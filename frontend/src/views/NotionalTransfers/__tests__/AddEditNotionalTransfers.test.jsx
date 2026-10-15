@@ -79,16 +79,12 @@ vi.mock('uuid', () => ({
 }))
 
 // Mock BCGridEditor with comprehensive API
-let mockGridRef = null
-let mockAlertRef = null
 let mockOnGridReady = null
 let mockOnCellEditingStopped = null
 let mockOnAction = null
 
 vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
   BCGridEditor: ({
-    gridRef,
-    alertRef,
     onGridReady,
     rowData,
     onCellEditingStopped,
@@ -96,8 +92,6 @@ vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
     loading,
     saveButtonProps
   }) => {
-    mockGridRef = gridRef
-    mockAlertRef = alertRef
     mockOnGridReady = onGridReady
     mockOnCellEditingStopped = onCellEditingStopped
     mockOnAction = onAction
@@ -202,15 +196,7 @@ vi.mock('@mui/material/Grid2', () => ({
 // Mock schema
 vi.mock('../_schema', () => ({
   defaultColDef: { test: 'default' },
-  notionalTransferColDefs: (
-    optionsData,
-    orgName,
-    errors,
-    warnings,
-    isSupplemental,
-    compliancePeriod,
-    isEarlyIssuance
-  ) => [
+  notionalTransferColDefs: () => [
     { field: 'legalName', headerName: 'Legal Name' },
     { field: 'quantity', headerName: 'Quantity' }
   ]
@@ -219,7 +205,6 @@ vi.mock('../_schema', () => ({
 describe('AddEditNotionalTransfers', () => {
   const mockNavigate = vi.fn()
   const mockSaveRow = vi.fn()
-  const mockTriggerAlert = vi.fn()
 
   // Default mock data
   const defaultComplianceReport = {
@@ -237,8 +222,6 @@ describe('AddEditNotionalTransfers', () => {
     vi.resetAllMocks()
 
     // Reset refs
-    mockGridRef = null
-    mockAlertRef = null
     mockOnGridReady = null
     mockOnCellEditingStopped = null
     mockOnAction = null
@@ -277,13 +260,6 @@ describe('AddEditNotionalTransfers', () => {
     vi.mocked(useSaveNotionalTransfer).mockReturnValue({
       mutateAsync: mockSaveRow
     })
-
-    // Setup alert ref mock
-    mockAlertRef = {
-      current: {
-        triggerAlert: mockTriggerAlert
-      }
-    }
   })
 
   describe('Basic Rendering', () => {
@@ -874,7 +850,7 @@ describe('AddEditNotionalTransfers', () => {
 
       render(<AddEditNotionalTransfers />, { fixtureOptions })
 
-      expect(mockTriggerAlert).not.toHaveBeenCalled()
+      expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
 
     it('sets column definitions when options data is available', () => {

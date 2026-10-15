@@ -1,6 +1,6 @@
 import { vi, describe, expect, beforeEach } from 'vitest'
 import { screen, fireEvent, waitFor } from '@testing-library/react'
-import React from 'react'
+import 'react'
 import { LoginScreenBackground } from '../LoginScreenBackground'
 import { test as fixtureTest } from '@/tests/utils/fixtures'
 

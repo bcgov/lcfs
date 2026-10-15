@@ -5,25 +5,17 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import theme from '@/themes'
 import {
-  AddEditChargingEquipment,
-  getNextRegistrationNumber,
-  createDuplicatedBulkRow
+  AddEditChargingEquipment
 } from '../AddEditChargingEquipment'
+import {
+  createDuplicatedBulkRow,
+  getNextRegistrationNumber,
+  isRowValid
+} from '../bulkRowHelpers'
 
 // --------------------
 // Validation helpers
 // --------------------
-
-// Re-create the isRowValid function for testing
-const isRowValid = (row) =>
-  Boolean(
-    row?.chargingSiteId &&
-      row?.serialNumber &&
-      row?.manufacturer &&
-      row?.levelOfEquipmentId &&
-      row?.intendedUseIds?.length > 0 &&
-      row?.intendedUserIds?.length > 0
-  )
 
 const getEmptyRow = (id = Date.now()) => ({
   id,
@@ -69,13 +61,15 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
-  BCGridEditor: React.forwardRef(({ saveButtonProps }, ref) => (
-    <div data-test="bc-grid-editor" ref={ref}>
+  BCGridEditor: React.forwardRef(function BCGridEditorMock({
+  saveButtonProps
+}, ref) {
+  return <div data-test="bc-grid-editor" ref={ref}>
       <button data-test="save-return-btn" onClick={saveButtonProps?.onSave}>
         {saveButtonProps?.text || 'Save'}
       </button>
-    </div>
-  ))
+    </div>;
+})
 }))
 
 vi.mock('@/components/ImportDialog', () => ({

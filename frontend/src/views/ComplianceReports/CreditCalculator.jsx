@@ -8,7 +8,6 @@ import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import FormControl from '@mui/material/FormControl'
 import InputAdornment from '@mui/material/InputAdornment'
-import Tooltip from '@mui/material/Tooltip'
 import Check from '@mui/icons-material/Check'
 import ContentCopy from '@mui/icons-material/ContentCopy'
 import colors from '@/themes/base/colors'
@@ -186,11 +185,7 @@ export const CreditCalculator = () => {
         uniqueEndUses.set(endUse.type, {
           value: endUse.type,
           sortLabel: endUse.type,
-          label: (
-            <Tooltip title={endUse.type} placement="top" arrow>
-              <span>{endUse.type}</span>
-            </Tooltip>
-          )
+          label: <span>{endUse.type}</span>
         })
       }
     })

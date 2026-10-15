@@ -17,7 +17,7 @@ import CircularProgress from '@mui/material/CircularProgress'
 import Radio from '@mui/material/Radio'
 import RadioGroup from '@mui/material/RadioGroup'
 import FormControlLabel from '@mui/material/FormControlLabel'
-import Tooltip from '@mui/material/Tooltip'
+import '@mui/material/Tooltip'
 
 const SummaryTable = ({
   title,
@@ -116,9 +116,7 @@ const SummaryTable = ({
 
   const handleCellChange = (e, rowIndex, columnId) => {
     const enteredValue = e.target.value
-    const column = columns.find((col) => col.id === columnId)
     const constraints = getCellConstraints(rowIndex, columnId)
-    const row = data[rowIndex]
 
     // All editable fields are integers
     // If input contains non-numeric chars (like $ or letters), strip decimals immediately
@@ -254,7 +252,7 @@ const SummaryTable = ({
             : parseFloat(currentValue) || 0
           : currentValue
 
-      if (onCellEditStopped && finalValue != originalValue) {
+      if (onCellEditStopped && finalValue !== originalValue) {
         const cellInfo = { rowIndex, columnId }
         onCellEditStopped(data, cellInfo)
       }
@@ -264,7 +262,7 @@ const SummaryTable = ({
     }
   }
 
-  const handleKeyDown = (e, rowIndex, columnId) => {
+  const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault()
       e.target.blur()

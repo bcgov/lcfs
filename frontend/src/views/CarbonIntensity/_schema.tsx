@@ -1,7 +1,4 @@
-// @ts-nocheck
 import type { ColDef } from 'ag-grid-community'
-import BCBox from '@/components/BCBox'
-import BCUserInitials from '@/components/BCUserInitials/BCUserInitials'
 import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
 import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
 import { dateFormatter } from '@/utils/formatters'
@@ -9,58 +6,8 @@ import {
   useCIApplicationStatuses,
   useGetCIApplicationAnalysts
 } from '@/hooks/useCIApplication'
-import {
-  CIApplicationStatusRenderer,
-  createStatusRenderer
-} from '@/utils/grid/cellRenderers'
+import { LastCommentRenderer, CIApplicationListStatusRenderer } from './components/CIApplicationListRenderers'
 import { CIAssignedAnalystCell } from './components/CIAssignedAnalystCell'
-
-const ANALYST_CHIP_SX = {
-  bgcolor: '#606060',
-  color: 'common.white',
-  borderRadius: '50%',
-  width: 32,
-  height: 32,
-  minWidth: 32,
-  '& .MuiChip-label': { padding: 0 },
-  '&:hover': { bgcolor: '#505050' }
-}
-
-// Centered chip wrapper so analyst / last-comment pills sit visually
-// centered in their grid cell regardless of the row's natural height.
-const PillCell = ({ children }) => (
-  <BCBox
-    component="div"
-    sx={{
-      width: '100%',
-      height: '100%',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      py: 1
-    }}
-  >
-    {children}
-  </BCBox>
-)
-
-const LastCommentRenderer = ({ data }) => {
-  const last = data?.lastComment
-  if (!last?.fullName) {
-    return <BCBox component="div" sx={{ width: '100%', height: '100%' }} />
-  }
-  return (
-    <PillCell>
-      <BCUserInitials
-        fullName={last.fullName}
-        tooltipText={last.comment}
-        maxLength={500}
-        variant="filled"
-        sx={ANALYST_CHIP_SX}
-      />
-    </PillCell>
-  )
-}
 
 const TEXT_FILTER_PARAMS = {
   filterOptions: ['contains', 'startsWith', 'equals'],
@@ -95,28 +42,6 @@ const productionFacilityLocation = (data) => {
   if (cityProvince && country) return `${cityProvince}, ${country}`
   return cityProvince || country
 }
-
-const CI_APPLICATION_CHANGES_REQUESTED_LABEL = 'Changes requested'
-const CIApplicationChangesRequestedRenderer = createStatusRenderer(
-  { [CI_APPLICATION_CHANGES_REQUESTED_LABEL]: 'warning' },
-  { statusField: 'status.status' },
-  CI_APPLICATION_CHANGES_REQUESTED_LABEL
-)
-
-const CIApplicationListStatusRenderer = (props) => {
-  const supplementalEditEnabled =
-    props.data?.pathwaySupplementalEditEnabled ||
-    props.data?.pathway_supplemental_edit_enabled
-
-  if (!supplementalEditEnabled) {
-    return <CIApplicationStatusRenderer {...props} />
-  }
-
-  return <CIApplicationChangesRequestedRenderer {...props} />
-}
-
-CIApplicationListStatusRenderer.filterPillRenderer =
-  CIApplicationStatusRenderer.filterPillRenderer
 
 const statusCol = (t) => ({
   field: 'status.status',
@@ -332,7 +257,7 @@ export const defaultSortModel: Array<{ field: string; direction: string }> = [
  * the Government decision panel.
  */
 export const getResumeStep = (
-  application: Record<string, any> | null | undefined
+  application: { status?: { status?: string } } | null | undefined
 ): number => {
   const status = application?.status?.status
   switch (status) {

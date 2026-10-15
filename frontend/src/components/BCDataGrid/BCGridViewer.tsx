@@ -1,4 +1,3 @@
-// @ts-nocheck
 import BCAlert, { FloatingAlert } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import { BCGridBase } from '@/components/BCDataGrid/BCGridBase'
@@ -27,10 +26,10 @@ import {
 } from '@/components/BCDataGrid/floatingScrollbarUtils'
 import {
   addFlexToColumns,
-  getColumnMinWidthSum,
-  relaxColumnMinWidths
+  getColumnMinWidthSum
 } from '@/components/BCDataGrid/columnSizingUtils'
-import type { BCGridViewerProps } from './types'
+import type { BCGridRow, BCGridViewerProps } from './types'
+import type { AgGridReact } from 'ag-grid-react'
 
 export type { BCGridViewerProps } from './types'
 
@@ -70,50 +69,66 @@ const isIntersectionObserverSupported = () => {
   return typeof window !== 'undefined' && 'IntersectionObserver' in window
 }
 
-export const BCGridViewer = forwardRef<any, BCGridViewerProps>(
+export const BCGridViewer = forwardRef<AgGridReact<BCGridRow>, BCGridViewerProps>(
   (
     {
-      gridRef,
-      alertRef,
-      loading,
-      defaultColDef,
-      columnDefs,
-      gridOptions,
-      suppressPagination,
-      gridKey,
-      getRowId,
-      onRowClicked,
-      autoSizeStrategy = {},
-
-      paginationOptions = {
-        page: 1,
-        size: 10,
-        sortOrders: [],
-        filters: []
-      },
-      onPaginationChange,
-
-      queryData,
-      dataKey = 'items',
-
-      enableExportButton = false,
-      enableCopyButton = false,
-      enableResetButton = false,
-      enablePageCaching = true,
-      paginationPageSizeSelector = [5, 10, 20, 25, 50, 100],
-      exportName = 'ExportData',
-      enableFloatingPagination = true,
-      filterToolbarConfig = {},
-      onClearFilters,
-      suppressMovableColumns = false,
-      columnState: controlledColumnState,
-      onColumnStateChange,
-      ...props
-    },
-    ref
+  gridRef,
+  alertRef,
+  loading,
+  defaultColDef,
+  columnDefs,
+  gridOptions,
+  suppressPagination,
+  gridKey,
+  getRowId,
+  onRowClicked,
+  autoSizeStrategy = {},
+  paginationOptions = {
+    page: 1,
+    size: 10,
+    sortOrders: [],
+    filters: []
+  },
+  onPaginationChange,
+  queryData,
+  dataKey = 'items',
+  enableExportButton = false,
+  enableCopyButton = false,
+  enableResetButton = false,
+  enablePageCaching = true,
+  paginationPageSizeSelector = [5, 10, 20, 25, 50, 100],
+  exportName = 'ExportData',
+  enableFloatingPagination = true,
+  filterToolbarConfig = {},
+  onClearFilters,
+  suppressMovableColumns = false,
+  columnState: controlledColumnState,
+  onColumnStateChange,
+  ...props
+}
   ) => {
     const { data, error, isError, isLoading } = queryData || {}
     const hasInitializedFromCache = useRef(false)
+    // Keep cache restoration tied to its original enable/grid-key triggers.
+    const paginationRestoreInputsRef = useRef({
+      paginationOptions,
+      onPaginationChange
+    })
+    const previousPaginationRestoreDepsRef = useRef({
+      enablePageCaching,
+      gridKey
+    })
+    if (
+      previousPaginationRestoreDepsRef.current.enablePageCaching !==
+        enablePageCaching ||
+      previousPaginationRestoreDepsRef.current.gridKey !== gridKey
+    ) {
+      previousPaginationRestoreDepsRef.current = { enablePageCaching, gridKey }
+      paginationRestoreInputsRef.current = {
+        paginationOptions,
+        onPaginationChange
+      }
+    }
     const previousGridKey = useRef(gridKey)
     const isRestoringFromCache = useRef(false)
 
@@ -125,8 +140,6 @@ export const BCGridViewer = forwardRef<any, BCGridViewerProps>(
     const [isGridVisible, setIsGridVisible] = useState(true)
     const [showScrollbar, setShowScrollbar] = useState(false)
     const [containerWidth, setContainerWidth] = useState(null)
-    const minWidthRelaxedRef = useRef(false)
-    const [minWidthRelaxed, setMinWidthRelaxed] = useState(false)
     const syncingFromGridRef = useRef(false)
     const syncingFromCustomRef = useRef(false)
     const [scrollContentWidth, setScrollContentWidth] = useState(null)
@@ -157,11 +170,7 @@ export const BCGridViewer = forwardRef<any, BCGridViewerProps>(
           asArray = values
         } else if (typeof values === 'string' && values.includes(',')) {
           asArray = values.split(',')
-        } else if (
-          values !== undefined &&
-          values !== null &&
-          values !== ''
-        ) {
+        } else if (values !== undefined && values !== null && values !== '') {
           asArray = [values]
         } else {
           asArray = []
@@ -201,61 +210,63 @@ export const BCGridViewer = forwardRef<any, BCGridViewerProps>(
         return dateOnly ? dateOnly[1] : value.trim()
       }
 
-      return Object.entries(filterModel).map(([field, filterConfig]) => {
-        const baseFilter = { field }
-        
-        if (filterConfig.filterType === 'set') {
-          // For set filters, use the 'filter' array or 'values' array
-          const values =
-            filterConfig.values !== undefined
-              ? filterConfig.values
-              : filterConfig.filter || []
-          const cleanValues = sanitizeArrayValues(values)
-          if (!cleanValues.length) {
-            return null
-          }
-          return {
-            ...baseFilter,
-            filterType: 'set',
-            values: cleanValues
-          }
-        } else if (filterConfig.filterType === 'text') {
-          // For text filters, skip if filter value is empty
-          if (
-            filterConfig.filter === undefined ||
-            filterConfig.filter === null ||
-            filterConfig.filter === ''
-          ) {
-            return null
-          }
-          const sanitizedFilter = sanitizeCsvString(filterConfig.filter)
-          if (!sanitizedFilter) {
-            return null
-          }
+      return Object.entries(filterModel)
+        .map(([field, filterConfig]) => {
+          const baseFilter = { field }
 
-          return {
-            ...baseFilter,
-            filterType: 'text',
-            type: filterConfig.type,
-            filter: sanitizedFilter
+          if (filterConfig.filterType === 'set') {
+            // For set filters, use the 'filter' array or 'values' array
+            const values =
+              filterConfig.values !== undefined
+                ? filterConfig.values
+                : filterConfig.filter || []
+            const cleanValues = sanitizeArrayValues(values)
+            if (!cleanValues.length) {
+              return null
+            }
+            return {
+              ...baseFilter,
+              filterType: 'set',
+              values: cleanValues
+            }
+          } else if (filterConfig.filterType === 'text') {
+            // For text filters, skip if filter value is empty
+            if (
+              filterConfig.filter === undefined ||
+              filterConfig.filter === null ||
+              filterConfig.filter === ''
+            ) {
+              return null
+            }
+            const sanitizedFilter = sanitizeCsvString(filterConfig.filter)
+            if (!sanitizedFilter) {
+              return null
+            }
+
+            return {
+              ...baseFilter,
+              filterType: 'text',
+              type: filterConfig.type,
+              filter: sanitizedFilter
+            }
+          } else {
+            // For other filter types, include all properties but clean empty values
+            const cleanConfig = { ...filterConfig }
+            if (cleanConfig.filter === '' || cleanConfig.filter === null) {
+              return null
+            }
+            if (cleanConfig.filterType === 'date') {
+              cleanConfig.type = cleanConfig.type || 'equals'
+              cleanConfig.dateFrom = sanitizeDateValue(cleanConfig.dateFrom)
+              cleanConfig.dateTo = sanitizeDateValue(cleanConfig.dateTo)
+            }
+            return {
+              ...baseFilter,
+              ...cleanConfig
+            }
           }
-        } else {
-          // For other filter types, include all properties but clean empty values
-          const cleanConfig = { ...filterConfig }
-          if (cleanConfig.filter === '' || cleanConfig.filter === null) {
-            return null
-          }
-          if (cleanConfig.filterType === 'date') {
-            cleanConfig.type = cleanConfig.type || 'equals'
-            cleanConfig.dateFrom = sanitizeDateValue(cleanConfig.dateFrom)
-            cleanConfig.dateTo = sanitizeDateValue(cleanConfig.dateTo)
-          }
-          return {
-            ...baseFilter,
-            ...cleanConfig
-          }
-        }
-      }).filter(Boolean) // Remove null entries
+        })
+        .filter(Boolean) // Remove null entries
     }, [])
 
     // Cache pagination options to sessionStorage
@@ -278,7 +289,7 @@ export const BCGridViewer = forwardRef<any, BCGridViewerProps>(
     )
 
     // Restore pagination options from sessionStorage
-    const getCachedPaginationOptions = useCallback(() => {
+    useCallback(() => {
       if (!enablePageCaching || !gridKey) return paginationOptions
 
       const cachedPagination = sessionStorage.getItem(`${gridKey}-pagination`)
@@ -295,7 +306,7 @@ export const BCGridViewer = forwardRef<any, BCGridViewerProps>(
         }
       }
       return paginationOptions
-    }, [gridKey, paginationOptions, enablePageCaching])
+    }, [gridKey, paginationOptions, enablePageCaching]);
 
     const getGridScrollInfo = useCallback(
       () => getGridScrollInfoUtil(gridContainerRef),
@@ -352,6 +363,8 @@ export const BCGridViewer = forwardRef<any, BCGridViewerProps>(
 
     // Initialize with cached pagination options if available
     useEffect(() => {
+      const { paginationOptions, onPaginationChange } =
+        paginationRestoreInputsRef.current
       if (enablePageCaching && gridKey && !hasInitializedFromCache.current) {
         const cachedPagination = sessionStorage.getItem(`${gridKey}-pagination`)
         if (cachedPagination) {
@@ -595,12 +608,6 @@ export const BCGridViewer = forwardRef<any, BCGridViewerProps>(
             }
           })
         }
-        requestAnimationFrame(() => {
-          if (minWidthRelaxedRef.current) return
-          relaxColumnMinWidths(params.api, params.columnApi, 50)
-          minWidthRelaxedRef.current = true
-          setMinWidthRelaxed(true)
-        })
       },
       [
         gridKey,
@@ -615,13 +622,6 @@ export const BCGridViewer = forwardRef<any, BCGridViewerProps>(
 
     const onFirstDataRendered = useCallback((params) => {
       params.api.hideOverlay()
-
-      // After initial sizing, reduce minWidth on all columns to allow user drag down to 50px
-      // Preserve current widths to avoid visual jumps.
-      if (minWidthRelaxedRef.current) return
-      relaxColumnMinWidths(params.api, params.columnApi, 50)
-      minWidthRelaxedRef.current = true
-      setMinWidthRelaxed(true)
     }, [])
 
     const handleChangePage = (_, newPage) => {
@@ -705,6 +705,7 @@ export const BCGridViewer = forwardRef<any, BCGridViewerProps>(
       }
       persistColumnState(columnState)
     }, [
+      gridRef,
       onPaginationChange,
       paginationOptions,
       enablePageCaching,
@@ -786,7 +787,7 @@ export const BCGridViewer = forwardRef<any, BCGridViewerProps>(
         api.setFilterModel(nextModel)
         setActiveFilters(convertFilterModelToArray(nextModel || {}))
       },
-      [gridRef, convertFilterModelToArray, activeFilters]
+      [gridRef, convertFilterModelToArray]
     )
 
     const defaultColDefParams = useMemo(
@@ -826,9 +827,6 @@ export const BCGridViewer = forwardRef<any, BCGridViewerProps>(
 
       if (shouldFitColumns) {
         const flexDefs = addFlexToColumns(columnDefs).columnDefs
-        if (!minWidthRelaxed) {
-          return flexDefs
-        }
         return flexDefs.map((col) => ({
           ...col,
           minWidth: 50
@@ -840,15 +838,13 @@ export const BCGridViewer = forwardRef<any, BCGridViewerProps>(
         if (nextCol.flex != null) {
           delete nextCol.flex
         }
-        if (!minWidthRelaxed && nextCol.minWidth && !nextCol.width) {
+        if (nextCol.minWidth && !nextCol.width) {
           nextCol.width = nextCol.minWidth
         }
-        if (minWidthRelaxed) {
-          nextCol.minWidth = 50
-        }
+        nextCol.minWidth = 50
         return nextCol
       })
-    }, [columnDefs, shouldFitColumns, minWidthRelaxed])
+    }, [columnDefs, shouldFitColumns])
 
     // Compute defaultMinWidth from columnDefs so autoSizeStrategy uses proper initial widths
     // This prevents the "squished then expand" visual effect on page load
@@ -901,10 +897,12 @@ export const BCGridViewer = forwardRef<any, BCGridViewerProps>(
         columnLabelLookup: labelLookup,
         columnPillRendererLookup: pillLookup
       }
-    }, [columnDefs, activeFilters])
+    }, [columnDefs])
 
-    const toolbarSelectFilters = filterToolbarConfig?.selectFilters || []
-    const additionalPills = filterToolbarConfig?.additionalPills || []
+    const toolbarSelectFilters = useMemo(
+      () => filterToolbarConfig?.selectFilters || [],
+      [filterToolbarConfig?.selectFilters]
+    )
 
     const gridFilterPills = useMemo(
       () =>
@@ -923,14 +921,30 @@ export const BCGridViewer = forwardRef<any, BCGridViewerProps>(
     )
 
     const combinedPills = useMemo(
-      () => [...(additionalPills || []), ...gridFilterPills],
-      [additionalPills, gridFilterPills]
+      () => [
+        ...(filterToolbarConfig?.additionalPills || []),
+        ...gridFilterPills
+      ],
+      [filterToolbarConfig?.additionalPills, gridFilterPills]
     )
 
     const hasAnyFiltersApplied = combinedPills.length > 0
     const shouldShowToolbar = useMemo(
       () => toolbarSelectFilters.length > 0 || combinedPills.length > 0,
-      [toolbarSelectFilters, combinedPills, activeFilters]
+      [toolbarSelectFilters, combinedPills]
+    )
+
+    const mergedDefaultColDef = useMemo(
+      () => ({
+        tooltipValueGetter: (params) => {
+          return params.value !== null && params.value !== undefined
+            ? String(params.value)
+            : 'No data'
+        },
+        ...defaultColDefParams,
+        ...defaultColDef
+      }),
+      [defaultColDefParams, defaultColDef]
     )
 
     const handleClearAllFilters = useCallback(() => {
@@ -938,7 +952,7 @@ export const BCGridViewer = forwardRef<any, BCGridViewerProps>(
         gridRef?.current?.api?.setFilterModel(null)
         gridRef?.current?.api?.setSortModel([])
         setActiveFilters([])
-      } catch (error) {
+      } catch {
         // no-op
       }
       onClearFilters?.()
@@ -978,16 +992,7 @@ export const BCGridViewer = forwardRef<any, BCGridViewerProps>(
           ref={gridRef}
           className="ag-theme-material"
           loading={isLoading || loading}
-          defaultColDef={{
-            tooltipValueGetter: (params) => {
-              // Show the cell value on hover
-              return params.value !== null && params.value !== undefined
-                ? String(params.value)
-                : 'No data'
-            },
-            ...defaultColDefParams,
-            ...defaultColDef
-          }}
+          defaultColDef={mergedDefaultColDef}
           columnDefs={transformedColumnDefs}
           gridOptions={gridOptions}
           rowData={!isLoading && ((data && data[dataKey]) || [])}
@@ -1058,7 +1063,7 @@ export const BCGridViewer = forwardRef<any, BCGridViewerProps>(
                       className="custom-horizontal-scroll"
                       ref={customScrollbarRef}
                       style={{ ...floatingScrollStyles }}
-                      onScroll={(e) => {
+                      onScroll={() => {
                         if (syncingFromGridRef.current) return
                         if (!customScrollbarRef.current) return
 

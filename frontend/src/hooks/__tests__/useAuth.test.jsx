@@ -1,8 +1,7 @@
 import { renderHook } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useAuth } from '../useAuth'
-import { KeycloakContext } from '@/components/KeycloakProvider'
-import React from 'react'
+import { KeycloakContext } from '@/components/KeycloakContext'
 
 describe('useAuth', () => {
   beforeEach(() => {

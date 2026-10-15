@@ -19,7 +19,7 @@ export const BulkProcessingModals = ({
   isValidating,
   isReturningToDraft
 }) => {
-  const { t } = useTranslation(['common', 'chargingEquipment'])
+  useTranslation(['common', 'chargingEquipment']);
 
   return (
     <>

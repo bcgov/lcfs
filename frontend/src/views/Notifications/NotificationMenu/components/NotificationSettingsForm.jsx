@@ -110,7 +110,7 @@ const NotificationSettingsForm = ({
         }
       }
       setMessage(t('messages.subscriptionUpdated'))
-    } catch (error) {
+    } catch {
       setMessage(t('errors.operationFailed'))
     } finally {
       setIsFormLoading(false)
@@ -128,7 +128,7 @@ const NotificationSettingsForm = ({
         })
         setMessage(t('messages.emailSaved'))
       }
-    } catch (err) {
+    } catch {
       setMessage(t('errors.operationFailed'))
     } finally {
       setIsFormLoading(false)
@@ -326,8 +326,7 @@ const NotificationSettingsForm = ({
                             : 'governmentNotificationNoInApp'
 
                           const renderNotificationCheckbox =
-                            (channel) =>
-                            ({ field }) => {
+                            (channel) => function NotificationCheckbox({ field }) {
                               const checkboxTestId = `notification-toggle-${notificationTypeKey}-${channel?.toLowerCase?.() || ''}`
                               const toggleSelection = (isChecked) => {
                                 field.onChange(isChecked)

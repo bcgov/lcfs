@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -80,7 +80,7 @@ const GovernmentNotificationsCard = () => {
 
   const { data: notification, isLoading } = useCurrentGovernmentNotification()
   const updateMutation = useUpdateGovernmentNotification({
-    onSuccess: (data) => {
+    onSuccess: () => {
       enqueueSnackbar(t('dashboard:governmentNotifications.updateSuccess'), {
         variant: 'success'
       })
@@ -210,10 +210,6 @@ const GovernmentNotificationsCard = () => {
       : notification?.notificationType
     const bgColor =
       NOTIFICATION_PILL_COLORS[type] || NOTIFICATION_PILL_COLORS.General
-    const textColor =
-      NOTIFICATION_PILL_TEXT_COLORS[type] ||
-      NOTIFICATION_PILL_TEXT_COLORS.General
-
     return {
       backgroundColor: `${bgColor} !important`,
       '& h2': {

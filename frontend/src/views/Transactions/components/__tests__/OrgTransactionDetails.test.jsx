@@ -1,6 +1,6 @@
 import { test } from '@/tests/utils/fixtures'
-import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
+import 'react';
+import { screen, fireEvent } from '@testing-library/react';
 import { vi } from 'vitest'
 import { OrgTransactionDetails } from '@/views/Transactions/components'
 import { ADMIN_ADJUSTMENT } from '@/views/Transactions/constants'
@@ -14,7 +14,7 @@ vi.mock('@/hooks/useDocuments.js', () => ({
 
 vi.mock('@/components/Documents/DocumentPreviewButton', () => ({
   __esModule: true,
-  default: ({ document }) => (
+  default: () => (
     <button type="button" data-test="document-preview-button">
       Preview document
     </button>

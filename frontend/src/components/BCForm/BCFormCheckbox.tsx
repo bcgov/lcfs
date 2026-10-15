@@ -4,6 +4,7 @@ import FormControlLabel from '@mui/material/FormControlLabel'
 import FormLabel from '@mui/material/FormLabel'
 import BCTypography from '@/components/BCTypography'
 import { Controller } from 'react-hook-form'
+import type { Control, FieldValues } from 'react-hook-form'
 import { CustomLabel } from './CustomLabel'
 import PropTypes from 'prop-types'
 import type { ReactNode } from 'react'
@@ -17,7 +18,7 @@ export interface BCFormCheckboxOption {
 
 export interface BCFormCheckboxProps {
   name: string
-  form: { control: any }
+  form: { control: Control<FieldValues> }
   label?: ReactNode
   options: BCFormCheckboxOption[]
   disabled?: boolean

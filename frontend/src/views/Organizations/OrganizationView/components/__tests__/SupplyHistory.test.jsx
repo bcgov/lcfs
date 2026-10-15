@@ -3,10 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import ThemeProvider from '@mui/material/styles/ThemeProvider'
-import {
-  SupplyHistory,
-  normalizeFuelTypeVolumeTrendRows
-} from '../SupplyHistory'
+import { SupplyHistory } from '../SupplyHistory'
+import { normalizeFuelTypeVolumeTrendRows } from '../supplyHistoryHelpers'
 import { supplyHistoryColDefs } from '../_supplyHistorySchema'
 import theme from '@/themes'
 

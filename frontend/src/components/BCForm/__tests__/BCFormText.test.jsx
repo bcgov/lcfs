@@ -79,13 +79,9 @@ describe.sequential('BCFormText', () => {
 
   describe('Basic Rendering', () => {
     test('renders text input field with correct attributes', ({
-      render,
-      query,
-      theme,
-      localization,
-      router,
-      i18n
-    }) => {
+  render,
+  theme
+}) => {
       renderBCFormText({ render, theme })
 
       const input = screen.getByRole('textbox')
@@ -95,13 +91,9 @@ describe.sequential('BCFormText', () => {
     })
 
     test('renders label with correct text', ({
-      render,
-      query,
-      theme,
-      localization,
-      router,
-      i18n
-    }) => {
+  render,
+  theme
+}) => {
       renderBCFormText({ render, theme })
 
       const label = screen.getByText('Test Label:')
@@ -113,13 +105,9 @@ describe.sequential('BCFormText', () => {
     })
 
     test('associates label with input field for accessibility', ({
-      render,
-      query,
-      theme,
-      localization,
-      router,
-      i18n
-    }) => {
+  render,
+  theme
+}) => {
       renderBCFormText({ render, theme })
 
       const input = screen.getByRole('textbox')
@@ -132,13 +120,9 @@ describe.sequential('BCFormText', () => {
 
   describe('Optional Field Indicators', () => {
     test('shows optional indicator when optional prop is true', ({
-      render,
-      query,
-      theme,
-      localization,
-      router,
-      i18n
-    }) => {
+  render,
+  theme
+}) => {
       renderBCFormText({ render, theme }, { optional: true })
 
       expect(screen.getByText('(optional)')).toBeInTheDocument()
@@ -158,13 +142,9 @@ describe.sequential('BCFormText', () => {
     }
 
     test('renders checkbox when checkbox prop is true', ({
-      render,
-      query,
-      theme,
-      localization,
-      router,
-      i18n
-    }) => {
+  render,
+  theme
+}) => {
       renderBCFormText({ render, theme }, checkboxProps)
 
       const checkbox = screen.getByRole('checkbox')
@@ -173,13 +153,9 @@ describe.sequential('BCFormText', () => {
     })
 
     test('renders checkbox label with correct styling', ({
-      render,
-      query,
-      theme,
-      localization,
-      router,
-      i18n
-    }) => {
+  render,
+  theme
+}) => {
       renderBCFormText({ render, theme }, checkboxProps)
 
       expect(screen.getByText('Enable this option')).toBeInTheDocument()
@@ -192,13 +168,9 @@ describe.sequential('BCFormText', () => {
     })
 
     test('sets checkbox checked state correctly', ({
-      render,
-      query,
-      theme,
-      localization,
-      router,
-      i18n
-    }) => {
+  render,
+  theme
+}) => {
       renderBCFormText({ render, theme }, { ...checkboxProps, isChecked: true })
 
       const checkbox = screen.getByRole('checkbox')
@@ -206,13 +178,9 @@ describe.sequential('BCFormText', () => {
     })
 
     test('calls onCheckboxChange when checkbox is clicked', async ({
-      render,
-      query,
-      theme,
-      localization,
-      router,
-      i18n
-    }) => {
+  render,
+  theme
+}) => {
       const user = userEvent.setup()
       const onCheckboxChange = vi.fn()
 
@@ -230,13 +198,9 @@ describe.sequential('BCFormText', () => {
 
   describe('Disabled State', () => {
     test('disables input when disabled prop is true', ({
-      render,
-      query,
-      theme,
-      localization,
-      router,
-      i18n
-    }) => {
+  render,
+  theme
+}) => {
       renderBCFormText({ render, theme }, { disabled: true })
 
       const input = screen.getByRole('textbox')
@@ -246,13 +210,9 @@ describe.sequential('BCFormText', () => {
 
   describe('Form Integration with React Hook Form', () => {
     test('integrates with react-hook-form control for value management', ({
-      render,
-      query,
-      theme,
-      localization,
-      router,
-      i18n
-    }) => {
+  render,
+  theme
+}) => {
       render(
         <FormWrapper defaultValues={{ testField: 'Initial Value' }}>
           {({ control }) => (
@@ -267,13 +227,9 @@ describe.sequential('BCFormText', () => {
     })
 
     test('handles user input and updates form state', async ({
-      render,
-      query,
-      theme,
-      localization,
-      router,
-      i18n
-    }) => {
+  render,
+  theme
+}) => {
       const user = userEvent.setup()
 
       render(
@@ -292,18 +248,14 @@ describe.sequential('BCFormText', () => {
     })
 
     test('displays form validation errors', async ({
-      render,
-      query,
-      theme,
-      localization,
-      router,
-      i18n
-    }) => {
+  render,
+  theme
+}) => {
       const user = userEvent.setup()
 
       render(
         <FormWrapper>
-          {({ control, formState: { errors } }) => (
+          {({ control }) => (
             <BCFormText
               name="required"
               control={control}
@@ -327,13 +279,9 @@ describe.sequential('BCFormText', () => {
 
   describe('Accessibility', () => {
     test('has proper label association for screen readers', ({
-      render,
-      query,
-      theme,
-      localization,
-      router,
-      i18n
-    }) => {
+  render,
+  theme
+}) => {
       renderBCFormText({ render, theme })
 
       const input = screen.getByRole('textbox')
@@ -344,13 +292,9 @@ describe.sequential('BCFormText', () => {
     })
 
     test('supports keyboard navigation', async ({
-      render,
-      query,
-      theme,
-      localization,
-      router,
-      i18n
-    }) => {
+  render,
+  theme
+}) => {
       const user = userEvent.setup()
 
       renderBCFormText(
@@ -376,13 +320,9 @@ describe.sequential('BCFormText', () => {
 
   describe('Edge Cases and Error Handling', () => {
     test('handles special characters in field name', ({
-      render,
-      query,
-      theme,
-      localization,
-      router,
-      i18n
-    }) => {
+  render,
+  theme
+}) => {
       renderBCFormText(
         { render, theme },
         { name: 'field-with-special_chars.123' }
@@ -393,13 +333,9 @@ describe.sequential('BCFormText', () => {
     })
 
     test('handles rapid user input without errors', async ({
-      render,
-      query,
-      theme,
-      localization,
-      router,
-      i18n
-    }) => {
+  render,
+  theme
+}) => {
       const user = userEvent.setup()
 
       renderBCFormText({ render, theme }, {}, { testField: '' })
@@ -413,13 +349,9 @@ describe.sequential('BCFormText', () => {
     })
 
     test('preserves input focus during re-renders', async ({
-      render,
-      query,
-      theme,
-      localization,
-      router,
-      i18n
-    }) => {
+  render,
+  theme
+}) => {
       const user = userEvent.setup()
 
       const { rerender } = render(
@@ -456,13 +388,9 @@ describe.sequential('BCFormText', () => {
 
   describe('Performance and Optimization', () => {
     test('does not cause unnecessary re-renders', ({
-      render,
-      query,
-      theme,
-      localization,
-      router,
-      i18n
-    }) => {
+  render,
+  theme
+}) => {
       const renderSpy = vi.fn()
 
       const TestComponentWrapper = (props) => {
@@ -490,13 +418,9 @@ describe.sequential('BCFormText', () => {
 
   describe('PropTypes Validation', () => {
     test('renders correctly with minimal required props', ({
-      render,
-      query,
-      theme,
-      localization,
-      router,
-      i18n
-    }) => {
+  render,
+  theme
+}) => {
       render(
         <FormWrapper>
           {({ control }) => <BCFormText name="minimal" control={control} />}
@@ -510,13 +434,9 @@ describe.sequential('BCFormText', () => {
     })
 
     test('accepts all documented prop types', ({
-      render,
-      query,
-      theme,
-      localization,
-      router,
-      i18n
-    }) => {
+  render,
+  theme
+}) => {
       const allProps = {
         name: 'fullTest',
         label: 'Full Test Label',

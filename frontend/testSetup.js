@@ -1,3 +1,4 @@
+import { omitProperties } from './src/utils/omitProperties'
 import '@testing-library/jest-dom/vitest'
 import { cleanup, configure } from '@testing-library/react'
 import { afterEach, vi } from 'vitest'
@@ -21,7 +22,7 @@ vi.mock('ag-grid-enterprise', () => ({}))
 
 // Mock ag-grid-react with complete API
 vi.mock('ag-grid-react', () => ({
-  AgGridReact: React.forwardRef((props, ref) => {
+  AgGridReact: React.forwardRef(function GridMock(props, ref) {
     React.useImperativeHandle(ref, () => ({
       api: {
         autoSizeAllColumns: vi.fn(),
@@ -45,22 +46,19 @@ vi.mock('ag-grid-react', () => ({
       }
     }))
 
-    const {
-      columnDefs,
-      rowData,
-      onGridReady,
-      onCellValueChanged,
-      onCellEditingStopped,
-      defaultColDef,
-      suppressMovableColumns,
-      suppressRowClickSelection,
-      rowSelection,
-      onSelectionChanged,
-      getRowId,
-      loading,
-      suppressNoRowsOverlay,
-      ...domProps
-    } = props
+    const { onGridReady, onCellValueChanged, loading, ...domProps } =
+      omitProperties(props, [
+        'columnDefs',
+        'rowData',
+        'onCellEditingStopped',
+        'defaultColDef',
+        'suppressMovableColumns',
+        'suppressRowClickSelection',
+        'rowSelection',
+        'onSelectionChanged',
+        'getRowId',
+        'suppressNoRowsOverlay'
+      ])
 
     React.useEffect(() => {
       if (onGridReady && ref?.current) {
@@ -69,7 +67,7 @@ vi.mock('ag-grid-react', () => ({
           columnApi: ref.current.columnApi
         })
       }
-    }, [onGridReady])
+    }, [onGridReady, ref])
 
     // Also trigger cell value changed callbacks with proper API
     React.useEffect(() => {
@@ -95,7 +93,7 @@ vi.mock('ag-grid-react', () => ({
           ref.current.mockEvent = mockEvent
         }
       }
-    }, [onCellValueChanged])
+    }, [onCellValueChanged, ref])
 
     return React.createElement(
       'div',
@@ -130,53 +128,61 @@ vi.mock('react-leaflet', () => ({
 
 // Global component mocks to fix common warnings
 vi.mock('@/components/BCBox', () => ({
-  default: React.forwardRef(
-    ({ children, jsx, justifyContent, flexWrap, ...props }, ref) => {
-      // Filter out non-DOM props that cause warnings
-      const {
-        variant,
-        bgColor,
-        color,
-        opacity,
-        borderRadius,
-        shadow,
-        coloredShadow,
-        component,
-        ...domProps
-      } = props
-      return React.createElement(
-        'div',
-        { ref, ...domProps, style: { justifyContent, flexWrap } },
-        children
-      )
-    }
-  )
+  default: React.forwardRef(function BoxMock(
+    { children, justifyContent, flexWrap, ...props },
+    ref
+  ) {
+    delete props.jsx
+
+    // Filter out non-DOM props that cause warnings
+    const { ...domProps } = omitProperties(props, [
+      'variant',
+      'bgColor',
+      'color',
+      'opacity',
+      'borderRadius',
+      'shadow',
+      'coloredShadow',
+      'component'
+    ])
+    return React.createElement(
+      'div',
+      { ref, ...domProps, style: { justifyContent, flexWrap } },
+      children
+    )
+  })
 }))
 
 vi.mock('@/components/BCAlert', () => ({
-  default: React.forwardRef((props, ref) => {
+  default: React.forwardRef(function AlertMock(props, ref) {
     React.useImperativeHandle(ref, () => ({
       triggerAlert: vi.fn(),
       show: vi.fn(),
       hide: vi.fn()
     }))
-    const { children, severity, dismissible, noFade, delay, ...domProps } =
-      props
+    const { children, severity, ...domProps } = omitProperties(props, [
+      'dismissible',
+      'noFade',
+      'delay'
+    ])
     return React.createElement(
       'div',
       { 'data-test': 'bc-alert', ...domProps, 'data-severity': severity },
       children
     )
   }),
-  BCAlert2: React.forwardRef((props, ref) => {
+  BCAlert2: React.forwardRef(function Alert2Mock(props, ref) {
     React.useImperativeHandle(ref, () => ({
       triggerAlert: vi.fn(),
       show: vi.fn(),
       hide: vi.fn(),
       clearAlert: vi.fn()
     }))
-    const { children, severity, dismissible, noFade, delay, ...domProps } =
-      props
+    const { children, severity, ...domProps } = omitProperties(props, [
+      'dismissible',
+      'noFade',
+      'delay'
+    ])
     const testId = domProps['data-test'] || 'bc-alert-2'
     return React.createElement(
       'div',
@@ -184,15 +190,18 @@ vi.mock('@/components/BCAlert', () => ({
       children
     )
   }),
-  FloatingAlert: React.forwardRef((props, ref) => {
+  FloatingAlert: React.forwardRef(function FloatingAlertMock(props, ref) {
     React.useImperativeHandle(ref, () => ({
       triggerAlert: vi.fn(),
       show: vi.fn(),
       hide: vi.fn(),
       clearAlert: vi.fn()
     }))
-    const { children, severity, dismissible, noFade, delay, ...domProps } =
-      props
+    const { children, severity, ...domProps } = omitProperties(props, [
+      'dismissible',
+      'noFade',
+      'delay'
+    ])
     return React.createElement(
       'div',
       { 'data-test': 'floating-alert', ...domProps, 'data-severity': severity },
@@ -202,24 +211,21 @@ vi.mock('@/components/BCAlert', () => ({
 }))
 
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  BCGridViewer: React.forwardRef((props, ref) => {
+  BCGridViewer: React.forwardRef(function GridViewerMock(props, ref) {
     React.useImperativeHandle(ref, () => ({
       api: vi.fn(),
       columnApi: vi.fn()
     }))
-    const {
-      children,
-      jsx,
-      justifyContent,
-      gridRef,
-      gridKey,
-      columnDefs,
-      rowData,
-      defaultColDef,
-      onGridReady,
-      onCellValueChanged,
-      ...domProps
-    } = props
+    const { children, justifyContent, ...domProps } = omitProperties(props, [
+      'jsx',
+      'gridRef',
+      'gridKey',
+      'columnDefs',
+      'rowData',
+      'defaultColDef',
+      'onGridReady',
+      'onCellValueChanged'
+    ])
     return React.createElement(
       'div',
       {
@@ -235,30 +241,25 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 
 // Mock form components
 vi.mock('@/components/BCForm/BCFormText', () => ({
-  BCFormText: ({
-    name,
-    control,
-    label,
-    optional,
-    checkbox,
-    checkboxLabel,
-    onCheckboxChange,
-    isChecked,
-    disabled,
-    ...props
-  }) => {
+  BCFormText: ({ name, label, optional, disabled, ...props }) => {
+    delete props.control
+    delete props.checkbox
+    delete props.checkboxLabel
+    delete props.onCheckboxChange
+    delete props.isChecked
+
     const { variant, fullWidth, ...domProps } = props
     // Create a properly labeled input that Testing Library can find by accessible name
     // Also handle form values correctly for React Hook Form integration
     return React.createElement('input', {
       id: name,
-      name: name,
+      name,
       'data-test': name,
       'data-testid': name,
       'data-variant': variant || 'outlined',
       'data-fullwidth': fullWidth || true,
       required: !optional,
-      disabled: disabled,
+      disabled,
       'aria-label': label, // This provides the accessible name
       placeholder: label, // Also add as placeholder for additional context
       ...domProps
@@ -267,7 +268,9 @@ vi.mock('@/components/BCForm/BCFormText', () => ({
 }))
 
 vi.mock('@/components/BCForm/BCFormRadio', () => ({
-  BCFormRadio: ({ name, control, options = [], ...props }) => {
+  BCFormRadio: ({ name, options = [], ...props }) => {
+    delete props.control
+
     return React.createElement(
       'div',
       { 'data-test': `${name}-radio-group` },
@@ -275,7 +278,7 @@ vi.mock('@/components/BCForm/BCFormRadio', () => ({
         React.createElement('input', {
           key: `${name}-${index}`,
           type: 'radio',
-          name: name,
+          name,
           value: option.value || option,
           'data-testid': option.dataTestId || `${name}${index + 1}`,
           'data-test': option.dataTestId || `${name}${index + 1}`
@@ -286,7 +289,7 @@ vi.mock('@/components/BCForm/BCFormRadio', () => ({
 }))
 
 vi.mock('@/components/BCForm/BCFormCheckbox', () => ({
-  BCFormCheckbox: ({ name, form, options = [] }) => {
+  BCFormCheckbox: ({ name, options = [] }) => {
     return React.createElement(
       'div',
       { 'data-test': `${name}-checkbox-group` },
@@ -307,24 +310,20 @@ vi.mock('@/components/BCForm/BCFormCheckbox', () => ({
 }))
 
 vi.mock('@/components/BCForm/BCFormAddressAutocomplete', () => ({
-  BCFormAddressAutocomplete: ({
-    name,
-    control,
-    label,
-    checkbox,
-    checkboxLabel,
-    onCheckboxChange,
-    isChecked,
-    disabled,
-    onSelectAddress,
-    ...props
-  }) => {
+  BCFormAddressAutocomplete: ({ name, label, disabled, ...props }) => {
+    delete props.control
+    delete props.checkbox
+    delete props.checkboxLabel
+    delete props.onCheckboxChange
+    delete props.isChecked
+    delete props.onSelectAddress
+
     return React.createElement('input', {
       'data-test': name,
       'data-name': name,
       'aria-label': label,
       placeholder: label,
-      disabled: disabled,
+      disabled,
       defaultValue: '',
       ...props
     })

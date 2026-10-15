@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { afterEach, vi } from 'vitest'
 import {
@@ -74,7 +74,11 @@ vi.mock('@/hooks/useCalculator', () => ({
 
 vi.mock('@/components/BCForm/BCFormRadio', async () => {
   const actual = await vi.importActual('@/components/BCForm/BCFormRadio')
-  const MockRadio = ({ name, label, options = [], disabled }) => {
+  const MockRadio = ({
+  name,
+  label,
+  options = []
+}) => {
     const { control, getValues } = useFormContext()
 
     const getTestId = (option, index) => {
@@ -95,7 +99,10 @@ vi.mock('@/components/BCForm/BCFormRadio', async () => {
         control={control}
         defaultValue={getValues(name) ?? ''}
         render={({ field: { value, onChange } }) => (
-          <div data-test={`${name}-radio-group`}>
+          <div
+            data-test={`${name}-radio-group`}
+            className="MuiRadioGroup-root"
+          >
             {label && (
               <span data-test={`${name}-label`} data-testid={`${name}-label`}>
                 {label}
@@ -110,7 +117,9 @@ vi.mock('@/components/BCForm/BCFormRadio', async () => {
                   key={`${name}-${testId}`}
                   data-test={testId}
                   data-testid={testId}
-                  className={isSelected ? 'selected' : ''}
+                  className={`MuiFormControlLabel-root MuiFormControlLabel-label${
+                    isSelected ? ' selected' : ''
+                  }`}
                   tabIndex={0}
                   role="radio"
                   aria-checked={isSelected}
@@ -327,6 +336,23 @@ describe('CreditCalculator', () => {
       expect(
         screen.getByText(mockT('report:qtySuppliedLabel'))
       ).toBeInTheDocument()
+    })
+
+    it('allows horizontal scrolling for long End Use labels', () => {
+      const { container } = render(
+        <TestWrapper>
+          <CreditCalculator />
+        </TestWrapper>
+      )
+
+      const endUseGroup = container.querySelector(
+        '[data-test="endUseType-radio-group"]'
+      )
+      const endUseOption = endUseGroup.querySelector('[role="radio"]')
+
+      expect(getComputedStyle(endUseGroup).overflowX).toBe('auto')
+      expect(getComputedStyle(endUseOption).maxWidth).toBe('none')
+      expect(getComputedStyle(endUseOption).whiteSpace).toBe('nowrap')
     })
 
     it.each([
@@ -693,7 +719,7 @@ describe('CreditCalculator', () => {
   describe('Conditional Rendering', () => {
     it('clears EC and credits until the new fuel has a valid end use', async () => {
       const refetch = vi.fn()
-      let dieselResults
+      const dieselResults = { current: undefined }
       const gasolineOptions = {
         data: {
           ...mockFuelOptions.data,
@@ -708,7 +734,7 @@ describe('CreditCalculator', () => {
         isLoading: false
       }))
       vi.mocked(useCalculateComplianceUnits).mockImplementation(({ fuelTypeId }) => ({
-        data: fuelTypeId === 1 ? gasolineResults : dieselResults,
+        data: fuelTypeId === 1 ? gasolineResults : dieselResults.current,
         refetch
       }))
 
@@ -733,7 +759,9 @@ describe('CreditCalculator', () => {
       expect(refetch).not.toHaveBeenCalled()
 
       // Even cached data must not restore results while End Use is blank.
-      dieselResults = { data: { complianceUnits: 250, energyContent: 2000000 } }
+      dieselResults.current = {
+        data: { complianceUnits: 250, energyContent: 2000000 }
+      }
       rerender(<TestWrapper><CreditCalculator /></TestWrapper>)
       expect(energyContentValue).toBeEmptyDOMElement()
       expect(document.getElementById('complianceUnits')).toHaveValue('')

@@ -1,7 +1,11 @@
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { useApiService } from '@/services/useApiService'
 import { apiRoutes } from '@/constants/routes'
-import type { QueryOptions, PaginationParams, ExtMutationOptions} from './types'
+import type {
+  QueryOptions,
+  PaginationParams,
+  ExtMutationOptions
+} from './types'
 
 export const useUsers = (options: QueryOptions<unknown>) => {
   const client = useApiService()
@@ -12,7 +16,10 @@ export const useUsers = (options: QueryOptions<unknown>) => {
   })
 }
 
-export const useUsersList = (paginationOptions: PaginationParams, options: QueryOptions<unknown>) => {
+export const useUsersList = (
+  paginationOptions: PaginationParams,
+  options: QueryOptions<unknown>
+) => {
   const client = useApiService()
   return useQuery({
     queryKey: ['users-list', paginationOptions],
@@ -22,12 +29,19 @@ export const useUsersList = (paginationOptions: PaginationParams, options: Query
   })
 }
 
-export const useUserActivities = (userID: number | string | undefined | null, paginationOptions: PaginationParams, options: QueryOptions<unknown>) => {
+export const useUserActivities = (
+  userID: number | string | undefined | null,
+  paginationOptions: PaginationParams,
+  options: QueryOptions<unknown>
+) => {
   const client = useApiService()
   return useQuery({
     queryKey: ['user-activities', userID, paginationOptions],
     queryFn: async () => {
-      const endpoint = apiRoutes.getUserActivities.replace(':userID', String(userID ?? ''))
+      const endpoint = apiRoutes.getUserActivities.replace(
+        ':userID',
+        String(userID ?? '')
+      )
       return (await client.post(endpoint, paginationOptions)).data
     },
     enabled: !!userID,
@@ -43,7 +57,10 @@ export const useUserAssignedWork = (
   return useQuery({
     queryKey: ['user-assigned-work-v2', userId],
     queryFn: async () => {
-      const endpoint = apiRoutes.getUserAssignedWork.replace(':userID', String(userId))
+      const endpoint = apiRoutes.getUserAssignedWork.replace(
+        ':userID',
+        String(userId)
+      )
       return (await client.get(endpoint)).data as {
         complianceReports: Array<{
           complianceReportId: number
@@ -64,7 +81,10 @@ export const useUserAssignedWork = (
   })
 }
 
-export const useUser = (id: number | string | undefined | null, options: QueryOptions<unknown>) => {
+export const useUser = (
+  id: number | string | undefined | null,
+  options: QueryOptions<unknown>
+) => {
   const client = useApiService()
   return useQuery({
     queryKey: ['user', id],
@@ -74,7 +94,10 @@ export const useUser = (id: number | string | undefined | null, options: QueryOp
   })
 }
 
-export const useSeededTestUsers = (seedEnv: string | undefined, options: QueryOptions<unknown>) => {
+export const useSeededTestUsers = (
+  seedEnv: string | undefined,
+  options: QueryOptions<unknown>
+) => {
   const client = useApiService()
   const query = seedEnv ? `?seed_env=${seedEnv}` : ''
   return useQuery({
@@ -85,17 +108,27 @@ export const useSeededTestUsers = (seedEnv: string | undefined, options: QueryOp
   })
 }
 
-export const useResolveOrgName = (options: ExtMutationOptions<unknown, any> = {}) => {
+export const useResolveOrgName = (
+  options: ExtMutationOptions<unknown, unknown> = {}
+) => {
   const apiClient = useApiService()
   return useMutation({
     ...options,
-    mutationFn: async (payload: any) => {
+    mutationFn: async (payload: unknown) => {
       return await apiClient.post(apiRoutes.resolveOrgName, payload)
     }
   })
 }
 
-export const useGetUserLoginHistory = ({ page = 1, size = 10, sortOrders = [], filters = [] }: any = {}, options: QueryOptions<unknown>) => {
+export const useGetUserLoginHistory = (
+  {
+    page = 1,
+    size = 10,
+    sortOrders = [],
+    filters = []
+  }: Record<string, unknown> = {},
+  options: QueryOptions<unknown>
+) => {
   const client = useApiService()
   return useQuery({
     queryKey: ['user-login-history', page, size, sortOrders, filters],
@@ -112,7 +145,15 @@ export const useGetUserLoginHistory = ({ page = 1, size = 10, sortOrders = [], f
   })
 }
 
-export const useGetUserActivities = ({ page = 1, size = 10, sortOrders = [], filters = [] }: any = {}, options: QueryOptions<unknown>) => {
+export const useGetUserActivities = (
+  {
+    page = 1,
+    size = 10,
+    sortOrders = [],
+    filters = []
+  }: Record<string, unknown> = {},
+  options: QueryOptions<unknown>
+) => {
   const client = useApiService()
   return useQuery({
     queryKey: ['/users/activities/all', page, size, sortOrders, filters],
@@ -129,13 +170,15 @@ export const useGetUserActivities = ({ page = 1, size = 10, sortOrders = [], fil
   })
 }
 
-export function useDeleteUser(options: ExtMutationOptions<unknown, any> = {}) {
+export function useDeleteUser(
+  options: ExtMutationOptions<unknown, unknown> = {}
+) {
   const apiClient = useApiService()
   const queryClient = useQueryClient()
 
   return useMutation({
     ...options,
-    mutationFn: async (userID: any) => {
+    mutationFn: async (userID: number | string) => {
       const path = apiRoutes.deleteUser.replace(':userID', String(userID ?? ''))
       return await apiClient.delete(path)
     },
@@ -152,12 +195,12 @@ export const useUpdateUser = ({
   onError,
   isSupplier = false,
   organizationId = null
-}: any = {}) => {
+}: Record<string, unknown> = {}) => {
   const apiService = useApiService()
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ userID, payload }: any) => {
+    mutationFn: async ({ userID, payload }: Record<string, unknown>) => {
       if (isSupplier) {
         return await apiService.put(
           `/organization/${organizationId}/users/${userID}`,
@@ -219,12 +262,12 @@ export const useCreateUser = ({
   onError,
   isSupplier = false,
   organizationId = null
-}: any = {}) => {
+}: Record<string, unknown> = {}) => {
   const apiService = useApiService()
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (payload: any) => {
+    mutationFn: async (payload: unknown) => {
       if (isSupplier) {
         return await apiService.post(
           `/organization/${organizationId}/users`,

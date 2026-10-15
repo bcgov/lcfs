@@ -1,12 +1,6 @@
-import React from 'react'
+import 'react'
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest'
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor
-} from '@testing-library/react'
+import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 
 import { CIApplications } from '@/views/CarbonIntensity/CIApplications'
 import { roles } from '@/constants/roles'

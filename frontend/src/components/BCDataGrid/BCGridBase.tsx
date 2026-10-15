@@ -1,5 +1,4 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-// @ts-nocheck
 import DataGridLoading from '@/components/DataGridLoading'
 import { AgGridReact } from 'ag-grid-react'
 import 'ag-grid-community/styles/ag-grid.css'
@@ -52,16 +51,18 @@ export const BCGridBase = forwardRef<AgGridReact, BCGridBaseProps>(
       enableCellTextSelection,
       getRowId,
       overlayNoRowsTemplate,
-      queryData,
-      dataKey,
-      paginationOptions,
-      onPaginationChange,
       onRowClicked,
       suppressMovableColumns = true,
       ...props
     },
     forwardedRef
   ) => {
+    const gridProps = Object.fromEntries(
+      Object.entries(props).filter(
+        ([key]) =>
+          !['queryData', 'dataKey', 'paginationOptions', 'onPaginationChange'].includes(key)
+      )
+    )
     const [searchParams] = useSearchParams()
     const highlightedId = searchParams.get('hid')
     const ref = useRef(null)
@@ -317,7 +318,7 @@ export const BCGridBase = forwardRef<AgGridReact, BCGridBaseProps>(
         }}
         rowHeight={ROW_HEIGHT}
         headerHeight={40}
-        {...props}
+        {...gridProps}
         theme="legacy"
         onCellKeyDown={onCellKeyDown}
         onCellClicked={onCellClicked}

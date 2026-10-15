@@ -4,14 +4,15 @@ import Stack from '@mui/material/Stack'
 import Warning from '@mui/icons-material/Warning'
 import DoneAll from '@mui/icons-material/DoneAll'
 import Save from '@mui/icons-material/Save'
+import type { GridApi } from 'ag-grid-community'
 
 export interface ValidationRendererProps {
   data: {
     isValid?: boolean
     validationMsg?: string
-    [key: string]: any
+    [key: string]: unknown
   }
-  api?: any
+  api?: GridApi
   enableSave?: boolean
 }
 

@@ -1,5 +1,6 @@
-import React from 'react'
+import 'react'
 import { screen, fireEvent } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { vi, describe, expect, beforeEach } from 'vitest'
 import OrgUserSettingsCard from '../OrgUserSettingsCard'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -12,7 +13,10 @@ vi.mock('@/hooks/useCurrentUser')
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => `mock__${key}`
+    t: (key) =>
+      key.endsWith('.helpLinkLabel')
+        ? 'Help (opens in a new browser tab)'
+        : `mock__${key}`
   })
 }))
 
@@ -30,8 +34,9 @@ vi.mock('@/utils/withRole', () => ({
 }))
 
 vi.mock('@fortawesome/react-fontawesome', () => ({
-  FontAwesomeIcon: ({ icon, style }) => (
+  FontAwesomeIcon: ({ icon, style, 'aria-hidden': ariaHidden }) => (
     <span
+      aria-hidden={ariaHidden}
       data-test="font-awesome-icon"
       data-icon={icon?.iconName}
       style={style}
@@ -294,12 +299,47 @@ describe('OrgUserSettingsCard', () => {
 
     render(<OrgUserSettingsCard />, [query, theme])
 
-    const helpLink = screen
-      .getByText('mock__dashboard:orgUserSettings.help')
-      .closest('a')
+    const helpLink = screen.getByRole('link', {
+      name: 'Help (opens in a new browser tab)'
+    })
     expect(helpLink).toHaveAttribute('href', HELP_GUIDE_URL)
     expect(helpLink).toHaveAttribute('target', '_blank')
     expect(helpLink).toHaveAttribute('rel', 'noreferrer')
+    expect(
+      screen.queryByRole('button', {
+        name: 'Help (opens in a new browser tab)'
+      })
+    ).not.toBeInTheDocument()
+  })
+
+  test('can reach the help link using keyboard navigation', async ({
+    render,
+    query,
+    theme
+  }) => {
+    useCurrentUser.mockReturnValue({
+      data: {
+        firstName: 'Test',
+        lastName: 'User',
+        title: 'Developer',
+        roles: [{ name: 'Government' }]
+      },
+      isLoading: false
+    })
+
+    render(<OrgUserSettingsCard />, [query, theme])
+
+    const helpLink = screen.getByRole('link', {
+      name: 'Help (opens in a new browser tab)'
+    })
+    const user = userEvent.setup()
+
+    await user.tab()
+    await user.tab()
+    await user.tab()
+
+    expect(helpLink).toHaveFocus()
+    expect(helpLink).toHaveClass('Mui-focusVisible')
   })
 
   test('renders FontAwesome icon with correct props', ({
@@ -321,6 +361,7 @@ describe('OrgUserSettingsCard', () => {
 
     const icon = screen.getByTestId('font-awesome-icon')
     expect(icon).toHaveAttribute('data-icon', 'share-from-square')
+    expect(icon).toHaveAttribute('aria-hidden', 'true')
     expect(icon).toHaveStyle({ color: '#547D59', marginLeft: '6px' })
   })
 

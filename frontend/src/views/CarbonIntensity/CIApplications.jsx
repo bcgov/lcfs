@@ -49,9 +49,10 @@ const CIApplicationsBase = () => {
 
   const queryData = useGetCIApplications(paginationOptions)
 
+  const { refetch } = queryData
   const handleRefresh = useCallback(() => {
-    queryData.refetch()
-  }, [queryData.refetch])
+    refetch()
+  }, [refetch])
 
   const columnDefs = useMemo(
     () => ciApplicationsColDefs(t, { isGovernment, onRefresh: handleRefresh }),

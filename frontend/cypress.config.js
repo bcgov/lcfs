@@ -63,7 +63,7 @@ export default defineConfig({
             })
 
             client.connect()
-            client.query('truncate compliance_report cascade;', (err, res) => {
+            client.query('truncate compliance_report cascade;', (err) => {
               client.end()
               if (err) reject(err)
               else resolve('Compliance reports cleared')
