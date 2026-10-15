@@ -101,14 +101,12 @@ export const CreditCalculator = () => {
   })
 
   const {
-  control,
-  watch,
-  setValue,
-  formState: {
-    errors
-  },
-  reset
-} = methods
+    control,
+    watch,
+    setValue,
+    formState: { errors },
+    reset
+  } = methods
 
   const watchedValues = watch()
   const {
@@ -184,11 +182,7 @@ export const CreditCalculator = () => {
         uniqueEndUses.set(endUse.type, {
           value: endUse.type,
           sortLabel: endUse.type,
-          label: (
-            <Tooltip title={endUse.type} placement="top" arrow>
-              <span>{endUse.type}</span>
-            </Tooltip>
-          )
+          label: <span>{endUse.type}</span>
         })
       }
     })
@@ -230,7 +224,7 @@ export const CreditCalculator = () => {
     return fuelTypeOptions?.data?.provisions?.find(
       (provision) => provision.name === provisionOfTheAct
     )
-  }, [fuelTypeOptions, provisionOfTheAct]);
+  }, [fuelTypeOptions, provisionOfTheAct])
 
   // Get unit based on selected fuel
   const unit = useMemo(() => {
@@ -599,7 +593,7 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
     <BCBox
       sx={{
         paddingTop: 2,
-        '& .MuiCardContent-root': { padding: '0 !important', margin: 0, },
+        '& .MuiCardContent-root': { padding: '0 !important', margin: 0 },
         '& .MuiFormLabel-root': {
           transform: 'translate(-0px, -32px) scale(1) !important'
         }
@@ -716,7 +710,7 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
                       width: '100%',
                       maxWidth: '100%',
                       maxHeight: { xs: 240, md: 360 },
-                      overflowX: 'auto',
+                      overflowX: 'hidden',
                       overflowY: 'auto',
                       pr: 1,
                       scrollbarGutter: 'stable'
@@ -725,15 +719,17 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
                       mr: 0,
                       mb: 0,
                       alignItems: 'flex-start',
-                      width: 'max-content',
-                      maxWidth: 'none',
-                      whiteSpace: 'nowrap'
+                      width: '100%',
+                      maxWidth: '100%',
+                      minWidth: 0,
+                      flexShrink: 0
                     },
                     '& .MuiRadio-root': {
                       flexShrink: 0
                     },
                     '& .MuiFormControlLabel-label': {
-                      whiteSpace: 'nowrap',
+                      whiteSpace: 'normal',
+                      overflowWrap: 'anywhere',
                       lineHeight: 1.35
                     }
                   }}
