@@ -3,6 +3,22 @@ import { render, screen, act, waitFor } from '@testing-library/react'
 import { forwardRef } from 'react'
 import userEvent from '@testing-library/user-event'
 import { EditViewComplianceReport } from '../EditViewComplianceReport'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useOrganization } from '@/hooks/useOrganization'
+import useComplianceReportStore from '@/stores/useComplianceReportStore'
+import {
+  useUpdateComplianceReport,
+  useDeleteComplianceReport,
+  useCreateSupplementalReport,
+  useCreateAnalystAdjustment,
+  useCreateIdirSupplementalReport
+} from '@/hooks/useComplianceReports'
+import { useForm } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
+import { useQueryClient } from '@tanstack/react-query'
+import { CONFIG } from '@/constants/config'
+import { buttonClusterConfigFn } from '../buttonConfigs'
 
 const { mockTriggerAlert } = vi.hoisted(() => ({ mockTriggerAlert: vi.fn() }))
 
@@ -54,7 +70,7 @@ vi.mock('@tanstack/react-query', () => ({
 vi.mock('@/components/BCAlert', () => ({
   __esModule: true,
   default: ({ children }) => <div data-test="bc-alert">{children}</div>,
-  FloatingAlert: forwardRef((props, ref) => {
+  FloatingAlert: forwardRef(function FloatingAlertMock(props, ref) {
     // Shared so tests can assert on the alerts the page raises
     const triggerAlert = mockTriggerAlert
 
@@ -67,7 +83,7 @@ vi.mock('@/components/BCAlert', () => ({
       }
     }
 
-    return <div data-test="floating-alert" />
+    return <div data-test={props['data-test'] || 'floating-alert'} />
   })
 }))
 
@@ -273,23 +289,6 @@ vi.mock('luxon', () => ({
     DATE_FULL: 'DATE_FULL'
   }
 }))
-
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useOrganization } from '@/hooks/useOrganization'
-import useComplianceReportStore from '@/stores/useComplianceReportStore'
-import {
-  useUpdateComplianceReport,
-  useDeleteComplianceReport,
-  useCreateSupplementalReport,
-  useCreateAnalystAdjustment,
-  useCreateIdirSupplementalReport
-} from '@/hooks/useComplianceReports'
-import { useForm } from 'react-hook-form'
-import { useTranslation } from 'react-i18next'
-import { useQueryClient } from '@tanstack/react-query'
-import { CONFIG } from '@/constants/config'
-import { buttonClusterConfigFn } from '../buttonConfigs'
 
 describe('EditViewComplianceReport', () => {
   // Mock functions
@@ -549,7 +548,7 @@ describe('EditViewComplianceReport', () => {
         const mod = await importOriginal()
         return {
           ...mod,
-          EditViewComplianceReport: (props) => {
+          EditViewComplianceReport: () => {
             return (
               <div data-test="early-issuance-summary">
                 Early Issuance Summary
@@ -1228,7 +1227,7 @@ describe('EditViewComplianceReport', () => {
         data: defaultUser,
         isLoading: false,
         hasRoles: vi.fn(() => false),
-        hasAnyRole: vi.fn((role1, role2) => role1 === 'compliance_reporting')
+        hasAnyRole: vi.fn((role1) => role1 === 'compliance_reporting')
       })
 
       render(<EditViewComplianceReport />)
@@ -1251,7 +1250,7 @@ describe('EditViewComplianceReport', () => {
         data: defaultUser,
         isLoading: false,
         hasRoles: vi.fn((role) => role === 'analyst'),
-        hasAnyRole: vi.fn((role1, role2) => {
+        hasAnyRole: vi.fn(() => {
           // For analyst adjustment, hasRoles needs to return true for analyst
           return false // This will make canEdit false, so activity card won't show
         })
@@ -2245,10 +2244,7 @@ describe('EditViewComplianceReport', () => {
           })
         })
 
-        const { rerender } = render(<EditViewComplianceReport />)
-
-        // Trigger deletion
-        const deleteButton = screen.queryByText('Delete')
+        render(<EditViewComplianceReport />)
         // Since deletion state is internal, just verify the component can handle it
         expect(
           screen.getByTestId('compliance-report-header')

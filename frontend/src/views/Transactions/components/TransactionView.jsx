@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react';
 import { useTranslation } from 'react-i18next'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'

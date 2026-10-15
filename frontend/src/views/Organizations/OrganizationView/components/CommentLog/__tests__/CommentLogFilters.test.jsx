@@ -29,7 +29,7 @@ const Harness = ({ onApply }) => {
       onApply(key, value)
       setFilters((f) => ({ ...f, [key]: value }))
     },
-    [filters, onApply]
+    [onApply]
   )
   const clearFilters = useCallback(() => {
     setFilters({ category: null, complianceYear: null, search: '' })

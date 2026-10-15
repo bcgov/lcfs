@@ -6,12 +6,7 @@ import BCTypography from '@/components/BCTypography'
 import Comments from '@/components/Comments'
 import Loading from '@/components/Loading'
 import { Role } from '@/components/Role'
-import {
-  govRoles,
-  nonGovRoles,
-  roles,
-  formatDelegatedRoleLabel
-} from '@/constants/roles'
+import { govRoles, roles, formatDelegatedRoleLabel } from '@/constants/roles'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import {
   useComplianceReportYearNavigation,
@@ -41,7 +36,7 @@ import Fab from '@mui/material/Fab'
 import Stack from '@mui/material/Stack'
 import Tooltip from '@mui/material/Tooltip'
 import Box from '@mui/material/Box'
-import Divider from '@mui/material/Divider'
+import '@mui/material/Divider'
 import { Introduction } from '@/views/ComplianceReports/components/Introduction.jsx'
 import { ReportYearNavigator } from '@/views/ComplianceReports/components/ReportYearNavigator.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -51,7 +46,7 @@ import KeyboardArrowDown from '@mui/icons-material/KeyboardArrowDown'
 import KeyboardArrowUp from '@mui/icons-material/KeyboardArrowUp'
 import { FILTER_KEYS, REPORT_SCHEDULES } from '@/constants/common'
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
-import { isQuarterEditable } from '@/utils/grid/cellEditables'
+import '@/utils/grid/cellEditables'
 import ComplianceReportEarlyIssuanceSummary from '@/views/ComplianceReports/components/ComplianceReportEarlyIssuanceSummary.jsx'
 import { DateTime } from 'luxon'
 import useComplianceReportStore from '@/stores/useComplianceReportStore'
@@ -243,7 +238,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
       daysRemaining,
       warningText
     }
-  }, [reportData, currentStatus, isGovernmentUser, hasBeenSubmitted])
+  }, [reportData, currentStatus, isGovernmentUser, hasBeenSubmitted, t])
 
   const { data: orgData, isLoading } = useOrganization(
     reportData?.report?.organizationId,
@@ -303,9 +298,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
       isQuarterly
     }
   }, [
-    reportData?.report?.reportingFrequency,
-    reportData?.report?.history,
-    reportData?.report?.updateDate,
+    reportData,
     currentStatus,
     reportCompliancePeriod,
     isDeleted,
@@ -499,7 +492,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
 
   const { mutate: createIdirSupplementalReport } =
     useCreateIdirSupplementalReport(complianceReportId, {
-      onSuccess: (res) => {
+      onSuccess: () => {
         setModalData(null)
         // Clear Filters before navigating to ensure they can see the report
         sessionStorage.setItem(FILTER_KEYS.COMPLIANCE_REPORT_GRID, '{}')
@@ -586,8 +579,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
       showEarlyIssuanceSummary
     }
   }, [
-    reportData?.report?.hasSupplemental,
-    reportData?.report?.reportingFrequency,
+    reportData,
     isDeleted,
     isDeleting
   ])
@@ -625,13 +617,14 @@ export const EditViewComplianceReport = ({ isError, error }) => {
   }, [
     isGovernmentUser,
     qReport?.isQuarterly,
+    currentStatus,
     hasDraftSupplemental,
     hasRoles,
     isDeleted,
     isDeleting
   ])
 
-  const { isSupplemental, isEarlyIssuance, showEarlyIssuanceSummary } =
+  const { isEarlyIssuance, showEarlyIssuanceSummary } =
     reportConditions
   const {
     shouldShowAssessmentStatement,
@@ -687,7 +680,6 @@ export const EditViewComplianceReport = ({ isError, error }) => {
     return buttonClusterConfigFn(context)
   }, [
     hasRoles,
-    currentUser,
     t,
     setModalData,
     updateComplianceReport,
@@ -696,12 +688,10 @@ export const EditViewComplianceReport = ({ isError, error }) => {
     createAnalystAdjustment,
     createIdirSupplementalReport,
     reportCompliancePeriod,
-    isGovernmentUser,
     isSigningAuthorityDeclared,
     hasDraftSupplemental,
-    reportData?.report?.version,
-    reportData?.report?.isNonAssessment,
-    isSupplemental,
+    hasAnyRole,
+    reportData,
     isDeleted,
     isDeleting,
     currentStatus,

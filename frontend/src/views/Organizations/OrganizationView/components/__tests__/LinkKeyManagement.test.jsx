@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+
+import { LinkKeyManagement } from '../LinkKeyManagement'
+import * as linkKeyUtils from '../linkKeyUtils'
+import { copyToClipboard } from '@/utils/clipboard'
 
 // Create comprehensive mocks
 vi.mock('@mui/material/FormControl', () => ({
@@ -8,8 +12,13 @@ vi.mock('@mui/material/FormControl', () => ({
 }))
 
 vi.mock('@mui/material/Select', () => ({
-    default: ({ children, onChange, value, 'aria-label': ariaLabel, displayEmpty, variant, sx, ...props }) => (
-    <select
+    default: ({
+  children,
+  onChange,
+  value,
+  'aria-label': ariaLabel,
+  ...props
+}) => { delete props.displayEmpty; delete props.variant; delete props.sx; return <select
       role="combobox"
       value={value}
       onChange={(e) => onChange?.(e)}
@@ -18,8 +27,7 @@ vi.mock('@mui/material/Select', () => ({
       {...props}
     >
       {children}
-    </select>
-  )
+    </select>; }
 }))
 
 vi.mock('@mui/material/MenuItem', () => ({
@@ -241,10 +249,6 @@ vi.mock('@/hooks/useOrganization', () => ({
     isLoading: regenerateMutationLoading
   }))
 }))
-
-import { LinkKeyManagement } from '../LinkKeyManagement'
-import * as linkKeyUtils from '../linkKeyUtils'
-import { copyToClipboard } from '@/utils/clipboard'
 
 const renderComponent = (props = {}) => {
   const client = new QueryClient({

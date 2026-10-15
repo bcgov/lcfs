@@ -1,17 +1,17 @@
 import { describe, expect, it, vi } from 'vitest'
 
-vi.mock('@/constants/config', () => ({
-  CONFIG: { API_BASE: '', ENVIRONMENT: 'test' },
-  FEATURE_FLAGS: { INITIATIVE_AGREEMENTS: 'initiativeAgreements' },
-  isFeatureEnabled: vi.fn(() => false)
-}))
-
 import {
   allDesignatedActionColDefs,
   defaultSortModel,
   designatedActionColDefs,
   initiativeAgreementColDefs
 } from '../_schema'
+
+vi.mock('@/constants/config', () => ({
+  CONFIG: { API_BASE: '', ENVIRONMENT: 'test' },
+  FEATURE_FLAGS: { INITIATIVE_AGREEMENTS: 'initiativeAgreements' },
+  isFeatureEnabled: vi.fn(() => false)
+}))
 
 describe('initiativeAgreementColDefs', () => {
   const t = (key) => key

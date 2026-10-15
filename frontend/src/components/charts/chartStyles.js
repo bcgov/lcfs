@@ -82,7 +82,26 @@ export const getStandardBarSeriesStyle = (index = 0) => ({
   }
 })
 
-export const getStandardChartOptions = (overrides = {}) => ({
-  color: BC_CHART_PALETTE,
-  ...overrides
-})
+const BC_CHART_TOOLTIP_OPTIONS = {
+  appendTo: 'body',
+  appendToBody: true,
+  confine: false,
+  extraCssText: 'z-index: 1500;'
+}
+
+export const getStandardChartOptions = (overrides = {}) => {
+  const { tooltip, ...rest } = overrides
+
+  return {
+    color: BC_CHART_PALETTE,
+    ...rest,
+    ...(tooltip === undefined
+      ? {}
+      : {
+          tooltip: {
+            ...BC_CHART_TOOLTIP_OPTIONS,
+            ...tooltip
+          }
+        })
+  }
+}

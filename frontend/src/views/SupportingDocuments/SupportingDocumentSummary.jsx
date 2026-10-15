@@ -47,6 +47,7 @@ export const SupportingDocumentSummary = ({
                 font: 'inherit',
                 textAlign: 'left',
                 textDecoration: 'underline',
+                fontSize: '1rem',
                 cursor: 'pointer',
                 '&:hover': { color: 'info.main' }
               }}

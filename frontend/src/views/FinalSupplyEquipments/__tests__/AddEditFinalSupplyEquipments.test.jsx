@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { AddEditFinalSupplyEquipments } from '../AddEditFinalSupplyEquipments'
-import { FEATURE_FLAGS } from '@/constants/config'
+import '@/constants/config'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules'
 
 // Test variables declared before mocks to avoid hoisting issues
@@ -16,6 +16,13 @@ const mockSaveRow = vi.fn()
 const mockImportHook = vi.fn()
 const mockJobStatusHook = vi.fn()
 const mockFeatureFlags = {}
+const mockGridApi = {
+  sizeColumnsToFit: vi.fn(),
+  getLastDisplayedRowIndex: () => 0,
+  startEditingCell: vi.fn(),
+  autoSizeAllColumns: vi.fn(),
+  refreshCells: vi.fn()
+}
 
 // Mock all external dependencies
 vi.mock('react-i18next', () => ({
@@ -91,120 +98,111 @@ vi.mock('@/constants/config', () => ({
 }))
 
 // Mock the entire BCDataGrid module
-vi.mock('@/components/BCDataGrid/BCGridEditor', () => {
-  const React = require('react')
+vi.mock('@/components/BCDataGrid/BCGridEditor', async () => {
+  const React = await vi.importActual('react')
   const { forwardRef, useImperativeHandle } = React
   return {
-    BCGridEditor: forwardRef(({ 
-      onGridReady, 
-      onCellEditingStopped, 
-      onAction, 
-      saveButtonProps, 
-      gridRef, 
-      alertRef,
-      columnDefs,
-      defaultColDef,
-      rowData,
-      onAddRows,
-      gridOptions,
-      loading,
-      showAddRowsButton,
-      ...props 
-    }, ref) => {
-      // Create a mock API that will be shared with both refs
-      const mockApi = {
-        sizeColumnsToFit: vi.fn(),
-        getLastDisplayedRowIndex: () => 0,
-        startEditingCell: vi.fn(),
+    BCGridEditor: forwardRef(function BCGridEditorMock({
+  onGridReady,
+  onCellEditingStopped,
+  onAction,
+  saveButtonProps,
+  gridRef,
+  ...props
+}, ref) {
+delete props.alertRef; delete props.columnDefs; delete props.defaultColDef; delete props.rowData; delete props.onAddRows; delete props.gridOptions; delete props.loading; delete props.showAddRowsButton;
+
+  // Set up both possible refs
+  useImperativeHandle(ref, () => ({
+    api: mockGridApi
+  }), []);
+  React.useEffect(() => {
+    // Initialize gridRef.current immediately
+    if (gridRef && !gridRef.current) {
+      gridRef.current = {
+        api: mockGridApi
+      };
+    } else if (gridRef && gridRef.current) {
+      gridRef.current.api = mockGridApi;
+    }
+
+    // Call onGridReady to simulate grid being ready
+    if (onGridReady) {
+      setTimeout(() => onGridReady({
+        api: mockGridApi
+      }), 0);
+    }
+  }, [onGridReady, gridRef]);
+
+  // Filter out non-DOM props
+  const domProps = {};
+  Object.keys(props).forEach(key => {
+    if (key.startsWith('data-') || key.startsWith('aria-') || ['id', 'className', 'style'].includes(key)) {
+      domProps[key] = props[key];
+    }
+  });
+  return <div data-test="bc-grid-editor" {...domProps}>
+          <button data-test="grid-ready-btn" onClick={() => onGridReady?.({
+      api: mockGridApi
+    })}>Grid Ready</button>
+          <button data-test="cell-edit-btn" onClick={() => onCellEditingStopped?.({
+      oldValue: 'old',
+      newValue: 'new',
+      node: {
+        data: {
+          id: '1',
+          test: 'data'
+        },
+        updateData: vi.fn(),
+        rowIndex: 0
+      },
+      api: {
         autoSizeAllColumns: vi.fn(),
-        refreshCells: vi.fn()
+        refreshCells: vi.fn(),
+        sizeColumnsToFit: vi.fn()
       }
-
-      // Set up both possible refs
-      useImperativeHandle(ref, () => ({
-        api: mockApi
-      }), [])
-
-      React.useEffect(() => {
-        // Initialize gridRef.current immediately
-        if (gridRef && !gridRef.current) {
-          gridRef.current = {
-            api: mockApi
-          }
-        } else if (gridRef && gridRef.current) {
-          gridRef.current.api = mockApi
-        }
-        
-        // Call onGridReady to simulate grid being ready
-        if (onGridReady) {
-          setTimeout(() => onGridReady({ api: mockApi }), 0)
-        }
-      }, [onGridReady, gridRef])
-
-      // Filter out non-DOM props
-      const domProps = {}
-      Object.keys(props).forEach(key => {
-        if (key.startsWith('data-') || key.startsWith('aria-') || ['id', 'className', 'style'].includes(key)) {
-          domProps[key] = props[key]
-        }
-      })
-
-      return (
-        <div data-test="bc-grid-editor" {...domProps}>
-          <button data-test="grid-ready-btn" onClick={() => onGridReady?.({ api: mockApi })}>Grid Ready</button>
-          <button 
-            data-test="cell-edit-btn" 
-            onClick={() => onCellEditingStopped?.({ 
-              oldValue: 'old', 
-              newValue: 'new',
-              node: { 
-                data: { id: '1', test: 'data' },
-                updateData: vi.fn(),
-                rowIndex: 0
-              },
-              api: {
-                autoSizeAllColumns: vi.fn(),
-                refreshCells: vi.fn(),
-                sizeColumnsToFit: vi.fn()
-              }
-            })}
-          >
+    })}>
             Cell Edit
           </button>
-          <button 
-            data-test="cell-edit-unchanged-btn" 
-            onClick={() => onCellEditingStopped?.({ 
-              oldValue: 'same', 
-              newValue: 'same',
-              node: { 
-                data: { id: '1', test: 'data' },
-                updateData: vi.fn(),
-                rowIndex: 0
-              }
-            })}
-          >
+          <button data-test="cell-edit-unchanged-btn" onClick={() => onCellEditingStopped?.({
+      oldValue: 'same',
+      newValue: 'same',
+      node: {
+        data: {
+          id: '1',
+          test: 'data'
+        },
+        updateData: vi.fn(),
+        rowIndex: 0
+      }
+    })}>
             Cell Edit Unchanged
           </button>
-          <button 
-            data-test="delete-action-btn" 
-            onClick={() => onAction?.('delete', { node: { data: { id: '1' }, rowIndex: 0 } })}
-          >
+          <button data-test="delete-action-btn" onClick={() => onAction?.('delete', {
+      node: {
+        data: {
+          id: '1'
+        },
+        rowIndex: 0
+      }
+    })}>
             Delete Action
           </button>
-          <button 
-            data-test="duplicate-action-btn" 
-            onClick={() => onAction?.('duplicate', { node: { data: { id: '1' }, rowIndex: 0 } })}
-          >
+          <button data-test="duplicate-action-btn" onClick={() => onAction?.('duplicate', {
+      node: {
+        data: {
+          id: '1'
+        },
+        rowIndex: 0
+      }
+    })}>
             Duplicate Action
           </button>
-          {saveButtonProps && (
-            <button data-test="save-btn" onClick={saveButtonProps.onSave}>
+          {saveButtonProps && <button data-test="save-btn" onClick={saveButtonProps.onSave}>
               {saveButtonProps.text}
-            </button>
-          )}
-        </div>
-      )
-    })
+            </button>}
+        </div>;
+})
   }
 })
 
@@ -238,7 +236,14 @@ vi.mock('@/components/BCBox', () => ({
   }
 }))
 vi.mock('@/components/BCButton/index.jsx', () => ({ 
-  default: ({ children, onClick, isLoading, endIcon, startIcon, ...props }) => {
+  default: ({
+  children,
+  onClick,
+  isLoading,
+  ...props
+}) => {
+delete props.endIcon; delete props.startIcon;
+
     const domProps = {}
     Object.keys(props).forEach(key => {
       if (key.startsWith('data-') || key.startsWith('aria-') || ['id', 'className', 'style'].includes(key)) {
@@ -252,7 +257,13 @@ vi.mock('@mui/material/Menu', async (importOriginal) => {
   const actual = await importOriginal()
   return {
     ...actual,
-    default: ({ children, open, onClose, anchorEl, anchorOrigin, transformOrigin, slotProps, ...props }) => {
+    default: ({
+  children,
+  open,
+  ...props
+}) => {
+delete props.onClose; delete props.anchorEl; delete props.anchorOrigin; delete props.transformOrigin; delete props.slotProps;
+
       if (!open) return null
       const domProps = {}
       Object.keys(props).forEach(key => {
@@ -292,7 +303,13 @@ vi.mock('@mui/material/Grid2', () => ({
   }
 }))
 vi.mock('@/components/ImportDialog', () => ({ 
-  default: ({ open, close, complianceReportId, isOverwrite, importHook, getJobStatusHook, ...props }) => {
+  default: ({
+  open,
+  close,
+  ...props
+}) => {
+delete props.complianceReportId; delete props.isOverwrite; delete props.importHook; delete props.getJobStatusHook;
+
     if (!open) return null
     const domProps = {}
     Object.keys(props).forEach(key => {
@@ -309,7 +326,9 @@ vi.mock('uuid', () => ({ v4: () => 'test-uuid-123' }))
 
 // Mock FontAwesome
 vi.mock('@fortawesome/react-fontawesome', () => ({
-  FontAwesomeIcon: ({ icon, ...props }) => <span {...props}>Icon</span>
+  FontAwesomeIcon: ({
+  ...props
+}) => { delete props.icon; return <span {...props}>Icon</span>; }
 }))
 vi.mock('@fortawesome/free-solid-svg-icons', () => ({
   faCaretDown: 'caret-down',
@@ -466,11 +485,7 @@ describe('AddEditFinalSupplyEquipments', () => {
       renderComponent()
       const duplicateBtn = screen.getByTestId('duplicate-action-btn')
       
-      let result
       await act(async () => {
-        // Mock the onAction to capture return value
-        const component = screen.getByTestId('bc-grid-editor')
-        result = { add: [{ id: expect.any(String) }], addIndex: 1 }
         fireEvent.click(duplicateBtn)
       })
       

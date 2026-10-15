@@ -2,21 +2,32 @@
   {
     "version": "1.3.10",
     "tag": "v1.3.10",
-    "date": "2026-10-07",
+    "date": "2026-10-15",
     "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/v1.3.10",
     "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/v1.3.9...v1.3.10",
-    "summary": "This release includes 3 new features, 4 bug fixes, 1 security update, 4 dependency updates and 23 other changes. Highlights: Improve Company Overview Comment UI - 5043, 4909; Credit Market Snapshot Alignment with Metabase Credit Market Report; Maintain Supply History Continuity for Petroleum and Fossil Derived Fuel Labels; combine open Dependabot updates, clear the security backlog, group future security PRs.",
+    "summary": "This release includes 5 new features, 13 bug fixes, 1 security update, 4 dependency updates and 32 other changes. Highlights: Improve Company Overview Comment UI - 5043, 4909; Credit Market Snapshot Alignment with Metabase Credit Market Report; Maintain Supply History Continuity for Petroleum and Fossil Derived Fuel Labels; Persist IA table preferences per session.",
     "sections": {
       "features": [
         "Improve Company Overview Comment UI - 5043, 4909",
         "Credit Market Snapshot Alignment with Metabase Credit Market Report",
-        "LCFS - Maintain Supply History Continuity for Petroleum and Fossil Derived Fuel Labels"
+        "LCFS - Maintain Supply History Continuity for Petroleum and Fossil Derived Fuel Labels",
+        "Persist IA table preferences per session - 5032",
+        "LCFS - Metabase Compliance Report Submission History"
       ],
       "fixes": [
         "LCFS - Input Filters in Multiple Tables Not Accessible to Screen Readers",
         "LCFS - Credit Market Snapshot Alignment with Metabase Credit Market Report",
         "rebuild 2027-2030 EERs from 2026 and fail on missing EERs (#5113)",
-        "Allow returning CI application from second to first verification"
+        "Allow returning CI application from second to first verification",
+        "LCFS - Clarify Renewable vs Non-Renewable Fuels Chart and Add Fuel Type Legend",
+        "Finish the Pacific date fix in #4996 (#4634)",
+        "LCFS - IDIR Users Receive Server Error When Accessing Transactions from Dashboard",
+        "Enforce BCeID Global Search Visibility - 5110",
+        "Accordion styling fixes while retaining accessibility.",
+        "LCFS - Energy content decimals",
+        "LCFS - Credit Ledger Displays Incorrect Time Zone for Transfer Transactions",
+        "establish zero-diagnostic ESLint baseline",
+        "LCFS - Flickering headings in the Proposed fuel pathways"
       ],
       "security": [
         "combine open Dependabot updates, clear the security backlog, group future security PRs"
@@ -51,7 +62,16 @@
         "Reserve compliance report deficits against the Line 17 balance (#5031)",
         "Let a Director assess a reassessment straight from Analyst adjustment (#5075)",
         "Improve accessibility for pagination, comments, and organization tabs",
-        "Add fuel category breakdown to Supply History (#5047)"
+        "Add fuel category breakdown to Supply History (#5047)",
+        "Test Release v1.3.10",
+        "Improve accordion accessibility for compliance reports",
+        "Fix credit calculator clearing state when fuel type changes",
+        "Fix Hydrogen energy density unit in calculator",
+        "Keep saved FSE reporting values in the grid until the list catches up (#5132)",
+        "Round CNG Energy Content display values",
+        "Stabilize calculator End Use ordering",
+        "Show the production release date on the Release Notes page",
+        "Improve accessibility of reference compare box and checkbox controls"
       ]
     },
     "contributors": []

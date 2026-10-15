@@ -9,6 +9,7 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
 )
 from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
     InitiativeAgreementStatus,
+    InitiativeAgreementStatusEnum,
 )
 from lcfs.db.models.organization.Organization import Organization
 from lcfs.web.api.search.entities.base import (
@@ -31,6 +32,10 @@ from lcfs.web.api.search.schema import SearchResultDetail, SearchResultItem
 ENTITY_TYPE = "initiative_agreement"
 SUPPORTED_FILTERS = {"status", "year"}
 
+# Fields that must not be searchable or echoed to non-government users.
+# gov_comment is an internal note never communicated to the recipient org.
+_SUPPLIER_EXCLUDED_FIELD_LABELS: frozenset[str] = frozenset({"Government comment"})
+
 
 async def search_initiative_agreements(
     db: AsyncSession, context: SearchContext
@@ -42,7 +47,7 @@ async def search_initiative_agreements(
     ):
         return []
 
-    fields = [
+    all_fields = [
         SearchField("Organization", Organization.name, primary=True, fuzzy=True),
         SearchField(
             "Initiative agreement ID",
@@ -57,6 +62,16 @@ async def search_initiative_agreements(
             date_text_expression(InitiativeAgreement.transaction_effective_date),
         ),
     ]
+    # Supplier users must not be able to search or see the government comment.
+    fields = (
+        all_fields
+        if context.is_government
+        else [
+            f
+            for f in all_fields
+            if f.label not in _SUPPLIER_EXCLUDED_FIELD_LABELS
+        ]
+    )
     match_context = match_context_expression(fields, query)
     clause, score = search_clause(fields, query)
     if clause is None and query.numeric_id is not None:
@@ -97,6 +112,13 @@ async def search_initiative_agreements(
         (
             InitiativeAgreement.to_organization_id == context.organization_id
             if not context.is_government and context.organization_id is not None
+            else None
+        ),
+        # Suppliers may only see Approved agreements.  Draft and Recommended
+        # are internal workflow states never communicated to the recipient org.
+        (
+            InitiativeAgreementStatus.status == InitiativeAgreementStatusEnum.Approved
+            if not context.is_government
             else None
         ),
     )

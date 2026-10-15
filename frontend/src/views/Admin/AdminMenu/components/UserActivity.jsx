@@ -9,7 +9,7 @@ import {
 import { useGetUserActivities } from '@/hooks/useUser'
 import { LinkRenderer } from '@/utils/grid/cellRenderers'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
-import { defaultInitialPagination } from '@/constants/schedules'
+import '@/constants/schedules'
 import ROUTES, { buildPath } from '@/routes/routes.js'
 
 const initialPaginationOptions = {
@@ -69,7 +69,7 @@ export const UserActivity = () => {
     try {
       sessionStorage.removeItem('all-user-activities-grid-filter')
       sessionStorage.removeItem('all-user-activities-grid-column')
-    } catch (error) {
+    } catch {
       // no-op if sessionStorage is unavailable
     }
 

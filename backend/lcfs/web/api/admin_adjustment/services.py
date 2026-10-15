@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from fastapi import Depends, Request, HTTPException
 from lcfs.db.models.admin_adjustment import AdminAdjustment
 from lcfs.db.models.admin_adjustment.AdminAdjustmentStatus import (
@@ -16,6 +16,7 @@ from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.api.role.schema import user_has_roles
 from lcfs.db.models.transaction.Transaction import TransactionActionEnum
+from lcfs.utils.dates import PACIFIC_TZ
 from lcfs.web.api.organizations.services import OrganizationsService
 from lcfs.web.api.internal_comment.services import InternalCommentService
 from lcfs.web.api.internal_comment.schema import (
@@ -227,8 +228,10 @@ class AdminAdjustmentServices:
         )
         admin_adjustment.transaction = to_transaction
 
-        # Set effective date to today if the analyst left it blank
+        # Set effective date to today if the analyst left it blank. The
+        # transaction views read it as a Pacific calendar date, so take
+        # today's Pacific date, not UTC's (which is tomorrow after 5 PM).
         if admin_adjustment.transaction_effective_date is None:
-            admin_adjustment.transaction_effective_date = datetime.now(timezone.utc).date()
+            admin_adjustment.transaction_effective_date = datetime.now(PACIFIC_TZ).date()
 
         await self.repo.refresh_admin_adjustment(admin_adjustment)

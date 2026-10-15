@@ -1,3 +1,4 @@
+import { omitProperties } from '@/utils/omitProperties'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import userEvent from '@testing-library/user-event'
@@ -196,7 +197,9 @@ describe('DownloadButton', () => {
   describe('Error Handling', () => {
     it('handles missing onDownload prop gracefully', () => {
       const propsWithoutOnDownload = { ...defaultProps }
-      const { onDownload, ...restProps } = propsWithoutOnDownload
+      const {
+  ...restProps
+} = omitProperties(propsWithoutOnDownload, ["onDownload"])
       
       expect(() => {
         render(<DownloadButton {...restProps} />)
@@ -280,7 +283,9 @@ describe('DownloadButton', () => {
 
     it('handles missing data-test attribute', () => {
       const propsWithoutDataTest = { ...defaultProps }
-      const { dataTest, ...restProps } = propsWithoutDataTest
+      const {
+  ...restProps
+} = omitProperties(propsWithoutDataTest, ["dataTest"])
       
       render(<DownloadButton {...restProps} />)
       

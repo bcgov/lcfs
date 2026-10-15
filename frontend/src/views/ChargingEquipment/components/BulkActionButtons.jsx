@@ -1,9 +1,5 @@
 import BCButton from '@/components/BCButton'
-import {
-  faCheck,
-  faBan,
-  faSquareCheck
-} from '@fortawesome/free-solid-svg-icons'
+import { faCheck, faBan } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import Box from '@mui/material/Box'
 import { useTranslation } from 'react-i18next'

@@ -1,13 +1,13 @@
-import React from 'react'
+import 'react'
 import { describe, expect, vi, beforeEach } from 'vitest'
-import { screen, waitFor, act } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ActivityLinksList } from '../ActivityLinksList'
 import { test } from '@/tests/utils/fixtures'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useApiService } from '@/services/useApiService'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
+import '@/constants/statuses'
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom')

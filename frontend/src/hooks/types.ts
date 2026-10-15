@@ -1,3 +1,4 @@
+import type { AxiosProgressEvent } from 'axios'
 import type { UseQueryOptions, UseMutationOptions } from '@tanstack/react-query'
 
 // ─── Pagination ──────────────────────────────────────────────────────────────
@@ -51,7 +52,7 @@ export type MutationOptions<
 // Legacy mutation callback signatures (data, variables, context).
 type LegacyMutationCallbacks<
   TData = unknown,
-  TVariables = any,
+  TVariables = unknown,
   TContext = unknown
 > = {
   onSuccess?: (
@@ -75,7 +76,7 @@ type LegacyMutationCallbacks<
 // Extended mutation options with control flags and legacy callbacks.
 export type ExtMutationOptions<
   TData = unknown,
-  TVariables = any,
+  TVariables = unknown,
   TContext = unknown
 > = Omit<
   MutationOptions<TData, TVariables, TContext>,
@@ -86,7 +87,7 @@ export type ExtMutationOptions<
     clearCache?: boolean
     invalidateAll?: boolean
     invalidateListQuery?: boolean
-    onUploadProgress?: (progressEvent: any) => void
+    onUploadProgress?: (progressEvent: AxiosProgressEvent) => void
     userID?: number | string
     [key: string]: unknown
   }

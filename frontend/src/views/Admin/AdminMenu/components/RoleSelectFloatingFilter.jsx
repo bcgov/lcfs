@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react'
 import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
 import { useRoleList } from '@/hooks/useRole'
 

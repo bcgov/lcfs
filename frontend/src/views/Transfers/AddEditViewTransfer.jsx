@@ -11,14 +11,14 @@ import { roles, govRoles, formatDelegatedRoleLabel } from '@/constants/roles'
 import { ROUTES, buildPath } from '@/routes/routes'
 import { TRANSFER_STATUSES } from '@/constants/statuses'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useCurrentOrgBalance } from '@/hooks/useOrganization'
+import '@/hooks/useOrganization';
 import { useRegExtOrgs } from '@/hooks/useOrganizations'
 import { useCreateUpdateTransfer, useTransfer } from '@/hooks/useTransfer'
 import { yupResolver } from '@hookform/resolvers/yup'
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import Box from '@mui/material/Box'
-import Divider from '@mui/material/Divider'
+import '@mui/material/Divider';
 import Stack from '@mui/material/Stack'
 import Step from '@mui/material/Step'
 import StepLabel from '@mui/material/StepLabel'
@@ -164,7 +164,7 @@ export const AddEditViewTransfer = () => {
   // update status for the transfer via mutation function.
   const { mutate: createUpdateTransfer, isPending: isUpdatingTransfer } =
     useCreateUpdateTransfer(currentUserOrgId, transferId, {
-      onSuccess: (response, variables) => {
+      onSuccess: (response) => {
         setModalData(null)
         if (response.data.currentStatus.status === TRANSFER_STATUSES.DRAFT) {
           navigate(
@@ -207,7 +207,7 @@ export const AddEditViewTransfer = () => {
         }
         alertRef.current?.triggerAlert()
       },
-      onError: (_error, _variables) => {
+      onError: (_error) => {
         setModalData(null)
         const errorMsg = _error.response.data?.detail
         if (errorMsg) {
