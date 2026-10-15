@@ -147,13 +147,13 @@ class ComplianceReportHistoryMigrator:
         — which silently hides the Report History section in the UI for every
         post-2023 report.
 
-        The INSERT path below uses
-        ON CONFLICT (compliance_report_id, status_id) DO NOTHING,
-        so re-running the migration is already safe without truncation.
+        The INSERT path below skips a (compliance_report_id, status_id) that
+        already has a row, so re-running the migration is already safe without
+        truncation.
         """
         logger.warning(
             "truncate_destination_table is deprecated and will wipe LCFS-native "
-            "history. Skipping truncate — see ON CONFLICT DO NOTHING in insert_history_record."
+            "history. Skipping truncate — insert_history_record skips existing statuses."
         )
 
     def fetch_source_history_records(self, tfrs_cursor) -> List[Dict]:
@@ -215,8 +215,12 @@ class ComplianceReportHistoryMigrator:
                 create_date,
                 update_user,
                 update_date
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s)
-            ON CONFLICT (compliance_report_id, status_id) DO NOTHING
+            )
+            SELECT %s, %s, %s, %s, %s, %s, %s
+            WHERE NOT EXISTS (
+                SELECT 1 FROM compliance_report_history
+                WHERE compliance_report_id = %s AND status_id = %s
+            )
         """
 
         try:
@@ -239,6 +243,8 @@ class ComplianceReportHistoryMigrator:
                     else None
                 ),
                 record_data["update_timestamp"],
+                record_data["destination_report_id"],
+                record_data["final_status_id"],
             ]
 
             lcfs_cursor.execute(insert_sql, params)
@@ -271,9 +277,9 @@ class ComplianceReportHistoryMigrator:
                     # NOTE: We intentionally do NOT truncate compliance_report_history.
                     # The table also holds LCFS-native history rows that this ETL
                     # does not regenerate; truncating would silently wipe them.
-                    # insert_history_record() uses
-                    # ON CONFLICT (compliance_report_id, status_id) DO NOTHING
-                    # so re-runs are idempotent without a truncate.
+                    # insert_history_record() skips a (compliance_report_id,
+                    # status_id) that already has a row, so re-runs are
+                    # idempotent without a truncate.
 
                     # Fetch source records
                     source_records = self.fetch_source_history_records(tfrs_cursor)
