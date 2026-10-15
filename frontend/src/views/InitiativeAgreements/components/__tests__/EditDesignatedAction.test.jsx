@@ -15,7 +15,7 @@ vi.mock('react-i18next', () => ({
 // spy so the tests can assert what the user is told.
 const mockTriggerAlert = vi.fn()
 vi.mock('@/components/BCAlert', () => ({
-  FloatingAlert: React.forwardRef((_props, ref) => {
+  FloatingAlert: React.forwardRef(function FloatingAlertMock(_props, ref) {
     React.useImperativeHandle(ref, () => ({ triggerAlert: mockTriggerAlert }))
     return null
   })

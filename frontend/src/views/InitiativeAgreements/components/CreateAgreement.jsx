@@ -17,9 +17,8 @@ import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
 import { useOrganizationNames } from '@/hooks/useOrganizations'
 import { useCreateAgreement } from '@/hooks/useInitiativeAgreements'
+import { AGREEMENT_TYPES } from './agreementTypes'
 import ModalField from './ModalField'
-
-export const AGREEMENT_TYPES = ['Initiative Agreement', 'P3A']
 
 // Starting an agreement from the index page. Deliberately thin: an analyst
 // opening a file has the organization and the agreement code, and little
