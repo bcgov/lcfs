@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState, useRef } from 'react'
+import React, { useMemo, useEffect, useState, useRef, useCallback } from 'react'
 import { useForm, FormProvider, Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import Grid from '@mui/material/Grid2'
@@ -30,7 +30,10 @@ import {
   FUEL_CATEGORIES,
   LEGISLATION_TRANSITION_YEAR
 } from '@/constants/common'
-import { formatEnergyContentWithCommas } from '@/utils/formatters'
+import {
+  formatEnergyContentWithCommas,
+  numberFormatter
+} from '@/utils/formatters'
 import { copyToClipboard } from '@/utils/clipboard'
 
 const CUSTOM_CI_OPTION_VALUE = 'customCi'
@@ -105,7 +108,8 @@ export const CreditCalculator = () => {
     watch,
     setValue,
     formState: { errors },
-    reset
+    reset,
+    handleSubmit
   } = methods
 
   const watchedValues = watch()
@@ -219,7 +223,7 @@ export const CreditCalculator = () => {
     )
   }, [provisionOptions])
 
-  useMemo(() => {
+  const selectedProvision = useMemo(() => {
     if (!provisionOfTheAct) return null
     return fuelTypeOptions?.data?.provisions?.find(
       (provision) => provision.name === provisionOfTheAct
@@ -593,7 +597,7 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
     <BCBox
       sx={{
         paddingTop: 2,
-        '& .MuiCardContent-root': { padding: '0 !important', margin: 0 },
+        '& .MuiCardContent-root': { padding: '0 !important', margin: 0, },
         '& .MuiFormLabel-root': {
           transform: 'translate(-0px, -32px) scale(1) !important'
         }
@@ -710,7 +714,7 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
                       width: '100%',
                       maxWidth: '100%',
                       maxHeight: { xs: 240, md: 360 },
-                      overflowX: 'hidden',
+                      overflowX: 'auto',
                       overflowY: 'auto',
                       pr: 1,
                       scrollbarGutter: 'stable'
@@ -719,17 +723,15 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
                       mr: 0,
                       mb: 0,
                       alignItems: 'flex-start',
-                      width: '100%',
-                      maxWidth: '100%',
-                      minWidth: 0,
-                      flexShrink: 0
+                      width: 'max-content',
+                      maxWidth: 'none',
+                      whiteSpace: 'nowrap'
                     },
                     '& .MuiRadio-root': {
                       flexShrink: 0
                     },
                     '& .MuiFormControlLabel-label': {
-                      whiteSpace: 'normal',
-                      overflowWrap: 'anywhere',
+                      whiteSpace: 'nowrap',
                       lineHeight: 1.35
                     }
                   }}
