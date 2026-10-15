@@ -129,15 +129,13 @@ export const defaultSortModel = [{ field: 'updateDate', direction: 'desc' }]
 // the wireframe; the analyst column assigns inline for managers and
 // directors and its floating filter sends the analyst's id.
 // The module-wide tab (#5078) reuses the agreement grid's columns, with
-// the ID read off each row's own agreement and the analyst column left
-// out — the wireframe's tab has no analyst, and the rows come from many
-// agreements at once.
+// the ID read off each row's own agreement. The analyst column is shared
+// too (#5197): the same cell, assignment mutation and server-side filter
+// apply, since the endpoint serves the same row shape across agreements.
 export const allDesignatedActionColDefs = (
   t: TFunction
 ): ColDef<InitiativeAgreementGridRow>[] =>
-  designatedActionColDefs(t, null).filter(
-    (colDef) => colDef.colId !== 'assignedAnalyst'
-  )
+  designatedActionColDefs(t, null)
 
 export const designatedActionColDefs = (
   t: TFunction,
