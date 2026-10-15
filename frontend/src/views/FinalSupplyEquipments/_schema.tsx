@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { ColDef } from 'ag-grid-community'
 import type { GridErrors, GridWarnings, OptionsData } from '@/types/schema'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
@@ -15,9 +14,9 @@ import dayjs from 'dayjs'
 import {
   CommonArrayRenderer,
   MultiSelectRenderer,
-  SelectRenderer,
-  createStatusRenderer
+  SelectRenderer
 } from '@/utils/grid/cellRenderers'
+import { createStatusRenderer } from '@/utils/grid/createStatusRenderer'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import { apiRoutes } from '@/constants/routes'
 import { numberFormatter } from '@/utils/formatters'
@@ -140,7 +139,7 @@ export const finalSupplyEquipmentColDefs = (
         }
         return false
       },
-      tooltipValueGetter: (params) =>
+      tooltipValueGetter: () =>
         'Select the organization name from the list'
     },
     {
@@ -242,7 +241,7 @@ export const finalSupplyEquipmentColDefs = (
       ),
       minWidth: 320,
       cellEditor: AsyncSuggestionEditor,
-      cellEditorParams: (params) => ({
+      cellEditorParams: () => ({
         queryKey: 'fuel-code-search',
         queryFn: async ({ client, queryKey }) => {
           try {
@@ -371,7 +370,7 @@ export const finalSupplyEquipmentColDefs = (
         'finalSupplyEquipment:finalSupplyEquipmentColLabels.streetAddress'
       ),
       cellEditor: AsyncSuggestionEditor,
-      cellEditorParams: (params) => ({
+      cellEditorParams: () => ({
         queryKey: 'address-autocomplete',
         queryFn: addressAutocompleteQuery,
         optionLabel: 'label'

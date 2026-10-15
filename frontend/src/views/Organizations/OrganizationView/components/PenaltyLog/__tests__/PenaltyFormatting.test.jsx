@@ -2,9 +2,11 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { MetricCardsSection, PenaltySummaryTable } from '../PenaltyComponents'
-import { buildAutomaticPenaltyRows } from '../PenaltyLog'
+import {
+  buildAutomaticPenaltyRows,
+  processSparklineData
+} from '../penaltyLogHelpers'
 import { penaltyLogColumnDefs, penaltyLogEditorColDefs } from '../_schema'
-import { processSparklineData } from '../PenaltyLog'
 import {
   usePenaltyMixOption,
   useSparklineOption,

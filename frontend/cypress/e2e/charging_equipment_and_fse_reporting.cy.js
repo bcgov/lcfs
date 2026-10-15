@@ -1,5 +1,3 @@
-/* eslint-disable cypress/unsafe-to-chain-command */
-
 const supplierCreds = () => ({
   username:
     Cypress.env('ORG1_BCEID_USERNAME') ||
@@ -219,8 +217,12 @@ describe('ChargingEquipment create/edit/list filters/download', () => {
       .first()
       .should('be.visible')
       .type('LCFS Org 2')
-    cy.contains('li', 'LCFS Org 2', { timeout: 30000 }).should('be.visible').click()
-    cy.wait('@equipmentListFiltered').its('request.body.organization_id').should('eq', 1002)
+    cy.contains('li', 'LCFS Org 2', { timeout: 30000 })
+      .should('be.visible')
+      .click()
+    cy.wait('@equipmentListFiltered')
+      .its('request.body.organization_id')
+      .should('eq', 1002)
 
     cy.getByDataTest('download-fse-excel', { timeout: 30000 }).click()
     cy.wait('@downloadEquipmentExport')
@@ -313,19 +315,21 @@ describe('FSE Reporting grid interactions + save flow', () => {
       }
     )
 
-    cy.intercept('POST', '**/final-supply-equipments/reporting/batch', (req) => {
-      req.reply([
-        {
-          chargingEquipmentComplianceId: 9001
-        }
-      ])
-    }).as('createFseReportingRows')
-
     cy.intercept(
       'POST',
-      '**/final-supply-equipments/reporting/set-default',
-      { message: 'Defaults updated' }
-    ).as('setFseDefaults')
+      '**/final-supply-equipments/reporting/batch',
+      (req) => {
+        req.reply([
+          {
+            chargingEquipmentComplianceId: 9001
+          }
+        ])
+      }
+    ).as('createFseReportingRows')
+
+    cy.intercept('POST', '**/final-supply-equipments/reporting/set-default', {
+      message: 'Defaults updated'
+    }).as('setFseDefaults')
 
     cy.intercept('PUT', '**/final-supply-equipments/reporting/9001', (req) => {
       reportingRows = reportingRows.map((row) =>
@@ -348,9 +352,13 @@ describe('FSE Reporting grid interactions + save flow', () => {
       })
     }).as('updateFseReportingRow')
 
-    cy.intercept('PATCH', '**/final-supply-equipments/reporting/active-status', {
-      message: 'Updated active status'
-    }).as('toggleFseReportingActive')
+    cy.intercept(
+      'PATCH',
+      '**/final-supply-equipments/reporting/active-status',
+      {
+        message: 'Updated active status'
+      }
+    ).as('toggleFseReportingActive')
 
     cy.visit(reportPath, { timeout: 30000 })
     cy.wait(['@siteNames', '@fseReportingList'])

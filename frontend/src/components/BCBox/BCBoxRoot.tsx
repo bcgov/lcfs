@@ -25,6 +25,19 @@ export type BCBoxColoredShadow =
   | 'nav'
   | 'none'
 
+interface BCBoxTheme {
+  palette: {
+    alerts: Record<BCBoxVariant, { color: string; background: string }>
+    gradients: Record<string, { main: string; state: string }>
+    grey: Record<number, string>
+    white: { main: string }
+    transparent: { main: string }
+  }
+  functions: { linearGradient: (main: string, state: string) => string }
+  borders: { borderRadius: Record<string, string> }
+  boxShadows: Record<string, string> & { colored: Record<string, string> }
+}
+
 interface BCBoxOwnerState {
   variant: BCBoxVariant
   bgColor: string
@@ -38,7 +51,8 @@ interface BCBoxOwnerState {
 const BCBoxRoot = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'ownerState'
 })<{ ownerState: BCBoxOwnerState }>(({ theme, ownerState }) => {
-  const { palette, functions, borders, boxShadows } = theme as any
+  const { palette, functions, borders, boxShadows } =
+    theme as unknown as BCBoxTheme
   const {
     variant,
     bgColor,
@@ -53,6 +67,7 @@ const BCBoxRoot = styled(Box, {
   const { linearGradient } = functions
   const { borderRadius: radius } = borders
   const { colored } = boxShadows
+  const paletteColors = palette as unknown as Record<string, { main: string }>
 
   const greyColors: Record<string, string> = {
     'grey-100': grey[100],
@@ -118,7 +133,9 @@ const BCBoxRoot = styled(Box, {
   let colorValue = color
 
   if (validColors.includes(color)) {
-    colorValue = palette[color] ? palette[color].main : greyColors[color]
+    colorValue = paletteColors[color]
+      ? paletteColors[color].main
+      : greyColors[color]
   }
 
   let borderRadiusValue: string | number = borderRadius
@@ -156,8 +173,8 @@ const BCBoxRoot = styled(Box, {
       boxShadow: boxShadowValue
     }
   } else if (validColors.includes(bgColor)) {
-    backgroundValue = palette[bgColor]
-      ? palette[bgColor].main
+    backgroundValue = paletteColors[bgColor]
+      ? paletteColors[bgColor].main
       : greyColors[bgColor]
   } else {
     backgroundValue = bgColor

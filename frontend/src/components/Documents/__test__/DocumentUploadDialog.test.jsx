@@ -47,7 +47,7 @@ vi.mock('@/components/Documents/DocumentTable.jsx', () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key, options) => {
+    t: (key) => {
       const translations = {
         'report:documentLabel':
           'Add file attachments (maximum file size: 50 MB):',

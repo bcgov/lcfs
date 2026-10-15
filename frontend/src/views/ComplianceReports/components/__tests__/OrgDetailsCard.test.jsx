@@ -1,7 +1,7 @@
 import { test } from '@/tests/utils/fixtures'
-import React from 'react'
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import 'react'
+import { describe, expect, beforeEach, vi } from 'vitest'
+import { screen } from '@testing-library/react'
 import { OrgDetailsCard } from '../OrgDetailsCard'
 import { constructAddress } from '@/utils/constructAddress'
 

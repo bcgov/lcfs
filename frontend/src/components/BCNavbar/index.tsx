@@ -45,7 +45,7 @@ function BCNavbar({
       className="main-layout-navbar"
       sx={{
         position: 'relative',
-        zIndex: (theme: any) => theme.zIndex.modal + 2
+        zIndex: (theme) => theme.zIndex.modal + 2
       }}
     >
       <PopupState variant="popover" popupId="demo-popup-menu">

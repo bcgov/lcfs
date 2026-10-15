@@ -13,11 +13,12 @@ vi.mock('@mui/material/Toolbar', async (importOriginal) => {
   const actual = await importOriginal()
   return {
     ...actual,
-    default: ({ children, sx, ...props }) => (
-      <div data-test="toolbar" {...props}>
+    default: ({
+  children,
+  ...props
+}) => { delete props.sx; return <div data-test="toolbar" {...props}>
         {children}
-      </div>
-    )
+      </div>; }
   }
 })
 
@@ -35,20 +36,25 @@ vi.mock('@mui/material/Icon', async (importOriginal) => {
 
 vi.mock('@/components/BCBox', () => ({
   __esModule: true,
-  default: ({ children, component, className, sx, display, ...props }) => (
-    <div className={className} {...props}>
+  default: ({
+  children,
+  className,
+  ...props
+}) => { delete props.component; delete props.sx; delete props.display; return <div className={className} {...props}>
       {children}
-    </div>
-  )
+    </div>; }
 }))
 
 vi.mock('@/components/BCTypography', () => ({
   __esModule: true,
-  default: ({ children, component, variant, className, color, sx, ...props }) => (
-    <span className={className} data-variant={variant} {...props}>
+  default: ({
+  children,
+  variant,
+  className,
+  ...props
+}) => { delete props.component; delete props.color; delete props.sx; return <span className={className} data-variant={variant} {...props}>
       {children}
-    </span>
-  )
+    </span>; }
 }))
 
 // Minimal popup-state stub; HeaderBar calls bindTrigger(popupState) to attach

@@ -4,6 +4,9 @@ import { screen } from '@testing-library/react'
 import { FSEProcessing } from '../FSEProcessing'
 import { test } from '@/tests/utils/fixtures'
 
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useFSEProcessing } from '@/hooks/useFSEProcessing'
+
 let render
 const it = (name, fn) =>
   test(name, ({ render: fixtureRender, theme }) => {
@@ -47,7 +50,9 @@ vi.mock('@/components/BCButton', () => ({
 vi.mock('@/components/BCAlert', () => ({
   __esModule: true,
   default: ({ children }) => <div>{children}</div>,
-  BCAlert2: React.forwardRef((props, ref) => <div data-testid="alert-box" />)
+  BCAlert2: React.forwardRef(function BCAlert2Mock() {
+  return <div data-testid="alert-box" />;
+})
 }))
 
 vi.mock('@/components/Loading', () => ({
@@ -62,9 +67,6 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 vi.mock('../components/BulkProcessingModals', () => ({
   BulkProcessingModals: () => <div data-testid="bulk-processing-modals" />
 }))
-
-import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useFSEProcessing } from '@/hooks/useFSEProcessing'
 
 describe('FSEProcessing', () => {
   beforeEach(() => {

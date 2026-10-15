@@ -157,7 +157,7 @@ export const handlers = [
     return HttpResponse.json({
       type: 'FeatureCollection',
       queryAddress: addressString,
-      features: features
+      features
     })
   }),
 

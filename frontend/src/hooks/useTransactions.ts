@@ -4,9 +4,12 @@ import { useCurrentUser } from './useCurrentUser'
 import { roles } from '@/constants/roles'
 import { TRANSFER_STATUSES } from '@/constants/statuses'
 import { apiRoutes } from '@/constants/routes'
-import type { QueryOptions , ExtMutationOptions} from './types'
+import type { QueryOptions, ExtMutationOptions } from './types'
 
-export const useTransaction = (transactionID: number | string | undefined | null, options: QueryOptions<unknown>) => {
+export const useTransaction = (
+  transactionID: number | string | undefined | null,
+  options: QueryOptions<unknown>
+) => {
   const client = useApiService()
 
   return useQuery({
@@ -27,11 +30,11 @@ export const useTransactionStatuses = (options: QueryOptions<unknown>) => {
       const optionsData = await client.get('/transactions/statuses/')
       if (hasAnyRole(roles.supplier)) {
         return optionsData.data.filter(
-          (val: any) => val.status !== TRANSFER_STATUSES.RECOMMENDED
+          (val: unknown) => val.status !== TRANSFER_STATUSES.RECOMMENDED
         )
       } else {
         return optionsData.data.filter(
-          (val: any) =>
+          (val: unknown) =>
             ![TRANSFER_STATUSES.DELETED, TRANSFER_STATUSES.SENT].includes(
               val.status
             )
@@ -42,7 +45,16 @@ export const useTransactionStatuses = (options: QueryOptions<unknown>) => {
   })
 }
 
-export const useGetTransactionList = ({ page = 1, size = 10, sortOrders = [], filters = [], selectedOrgId }: any = {}, options: QueryOptions<unknown>) => {
+export const useGetTransactionList = (
+  {
+    page = 1,
+    size = 10,
+    sortOrders = [],
+    filters = [],
+    selectedOrgId
+  }: Record<string, unknown> = {},
+  options: QueryOptions<unknown>
+) => {
   const client = useApiService()
   const { hasRoles, isLoading } = useCurrentUser()
 
@@ -81,7 +93,11 @@ export const useGetTransactionList = ({ page = 1, size = 10, sortOrders = [], fi
   })
 }
 
-export const useTransactionDocuments = (parentID: number | string | undefined | null, parentType: string, options: QueryOptions<unknown>) => {
+export const useTransactionDocuments = (
+  parentID: number | string | undefined | null,
+  parentType: string,
+  options: QueryOptions<unknown>
+) => {
   const client = useApiService()
 
   return useQuery({
@@ -98,11 +114,13 @@ export const useTransactionDocuments = (parentID: number | string | undefined | 
   })
 }
 
-export const useDownloadTransactions = (options: ExtMutationOptions<unknown, any>) => {
+export const useDownloadTransactions = (
+  options: ExtMutationOptions<unknown, unknown>
+) => {
   const client = useApiService()
   return useMutation({
     ...options,
-    mutationFn: async ({ format, body, endpoint }: any) => {
+    mutationFn: async ({ format, body, endpoint }: Record<string, unknown>) => {
       return await client.download({
         url: endpoint,
         method: 'post',

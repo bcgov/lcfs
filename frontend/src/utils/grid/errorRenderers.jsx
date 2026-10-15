@@ -25,12 +25,7 @@ export const StandardCellErrors = (params, errors) => {
   return style
 }
 
-export const StandardCellWarningAndErrors = (
-  params,
-  errors,
-  warnings,
-  isSupplemental = false
-) => {
+export const StandardCellWarningAndErrors = (params, errors, warnings) => {
   // Don't override row-level styling for CREATE actions (let green background show through)
   // But only disable interaction for actual new supplemental entries
   if (params.data.actionType === 'CREATE') {

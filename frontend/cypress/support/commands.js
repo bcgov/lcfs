@@ -31,7 +31,7 @@ Cypress.Commands.add('loginWith', (userType, username, password) => {
   const loginProcess = (args) => {
     const [username, password] = args
 
-    cy.on('uncaught:exception', (_err, runnable) => {
+    cy.on('uncaught:exception', () => {
       // Return false to ignore exceptions in case wrong credentials or account lock issues.
       return false
     })
@@ -211,15 +211,14 @@ Cypress.Commands.add(
       cy.get('body').then(($body) => {
         // AsyncSuggestionEditor can be rendered in slightly different DOM shapes
         // depending on browser/headed mode.
-        const $asyncInput = $body
-          .find(
-            [
-              '[data-testid="ag-grid-editor-select-options"] input',
-              '#async-search-editor input',
-              'input[placeholder*="search a name"]',
-              'input[aria-autocomplete="list"]'
-            ].join(', ')
-          )
+        const $asyncInput = $body.find(
+          [
+            '[data-testid="ag-grid-editor-select-options"] input',
+            '#async-search-editor input',
+            'input[placeholder*="search a name"]',
+            'input[aria-autocomplete="list"]'
+          ].join(', ')
+        )
         // Inline editors (NumberEditor, agTextCellEditor) live inside the cell
         const $inlineInput = $body
           .find(cellSelector)
@@ -266,15 +265,14 @@ Cypress.Commands.add(
           cy.wait(400)
 
           cy.get('body').then(($retryBody) => {
-            const $retryAsyncInput = $retryBody
-              .find(
-                [
-                  '[data-testid="ag-grid-editor-select-options"] input',
-                  '#async-search-editor input',
-                  'input[placeholder*="search a name"]',
-                  'input[aria-autocomplete="list"]'
-                ].join(', ')
-              )
+            const $retryAsyncInput = $retryBody.find(
+              [
+                '[data-testid="ag-grid-editor-select-options"] input',
+                '#async-search-editor input',
+                'input[placeholder*="search a name"]',
+                'input[aria-autocomplete="list"]'
+              ].join(', ')
+            )
 
             const $retryInlineInput = $retryBody
               .find(cellSelector)

@@ -19,18 +19,15 @@ vi.mock('react-i18next', () => ({
 // Mock BCGridViewer
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: ({
-    gridKey,
-    columnDefs,
-    queryData,
-    dataKey,
-    gridOptions,
-    defaultColDef,
-    suppressPagination,
-    paginationOptions,
-    getRowId,
-    enableCopyButton,
-    onPaginationChange
-  }) => (
+  gridKey,
+  queryData,
+  dataKey,
+  suppressPagination,
+  paginationOptions,
+  getRowId,
+  enableCopyButton,
+  onPaginationChange
+}) => (
     <div data-test="bc-grid-viewer">
       <div data-test="grid-key">{gridKey}</div>
       <div data-test="data-key">{dataKey}</div>
@@ -76,7 +73,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 
 // Mock the schema
 vi.mock('../_schema', () => ({
-  allocationAgreementSummaryColDef: vi.fn((isEarlyIssuance) => [
+  allocationAgreementSummaryColDef: vi.fn(() => [
     { field: 'agreementName', headerName: 'Agreement Name' },
     { field: 'fuel', headerName: 'Fuel' },
     { field: 'quantity', headerName: 'Quantity' }
