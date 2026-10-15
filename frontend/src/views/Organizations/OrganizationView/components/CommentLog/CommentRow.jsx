@@ -215,22 +215,19 @@ export const CommentRow = forwardRef(function CommentRow(
                 sx={metadataChipSx}
               />
             )}
-            <Chip
-              size="small"
-              color="primary"
-              variant="outlined"
-              label={
-                comment.complianceYear ??
-                t('internalComment:log.noCompliancePeriod')
-              }
-              aria-label={t('internalComment:log.compliancePeriod', {
-                year:
-                  comment.complianceYear ??
-                  t('internalComment:log.noCompliancePeriod')
-              })}
-              data-test="comment-compliance-period-chip"
-              sx={metadataChipSx}
-            />
+            {comment.complianceYear != null && (
+              <Chip
+                size="small"
+                color="primary"
+                variant="outlined"
+                label={comment.complianceYear}
+                aria-label={t('internalComment:log.compliancePeriod', {
+                  year: comment.complianceYear
+                })}
+                data-test="comment-compliance-period-chip"
+                sx={metadataChipSx}
+              />
+            )}
             <BCTypography variant="body2" color="text" component="span">
               <strong>{displayName || displayUser || '—'}</strong>
               {displayDate && (

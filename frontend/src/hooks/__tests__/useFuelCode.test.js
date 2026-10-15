@@ -642,7 +642,7 @@ describe('useFuelCode', () => {
 
       try {
         await result.current.mutateAsync(fuelCodeData)
-      } catch (error) {
+      } catch {
         // Expected to throw
       }
 
@@ -694,7 +694,7 @@ describe('useFuelCode', () => {
 
       try {
         await result.current.mutateAsync(updateData)
-      } catch (error) {
+      } catch {
         // Expected to throw
       }
 
@@ -738,7 +738,7 @@ describe('useFuelCode', () => {
 
       try {
         await result.current.mutateAsync(fuelCodeID)
-      } catch (error) {
+      } catch {
         // Expected to throw
       }
 
@@ -782,7 +782,7 @@ describe('useFuelCode', () => {
 
       try {
         await result.current.mutateAsync(fuelCodeID)
-      } catch (error) {
+      } catch {
         // Expected to throw
       }
 
@@ -832,7 +832,7 @@ describe('useFuelCode', () => {
 
       try {
         await result.current.mutateAsync(downloadParams)
-      } catch (error) {
+      } catch {
         // Expected to throw
       }
 

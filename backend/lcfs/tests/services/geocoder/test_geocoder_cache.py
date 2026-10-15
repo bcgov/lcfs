@@ -23,7 +23,8 @@ def geocoder_cache(fake_redis_client):
 class TestGeocoderCache:
     """Test cases for geocoder cache."""
 
-    def test_cache_initialization(self, geocoder_cache):
+    @pytest.mark.anyio
+    async def test_cache_initialization(self, geocoder_cache):
         """Test cache initialization."""
         cache = geocoder_cache
         assert cache.default_ttl == 3600
@@ -93,7 +94,8 @@ class TestGeocoderCache:
         assert result1 is None
         assert result2 is None
 
-    def test_generate_key(self, geocoder_cache):
+    @pytest.mark.anyio
+    async def test_generate_key(self, geocoder_cache):
         """Test cache key generation."""
         cache = geocoder_cache
         
@@ -105,7 +107,8 @@ class TestGeocoderCache:
         assert key1 != key3  # Different arguments should generate different keys
         assert key1.startswith("geocoder:")
 
-    def test_cache_key_for_method(self, geocoder_cache):
+    @pytest.mark.anyio
+    async def test_cache_key_for_method(self, geocoder_cache):
         """Test method-specific cache key generation."""
         cache = geocoder_cache
         

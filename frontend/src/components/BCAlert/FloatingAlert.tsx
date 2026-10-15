@@ -15,7 +15,10 @@ import WarningIcon from '@mui/icons-material/Warning'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import CloseIcon from '@mui/icons-material/Close'
 import type { BoxProps } from '@mui/material/Box'
-import type { AlertSeverity } from '@/components/BCAlert/BCAlertRoot'
+import type {
+  AlertSeverity,
+  BCAlertTheme
+} from '@/components/BCAlert/BCAlertRoot'
 
 interface FloatingAlertOwnerState {
   color?: AlertSeverity | null
@@ -35,16 +38,11 @@ export interface FloatingAlertProps extends Omit<BoxProps, 'color'> {
 // Styled component for the floating alert at the top of the screen
 const FloatingAlertRoot = styled(Box)<{ ownerState: FloatingAlertOwnerState }>(
   ({ theme, ownerState }) => {
-    const { palette, typography, borders, functions } = theme as any
+    const { palette, typography, borders, functions } =
+      theme as unknown as BCAlertTheme
     const { color } = ownerState
 
-    const { gradients, alerts } = palette as typeof palette & {
-      gradients: Record<string, { main: string; state: string }>
-      alerts: Record<
-        AlertSeverity,
-        { color: string; background: string; border?: string }
-      >
-    }
+    const { gradients, alerts } = palette
     const { fontSizeMD, fontWeightMedium } = typography
     const { borderRadius } = borders
     const { pxToRem, linearGradient } = functions

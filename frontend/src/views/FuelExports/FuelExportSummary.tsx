@@ -8,12 +8,13 @@ import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { defaultInitialPagination } from '@/constants/schedules'
+import type { BCPaginationOptions , BCGridRow } from '@/components/BCDataGrid/types'
 
 interface FuelExport {
   fuelExportId: number | string
   actionType?: string
   fuelType?: { fuelType?: string }
-  [key: string]: any
+  [key: string]: unknown
 }
 
 interface FuelExportSummaryProps {
@@ -28,26 +29,26 @@ interface PaginationFilter {
   field: string
   type: string
   filter?: string
+  [key: string]: unknown
 }
 
 interface PaginationSort {
   field: string
   direction: 'asc' | 'desc'
+  [key: string]: unknown
 }
 
 interface PaginationOptions {
   page: number
   size: number
-  filters?: PaginationFilter[]
-  sortOrders?: PaginationSort[]
+  filters: PaginationFilter[]
+  sortOrders: PaginationSort[]
+  [key: string]: unknown
 }
 
-export const FuelExportSummary = ({
-  data,
-  status
-}: FuelExportSummaryProps) => {
+export const FuelExportSummary = ({ data, status }: FuelExportSummaryProps) => {
   const [paginationOptions, setPaginationOptions] = useState<PaginationOptions>(
-    defaultInitialPagination
+    defaultInitialPagination as unknown as PaginationOptions
   )
   const gridRef = useRef(null)
   const { t } = useTranslation(['common', 'fuelExport'])
@@ -99,8 +100,8 @@ export const FuelExportSummary = ({
     ) {
       paginationOptions.sortOrders.forEach((sort) => {
         filteredData.sort((a, b) => {
-          const aVal = a[sort.field]
-          const bVal = b[sort.field]
+          const aVal = a[sort.field] as string | number
+          const bVal = b[sort.field] as string | number
 
           let comparison = 0
           if (aVal > bVal) comparison = 1
@@ -139,7 +140,7 @@ export const FuelExportSummary = ({
     () => ({
       overlayNoRowsTemplate: t('fuelExport:noFuelExportsFound'),
       autoSizeStrategy: {
-        type: 'fitCellContents',
+        type: 'fitCellContents' as const,
         defaultMinWidth: 50,
         defaultMaxWidth: 600
       },
@@ -162,8 +163,13 @@ export const FuelExportSummary = ({
     [status]
   )
 
-  const getRowId = (params: { data: FuelExport }) => {
-    return params.data.fuelExportId.toString()
+  const columnDefs = useMemo(
+    () => fuelExportSummaryColDefs(showFuelTypeOther),
+    [showFuelTypeOther]
+  )
+
+  const getRowId = (params: { data: BCGridRow }) => {
+    return (params.data.fuelExportId as string | number).toString()
   }
 
   return (
@@ -182,18 +188,18 @@ export const FuelExportSummary = ({
           gridRef={gridRef}
           queryData={paginatedData}
           dataKey="fuelExports"
-          columnDefs={fuelExportSummaryColDefs(showFuelTypeOther)}
+          columnDefs={columnDefs}
           getRowId={getRowId}
           gridOptions={gridOptions}
           enableCopyButton={false}
           defaultColDef={defaultColDef}
           suppressPagination={(data?.fuelExports?.length || 0) <= 10}
           paginationOptions={paginationOptions}
-          onPaginationChange={(newPagination: Partial<PaginationOptions>) =>
+          onPaginationChange={(newPagination: BCPaginationOptions) =>
             setPaginationOptions((prev) => ({
               ...prev,
               ...newPagination
-            }))
+            }) as PaginationOptions)
           }
           enablePageCaching={false}
         />

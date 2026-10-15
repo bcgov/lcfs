@@ -1,5 +1,3 @@
-/* eslint-disable cypress/unsafe-to-chain-command */
-
 const supplierCreds = () => ({
   username:
     Cypress.env('ORG1_BCEID_USERNAME') ||
@@ -140,7 +138,12 @@ const interceptViewChargingSite = ({
         status: site.status,
         organizationId: site.organization.organizationId,
         equipments: equipment,
-        pagination: { page: 1, size: 25, total: equipment.length, totalPages: 1 }
+        pagination: {
+          page: 1,
+          size: 25,
+          total: equipment.length,
+          totalPages: 1
+        }
       }
     }
   ).as('getChargingSiteEquipment')
@@ -154,12 +157,10 @@ describe('Charging Site and FSE supplier workflows', () => {
   const creds = supplierCreds()
 
   before(() => {
-    expect(creds.username, 'BCeID username is configured')
-      .to.be.a('string')
-      .and.not.be.empty
-    expect(creds.password, 'BCeID password is configured')
-      .to.be.a('string')
-      .and.not.be.empty
+    expect(creds.username, 'BCeID username is configured').to.be.a('string').and
+      .not.be.empty
+    expect(creds.password, 'BCeID password is configured').to.be.a('string').and
+      .not.be.empty
 
     cy.loginWith('bceid', creds.username, creds.password)
     cy.get('.main-layout-navbar', { timeout: 30000 }).should('be.visible')
@@ -368,7 +369,12 @@ describe('Charging Site and FSE supplier workflows', () => {
     cy.intercept('POST', '**/charging-equipment/list', (req) => {
       req.reply({
         items: equipmentRows,
-        pagination: { page: 1, size: 25, total: equipmentRows.length, totalPages: 1 }
+        pagination: {
+          page: 1,
+          size: 25,
+          total: equipmentRows.length,
+          totalPages: 1
+        }
       })
     }).as('chargingEquipmentList')
 
@@ -405,7 +411,10 @@ describe('Charging Site and FSE supplier workflows', () => {
     // Click the confirmation button in the modal
     cy.contains('button', 'Submit selected', { timeout: 30000 }).last().click()
     cy.wait('@bulkSubmit')
-    cy.getByDataTest('alert-box', { timeout: 30000 }).should('contain', 'submitted')
+    cy.getByDataTest('alert-box', { timeout: 30000 }).should(
+      'contain',
+      'submitted'
+    )
 
     cy.contains('button', 'Select all Validated', { timeout: 30000 })
       .should('be.visible')
@@ -419,7 +428,10 @@ describe('Charging Site and FSE supplier workflows', () => {
       .last()
       .click()
     cy.wait('@bulkDecommission')
-    cy.getByDataTest('alert-box', { timeout: 30000 }).should('contain', 'decommissioned')
+    cy.getByDataTest('alert-box', { timeout: 30000 }).should(
+      'contain',
+      'decommissioned'
+    )
   })
 })
 
@@ -427,12 +439,10 @@ describe('FSE processing and map workflows (IDIR)', () => {
   const creds = idirCreds()
 
   before(() => {
-    expect(creds.username, 'IDIR username is configured')
-      .to.be.a('string')
-      .and.not.be.empty
-    expect(creds.password, 'IDIR password is configured')
-      .to.be.a('string')
-      .and.not.be.empty
+    expect(creds.username, 'IDIR username is configured').to.be.a('string').and
+      .not.be.empty
+    expect(creds.password, 'IDIR password is configured').to.be.a('string').and
+      .not.be.empty
 
     cy.loginWith('idir', creds.username, creds.password)
     cy.get('.main-layout-navbar', { timeout: 30000 }).should('be.visible')
@@ -521,14 +531,17 @@ describe('FSE processing and map workflows (IDIR)', () => {
       .last()
       .click()
     cy.wait('@bulkValidate')
-    cy.getByDataTest('alert-box', { timeout: 30000 }).should('contain', 'Validated')
+    cy.getByDataTest('alert-box', { timeout: 30000 }).should(
+      'contain',
+      'Validated'
+    )
   })
 
   it('renders the FSE map view and supports interactions', () => {
     interceptCurrentUser({ type: 'idir' })
     cy.intercept('GET', '**/organizations/names/all*', [
-        { organizationId: 1001, name: 'LCFS Org 1', orgType: 'supplier' },
-        { organizationId: 1002, name: 'LCFS Org 2', orgType: 'supplier' }
+      { organizationId: 1001, name: 'LCFS Org 1', orgType: 'supplier' },
+      { organizationId: 1002, name: 'LCFS Org 2', orgType: 'supplier' }
     ]).as('orgNames')
 
     cy.intercept('POST', '**/charging-equipment/list', {
@@ -569,7 +582,9 @@ describe('FSE processing and map workflows (IDIR)', () => {
       pagination: { total: 1 }
     }
 
-    cy.intercept('POST', '**/charging-sites/list-all', mapSitesBody).as('fseMapSites')
+    cy.intercept('POST', '**/charging-sites/list-all', mapSitesBody).as(
+      'fseMapSites'
+    )
     cy.intercept(
       'POST',
       '**/charging-sites/organization/*/list-all',
@@ -584,7 +599,9 @@ describe('FSE processing and map workflows (IDIR)', () => {
     cy.contains('button', 'FSE coordinates', { timeout: 30000 }).click()
     cy.contains('button', 'Charging sites').should('be.visible')
 
-    cy.get('[aria-label="Expand map"]', { timeout: 30000 }).click({ force: true })
+    cy.get('[aria-label="Expand map"]', { timeout: 30000 }).click({
+      force: true
+    })
     cy.get('[aria-label="Collapse map"]', { timeout: 30000 }).should('exist')
     cy.get('[aria-label="Collapse map"]').click({ force: true })
     cy.get('[aria-label="Expand map"]').should('exist')

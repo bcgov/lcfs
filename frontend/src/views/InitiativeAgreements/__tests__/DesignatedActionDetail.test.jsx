@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react';
 import { cleanup, fireEvent, screen } from '@testing-library/react'
 import { describe, expect, vi, beforeEach } from 'vitest'
 import { roles } from '@/constants/roles'
@@ -364,6 +364,22 @@ describe('DesignatedActionDetail', () => {
   test('offers the edit control on the action card', ({ render, app }) => {
     render(<DesignatedActionDetail />, app)
     expect(screen.getByTestId('edit-designated-action')).toBeInTheDocument()
+  })
+
+  test('places the edit control in the blue card header (#5169)', ({
+    render,
+    app
+  }) => {
+    render(<DesignatedActionDetail />, app)
+    const header = screen.getByRole('heading', {
+      name: 'initiativeAgreement:actionDetail.cardHeader'
+    }).parentElement
+    expect(header).toContainElement(
+      screen.getByTestId('edit-designated-action')
+    )
+    expect(
+      screen.getByTestId('previous-action-button').parentElement
+    ).not.toContainElement(screen.getByTestId('edit-designated-action'))
   })
 
   test('renders the audit trail panel', ({ render, app }) => {

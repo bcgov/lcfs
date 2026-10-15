@@ -15,7 +15,7 @@ const OPTIONS_STALE_TIME = 30 * 60 * 1000 // 30 minutes (options change less fre
 const JOB_STATUS_STALE_TIME = 0 // Real-time for job status
 
 export const useAllocationAgreementOptions = (
-  params: Record<string, any>,
+  params: Record<string, unknown>,
   options: QueryOptions<unknown> = {}
 ) => {
   const client = useApiService()
@@ -125,7 +125,7 @@ export const useGetAllAllocationAgreements = (
 }
 
 export const useGetAllocationAgreementsList = (
-  { complianceReportId, changelog = false }: any,
+  { complianceReportId, changelog = false }: Record<string, unknown>,
   pagination: PaginationParams,
   options: QueryOptions<unknown> = {}
 ) => {
@@ -168,8 +168,8 @@ export const useGetAllocationAgreementsList = (
 }
 
 export const useSaveAllocationAgreement = (
-  params: Record<string, any>,
-  options: ExtMutationOptions<unknown, any> = {}
+  params: { complianceReportId: number | string },
+  options: ExtMutationOptions<unknown, Record<string, unknown>> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -183,7 +183,7 @@ export const useSaveAllocationAgreement = (
   } = options
 
   return useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: Record<string, unknown>) => {
       if (!params?.complianceReportId) {
         throw new Error('Compliance report ID is required')
       }
@@ -250,8 +250,8 @@ export const useSaveAllocationAgreement = (
 }
 
 export const useUpdateAllocationAgreement = (
-  params: Record<string, any>,
-  options: ExtMutationOptions<unknown, any> = {}
+  params: { complianceReportId: number | string },
+  options: ExtMutationOptions<unknown, Record<string, unknown>> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -265,7 +265,7 @@ export const useUpdateAllocationAgreement = (
   } = options
 
   return useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: Record<string, unknown> & { id?: number | string }) => {
       if (!params?.complianceReportId) {
         throw new Error('Compliance report ID is required')
       }
@@ -332,8 +332,8 @@ export const useUpdateAllocationAgreement = (
 }
 
 export const useDeleteAllocationAgreement = (
-  params: Record<string, any>,
-  options: ExtMutationOptions<unknown, any> = {}
+  params: { complianceReportId: number | string },
+  options: ExtMutationOptions<unknown, number | string> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -346,7 +346,7 @@ export const useDeleteAllocationAgreement = (
   } = options
 
   return useMutation({
-    mutationFn: async (agreementId: any) => {
+    mutationFn: async (agreementId: number | string) => {
       if (!params?.complianceReportId) {
         throw new Error('Compliance report ID is required')
       }
@@ -398,7 +398,7 @@ export const useDeleteAllocationAgreement = (
 
 export const useImportAllocationAgreement = (
   complianceReportId: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -411,7 +411,7 @@ export const useImportAllocationAgreement = (
   } = options
 
   return useMutation({
-    mutationFn: async ({ file, isOverwrite }: any) => {
+    mutationFn: async ({ file, isOverwrite }: { file: File; isOverwrite: boolean }) => {
       if (!complianceReportId) {
         throw new Error('Compliance report ID is required')
       }
@@ -427,7 +427,7 @@ export const useImportAllocationAgreement = (
       const formData = new FormData()
       formData.append('file', file)
       formData.append('filename', file.name)
-      formData.append('overwrite', isOverwrite)
+      formData.append('overwrite', isOverwrite as unknown as string)
 
       return await client.post(path, formData, {
         headers: {
@@ -499,7 +499,9 @@ export const useGetAllocationAgreementImportJobStatus = (
     gcTime,
     refetchInterval: (data) => {
       // Stop polling when job is complete or failed
-      const jobData = (data as any)?.state?.data
+      const jobData = (
+        data as { state?: { data?: { status?: string } } } | undefined
+      )?.state?.data
       if (jobData?.status === 'completed' || jobData?.status === 'failed') {
         return false
       }

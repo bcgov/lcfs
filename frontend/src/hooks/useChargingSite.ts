@@ -1,8 +1,14 @@
+import { omitProperties } from '@/utils/omitProperties'
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
+import type { AxiosRequestConfig } from 'axios'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import type { QueryOptions, PaginationParams, ExtMutationOptions} from './types'
+import type {
+  QueryOptions,
+  PaginationParams,
+  ExtMutationOptions
+} from './types'
 
 // Default cache configuration
 const DEFAULT_STALE_TIME = 5 * 60 * 1000 // 5 minutes
@@ -10,14 +16,15 @@ const DEFAULT_CACHE_TIME = 10 * 60 * 1000 // 10 minutes
 const OPTIONS_STALE_TIME = 60 * 60 * 1000 // 1 hr (options change less frequently)
 const JOB_STATUS_STALE_TIME = 0 // Real-time for job status
 
-export const useGetAllocationOrganizations = (options: QueryOptions<unknown> = {}) => {
+export const useGetAllocationOrganizations = (
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
   const {
-    staleTime = OPTIONS_STALE_TIME,
     gcTime = DEFAULT_CACHE_TIME,
     enabled = true,
     ...restOptions
-  } = options
+  } = omitProperties(options, ['staleTime'])
 
   return useQuery({
     queryKey: ['allocationOrganizations'],
@@ -34,7 +41,10 @@ export const useGetAllocationOrganizations = (options: QueryOptions<unknown> = {
   })
 }
 
-export const useGetChargingSiteById = (siteId: number | string | undefined | null, { historyMode = false, ...options }: any = {}) => {
+export const useGetChargingSiteById = (
+  siteId: number | string | undefined | null,
+  { historyMode = false, ...options }: { historyMode?: boolean } & QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
   const {
     staleTime = DEFAULT_STALE_TIME,
@@ -63,7 +73,12 @@ export const useGetChargingSiteById = (siteId: number | string | undefined | nul
   })
 }
 
-export const useGetAllChargingSites = (pagination: PaginationParams, isIDIR: any, organizationId: number | string | undefined | null, options: QueryOptions<unknown> = {}) => {
+export const useGetAllChargingSites = (
+  pagination: PaginationParams,
+  isIDIR: boolean,
+  organizationId: number | string | undefined | null,
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
   const {
     staleTime = DEFAULT_STALE_TIME,
@@ -99,20 +114,22 @@ export const useGetAllChargingSites = (pagination: PaginationParams, isIDIR: any
   })
 }
 
-export const useSaveChargingSite = (organizationId: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+export const useSaveChargingSite = (
+  organizationId: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, Record<string, unknown> & { chargingSiteId?: number | string }> = {}
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
   const {
     onSuccess,
     onError,
-    invalidateRelatedQueries = true,
     clearCache = true,
     ...restOptions
-  } = options
+  } = omitProperties(options, ['invalidateRelatedQueries'])
 
   return useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: Record<string, unknown> & { chargingSiteId?: number | string }) => {
       if (!organizationId) {
         throw new Error('Organization ID is required')
       }
@@ -125,7 +142,7 @@ export const useSaveChargingSite = (organizationId: number | string | undefined 
         }
         return await client.delete(
           `${apiRoutes.saveChargingSite.replace(':orgID', String(organizationId ?? ''))}/${chargingSiteId}`,
-          data
+          data as AxiosRequestConfig
         )
       } else if (data.chargingSiteId) {
         // Update operation (has ID and not explicitly creating)
@@ -136,13 +153,18 @@ export const useSaveChargingSite = (organizationId: number | string | undefined 
       } else {
         // Create operation (no ID or explicitly creating)
         return await client.post(
-          apiRoutes.saveChargingSite.replace(':orgID', String(organizationId ?? '')),
+          apiRoutes.saveChargingSite.replace(
+            ':orgID',
+            String(organizationId ?? '')
+          ),
           data
         )
       }
     },
     onSuccess: (data, variables, context) => {
-      const responseSiteId = data?.data?.chargingSiteId
+      const responseSiteId = (
+        data as { data?: { chargingSiteId?: number | string } }
+      )?.data?.chargingSiteId
 
       // Comprehensive cache invalidation for charging site mutations
       if (clearCache) {
@@ -225,7 +247,10 @@ export const useChargingEquipmentStatuses = () => {
   })
 }
 
-export const useSiteNames = (organizationId: number | string | undefined | null = null, options: QueryOptions<unknown> = {}) => {
+export const useSiteNames = (
+  organizationId: number | string | undefined | null = null,
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
   const { data: currentUser } = useCurrentUser()
   const {
@@ -237,10 +262,13 @@ export const useSiteNames = (organizationId: number | string | undefined | null 
   return useQuery({
     queryKey: ['site-names', organizationId],
     queryFn: async () => {
-      const isIDIR = currentUser?.roles?.some((role: any) => role.name === 'Government')
-      const url = isIDIR && organizationId 
-        ? `/charging-sites/names?organization_id=${organizationId}`
-        : '/charging-sites/names'
+      const isIDIR = currentUser?.roles?.some(
+        (role: { name?: string }) => role.name === 'Government'
+      )
+      const url =
+        isIDIR && organizationId
+          ? `/charging-sites/names?organization_id=${organizationId}`
+          : '/charging-sites/names'
       const response = await client.get(url)
       return response.data
     },
@@ -250,13 +278,15 @@ export const useSiteNames = (organizationId: number | string | undefined | null 
   })
 }
 
-export const useUpdateChargingSiteStatus = (options: ExtMutationOptions<unknown, any> = {}) => {
+export const useUpdateChargingSiteStatus = (
+  options: ExtMutationOptions<unknown, unknown> = {}
+) => {
   const apiService = useApiService()
   const queryClient = useQueryClient()
   const { onSuccess, onError, ...restOptions } = options
 
   return useMutation({
-    mutationFn: async ({ siteId, newStatus }: any) => {
+    mutationFn: async ({ siteId, newStatus }: Record<string, unknown>) => {
       if (!siteId) {
         throw new Error('Charging site ID is required')
       }
@@ -284,7 +314,15 @@ export const useUpdateChargingSiteStatus = (options: ExtMutationOptions<unknown,
   })
 }
 
-export const useBulkUpdateEquipmentStatus = (options: ExtMutationOptions<unknown, any> = {}) => {
+export const useBulkUpdateEquipmentStatus = (
+  options: ExtMutationOptions<unknown, {
+    siteId?: number | string
+    equipmentIds?: Array<number | string>
+    equipment_ids?: Array<number | string>
+    newStatus?: string
+    new_status?: string
+  }> = {}
+) => {
   const apiService = useApiService()
   const queryClient = useQueryClient()
 
@@ -303,7 +341,10 @@ export const useBulkUpdateEquipmentStatus = (options: ExtMutationOptions<unknown
       const newStatus = vars?.newStatus || vars?.new_status
 
       return apiService.post(
-        apiRoutes.bulkUpdateEquipmentStatus.replace(':siteId', String(siteId ?? '')),
+        apiRoutes.bulkUpdateEquipmentStatus.replace(
+          ':siteId',
+          String(siteId ?? '')
+        ),
         {
           equipment_ids: equipmentIds,
           new_status: newStatus
@@ -374,7 +415,11 @@ export const useBulkUpdateEquipmentStatus = (options: ExtMutationOptions<unknown
   })
 }
 
-export const useChargingSiteEquipmentPaginated = (siteId: number | string | undefined | null, paginationOptions: PaginationParams, { historyMode = false, ...options }: any = {}) => {
+export const useChargingSiteEquipmentPaginated = (
+  siteId: number | string | undefined | null,
+  paginationOptions: PaginationParams,
+  { historyMode = false, ...options }: Record<string, unknown> = {}
+) => {
   const apiService = useApiService()
 
   return useQuery({
@@ -411,7 +456,7 @@ export const useChargingSiteEquipmentPaginated = (siteId: number | string | unde
       // Don't retry if it's a validation error about invalid site ID
       if (
         error?.message?.includes('Invalid site ID') ||
-        (error as any)?.response?.status === 400
+        (error as { response?: { status?: number } })?.response?.status === 400
       ) {
         return false
       }
@@ -423,13 +468,16 @@ export const useChargingSiteEquipmentPaginated = (siteId: number | string | unde
 }
 
 // Charging site import/export hooks
-export const useImportChargingSites = (_organizationId: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+export const useImportChargingSites = (
+  _organizationId: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, { file: File; isOverwrite: boolean }> = {}
+) => {
   const client = useApiService()
 
   const { onSuccess, onError, ...restOptions } = options
 
   return useMutation({
-    mutationFn: async ({ file, isOverwrite }: any) => {
+    mutationFn: async ({ file, isOverwrite }: { file: File; isOverwrite: boolean }) => {
       if (!file) {
         throw new Error('File is required for import')
       }
@@ -437,7 +485,7 @@ export const useImportChargingSites = (_organizationId: number | string | undefi
       const formData = new FormData()
       formData.append('file', file)
       formData.append('filename', file.name)
-      formData.append('overwrite', isOverwrite)
+      formData.append('overwrite', isOverwrite as unknown as string)
 
       return await client.post(apiRoutes.importChargingSites, formData, {
         headers: {
@@ -456,7 +504,10 @@ export const useImportChargingSites = (_organizationId: number | string | undefi
   })
 }
 
-export const useGetChargingSitesImportJobStatus = (jobId: string | undefined | null, options: QueryOptions<unknown> = {}) => {
+export const useGetChargingSitesImportJobStatus = (
+  jobId: string | undefined | null,
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
   const {
@@ -471,7 +522,10 @@ export const useGetChargingSitesImportJobStatus = (jobId: string | undefined | n
     queryKey: ['chargingSitesImportJobStatus', jobId],
     queryFn: async () => {
       const response = await client.get(
-        apiRoutes.getImportChargingSitesJobStatus.replace(':jobID', String(jobId ?? ''))
+        apiRoutes.getImportChargingSitesJobStatus.replace(
+          ':jobID',
+          String(jobId ?? '')
+        )
       )
       return response.data
     },
@@ -479,7 +533,11 @@ export const useGetChargingSitesImportJobStatus = (jobId: string | undefined | n
     gcTime,
     enabled: enabled && !!jobId,
     refetchInterval: (data) => {
-      const responseData = (data as any)?.state?.data
+      const responseData = (
+        data as {
+          state?: { data?: { status?: string; progress?: number } }
+        } | undefined
+      )?.state?.data
       // Stop polling when job is complete or failed
       if (
         responseData?.status === 'Import process completed.' ||
@@ -487,7 +545,10 @@ export const useGetChargingSitesImportJobStatus = (jobId: string | undefined | n
         responseData?.progress === 100
       ) {
         // Invalidate charging site queries when job completes successfully
-        if (responseData?.progress === 100 && responseData?.status === 'Import process completed.') {
+        if (
+          responseData?.progress === 100 &&
+          responseData?.status === 'Import process completed.'
+        ) {
           queryClient.invalidateQueries({ queryKey: ['chargingSitesByOrg'] })
           queryClient.invalidateQueries({ queryKey: ['chargingSite'] })
           queryClient.invalidateQueries({ queryKey: ['chargingSitesAll'] })
@@ -515,13 +576,13 @@ export const useInvalidateChargingSiteQueries = () => {
       })
       queryClient.invalidateQueries({ queryKey: ['charging-site-statuses'] })
     },
-    invalidateForSite: (siteId: any) => {
+    invalidateForSite: (siteId: unknown) => {
       queryClient.invalidateQueries({ queryKey: ['chargingSite', siteId] })
       queryClient.invalidateQueries({
         queryKey: ['charging-site-equipment-paginated', siteId]
       })
     },
-    invalidateForOrganization: (orgId: any) => {
+    invalidateForOrganization: (orgId: unknown) => {
       queryClient.invalidateQueries({ queryKey: ['chargingSitesByOrg', orgId] })
     },
     // Add method to invalidate all lists

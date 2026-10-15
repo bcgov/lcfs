@@ -1,6 +1,9 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import { AuthorizationProvider, useAuthorization } from '../AuthorizationContext'
+import {
+  AuthorizationProvider,
+  useAuthorization
+} from '../AuthorizationContext'
 import React from 'react'
 
 describe('AuthorizationContext', () => {
@@ -80,7 +83,11 @@ describe('AuthorizationContext', () => {
         result.current.addErrorRef('ref-789')
       })
 
-      expect(result.current.errorRefs).toEqual(['ref-123', 'ref-456', 'ref-789'])
+      expect(result.current.errorRefs).toEqual([
+        'ref-123',
+        'ref-456',
+        'ref-789'
+      ])
     })
 
     it('should not add duplicate reference numbers', () => {
@@ -108,10 +115,13 @@ describe('AuthorizationContext', () => {
 
     it('should not add null or undefined reference', () => {
       const { result } = renderHook(() => useAuthorization(), { wrapper })
+      const addUnknownErrorRef = result.current.addErrorRef as (
+        ref: unknown
+      ) => void
 
       act(() => {
-        result.current.addErrorRef(null as any)
-        result.current.addErrorRef(undefined as any)
+        addUnknownErrorRef(null)
+        addUnknownErrorRef(undefined)
       })
 
       expect(result.current.errorRefs).toEqual([])
@@ -339,7 +349,9 @@ describe('AuthorizationContext', () => {
     it('should throw error when useAuthorization is used outside provider', () => {
       expect(() => {
         renderHook(() => useAuthorization())
-      }).toThrow('useAuthorization must be used within an AuthorizationProvider')
+      }).toThrow(
+        'useAuthorization must be used within an AuthorizationProvider'
+      )
     })
   })
 
@@ -358,7 +370,9 @@ describe('AuthorizationContext', () => {
     })
 
     it('should preserve function references across re-renders', () => {
-      const { result, rerender } = renderHook(() => useAuthorization(), { wrapper })
+      const { result, rerender } = renderHook(() => useAuthorization(), {
+        wrapper
+      })
 
       const initialSetForbidden = result.current.setForbidden
       const initialAddErrorRef = result.current.addErrorRef

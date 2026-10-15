@@ -603,6 +603,36 @@ async def test_get_lookup_table_data_builds_rows(calculator_service, mock_repo):
 
 
 @pytest.mark.anyio
+async def test_get_lookup_table_data_preserves_hydrogen_mass_unit(
+    calculator_service, mock_repo
+):
+    hydrogen_row = SimpleNamespace(
+        fuel_category="Diesel",
+        fuel_type="Hydrogen",
+        end_use_type="Fuel cell vehicle",
+        provision_of_the_act="Default carbon intensity",
+        target_carbon_intensity=79.28,
+        default_carbon_intensity=94.38,
+        category_carbon_intensity=None,
+        energy_density=141.76,
+        energy_density_unit="MJ/kg",
+        eer=1.9,
+        fuel_type_id=6,
+        end_use_type_id=None,
+    )
+    mock_repo.get_lookup_table_data.return_value = {
+        "data": [hydrogen_row],
+        "uci_map": {},
+    }
+
+    result = await calculator_service.get_lookup_table_data(2025)
+
+    assert result.data[0].fuel_type == "Hydrogen"
+    assert result.data[0].energy_density == 141.76
+    assert result.data[0].energy_density_unit == "MJ/kg"
+
+
+@pytest.mark.anyio
 async def test_get_lookup_table_data_filters_fuel_code_rows(calculator_service, mock_repo):
     """Test that rows with 'Fuel code' determining CI are filtered out (Issue #3841)"""
     row_default_ci = SimpleNamespace(

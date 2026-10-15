@@ -1,3 +1,4 @@
+import React from 'react'
 import { vi, describe, expect, beforeEach, afterEach } from 'vitest'
 import { screen, fireEvent, waitFor } from '@testing-library/react'
 import { Organizations } from '../Organizations'
@@ -24,16 +25,19 @@ vi.mock('react-router-dom', async () => {
 })
 
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  BCGridViewer: ({
-    gridRef,
-    onPaginationChange,
-    queryData,
-    getRowId,
-    gridOptions,
-    defaultColDef,
-    handleGridKey,
-    ...otherProps
-  }) => {
+  BCGridViewer: (props) => {
+    const { gridRef, ...otherProps } = props
+    for (const key of [
+      'onPaginationChange',
+      'queryData',
+      'getRowId',
+      'gridOptions',
+      'defaultColDef',
+      'handleGridKey'
+    ]) {
+      delete otherProps[key]
+    }
+
     // Set up gridRef with clearFilters method
     if (gridRef) {
       gridRef.current = {
@@ -164,7 +168,12 @@ vi.mock('@/components/BCTypography', () => ({
 }))
 
 vi.mock('@mui/material/Stack', () => ({
-    default: ({ children, direction, spacing, useFlexGap, flexWrap }) => (
+    default: ({
+  children,
+  direction,
+  spacing,
+  flexWrap
+}) => (
     <div
       data-test="mui-stack"
       style={{
@@ -200,10 +209,13 @@ vi.mock('@fortawesome/react-fontawesome', () => ({
 }))
 
 vi.mock('@/components/DownloadButton', () => {
-  const { forwardRef } = require('react')
   return {
-    DownloadButton: forwardRef(
-      ({ onDownload, isDownloading, label, downloadLabel, dataTest }, ref) => (
+    DownloadButton: React.forwardRef(
+      function MockDownloadButton(
+        { onDownload, isDownloading, label, downloadLabel, dataTest },
+        ref
+      ) {
+        return (
         <button
           ref={ref}
           data-test={dataTest || 'download-button'}
@@ -212,7 +224,8 @@ vi.mock('@/components/DownloadButton', () => {
         >
           {isDownloading ? downloadLabel : label}
         </button>
-      )
+        )
+      }
     )
   }
 })

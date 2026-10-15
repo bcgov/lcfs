@@ -155,6 +155,8 @@ const CommentForm = ({
   })
 
   const attachmentsEnabled = enableAttachments && !!onAttachmentsChange
+  const attachmentsEnabledRef = useRef(attachmentsEnabled)
+  attachmentsEnabledRef.current = attachmentsEnabled
 
   // Public comments can't carry mentions of internal staff. Switching to
   // Public leaves the text untouched and asks the user to resolve it (the
@@ -172,9 +174,10 @@ const CommentForm = ({
     onSubmit(commentText, visibility)
   }
 
-  const handleAttachClick = () => {
+  const handleAttachClick = useCallback(() => {
+    if (!attachmentsEnabledRef.current) return
     fileInputRef.current?.click()
-  }
+  }, [])
 
   const handleFilesSelected = (event) => {
     const selected = Array.from(event.target.files || [])
@@ -238,71 +241,22 @@ const CommentForm = ({
     if (source === 'user' && removedMentionsSnapshot !== null) {
       setRemovedMentionsSnapshot(null)
     }
-    onCommentChange(content)
+    onCommentChange?.(content)
     mentionEditor.handleEditorChange(editor)
   }
 
-  // Quill renders the toolbar buttons' innerHTML itself, so tooltip/aria
-  // labels have to be set imperatively once the toolbar DOM exists.
-  useEffect(() => {
-    const quill = quillRef.current?.getEditor?.()
-    const toolbar = quill?.getModule('toolbar')?.container
-    if (!toolbar) return
-
-    const setTooltip = (selector, label) => {
-      const button = toolbar.querySelector(selector)
-      if (!button) return
-      button.setAttribute('title', label)
-      button.setAttribute('aria-label', label)
-      button.setAttribute('type', 'button')
-    }
-
-    setTooltip('.ql-bold', t('internalComment:toolbarBold'))
-    setTooltip('.ql-italic', t('internalComment:toolbarItalic'))
-    setTooltip(
-      '.ql-list[value="bullet"]',
-      t('internalComment:toolbarBulletList')
-    )
-    setTooltip(
-      '.ql-list[value="ordered"]',
-      t('internalComment:toolbarNumberedList')
-    )
-    if (attachmentsEnabled) {
-      setTooltip('.ql-attach', t('internalComment:attachFile'))
-    }
-    const mentionButton = toolbar.querySelector('.ql-mention')
-    if (mentionButton) {
-      // The button is always in the toolbar config: changing `modules` would
-      // rebuild the whole editor. Only its presentation changes here: hidden
-      // when mentions aren't allowed, disabled while the comment is Public.
-      mentionButton.style.display =
-        enableMentions || mentionsPausedByVisibility ? '' : 'none'
-      if (enableMentions) {
-        mentionButton.removeAttribute('aria-disabled')
-        setTooltip('.ql-mention', t('internalComment:mentionButtonLabel'))
-      } else if (mentionsPausedByVisibility) {
-        mentionButton.setAttribute('aria-disabled', 'true')
-        setTooltip(
-          '.ql-mention',
-          t('internalComment:mentionButtonDisabledPublic')
-        )
-      }
-    }
-  }, [attachmentsEnabled, enableMentions, mentionsPausedByVisibility, t])
-
-  // Memoized so Quill isn't re-initialized on every render.
+  // ReactQuill treats a modules change as an editor regeneration. Keep this
+  // configuration stable and toggle the attachment and mention controls in
+  // place instead.
   const quillModules = useMemo(() => {
-    const container = [
-      ['bold', 'italic'],
-      [{ list: 'bullet' }, { list: 'ordered' }]
-    ]
-    if (attachmentsEnabled) {
-      container.push(['attach'])
-    }
-    container.push(['mention'])
     return {
       toolbar: {
-        container,
+        container: [
+          ['bold', 'italic'],
+          [{ list: 'bullet' }, { list: 'ordered' }],
+          ['attach'],
+          ['mention']
+        ],
         handlers: {
           attach: handleAttachClick,
           mention: mentionEditor.handleButtonClick
@@ -312,11 +266,128 @@ const CommentForm = ({
         bindings: { tab: false }
       }
     }
-    // `handleAttachClick` only touches a ref, so it can be left out.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [attachmentsEnabled])
+  }, [handleAttachClick, mentionEditor.handleButtonClick])
 
   const isCommentEmpty = !commentText || commentText.trim() === ''
+
+  // Remount only to refresh the placeholder: a remount re-parses the value and
+  // trims whitespace, so skip it once there's content.
+  const quillInstanceKey =
+    showVisibilityToggle && isCommentEmpty ? visibility : 'static'
+
+  // Quill renders the toolbar buttons' innerHTML itself, so labels, tooltips
+  // and visibility have to be set imperatively once the toolbar DOM exists.
+  useEffect(() => {
+    const quill = quillRef.current?.getEditor?.()
+    const toolbar = quill?.getModule?.('toolbar')?.container
+    if (!toolbar) return
+
+    toolbar.setAttribute('role', 'toolbar')
+    toolbar.setAttribute(
+      'aria-label',
+      t('internalComment:commentFormattingToolbar', {
+        defaultValue: 'Comment formatting'
+      })
+    )
+
+    const controls = [
+      ['.ql-bold', t('internalComment:formatBold', { defaultValue: 'Bold' })],
+      [
+        '.ql-italic',
+        t('internalComment:formatItalic', { defaultValue: 'Italic' })
+      ],
+      [
+        '.ql-list[value="bullet"]',
+        t('internalComment:formatBulletedList', {
+          defaultValue: 'Bulleted list'
+        })
+      ],
+      [
+        '.ql-list[value="ordered"]',
+        t('internalComment:formatNumberedList', {
+          defaultValue: 'Numbered list'
+        })
+      ]
+    ]
+    controls.forEach(([selector, label]) => {
+      toolbar.querySelectorAll(selector).forEach((button) => {
+        button.setAttribute('aria-label', label)
+        button.setAttribute('title', label)
+      })
+    })
+    toolbar.querySelectorAll('.ql-attach').forEach((button) => {
+      const label = t('internalComment:attachFile', {
+        defaultValue: 'Attach file'
+      })
+      button.setAttribute('aria-label', label)
+      button.setAttribute('title', label)
+      button.removeAttribute('aria-pressed')
+      button.disabled = !attachmentsEnabled
+      button.hidden = !attachmentsEnabled
+      // Quill's author stylesheet can override the browser's default [hidden]
+      // styling, so set inline display as well to keep it out of view and the
+      // accessibility tree while attachments are unavailable.
+      button.style.display = attachmentsEnabled ? '' : 'none'
+      const group = button.closest('.ql-formats')
+      if (group) {
+        group.hidden = !attachmentsEnabled
+        group.style.display = attachmentsEnabled ? '' : 'none'
+      }
+    })
+
+    // Only the presentation of the mention button changes: hidden when
+    // mentions aren't allowed, disabled while the comment is Public.
+    const mentionButton = toolbar.querySelector('.ql-mention')
+    if (mentionButton) {
+      mentionButton.style.display =
+        enableMentions || mentionsPausedByVisibility ? '' : 'none'
+      mentionButton.setAttribute('type', 'button')
+      if (enableMentions) {
+        mentionButton.removeAttribute('aria-disabled')
+      } else if (mentionsPausedByVisibility) {
+        mentionButton.setAttribute('aria-disabled', 'true')
+      }
+      if (enableMentions || mentionsPausedByVisibility) {
+        const label = enableMentions
+          ? t('internalComment:mentionButtonLabel')
+          : t('internalComment:mentionButtonDisabledPublic')
+        mentionButton.setAttribute('title', label)
+        mentionButton.setAttribute('aria-label', label)
+      }
+    }
+
+    const updatePressedStates = () => {
+      toolbar
+        .querySelectorAll(
+          '.ql-bold, .ql-italic, .ql-list[value="bullet"], .ql-list[value="ordered"]'
+        )
+        .forEach((button) => {
+          button.setAttribute(
+            'aria-pressed',
+            String(button.classList.contains('ql-active'))
+          )
+        })
+    }
+
+    updatePressedStates()
+    // Quill changes ql-active after its editor-change callback has run. Watch
+    // the generated controls so aria-pressed always matches the actual state.
+    const observer = new MutationObserver(updatePressedStates)
+    observer.observe(toolbar, {
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class']
+    })
+
+    return () => observer.disconnect()
+  }, [
+    t,
+    quillInstanceKey,
+    attachmentsEnabled,
+    enableMentions,
+    mentionsPausedByVisibility
+  ])
+
   const showVisibilityUnderTitle =
     showVisibilityToggle && visibilityAlign === 'left'
 
@@ -479,10 +550,8 @@ const CommentForm = ({
       )}
       <div data-mention-conflict={hasMentionConflict ? 'true' : 'false'}>
         <ReactQuill
+          key={quillInstanceKey}
           ref={quillRef}
-          // Remount only to refresh the placeholder: a remount re-parses the
-          // value and trims whitespace, so skip it once there's content.
-          key={showVisibilityToggle && isCommentEmpty ? visibility : 'static'}
           value={commentText}
           onChange={handleEditorChange}
           onChangeSelection={mentionEditor.handleSelectionChange}

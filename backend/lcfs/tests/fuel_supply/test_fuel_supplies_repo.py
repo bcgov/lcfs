@@ -1,10 +1,12 @@
 import math
 import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
+from types import SimpleNamespace
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db.models.compliance import FuelSupply
-from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
+from lcfs.db.models.compliance.ComplianceReport import QuantityUnitsEnum
+from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository, _fuel_type_filter
 from lcfs.web.api.fuel_supply.schema import FuelSupplyCreateUpdateSchema, ModeEnum
 from lcfs.web.api.fuel_supply.schema import (
     FuelSuppliesSchema,
@@ -38,6 +40,24 @@ def mock_db_session():
 @pytest.fixture
 def fuel_supply_repo(mock_db_session):
     return FuelSupplyRepository(db=mock_db_session)
+
+
+def test_fuel_type_filter_expands_legacy_and_current_equivalent_names():
+    petroleum_filter = str(
+        _fuel_type_filter("Petroleum-based diesel").compile(
+            compile_kwargs={"literal_binds": True}
+        )
+    )
+    fossil_filter = str(
+        _fuel_type_filter("fossil").compile(compile_kwargs={"literal_binds": True})
+    )
+
+    assert "Petroleum-based diesel" in petroleum_filter
+    assert "Fossil-derived diesel" in petroleum_filter
+    assert "Petroleum-based diesel" in fossil_filter
+    assert "Fossil-derived diesel" in fossil_filter
+    assert "Petroleum-based gasoline" in fossil_filter
+    assert "Fossil-derived gasoline" in fossil_filter
 
 
 @pytest.mark.anyio
@@ -301,9 +321,7 @@ async def test_get_fuel_supply_table_options_excludes_other_fuel_types_pre_2024(
     mock_db_session.execute = mock_execute
 
     def compiled_sql():
-        return str(
-            captured["query"].compile(compile_kwargs={"literal_binds": True})
-        )
+        return str(captured["query"].compile(compile_kwargs={"literal_binds": True}))
 
     # Pre-2024: exclusion clause for both "Other" fuel types must be present
     await fuel_supply_repo.get_fuel_supply_table_options("2023")
@@ -336,9 +354,7 @@ async def test_get_fuel_supply_table_options_legacy_petroleum_provision_by_categ
     mock_db_session.execute = mock_execute
 
     await fuel_supply_repo.get_fuel_supply_table_options("2020")
-    legacy_sql = str(
-        captured["query"].compile(compile_kwargs={"literal_binds": True})
-    )
+    legacy_sql = str(captured["query"].compile(compile_kwargs={"literal_binds": True}))
 
     # The category-aware pairing is present: Gasoline -> 4, Diesel -> 5.
     assert "category = 'Gasoline'" in legacy_sql
@@ -882,9 +898,7 @@ async def test_get_organization_fuel_supply_analytics_filters_no_duplicate_join(
 
     for field in ("fuelType", "fuelCategory", "provisionOfTheAct", "fuelCode"):
         filters = [
-            FilterModel(
-                field=field, filter="x", type="contains", filter_type="text"
-            )
+            FilterModel(field=field, filter="x", type="contains", filter_type="text")
         ]
 
         # Analytics (charts) path.
@@ -896,9 +910,7 @@ async def test_get_organization_fuel_supply_analytics_filters_no_duplicate_join(
         pagination = PaginationRequestSchema(
             page=1, size=10, filters=filters, sort_orders=[]
         )
-        rows, total = await repo.get_organization_fuel_supply_paginated(
-            1, pagination
-        )
+        rows, total = await repo.get_organization_fuel_supply_paginated(1, pagination)
         assert isinstance(rows, list)
         assert isinstance(total, int)
 
@@ -1016,3 +1028,146 @@ async def test_get_organization_fuel_supply_uses_effective_versions(dbsession):
     )
     assert analytics["total_volume"] == 200
     assert analytics["total_by_year"] == {period.description: 200}
+
+
+def test_renewable_liquid_fuel_grouping_rules():
+    """Renewable vs non-renewable chart includes only liquid target fuels."""
+    from lcfs.web.api.fuel_supply.repo import (
+        _get_renewable_liquid_fuel_category_label,
+        _get_renewable_liquid_fuel_group,
+    )
+
+    def fuel_supply(fuel_type, category, renewable=True, unit_name="Litres"):
+        unit_value = "L" if unit_name == "Litres" else "kWh"
+        units = SimpleNamespace(name=unit_name, value=unit_value)
+        return SimpleNamespace(
+            fuel_type=SimpleNamespace(
+                fuel_type=fuel_type,
+                renewable=renewable,
+                units=units,
+            ),
+            fuel_category=SimpleNamespace(category=category),
+            units=units,
+        )
+
+    renewable_gasoline_fuels = [
+        "Renewable gasoline",
+        "Ethanol",
+        "Renewable naphtha",
+    ]
+    for fuel_type in renewable_gasoline_fuels:
+        supply = fuel_supply(fuel_type, "Gasoline")
+        assert _get_renewable_liquid_fuel_group(supply) == "Renewable"
+        assert _get_renewable_liquid_fuel_category_label(supply) == "Renewable gasoline"
+
+    renewable_diesel_fuels = ["Biodiesel", "HDRD", "Other diesel fuel"]
+    for fuel_type in renewable_diesel_fuels:
+        supply = fuel_supply(fuel_type, "Diesel")
+        assert _get_renewable_liquid_fuel_group(supply) == "Renewable"
+        assert _get_renewable_liquid_fuel_category_label(supply) == "Renewable diesel"
+
+    renewable_jet = fuel_supply("Alternative jet fuel", "Jet fuel")
+    assert _get_renewable_liquid_fuel_group(renewable_jet) == "Renewable"
+    assert (
+        _get_renewable_liquid_fuel_category_label(renewable_jet)
+        == "Renewable jet fuel"
+    )
+
+    non_renewable_diesel = fuel_supply(
+        "Fossil-derived diesel", "Diesel", renewable=False
+    )
+    assert _get_renewable_liquid_fuel_group(non_renewable_diesel) == "Non-renewable"
+    assert (
+        _get_renewable_liquid_fuel_category_label(non_renewable_diesel)
+        == "Non-renewable diesel"
+    )
+
+    electricity = fuel_supply("Electricity", "Diesel", unit_name="Kilowatt_hour")
+    assert _get_renewable_liquid_fuel_group(electricity) is None
+    assert _get_renewable_liquid_fuel_category_label(electricity) is None
+
+    mismatched_supply_units = fuel_supply("Renewable gasoline", "Gasoline")
+    mismatched_supply_units.units = SimpleNamespace(
+        name="Kilowatt_hour", value="kWh"
+    )
+    assert _get_renewable_liquid_fuel_group(mismatched_supply_units) is None
+    assert _get_renewable_liquid_fuel_category_label(mismatched_supply_units) is None
+
+    propane = fuel_supply("Propane", "Other", renewable=False)
+    assert _get_renewable_liquid_fuel_group(propane) is None
+    assert _get_renewable_liquid_fuel_category_label(propane) is None
+
+
+@pytest.mark.anyio
+async def test_get_organization_fuel_supply_analytics_normalizes_petroleum_fuel_types(
+    mock_db_session,
+):
+    repo = FuelSupplyRepository(db=mock_db_session)
+
+    def fuel_supply(year, fuel_type, quantity, category):
+        return SimpleNamespace(
+            quantity=quantity,
+            q1_quantity=None,
+            q2_quantity=None,
+            q3_quantity=None,
+            q4_quantity=None,
+            compliance_units=0,
+            energy=0,
+            units=QuantityUnitsEnum.Litres,
+            fuel_type=SimpleNamespace(
+                fuel_type=fuel_type,
+                renewable=False,
+                fossil_derived=fuel_type.startswith("Fossil-derived"),
+                units="L",
+            ),
+            fuel_category=SimpleNamespace(category=category),
+            provision_of_the_act=SimpleNamespace(name="Prescribed"),
+            fuel_code=None,
+            compliance_report=SimpleNamespace(
+                update_date=None,
+                compliance_period=SimpleNamespace(description=str(year)),
+            ),
+        )
+
+    supplies = [
+        fuel_supply(2023, "Petroleum-based diesel", 100, "Diesel"),
+        fuel_supply(2024, "Fossil-derived diesel", 150, "Diesel"),
+        fuel_supply(2023, "Petroleum-based gasoline", 200, "Gasoline"),
+        fuel_supply(2024, "Fossil-derived gasoline", 100, "Gasoline"),
+    ]
+    result = MagicMock()
+    result.scalars.return_value.all.return_value = supplies
+    mock_db_session.execute = AsyncMock(return_value=result)
+
+    analytics = await repo.get_organization_fuel_supply_analytics(1)
+    yoy_by_fuel_type = {row["fuelType"]: row for row in analytics["fuel_type_yoy"]}
+
+    assert analytics["total_by_fuel_type"] == {
+        "Fossil-derived diesel": 250,
+        "Fossil-derived gasoline": 300,
+    }
+    assert analytics["total_fuel_types"] == 2
+    assert yoy_by_fuel_type["Fossil-derived diesel"]["priorYearVolume"] == 100
+    assert yoy_by_fuel_type["Fossil-derived diesel"]["totalVolume"] == 150
+    assert yoy_by_fuel_type["Fossil-derived diesel"]["pctChangeYoy"] == 50
+    assert yoy_by_fuel_type["Fossil-derived diesel"]["isNew"] is False
+    assert yoy_by_fuel_type["Fossil-derived gasoline"]["priorYearVolume"] == 200
+    assert yoy_by_fuel_type["Fossil-derived gasoline"]["totalVolume"] == 100
+    assert yoy_by_fuel_type["Fossil-derived gasoline"]["pctChangeYoy"] == -50
+    assert yoy_by_fuel_type["Fossil-derived gasoline"]["isDiscontinued"] is False
+
+    trend_keys = {
+        (row["reportingYear"], row["fuelType"])
+        for row in analytics["fuel_type_volume_trend"]
+    }
+    assert trend_keys == {
+        ("2023", "Fossil-derived diesel"),
+        ("2023", "Fossil-derived gasoline"),
+        ("2024", "Fossil-derived diesel"),
+        ("2024", "Fossil-derived gasoline"),
+    }
+    assert all(
+        row["fossilDerived"] is True
+        for row in analytics["fuel_type_volume_trend"]
+        if row["fuelType"] in {"Fossil-derived diesel", "Fossil-derived gasoline"}
+    )

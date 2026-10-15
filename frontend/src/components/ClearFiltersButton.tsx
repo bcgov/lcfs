@@ -1,16 +1,18 @@
 import { forwardRef, type KeyboardEvent, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { ButtonProps } from '@mui/material/Button'
+import type { SxProps, Theme } from '@mui/material/styles'
 import BCButton from '@/components/BCButton'
 import FilterListOffIcon from '@mui/icons-material/FilterListOff'
 
-interface ClearFiltersButtonProps {
+interface ClearFiltersButtonProps
+  extends Omit<ButtonProps, 'size' | 'color' | 'sx' | 'onClick'> {
   onClick?: () => void
   size?: 'small' | 'medium' | 'large'
   color?: 'primary' | 'secondary'
-  sx?: Record<string, any>
+  sx?: SxProps<Theme>
   buttonRef?: RefObject<HTMLButtonElement> | null
   disabled?: boolean
-  [key: string]: any // For spreading additional props
 }
 
 export const ClearFiltersButton = forwardRef<HTMLButtonElement, ClearFiltersButtonProps>(({
@@ -53,3 +55,5 @@ export const ClearFiltersButton = forwardRef<HTMLButtonElement, ClearFiltersButt
     </BCButton>
   )
 })
+
+ClearFiltersButton.displayName = 'ClearFiltersButton'

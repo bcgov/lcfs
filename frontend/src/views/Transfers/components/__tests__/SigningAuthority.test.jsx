@@ -1,7 +1,6 @@
-import React from 'react'
+import 'react';
 import { fireEvent, screen } from '@testing-library/react'
-import { SigningAuthority } from '../SigningAuthority'
-import SigningAuthorityWithRole from '../SigningAuthority'
+import SigningAuthorityWithRole, { SigningAuthority } from '../SigningAuthority'
 import { FormProvider, useForm } from 'react-hook-form'
 import { describe, expect, vi, beforeEach } from 'vitest'
 import { test } from '@/tests/utils/fixtures'
@@ -29,24 +28,7 @@ const MockFormProvider = ({ children, formProps = {} }) => {
   return <FormProvider {...methods}>{children}</FormProvider>
 }
 
-const MockFormProviderWithErrors = ({ children }) => {
-  const methods = useForm({
-    defaultValues: { signingAuthorityDeclaration: false },
-    mode: 'onChange'
-  })
 
-  // Override the formState errors via Object.defineProperty to avoid read-only error
-  Object.defineProperty(methods.formState, 'errors', {
-    value: {
-      signingAuthorityDeclaration: {
-        message: 'This field is required'
-      }
-    },
-    writable: false
-  })
-
-  return <FormProvider {...methods}>{children}</FormProvider>
-}
 
 describe('SigningAuthority Component', () => {
   beforeEach(() => {

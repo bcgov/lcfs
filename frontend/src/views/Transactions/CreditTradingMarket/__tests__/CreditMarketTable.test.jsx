@@ -19,7 +19,7 @@ vi.mock('react-i18next', () => ({
 
 // Mock the schema imports
 vi.mock('../_schema', () => ({
-  creditMarketColDefs: vi.fn((t) => [
+  creditMarketColDefs: vi.fn(() => [
     { headerName: 'Organization Name', field: 'organizationName' },
     { headerName: 'Credits to sell', field: 'creditsToSell' },
     { headerName: 'Role in market', field: 'roleInMarket' },
@@ -36,13 +36,12 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: (props) => {
     mockBCGridViewer(props)
     const {
-      queryData,
-      overlayNoRowsTemplate,
-      columnDefs,
-      readOnlyGrid,
-      getRowId,
-      onPaginationChange
-    } = props
+  queryData,
+  overlayNoRowsTemplate,
+  columnDefs,
+  getRowId,
+  onPaginationChange
+} = props
     const { data, isLoading, error } = queryData
 
     if (isLoading) return <div data-test="grid-loading">Loading...</div>
@@ -78,11 +77,12 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 
 // Mock Material-UI Box
 vi.mock('@mui/material/Box', () => ({
-  default: ({ children, component, sx, ...props }) => (
-    <div data-test="mui-box" {...props}>
+  default: ({
+  children,
+  ...props
+}) => { delete props.component; delete props.sx; return <div data-test="mui-box" {...props}>
       {children}
-    </div>
-  )
+    </div>; }
 }))
 
 // Sample test data

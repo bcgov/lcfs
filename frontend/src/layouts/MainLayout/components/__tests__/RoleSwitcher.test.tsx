@@ -9,7 +9,7 @@ import type { CSSProperties, ReactNode, ElementType } from 'react'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => key
+    t: (key: string) => key
   })
 }))
 
@@ -76,7 +76,12 @@ vi.mock('@/hooks/useUser')
 vi.mock('@/views/Users/AddEditUser/_schema')
 
 const mutateMock = vi.fn()
-let hookOptions: any
+let hookOptions: {
+  onSuccess?: (
+    data: unknown,
+    variables: { meta: { admin: boolean; role: string } }
+  ) => void
+} | null
 const originalRoleSwitcherFlag = CONFIG.feature_flags.roleSwitcher
 
 const defaultUser = {
@@ -106,13 +111,15 @@ test.beforeEach(() => {
   CONFIG.feature_flags.roleSwitcher = true
 
   vi.mocked(idirRoleOptions).mockReturnValue([
-    { label: 'Analyst', value: 'analyst' },
-    { label: 'Director', value: 'director' }
+    { label: 'Analyst', header: '', text: 'Analyst', value: 'analyst' },
+    { label: 'Director', header: '', text: 'Director', value: 'director' }
   ])
 
   vi.mocked(useUpdateUser).mockImplementation((options) => {
-    hookOptions = options
-    return { mutate: mutateMock, isPending: false }
+    hookOptions = options as unknown as typeof hookOptions
+    return { mutate: mutateMock, isPending: false } as unknown as ReturnType<
+      typeof useUpdateUser
+    >
   })
 })
 
@@ -161,7 +168,7 @@ describe('RoleSwitcher', () => {
     const { container } = render(
       <RoleSwitcher
         currentUser={defaultUser}
-        hasRoles={(role) => role === 'Administrator'}
+        hasRoles={(role: string) => role === 'Administrator'}
         open
         anchorEl={anchor}
         onClose={onClose}
@@ -187,7 +194,7 @@ describe('RoleSwitcher', () => {
     render(
       <RoleSwitcher
         currentUser={defaultUser}
-        hasRoles={(role) => role === 'Administrator'}
+        hasRoles={(role: string) => role === 'Administrator'}
         open
         anchorEl={anchor}
         onClose={onClose}
@@ -221,7 +228,7 @@ describe('RoleSwitcher', () => {
     render(
       <RoleSwitcher
         currentUser={defaultUser}
-        hasRoles={(role) => role === 'Administrator'}
+        hasRoles={(role: string) => role === 'Administrator'}
         open
         anchorEl={anchor}
         onClose={onClose}
@@ -261,7 +268,7 @@ describe('RoleSwitcher', () => {
     render(
       <RoleSwitcher
         currentUser={defaultUser}
-        hasRoles={(role) => role === 'Administrator'}
+        hasRoles={(role: string) => role === 'Administrator'}
         open
         anchorEl={anchor}
         onClose={onClose}
@@ -273,9 +280,11 @@ describe('RoleSwitcher', () => {
     const directorRadio = screen.getByRole('radio', { name: 'Director' })
     fireEvent.click(directorRadio)
 
-    expect(hookOptions).toBeDefined()
+    const onSuccess = hookOptions?.onSuccess
+    expect(onSuccess).toBeDefined()
+    if (!onSuccess) throw new Error('useUpdateUser onSuccess option was missing')
     act(() => {
-      hookOptions.onSuccess(
+      onSuccess(
         {},
         {
           meta: {
@@ -307,7 +316,7 @@ describe('RoleSwitcher', () => {
     render(
       <RoleSwitcher
         currentUser={userWithoutId}
-        hasRoles={(role) => role === 'Administrator'}
+        hasRoles={(role: string) => role === 'Administrator'}
         open
         anchorEl={anchor}
         onClose={onClose}

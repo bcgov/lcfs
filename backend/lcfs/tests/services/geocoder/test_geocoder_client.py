@@ -67,7 +67,8 @@ def mock_nominatim_response():
 class TestBCGeocoderService:
     """Test cases for BC Geocoder service."""
 
-    def test_initialization(self, geocoder_service):
+    @pytest.mark.anyio
+    async def test_initialization(self, geocoder_service):
         """Test service initialization."""
         assert geocoder_service.bc_geocoder_url == "https://test.geocoder.api.gov.bc.ca"
         assert (
@@ -509,7 +510,8 @@ class TestBCGeocoderService:
             await geocoder_service.shutdown()
             mock_shutdown.assert_called_once()
 
-    def test_parse_bc_geocoder_response(
+    @pytest.mark.anyio
+    async def test_parse_bc_geocoder_response(
         self, geocoder_service, mock_bc_geocoder_response
     ):
         """Test parsing of BC Geocoder response."""
@@ -527,7 +529,8 @@ class TestBCGeocoderService:
         assert address.latitude == 49.2827
         assert address.longitude == -123.1207
 
-    def test_parse_bc_geocoder_empty_response(self, geocoder_service):
+    @pytest.mark.anyio
+    async def test_parse_bc_geocoder_empty_response(self, geocoder_service):
         """Test parsing of empty BC Geocoder response."""
         empty_response = {"features": []}
         addresses = geocoder_service._parse_bc_geocoder_response(empty_response)

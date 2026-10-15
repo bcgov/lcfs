@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { ThemeProvider } from '@mui/material/styles'
@@ -73,7 +73,7 @@ describe('UserLoginHistory', () => {
         },
         {
           userLoginHistoryId: 2,
-          username: 'user2', 
+          username: 'user2',
           loginDate: '2024-01-02'
         }
       ]
@@ -90,20 +90,20 @@ describe('UserLoginHistory', () => {
 
   beforeEach(() => {
     vi.resetAllMocks()
-    
+
     mockUseGetUserLoginHistory.mockReturnValue(mockQueryData)
-    
+
     // Configure mocks using vi.mocked
     vi.mocked(BCGridViewer).mockImplementation((props) => {
       // Store ref for testing
       if (props.gridRef) {
         Object.assign(props.gridRef, mockGridRef)
       }
-      
+
       return (
         <div data-test="bc-grid-viewer">
-          <button 
-            data-test="test-pagination-change" 
+          <button
+            data-test="test-pagination-change"
             onClick={() => props.onPaginationChange({ page: 2, size: 20 })}
           >
             Test Pagination Change
@@ -128,7 +128,7 @@ describe('UserLoginHistory', () => {
 
   it('calls useGetUserLoginHistory with initial pagination options', () => {
     customRender(<UserLoginHistory />)
-    
+
     expect(mockUseGetUserLoginHistory).toHaveBeenCalledWith(
       {
         page: 1,
@@ -145,7 +145,7 @@ describe('UserLoginHistory', () => {
 
   it('passes correct props to BCGridViewer', () => {
     customRender(<UserLoginHistory />)
-    
+
     expect(vi.mocked(BCGridViewer)).toHaveBeenCalledWith(
       expect.objectContaining({
         gridKey: 'user-login-history-grid',
@@ -163,41 +163,41 @@ describe('UserLoginHistory', () => {
 
   it('getRowId callback returns correct value', () => {
     customRender(<UserLoginHistory />)
-    
+
     const getRowIdCall = vi.mocked(BCGridViewer).mock.calls[0][0].getRowId
     const testParams = {
       data: {
         userLoginHistoryId: 123
       }
     }
-    
+
     const result = getRowIdCall(testParams)
     expect(result).toBe('123')
   })
 
   it('getRowId callback handles different id types', () => {
     customRender(<UserLoginHistory />)
-    
+
     const getRowIdCall = vi.mocked(BCGridViewer).mock.calls[0][0].getRowId
-    
+
     // Test with number
     expect(getRowIdCall({ data: { userLoginHistoryId: 456 } })).toBe('456')
-    
+
     // Test with string number
     expect(getRowIdCall({ data: { userLoginHistoryId: '789' } })).toBe('789')
   })
 
   it('handleClearFilters functionality works internally', async () => {
     customRender(<UserLoginHistory />)
-    
+
     // Trigger pagination change first
     const paginationChangeButton = screen.getByTestId('test-pagination-change')
     fireEvent.click(paginationChangeButton)
-    
+
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 10))
+      await new Promise((resolve) => setTimeout(resolve, 10))
     })
-    
+
     // Verify pagination was updated
     expect(mockUseGetUserLoginHistory).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -216,8 +216,8 @@ describe('UserLoginHistory', () => {
       }
       return (
         <div data-test="bc-grid-viewer">
-          <button 
-            data-test="test-pagination-change" 
+          <button
+            data-test="test-pagination-change"
             onClick={() => props.onPaginationChange({ page: 2, size: 20 })}
           >
             Test Pagination Change
@@ -225,9 +225,9 @@ describe('UserLoginHistory', () => {
         </div>
       )
     })
-    
+
     customRender(<UserLoginHistory />)
-    
+
     // Component should render without errors
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
   })
@@ -238,8 +238,8 @@ describe('UserLoginHistory', () => {
       props.gridRef.current = undefined
       return (
         <div data-test="bc-grid-viewer">
-          <button 
-            data-test="test-pagination-change" 
+          <button
+            data-test="test-pagination-change"
             onClick={() => props.onPaginationChange({ page: 2, size: 20 })}
           >
             Test Pagination Change
@@ -247,23 +247,23 @@ describe('UserLoginHistory', () => {
         </div>
       )
     })
-    
+
     customRender(<UserLoginHistory />)
-    
+
     // Component should render without errors
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
   })
 
   it('onPaginationChange callback updates pagination state', async () => {
     customRender(<UserLoginHistory />)
-    
+
     const paginationChangeButton = screen.getByTestId('test-pagination-change')
     fireEvent.click(paginationChangeButton)
-    
+
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 10))
+      await new Promise((resolve) => setTimeout(resolve, 10))
     })
-    
+
     expect(mockUseGetUserLoginHistory).toHaveBeenLastCalledWith(
       expect.objectContaining({
         page: 2,
@@ -278,9 +278,9 @@ describe('UserLoginHistory', () => {
       ...mockQueryData,
       isLoading: true
     })
-    
+
     customRender(<UserLoginHistory />)
-    
+
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
   })
 
@@ -290,9 +290,9 @@ describe('UserLoginHistory', () => {
       isError: true,
       error: new Error('Test error')
     })
-    
+
     customRender(<UserLoginHistory />)
-    
+
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
   })
 
@@ -301,15 +301,15 @@ describe('UserLoginHistory', () => {
       ...mockQueryData,
       data: { histories: [] }
     })
-    
+
     customRender(<UserLoginHistory />)
-    
+
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
   })
 
   it('passes columnDefs function result to BCGridViewer', () => {
     customRender(<UserLoginHistory />)
-    
+
     const columnDefsCall = vi.mocked(BCGridViewer).mock.calls[0][0].columnDefs
     expect(Array.isArray(columnDefsCall)).toBe(true)
     expect(columnDefsCall.length).toBeGreaterThan(0)

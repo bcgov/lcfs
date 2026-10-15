@@ -1,6 +1,5 @@
 import io
 import logging
-import zoneinfo
 from datetime import datetime, timezone
 from typing import List, Dict, Union
 from fastapi import Depends
@@ -36,6 +35,7 @@ from lcfs.utils.constants import (
     id_prefix_to_transaction_type_map,
 )
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
+from lcfs.utils.dates import to_pacific_date
 
 
 logger = logging.getLogger(__name__)
@@ -46,19 +46,6 @@ class TransactionsService:
         self, repo: TransactionRepository = Depends(TransactionRepository)
     ) -> None:
         self.repo = repo
-
-    @staticmethod
-    def _to_pacific(dt):
-        """Convert a naive-UTC or aware datetime to America/Vancouver."""
-        from datetime import date as date_type
-
-        # MV columns cast to ::date return date objects, not datetime
-        if isinstance(dt, date_type) and not isinstance(dt, datetime):
-            return dt
-        pacific = zoneinfo.ZoneInfo("America/Vancouver")
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return dt.astimezone(pacific)
 
     def apply_transaction_filters(self, pagination, conditions):
         """
@@ -101,23 +88,30 @@ class TransactionsService:
     @staticmethod
     def _status_filter(filter_model):
         field = cast(get_field_for_filter(TransactionView, "status"), String)
-        filter_value = filter_model.filter
+        filter_value = (
+            filter_model.values
+            if filter_model.filter_type == "set" and filter_model.values is not None
+            else filter_model.filter
+        )
         filter_type = filter_model.filter_type
+
         if isinstance(filter_value, str) and "," in filter_value:
             filter_value = filter_value.split(",")
         if isinstance(filter_value, list):
             filter_type = "set"
+
         return apply_filter_conditions(
             field, filter_value, filter_model.type, filter_type
         )
 
     @service_handler
     async def get_transactions_paginated(
-        self, pagination: PaginationRequestSchema = {}, organization_id: int = None
+        self, pagination: PaginationRequestSchema = None, organization_id: int = None
     ) -> Dict[str, Union[List[TransactionViewSchema], PaginationResponseSchema]]:
         """
         Fetch transactions with filters, sorting, and pagination.
         """
+        pagination = pagination or PaginationRequestSchema()
         pagination.filters.append(
             FilterModel(
                 field="status", filter="Deleted", type="notEqual", filter_type="text"
@@ -233,6 +227,16 @@ class TransactionsService:
             repo_organization_id,
         )
 
+        # The transactions view has no agreement date or A1 flag, so look both
+        # up for the exported transfers.
+        transfer_details = await self.repo.get_transfer_export_details(
+            [
+                result.transaction_id
+                for result in results[0]
+                if result.transaction_type == "Transfer"
+            ]
+        )
+
         # Prepare data for the spreadsheet
         data = []
         for result in results[0]:
@@ -241,6 +245,19 @@ class TransactionsService:
                 TransferStatusEnum.Submitted.name
                 if result.status == TransferStatusEnum.Recommended.value
                 else result.status
+            )
+
+            # IDs are only unique per transaction type
+            transfer = (
+                transfer_details.get(result.transaction_id)
+                if result.transaction_type == "Transfer"
+                else None
+            )
+            # A1 is a flagged subset of Category A
+            category = (
+                "A1"
+                if transfer and transfer.is_a1_category and result.category == "A"
+                else result.category
             )
 
             prefix = transaction_type_to_id_prefix_map.get(result.transaction_type)
@@ -265,23 +282,14 @@ class TransactionsService:
                     result.to_organization,
                     result.quantity,
                     result.price_per_unit,
-                    result.category,
+                    category,
                     masked_status,
-                    (
-                        result.transaction_effective_date.strftime("%Y-%m-%d")
-                        if result.transaction_effective_date
-                        else None
-                    ),
-                    (
-                        self._to_pacific(result.recorded_date).strftime("%Y-%m-%d")
-                        if result.recorded_date
-                        else None
-                    ),
-                    (
-                        self._to_pacific(result.approved_date).strftime("%Y-%m-%d")
-                        if result.approved_date
-                        else None
-                    ),
+                    # The agreement date is stored as a calendar date and the
+                    # view emits the other three as Pacific calendar dates
+                    to_pacific_date(transfer.agreement_date if transfer else None),
+                    to_pacific_date(result.transaction_effective_date),
+                    to_pacific_date(result.recorded_date),
+                    to_pacific_date(result.approved_date),
                     result.from_org_comment,
                     result.to_org_comment,
                     result.government_comment,

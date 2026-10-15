@@ -1,7 +1,4 @@
-// @ts-nocheck
 import type { ColDef } from 'ag-grid-community'
-import BCBox from '@/components/BCBox'
-import BCUserInitials from '@/components/BCUserInitials/BCUserInitials'
 import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
 import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
 import { dateFormatter } from '@/utils/formatters'
@@ -9,57 +6,21 @@ import {
   useCIApplicationStatuses,
   useGetCIApplicationAnalysts
 } from '@/hooks/useCIApplication'
-import {
-  CIApplicationStatusRenderer,
-  createStatusRenderer
-} from '@/utils/grid/cellRenderers'
+import { LastCommentRenderer, CIApplicationListStatusRenderer } from './components/CIApplicationListRenderers'
 import { CIAssignedAnalystCell } from './components/CIAssignedAnalystCell'
 
-const ANALYST_CHIP_SX = {
-  bgcolor: '#606060',
-  color: 'common.white',
-  borderRadius: '50%',
-  width: 32,
-  height: 32,
-  minWidth: 32,
-  '& .MuiChip-label': { padding: 0 },
-  '&:hover': { bgcolor: '#505050' }
-}
-
-// Centered chip wrapper so analyst / last-comment pills sit visually
-// centered in their grid cell regardless of the row's natural height.
-const PillCell = ({ children }) => (
-  <BCBox
-    component="div"
-    sx={{
-      width: '100%',
-      height: '100%',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      py: 1
-    }}
-  >
-    {children}
-  </BCBox>
-)
-
-const LastCommentRenderer = ({ data }) => {
-  const last = data?.lastComment
-  if (!last?.fullName) {
-    return <BCBox component="div" sx={{ width: '100%', height: '100%' }} />
-  }
-  return (
-    <PillCell>
-      <BCUserInitials
-        fullName={last.fullName}
-        tooltipText={last.comment}
-        maxLength={500}
-        variant="filled"
-        sx={ANALYST_CHIP_SX}
-      />
-    </PillCell>
-  )
+type CIApplicationListRow = {
+  ciApplicationId?: number | string
+  status?: { status?: string }
+  organization?: { name?: string }
+  assignedAnalyst?: { userProfileId?: number | string; firstName?: string; lastName?: string; initials?: string }
+  lastComment?: { fullName?: string; comment?: string }
+  facilityCity?: string | null
+  facilityProvinceState?: string | null
+  facilityCountry?: string | null
+  verificationLevel?: string | null
+  verification?: { verificationLevel?: string | null }
+  [key: string]: unknown
 }
 
 const TEXT_FILTER_PARAMS = {
@@ -85,7 +46,7 @@ const DATE_FLOATING_FILTER_PARAMS = {
 // "Production facility Location" matches the wireframe: city + optional
 // province/state, then country. We bake this in the frontend rather than on
 // the API because each piece is already on the row.
-const productionFacilityLocation = (data) => {
+const productionFacilityLocation = (data?: CIApplicationListRow) => {
   if (!data) return ''
   const cityProvince = [data.facilityCity, data.facilityProvinceState]
     .filter(Boolean)
@@ -96,33 +57,11 @@ const productionFacilityLocation = (data) => {
   return cityProvince || country
 }
 
-const CI_APPLICATION_CHANGES_REQUESTED_LABEL = 'Changes requested'
-const CIApplicationChangesRequestedRenderer = createStatusRenderer(
-  { [CI_APPLICATION_CHANGES_REQUESTED_LABEL]: 'warning' },
-  { statusField: 'status.status' },
-  CI_APPLICATION_CHANGES_REQUESTED_LABEL
-)
-
-const CIApplicationListStatusRenderer = (props) => {
-  const supplementalEditEnabled =
-    props.data?.pathwaySupplementalEditEnabled ||
-    props.data?.pathway_supplemental_edit_enabled
-
-  if (!supplementalEditEnabled) {
-    return <CIApplicationStatusRenderer {...props} />
-  }
-
-  return <CIApplicationChangesRequestedRenderer {...props} />
-}
-
-CIApplicationListStatusRenderer.filterPillRenderer =
-  CIApplicationStatusRenderer.filterPillRenderer
-
-const statusCol = (t) => ({
+const statusCol = (t: (key: string) => string) => ({
   field: 'status.status',
   headerName: t('carbonIntensity:columns.status'),
   cellRenderer: CIApplicationListStatusRenderer,
-  valueGetter: (params) => params.data?.status?.status,
+  valueGetter: (params: { data?: CIApplicationListRow }) => params.data?.status?.status,
   minWidth: 140,
   sortable: false,
   floatingFilterComponent: BCSelectFloatingFilter,
@@ -134,7 +73,7 @@ const statusCol = (t) => ({
   suppressFloatingFilterButton: true
 })
 
-const idCol = (t) => ({
+const idCol = (t: (key: string) => string): ColDef<CIApplicationListRow> => ({
   field: 'ciApplicationId',
   headerName: t('carbonIntensity:columns.ciApplicationId'),
   valueFormatter: (params) => `CI${params.value}`,
@@ -147,7 +86,9 @@ const idCol = (t) => ({
   suppressFloatingFilterButton: true
 })
 
-const proposedEffectiveCol = (t) => ({
+const proposedEffectiveCol = (
+  t: (key: string) => string
+): ColDef<CIApplicationListRow> => ({
   field: 'proposedFuelCodeEffectiveDate',
   headerName: t('carbonIntensity:columns.proposedEffectiveDate'),
   minWidth: 300,
@@ -162,7 +103,9 @@ const proposedEffectiveCol = (t) => ({
 // Single composite column replacing the previous Country / City / Capacity
 // trio so we match the wireframe layout. Filterable by free text against
 // the displayed string.
-const productionFacilityLocationCol = (t) => ({
+const productionFacilityLocationCol = (
+  t: (key: string) => string
+): ColDef<CIApplicationListRow> => ({
   field: 'productionFacilityLocation',
   headerName: t('carbonIntensity:columns.productionFacilityLocation'),
   valueGetter: ({ data }) => productionFacilityLocation(data),
@@ -173,7 +116,9 @@ const productionFacilityLocationCol = (t) => ({
   suppressFloatingFilterButton: true
 })
 
-const lastUpdatedCol = (t) => ({
+const lastUpdatedCol = (
+  t: (key: string) => string
+): ColDef<CIApplicationListRow> => ({
   field: 'updateDate',
   headerName: t('carbonIntensity:columns.lastUpdated'),
   minWidth: 300,
@@ -186,7 +131,9 @@ const lastUpdatedCol = (t) => ({
   suppressFloatingFilterButton: true
 })
 
-const organizationCol = (t) => ({
+const organizationCol = (
+  t: (key: string) => string
+): ColDef<CIApplicationListRow> => ({
   field: 'organization.name',
   headerName: t('carbonIntensity:columns.organization'),
   valueGetter: (params) => params.data?.organization?.name,
@@ -198,7 +145,9 @@ const organizationCol = (t) => ({
 
 // IDIR triage columns. Backed by simple nullable columns on the
 // ci_application table; filterable via the standard pipeline.
-const priorityScoreCol = (t) => ({
+const priorityScoreCol = (
+  t: (key: string) => string
+): ColDef<CIApplicationListRow> => ({
   field: 'priorityScore',
   headerName: t('carbonIntensity:columns.priorityScore'),
   minWidth: 180,
@@ -208,16 +157,21 @@ const priorityScoreCol = (t) => ({
   suppressFloatingFilterButton: true
 })
 
-export const getVerificationColumnValue = (data) => {
+export const getVerificationColumnValue = (data?: CIApplicationListRow) => {
   if (data?.verification2Date) return 'VX2'
   if (data?.verification1Date) return 'VX1'
-  if (['VX1', 'VX2'].includes(data?.verificationLevel)) {
+  if (
+    data?.verificationLevel &&
+    ['VX1', 'VX2'].includes(data.verificationLevel)
+  ) {
     return data.verificationLevel
   }
   return null
 }
 
-const verificationCol = (t) => ({
+const verificationCol = (
+  t: (key: string) => string
+): ColDef<CIApplicationListRow> => ({
   field: 'verificationLevel',
   headerName: t('carbonIntensity:columns.verification'),
   valueGetter: ({ data }) => getVerificationColumnValue(data),
@@ -227,7 +181,10 @@ const verificationCol = (t) => ({
   suppressFloatingFilterButton: true
 })
 
-const assignedAnalystCol = (t, onRefresh) => ({
+const assignedAnalystCol = (
+  t: (key: string) => string,
+  onRefresh?: () => void
+): ColDef<CIApplicationListRow> => ({
   field: 'assignedAnalyst',
   headerName: t('carbonIntensity:columns.assignedAnalyst'),
   minWidth: 180,
@@ -239,8 +196,12 @@ const assignedAnalystCol = (t, onRefresh) => ({
   sortable: false,
   filter: 'agTextColumnFilter',
   filterParams: {
-    textFormatter: (value) => value || '',
-    textCustomComparator: (filter, value, filterText) => {
+    textFormatter: (value: string | null) => value || '',
+    textCustomComparator: (
+      _filter: string,
+      value: string,
+      filterText: string
+    ) => {
       // Handle filtering by initials
       const cleanValue = (value || '').toLowerCase()
       const cleanFilter = filterText.toLowerCase()
@@ -258,7 +219,9 @@ const assignedAnalystCol = (t, onRefresh) => ({
   suppressHeaderFilterButton: true
 })
 
-const lastCommentCol = (t) => ({
+const lastCommentCol = (
+  t: (key: string) => string
+): ColDef<CIApplicationListRow> => ({
   field: 'lastComment',
   headerName: t('carbonIntensity:columns.lastComment'),
   minWidth: 220,
@@ -332,7 +295,7 @@ export const defaultSortModel: Array<{ field: string; direction: string }> = [
  * the Government decision panel.
  */
 export const getResumeStep = (
-  application: Record<string, any> | null | undefined
+  application: { status?: { status?: string } } | null | undefined
 ): number => {
   const status = application?.status?.status
   switch (status) {

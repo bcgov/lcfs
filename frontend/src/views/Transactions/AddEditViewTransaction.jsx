@@ -52,7 +52,7 @@ import {
   INITIATIVE_AGREEMENT
 } from '@/views/Transactions/constants'
 import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog.jsx'
-import { SupportingDocumentSummary } from '@/views/SupportingDocuments/SupportingDocumentSummary.jsx'
+import '@/views/SupportingDocuments/SupportingDocumentSummary.jsx';
 import { useTransactionDocuments } from '@/hooks/useTransactions.js'
 import TransactionDocuments from '@/views/Transactions/components/Documents.jsx'
 
@@ -123,7 +123,6 @@ export const AddEditViewTransaction = () => {
   const {
     watch,
     setValue,
-    formState: { errors },
     handleSubmit
   } = methods
 
@@ -157,10 +156,9 @@ export const AddEditViewTransaction = () => {
       : INITIATIVE_AGREEMENT
   }
 
-  const { data: documentData, isLoading: documentsLoading } =
-    useTransactionDocuments(transactionId, txnType, {
+  useTransactionDocuments(transactionId, txnType, {
       enabled: !!transactionId && !!txnType
-    })
+    });
 
   // Conditionally fetch data if in edit mode and txnType is set
   const transactionDataHook =

@@ -1,4 +1,3 @@
-import React from 'react'
 import { act, screen, fireEvent } from '@testing-library/react'
 import { describe, expect, beforeEach, vi } from 'vitest'
 import { FuelSupplySummary } from '../FuelSupplySummary'
@@ -25,13 +24,9 @@ vi.mock('react-i18next', () => ({
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: ({
     gridKey,
-    columnDefs,
     queryData,
     dataKey,
-    gridOptions,
-    defaultColDef,
     suppressPagination,
-    paginationOptions,
     onPaginationChange,
     getRowId,
     suppressMovableColumns,
@@ -88,12 +83,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 
 // Mock the schema
 vi.mock('@/views/FuelSupplies/_schema', () => ({
-  fuelSupplySummaryColDef: (
-    isEarlyIssuance,
-    showFuelTypeOther,
-    complianceYear,
-    optionsData
-  ) => [
+  fuelSupplySummaryColDef: () => [
     { field: 'fuelType', headerName: 'Fuel Type' },
     { field: 'quantity', headerName: 'Quantity' }
   ]
@@ -326,13 +316,6 @@ describe('FuelSupplySummary', () => {
       }
 
       const TestComponent = () => {
-        const [paginationOptions, setPaginationOptions] = React.useState({
-          page: 1,
-          size: 10,
-          filters: [],
-          sortOrders: [{ field: 'quantity', direction: 'asc' }]
-        })
-
         return (
           <FuelSupplySummary
             data={mockData}
@@ -371,13 +354,6 @@ describe('FuelSupplySummary', () => {
       }
 
       const TestComponent = () => {
-        const [paginationOptions, setPaginationOptions] = React.useState({
-          page: 1,
-          size: 10,
-          filters: [],
-          sortOrders: [{ field: 'quantity', direction: 'desc' }]
-        })
-
         return (
           <FuelSupplySummary
             data={mockData}
@@ -603,13 +579,6 @@ describe('FuelSupplySummary', () => {
       }
 
       const TestComponent = () => {
-        const [paginationOptions, setPaginationOptions] = React.useState({
-          page: 1,
-          size: 10,
-          filters: null,
-          sortOrders: []
-        })
-
         return (
           <FuelSupplySummary
             data={mockData}
@@ -631,13 +600,6 @@ describe('FuelSupplySummary', () => {
       }
 
       const TestComponent = () => {
-        const [paginationOptions, setPaginationOptions] = React.useState({
-          page: 1,
-          size: 10,
-          filters: [],
-          sortOrders: null
-        })
-
         return (
           <FuelSupplySummary
             data={mockData}
@@ -664,13 +626,6 @@ describe('FuelSupplySummary', () => {
       }
 
       const TestComponent = () => {
-        const [paginationOptions, setPaginationOptions] = React.useState({
-          page: 1,
-          size: 10,
-          filters: [{ field: 'supplier', type: 'contains', filter: '' }],
-          sortOrders: []
-        })
-
         return (
           <FuelSupplySummary
             data={mockData}

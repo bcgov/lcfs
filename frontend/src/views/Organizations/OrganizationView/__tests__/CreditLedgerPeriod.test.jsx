@@ -12,6 +12,13 @@ import theme from '@/themes'
 
 import { CreditLedgerPeriod } from '../CreditLedgerPeriod'
 
+import {
+  usePeriodCreditLedger,
+  useDownloadCreditLedger,
+  useCreditLedgerYears
+} from '@/hooks/useCreditLedger'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+
 // t returns the key, interpolating year/type so period + assessed labels are
 // assertable.
 vi.mock('react-i18next', () => ({
@@ -40,13 +47,6 @@ vi.mock('@/hooks/useCreditLedger', () => ({
 vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: vi.fn()
 }))
-
-import {
-  usePeriodCreditLedger,
-  useDownloadCreditLedger,
-  useCreditLedgerYears
-} from '@/hooks/useCreditLedger'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
 
 const mockPeriod = vi.mocked(usePeriodCreditLedger)
 const mockYears = vi.mocked(useCreditLedgerYears)

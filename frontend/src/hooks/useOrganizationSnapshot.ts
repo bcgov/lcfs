@@ -1,13 +1,16 @@
 import { useApiService } from '@/services/useApiService'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiRoutes } from '@/constants/routes/index'
-import type { QueryOptions, ExtMutationOptions} from './types'
+import type { QueryOptions, ExtMutationOptions } from './types'
 
 // Default cache configuration
 const DEFAULT_STALE_TIME = 5 * 60 * 1000 // 5 minutes
 const DEFAULT_CACHE_TIME = 10 * 60 * 1000 // 10 minutes
 
-export const useOrganizationSnapshot = (complianceReportId: number | string | undefined | null, options: QueryOptions<unknown> = {}) => {
+export const useOrganizationSnapshot = (
+  complianceReportId: number | string | undefined | null,
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
 
   const {
@@ -23,7 +26,7 @@ export const useOrganizationSnapshot = (complianceReportId: number | string | un
       if (!complianceReportId) {
         throw new Error('Compliance Report ID is required')
       }
-      
+
       const response = await client.get(
         `${apiRoutes.getOrganizationSnapshot.replace(':reportID', String(complianceReportId ?? ''))}`
       )
@@ -38,10 +41,16 @@ export const useOrganizationSnapshot = (complianceReportId: number | string | un
   })
 }
 
-export const useUpdateOrganizationSnapshot = (reportID: number | string | undefined | null, options: ExtMutationOptions<unknown, any> = {}) => {
+export const useUpdateOrganizationSnapshot = (
+  reportID: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, unknown> = {}
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
-  const path = apiRoutes.getOrganizationSnapshot.replace(':reportID', String(reportID ?? ''))
+  const path = apiRoutes.getOrganizationSnapshot.replace(
+    ':reportID',
+    String(reportID ?? '')
+  )
 
   const {
     onSuccess,
@@ -52,7 +61,7 @@ export const useUpdateOrganizationSnapshot = (reportID: number | string | undefi
   } = options
 
   return useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: unknown) => {
       if (!reportID) {
         throw new Error('Report ID is required')
       }
@@ -61,7 +70,9 @@ export const useUpdateOrganizationSnapshot = (reportID: number | string | undefi
     onSuccess: (data, variables, context) => {
       // Handle cache clearing or invalidation
       if (clearCache) {
-        queryClient.removeQueries({ queryKey: ['organization-snapshot', reportID] })
+        queryClient.removeQueries({
+          queryKey: ['organization-snapshot', reportID]
+        })
       } else {
         queryClient.setQueryData(['organization-snapshot', reportID], data.data)
       }
@@ -74,8 +85,10 @@ export const useUpdateOrganizationSnapshot = (reportID: number | string | undefi
     },
     onError: (error, variables, context) => {
       // Optionally invalidate queries on error to refetch fresh data
-      queryClient.invalidateQueries({ queryKey: ['organization-snapshot', reportID] })
-      
+      queryClient.invalidateQueries({
+        queryKey: ['organization-snapshot', reportID]
+      })
+
       // Call custom onError handler if provided
       onError?.(error, variables, context)
     },

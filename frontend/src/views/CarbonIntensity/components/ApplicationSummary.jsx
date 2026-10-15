@@ -240,7 +240,12 @@ const getOrganizationAddress = (organization = {}) => {
  * Pulls every field straight off ``ciApplication`` so a single render
  * mirrors what the wizard captured.
  */
-export const ApplicationSummary = ({
+export const ApplicationSummary = (props) =>
+  props.ciApplication ? <ApplicationSummaryDetails {...props} /> : null
+
+const EMPTY_PATHWAYS = []
+
+const ApplicationSummaryDetails = ({
   ciApplication,
   currentUser,
   canEditDocuments = false,
@@ -252,7 +257,6 @@ export const ApplicationSummary = ({
   isSavingPathways = false
 }) => {
   const { t } = useTranslation(['common', 'carbonIntensity'])
-  if (!ciApplication) return null
   const pathwayGridRef = useRef(null)
   const [showPathwayChangelog, setShowPathwayChangelog] = useState(false)
   const [isEditingPathways, setIsEditingPathways] = useState(false)
@@ -287,7 +291,7 @@ export const ApplicationSummary = ({
       : ''
 
   const documents = ciApplication.documents || []
-  const pathways = ciApplication.pathways || []
+  const pathways = ciApplication.pathways || EMPTY_PATHWAYS
   const pathwayDescription = ciApplication.pathwayDescription?.trim()
   const pathwayChangeLogs = [
     ...(ciApplication.pathwayChangeLogs ||

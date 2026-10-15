@@ -1,16 +1,10 @@
-import BCAlert from '@/components/BCAlert'
+import BCAlert, { BCAlert2 } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { ROUTES } from '@/routes/routes'
-import {
-  faSquareCheck,
-  faCheck,
-  faUndo,
-  faArrowLeft,
-  faFilterCircleXmark
-} from '@fortawesome/free-solid-svg-icons'
+import { faSquareCheck, faCheck, faUndo, faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import Box from '@mui/material/Box'
 import Grid from '@mui/material/Grid'
@@ -18,14 +12,13 @@ import Stack from '@mui/material/Stack'
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import Chip from '@mui/material/Chip'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { govRoles } from '@/constants/roles'
 import Loading from '@/components/Loading'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
-import { BCAlert2 } from '@/components/BCAlert'
 import { useFSEProcessing } from '@/hooks/useFSEProcessing'
 import { BulkProcessingModals } from './components/BulkProcessingModals'
 
@@ -101,7 +94,7 @@ const initialPaginationOptions = {
 }
 
 export const FSEProcessing = () => {
-  const { t } = useTranslation(['common', 'chargingEquipment'])
+  useTranslation(['common', 'chargingEquipment']);
   const navigate = useNavigate()
   const location = useLocation()
   const { siteId } = useParams()
@@ -292,8 +285,8 @@ export const FSEProcessing = () => {
     if (colId === '__select__') return
 
     // For BCeID users, navigate to the edit page
-    const { charging_equipment_id } = params.data
-    navigate(ROUTES.REPORTS.EDIT_FSE.replace(':fseId', charging_equipment_id), {
+    const { charging_equipment_id: chargingEquipmentId } = params.data
+    navigate(ROUTES.REPORTS.EDIT_FSE.replace(':fseId', chargingEquipmentId), {
       state: { returnTo: location.pathname }
     })
   }
