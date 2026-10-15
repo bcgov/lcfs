@@ -345,14 +345,15 @@ async def update_designated_action(
     response_model=DesignatedActionSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.IA_MANAGER, RoleEnum.DIRECTOR])
+@view_handler(IA_IDIR_ROLES)
 async def assign_designated_action_analyst(
     request: Request,
     designated_action_id: int,
     data: AnalystAssignmentSchema = Body(...),
     service: InitiativeAgreementServices = Depends(),
 ):
-    """Assign, reassign or unassign an analyst (IA managers and directors)."""
+    """Assign, reassign or unassign an analyst (any IDIR IA user, as with
+    compliance reports: IA analysts, IA managers and directors)."""
     return await service.assign_designated_action_analyst(
         designated_action_id, data, request.user
     )
