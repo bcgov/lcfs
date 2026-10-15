@@ -535,15 +535,7 @@ export const renewableFuelColumns = (
     }
   ]
 
-  return allColumns.filter((column) => {
-    if (
-      column.id === 'jetFuel' &&
-      parseInt(compliancePeriodYear as string) < 2024
-    ) {
-      return false
-    }
-    return true
-  })
+  return allColumns
 }
 
 export const lowCarbonColumns = (
