@@ -31,8 +31,7 @@ import { AccessibleHeader } from '@/components/BCDataGrid/components/Renderers/A
 import { BCPagination } from '@/components/BCDataGrid/components/StatusBar/BCPagination'
 import {
   addFlexToColumns,
-  getColumnMinWidthSum,
-  relaxColumnMinWidths
+  getColumnMinWidthSum
 } from '@/components/BCDataGrid/columnSizingUtils'
 import {
   runOnNextFrame,
@@ -188,8 +187,6 @@ export const BCGridEditorPaginated = ({
   const [scrollContentWidth, setScrollContentWidth] = useState<number | null>(
     null
   )
-  const minWidthRelaxedRef = useRef(false)
-  const [minWidthRelaxed, setMinWidthRelaxed] = useState(false)
 
   const hasInitializedFromCache = useRef(false)
   const previousGridKey = useRef(gridKey)
@@ -248,9 +245,6 @@ export const BCGridEditorPaginated = ({
 
     if (shouldFitColumns) {
       const flexDefs = addFlexToColumns(columnDefs).columnDefs
-      if (!minWidthRelaxed) {
-        return flexDefs
-      }
       return flexDefs.map((col: ColDef<BCGridRow>) => ({
         ...col,
         minWidth: 50
@@ -262,15 +256,13 @@ export const BCGridEditorPaginated = ({
       if (nextCol.flex != null) {
         delete nextCol.flex
       }
-      if (!minWidthRelaxed && nextCol.minWidth && !nextCol.width) {
+      if (nextCol.minWidth && !nextCol.width) {
         nextCol.width = nextCol.minWidth
       }
-      if (minWidthRelaxed) {
-        nextCol.minWidth = 50
-      }
+      nextCol.minWidth = 50
       return nextCol
     })
-  }, [columnDefs, shouldFitColumns, minWidthRelaxed])
+  }, [columnDefs, shouldFitColumns])
 
   // Compute defaultMinWidth from columnDefs so autoSizeStrategy uses proper initial widths
   // This prevents the "squished then expand" visual effect on page load
@@ -290,24 +282,8 @@ export const BCGridEditorPaginated = ({
     return { type: 'fitGridWidth' as const, defaultMinWidth }
   }, [columnDefs])
 
-  // Expand columns to fill grid and reduce minWidth to allow user drag down to 50px
   const handleFirstDataRendered = useCallback(
     (params: FirstDataRenderedEvent<BCGridRow>) => {
-      // After initial sizing, reduce minWidth on all columns to allow user drag down to 50px
-      // Preserve current widths to avoid visual jumps.
-      if (minWidthRelaxedRef.current) return
-      relaxColumnMinWidths(
-        params.api,
-        (
-          params as FirstDataRenderedEvent<BCGridRow> & {
-            columnApi?: unknown
-          }
-        ).columnApi,
-        50
-      )
-      minWidthRelaxedRef.current = true
-      setMinWidthRelaxed(true)
-
       props.onFirstDataRendered?.(params)
     },
     [props.onFirstDataRendered]
@@ -613,21 +589,6 @@ export const BCGridEditorPaginated = ({
           defaultState: { sort: null }
         })
       }
-
-      requestAnimationFrame(() => {
-        if (minWidthRelaxedRef.current) return
-        relaxColumnMinWidths(
-          params.api,
-          (
-            params as GridReadyEvent<BCGridRow> & {
-              columnApi?: unknown
-            }
-          ).columnApi,
-          50
-        )
-        minWidthRelaxedRef.current = true
-        setMinWidthRelaxed(true)
-      })
 
       props.onGridReady?.(params)
     },
@@ -964,23 +925,34 @@ export const BCGridEditorPaginated = ({
     setShowCloseModal(true)
   }
 
-  const defaultColDefParams = {
-    headerComponentParams: {
-      innerHeaderComponent: AccessibleHeader
-    },
-    suppressHeaderFilterButton: true,
-    resizable: true,
-    sortable: true,
-    filter: true,
-    filterParams: {
-      maxNumConditions: 1
-    },
-    floatingFilter: true,
-    floatingFilterComponentParams: {
-      browserAutoComplete: false
-    },
-    minWidth: 50
-  }
+  const defaultColDefParams = useMemo(
+    () => ({
+      headerComponentParams: {
+        innerHeaderComponent: AccessibleHeader
+      },
+      suppressHeaderFilterButton: true,
+      resizable: true,
+      sortable: true,
+      filter: true,
+      filterParams: {
+        maxNumConditions: 1
+      },
+      floatingFilter: true,
+      floatingFilterComponentParams: {
+        browserAutoComplete: false
+      },
+      minWidth: 50
+    }),
+    []
+  )
+
+  const mergedDefaultColDef = useMemo(
+    () => ({
+      ...defaultColDefParams,
+      ...defaultColDef
+    }),
+    [defaultColDefParams, defaultColDef]
+  )
 
   return (
     <BCBox
@@ -1024,10 +996,7 @@ export const BCGridEditorPaginated = ({
         rowData={
           (!isLoading && ((data && data[dataKey]) || [])) as unknown as BCGridRow[]
         }
-        defaultColDef={{
-          ...defaultColDefParams,
-          ...defaultColDef
-        }}
+        defaultColDef={mergedDefaultColDef}
         enableCellTextSelection={true}
         columnDefs={transformedColumnDefs}
         {...gridProps}

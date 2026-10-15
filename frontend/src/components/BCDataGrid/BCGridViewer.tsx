@@ -40,8 +40,7 @@ import {
 } from '@/components/BCDataGrid/floatingScrollbarUtils'
 import {
   addFlexToColumns,
-  getColumnMinWidthSum,
-  relaxColumnMinWidths
+  getColumnMinWidthSum
 } from '@/components/BCDataGrid/columnSizingUtils'
 import type {
   BCGridRef,
@@ -162,8 +161,6 @@ export const BCGridViewer = forwardRef<AgGridReact<BCGridRow>, BCGridViewerProps
     const [isGridVisible, setIsGridVisible] = useState(true)
     const [showScrollbar, setShowScrollbar] = useState(false)
     const [containerWidth, setContainerWidth] = useState<number | null>(null)
-    const minWidthRelaxedRef = useRef(false)
-    const [minWidthRelaxed, setMinWidthRelaxed] = useState(false)
     const syncingFromGridRef = useRef(false)
     const syncingFromCustomRef = useRef(false)
     const [scrollContentWidth, setScrollContentWidth] = useState<number | null>(
@@ -647,20 +644,6 @@ export const BCGridViewer = forwardRef<AgGridReact<BCGridRow>, BCGridViewerProps
             }
           }) as unknown as Parameters<typeof params.api.applyColumnState>[0])
         }
-        requestAnimationFrame(() => {
-          if (minWidthRelaxedRef.current) return
-          relaxColumnMinWidths(
-            params.api,
-            (
-              params as GridReadyEvent<BCGridRow> & {
-                columnApi?: unknown
-              }
-            ).columnApi,
-            50
-          )
-          minWidthRelaxedRef.current = true
-          setMinWidthRelaxed(true)
-        })
       },
       [
         gridKey,
@@ -676,21 +659,6 @@ export const BCGridViewer = forwardRef<AgGridReact<BCGridRow>, BCGridViewerProps
     const onFirstDataRendered = useCallback(
       (params: FirstDataRenderedEvent<BCGridRow>) => {
         params.api.hideOverlay()
-
-        // After initial sizing, reduce minWidth on all columns to allow user drag down to 50px
-        // Preserve current widths to avoid visual jumps.
-        if (minWidthRelaxedRef.current) return
-        relaxColumnMinWidths(
-          params.api,
-          (
-            params as FirstDataRenderedEvent<BCGridRow> & {
-              columnApi?: unknown
-            }
-          ).columnApi,
-          50
-        )
-        minWidthRelaxedRef.current = true
-        setMinWidthRelaxed(true)
       },
       []
     )
@@ -909,9 +877,6 @@ export const BCGridViewer = forwardRef<AgGridReact<BCGridRow>, BCGridViewerProps
 
       if (shouldFitColumns) {
         const flexDefs = addFlexToColumns(columnDefs).columnDefs
-        if (!minWidthRelaxed) {
-          return flexDefs
-        }
         return flexDefs.map((col: ColDef<BCGridRow>) => ({
           ...col,
           minWidth: 50
@@ -923,15 +888,13 @@ export const BCGridViewer = forwardRef<AgGridReact<BCGridRow>, BCGridViewerProps
         if (nextCol.flex != null) {
           delete nextCol.flex
         }
-        if (!minWidthRelaxed && nextCol.minWidth && !nextCol.width) {
+        if (nextCol.minWidth && !nextCol.width) {
           nextCol.width = nextCol.minWidth
         }
-        if (minWidthRelaxed) {
-          nextCol.minWidth = 50
-        }
+        nextCol.minWidth = 50
         return nextCol
       })
-    }, [columnDefs, shouldFitColumns, minWidthRelaxed])
+    }, [columnDefs, shouldFitColumns])
 
     // Compute defaultMinWidth from columnDefs so autoSizeStrategy uses proper initial widths
     // This prevents the "squished then expand" visual effect on page load
@@ -1031,6 +994,20 @@ export const BCGridViewer = forwardRef<AgGridReact<BCGridRow>, BCGridViewerProps
       [toolbarSelectFilters, combinedPills]
     )
 
+    const mergedDefaultColDef = useMemo(
+      () => ({
+        tooltipValueGetter: (params: ITooltipParams<BCGridRow>) => {
+          // Show the cell value on hover
+          return params.value !== null && params.value !== undefined
+            ? String(params.value)
+            : 'No data'
+        },
+        ...defaultColDefParams,
+        ...defaultColDef
+      }),
+      [defaultColDefParams, defaultColDef]
+    )
+
     const handleClearAllFilters = useCallback(() => {
       try {
         gridRef?.current?.api?.setFilterModel(null)
@@ -1083,16 +1060,7 @@ export const BCGridViewer = forwardRef<AgGridReact<BCGridRow>, BCGridViewerProps
           ref={gridRef}
           className="ag-theme-material"
           loading={isLoading || loading}
-          defaultColDef={{
-            tooltipValueGetter: (params: ITooltipParams<BCGridRow>) => {
-              // Show the cell value on hover
-              return params.value !== null && params.value !== undefined
-                ? String(params.value)
-                : 'No data'
-            },
-            ...defaultColDefParams,
-            ...defaultColDef
-          }}
+          defaultColDef={mergedDefaultColDef}
           columnDefs={transformedColumnDefs}
           gridOptions={gridOptions}
           rowData={

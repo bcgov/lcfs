@@ -147,6 +147,14 @@ export const OtherUsesSummary = ({ data, status }: OtherUsesSummaryProps) => {
 
   const getRowId = (params: { data: BCGridRow }) =>
     (params.data.otherUsesId as string | number).toString()
+  const columnDefs = useMemo(
+    () =>
+      otherUsesSummaryColDefs(
+        parseInt(compliancePeriod ?? '0'),
+        optionsData as OptionsData
+      ),
+    [compliancePeriod, optionsData]
+  )
   if (optionsLoading) {
     return <Loading />
   }
@@ -157,10 +165,7 @@ export const OtherUsesSummary = ({ data, status }: OtherUsesSummaryProps) => {
           gridKey="other-uses"
           gridRef={gridRef}
           getRowId={getRowId}
-          columnDefs={otherUsesSummaryColDefs(
-            parseInt(compliancePeriod ?? '0'),
-            optionsData as OptionsData
-          )}
+          columnDefs={columnDefs}
           defaultColDef={defaultColDef}
           queryData={paginatedData}
           dataKey="otherUses"

@@ -163,6 +163,11 @@ export const FuelExportSummary = ({ data, status }: FuelExportSummaryProps) => {
     [status]
   )
 
+  const columnDefs = useMemo(
+    () => fuelExportSummaryColDefs(showFuelTypeOther),
+    [showFuelTypeOther]
+  )
+
   const getRowId = (params: { data: BCGridRow }) => {
     return (params.data.fuelExportId as string | number).toString()
   }
@@ -183,7 +188,7 @@ export const FuelExportSummary = ({ data, status }: FuelExportSummaryProps) => {
           gridRef={gridRef}
           queryData={paginatedData}
           dataKey="fuelExports"
-          columnDefs={fuelExportSummaryColDefs(showFuelTypeOther)}
+          columnDefs={columnDefs}
           getRowId={getRowId}
           gridOptions={gridOptions}
           enableCopyButton={false}
