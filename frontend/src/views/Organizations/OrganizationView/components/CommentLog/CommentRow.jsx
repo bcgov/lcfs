@@ -89,7 +89,10 @@ export const CommentRow = forwardRef(function CommentRow(
     useLatestAttribution = false,
     searchQuery = '',
     onEdit,
-    isEditPending
+    isEditPending,
+    enableMentions = false,
+    mentionResults,
+    onMentionQueryChange
   },
   ref
 ) {
@@ -444,6 +447,10 @@ export const CommentRow = forwardRef(function CommentRow(
               showAddCommentBtn
               showTitle={false}
               showVisibilityToggle={false}
+              // Public comments can't carry mentions of internal staff.
+              enableMentions={enableMentions && editVisibility === 'Internal'}
+              mentionResults={mentionResults}
+              onMentionQueryChange={onMentionQueryChange}
             />
           </>
         )}

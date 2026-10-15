@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 import Alert from '@mui/material/Alert'
@@ -16,8 +16,10 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   useOrganizationComments,
   useCommentCategories,
-  useEditOrganizationComment
+  useEditOrganizationComment,
+  COMPANY_OVERVIEW_ENTITY_TYPE
 } from '@/hooks/useOrganizationComments'
+import { useMentionableUsers } from '@/hooks/useMentionableUsers'
 
 import { CommentRow } from './CommentRow'
 import { CommentLogFilters } from './CommentLogFilters'
@@ -99,6 +101,14 @@ export const CommentLog = ({ organizationId }) => {
   const yearOptions = useMemo(buildYearOptions, [])
   const { data: categoryOptions = [] } = useCommentCategories()
   const editMutation = useEditOrganizationComment(effectiveOrgId)
+
+  // One lookup is shared by whichever row is being edited. `null` means no
+  // lookup is in progress.
+  const [mentionQuery, setMentionQuery] = useState(null)
+  const mentionResults = useMentionableUsers(
+    mentionQuery ?? '',
+    isGovernment && mentionQuery !== null
+  )
 
   return (
     <BCBox component="section" aria-label={t('internalComment:log.title')}>
@@ -225,6 +235,13 @@ export const CommentLog = ({ organizationId }) => {
                               })
                             }
                             isEditPending={editMutation.isPending}
+                            // Company Overview notes don't support @mentions.
+                            enableMentions={
+                              isGovernment &&
+                              c.entityType !== COMPANY_OVERVIEW_ENTITY_TYPE
+                            }
+                            mentionResults={mentionResults}
+                            onMentionQueryChange={setMentionQuery}
                           />
                         </Box>
                       ))}
