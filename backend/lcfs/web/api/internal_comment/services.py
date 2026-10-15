@@ -75,12 +75,12 @@ def _extract_mentioned_user_ids(html: Optional[str]) -> List[int]:
 
 
 # A mention span as Quill serializes it: an inner span plus zero-width guard
-# characters around the visible "@Name".
+# characters around the visible "@Name". The alternatives and quantifiers are
+# written so no two parts can match the same characters (avoids ReDoS).
 _MENTION_SPAN_RE = re.compile(
     r'(<span class="mention" data-mention-id="(\d+)"[^>]*>)'
-    r"[\ufeff\u200b]*(?:<span[^>]*>.*?</span>|[^<]*)[\ufeff\u200b]*"
-    r"(</span>)",
-    re.DOTALL,
+    r"(?:[\ufeff\u200b]*<span[^>]*>[^<]*</span>[\ufeff\u200b]*|[^<]*)"
+    r"(</span>)"
 )
 
 
@@ -155,18 +155,27 @@ def _remove_mention_markup(
 
 
 def _build_entity_link_path(
-    entity_type: EntityTypeEnum, entity_id: int, compliance_year: Optional[int]
+    entity_type: EntityTypeEnum,
+    entity_id: int,
+    compliance_year: Optional[int],
+    initiative_agreement_id: Optional[int] = None,
 ) -> str:
     """IDIR-facing front-end route for the entity a comment thread hangs off."""
     if entity_type == EntityTypeEnum.COMPLIANCE_REPORT and compliance_year:
         return f"/compliance-reporting/{compliance_year}/{entity_id}"
     if entity_type == EntityTypeEnum.TRANSFER:
         return f"/transfers/{entity_id}"
-    if entity_type in (
-        EntityTypeEnum.INITIATIVE_AGREEMENT,
-        EntityTypeEnum.DESIGNATED_ACTION,
-    ):
-        return f"/initiative-agreement/{entity_id}"
+    if entity_type == EntityTypeEnum.INITIATIVE_AGREEMENT:
+        return f"/initiative-agreements/{entity_id}"
+    if entity_type == EntityTypeEnum.DESIGNATED_ACTION:
+        # The action page lives under its parent agreement; fall back to the
+        # actions list if the parent can't be resolved.
+        if initiative_agreement_id is None:
+            return "/initiative-agreements/designated-actions"
+        return (
+            f"/initiative-agreements/{initiative_agreement_id}"
+            f"/designated-actions/{entity_id}"
+        )
     if entity_type == EntityTypeEnum.ADMIN_ADJUSTMENT:
         return f"/admin-adjustment/{entity_id}"
     if entity_type == EntityTypeEnum.CI_APPLICATION:
@@ -350,8 +359,13 @@ class InternalCommentService:
                 comment_text = comment_text[:500].rstrip() + "…"
 
             entity_label = _ENTITY_LABEL_BY_TYPE.get(entity_type, "a record")
+            initiative_agreement_id = None
+            if entity_type == EntityTypeEnum.DESIGNATED_ACTION:
+                initiative_agreement_id = (
+                    await self.repo.get_initiative_agreement_id_for_action(entity_id)
+                )
             link_path = _build_entity_link_path(
-                entity_type, entity_id, comment.compliance_year
+                entity_type, entity_id, comment.compliance_year, initiative_agreement_id
             )
             message_payload = json.dumps(
                 {

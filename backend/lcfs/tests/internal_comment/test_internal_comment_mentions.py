@@ -41,8 +41,7 @@ def test_extract_mentioned_user_ids_empty_for_no_markup():
     [
         (EntityTypeEnum.COMPLIANCE_REPORT, 55, 2024, "/compliance-reporting/2024/55"),
         (EntityTypeEnum.TRANSFER, 10, None, "/transfers/10"),
-        (EntityTypeEnum.INITIATIVE_AGREEMENT, 11, None, "/initiative-agreement/11"),
-        (EntityTypeEnum.DESIGNATED_ACTION, 12, None, "/initiative-agreement/12"),
+        (EntityTypeEnum.INITIATIVE_AGREEMENT, 11, None, "/initiative-agreements/11"),
         (EntityTypeEnum.ADMIN_ADJUSTMENT, 13, None, "/admin-adjustment/13"),
         (EntityTypeEnum.CI_APPLICATION, 14, None, "/ci-applications/14"),
         (EntityTypeEnum.ORGANIZATION, 15, None, "/organizations/15/comment-log"),
@@ -157,6 +156,52 @@ async def test_create_internal_comment_notifies_mentioned_idir_user():
     assert "/transfers/123" in kwargs["email_context"]["link_path"]
     # The email shows the mentioned name even though storage keeps only the id.
     assert kwargs["email_context"]["comment_text"] == "Heads up @Jane Doe"
+
+
+def test_build_entity_link_path_designated_action_uses_parent_agreement():
+    assert (
+        _build_entity_link_path(EntityTypeEnum.DESIGNATED_ACTION, 12, None, 4)
+        == "/initiative-agreements/4/designated-actions/12"
+    )
+
+
+def test_build_entity_link_path_designated_action_without_parent_falls_back():
+    assert (
+        _build_entity_link_path(EntityTypeEnum.DESIGNATED_ACTION, 12, None)
+        == "/initiative-agreements/designated-actions"
+    )
+
+
+@pytest.mark.anyio
+async def test_create_internal_comment_designated_action_mention_links_to_action():
+    service, mock_repo, mock_notification_service = _mention_service()
+    mock_repo.get_initiative_agreement_id_for_action = AsyncMock(return_value=4)
+
+    await service.create_internal_comment(
+        InternalCommentCreateSchema(
+            entity_type=EntityTypeEnum.DESIGNATED_ACTION,
+            entity_id=12,
+            comment='<p>Heads up <span data-mention-id="5">@Jane Doe</span></p>',
+            visibility=CommentVisibilityEnum.INTERNAL,
+            audience_scope=AudienceScopeEnum.ANALYST,
+        )
+    )
+
+    mock_repo.get_initiative_agreement_id_for_action.assert_awaited_once_with(12)
+    kwargs = mock_notification_service.send_mention_notification.await_args.kwargs
+    assert (
+        kwargs["email_context"]["link_path"]
+        == "/initiative-agreements/4/designated-actions/12"
+    )
+
+
+def test_mention_regex_handles_pathological_input_quickly():
+    # Many unclosed mention openers / zero-width chars used to backtrack badly.
+    opener = '<span class="mention" data-mention-id="9"><span>'
+    html = opener * 3000
+    assert _strip_mention_names_for_storage(html) == html
+    html = '<span class="mention" data-mention-id="9">' + "\u200b" * 20000
+    assert _remove_mention_markup(html, {}) == html
 
 
 @pytest.mark.anyio

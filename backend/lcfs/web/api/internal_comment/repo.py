@@ -759,6 +759,19 @@ class InternalCommentRepository:
         org_id = (await self.db.execute(stmt)).scalar_one_or_none()
         return (org_id, None)
 
+    @repo_handler
+    async def get_initiative_agreement_id_for_action(
+        self, designated_action_id: int
+    ) -> Optional[int]:
+        """Parent initiative agreement id of a designated action, if any."""
+        return (
+            await self.db.execute(
+                select(DesignatedAction.initiative_agreement_id).where(
+                    DesignatedAction.designated_action_id == designated_action_id
+                )
+            )
+        ).scalar_one_or_none()
+
     def _entity_meta_subquery(self, organization_id: Optional[int] = None):
         """
         Per ``internal_comment_id``, choose one (entity_type, entity_id,
