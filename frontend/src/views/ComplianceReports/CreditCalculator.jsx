@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState, useRef } from 'react'
+import React, { useMemo, useEffect, useState, useRef, useCallback } from 'react'
 import { useForm, FormProvider, Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import Grid from '@mui/material/Grid2'
@@ -8,7 +8,6 @@ import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import FormControl from '@mui/material/FormControl'
 import InputAdornment from '@mui/material/InputAdornment'
-import Tooltip from '@mui/material/Tooltip'
 import Check from '@mui/icons-material/Check'
 import ContentCopy from '@mui/icons-material/ContentCopy'
 import colors from '@/themes/base/colors'
@@ -30,7 +29,10 @@ import {
   FUEL_CATEGORIES,
   LEGISLATION_TRANSITION_YEAR
 } from '@/constants/common'
-import { formatEnergyContentWithCommas } from '@/utils/formatters'
+import {
+  formatEnergyContentWithCommas,
+  numberFormatter
+} from '@/utils/formatters'
 import { copyToClipboard } from '@/utils/clipboard'
 
 const CUSTOM_CI_OPTION_VALUE = 'customCi'
@@ -101,14 +103,13 @@ export const CreditCalculator = () => {
   })
 
   const {
-  control,
-  watch,
-  setValue,
-  formState: {
-    errors
-  },
-  reset
-} = methods
+    control,
+    watch,
+    setValue,
+    formState: { errors },
+    reset,
+    handleSubmit
+  } = methods
 
   const watchedValues = watch()
   const {
@@ -184,11 +185,7 @@ export const CreditCalculator = () => {
         uniqueEndUses.set(endUse.type, {
           value: endUse.type,
           sortLabel: endUse.type,
-          label: (
-            <Tooltip title={endUse.type} placement="top" arrow>
-              <span>{endUse.type}</span>
-            </Tooltip>
-          )
+          label: <span>{endUse.type}</span>
         })
       }
     })
@@ -225,12 +222,12 @@ export const CreditCalculator = () => {
     )
   }, [provisionOptions])
 
-  useMemo(() => {
+  const selectedProvision = useMemo(() => {
     if (!provisionOfTheAct) return null
     return fuelTypeOptions?.data?.provisions?.find(
       (provision) => provision.name === provisionOfTheAct
     )
-  }, [fuelTypeOptions, provisionOfTheAct]);
+  }, [fuelTypeOptions, provisionOfTheAct])
 
   // Get unit based on selected fuel
   const unit = useMemo(() => {
