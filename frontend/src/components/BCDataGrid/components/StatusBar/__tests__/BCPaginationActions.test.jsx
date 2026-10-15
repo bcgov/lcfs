@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { ThemeProvider } from '@mui/material/styles'
-import { createTheme } from '@mui/material/styles'
+import '@testing-library/user-event';
+import { ThemeProvider , createTheme } from '@mui/material/styles'
 import { BCPaginationActions } from '../BCPaginationActions'
 
 const theme = createTheme()
@@ -18,21 +17,15 @@ vi.mock('@mui/material/Pagination', async (importOriginal) => {
     ...actual,
     default: vi.fn(
       ({
-        onChange,
-        showFirstButton,
-        showLastButton,
-        component,
-        color,
-        ...props
-      }) => (
-        <div
+  onChange,
+  ...props
+}) => { delete props.showFirstButton; delete props.showLastButton; delete props.component; delete props.color; return <div
           data-test="pagination"
           onClick={() => onChange && onChange(null, 2)}
           {...props}
         >
           Mock Pagination
-        </div>
-      )
+        </div>; }
     )
   }
 })
@@ -333,8 +326,8 @@ describe('BCPaginationActions', () => {
       fireEvent.click(screen.getByTestId('downloadGridButton'))
 
       const transformedData = XLSX.utils.json_to_sheet.mock.calls[0][0]
-      expect(transformedData[0]['Date']).toBe('2023-01-01') // Date part only
-      expect(transformedData[1]['Date']).toBe('2023-01-02') // Date part only
+      expect(transformedData[0].Date).toBe('2023-01-01') // Date part only
+      expect(transformedData[1].Date).toBe('2023-01-02') // Date part only
     })
 
     it('preserves non-date values', async () => {
@@ -345,8 +338,8 @@ describe('BCPaginationActions', () => {
       fireEvent.click(screen.getByTestId('downloadGridButton'))
 
       const transformedData = XLSX.utils.json_to_sheet.mock.calls[0][0]
-      expect(transformedData[0]['ID']).toBe(1)
-      expect(transformedData[0]['Name']).toBe('Test')
+      expect(transformedData[0].ID).toBe(1)
+      expect(transformedData[0].Name).toBe('Test')
     })
 
     it('calculates column widths correctly', async () => {
@@ -372,7 +365,6 @@ describe('BCPaginationActions', () => {
       vi.spyOn(global, 'Date').mockImplementation(function () {
         return mockDate
       })
-      Date.prototype.toISOString = vi.fn(() => '2023-01-15T10:00:00.000Z')
 
       renderWithTheme(<BCPaginationActions {...defaultProps} />)
 

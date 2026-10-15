@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { ThemeProvider } from '@mui/material/styles'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -125,16 +125,19 @@ vi.mock('@mui/material/Radio', () => ({
 }))
 
 vi.mock('@mui/material/RadioGroup', () => ({
-  default: ({ children, value, onChange, row, ...props }) => (
-    <div
+  default: ({
+  children,
+  value,
+  onChange,
+  ...props
+}) => { delete props.row; return <div
       data-test="radio-group"
       data-value={value}
       onChange={onChange}
       {...props}
     >
       {children}
-    </div>
-  )
+    </div>; }
 }))
 
 vi.mock('@mui/material/FormControlLabel', () => ({
@@ -157,18 +160,17 @@ vi.mock('@mui/material/Tooltip', () => ({
 // Mock react-number-format
 vi.mock('react-number-format', () => ({
   NumericFormat: ({
-    customInput: CustomInput,
-    value,
-    onValueChange,
-    onBlur,
-    onFocus,
-    onKeyDown,
-    thousandSeparator,
-    decimalScale,
-    allowNegative,
-    slotProps,
-    ...props
-  }) => {
+  customInput: CustomInput,
+  value,
+  onValueChange,
+  onBlur,
+  onFocus,
+  onKeyDown,
+  slotProps,
+  ...props
+}) => {
+delete props.thousandSeparator; delete props.decimalScale; delete props.allowNegative;
+
     const handleChange = (e) => {
       const rawValue = e.target.value.replace(/,/g, '')
       onValueChange?.({

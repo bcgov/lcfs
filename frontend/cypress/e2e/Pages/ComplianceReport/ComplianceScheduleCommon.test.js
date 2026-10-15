@@ -1,4 +1,3 @@
-/* eslint-disable cypress/unsafe-to-chain-command */
 import { Given } from '@badeball/cypress-cucumber-preprocessor'
 
 const currentComplianceYear = (new Date().getFullYear() - 1).toString()
@@ -13,7 +12,9 @@ function selectComplianceYear() {
       '[class*="compliance-period-"]:not(.Mui-disabled):not([aria-disabled="true"])'
 
     if ($modalBody.find(enabledCurrentYear).length > 0) {
-      cy.get(enabledCurrentYear, { timeout: 10000 }).first().click({ force: true })
+      cy.get(enabledCurrentYear, { timeout: 10000 })
+        .first()
+        .click({ force: true })
     } else if ($modalBody.find(enabledAnyYear).length > 0) {
       cy.get(enabledAnyYear, { timeout: 10000 }).first().click({ force: true })
     } else {
@@ -67,9 +68,7 @@ Given(
       cy.get('body').then(($pageBody) => {
         const reportLink = [
           ...$pageBody.find('a[href^="/compliance-reporting/"]')
-        ].find((el) =>
-          REPORT_VIEW_RE.test(el.getAttribute('href') || '')
-        )
+        ].find((el) => REPORT_VIEW_RE.test(el.getAttribute('href') || ''))
 
         if (reportLink) {
           cy.wrap(reportLink).click({ force: true })

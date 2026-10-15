@@ -538,30 +538,6 @@ const AddEditFuelCodeBase = () => {
     [fuelCodeMutation, handleError, updateState]
   )
 
-  const handleApproveCode = useCallback(
-    async (fuelCodeId) => {
-      try {
-        await fuelCodeMutation.mutateAsync({
-          action: 'approve',
-          data: { status: FUEL_CODE_STATUSES.APPROVED },
-          fuelCodeId
-        })
-        await refetch()
-        updateState({ modalData: null })
-        alertRef.current?.triggerAlert({
-          message: t(
-            'fuelCode:approveSuccessMessage',
-            'Fuel code approved successfully.'
-          ),
-          severity: 'success'
-        })
-      } catch (error) {
-        handleError(error, `Error approving fuel code: ${error.message}`)
-      }
-    },
-    [fuelCodeMutation, refetch, t, handleError, updateState]
-  )
-
   const openDeleteModal = useCallback(
     (fuelCodeId, params) => {
       updateState({
@@ -584,30 +560,6 @@ const AddEditFuelCodeBase = () => {
       })
     },
     [handleDeleteFuelCode, t, updateState]
-  )
-
-  const openApprovalModal = useCallback(
-    (fuelCodeId) => {
-      updateState({
-        modalData: {
-          primaryButtonAction: () => handleApproveCode(fuelCodeId),
-          primaryButtonText: t('fuelCode:approveFuelCodeBtn'),
-          secondaryButtonText: t('cancelBtn'),
-          title: t('fuelCode:approveFuelCode'),
-          content: (
-            <Stack>
-              <BCTypography variant="h6">
-                {t('fuelCode:approveFuelCode')}
-              </BCTypography>
-              <BCTypography mt={1} variant="body5">
-                {t('fuelCode:approveConfirmText')}
-              </BCTypography>
-            </Stack>
-          )
-        }
-      })
-    },
-    [handleApproveCode, t, updateState]
   )
 
   const parsePastedData = useCallback((pastedData, headerRow) => {
@@ -966,7 +918,8 @@ const AddEditFuelCodeBase = () => {
     updateState,
     state.isButtonOperationInProgress,
     state.currentButtonOperation,
-    setButtonOperationState
+    setButtonOperationState,
+    navigate
   ])
 
   const buttonConfig = useMemo(() => {

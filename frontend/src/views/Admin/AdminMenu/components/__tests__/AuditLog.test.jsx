@@ -41,11 +41,19 @@ vi.mock('@/utils/grid/cellRenderers', () => ({
 
 // Mock UI components
 vi.mock('@/components/BCBox', () => ({
-  default: ({ children, ...props }) => <div data-test="bc-box" {...props}>{children}</div>
+  default: ({ children, ...props }) => (
+    <div data-test="bc-box" {...props}>
+      {children}
+    </div>
+  )
 }))
 
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, ...props }) => <div data-test="bc-typography" {...props}>{children}</div>
+  default: ({ children, ...props }) => (
+    <div data-test="bc-typography" {...props}>
+      {children}
+    </div>
+  )
 }))
 
 vi.mock('@/components/ClearFiltersButton', () => ({
@@ -59,38 +67,52 @@ vi.mock('@/components/ClearFiltersButton', () => ({
 // Mock BCGridViewer with ref forwarding
 let capturedGridViewerProps = {}
 const mockClearFilters = vi.fn()
-let gridRefCallback = null
 
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  BCGridViewer: React.forwardRef((props, ref) => {
+  BCGridViewer: React.forwardRef(function BCGridViewerMock(props, ref) {
     capturedGridViewerProps = props
-    
+
     // Store the ref callback to simulate ref assignment
-    gridRefCallback = ref
-    
+
     // Set up ref with clearFilters method
     React.useEffect(() => {
       if (ref) {
         if (typeof ref === 'function') {
-          ref({ clearFilters: mockClearFilters })
+          ref({
+            clearFilters: mockClearFilters
+          })
         } else {
-          ref.current = { clearFilters: mockClearFilters }
+          ref.current = {
+            clearFilters: mockClearFilters
+          }
         }
       }
     }, [ref])
-    
     return (
       <div data-test="bc-grid-viewer" data-grid-key={props.gridKey}>
         {/* Test row click and pagination change */}
-        <button 
+        <button
           data-test="test-row-click"
-          onClick={() => props.getRowId && props.getRowId({ data: { auditLogId: 123 } })}
+          onClick={() =>
+            props.getRowId &&
+            props.getRowId({
+              data: {
+                auditLogId: 123
+              }
+            })
+          }
         >
           Test Row
         </button>
         <button
           data-test="test-pagination"
-          onClick={() => props.onPaginationChange && props.onPaginationChange({ page: 2, size: 20 })}
+          onClick={() =>
+            props.onPaginationChange &&
+            props.onPaginationChange({
+              page: 2,
+              size: 20
+            })
+          }
         >
           Test Pagination
         </button>
@@ -158,31 +180,37 @@ describe('AuditLog Component', () => {
     it('converts auditLogId to string', () => {
       render(<AuditLog />)
       const testButton = screen.getByTestId('test-row-click')
-      
+
       fireEvent.click(testButton)
-      
+
       // The getRowId function should be called and convert the number to string
-      expect(typeof capturedGridViewerProps.getRowId({ data: { auditLogId: 123 } })).toBe('string')
-      expect(capturedGridViewerProps.getRowId({ data: { auditLogId: 123 } })).toBe('123')
+      expect(
+        typeof capturedGridViewerProps.getRowId({ data: { auditLogId: 123 } })
+      ).toBe('string')
+      expect(
+        capturedGridViewerProps.getRowId({ data: { auditLogId: 123 } })
+      ).toBe('123')
     })
 
     it('handles different auditLogId types', () => {
       render(<AuditLog />)
-      
+
       // Test with number
-      expect(capturedGridViewerProps.getRowId({ data: { auditLogId: 456 } })).toBe('456')
-      
+      expect(
+        capturedGridViewerProps.getRowId({ data: { auditLogId: 456 } })
+      ).toBe('456')
+
       // Test with string
-      expect(capturedGridViewerProps.getRowId({ data: { auditLogId: '789' } })).toBe('789')
+      expect(
+        capturedGridViewerProps.getRowId({ data: { auditLogId: '789' } })
+      ).toBe('789')
     })
   })
-
-
 
   describe('onPaginationChange Function', () => {
     it('merges new pagination with previous state', async () => {
       render(<AuditLog />)
-      
+
       const paginationButton = screen.getByTestId('test-pagination')
       await act(async () => {
         fireEvent.click(paginationButton)
@@ -201,7 +229,7 @@ describe('AuditLog Component', () => {
 
     it('preserves existing pagination properties', async () => {
       render(<AuditLog />)
-      
+
       // Mock a partial pagination change
       await act(async () => {
         capturedGridViewerProps.onPaginationChange({ page: 3 })
@@ -228,7 +256,9 @@ describe('AuditLog Component', () => {
       expect(capturedGridViewerProps.dataKey).toBe('auditLogs')
       expect(capturedGridViewerProps.gridKey).toBe('audit-log-grid')
       expect(capturedGridViewerProps.queryData).toBe(mockQueryData)
-      expect(capturedGridViewerProps.defaultSortModel).toBe(defaultAuditLogSortModel)
+      expect(capturedGridViewerProps.defaultSortModel).toBe(
+        defaultAuditLogSortModel
+      )
     })
 
     it('passes correct button configurations', () => {
@@ -246,12 +276,17 @@ describe('AuditLog Component', () => {
     })
 
     it('configures defaultColDef with LinkRenderer', () => {
-      expect(capturedGridViewerProps.defaultColDef.cellRenderer).toBe('LinkRenderer')
-      expect(typeof capturedGridViewerProps.defaultColDef.cellRendererParams.url).toBe('function')
+      expect(capturedGridViewerProps.defaultColDef.cellRenderer).toBe(
+        'LinkRenderer'
+      )
+      expect(
+        typeof capturedGridViewerProps.defaultColDef.cellRendererParams.url
+      ).toBe('function')
     })
 
     it('defaultColDef url function returns auditLogId', () => {
-      const urlFunction = capturedGridViewerProps.defaultColDef.cellRendererParams.url
+      const urlFunction =
+        capturedGridViewerProps.defaultColDef.cellRendererParams.url
       const result = urlFunction({ data: { auditLogId: 999 } })
       expect(result).toBe(999)
     })
@@ -263,8 +298,12 @@ describe('AuditLog Component', () => {
     })
 
     it('configures gridOptions correctly', () => {
-      expect(capturedGridViewerProps.gridOptions.overlayNoRowsTemplate).toBe('admin:auditLogsNotFound')
-      expect(capturedGridViewerProps.gridOptions.suppressHeaderMenuButton).toBe(false)
+      expect(capturedGridViewerProps.gridOptions.overlayNoRowsTemplate).toBe(
+        'admin:auditLogsNotFound'
+      )
+      expect(capturedGridViewerProps.gridOptions.suppressHeaderMenuButton).toBe(
+        false
+      )
       expect(capturedGridViewerProps.gridOptions.paginationPageSize).toBe(20)
     })
 
@@ -277,7 +316,7 @@ describe('AuditLog Component', () => {
   describe('Pagination State Management', () => {
     it('initializes with correct pagination options', () => {
       render(<AuditLog />)
-      
+
       expect(capturedGridViewerProps.paginationOptions).toEqual({
         page: 1,
         size: 10,
@@ -288,10 +327,10 @@ describe('AuditLog Component', () => {
 
     it('updates pagination options when onPaginationChange is called', async () => {
       render(<AuditLog />)
-      
+
       await act(async () => {
-        capturedGridViewerProps.onPaginationChange({ 
-          page: 2, 
+        capturedGridViewerProps.onPaginationChange({
+          page: 2,
           size: 25,
           filters: [{ field: 'test', value: 'value' }]
         })

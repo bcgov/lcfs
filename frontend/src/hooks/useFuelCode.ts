@@ -8,7 +8,7 @@ import type {
 } from './types'
 
 export const useFuelCodeOptions = (
-  _params: Record<string, any>,
+  _params: Record<string, unknown>,
   options: QueryOptions<unknown>
 ) => {
   const client = useApiService()
@@ -22,7 +22,7 @@ export const useFuelCodeOptions = (
 }
 
 export const useGetFuelCode = (
-  fuelCodeID: any,
+  fuelCodeID: unknown,
   options: QueryOptions<unknown>
 ) => {
   const client = useApiService()
@@ -43,7 +43,7 @@ export const useGetFuelCode = (
 }
 
 export const useGetFuelCodeGroup = (
-  fuelCodeID: any,
+  fuelCodeID: unknown,
   options: QueryOptions<unknown> = {}
 ) => {
   const client = useApiService()
@@ -73,7 +73,7 @@ export const useGetFuelCodes = (
     sortOrders = [],
     filters = [],
     excludeArchived = false
-  }: any = {},
+  }: Record<string, unknown> = {},
   options: QueryOptions<unknown>
 ) => {
   const client = useApiService()
@@ -100,7 +100,12 @@ export const useGetFuelCodes = (
 }
 
 export const useGetMyFuelCodes = (
-  { page = 1, size = 10, sortOrders = [], filters = [] }: any = {},
+  {
+    page = 1,
+    size = 10,
+    sortOrders = [],
+    filters = []
+  }: Record<string, unknown> = {},
   options: QueryOptions<unknown>
 ) => {
   const client = useApiService()
@@ -137,7 +142,7 @@ export const useFuelCodeStatuses = (options: QueryOptions<unknown>) => {
 }
 
 export const useFuelCodeBulletins = (
-  bulletinType: any,
+  bulletinType: unknown,
   paginationOptions: PaginationParams,
   options: QueryOptions<unknown>
 ) => {
@@ -164,11 +169,16 @@ export const useFuelCodeBulletins = (
 }
 
 export const useDownloadFuelCodeBulletins = (
-  options: ExtMutationOptions<unknown, any>
+  options: ExtMutationOptions<unknown, unknown>
 ) => {
   const client = useApiService()
   return useMutation({
-    mutationFn: async ({ bulletinType, format = 'xlsx', body, idir }: any) => {
+    mutationFn: async ({
+      bulletinType,
+      format = 'xlsx',
+      body,
+      idir
+    }: Record<string, unknown>) => {
       if (!bulletinType) {
         throw new Error('bulletinType is required for bulletin download')
       }
@@ -200,13 +210,17 @@ export const useTransportModes = (options: QueryOptions<unknown>) => {
 
 // Single unified mutation hook for all fuel code operations
 export const useFuelCodeMutation = (
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, unknown> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ action, data, fuelCodeId }: any) => {
+    mutationFn: async ({
+      action,
+      data,
+      fuelCodeId
+    }: Record<string, unknown>) => {
       switch (action) {
         case 'create':
         case 'save':
@@ -307,56 +321,57 @@ export const useFuelCodeMutation = (
 
 // Convenience hooks for backward compatibility (optional)
 export const useCreateFuelCode = (
-  options: ExtMutationOptions<unknown, any>
+  options: ExtMutationOptions<unknown, unknown>
 ) => {
   const mutation = useFuelCodeMutation(options)
   return {
     ...mutation,
-    mutateAsync: (data: any) => mutation.mutateAsync({ action: 'create', data })
+    mutateAsync: (data: unknown) =>
+      mutation.mutateAsync({ action: 'create', data })
   }
 }
 
 export const useUpdateFuelCode = (
-  fuelCodeId: any,
-  options: ExtMutationOptions<unknown, any>
+  fuelCodeId: unknown,
+  options: ExtMutationOptions<unknown, unknown>
 ) => {
   const mutation = useFuelCodeMutation(options)
   return {
     ...mutation,
-    mutateAsync: (data: any) =>
+    mutateAsync: (data: unknown) =>
       mutation.mutateAsync({ action: 'update', data, fuelCodeId })
   }
 }
 
 export const useDeleteFuelCode = (
-  options: ExtMutationOptions<unknown, any>
+  options: ExtMutationOptions<unknown, unknown>
 ) => {
   const mutation = useFuelCodeMutation(options)
   return {
     ...mutation,
-    mutateAsync: (fuelCodeId: any) =>
+    mutateAsync: (fuelCodeId: unknown) =>
       mutation.mutateAsync({ action: 'delete', fuelCodeId })
   }
 }
 
 export const useApproveFuelCode = (
-  options: ExtMutationOptions<unknown, any>
+  options: ExtMutationOptions<unknown, unknown>
 ) => {
   const mutation = useFuelCodeMutation(options)
   return {
     ...mutation,
-    mutateAsync: (fuelCodeId: any) =>
+    mutateAsync: (fuelCodeId: unknown) =>
       mutation.mutateAsync({ action: 'approve', fuelCodeId })
   }
 }
 
 export const useDownloadFuelCodes = (
-  options: ExtMutationOptions<unknown, any>
+  options: ExtMutationOptions<unknown, unknown>
 ) => {
   const mutation = useFuelCodeMutation(options)
   return {
     ...mutation,
-    mutateAsync: (data: any) =>
+    mutateAsync: (data: unknown) =>
       mutation.mutateAsync({ action: 'download', data })
   }
 }

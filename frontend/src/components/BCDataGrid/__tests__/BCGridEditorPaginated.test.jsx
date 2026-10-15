@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import React, { createRef } from 'react'
 import { BCGridEditorPaginated } from '../BCGridEditorPaginated'
@@ -17,7 +17,7 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('@/components/BCAlert', () => ({
-  FloatingAlert: React.forwardRef((props, ref) => {
+  FloatingAlert: React.forwardRef(function MockFloatingAlert(props, ref) {
     React.useImperativeHandle(ref, () => ({ clearAlert: vi.fn() }))
     return <div data-test="floating-alert" />
   })
@@ -62,15 +62,19 @@ vi.mock('@/components/BCModal', () => ({
 }))
 
 vi.mock('@/components/BCDataGrid/components/Renderers/RequiredHeader', () => ({
-    RequiredHeader: () => <div data-test="required-header">Required</div>
+    RequiredHeader: function MockRequiredHeader() {
+      return <div data-test="required-header">Required</div>
+    }
 }))
 
 vi.mock('@/components/BCDataGrid/components/Renderers/AccessibleHeader', () => ({
-    AccessibleHeader: () => <div data-test="accessible-header">Accessible</div>
+    AccessibleHeader: function MockAccessibleHeader() {
+      return <div data-test="accessible-header">Accessible</div>
+    }
 }))
 
 vi.mock('@/components/BCDataGrid/components/StatusBar/BCPagination', () => ({
-    BCPagination: ({ handleChangePage, handleChangeRowsPerPage, ...props }) => {
+    BCPagination: ({ handleChangePage, handleChangeRowsPerPage }) => {
     return (
       <div data-test="bc-pagination">
         <button
@@ -81,7 +85,7 @@ vi.mock('@/components/BCDataGrid/components/StatusBar/BCPagination', () => ({
         </button>
         <button
           data-test="size-btn"
-          onClick={(e) =>
+          onClick={() =>
             handleChangeRowsPerPage &&
             handleChangeRowsPerPage({ target: { value: '20' } })
           }
@@ -112,18 +116,19 @@ const mockGridApi = {
 }
 
 vi.mock('@/components/BCDataGrid/BCGridBase', () => ({
-  BCGridBase: React.forwardRef((props, ref) => {
+  BCGridBase: React.forwardRef(function MockGridBase(props, ref) {
     React.useImperativeHandle(ref, () => ({ api: mockGridApi, columnApi: {} }))
 
+    const { onGridReady } = props
     React.useEffect(() => {
-      if (props.onGridReady) {
+      if (onGridReady) {
         setTimeout(() => {
           if (ref.current) {
-            props.onGridReady({ api: mockGridApi, columnApi: {} })
+            onGridReady({ api: mockGridApi, columnApi: {} })
           }
         }, 0)
       }
-    }, [props.onGridReady])
+    }, [onGridReady, ref])
 
     return <div data-test="bc-grid-base">Grid Base</div>
   })

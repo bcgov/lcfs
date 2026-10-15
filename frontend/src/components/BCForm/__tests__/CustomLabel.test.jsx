@@ -36,7 +36,10 @@ describe.sequential('CustomLabel', () => {
   }
 
   const renderCustomLabel = (
-    { render, query, theme, localization, router, i18n },
+    {
+  render,
+  theme
+},
     props = {}
   ) => {
     return render(<CustomLabel {...defaultProps} {...props} />, [theme])
@@ -55,7 +58,7 @@ describe.sequential('CustomLabel', () => {
 
       expect(screen.getByText('Test Header')).toBeInTheDocument()
       expect(
-        screen.getByText((content, element) =>
+        screen.getByText((content) =>
           content.includes('Test description text')
         )
       ).toBeInTheDocument()

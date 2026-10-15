@@ -14,7 +14,11 @@ export const useGeocoder = () => {
    * Validate and standardize an address
    */
   const validateAddress = useMutation({
-    mutationFn: async ({ addressString, minScore = 50, maxResults = 5 }: any) => {
+    mutationFn: async ({
+      addressString,
+      minScore = 50,
+      maxResults = 5
+    }: Record<string, unknown>) => {
       const response = await apiService.post(apiRoutes.geocoderValidate, {
         address_string: addressString,
         min_score: minScore,
@@ -28,7 +32,10 @@ export const useGeocoder = () => {
    * Forward geocode an address to coordinates
    */
   const forwardGeocode = useMutation({
-    mutationFn: async ({ addressString, useFallback = true }: any) => {
+    mutationFn: async ({
+      addressString,
+      useFallback = true
+    }: Record<string, unknown>) => {
       const response = await apiService.post(apiRoutes.geocoderForward, {
         address_string: addressString,
         use_fallback: useFallback
@@ -41,7 +48,11 @@ export const useGeocoder = () => {
    * Reverse geocode coordinates to address
    */
   const reverseGeocode = useMutation({
-    mutationFn: async ({ latitude, longitude, useFallback = true }: any) => {
+    mutationFn: async ({
+      latitude,
+      longitude,
+      useFallback = true
+    }: Record<string, unknown>) => {
       const response = await apiService.post(apiRoutes.geocoderReverse, {
         latitude,
         longitude,
@@ -55,7 +66,10 @@ export const useGeocoder = () => {
    * Get address autocomplete suggestions
    */
   const autocompleteAddress = useMutation({
-    mutationFn: async ({ partialAddress, maxResults = 5 }: any) => {
+    mutationFn: async ({
+      partialAddress,
+      maxResults = 5
+    }: Record<string, unknown>) => {
       const response = await apiService.post(apiRoutes.geocoderAutocomplete, {
         partial_address: partialAddress,
         max_results: maxResults
@@ -68,7 +82,10 @@ export const useGeocoder = () => {
    * Batch geocode multiple addresses
    */
   const batchGeocode = useMutation({
-    mutationFn: async ({ addresses, batchSize = 5 }: any) => {
+    mutationFn: async ({
+      addresses,
+      batchSize = 5
+    }: Record<string, unknown>) => {
       const response = await apiService.post(apiRoutes.geocoderBatch, {
         addresses,
         batch_size: batchSize
@@ -81,7 +98,7 @@ export const useGeocoder = () => {
    * Check if coordinates are within BC boundaries
    */
   const checkBCBoundary = useMutation({
-    mutationFn: async ({ latitude, longitude }: any) => {
+    mutationFn: async ({ latitude, longitude }: Record<string, unknown>) => {
       const response = await apiService.post(apiRoutes.geocoderBoundaryCheck, {
         latitude,
         longitude

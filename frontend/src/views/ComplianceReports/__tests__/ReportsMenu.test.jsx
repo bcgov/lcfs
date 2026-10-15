@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react'
 import { describe, expect, vi, beforeEach } from 'vitest'
 import { screen } from '@testing-library/react'
 import { ReportsMenu } from '../ReportsMenu'

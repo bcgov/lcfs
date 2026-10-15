@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import TextField from '@mui/material/TextField'
-import Grid from '@mui/material/Grid'
+import '@mui/material/Grid';
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Checkbox from '@mui/material/Checkbox'
 import InputLabel from '@mui/material/InputLabel'
@@ -167,22 +167,19 @@ export const CreditMarketDetailsCard = ({
   const organizationDisplayName =
     getOrgValue('organizationName', 'organization_name', 'name') || ''
 
+  const baseCardTitle = t(
+    'creditMarket:marketDetails',
+    'Credit trading market details'
+  )
+  const cardTitle =
+    variant === 'admin' && organizationDisplayName
+      ? `${baseCardTitle} - ${organizationDisplayName}`
+      : baseCardTitle
+  const readOnlyValues = buildFormValues()
+
   if (variant === 'admin' && !organizationId) {
     return null
   }
-
-  const cardTitle = useMemo(() => {
-    const baseTitle = t(
-      'creditMarket:marketDetails',
-      'Credit trading market details'
-    )
-    if (variant === 'admin' && organizationDisplayName) {
-      return `${baseTitle} - ${organizationDisplayName}`
-    }
-    return baseTitle
-  }, [organizationDisplayName, t, variant])
-
-  const readOnlyValues = useMemo(() => buildFormValues(), [buildFormValues])
 
   if (isLoading) {
     return <Loading />
@@ -519,24 +516,20 @@ export const CreditMarketDetailsCard = ({
                         {(() => {
                           const displayRoles = []
                           if (
-                            Boolean(
-                              getOrgValue(
+                            getOrgValue(
                                 'creditMarketIsSeller',
                                 'credit_market_is_seller'
                               )
-                            )
                           ) {
                             displayRoles.push(
                               t('creditMarket:seller', 'Seller')
                             )
                           }
                           if (
-                            Boolean(
-                              getOrgValue(
+                            getOrgValue(
                                 'creditMarketIsBuyer',
                                 'credit_market_is_buyer'
                               )
-                            )
                           ) {
                             displayRoles.push(t('creditMarket:buyer', 'Buyer'))
                           }
@@ -554,12 +547,10 @@ export const CreditMarketDetailsCard = ({
                           )}
                           :
                         </strong>{' '}
-                        {Boolean(
-                          getOrgValue(
+                        {getOrgValue(
                             'displayInCreditMarket',
                             'display_in_credit_market'
                           )
-                        )
                           ? t('common:yes')
                           : t('common:no')}
                       </BCTypography>

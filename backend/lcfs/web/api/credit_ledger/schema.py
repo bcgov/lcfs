@@ -1,5 +1,5 @@
 from typing import List, Optional
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import ConfigDict, field_validator
 from lcfs.web.api.base import BaseSchema, PaginationResponseSchema
@@ -39,7 +39,8 @@ class PeriodLedgerTxnSchema(BaseSchema):
     transaction_id: int
     transaction_type: str
     description: Optional[str] = None
-    effective_date: Optional[datetime] = None
+    # A Pacific calendar date, sent as YYYY-MM-DD so browsers can't shift it
+    effective_date: Optional[date] = None
     units_in: int
     units_out: int
     # Cumulative balance from transactions within the selected period only.

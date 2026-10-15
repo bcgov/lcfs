@@ -60,7 +60,9 @@ vi.mock('@/hooks/useOrganization', () => ({
 
 // Mock Role component to always render children for government role
 vi.mock('@/components/Role', () => ({
-  Role: ({ children, roles }) => {
+  Role: ({
+  children
+}) => {
     // Always show children for this test (we're mocking appropriate user roles)
     return <div data-test="role-component">{children}</div>
   }
@@ -72,10 +74,6 @@ const govUser = {
 }
 const adminUser = {
   roles: [{ name: roles.administrator }],
-  organization: { organizationId: '123' }
-}
-const analystUser = {
-  roles: [{ name: roles.analyst }],
   organization: { organizationId: '123' }
 }
 const nonGovUser = {
