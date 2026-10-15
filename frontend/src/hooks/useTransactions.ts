@@ -30,13 +30,16 @@ export const useTransactionStatuses = (options: QueryOptions<unknown>) => {
       const optionsData = await client.get('/transactions/statuses/')
       if (hasAnyRole(roles.supplier)) {
         return optionsData.data.filter(
-          (val: unknown) => val.status !== TRANSFER_STATUSES.RECOMMENDED
+          (val: { status: string }) =>
+            val.status !== TRANSFER_STATUSES.RECOMMENDED
         )
       } else {
         return optionsData.data.filter(
-          (val: unknown) =>
+          (val: { status: string }) =>
             ![TRANSFER_STATUSES.DELETED, TRANSFER_STATUSES.SENT].includes(
-              val.status
+              val.status as
+                | typeof TRANSFER_STATUSES.DELETED
+                | typeof TRANSFER_STATUSES.SENT
             )
         )
       }
@@ -75,7 +78,7 @@ export const useGetTransactionList = (
         } else if (selectedOrgId) {
           return apiRoutes.filteredTransactionsByOrg.replace(
             ':orgID',
-            selectedOrgId
+            selectedOrgId as string
           )
         }
         return apiRoutes.transactions
@@ -115,12 +118,20 @@ export const useTransactionDocuments = (
 }
 
 export const useDownloadTransactions = (
-  options: ExtMutationOptions<unknown, unknown>
+  options: ExtMutationOptions<unknown, {
+    format: string
+    body?: Record<string, unknown>
+    endpoint: string
+  }>
 ) => {
   const client = useApiService()
   return useMutation({
     ...options,
-    mutationFn: async ({ format, body, endpoint }: Record<string, unknown>) => {
+    mutationFn: async ({ format, body, endpoint }: {
+      format: string
+      body?: Record<string, unknown>
+      endpoint: string
+    }) => {
       return await client.download({
         url: endpoint,
         method: 'post',

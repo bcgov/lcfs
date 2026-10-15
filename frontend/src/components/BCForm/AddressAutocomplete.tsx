@@ -24,7 +24,7 @@ export interface AddressOption {
 }
 
 interface GeocoderSuggestion {
-  full_address?: string
+  full_address: string
   street_address?: string
   city?: string
   province?: string

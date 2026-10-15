@@ -20,12 +20,19 @@ import {
 } from '@/hooks/useFuelCode'
 import BCAlert from '@/components/BCAlert'
 import { ROUTES, buildPath } from '@/routes/routes'
+import type { BCPaginationOptions , BCGridRef } from '@/components/BCDataGrid/types'
+import type { PaginationParams } from '@/hooks/types'
 
-const initialPaginationOptions = {
+const initialPaginationOptions: BCPaginationOptions = {
   page: 1,
   size: 25,
   sortOrders: [],
   filters: []
+}
+
+type FuelCodeBulletinData = {
+  fuelCodes?: FuelCodeRow[]
+  cutoffDate?: string | null
 }
 
 export const CurrentFuelCodes = () => {
@@ -33,25 +40,27 @@ export const CurrentFuelCodes = () => {
   const { hasAnyRole } = useCurrentUser()
   const isIdirView = hasAnyRole(...govRoles)
   const navigate = useNavigate()
-  const gridRef = useRef(null)
+  const gridRef = useRef<BCGridRef['current']>(null)
   const [isDownloading, setIsDownloading] = useState(false)
   const [downloadError, setDownloadError] = useState('')
   const [paginationOptions, setPaginationOptions] = useState(
     initialPaginationOptions
   )
-  const { mutateAsync: downloadBulletins } = useDownloadFuelCodeBulletins()
+  const { mutateAsync: downloadBulletins } = useDownloadFuelCodeBulletins({})
 
   const { data, isLoading, isError, error } = useFuelCodeBulletins(
     'current',
-    paginationOptions
+    paginationOptions as PaginationParams
   )
 
   const colDefs = useMemo(() => buildColumnDefs(t, isIdirView), [t, isIdirView])
   const queryData = useMemo(
     () => ({
       data: {
-        ...data,
-        fuelCodes: normalizeRows(data?.fuelCodes || [])
+        ...(data as FuelCodeBulletinData | undefined),
+        fuelCodes: normalizeRows(
+          (data as FuelCodeBulletinData | undefined)?.fuelCodes || []
+        )
       },
       isLoading,
       isError,
@@ -59,8 +68,8 @@ export const CurrentFuelCodes = () => {
     }),
     [data, isLoading, isError, error]
   )
-  const cutoffLabel = data?.cutoffDate
-    ? formatDate(data.cutoffDate)
+  const cutoffLabel = (data as FuelCodeBulletinData | undefined)?.cutoffDate
+    ? formatDate((data as FuelCodeBulletinData).cutoffDate as string)
     : t('current.cutoffLabel')
 
   const navigateToFuelCodeDetail = (fuelCodeId: unknown) => {
@@ -138,7 +147,7 @@ export const CurrentFuelCodes = () => {
           columnDefs={colDefs}
           gridKey="current-fuel-codes-grid"
           paginationOptions={paginationOptions}
-          onPaginationChange={(newPagination) =>
+          onPaginationChange={(newPagination: BCPaginationOptions) =>
             setPaginationOptions((prev) => ({
               ...prev,
               ...newPagination
@@ -156,11 +165,11 @@ export const CurrentFuelCodes = () => {
             resizable: true,
             sortable: true
           }}
-          getRowId={(params: { data: FuelCodeRow }) => params.data.id}
+          getRowId={(params) => params.data.id as string}
           rowStyle={isIdirView ? { cursor: 'pointer' } : undefined}
           onRowClicked={
             isIdirView
-              ? (params: { data?: FuelCodeRow }) => {
+              ? (params) => {
                   navigateToFuelCodeDetail(params.data?.fuelCodeId)
                 }
               : undefined

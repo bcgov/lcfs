@@ -1,6 +1,7 @@
 import { forwardRef, useEffect, useRef } from 'react'
 import TextField from '@mui/material/TextField'
 import InputMask from 'react-input-mask'
+import type { ChangeEvent } from 'react'
 
 export interface TextCellEditorProps {
   value?: string
@@ -11,27 +12,26 @@ export interface TextCellEditorProps {
   mask?: string
   formatChars?: Record<string, string>
   inputProps?: Record<string, unknown>
-  [key: string]: unknown
 }
 
-export const TextCellEditor = forwardRef(
+export const TextCellEditor = forwardRef<HTMLDivElement, TextCellEditorProps>(
   (
     {
       value,
       onValueChange,
       ...props
-    }: TextCellEditorProps,
+    },
     ref
   ) => {
-    const handleTextFieldChange = (event) => {
+    const handleTextFieldChange = (event: ChangeEvent<HTMLInputElement>) => {
       onValueChange(event.target.value)
     }
 
-    const inputRef = useRef(null)
+    const inputRef = useRef<HTMLInputElement | null>(null)
 
     useEffect(() => {
       if (inputRef) {
-        inputRef.current.focus()
+        inputRef.current!.focus()
       }
     }, [])
 

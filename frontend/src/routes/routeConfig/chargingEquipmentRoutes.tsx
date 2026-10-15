@@ -1,9 +1,6 @@
 import { lazy } from 'react'
 
 import { AppRouteObject } from '../types'
-// TODO: Implement RoleRoute component for role-based access control
-// import { RoleRoute } from '@/components/RoleRoute'
-// import { roles } from '@/constants/roles'
 
 // Lazy load components
 lazy(() =>

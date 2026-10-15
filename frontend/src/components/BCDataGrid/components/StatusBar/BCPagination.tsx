@@ -16,7 +16,7 @@ export interface BCPaginationProps {
   enableCopyButton?: boolean
   enableExportButton?: boolean
   exportName?: string
-  gridRef?: BCGridRef
+  gridRef?: BCGridRef | null
   rowsPerPageOptions?: number[]
 }
 

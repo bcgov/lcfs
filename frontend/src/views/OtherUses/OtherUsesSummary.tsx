@@ -5,11 +5,12 @@ import { otherUsesSummaryColDefs } from '@/views/OtherUses/_schema'
 import Grid2 from '@mui/material/Grid2'
 import { useMemo, useRef, useState } from 'react'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
-import { defaultInitialPagination } from '@/constants/schedules'
 import { useParams } from 'react-router-dom'
 import Loading from '@/components/Loading'
 import { useOtherUsesOptions } from '@/hooks/useOtherUses'
-import { useTranslation } from 'react-i18next'
+import type { OptionsData } from '@/types/schema'
+import { defaultInitialPagination } from '@/constants/schedules'
+import type { BCPaginationOptions , BCGridRow } from '@/components/BCDataGrid/types'
 
 interface OtherUse {
   otherUsesId: number | string
@@ -26,26 +27,28 @@ interface PaginationFilter {
   field: string
   type: string
   filter?: string
+  [key: string]: unknown
 }
 
 interface PaginationSort {
   field: string
   direction: 'asc' | 'desc'
+  [key: string]: unknown
 }
 
 interface PaginationOptions {
   page: number
   size: number
-  filters?: PaginationFilter[]
-  sortOrders?: PaginationSort[]
+  filters: PaginationFilter[]
+  sortOrders: PaginationSort[]
+  [key: string]: unknown
 }
 
 export const OtherUsesSummary = ({ data, status }: OtherUsesSummaryProps) => {
   const [paginationOptions, setPaginationOptions] = useState<PaginationOptions>(
-    defaultInitialPagination
+    defaultInitialPagination as unknown as PaginationOptions
   )
   const gridRef = useRef(null)
-  const { t } = useTranslation(['otherUses'])
   const { compliancePeriod } = useParams<{ compliancePeriod: string }>()
   const { data: optionsData, isLoading: optionsLoading } = useOtherUsesOptions({
     compliancePeriod
@@ -97,8 +100,8 @@ export const OtherUsesSummary = ({ data, status }: OtherUsesSummaryProps) => {
     ) {
       paginationOptions.sortOrders.forEach((sort) => {
         filteredData.sort((a, b) => {
-          const aVal = a[sort.field]
-          const bVal = b[sort.field]
+          const aVal = a[sort.field] as string | number
+          const bVal = b[sort.field] as string | number
 
           let comparison = 0
           if (aVal > bVal) comparison = 1
@@ -142,14 +145,16 @@ export const OtherUsesSummary = ({ data, status }: OtherUsesSummaryProps) => {
     [status]
   )
 
-  const getRowId = (params: { data: OtherUse }) =>
-    params.data.otherUsesId.toString()
+  const getRowId = (params: { data: BCGridRow }) =>
+    (params.data.otherUsesId as string | number).toString()
   const columnDefs = useMemo(
     () =>
-      otherUsesSummaryColDefs(parseInt(compliancePeriod ?? '0'), optionsData),
-    [compliancePeriod, optionsData, t]
+      otherUsesSummaryColDefs(
+        parseInt(compliancePeriod ?? '0'),
+        optionsData as OptionsData
+      ),
+    [compliancePeriod, optionsData]
   )
-
   if (optionsLoading) {
     return <Loading />
   }
@@ -172,11 +177,11 @@ export const OtherUsesSummary = ({ data, status }: OtherUsesSummaryProps) => {
           }}
           enableCellTextSelection
           paginationOptions={paginationOptions}
-          onPaginationChange={(newPagination: Partial<PaginationOptions>) =>
+          onPaginationChange={(newPagination: BCPaginationOptions) =>
             setPaginationOptions((prev) => ({
               ...prev,
               ...newPagination
-            }))
+            }) as PaginationOptions)
           }
           enablePageCaching={false}
         />

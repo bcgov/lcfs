@@ -1,6 +1,6 @@
 import { FuelCodeStatusBadge } from './components/FuelCodeStatusBadge'
 import type { ColDef, ICellRendererParams } from 'ag-grid-community'
-import { TFunction } from 'i18next'
+import type { TFunction } from 'i18next'
 import { Link } from 'react-router-dom'
 import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
 import { fuelCodeColDefs as idirFuelCodeColDefs } from '@/views/FuelCodes/_schema'
@@ -30,13 +30,18 @@ export const formatCarbonIntensity = (
     : num.toFixed(2).replace(/\.00$/, '')
 }
 
-export const dateSortComparator = (a: string, b: string): number => {
+export const dateSortComparator = (
+  a: string | number | null | undefined,
+  b: string | number | null | undefined
+): number => {
   const left = a ? new Date(a).getTime() : -Infinity
   const right = b ? new Date(b).getTime() : -Infinity
   return left - right
 }
 
-const parseDateOnly = (value: string | Date | null | undefined): Date | null => {
+const parseDateOnly = (
+  value: string | Date | null | undefined
+): Date | null => {
   if (!value) return null
   if (value instanceof Date) return value
 
@@ -54,7 +59,7 @@ const dateFilterComparator = (
   filterLocalDateAtMidnight: Date,
   cellValue: string | null | undefined
 ): number => {
-  const cellDate = parseDateOnly(cellValue)
+  const cellDate = parseDateOnly(cellValue as string)
   if (!cellDate) return -1
   const normalizedCellDate = new Date(
     cellDate.getFullYear(),
@@ -196,7 +201,8 @@ export const buildColumnDefs = (t: TFunction, isIdir = false): ColDef[] => {
       sortable: true,
       minWidth: 180,
       comparator: dateSortComparator,
-      valueFormatter: (params: FuelCodeValueParams) => formatDate(params.value)
+      valueFormatter: (params: FuelCodeValueParams) =>
+        formatDate(params.value as string | null | undefined)
     },
     {
       headerName: t('columns.expiryDate'),
@@ -209,7 +215,8 @@ export const buildColumnDefs = (t: TFunction, isIdir = false): ColDef[] => {
       sortable: true,
       minWidth: 180,
       comparator: dateSortComparator,
-      valueFormatter: (params: FuelCodeValueParams) => formatDate(params.value)
+      valueFormatter: (params: FuelCodeValueParams) =>
+        formatDate(params.value as string | null | undefined)
     }
   ]
 }
@@ -217,12 +224,12 @@ export const buildColumnDefs = (t: TFunction, isIdir = false): ColDef[] => {
 
 export const normalizeRows = (rows: unknown[] = []): FuelCodeRow[] =>
   rows.map((value, index) => {
-    const row = value as Record<string, unknown>
+    const row = value as FuelCodeRow
     return {
       ...row,
       id: `${row.fuelCode}-${row.effectiveDate || index}`,
       // Aliases so the canonical IDIR fuelCodeColDefs can render unchanged
       fuelType: row.fuel,
       expirationDate: row.expiryDate
-    } as FuelCodeRow
+    }
   })

@@ -4,7 +4,7 @@ import type { ComponentProps, ReactNode } from 'react'
 import type { SxProps, Theme } from '@mui/material/styles'
 
 // Header edit button shared by BCWidgetCard and cards that own their edit flow.
-export const widgetEditButtonSx: SxProps<Theme> = {
+const widgetEditButtonSx: SxProps<Theme> = {
   borderColor: 'rgba(255, 255, 255 , 1)',
   color: 'rgba(255, 255, 255 , 1)',
   '&:hover': {

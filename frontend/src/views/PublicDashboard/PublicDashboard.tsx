@@ -58,6 +58,34 @@ const priceFmt = new Intl.NumberFormat('en-CA', {
   maximumFractionDigits: 2
 })
 
+interface PublicPricePoint {
+  period: string
+  vwap: number | null
+  volume: number | null
+  low: number | null
+  high: number | null
+}
+
+interface PublicMarketOverview {
+  priceIndex?: PublicPricePoint[]
+  totalVolumeTraded?: number | null
+  totalCreditsIssued?: number | null
+  participatingOrganizations?: number | null
+}
+
+interface ActiveLoginBackground {
+  loginBgImageId: number | string
+  displayName?: string | null
+  caption?: string | null
+}
+
+interface MarketTooltipParam {
+  seriesName: string
+  value: number | null
+  marker: string
+  axisValue: string
+}
+
 // Break a section out of the constrained page container to full viewport width.
 const fullBleed = {
   position: 'relative',
@@ -73,8 +101,12 @@ export const PublicDashboard = () => {
   const { t } = useTranslation()
   const { keycloak, initialized } = useKeycloak()
   const navigate = useNavigate()
-  const { data } = useCreditMarketPublicOverview('quarter')
-  const { data: activeBg } = useActiveLoginBgImage()
+  const { data } = useCreditMarketPublicOverview('quarter') as {
+    data: PublicMarketOverview | undefined
+  }
+  const { data: activeBg } = useActiveLoginBgImage() as {
+    data: ActiveLoginBackground | undefined
+  }
   const publicMarketDataEnabled = CONFIG.feature_flags.publicMarketData
 
   // After login the OIDC callback returns to the app root, which can briefly
@@ -97,14 +129,14 @@ export const PublicDashboard = () => {
   const bgUrl = activeBg?.loginBgImageId
     ? `${CONFIG.API_BASE}${apiRoutes.loginBgImageStream.replace(
         ':imageId',
-        activeBg.loginBgImageId
+        activeBg.loginBgImageId as string
       )}`
     : bgFallbackImage
   const credits = activeBg
     ? [activeBg.displayName, activeBg.caption].filter(Boolean).join(' — ')
     : null
 
-  const login = (idpHint) =>
+  const login = (idpHint: string) =>
     keycloak.login({ idpHint, redirectUri: window.location.origin })
 
   // Latest VWAP and quarter-over-quarter change for the snapshot card.
@@ -117,7 +149,8 @@ export const PublicDashboard = () => {
       latestPeriod: last?.period ?? '',
       deltaPct:
         last && prev && prev.vwap
-          ? ((last.vwap - prev.vwap) / prev.vwap) * 100
+          ? (((last.vwap as number) - (prev.vwap as number)) /
+              (prev.vwap as number)) * 100
           : null
     }
   }, [priceIndex])
@@ -155,7 +188,7 @@ export const PublicDashboard = () => {
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'cross' },
-        formatter: (params) => {
+        formatter: (params: MarketTooltipParam[]) => {
           if (!params || !params.length) return ''
           const priceName = t('publicDashboard.market.priceSeries')
           const volName = t('publicDashboard.market.volumeSeries')

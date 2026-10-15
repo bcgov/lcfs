@@ -18,7 +18,7 @@ import BCButton from '@/components/BCButton'
 import { BCFormText } from '@/components/BCForm/BCFormText'
 import BCTypography from '@/components/BCTypography'
 import { useUpdateAgreement } from '@/hooks/useInitiativeAgreements'
-import { AGREEMENT_TYPES } from './CreateAgreement'
+import { AGREEMENT_TYPES } from './agreementTypes'
 
 const DATE_FORMAT = 'yyyy-MM-dd'
 
