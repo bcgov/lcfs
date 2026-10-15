@@ -19,6 +19,8 @@ export interface BCFormTextProps {
   onCheckboxChange?: ChangeEventHandler<HTMLInputElement>
   isChecked?: boolean
   disabled?: boolean
+  multiline?: boolean
+  rows?: number
 }
 
 export const BCFormText = ({
@@ -30,7 +32,9 @@ export const BCFormText = ({
   checkboxLabel,
   onCheckboxChange,
   isChecked,
-  disabled
+  disabled,
+  multiline,
+  rows
 }: BCFormTextProps) => {
   return (
     <Controller
@@ -83,6 +87,9 @@ export const BCFormText = ({
             fullWidth
             variant="outlined"
             disabled={disabled}
+            multiline={multiline}
+            rows={rows}
+            inputProps={{ 'data-test': name }}
           />
         </>
       )}
@@ -99,5 +106,7 @@ BCFormText.propTypes = {
   checkboxLabel: PropTypes.string,
   onCheckboxChange: PropTypes.func,
   isChecked: PropTypes.bool,
-  disabled: PropTypes.bool
+  disabled: PropTypes.bool,
+  multiline: PropTypes.bool,
+  rows: PropTypes.number
 }
