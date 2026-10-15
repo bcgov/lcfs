@@ -439,6 +439,37 @@ export const useUpdateDesignatedAction = (
   })
 }
 
+export const useUpdateAgreement = (initiativeAgreementId: number | string) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: {
+      iaCode?: string
+      agreementType?: string
+      title?: string | null
+      projectDescription?: string | null
+      projectLocation?: string | null
+      contactName?: string | null
+      contactEmail?: string | null
+      contactPhone?: string | null
+      agreementStartDate?: string | null
+      agreementEndDate?: string | null
+    }) =>
+      (
+        await client.put(
+          apiRoutes.updateAgreement.replace(
+            ':initiativeAgreementId',
+            String(initiativeAgreementId)
+          ),
+          payload
+        )
+      ).data,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['initiative-agreements'] })
+    }
+  })
+}
+
 /** Start a new initiative agreement as a draft (analysts and managers). */
 export const useCreateAgreement = () => {
   const client = useApiService()
