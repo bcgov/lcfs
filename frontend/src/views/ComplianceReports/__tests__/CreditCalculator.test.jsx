@@ -338,7 +338,7 @@ describe('CreditCalculator', () => {
       ).toBeInTheDocument()
     })
 
-    it('wraps End Use labels without horizontal scrolling', () => {
+    it('allows horizontal scrolling for long End Use labels', () => {
       const { container } = render(
         <TestWrapper>
           <CreditCalculator />
@@ -350,10 +350,9 @@ describe('CreditCalculator', () => {
       )
       const endUseOption = endUseGroup.querySelector('[role="radio"]')
 
-      expect(getComputedStyle(endUseGroup).overflowX).toBe('hidden')
-      expect(getComputedStyle(endUseOption).maxWidth).toBe('100%')
-      expect(getComputedStyle(endUseOption).whiteSpace).toBe('normal')
-      expect(getComputedStyle(endUseOption).overflowWrap).toBe('anywhere')
+      expect(getComputedStyle(endUseGroup).overflowX).toBe('auto')
+      expect(getComputedStyle(endUseOption).maxWidth).toBe('none')
+      expect(getComputedStyle(endUseOption).whiteSpace).toBe('nowrap')
     })
 
     it.each([
