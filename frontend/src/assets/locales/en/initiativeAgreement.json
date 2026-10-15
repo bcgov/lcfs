@@ -44,6 +44,7 @@
     "sectionPlaceholder": "This section is under development and will be populated once the agreement management API is available.",
     "manageDocuments": "Manage documents",
     "noDocuments": "No documents have been attached to this agreement.",
+    "noOrganization": "No organization assigned",
     "loadFailMsg": "Failed to load the initiative agreement."
   },
   "documents": {
@@ -54,10 +55,13 @@
   "actions": {
     "columns": {
       "id": "ID",
+      "organization": "Organization",
+      "iaName": "IA name",
       "name": "DA name",
       "assignedAnalyst": "Assigned analyst",
       "lastComment": "Last comment",
       "creditsToBeIssued": "Compliance units to be issued",
+      "dateForCompletion": "Date for completion",
       "lastUpdated": "Last updated",
       "status": "Current status"
     },
@@ -70,7 +74,7 @@
     "creditsLabel": "Compliance units to be issued",
     "dateLabel": "Date for completion",
     "create": "Add designated action",
-    "draftOnly": "Designated actions can only be added while the agreement is a draft.",
+    "closedToNewActions": "Designated actions cannot be added to a completed or terminated agreement.",
     "createFailed": "The designated action could not be added.",
     "edit": "Edit details",
     "editTitle": "Edit designated action",
@@ -281,7 +285,7 @@
     "locationLabel": "Project location",
     "startLabel": "Start date",
     "endLabel": "End date",
-    "created": "Agreement {{code}} created as a draft.",
+    "created": "Agreement {{code}} created.",
     "failed": "The agreement could not be created."
   },
   "tabs": {
