@@ -20,7 +20,16 @@ export const validation = {
 }
 
 /**
- * @param {Partial<Pick<import('./components/Renderers/ActionsRenderer').ActionsRendererProps, 'enableDuplicate' | 'enableEdit' | 'enableDelete' | 'enableUndo' | 'enableStatus'>> & { hide?: boolean } | ((params: import('ag-grid-community').ICellRendererParams) => Partial<Pick<import('./components/Renderers/ActionsRenderer').ActionsRendererProps, 'enableDuplicate' | 'enableEdit' | 'enableDelete' | 'enableUndo' | 'enableStatus'>>)
+ * @param {
+ *   (Partial<Pick<
+ *     import('./components/Renderers/ActionsRenderer').ActionsRendererProps,
+ *     'enableDuplicate' | 'enableEdit' | 'enableDelete' | 'enableUndo' | 'enableStatus'
+ *   >> & { hide?: boolean }) |
+ *   ((params: import('ag-grid-community').ICellRendererParams) => Partial<Pick<
+ *     import('./components/Renderers/ActionsRenderer').ActionsRendererProps,
+ *     'enableDuplicate' | 'enableEdit' | 'enableDelete' | 'enableUndo' | 'enableStatus'
+ *   >>)
+ * } props
  * @returns {import('ag-grid-community').ColDef}
  */
 export const actions = (props) => ({
