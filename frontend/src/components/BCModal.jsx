@@ -9,11 +9,14 @@ import DialogTitle from '@mui/material/DialogTitle'
 import Divider from '@mui/material/Divider'
 import IconButton from '@mui/material/IconButton'
 import PropTypes from 'prop-types'
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import BCButton from './BCButton'
 
 const BCModal = ({ open, onClose, data = null }) => {
   const [isLoading, setIsLoading] = useState(false)
+  const baseId = useId()
+  const titleId = `${baseId}-title`
+  const contentId = `${baseId}-content`
 
   useEffect(() => {
     setIsLoading(false)
@@ -72,9 +75,11 @@ const BCModal = ({ open, onClose, data = null }) => {
       onClose={handleClose}
       maxWidth="md"
       fullWidth
+      aria-labelledby={titleId}
+      aria-describedby={contentId}
       data-test="modal"
     >
-      <DialogTitle>{title}</DialogTitle>
+      <DialogTitle id={titleId}>{title}</DialogTitle>
       <IconButton
         aria-label="close"
         onClick={handleClose}
@@ -106,7 +111,7 @@ const BCModal = ({ open, onClose, data = null }) => {
           </Box>
         </DialogContent>
       )}
-      <DialogContent>{content}</DialogContent>
+      <DialogContent id={contentId}>{content}</DialogContent>
       <Divider />
       <DialogActions>
         {secondaryButtonText && (
