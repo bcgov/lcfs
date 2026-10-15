@@ -163,21 +163,34 @@ describe('CommentLog', () => {
     }
   )
 
-  it('shows N/A for a comment without a compliance period', () => {
-    mockHook.mockReturnValue({
-      ...baseHookState(),
-      data: {
-        comments: [
-          sampleComment({ entityType: 'Transfer', complianceYear: null })
-        ],
-        pagination: { page: 1, size: 25, total: 1, totalPages: 1 }
-      }
-    })
-    renderCommentLog()
-    expect(
-      screen.getByTestId('comment-compliance-period-chip')
-    ).toHaveTextContent('N/A')
-  })
+  it.each([null, undefined])(
+    'omits the compliance period pill when the year is %s',
+    (complianceYear) => {
+      mockHook.mockReturnValue({
+        ...baseHookState(),
+        data: {
+          comments: [
+            sampleComment({
+              entityType: 'ciApplication',
+              category: 'CI application notes',
+              complianceYear
+            })
+          ],
+          pagination: { page: 1, size: 25, total: 1, totalPages: 1 }
+        }
+      })
+      renderCommentLog()
+
+      const row = screen.getByTestId('comment-log-row')
+      expect(
+        within(row).queryByTestId('comment-compliance-period-chip')
+      ).not.toBeInTheDocument()
+      expect(
+        within(row).getByTestId('comment-category-chip')
+      ).toHaveTextContent('CI application notes')
+      expect(row).not.toHaveTextContent('N/A')
+    }
+  )
 
   it('shows a loading skeleton while fetching', () => {
     mockHook.mockReturnValue({ ...baseHookState(), isLoading: true })

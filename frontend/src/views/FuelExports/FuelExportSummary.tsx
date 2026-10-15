@@ -42,10 +42,7 @@ interface PaginationOptions {
   sortOrders?: PaginationSort[]
 }
 
-export const FuelExportSummary = ({
-  data,
-  status
-}: FuelExportSummaryProps) => {
+export const FuelExportSummary = ({ data, status }: FuelExportSummaryProps) => {
   const [paginationOptions, setPaginationOptions] = useState<PaginationOptions>(
     defaultInitialPagination
   )
@@ -162,6 +159,11 @@ export const FuelExportSummary = ({
     [status]
   )
 
+  const columnDefs = useMemo(
+    () => fuelExportSummaryColDefs(showFuelTypeOther),
+    [showFuelTypeOther, t]
+  )
+
   const getRowId = (params: { data: FuelExport }) => {
     return params.data.fuelExportId.toString()
   }
@@ -182,7 +184,7 @@ export const FuelExportSummary = ({
           gridRef={gridRef}
           queryData={paginatedData}
           dataKey="fuelExports"
-          columnDefs={fuelExportSummaryColDefs(showFuelTypeOther)}
+          columnDefs={columnDefs}
           getRowId={getRowId}
           gridOptions={gridOptions}
           enableCopyButton={false}
