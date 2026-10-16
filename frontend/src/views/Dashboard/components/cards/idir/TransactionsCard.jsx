@@ -12,7 +12,8 @@ import { roles } from '@/constants/roles'
 import { ROUTES } from '@/routes/routes'
 import { useTransactionCounts } from '@/hooks/useDashboard'
 import { TRANSACTION_STATUSES, TRANSFER_STATUSES } from '@/constants/statuses'
-import { CountDisplay, countDigits } from '../../CountDisplay'
+import { CountDisplay } from '../../CountDisplay'
+import { countDigits } from '../../countDigits'
 
 // Constants for transaction configurations
 const TRANSACTION_CONFIGS = {

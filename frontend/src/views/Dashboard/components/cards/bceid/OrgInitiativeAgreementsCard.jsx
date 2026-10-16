@@ -14,7 +14,8 @@ import { FEATURE_FLAGS } from '@/constants/config'
 import { FILTER_KEYS } from '@/constants/common'
 import { ROUTES } from '@/routes/routes'
 import { useOrgInitiativeAgreementCounts } from '@/hooks/useDashboard'
-import { CountDisplay, countDigits } from '../../CountDisplay'
+import { CountDisplay } from '../../CountDisplay'
+import { countDigits } from '../../countDigits'
 
 // BCeID dashboard card for a proponent's initiative agreements (#4893):
 // the organization's agreements by lifecycle status, each a link into

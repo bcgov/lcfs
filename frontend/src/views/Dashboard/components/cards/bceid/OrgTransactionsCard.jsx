@@ -13,7 +13,8 @@ import { useOrganization } from '@/hooks/useOrganization'
 import { useOrgTransactionCounts } from '@/hooks/useDashboard'
 import { FILTER_KEYS } from '@/constants/common'
 import { TRANSACTION_TYPES, TRANSFER_STATUSES } from '@/constants/statuses'
-import { CountDisplay, countDigits } from '../../CountDisplay'
+import { CountDisplay } from '../../CountDisplay'
+import { countDigits } from '../../countDigits'
 
 export const OrgTransactionsCard = () => {
   const { t } = useTranslation(['dashboard'])

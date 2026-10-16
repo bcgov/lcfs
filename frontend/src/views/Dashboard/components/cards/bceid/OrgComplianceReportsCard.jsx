@@ -14,7 +14,8 @@ import { useOrganization } from '@/hooks/useOrganization'
 import { useOrgComplianceReportCounts } from '@/hooks/useDashboard'
 import { FILTER_KEYS } from '@/constants/common'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
-import { CountDisplay, countDigits } from '../../CountDisplay'
+import { CountDisplay } from '../../CountDisplay'
+import { countDigits } from '../../countDigits'
 
 const OrgComplianceReportsCard = () => {
   const { t } = useTranslation(['dashboard'])

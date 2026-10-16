@@ -10,7 +10,8 @@ import ListItemButton from '@mui/material/ListItemButton'
 import Stack from '@mui/material/Stack'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { CountDisplay, countDigits } from '../../CountDisplay'
+import { CountDisplay } from '../../CountDisplay'
+import { countDigits } from '../../countDigits'
 
 export const CIApplicationCard = () => {
   const { t } = useTranslation(['dashboard'])

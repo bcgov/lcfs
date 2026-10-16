@@ -18,7 +18,8 @@ import {
   TRANSFER_STATUSES,
   FUEL_CODE_STATUSES
 } from '@/constants/statuses'
-import { CountDisplay, countDigits } from '../../CountDisplay'
+import { CountDisplay } from '../../CountDisplay'
+import { countDigits } from '../../countDigits'
 
 // Constants for filter configurations
 const FILTER_CONFIGS = {

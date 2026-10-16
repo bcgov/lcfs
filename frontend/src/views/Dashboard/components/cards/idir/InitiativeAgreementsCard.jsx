@@ -10,7 +10,8 @@ import ListItemButton from '@mui/material/ListItemButton'
 import Stack from '@mui/material/Stack'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { CountDisplay, countDigits } from '../../CountDisplay'
+import { CountDisplay } from '../../CountDisplay'
+import { countDigits } from '../../countDigits'
 
 // IDIR dashboard links card for the Initiative Agreements module (#4895).
 // The wireframe's "Change order(s)" and "Expression of interest" counters

@@ -1,8 +1,8 @@
-import React from 'react'
 import { screen } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { test } from '@/tests/utils/fixtures'
-import { CountDisplay, countDigits, MIN_COUNT_DIGITS } from '../CountDisplay'
+import { CountDisplay } from '../CountDisplay'
+import { countDigits, MIN_COUNT_DIGITS } from '../countDigits'
 import DirectorReviewCard from '../cards/idir/DirectorReviewCard'
 import TransactionsCard from '../cards/idir/TransactionsCard'
 import {

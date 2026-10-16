@@ -13,7 +13,8 @@ import { roles } from '@/constants/roles'
 import { FEATURE_FLAGS } from '@/constants/config'
 import { ROUTES } from '@/routes/routes'
 import { useOrgFuelCodeCounts } from '@/hooks/useDashboard'
-import { CountDisplay, countDigits } from '../../CountDisplay'
+import { CountDisplay } from '../../CountDisplay'
+import { countDigits } from '../../countDigits'
 
 const linkSx = {
   textDecoration: 'underline',
