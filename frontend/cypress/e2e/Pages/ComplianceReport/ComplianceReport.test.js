@@ -392,7 +392,7 @@ function enterFSEData(data) {
     let usedApiFallback = false
 
     // Set up the exception handler for this row
-    cy.on('uncaught:exception', (_err) => {
+    cy.on('uncaught:exception', () => {
       cy.log(
         `⚠️ FSE grid data entry failed at row ${startIndex}, falling back to API.`
       )
@@ -593,7 +593,7 @@ function enterAllocationData(data) {
     let usedApiFallback = false
 
     // Set up the exception handler for this row
-    cy.on('uncaught:exception', (_err) => {
+    cy.on('uncaught:exception', () => {
       cy.log(
         `⚠️ Allocation data entry failed at row ${startIndex}, falling back to API.`
       )

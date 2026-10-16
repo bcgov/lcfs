@@ -1,5 +1,6 @@
-import React from 'react'
-import { screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { omitProperties } from '@/utils/omitProperties'
+import 'react';
+import { screen, act } from '@testing-library/react';
 import { vi, describe, expect, beforeEach } from 'vitest'
 import { CreditMarketDetailsCard } from '../CreditMarketDetailsCard'
 import { test } from '@/tests/utils/fixtures'
@@ -52,7 +53,9 @@ vi.mock('react-hook-form', () => ({
     formState: { isDirty: false },
     watch: mockWatch
   }),
-  Controller: ({ render, name, control }) => {
+  Controller: ({
+  render
+}) => {
     const fieldProps = { value: '', onChange: vi.fn() }
     return render({ field: fieldProps, fieldState: {} })
   }
@@ -357,11 +360,8 @@ describe('CreditMarketDetailsCard', () => {
       i18n
     }) => {
       const {
-        creditMarketContactName,
-        creditMarketContactEmail,
-        creditMarketContactPhone,
-        ...orgDataWithoutCreditMarketContact
-      } = mockOrganizationData
+  ...orgDataWithoutCreditMarketContact
+} = omitProperties(mockOrganizationData, ["creditMarketContactName","creditMarketContactEmail","creditMarketContactPhone"])
       vi.mocked(useOrganization).mockReturnValue({
         data: orgDataWithoutCreditMarketContact,
         isLoading: false

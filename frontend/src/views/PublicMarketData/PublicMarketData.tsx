@@ -16,7 +16,7 @@ import ReactECharts from 'echarts-for-react'
 import { useTranslation } from 'react-i18next'
 import * as XLSX from 'xlsx'
 import html2canvas from 'html2canvas'
-import jsPDF from 'jspdf'
+import { jsPDF as JsPdf } from 'jspdf'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import { useCreditMarketPublicReport } from '@/hooks/useCreditMarket'
@@ -518,11 +518,11 @@ export const PublicMarketData = () => {
     quarter: 'quarterly',
     year: 'annual'
   }[gran] as ReportKey
-  const series = data?.[seriesKey] ?? []
+  const series = useMemo(() => data?.[seriesKey] ?? [], [data, seriesKey])
   const kpis = data?.kpis
   const ytdKpis = data?.ytdKpis ?? kpis
   const allTime = data?.allTime
-  const a1MonthlyChartRows = data?.a1Monthly ?? []
+  const a1MonthlyChartRows = useMemo(() => data?.a1Monthly ?? [], [data?.a1Monthly])
 
   const chartOption = useMemo(() => {
     const priceName = t('publicDashboard.marketData.kpi.avgPrice')
@@ -1175,7 +1175,7 @@ export const PublicMarketData = () => {
         }
       })
 
-      const pdf = new jsPDF({ orientation: 'l', unit: 'mm', format: 'a4' })
+      const pdf = new JsPdf({ orientation: 'l', unit: 'mm', format: 'a4' })
       const pageWidthMm = pdf.internal.pageSize.getWidth()
       const pageHeightMm = pdf.internal.pageSize.getHeight()
       const marginMm = 6

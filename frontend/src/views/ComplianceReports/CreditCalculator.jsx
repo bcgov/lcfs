@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState, useRef, useCallback } from 'react'
+import React, { useMemo, useEffect, useState, useRef } from 'react'
 import { useForm, FormProvider, Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import Grid from '@mui/material/Grid2'
@@ -8,7 +8,6 @@ import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import FormControl from '@mui/material/FormControl'
 import InputAdornment from '@mui/material/InputAdornment'
-import Tooltip from '@mui/material/Tooltip'
 import Check from '@mui/icons-material/Check'
 import ContentCopy from '@mui/icons-material/ContentCopy'
 import colors from '@/themes/base/colors'
@@ -30,7 +29,9 @@ import {
   FUEL_CATEGORIES,
   LEGISLATION_TRANSITION_YEAR
 } from '@/constants/common'
-import { numberFormatter } from '@/utils/formatters'
+import {
+  formatEnergyContentWithCommas
+} from '@/utils/formatters'
 import { copyToClipboard } from '@/utils/clipboard'
 
 const CUSTOM_CI_OPTION_VALUE = 'customCi'
@@ -105,8 +106,7 @@ export const CreditCalculator = () => {
     watch,
     setValue,
     formState: { errors },
-    reset,
-    handleSubmit
+    reset
   } = methods
 
   const watchedValues = watch()
@@ -183,11 +183,7 @@ export const CreditCalculator = () => {
         uniqueEndUses.set(endUse.type, {
           value: endUse.type,
           sortLabel: endUse.type,
-          label: (
-            <Tooltip title={endUse.type} placement="top" arrow>
-              <span>{endUse.type}</span>
-            </Tooltip>
-          )
+          label: <span>{endUse.type}</span>
         })
       }
     })
@@ -223,13 +219,6 @@ export const CreditCalculator = () => {
       (option) => option.value !== CUSTOM_CI_OPTION_VALUE
     )
   }, [provisionOptions])
-
-  const selectedProvision = useMemo(() => {
-    if (!provisionOfTheAct) return null
-    return fuelTypeOptions?.data?.provisions?.find(
-      (provision) => provision.name === provisionOfTheAct
-    )
-  }, [fuelTypeOptions, provisionOfTheAct])
 
   // Get unit based on selected fuel
   const unit = useMemo(() => {
@@ -559,6 +548,10 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
     if (!endUseId || !calculatedResults) return fallback
 
     const data = calculatedResults
+    const formattedEnergyContent = formatEnergyContentWithCommas({
+      value: data.energyContent || 0,
+      fuelType
+    })
 
     return {
       credits: data.complianceUnits || 0,
@@ -567,12 +560,12 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
         eer: (data.eer || 0).toFixed(2),
         ci: `${data.rci || 0} ${CARBON_INTENSITY_UNIT}`,
         uci: data.uci ? `${data.uci} ${CARBON_INTENSITY_UNIT}` : 'N/A',
-        energyContent: `${numberFormatter(data.energyContent || 0)} MJ`,
+        energyContent: `${formattedEnergyContent} MJ`,
         energyDensity: `${data.energyDensity || 0} ${fuelTypeOptions?.data?.energyDensity?.unit?.name || ''}`
       },
-      formulaDisplay: `${(data.complianceUnits || 0).toLocaleString()} = (${data.tci || 0} * ${data.eer || 0} - (${data.rci || 0} + ${data.uci || 'N/A'})) * ${numberFormatter(data.energyContent || 0)} / 1,000,000`
+      formulaDisplay: `${(data.complianceUnits || 0).toLocaleString()} = (${data.tci || 0} * ${data.eer || 0} - (${data.rci || 0} + ${data.uci || 'N/A'})) * ${formattedEnergyContent} / 1,000,000`
     }
-  }, [calculatedResults, fuelTypeOptions, endUseId])
+  }, [calculatedResults, fuelTypeOptions, endUseId, fuelType])
 
   const carbonIntensityDisplayValue = useMemo(() => {
     if (!provisionOfTheAct) return ''

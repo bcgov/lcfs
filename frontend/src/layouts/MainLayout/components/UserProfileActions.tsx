@@ -33,6 +33,7 @@ import Box from '@mui/material/Box'
 import Close from '@mui/icons-material/Close'
 import Logout from '@mui/icons-material/Logout'
 import NotificationsIcon from '@mui/icons-material/Notifications'
+
 import { NavLink, useNavigate } from 'react-router-dom'
 import { ROUTES, buildPath } from '@/routes/routes'
 import { RoleSwitcher } from './RoleSwitcher'
@@ -49,6 +50,24 @@ type NotificationMessage = {
   }
 }
 
+type NotificationPayload = {
+  id?: string | number
+  service?: string
+  compliancePeriod?: string | number
+  type?: string
+  toOrganizationId?: number
+  fromOrganization?: string
+}
+
+type NotificationUser = {
+  organization?: { organizationId?: number }
+  [key: string]: unknown
+}
+
+const parseNotificationPayload = (message: string): NotificationPayload => {
+  return JSON.parse(message) as NotificationPayload
+}
+
 const latestNotificationOptions = {
   page: 1,
   size: 3,
@@ -58,25 +77,26 @@ const latestNotificationOptions = {
 
 const getNotificationRoute = (
   notification: NotificationMessage,
-  currentUser?: Record<string, any>
+  currentUser?: NotificationUser
 ) => {
   try {
-    const parsed = JSON.parse(notification.message)
+    const parsed = parseNotificationPayload(notification.message)
     const { id, service, compliancePeriod } = parsed
     const serviceKey = service || notification.type
-    const routeTemplate = routesMapping(currentUser || {})[serviceKey]
+    const routeMap = routesMapping(currentUser || {})
+    const routeTemplate = routeMap[serviceKey as keyof typeof routeMap]
 
     if (!routeTemplate) {
       return null
     }
 
     return routeTemplate
-      .replace(':transactionId', id)
-      .replace(':transferId', id)
-      .replace(':compliancePeriod', compliancePeriod)
-      .replace(':complianceReportId', id)
-      .replace(':ciApplicationId', id)
-      .replace(':fuelCodeID', id)
+      .replace(':transactionId', id as string)
+      .replace(':transferId', id as string)
+      .replace(':compliancePeriod', compliancePeriod as string)
+      .replace(':complianceReportId', id as string)
+      .replace(':ciApplicationId', id as string)
+      .replace(':fuelCodeID', id as string)
   } catch {
     return null
   }
@@ -93,10 +113,10 @@ const getNotificationSummary = (notification: NotificationMessage) => {
 
 const getNotificationOrganization = (
   notification: NotificationMessage,
-  currentUser?: Record<string, any>
+  currentUser?: NotificationUser
 ) => {
   try {
-    const parsed = JSON.parse(notification.message)
+    const parsed = parseNotificationPayload(notification.message)
     const { service, toOrganizationId, fromOrganization } = parsed
     if (
       service === 'Transfer' &&
@@ -126,7 +146,7 @@ const formatNotificationDate = (date?: string) => {
 
 const getNotificationMeta = (
   notification: NotificationMessage,
-  currentUser?: Record<string, any>
+  currentUser?: NotificationUser
 ) => {
   return [
     getNotificationOrganization(notification, currentUser),
@@ -170,7 +190,7 @@ export const UserProfileActions = () => {
     gcTime: 5 * 60 * 1000 // Keep in cache for 5 minutes
   })
 
-  const notificationsCount = (notificationsData as any)?.count || 0
+  const notificationsCount = notificationsData?.count || 0
   const latestNotifications = useGetNotificationMessages(
     latestNotificationOptions,
     {
@@ -180,8 +200,7 @@ export const UserProfileActions = () => {
     }
   )
   const markAsReadMutation = useMarkNotificationAsRead({})
-  const notificationMessages =
-    (latestNotifications?.data as any)?.notifications || []
+  const notificationMessages = latestNotifications?.data?.notifications || []
 
   useEffect(() => {
     if (!isRoleSwitcherEnabled) {
@@ -258,7 +277,9 @@ export const UserProfileActions = () => {
     setNotificationAnchorEl(event.currentTarget)
   }
 
-  const openNotificationMenuFromFocus = (event: ReactFocusEvent<HTMLElement>) => {
+  const openNotificationMenuFromFocus = (
+    event: ReactFocusEvent<HTMLElement>
+  ) => {
     cancelNotificationClose()
     setNotificationAnchorEl(event.currentTarget)
   }
@@ -329,7 +350,7 @@ export const UserProfileActions = () => {
 
   const iconBtn = (
     <IconButton
-      component={NavLink as any}
+      component={NavLink}
       to={ROUTES.NOTIFICATIONS.LIST}
       color="inherit"
       className="small-icon"
@@ -476,7 +497,8 @@ export const UserProfileActions = () => {
                     disabled={notificationsCount === 0}
                   >
                     <BCTypography variant="body2" color="primary">
-                      {'✓ '}{t('notifications:markAllAsRead')}
+                      {'✓ '}
+                      {t('notifications:markAllAsRead')}
                     </BCTypography>
                   </Button>
                 </Stack>
@@ -488,8 +510,8 @@ export const UserProfileActions = () => {
                   ) : notificationMessages.length === 0 ? (
                     <BCTypography
                       variant="body2"
-                      color="text.secondary"
                       sx={{ px: 2, py: 3, textAlign: 'center' }}
+                      color="text.secondary"
                     >
                       {t('notifications:noRecentNotifications')}
                     </BCTypography>

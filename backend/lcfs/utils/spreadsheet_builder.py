@@ -238,6 +238,9 @@ class SpreadsheetBuilder:
         alignment.horz = xlwt.Alignment.HORZ_LEFT
         left_aligned_num_style.alignment = alignment
 
+        date_style = xlwt.XFStyle()
+        date_style.num_format_str = "yyyy-mm-dd"
+
         plain_style = xlwt.XFStyle()
         header_style = (
             bold_style if sheet_data["styles"].get("bold_headers") else default_style
@@ -252,11 +255,13 @@ class SpreadsheetBuilder:
         # Write rows with appropriate styles.
         for row_index, row in enumerate(sheet_data["rows"], start=1):
             for col_index, value in enumerate(row):
-                cell_style = (
-                    left_aligned_num_style
-                    if isinstance(value, (int, float))
-                    else plain_style
-                )
+                column_type = sheet_data["columns"][col_index].column_type
+                if column_type == "date":
+                    cell_style = date_style
+                elif isinstance(value, (int, float)):
+                    cell_style = left_aligned_num_style
+                else:
+                    cell_style = plain_style
                 sheet.write(row_index, col_index, value, cell_style)
 
     def _auto_adjust_column_width_xlsx(self, writer: pd.ExcelWriter, sheet_name: str):

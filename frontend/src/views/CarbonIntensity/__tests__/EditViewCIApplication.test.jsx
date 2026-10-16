@@ -1,24 +1,13 @@
 import { test } from '@/tests/utils/fixtures'
 import React from 'react'
-import {
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi
-} from 'vitest'
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor
-} from '@testing-library/react'
+import { afterEach, beforeAll, beforeEach, describe, expect, vi } from 'vitest'
+import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 
 import { roles } from '@/constants/roles'
 import { ROUTES } from '@/routes/routes'
+
+// Import AFTER mocks
+import { EditViewCIApplication } from '@/views/CarbonIntensity/EditViewCIApplication'
 
 // ---------------- Mocks ----------------
 
@@ -178,8 +167,16 @@ vi.mock('@/views/CarbonIntensity/components/ApplicationSummary', () => ({
 vi.mock(
   '@/views/CarbonIntensity/components/ApplicationInformationStep',
   () => ({
-    ApplicationInformationStep: ({ onSave, onDelete, organization }) => (
-      <div data-test="step1-stub">
+    ApplicationInformationStep: ({
+      onSave,
+      onDelete,
+      organization,
+      showEffectiveDateNotice
+    }) => (
+      <div
+        data-test="step1-stub"
+        data-show-effective-date-notice={String(!!showEffectiveDateNotice)}
+      >
         <div data-test="org-name">{organization?.name || ''}</div>
         <button
           data-test="step1-save-trigger"
@@ -209,9 +206,6 @@ vi.mock('@/views/CarbonIntensity/components/StepStub', () => ({
   StepStub: ({ titleKey }) => <div data-test={`stub-${titleKey}`} />,
   default: ({ titleKey }) => <div data-test={`stub-${titleKey}`} />
 }))
-
-// Import AFTER mocks
-import { EditViewCIApplication } from '@/views/CarbonIntensity/EditViewCIApplication'
 
 // ---------------- Tests ----------------
 
@@ -361,6 +355,47 @@ describe('EditViewCIApplication', () => {
         'true'
       )
     })
+  })
+
+  test('shows the effective date notice in Step 1 for BCeID applicants', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<EditViewCIApplication />, [query, theme, localization, router])
+
+    expect(await screen.findByTestId('step1-stub')).toHaveAttribute(
+      'data-show-effective-date-notice',
+      'true'
+    )
+  })
+
+  test('does not show the effective date notice to government users', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    mockParams = { ciApplicationId: '10' }
+    mockUserRoles = [{ name: roles.government }, { name: roles.analyst }]
+    mockGetCIApplication = {
+      data: {
+        ciApplicationId: 10,
+        organization: { name: 'Acme Corp' },
+        status: { status: 'Draft' }
+      },
+      isLoading: false
+    }
+
+    render(<EditViewCIApplication />, [query, theme, localization, router])
+
+    expect(await screen.findByTestId('step1-stub')).toHaveAttribute(
+      'data-show-effective-date-notice',
+      'false'
+    )
   })
 
   test('creates a new draft and navigates to the edit URL on Save (add mode)', async ({

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useRef } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next'
 import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'

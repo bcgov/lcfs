@@ -1,5 +1,4 @@
-// @ts-nocheck
-import type { ColDef } from 'ag-grid-community'
+import type { ICellRendererParams, ColDef } from 'ag-grid-community'
 import type { SummaryColumn } from '@/types/schema'
 import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
 import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
@@ -14,13 +13,13 @@ import {
   useGetAvailableAnalysts
 } from '@/hooks/useComplianceReports'
 import { AssignedAnalystCell } from './AssignedAnalystCell'
-import Tooltip from '@mui/material/Tooltip'
-import WarningIcon from '@mui/icons-material/Warning'
-import { Link, useLocation } from 'react-router-dom'
+import { ComplianceReportTypeCell } from './ComplianceReportTypeCell'
 
 const VANCOUVER_TIME_ZONE = 'America/Vancouver'
 
-const parseDateOnly = (value: string | Date | null | undefined): Date | null => {
+const parseDateOnly = (
+  value: string | Date | null | undefined
+): Date | null => {
   if (!value) return null
   if (value instanceof Date) return value
 
@@ -61,80 +60,6 @@ const dateFilterComparator = (
   return 0
 }
 
-// Cell renderer for Type column with 30-day supplemental flag
-const TypeCellRenderer = (isSupplier) => (props) => {
-  const location = useLocation()
-  const { data } = props
-  const reportType = data.reportType || ''
-
-  // Show a flag on existing rows (Original Report, Supplemental, Early Issuance, etc.)
-  // to alert IDIR that the organization has a draft supplemental sitting > 30 days.
-  const hasDraftSupplementalOverThirtyDays = () => {
-    // Only show flag for IDIR users (government users)
-    if (isSupplier) {
-      return false
-    }
-
-    // Need the draft's create date to calculate age
-    if (!data.latestSupplementalCreateDate) {
-      return false
-    }
-
-    if (data.isLatest !== false || data.latestStatus !== 'Draft') {
-      return false
-    }
-
-    // The flag only nudges toward the *initial* submission of a supplemental.
-    // Once it has been submitted for the first time the flag is permanently
-    // retired, even after the report is returned to Draft for analyst-requested
-    // revisions (#4630 — matches the report-page 30-day banner suppression).
-    if (data.latestSupplementalHasBeenSubmitted) {
-      return false
-    }
-
-    // Calculate how long the draft supplemental has been sitting
-    const createDate = new Date(data.latestSupplementalCreateDate)
-    const now = new Date()
-    const daysDiff = Math.floor((now - createDate) / (1000 * 60 * 60 * 24))
-
-    return daysDiff > 30
-  }
-
-  const showFlag = hasDraftSupplementalOverThirtyDays()
-
-  const targetUrl = `${location.pathname}/${data.compliancePeriod}/${data.complianceReportId}`
-
-  return (
-    <Link to={targetUrl} style={{ color: '#000', textDecoration: 'none' }}>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          width: '100%',
-          height: '100%'
-        }}
-      >
-        {showFlag && (
-          <Tooltip
-            title="Supplemental draft over 30 days old"
-            arrow
-            placement="top"
-          >
-            <WarningIcon
-              fontSize="medium"
-              sx={{
-                color: '#ff0000'
-              }}
-            />
-          </Tooltip>
-        )}
-        <span>{reportType}</span>
-      </div>
-    </Link>
-  )
-}
-
 export const reportsColDefs = (
   t: (key: string) => string,
   isSupplier: boolean,
@@ -146,8 +71,13 @@ export const reportsColDefs = (
     minWidth: 220,
     valueGetter: ({ data }) => data.reportStatus || '',
     filterParams: {
-      textFormatter: (value) => value.replace(/\s+/g, '_').toLowerCase(),
-      textCustomComparator: (filter, value, filterText) => {
+      textFormatter: (value: string) =>
+        value.replace(/\s+/g, '_').toLowerCase(),
+      textCustomComparator: (
+        _filter: string,
+        value: string,
+        filterText: string
+      ) => {
         // Split the filter text by comma and trim each value
         const filterValues = filterText
           .split(',')
@@ -164,7 +94,8 @@ export const reportsColDefs = (
     },
     cellRenderer: ReportsStatusRenderer,
     cellRendererParams: {
-      url: ({ data }) => `${data.compliancePeriod}/${data.complianceReportId}`
+      url: ({ data }: ICellRendererParams) =>
+        `${data.compliancePeriod}/${data.complianceReportId}`
     },
     floatingFilterComponent: BCSelectFloatingFilter,
     floatingFilterComponentParams: {
@@ -186,8 +117,12 @@ export const reportsColDefs = (
     },
     filter: 'agTextColumnFilter',
     filterParams: {
-      textFormatter: (value) => value || '',
-      textCustomComparator: (filter, value, filterText) => {
+      textFormatter: (value: string) => value || '',
+      textCustomComparator: (
+        _filter: string,
+        value: string,
+        filterText: string
+      ) => {
         // Handle filtering by initials
         const cleanValue = (value || '').toLowerCase()
         const cleanFilter = filterText.toLowerCase()
@@ -237,7 +172,8 @@ export const reportsColDefs = (
     headerName: t('report:reportColLabels.type'),
     minWidth: 300,
     valueGetter: ({ data }) => data.reportType,
-    cellRenderer: TypeCellRenderer(isSupplier),
+    cellRenderer: ComplianceReportTypeCell,
+    cellRendererParams: { isSupplier },
     floatingFilterComponent: BCSelectFloatingFilter,
     floatingFilterComponentParams: {
       optionsQuery: () => ({
@@ -282,9 +218,20 @@ export const reportsColDefs = (
   }
 ]
 
+type RenewableFuelLine = {
+  gasoline: number
+  diesel: number
+  jetFuel: number
+  maxGasoline?: number
+  maxDiesel?: number
+  maxJetFuel?: number
+}
+
+type RenewableFuelData = Record<string, RenewableFuelLine>
+
 export const renewableFuelColumns = (
   t: (key: string) => string,
-  data: Record<string, any>,
+  data: RenewableFuelData,
   editable: boolean,
   compliancePeriodYear: string | number,
   lines7And9Locked: boolean = false,
@@ -308,13 +255,13 @@ export const renewableFuelColumns = (
    * - From 2028 onward, Jet Fuel follows the same logic as Gasoline and Diesel.
    */
 
-  let gasolineEditableCells = []
-  let dieselEditableCells = []
-  let jetFuelEditableCells = []
+  let gasolineEditableCells: number[] = []
+  let dieselEditableCells: number[] = []
+  let jetFuelEditableCells: number[] = []
 
-  const safeRound = (value = 0) => Math.round(value || 0)
+  const safeRound = (value: number = 0) => Math.round(value || 0)
 
-  const toRoundedOrUndefined = (value) => {
+  const toRoundedOrUndefined = (value: unknown) => {
     const numericValue = Number(value)
     if (!Number.isFinite(numericValue)) {
       return undefined
@@ -322,8 +269,11 @@ export const renewableFuelColumns = (
     return Math.round(numericValue)
   }
 
-  const buildLineSevenConstraint = (maxValue, currentValue) => {
-    const constraint = { min: 0 }
+  const buildLineSevenConstraint = (
+    maxValue: unknown,
+    currentValue: unknown
+  ) => {
+    const constraint: { min: number; max?: number } = { min: 0 }
     const roundedMax = toRoundedOrUndefined(maxValue)
     const roundedCurrent = toRoundedOrUndefined(currentValue) ?? 0
 
@@ -364,11 +314,13 @@ export const renewableFuelColumns = (
     )
   }
 
-  const unlockedLineSevenConstraint = (constraint) =>
-    lines7And9Locked ? (constraint ?? { min: 0 }) : { min: 0 }
+  const unlockedLineSevenConstraint = (
+    constraint: { min: number; max?: number } | undefined
+  ) => (lines7And9Locked ? (constraint ?? { min: 0 }) : { min: 0 })
 
-  const unlockedLineNineConstraint = (constraint) =>
-    lines7And9Locked ? (constraint ?? { min: 0 }) : { min: 0 }
+  const unlockedLineNineConstraint = (
+    constraint: { min: number; max?: number } | undefined
+  ) => (lines7And9Locked ? (constraint ?? { min: 0 }) : { min: 0 })
 
   // Line 6 (Retention) caps - LCFA s.10(2): Lesser of excess and 5% of Line 4
   const line6Caps = {
@@ -472,13 +424,13 @@ export const renewableFuelColumns = (
     jetFuelEditableCells = [SUMMARY.LINE_6]
   } else if (
     data[SUMMARY.LINE_2].jetFuel < data[SUMMARY.LINE_4].jetFuel &&
-    parseInt(compliancePeriodYear) >= 2028
+    parseInt(compliancePeriodYear as string) >= 2028
   ) {
     // Deficiency: Line 8 editable (only from 2028 onward), Line 6 not editable
     jetFuelEditableCells = [SUMMARY.LINE_8]
   }
 
-  if (parseInt(compliancePeriodYear) === 2024) {
+  if (parseInt(compliancePeriodYear as string) === 2024) {
     // by default enable in editing mode for compliance period 2024, but respect locks for Lines 7 & 9
     if (!lines7And9Locked) {
       // Line 7 and Line 9 are editable when not locked
@@ -495,7 +447,7 @@ export const renewableFuelColumns = (
         SUMMARY.LINE_9
       ]
     }
-  } else if (parseInt(compliancePeriodYear) >= 2025) {
+  } else if (parseInt(compliancePeriodYear as string) >= 2025) {
     // For 2025+ reports, only allow editing Lines 7 & 9 if not locked
     if (!lines7And9Locked) {
       // Line 7 and Line 9 are editable when not locked
@@ -511,20 +463,20 @@ export const renewableFuelColumns = (
       ]
     }
   }
-  if (parseInt(compliancePeriodYear) < 2029) {
+  if (parseInt(compliancePeriodYear as string) < 2029) {
     // The Jet Fuel cells for lines 7 and 9 should remain unavailable until 2029 (one year after the first renewable requirements come into effect for 2028).
     jetFuelEditableCells = []
   }
 
   if (lines6And8Locked) {
-    const stripLocked = (cells) =>
+    const stripLocked = (cells: number[]) =>
       cells.filter((cell) => cell !== SUMMARY.LINE_6 && cell !== SUMMARY.LINE_8)
     gasolineEditableCells = stripLocked(gasolineEditableCells)
     dieselEditableCells = stripLocked(dieselEditableCells)
     jetFuelEditableCells = stripLocked(jetFuelEditableCells)
   }
 
-  return [
+  const allColumns: SummaryColumn[] = [
     {
       id: 'line',
       label: t('report:summaryLabels.line'),
@@ -583,15 +535,7 @@ export const renewableFuelColumns = (
     }
   ]
 
-  // Filter out the jetFuel column if the compliance period year is less than 2024
-  const filteredColumns = allColumns.filter((col) => {
-    if (col.id === 'jetFuel' && parseInt(compliancePeriodYear) < 2024) {
-      return false // Exclude jet fuel column for years before 2024
-    }
-    return true // Include all other columns
-  })
-
-  return filteredColumns
+  return allColumns
 }
 
 export const lowCarbonColumns = (
@@ -618,12 +562,12 @@ export const lowCarbonColumns = (
 ]
 
 export const nonComplianceColumns = (
-  t: (key: string) => string,
+  t: (key: string, options?: { defaultValue: string }) => string,
   editable: boolean = false,
   statusEditable: boolean = editable,
   showStatusColumns: boolean = true,
   statusEditableCells: number[] = [0, 1]
-): SummaryColumn[] => [
+): Array<SummaryColumn & { type?: string }> => [
   {
     id: 'description',
     label: t('report:nonCompliancePenaltySummary'),
@@ -634,7 +578,7 @@ export const nonComplianceColumns = (
     label: t('report:summaryLabels.totalValue'),
     align: 'center',
     width: '150px',
-    editable: editable,
+    editable,
     editableCells: editable ? [0, 1] : []
   },
   ...(showStatusColumns

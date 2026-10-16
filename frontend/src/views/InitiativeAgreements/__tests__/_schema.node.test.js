@@ -1,17 +1,17 @@
 import { describe, expect, it, vi } from 'vitest'
 
-vi.mock('@/constants/config', () => ({
-  CONFIG: { API_BASE: '', ENVIRONMENT: 'test' },
-  FEATURE_FLAGS: { INITIATIVE_AGREEMENTS: 'initiativeAgreements' },
-  isFeatureEnabled: vi.fn(() => false)
-}))
-
 import {
   allDesignatedActionColDefs,
   defaultSortModel,
   designatedActionColDefs,
   initiativeAgreementColDefs
 } from '../_schema'
+
+vi.mock('@/constants/config', () => ({
+  CONFIG: { API_BASE: '', ENVIRONMENT: 'test' },
+  FEATURE_FLAGS: { INITIATIVE_AGREEMENTS: 'initiativeAgreements' },
+  isFeatureEnabled: vi.fn(() => false)
+}))
 
 describe('initiativeAgreementColDefs', () => {
   const t = (key) => key
@@ -82,7 +82,7 @@ describe('designatedActionColDefs', () => {
 describe('allDesignatedActionColDefs (module tab, #5078)', () => {
   const t = (key) => key
 
-  it('drops the analyst column and keeps the rest in order', () => {
+  it('includes the assigned analyst column (#5197) in order', () => {
     const ids = allDesignatedActionColDefs(t).map(
       (colDef) => colDef.colId ?? colDef.field
     )
@@ -90,6 +90,7 @@ describe('allDesignatedActionColDefs (module tab, #5078)', () => {
       'actionNumber',
       'name',
       'currentStatus',
+      'assignedAnalyst',
       'lastComment',
       'creditAllocation',
       'updateDate'

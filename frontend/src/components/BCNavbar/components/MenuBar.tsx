@@ -7,6 +7,15 @@ import type {
   NavbarRoute,
   NavbarContextData
 } from '@/components/BCNavbar/types'
+import type { Theme } from '@mui/material/styles'
+
+type NavbarTheme = Theme & {
+  functions: { rgba: (color: string, opacity: number) => string }
+  palette: Theme['palette'] & {
+    white: { main: string }
+    secondary: Theme['palette']['secondary'] & { nav: string }
+  }
+}
 
 interface MenuBarProps {
   routes: NavbarRoute[]
@@ -17,9 +26,10 @@ const MenuBar = ({ routes, data }: MenuBarProps) => {
   return (
     <Toolbar
       className="nav"
-      sx={(theme: any) => {
-        const { secondary, white } = theme.palette
-        const { rgba } = theme.functions
+      sx={(theme) => {
+        const navbarTheme = theme as NavbarTheme
+        const { secondary, white } = navbarTheme.palette
+        const { rgba } = navbarTheme.functions
         return {
           backgroundColor: rgba(secondary.nav, 1),
           backdropFilter: `saturate(200%) blur(30px)`,

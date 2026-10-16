@@ -16,7 +16,7 @@ export const useGetCompliancePeriodList = (options: QueryOptions<unknown>) => {
   })
 }
 
-export const useGetFuelTypeList = (params: Record<string, any>) => {
+export const useGetFuelTypeList = (params: Record<string, unknown>) => {
   const client = useApiService()
   return useQuery({
     queryKey: ['calculator-fuel-types', params],
@@ -24,7 +24,7 @@ export const useGetFuelTypeList = (params: Record<string, any>) => {
       client.get(
         apiRoutes.getCalculatorFuelTypes.replace(
           ':complianceYear',
-          params.complianceYear
+          params.complianceYear as string
         ),
         {
           params: {
@@ -38,7 +38,7 @@ export const useGetFuelTypeList = (params: Record<string, any>) => {
   })
 }
 
-export const useGetFuelTypeOptions = (params: Record<string, any>) => {
+export const useGetFuelTypeOptions = (params: Record<string, unknown>) => {
   const client = useApiService()
   return useQuery({
     queryKey: ['calculator-fuel-type-options', params],
@@ -46,7 +46,7 @@ export const useGetFuelTypeOptions = (params: Record<string, any>) => {
       client.get(
         apiRoutes.getCalculatorFuelTypeOptions.replace(
           ':complianceYear',
-          params.complianceYear
+          params.complianceYear as string
         ),
         {
           params: {
@@ -71,7 +71,17 @@ export const useCalculateComplianceUnits = ({
   useCustomCi = false,
   customCiValue,
   enabled = true
-}: any) => {
+}: {
+  compliancePeriod: string | number
+  fuelCategoryId: string | number
+  fuelTypeId: string | number
+  endUseId?: string | number | null
+  quantity: number
+  fuelCodeId?: string | number | null
+  useCustomCi?: boolean
+  customCiValue?: number | null
+  enabled?: boolean
+}) => {
   const client = useApiService()
   return useQuery({
     queryKey: [
@@ -89,7 +99,7 @@ export const useCalculateComplianceUnits = ({
       client.get(
         apiRoutes.getCalculatedComplianceUnits.replace(
           ':complianceYear',
-          compliancePeriod
+          compliancePeriod as string
         ),
         {
           params: {
@@ -110,7 +120,7 @@ export const useCalculateComplianceUnits = ({
       !!fuelCategoryId &&
       !!fuelTypeId &&
       !!(
-        endUseId || parseInt(compliancePeriod) >= LEGISLATION_TRANSITION_YEAR
+        endUseId || parseInt(compliancePeriod as string) >= LEGISLATION_TRANSITION_YEAR
       ) &&
       !!quantity
   })
@@ -126,7 +136,17 @@ export const useCalculateQuantityFromComplianceUnits = ({
   useCustomCi = false,
   customCiValue,
   enabled = true
-}: any) => {
+}: {
+  compliancePeriod: string | number
+  fuelCategoryId: string | number
+  fuelTypeId: string | number
+  endUseId?: string | number | null
+  complianceUnits: number
+  fuelCodeId?: string | number | null
+  useCustomCi?: boolean
+  customCiValue?: number | null
+  enabled?: boolean
+}) => {
   const client = useApiService()
   return useQuery({
     queryKey: [
@@ -144,7 +164,7 @@ export const useCalculateQuantityFromComplianceUnits = ({
       client.get(
         apiRoutes.getCalculatorQuantityFromComplianceUnits.replace(
           ':complianceYear',
-          compliancePeriod
+          compliancePeriod as string
         ),
         {
           params: {
@@ -165,19 +185,25 @@ export const useCalculateQuantityFromComplianceUnits = ({
       !!fuelCategoryId &&
       !!fuelTypeId &&
       !!(
-        endUseId || parseInt(compliancePeriod) >= LEGISLATION_TRANSITION_YEAR
+        endUseId || parseInt(compliancePeriod as string) >= LEGISLATION_TRANSITION_YEAR
       ) &&
       !!complianceUnits
   })
 }
 
-export const useGetLookupTableData = (complianceYear: string | number | undefined, options: QueryOptions<unknown>) => {
+export const useGetLookupTableData = (
+  complianceYear: string | number | undefined,
+  options: QueryOptions<unknown>
+) => {
   const client = useApiService()
   return useQuery({
     queryKey: ['lookup-table-data', complianceYear],
     queryFn: () =>
       client.get(
-        apiRoutes.getLookupTableData.replace(':complianceYear', String(complianceYear ?? ''))
+        apiRoutes.getLookupTableData.replace(
+          ':complianceYear',
+          String(complianceYear ?? '')
+        )
       ),
     staleTime: 60 * 60 * 1000, // 1 hour
     gcTime: 60 * 60 * 1000,

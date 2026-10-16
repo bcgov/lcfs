@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react'
 import List from '@mui/material/List'
 import ListItemButton from '@mui/material/ListItemButton'
 import Stack from '@mui/material/Stack'
@@ -21,7 +21,7 @@ const linkStyle = {
   '&:hover': { color: 'info.main' }
 }
 
-const UserSettingsLink = ({ onClick, children }) => (
+export const UserSettingsLink = ({ onClick, children }) => (
   <ListItemButton onClick={onClick}>
     <Typography variant="subtitle2" sx={linkStyle} component="p">
       {children}
@@ -29,7 +29,7 @@ const UserSettingsLink = ({ onClick, children }) => (
   </ListItemButton>
 )
 
-const UserSettingsCard = () => {
+export const UserSettingsCard = () => {
   const { t } = useTranslation(['dashboard'])
   const { data: currentUser } = useCurrentUser()
   const navigate = useNavigate()
@@ -64,15 +64,29 @@ const UserSettingsCard = () => {
               {t('dashboard:userSettings.configureNotifications')}
             </UserSettingsLink>
 
-            <a href={HELP_GUIDE_URL} target="_blank" rel="noreferrer">
-              <UserSettingsLink>
+            <ListItemButton
+              component="a"
+              href={HELP_GUIDE_URL}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={t('dashboard:userSettings.helpLinkLabel')}
+              sx={{
+                '&.Mui-focusVisible': {
+                  outline: '2px solid',
+                  outlineColor: 'primary.main',
+                  outlineOffset: '2px'
+                }
+              }}
+            >
+              <Typography variant="subtitle2" sx={linkStyle} component="p">
                 {t('dashboard:userSettings.help')}
                 <FontAwesomeIcon
+                  aria-hidden="true"
                   icon={faShareFromSquare}
                   style={{ color: '#547D59', marginLeft: 6 }}
                 />
-              </UserSettingsLink>
-            </a>
+              </Typography>
+            </ListItemButton>
           </List>
         </Stack>
       }
@@ -80,4 +94,6 @@ const UserSettingsCard = () => {
   )
 }
 
-export default withRole(UserSettingsCard, govRoles)
+const UserSettingsCardWithRole = withRole(UserSettingsCard, govRoles)
+
+export default UserSettingsCardWithRole

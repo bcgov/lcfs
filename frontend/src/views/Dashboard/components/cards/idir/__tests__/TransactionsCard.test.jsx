@@ -1,7 +1,11 @@
-import React from 'react'
+import 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import TransactionsCard from '../TransactionsCard'
+
+import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
+import { useTransactionCounts } from '@/hooks/useDashboard'
 
 // Mock external dependencies
 vi.mock('react-i18next', () => ({
@@ -30,8 +34,14 @@ vi.mock('@/components/BCWidgetCard/BCWidgetCard', () => ({
 }))
 
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, onClick, variant, component, sx, color, ...props }) => (
-    <div
+  default: ({
+  children,
+  onClick,
+  variant,
+  component,
+  color,
+  ...props
+}) => { delete props.sx; return <div
       data-test="bc-typography"
       data-variant={variant}
       data-component={component}
@@ -40,8 +50,7 @@ vi.mock('@/components/BCTypography', () => ({
       {...props}
     >
       {children}
-    </div>
-  )
+    </div>; }
 }))
 
 vi.mock('@/components/Loading', () => ({
@@ -65,10 +74,6 @@ vi.mock('@mui/material/ListItemButton', () => ({
     </button>
   )
 }))
-
-import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
-import { useTransactionCounts } from '@/hooks/useDashboard'
 
 describe('TransactionsCard', () => {
   const mockT = vi.fn()

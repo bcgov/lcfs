@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
@@ -6,9 +6,9 @@ import List from '@mui/material/List'
 import BCTypography from '@/components/BCTypography'
 import { apiRoutes } from '@/constants/routes'
 import { ROUTES } from '@/routes/routes'
-import Chip from '@mui/material/Chip'
-import { styled } from '@mui/material/styles'
-import colors from '@/themes/base/colors.js'
+import '@mui/material/Chip'
+import '@mui/material/styles'
+import '@/themes/base/colors.js'
 import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog.jsx'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import BCButton from '@/components/BCButton/index.jsx'
@@ -33,18 +33,21 @@ export const ActivityLinksList = ({
 
   const [isOpen, setIsOpen] = useState(false)
 
-  const createActivity = (nameKey, labelKey, route, enableForQuarterly) => ({
-    name: t(nameKey),
-    label: t(labelKey),
-    enableForQuarterly,
-    action: () => {
-      navigate(
-        route
-          .replace(':compliancePeriod', compliancePeriod)
-          .replace(':complianceReportId', complianceReportId)
-      )
-    }
-  })
+  const createActivity = useCallback(
+    (nameKey, labelKey, route, enableForQuarterly) => ({
+      name: t(nameKey),
+      label: t(labelKey),
+      enableForQuarterly,
+      action: () => {
+        navigate(
+          route
+            .replace(':compliancePeriod', compliancePeriod)
+            .replace(':complianceReportId', complianceReportId)
+        )
+      }
+    }),
+    [t, navigate, compliancePeriod, complianceReportId]
+  )
 
   const [isDownloading, setIsDownloading] = useState(false)
   const onDownloadReport = async () => {
@@ -91,7 +94,7 @@ export const ActivityLinksList = ({
           ]
         : [])
     ],
-    [t, navigate, compliancePeriod, complianceReportId]
+    [createActivity, compliancePeriod]
   )
 
   const secondaryList = useMemo(
@@ -121,7 +124,7 @@ export const ActivityLinksList = ({
         enableForQuarterly: true
       }
     ],
-    [t, navigate, compliancePeriod, complianceReportId]
+    [createActivity, compliancePeriod, t]
   )
 
   const quarterAsStr = `Q${reportQuarter}`

@@ -15,7 +15,7 @@ import { FILTER_KEYS } from '@/constants/common'
 import { TRANSACTION_TYPES, TRANSFER_STATUSES } from '@/constants/statuses'
 import { CountDisplay, countDigits } from '../../CountDisplay'
 
-const OrgTransactionsCard = () => {
+export const OrgTransactionsCard = () => {
   const { t } = useTranslation(['dashboard'])
   const navigate = useNavigate()
 
@@ -134,9 +134,9 @@ const OrgTransactionsCard = () => {
 }
 
 const AllowedRoles = [roles.transfers]
-const orgTransactionsWidgetWithRole = withRole(
+const OrgTransactionsCardWithRole = withRole(
   OrgTransactionsCard,
   AllowedRoles
 )
 
-export default orgTransactionsWidgetWithRole
+export default OrgTransactionsCardWithRole

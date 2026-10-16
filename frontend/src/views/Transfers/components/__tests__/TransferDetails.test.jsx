@@ -21,7 +21,7 @@ vi.mock('react-i18next', () => ({
 
 // Mock FormProvider Component with customizable form state
 const createMockFormProvider = (defaultValues = {}, errors = {}) => {
-  return ({ children }) => {
+  return function MockFormProvider({ children }) {
     const methods = useForm({
       defaultValues: {
         toOrganizationId: '',
