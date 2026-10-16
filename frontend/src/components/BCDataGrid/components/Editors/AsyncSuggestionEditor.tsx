@@ -9,7 +9,7 @@ import match from 'autosuggest-highlight/match'
 import parse from 'autosuggest-highlight/parse'
 import { debounce } from 'lodash'
 import { useMemo, useState } from 'react'
-import type { KeyboardEvent } from 'react'
+import type { KeyboardEvent, SyntheticEvent } from 'react'
 import type { GridApi } from 'ag-grid-community'
 import type { ApiServiceInstance } from '@/services/useApiService'
 
@@ -80,26 +80,26 @@ export const AsyncSuggestionEditor = ({
     [debounceValue]
   )
 
-  const handleInputChange = (_, newInputValue) => {
+  const handleInputChange = (_event: SyntheticEvent, newInputValue: string) => {
     debouncedSetInputValue(newInputValue)
     // Update the value based on the input
     onValueChange(newInputValue)
   }
 
-  const handleChange = (_, newValue) => {
+  const handleChange = (_event: SyntheticEvent, newValue: AsyncSuggestion | null) => {
     if (typeof newValue === 'string') {
       debouncedSetInputValue(newValue)
       onValueChange(newValue)
     } else if (newValue && typeof newValue === 'object') {
       const storedValue = valueKey ? newValue[valueKey] : newValue
-      debouncedSetInputValue(newValue[optionLabel])
+      debouncedSetInputValue(newValue[optionLabel] as string)
       onValueChange(storedValue)
     } else {
       onValueChange('')
     }
   }
 
-  const handleKeyDown = (event) => {
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (onKeyDownCapture) {
       onKeyDownCapture(event)
     }
@@ -117,10 +117,10 @@ export const AsyncSuggestionEditor = ({
       event.preventDefault()
       if (event.shiftKey) {
         // Shift + Tab: Move to the previous cell
-        api.tabToPreviousCell()
+        api!.tabToPreviousCell()
       } else {
         // Tab: Move to the next cell
-        api.tabToNextCell()
+        api!.tabToNextCell()
       }
     }
   }

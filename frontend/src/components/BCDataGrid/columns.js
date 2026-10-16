@@ -2,7 +2,7 @@ import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { ActionsRenderer } from './components/Renderers/ActionsRenderer'
 import { ValidationRenderer2 } from './components/Renderers/ValidationRenderer2'
 import colors from '@/themes/base/colors'
-
+/** @type {import('ag-grid-community').ColDef} */
 export const validation = {
   colId: 'validation',
   cellRenderer: ValidationRenderer2,
@@ -19,6 +19,19 @@ export const validation = {
   filter: false
 }
 
+/**
+ * @param {
+ *   (Partial<Pick<
+ *     import('./components/Renderers/ActionsRenderer').ActionsRendererProps,
+ *     'enableDuplicate' | 'enableEdit' | 'enableDelete' | 'enableUndo' | 'enableStatus'
+ *   >> & { hide?: boolean }) |
+ *   ((params: import('ag-grid-community').ICellRendererParams) => Partial<Pick<
+ *     import('./components/Renderers/ActionsRenderer').ActionsRendererProps,
+ *     'enableDuplicate' | 'enableEdit' | 'enableDelete' | 'enableUndo' | 'enableStatus'
+ *   >>)
+ * } props
+ * @returns {import('ag-grid-community').ColDef}
+ */
 export const actions = (props) => ({
   colId: 'action',
   headerName: 'Action',
@@ -54,5 +67,5 @@ export const actions = (props) => ({
   editable: false,
   suppressKeyboardEvent,
   filter: false,
-  hide: props.hide
+  hide: /** @type {{ hide?: boolean }} */ (props).hide
 })

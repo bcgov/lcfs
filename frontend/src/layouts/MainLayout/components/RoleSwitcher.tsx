@@ -72,8 +72,8 @@ const RoleSwitcherComponent = ({
   const [roleUpdateError, setRoleUpdateError] = useState<string | null>(null)
   const [areOptionsVisible, setAreOptionsVisible] = useState<boolean>(false)
 
-  const isGovernmentAdmin =
-    currentUser?.isGovernmentUser && hasRoles?.(roles.administrator)
+  const isGovernmentAdmin = (currentUser?.isGovernmentUser &&
+    hasRoles?.(roles.administrator)) as boolean
   const idirOptions = useMemo<RoleOption[]>(() => idirRoleOptions(t), [t])
   const optionsContainerId = 'role-switcher-options'
 
@@ -113,7 +113,10 @@ const RoleSwitcherComponent = ({
 
   const { mutate: updateCurrentUserRoles, isPending: isUpdatingRoles } =
     useUpdateUser({
-      onSuccess: (_data, variables) => {
+      onSuccess: (
+        _data: unknown,
+        variables: { meta?: { admin?: boolean; role?: string } } | undefined
+      ) => {
         const meta = variables?.meta || {}
         if (typeof meta?.admin === 'boolean') {
           setIsAdministratorSelected(meta.admin)
@@ -124,7 +127,7 @@ const RoleSwitcherComponent = ({
         setRoleUpdateError(null)
         onClose()
       },
-      onError: (error) => {
+      onError: (error: Error) => {
         console.error('Error updating current user roles:', error)
         setRoleUpdateError(t('common:submitError'))
       }
@@ -206,9 +209,7 @@ const RoleSwitcherComponent = ({
     setAreOptionsVisible((prev) => !prev)
   }
 
-  const handleTitleKeyDown = (
-    event: ReactKeyboardEvent<HTMLDivElement>
-  ) => {
+  const handleTitleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault()
       toggleOptionsVisibility()
@@ -342,19 +343,26 @@ const RoleSwitcherComponent = ({
   )
 }
 
-RoleSwitcherComponent.propTypes = {
-  currentUser: PropTypes.object,
-  hasRoles: PropTypes.func,
-  open: PropTypes.bool.isRequired,
-  anchorEl: PropTypes.any,
-  onClose: PropTypes.func.isRequired
-}
+const RoleSwitcherComponentWithPropTypes = Object.assign(
+  RoleSwitcherComponent,
+  {
+    propTypes: {
+      currentUser: PropTypes.object,
+      hasRoles: PropTypes.func,
+      open: PropTypes.bool.isRequired,
+      anchorEl: PropTypes.any,
+      onClose: PropTypes.func.isRequired
+    }
+  }
+)
 
 export const RoleSwitcher = withFeatureFlag(
-  RoleSwitcherComponent,
+  RoleSwitcherComponentWithPropTypes,
   FEATURE_FLAGS.ROLE_SWITCHER
 )
 
-RoleSwitcher.propTypes = RoleSwitcherComponent.propTypes
+Object.assign(RoleSwitcher, {
+  propTypes: RoleSwitcherComponentWithPropTypes.propTypes
+})
 
 export { RoleSwitcherComponent as RoleSwitcherBase }

@@ -1,5 +1,6 @@
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
+import type { ApiServiceInstance } from '@/services/useApiService'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { PaginationParams, QueryOptions } from './types'
 
@@ -218,9 +219,9 @@ export const useEvidenceRequirements = (
   })
 }
 
-const useEvidenceMutation = (
+const useEvidenceMutation = <TVariables,>(
   designatedActionId: number | string,
-  mutationFn: (client: unknown) => (variables: unknown) => Promise<unknown>
+  mutationFn: (client: ApiServiceInstance) => (variables: TVariables) => Promise<unknown>
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -435,6 +436,37 @@ export const useUpdateDesignatedAction = (
       queryClient.invalidateQueries({
         queryKey: ['designated-action-history', String(designatedActionId)]
       })
+    }
+  })
+}
+
+export const useUpdateAgreement = (initiativeAgreementId: number | string) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: {
+      iaCode?: string
+      agreementType?: string
+      title?: string | null
+      projectDescription?: string | null
+      projectLocation?: string | null
+      contactName?: string | null
+      contactEmail?: string | null
+      contactPhone?: string | null
+      agreementStartDate?: string | null
+      agreementEndDate?: string | null
+    }) =>
+      (
+        await client.put(
+          apiRoutes.updateAgreement.replace(
+            ':initiativeAgreementId',
+            String(initiativeAgreementId)
+          ),
+          payload
+        )
+      ).data,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['initiative-agreements'] })
     }
   })
 }

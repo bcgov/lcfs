@@ -26,9 +26,10 @@ const MenuBar = ({ routes, data }: MenuBarProps) => {
   return (
     <Toolbar
       className="nav"
-      sx={(theme: NavbarTheme) => {
-        const { secondary, white } = theme.palette
-        const { rgba } = theme.functions
+      sx={(theme) => {
+        const navbarTheme = theme as NavbarTheme
+        const { secondary, white } = navbarTheme.palette
+        const { rgba } = navbarTheme.functions
         return {
           backgroundColor: rgba(secondary.nav, 1),
           backdropFilter: `saturate(200%) blur(30px)`,

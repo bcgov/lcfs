@@ -1,4 +1,5 @@
 import { forwardRef, useState, useCallback, useLayoutEffect } from 'react'
+import type { ChangeEvent, KeyboardEvent } from 'react'
 import InputBase from '@mui/material/InputBase'
 import Popper from '@mui/material/Popper'
 import Paper from '@mui/material/Paper'
@@ -9,10 +10,9 @@ export interface LargeTextareaEditorProps {
   onValueChange: (value: string) => void
   column: { actualWidth: number }
   api?: Pick<GridApi, 'getFocusedCell' | 'tabToNextCell'>
-  [key: string]: unknown
 }
 
-export const LargeTextareaEditor = forwardRef(
+export const LargeTextareaEditor = forwardRef<unknown, LargeTextareaEditorProps>(
   ({
   value,
   onValueChange,
@@ -20,8 +20,10 @@ export const LargeTextareaEditor = forwardRef(
   api
 }) => {
     const [valueState, setValueState] = useState(value)
-    const [anchorEl, setAnchorEl] = useState()
-    const [inputRef, setInputRef] = useState(null)
+    const [anchorEl, setAnchorEl] = useState<
+      HTMLDivElement | null | undefined
+    >()
+    const [inputRef, setInputRef] = useState<HTMLTextAreaElement | null>(null)
 
     useLayoutEffect(() => {
       api!.getFocusedCell()
@@ -30,12 +32,12 @@ export const LargeTextareaEditor = forwardRef(
       }
     }, [inputRef, api])
 
-    const handleRef = useCallback((el) => {
+    const handleRef = useCallback((el: HTMLDivElement | null) => {
       setAnchorEl(el)
     }, [])
 
     const handleChange = useCallback(
-      (event) => {
+      (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const newValue = event.target.value
         setValueState(newValue)
         onValueChange(newValue)
@@ -43,7 +45,9 @@ export const LargeTextareaEditor = forwardRef(
       [onValueChange]
     )
 
-    const handleKeyDown = (event) => {
+    const handleKeyDown = (
+      event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>
+    ) => {
       if (event.key === 'Tab') {
         // setAnchorEl(null)
         // Move to the next cell

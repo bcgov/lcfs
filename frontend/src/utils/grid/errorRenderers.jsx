@@ -1,3 +1,4 @@
+/** @returns {import('ag-grid-community').CellStyle} */
 export const StandardCellErrors = (params, errors) => {
   let style = {}
   if (
@@ -54,6 +55,7 @@ export const StandardCellWarningAndErrors = (params, errors, warnings) => {
   return style
 }
 
+/** @returns {import('ag-grid-community').CellStyle} */
 export const StandardCellStyle = (
   params,
   errors,

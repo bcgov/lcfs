@@ -3,7 +3,18 @@ import { useApiService } from '@/services/useApiService'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { QueryOptions, ExtMutationOptions } from './types'
 
-export const useNotificationsCount = (options: QueryOptions<unknown>) => {
+type NotificationRecord = {
+  notificationMessageId: number
+  type: string
+  message: string
+  createDate?: string
+  isRead?: boolean
+  relatedOrganization?: { name?: string }
+}
+
+export const useNotificationsCount = (
+  options: QueryOptions<{ count: number }>
+) => {
   const client = useApiService()
   return useQuery({
     queryKey: ['notifications-count'],
@@ -26,8 +37,13 @@ export const useGetNotificationMessages = (
     size = 10,
     sortOrders = [],
     filters = []
-  }: Record<string, unknown> = {},
-  options: QueryOptions<unknown>
+  }: {
+    page?: number
+    size?: number
+    sortOrders?: Array<Record<string, unknown>>
+    filters?: Array<Record<string, unknown>>
+  } = {},
+  options: QueryOptions<{ notifications: NotificationRecord[] }>
 ) => {
   const client = useApiService()
   return useQuery({
@@ -93,7 +109,9 @@ export const useTargetUserNotificationSubscriptions = (
         )
         return response.data
       } catch (error) {
-        if ((error as unknown).response?.status === 404) return []
+        if (
+          (error as { response?: { status?: number } }).response?.status === 404
+        ) return []
         throw error
       }
     },
@@ -117,8 +135,8 @@ export const useNotificationSubscriptions = (
         return response.data
       } catch (error) {
         if (
-          (error as unknown).response &&
-          (error as unknown).response.status === 404
+          (error as { response?: { status?: number } }).response &&
+          (error as { response?: { status?: number } }).response?.status === 404
         ) {
           // Return an empty array if 404 is returned
           return []
