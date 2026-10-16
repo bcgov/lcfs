@@ -9,7 +9,7 @@ import { defaultInitialPagination } from '@/constants/schedules'
 import { useFuelSupplyOptions } from '@/hooks/useFuelSupply'
 import colors from '@/themes/base/colors'
 import Box from '@mui/material/Box'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { changelogColDefs, changelogCommonColDefs } from './_schema'
 import { useParams } from 'react-router-dom'
@@ -18,7 +18,9 @@ export const FuelSupplyChangelog = ({ isEarlyIssuance = false }) => {
   const { complianceReportId, compliancePeriod } = useParams()
   const { data: currentReport, isLoading: currentReportLoading } =
     useComplianceReportWithCache(complianceReportId)
-  const { data: optionsData, isLoading: optionsLoading } = useFuelSupplyOptions({ compliancePeriod })
+  const { data: optionsData, isLoading: optionsLoading } = useFuelSupplyOptions(
+    { compliancePeriod }
+  )
   const { t } = useTranslation(['common', 'fuelSupply', 'report'])
 
   // State for pagination - one per changelog item
@@ -34,6 +36,37 @@ export const FuelSupplyChangelog = ({ isEarlyIssuance = false }) => {
   const getRowId = (params) => {
     return params.data.fuelSupplyId.toString()
   }
+
+  const currentOrOriginalColumnDefs = useMemo(
+    () =>
+      changelogCommonColDefs(
+        false,
+        isEarlyIssuance,
+        parseInt(compliancePeriod),
+        optionsData
+      ),
+    [isEarlyIssuance, compliancePeriod, optionsData]
+  )
+
+  const changedColumnDefs = useMemo(
+    () =>
+      changelogColDefs(
+        true,
+        isEarlyIssuance,
+        parseInt(compliancePeriod),
+        optionsData
+      ),
+    [isEarlyIssuance, compliancePeriod, optionsData]
+  )
+
+  const defaultColDef = useMemo(
+    () => ({
+      floatingFilter: false,
+      filter: false,
+      sortable: false
+    }),
+    []
+  )
 
   const gridOptions = (highlight = true) => ({
     overlayNoRowsTemplate: t('fuelSupply:noFuelSuppliesFound'),
@@ -172,18 +205,8 @@ export const FuelSupplyChangelog = ({ isEarlyIssuance = false }) => {
                 gridKey={`fuel-supply-changelog-${i}`}
                 columnDefs={
                   isCurrentOrOriginalVersion
-                    ? changelogCommonColDefs(
-                        false,
-                        isEarlyIssuance,
-                        parseInt(compliancePeriod),
-                        optionsData
-                      )
-                    : changelogColDefs(
-                        true,
-                        isEarlyIssuance,
-                        parseInt(compliancePeriod),
-                        optionsData
-                      )
+                    ? currentOrOriginalColumnDefs
+                    : changedColumnDefs
                 }
                 queryData={queryData}
                 getRowId={getRowId}
@@ -193,11 +216,7 @@ export const FuelSupplyChangelog = ({ isEarlyIssuance = false }) => {
                     ? gridOptions(false)
                     : gridOptions()
                 }
-                defaultColDef={{
-                  floatingFilter: false,
-                  filter: false,
-                  sortable: false
-                }}
+                defaultColDef={defaultColDef}
                 paginationOptions={
                   shouldPaginate ? paginationOptions : undefined
                 }

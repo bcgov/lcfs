@@ -1,4 +1,3 @@
-import React from 'react'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import {
@@ -37,8 +36,8 @@ vi.mock('react-router-dom', async (importOriginal) => {
 })
 
 // Mock all view components to capture route parameters
-vi.mock('@/layouts/MainLayout', () => {
-  const { Outlet } = require('react-router-dom')
+vi.mock('@/layouts/MainLayout', async () => {
+  const { Outlet } = await import('react-router-dom')
   return {
     MainLayout: () => (
       <div data-test="main-layout">
@@ -48,8 +47,8 @@ vi.mock('@/layouts/MainLayout', () => {
   }
 })
 
-vi.mock('@/layouts/PublicLayout', () => {
-  const { Outlet } = require('react-router-dom')
+vi.mock('@/layouts/PublicLayout', async () => {
+  const { Outlet } = await import('react-router-dom')
   return {
     __esModule: true,
     default: () => (
@@ -247,7 +246,7 @@ vi.mock('@/views/Users', () => ({
 
 vi.mock('@/views/Admin/AdminMenu/components/UserDetailsCard', () => ({
   __esModule: true,
-  default: ({ addMode, userType }) => {
+  default: function UserDetailsMock({ addMode, userType }) {
     const params = useParams()
     const location = useLocation()
     const testId = addMode

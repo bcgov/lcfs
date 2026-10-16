@@ -8,19 +8,14 @@ import { faSquareCheck } from '@fortawesome/free-solid-svg-icons'
 import BCButton from '@/components/BCButton'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
-import {
-  columnDefs,
-  routesMapping,
-  defaultColDef,
-  defaultSortModel
-} from './_schema'
+import { columnDefs, routesMapping, defaultSortModel } from './_schema';
 import {
   useDeleteNotificationMessages,
   useGetNotificationMessages,
   useMarkNotificationAsRead
 } from '@/hooks/useNotifications'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { defaultInitialPagination } from '@/constants/schedules'
+import '@/constants/schedules';
 
 const initialPaginationOptions = {
   page: 1,

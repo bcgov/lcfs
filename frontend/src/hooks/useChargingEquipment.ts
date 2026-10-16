@@ -18,7 +18,7 @@ export const useChargingEquipment = (paginationOptions: PaginationParams) => {
     queryKey: ['charging-equipment', paginationOptions],
     queryFn: async () => {
       // Convert frontend pagination format to backend format
-      const requestData = {
+      const requestData: Record<string, unknown> = {
         page: paginationOptions?.page || 1,
         size: paginationOptions?.size || 25,
         sort_orders: paginationOptions?.sortOrders || [],
@@ -27,7 +27,7 @@ export const useChargingEquipment = (paginationOptions: PaginationParams) => {
 
       // Add organization_id if provided (for IDIR users filtering)
       if (paginationOptions?.organizationId) {
-        ;(requestData as any).organization_id = paginationOptions.organizationId
+        requestData.organization_id = paginationOptions.organizationId
       }
 
       const response = await apiService.post(
@@ -41,7 +41,7 @@ export const useChargingEquipment = (paginationOptions: PaginationParams) => {
 
   // Submit equipment mutation
   const submitMutation = useMutation({
-    mutationFn: async (equipmentIds: any) => {
+    mutationFn: async (equipmentIds: unknown) => {
       const response = await apiService.post(
         apiRoutes.chargingEquipment.bulkSubmit,
         { charging_equipment_ids: equipmentIds }
@@ -55,7 +55,7 @@ export const useChargingEquipment = (paginationOptions: PaginationParams) => {
 
   // Decommission equipment mutation
   const decommissionMutation = useMutation({
-    mutationFn: async (equipmentIds: any) => {
+    mutationFn: async (equipmentIds: unknown) => {
       const response = await apiService.post(
         apiRoutes.chargingEquipment.bulkDecommission,
         { charging_equipment_ids: equipmentIds }
@@ -81,12 +81,12 @@ export const useChargingEquipment = (paginationOptions: PaginationParams) => {
 }
 
 export const useDownloadChargingEquipment = (
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, { body?: Record<string, unknown> }> = {}
 ) => {
   const apiService = useApiService()
 
   return useMutation({
-    mutationFn: async ({ body }: any) => {
+    mutationFn: async ({ body }: { body?: Record<string, unknown> }) => {
       return await apiService.download({
         url: apiRoutes.chargingEquipment.export,
         method: 'post',
@@ -121,7 +121,7 @@ export const useCreateChargingEquipment = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: unknown) => {
       const response = await apiService.post(
         apiRoutes.chargingEquipment.create,
         data
@@ -140,7 +140,7 @@ export const useUpdateChargingEquipment = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ id, data }: any) => {
+    mutationFn: async ({ id, data }: Record<string, unknown>) => {
       const response = await apiService.put(
         apiRoutes.chargingEquipment.update.replace(':id', String(id ?? '')),
         data
@@ -162,9 +162,13 @@ export const useDeleteChargingEquipment = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (row: any) => {
+    mutationFn: async (
+      row: number | string | { id?: number | string } | null
+    ) => {
       const id =
-        typeof row === 'number' || typeof row === 'string' ? row : row?.id
+        typeof row === 'number' || typeof row === 'string'
+          ? row
+          : (row as { id?: number | string } | null)?.id
       await apiService.delete(
         apiRoutes.chargingEquipment.delete.replace(':id', String(id ?? ''))
       )
@@ -278,13 +282,13 @@ export const useHasAllocationAgreements = () => {
 // Import charging equipment
 export const useImportChargingEquipment = (
   organizationId: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, any> = {}
+  options: ExtMutationOptions<unknown, { file: File; isOverwrite: boolean }> = {}
 ) => {
   const apiService = useApiService()
   const { onSuccess, onError, ...restOptions } = options
 
   return useMutation({
-    mutationFn: async ({ file, isOverwrite }: any) => {
+    mutationFn: async ({ file, isOverwrite }: { file: File; isOverwrite: boolean }) => {
       if (!file) {
         throw new Error('File is required for import')
       }
@@ -294,7 +298,7 @@ export const useImportChargingEquipment = (
 
       const formData = new FormData()
       formData.append('file', file)
-      formData.append('overwrite', isOverwrite)
+      formData.append('overwrite', isOverwrite as unknown as string)
 
       const endpoint = apiRoutes.chargingEquipment.import.replace(
         ':organizationId',
@@ -346,7 +350,12 @@ export const useChargingEquipmentImportJobStatus = (
     gcTime,
     enabled: enabled && !!jobId,
     refetchInterval: (data) => {
-      const statusData = (data as any)?.state?.data ?? (data as any)
+      const statusData = (
+        data as {
+          state?: { data?: { progress?: number; status?: string } }
+        } | undefined
+      )?.state?.data ??
+        (data as { progress?: number; status?: string })
       if (
         !statusData ||
         statusData?.progress === 100 ||

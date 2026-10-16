@@ -25,7 +25,7 @@ const baseArgs = {
   iconOnly: false,
   children: 'Click Me',
   disabled: false
-}
+} satisfies Story['args']
 
 export const Default: Story = {
   args: baseArgs

@@ -5,20 +5,29 @@ import BCModal from '@/components/BCModal'
 // Unmock the component we're testing (overrides global mock)
 vi.unmock('@/components/BCModal')
 
-// Mock BCButton to avoid theme/function errors in tests  
+// Mock BCButton to avoid theme/function errors in tests
 vi.mock('@/components/BCButton', () => ({
   __esModule: true,
-  default: ({ children, onClick, 'data-test': dataTest, id, variant, color, ...props }) => (
-    <button onClick={onClick} data-test={dataTest} id={id} role="button" {...props}>
+  default: ({
+  children,
+  onClick,
+  'data-test': dataTest,
+  id,
+  ...props
+}) => { delete props.variant; delete props.color; return <button onClick={onClick} data-test={dataTest} id={id} role="button" {...props}>
       {children}
-    </button>
-  )
+    </button>; }
 }))
 
 // Mock MUI components
 vi.mock('@mui/material/Dialog', () => ({
-    default: ({ children, open, onClose, 'data-test': dataTest, ...props }) =>
-    open ? <div data-test={dataTest || 'modal'} role="dialog">{children}</div> : null
+    default: ({
+  children,
+  open,
+  'data-test': dataTest,
+  ...props
+}) =>
+    { delete props.onClose; return open ? <div data-test={dataTest || 'modal'} role="dialog">{children}</div> : null; }
 }))
 
 vi.mock('@mui/material/DialogTitle', () => ({
@@ -34,21 +43,32 @@ vi.mock('@mui/material/DialogActions', () => ({
 }))
 
 vi.mock('@mui/material/IconButton', () => ({
-    default: ({ children, onClick, 'aria-label': ariaLabel, 'data-test': dataTest, sx, ...props }) => (
-    <button 
-      onClick={onClick} 
-      aria-label={ariaLabel} 
+    default: ({
+  children,
+  onClick,
+  'aria-label': ariaLabel,
+  'data-test': dataTest,
+  ...props
+}) => { delete props.sx; return <button
+      onClick={onClick}
+      aria-label={ariaLabel}
       data-test={dataTest}
       role="button"
       {...props}
     >
       {children}
-    </button>
-  )
+    </button>; }
 }))
 
 vi.mock('@mui/material/Box', () => ({
-    default: ({ children, dangerouslySetInnerHTML, 'data-test': dataTest, bgcolor, borderRadius, p, display, gap, ...props }) => {
+    default: ({
+  children,
+  dangerouslySetInnerHTML,
+  'data-test': dataTest,
+  ...props
+}) => {
+delete props.bgcolor; delete props.borderRadius; delete props.p; delete props.display; delete props.gap;
+
     if (dangerouslySetInnerHTML) {
       return <div data-test={dataTest} dangerouslySetInnerHTML={dangerouslySetInnerHTML} {...props} />
     }

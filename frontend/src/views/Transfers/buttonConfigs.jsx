@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/rules-of-hooks */
 import colors from '@/themes/base/colors'
 // constants
 import { roles } from '@/constants/roles'

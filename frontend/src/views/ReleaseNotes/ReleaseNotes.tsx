@@ -977,7 +977,7 @@ export const ReleaseNotes = () => {
                               primaryButtonColor: 'error',
                               secondaryButtonText: t('common:cancel'),
                               secondaryButtonAction: () => setResetModalOpen(false)
-                            } as any
+                            }
                           }
                         />
                       </Box>

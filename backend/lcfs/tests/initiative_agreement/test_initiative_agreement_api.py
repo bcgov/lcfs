@@ -1,3 +1,5 @@
+from datetime import date
+
 import pytest
 from fastapi import FastAPI, status
 from httpx import AsyncClient
@@ -815,6 +817,225 @@ async def test_create_agreement_is_closed_to_a_proponent(
     response = await client.post(
         url, json={"organizationId": org_id, "iaCode": "IA-26NOPE"}
     )
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.anyio
+async def test_update_agreement_edits_a_submitted_agreement(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    org_id, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(
+        dbsession,
+        org_id,
+        "IA-26EDT1",
+        project_location="Old place",
+        lifecycle_status_id=await _lifecycle_status_id(dbsession, "Underway"),
+    )
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    url = fastapi_app.url_path_for(
+        "update_agreement", initiative_agreement_id=agreement.initiative_agreement_id
+    )
+    response = await client.put(
+        url,
+        json={
+            "iaCode": "IA-26EDT1-R",
+            "agreementType": "P3A",
+            "title": "  Corrected title  ",
+            "projectLocation": None,
+            "projectDescription": "New description",
+            "agreementStartDate": "2026-01-01",
+            "agreementEndDate": "2026-12-31",
+        },
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    body = response.json()
+    assert body["iaCode"] == "IA-26EDT1-R"
+    assert body["agreementType"] == "P3A"
+    assert body["title"] == "Corrected title"
+    assert body["projectDescription"] == "New description"
+    assert body["projectLocation"] is None
+    assert body["agreementStartDate"] == "2026-01-01"
+    assert body["agreementEndDate"] == "2026-12-31"
+    assert body["lifecycleStatus"]["status"] == "Underway"
+
+
+@pytest.mark.anyio
+async def test_update_agreement_leaves_omitted_fields_alone(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    org_id, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(
+        dbsession, org_id, "IA-26EDT2", title="Keep me", project_location="Here"
+    )
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    url = fastapi_app.url_path_for(
+        "update_agreement", initiative_agreement_id=agreement.initiative_agreement_id
+    )
+    response = await client.put(url, json={"projectDescription": "Only this"})
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    body = response.json()
+    assert body["projectDescription"] == "Only this"
+    assert body["title"] == "Keep me"
+    assert body["projectLocation"] == "Here"
+    assert body["iaCode"] == "IA-26EDT2"
+
+
+@pytest.mark.anyio
+async def test_update_agreement_may_keep_its_own_code(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    org_id, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(dbsession, org_id, "IA-26EDT3")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    url = fastapi_app.url_path_for(
+        "update_agreement", initiative_agreement_id=agreement.initiative_agreement_id
+    )
+    response = await client.put(url, json={"iaCode": "ia-26edt3"})
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert response.json()["iaCode"] == "ia-26edt3"
+
+
+@pytest.mark.anyio
+async def test_update_agreement_rejects_another_agreements_code(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    org_id, _ = await _two_org_ids(dbsession)
+    await _seed_agreement(dbsession, org_id, "IA-26TAKEN")
+    agreement = await _seed_agreement(dbsession, org_id, "IA-26EDT4")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    url = fastapi_app.url_path_for(
+        "update_agreement", initiative_agreement_id=agreement.initiative_agreement_id
+    )
+    response = await client.put(url, json={"iaCode": "ia-26taken"})
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "already in use" in response.json()["detail"]
+
+
+@pytest.mark.anyio
+async def test_update_agreement_requires_a_code(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    org_id, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(dbsession, org_id, "IA-26EDT5")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    url = fastapi_app.url_path_for(
+        "update_agreement", initiative_agreement_id=agreement.initiative_agreement_id
+    )
+    response = await client.put(url, json={"iaCode": "   "})
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "code is required" in response.json()["detail"]
+
+
+@pytest.mark.anyio
+async def test_update_agreement_rejects_a_code_longer_than_the_column(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    org_id, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(dbsession, org_id, "IA-26EDT9")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    url = fastapi_app.url_path_for(
+        "update_agreement", initiative_agreement_id=agreement.initiative_agreement_id
+    )
+    response = await client.put(url, json={"iaCode": "X" * 51})
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+@pytest.mark.anyio
+async def test_update_agreement_rejects_an_unknown_type(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    org_id, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(dbsession, org_id, "IA-26EDT6")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    url = fastapi_app.url_path_for(
+        "update_agreement", initiative_agreement_id=agreement.initiative_agreement_id
+    )
+    response = await client.put(url, json={"agreementType": "Nonsense"})
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "not a valid agreement type" in response.json()["detail"]
+
+
+@pytest.mark.anyio
+async def test_update_agreement_rejects_an_end_before_its_start(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    org_id, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(
+        dbsession, org_id, "IA-26EDT7", agreement_start_date=date(2026, 9, 1)
+    )
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    url = fastapi_app.url_path_for(
+        "update_agreement", initiative_agreement_id=agreement.initiative_agreement_id
+    )
+    response = await client.put(url, json={"agreementEndDate": "2026-08-01"})
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "cannot precede" in response.json()["detail"]
+
+
+@pytest.mark.anyio
+async def test_update_agreement_404s_on_a_missing_agreement(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    url = fastapi_app.url_path_for("update_agreement", initiative_agreement_id=999999)
+    response = await client.put(url, json={"title": "Nope"})
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.anyio
+async def test_update_agreement_refuses_a_legacy_credit_award(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    org_id, _ = await _two_org_ids(dbsession)
+    award = InitiativeAgreement(to_organization_id=org_id, compliance_units=100)
+    dbsession.add(award)
+    await dbsession.flush()
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    url = fastapi_app.url_path_for(
+        "update_agreement", initiative_agreement_id=award.initiative_agreement_id
+    )
+    response = await client.put(url, json={"title": "Nope"})
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "roles",
+    [[RoleEnum.IA_PROPONENT], [RoleEnum.DIRECTOR, RoleEnum.GOVERNMENT]],
+)
+async def test_update_agreement_is_closed_to_proponents_and_directors(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession, roles
+):
+    org_id, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(dbsession, org_id, "IA-26EDT8")
+    set_mock_user(fastapi_app, roles)
+
+    url = fastapi_app.url_path_for(
+        "update_agreement", initiative_agreement_id=agreement.initiative_agreement_id
+    )
+    response = await client.put(url, json={"title": "Nope"})
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
 

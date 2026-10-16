@@ -1,5 +1,5 @@
-import React from 'react'
-import { screen, act } from '@testing-library/react'
+import 'react';
+import { screen } from '@testing-library/react';
 import { describe, expect, beforeEach, vi } from 'vitest'
 import { NotionalTransferChangelog } from '../NotionalTransferChangelog'
 import { test } from '@/tests/utils/fixtures'
@@ -75,16 +75,19 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 
 // Mock BCTypography
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, variant, color, component, ...props }) => (
-    <div
-      data-test="bc-typography"
-      data-variant={variant}
-      data-color={color}
-      {...props}
-    >
-      {children}
-    </div>
-  )
+  default: ({ children, variant, color, component, ...props }) => {
+    const Component = component || 'div'
+    return (
+      <Component
+        data-test="bc-typography"
+        data-variant={variant}
+        data-color={color}
+        {...props}
+      >
+        {children}
+      </Component>
+    )
+  }
 }))
 
 // Mock Loading
@@ -137,12 +140,13 @@ vi.mock('@mui/material/Paper', () => ({
 vi.mock('@mui/material/styles', () => ({
   styled:
     () =>
-    () =>
-    ({ children, ...props }) => (
+    () => function StyledMock({ children, ...props }) {
+      return (
       <div data-test="styled-component" {...props}>
         {children}
       </div>
-    ),
+      )
+    },
   useTheme: () => ({
     spacing: (val) => val * 8,
     palette: {
@@ -161,7 +165,7 @@ vi.mock('./_schema', () => ({
     { field: 'quantity', headerName: 'Quantity' },
     { field: 'unitOfMeasure', headerName: 'Unit' }
   ],
-  changelogCommonColDefs: (highlight) => [
+  changelogCommonColDefs: () => [
     { field: 'notionalTransferId', headerName: 'ID' },
     { field: 'legalName', headerName: 'Legal Name' }
   ]

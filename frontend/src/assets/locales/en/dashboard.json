@@ -101,13 +101,15 @@
     "title": "User settings",
     "notifications": "Notifications",
     "configureNotifications": "Configure your notifications",
-    "help": "Help"
+    "help": "Help",
+    "helpLinkLabel": "Help (opens in a new browser tab)"
   },
   "orgUserSettings": {
     "title": "User settings",
     "notifications": "Notifications",
     "configureNotifications": "Configure your notifications",
-    "help": "Help"
+    "help": "Help",
+    "helpLinkLabel": "Help (opens in a new browser tab)"
   },
   "governmentNotifications": {
     "titles": {

@@ -15,13 +15,13 @@ export const useOrganizationStatuses = (options: QueryOptions<unknown>) => {
 export const useOrganizationListStatuses = (options: QueryOptions<unknown>) => {
   const { data, isLoading, ...rest } = useOrganizationStatuses(options)
 
-  const validStatuses = [
+  const validStatuses: string[] = [
     ORGANIZATION_STATUSES.REGISTERED,
     ORGANIZATION_STATUSES.UNREGISTERED
   ]
 
-  const filteredData = (data as any)?.filter((status: any) =>
-    validStatuses.includes(status.status)
+  const filteredData = (data as { status: string }[] | undefined)?.filter(
+    (status) => validStatuses.includes(status.status)
   )
 
   return {
@@ -55,7 +55,14 @@ export const useOrganizationListStatuses = (options: QueryOptions<unknown>) => {
  *   { staleTime: 5 * 60 * 1000 }
  * )
  */
-export const useOrganizationNames = (statuses: any = null, queryParamsOrOptions: any = {}, options: QueryOptions<unknown> = {}) => {
+export const useOrganizationNames = (
+  statuses: string[] | null = null,
+  queryParamsOrOptions: QueryOptions<unknown> & {
+    orgFilter?: string
+    filters?: Record<string, unknown>
+  } = {},
+  options: QueryOptions<unknown> = {}
+) => {
   const client = useApiService()
 
   const hasQueryParams =
@@ -63,7 +70,7 @@ export const useOrganizationNames = (statuses: any = null, queryParamsOrOptions:
     (Object.prototype.hasOwnProperty.call(queryParamsOrOptions, 'orgFilter') ||
       Object.prototype.hasOwnProperty.call(queryParamsOrOptions, 'filters'))
 
-  const queryParams = {
+  const queryParams: { orgFilter: string; filters: Record<string, unknown> } = {
     orgFilter: 'fuel_supplier',
     filters: {}
   }
@@ -89,7 +96,7 @@ export const useOrganizationNames = (statuses: any = null, queryParamsOrOptions:
           .filter(
             (status) => typeof status === 'string' && status.trim().length > 0
           )
-          .map((status: any) => `statuses=${encodeURIComponent(status)}`)
+          .map((status: string) => `statuses=${encodeURIComponent(status)}`)
       : []
 
   const filterEntries: string[] = []
@@ -100,14 +107,14 @@ export const useOrganizationNames = (statuses: any = null, queryParamsOrOptions:
       const values = Array.isArray(rawValue) ? rawValue : [rawValue]
       values
         .filter(
-          (value: any) =>
+          (value: unknown) =>
             value !== null &&
             value !== undefined &&
             String(value).trim().length > 0
         )
-        .forEach((value: any) => {
+        .forEach((value: unknown) => {
           filterEntries.push(
-            `${encodeURIComponent(key)}=${encodeURIComponent(value)}`
+            `${encodeURIComponent(key)}=${encodeURIComponent(value as string)}`
           )
         })
     })
@@ -145,7 +152,10 @@ export const useRegExtOrgs = (options: QueryOptions<unknown>) => {
   })
 }
 
-export const useOrganizationsList = (paginationOptions: PaginationParams, options: QueryOptions<unknown>) => {
+export const useOrganizationsList = (
+  paginationOptions: PaginationParams,
+  options: QueryOptions<unknown>
+) => {
   const client = useApiService()
 
   return useQuery({
@@ -158,7 +168,11 @@ export const useOrganizationsList = (paginationOptions: PaginationParams, option
   })
 }
 
-export const useOrganizationUsers = (orgID: number | string | undefined | null, paginationOptions: PaginationParams, options: QueryOptions<unknown>) => {
+export const useOrganizationUsers = (
+  orgID: number | string | undefined | null,
+  paginationOptions: PaginationParams,
+  options: QueryOptions<unknown>
+) => {
   const client = useApiService()
 
   return useQuery({

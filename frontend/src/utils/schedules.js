@@ -150,7 +150,7 @@ export const handleScheduleDelete = async (
         validationStatus: 'warning'
       })
       if (error.code === 'ERR_BAD_REQUEST') {
-        const { fields, message } = error.response.data.errors[0]
+        const { message } = error.response.data.errors[0]
         const errMsg = `Unable to delete/undo row: ${message}`
 
         alertRef.current?.triggerAlert({

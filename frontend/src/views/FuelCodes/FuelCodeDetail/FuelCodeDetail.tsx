@@ -1,7 +1,12 @@
-// @ts-nocheck
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
+import type { TFunction } from 'i18next'
+import type { EChartsOption } from 'echarts'
+import type {
+  BCGridRef,
+  BCPaginationOptions
+} from '@/components/BCDataGrid/types'
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import Divider from '@mui/material/Divider'
@@ -23,7 +28,58 @@ import withRole from '@/utils/withRole'
 import { govRoles, nonGovRoles } from '@/constants/roles'
 import { iterationColDefs } from './_schema'
 
-const formatDate = (value) => {
+type FuelCodeIteration = {
+  fuelCodeId?: number
+  prefix?: string
+  fuelSuffix?: string
+  status?: string
+  carbonIntensity?: number | null
+  applicationDate?: string | null
+  approvalDate?: string | null
+  effectiveDate?: string | null
+  expirationDate?: string | null
+  fuelType?: { fuelType?: string | null } | null
+  fuelCodePrefix?: { prefix?: string | null } | null
+  fuelProductionFacilityCity?: string | null
+  fuelProductionFacilityProvinceState?: string | null
+  fuelProductionFacilityCountry?: string | null
+  facilityNameplateCapacity?: number | null
+  facilityNameplateCapacityUnit?: string | null
+  coProcessed?: string | boolean | null
+  feedstock?: string | null
+  feedstockLocation?: string | null
+  feedstockFuelTransportModes?: Array<{
+    distance?: number | null
+    feedstockFuelTransportMode?: { transportMode?: string | null } | null
+  }> | null
+  finishedFuelTransportModes?: Array<{
+    distance?: number | null
+    finishedFuelTransportMode?: { transportMode?: string | null } | null
+  }> | null
+  feedstockMisc?: string | null
+  company?: string | null
+  companyAddress?: string | null
+  contactPhone?: string | null
+  contactEmail?: string | null
+  notes?: string | null
+}
+
+type FuelCodeTimeSeriesPoint = {
+  year: string
+  totalVolume?: number | null
+  totalComplianceUnits?: number | null
+}
+
+type FuelCodeGroup = {
+  latestIteration: FuelCodeIteration
+  iterations: FuelCodeIteration[]
+  volumeOverTime: FuelCodeTimeSeriesPoint[]
+  complianceUnitsOverTime: FuelCodeTimeSeriesPoint[]
+}
+
+type FuelCodeGridRow = FuelCodeIteration & { id: number | string }
+
+const formatDate = (value: string | null | undefined) => {
   if (!value) return '—'
   const d = new Date(value)
   if (isNaN(d.getTime())) return value
@@ -34,14 +90,17 @@ const formatDate = (value) => {
   })
 }
 
-const formatCI = (value) => {
+const formatCI = (value: number | string | null | undefined) => {
   if (value === null || value === undefined || value === '') return '—'
   const n = Number(value)
   if (isNaN(n)) return value
   return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.00$/, '')
 }
 
-const formatCapacity = (value, unit) => {
+const formatCapacity = (
+  value: number | string | null | undefined,
+  unit: string | null | undefined
+) => {
   if (value === null || value === undefined || value === '') return '—'
   const n = Number(value)
   const formattedValue = Number.isNaN(n) ? value : n.toLocaleString()
@@ -49,7 +108,10 @@ const formatCapacity = (value, unit) => {
   return [formattedValue, resolvedUnit].filter(Boolean).join(' ')
 }
 
-const formatFuelCodeLabel = (prefix, suffixPart) => {
+const formatFuelCodeLabel = (
+  prefix: string | null | undefined,
+  suffixPart: string | null | undefined
+) => {
   if (!prefix) return suffixPart || ''
   if (!suffixPart) return prefix
   if (prefix.endsWith('-') || String(suffixPart).startsWith('-')) {
@@ -58,7 +120,17 @@ const formatFuelCodeLabel = (prefix, suffixPart) => {
   return `${prefix}-${suffixPart}`
 }
 
-const DetailRow = ({ label, value, labelWidth = 210, sx = {} }) => (
+const DetailRow = ({
+  label,
+  value,
+  labelWidth = 210,
+  sx = {}
+}: {
+  label: string
+  value: ReactNode
+  labelWidth?: number
+  sx?: Record<string, unknown>
+}) => (
   <BCBox
     sx={{
       mb: 1.5,
@@ -94,7 +166,7 @@ const DetailRow = ({ label, value, labelWidth = 210, sx = {} }) => (
   </BCBox>
 )
 
-const IterationCardContent = ({ data, t }) => {
+const IterationCardContent = ({ data }: { data?: FuelCodeIteration }) => {
   if (!data) return null
 
   const facilityLocation = [
@@ -275,7 +347,13 @@ const IterationCardContent = ({ data, t }) => {
   )
 }
 
-const VolumeChart = ({ data, t }) => {
+const VolumeChart = ({
+  data,
+  t
+}: {
+  data: FuelCodeTimeSeriesPoint[]
+  t: TFunction
+}) => {
   if (!data || data.length === 0) {
     return (
       <BCTypography variant="body2" color="text.secondary">
@@ -291,7 +369,7 @@ const VolumeChart = ({ data, t }) => {
   const chartGrid = '#e6edf7'
   const chartText = '#5f6b7a'
 
-  const option = {
+  const option: EChartsOption = {
     color: [chartBlue],
     aria: {
       enabled: true,
@@ -302,7 +380,7 @@ const VolumeChart = ({ data, t }) => {
     tooltip: {
       trigger: 'axis',
       formatter: (params) => {
-        const p = params[0]
+        const p = (params as Array<{ name: string; value: number }>)[0]
         return `${p.name}<br/>${t('fuelCode:detail.totalVolume')}: ${Number(p.value).toLocaleString()}`
       }
     },
@@ -368,7 +446,13 @@ const VolumeChart = ({ data, t }) => {
   )
 }
 
-const ComplianceUnitsChart = ({ data, t }) => {
+const ComplianceUnitsChart = ({
+  data,
+  t
+}: {
+  data: FuelCodeTimeSeriesPoint[]
+  t: TFunction
+}) => {
   if (!data || data.length === 0) {
     return (
       <BCTypography variant="body2" color="text.secondary">
@@ -384,7 +468,7 @@ const ComplianceUnitsChart = ({ data, t }) => {
   const chartGrid = '#e6edf7'
   const chartText = '#5f6b7a'
 
-  const option = {
+  const option: EChartsOption = {
     color: [chartBlue],
     aria: {
       enabled: true,
@@ -395,7 +479,7 @@ const ComplianceUnitsChart = ({ data, t }) => {
     tooltip: {
       trigger: 'axis',
       formatter: (params) => {
-        const p = params[0]
+        const p = (params as Array<{ name: string; value: number }>)[0]
         return `${p.name}<br/>${t('fuelCode:detail.totalComplianceUnits')}: ${Number(p.value).toLocaleString()}`
       }
     },
@@ -466,13 +550,14 @@ const FuelCodeDetailBase = () => {
   const { t } = useTranslation(['fuelCode', 'common'])
   const { data: currentUser } = useCurrentUser()
   const isGovernmentUser = currentUser?.isGovernmentUser === true
-  const gridRef = useRef(null)
-  const [paginationOptions, setPaginationOptions] = useState({
-    page: 1,
-    size: 10,
-    sortOrders: [],
-    filters: []
-  })
+  const gridRef = useRef<BCGridRef['current']>(null)
+  const [paginationOptions, setPaginationOptions] =
+    useState<BCPaginationOptions>({
+      page: 1,
+      size: 10,
+      sortOrders: [],
+      filters: []
+    })
   const setFuelCodeTitle = useFuelCodePageStore(
     (state) => state.setFuelCodeTitle
   )
@@ -486,11 +571,11 @@ const FuelCodeDetailBase = () => {
 
   const activeQuery = isGovernmentUser ? groupQuery : fuelCodeQuery
   const { isLoading, isError, error } = activeQuery
-  const data = isGovernmentUser
-    ? groupQuery.data
+  const data: FuelCodeGroup | undefined = isGovernmentUser
+    ? (groupQuery.data as FuelCodeGroup | undefined)
     : fuelCodeQuery.data
       ? {
-          latestIteration: fuelCodeQuery.data,
+          latestIteration: fuelCodeQuery.data as FuelCodeIteration,
           iterations: [],
           volumeOverTime: [],
           complianceUnitsOverTime: []
@@ -498,7 +583,7 @@ const FuelCodeDetailBase = () => {
       : undefined
 
   const latest = data?.latestIteration
-  const iterations = data?.iterations ?? []
+  const iterations = useMemo(() => data?.iterations ?? [], [data?.iterations])
   const volumeOverTime = data?.volumeOverTime ?? []
   const complianceUnitsOverTime = data?.complianceUnitsOverTime ?? []
 
@@ -535,9 +620,9 @@ const FuelCodeDetailBase = () => {
       cellRenderer: LinkRenderer,
       cellRendererParams: {
         isAbsolute: true,
-        url: (params) =>
+        url: (params: { data?: FuelCodeGridRow }) =>
           buildPath(ROUTES.FUEL_CODES.EDIT, {
-            fuelCodeID: params.data?.fuelCodeId
+            fuelCodeID: params.data?.fuelCodeId as number
           })
       }
     }),
@@ -547,7 +632,7 @@ const FuelCodeDetailBase = () => {
   const queryData = useMemo(
     () => ({
       data: {
-        fuelCodes: iterations.map((row, i) => ({
+        fuelCodes: iterations.map((row: FuelCodeIteration, i: number) => ({
           ...row,
           id: row.fuelCodeId ?? `${row.prefix}${row.fuelSuffix}-${i}`
         })),
@@ -571,11 +656,16 @@ const FuelCodeDetailBase = () => {
     ]
   )
 
-  const handleIterationPaginationChange = (newPaginationOptions) => {
+  const handleIterationPaginationChange = (
+    newPaginationOptions: BCPaginationOptions
+  ) => {
     setPaginationOptions(newPaginationOptions)
 
     if (newPaginationOptions.size !== paginationOptions.size) {
-      gridRef.current?.api?.paginationSetPageSize?.(newPaginationOptions.size)
+      const api = gridRef.current?.api as unknown as
+        | { paginationSetPageSize?: (size?: number) => void }
+        | undefined
+      api?.paginationSetPageSize?.(newPaginationOptions.size)
     }
 
     gridRef.current?.api?.paginationGoToPage?.(
@@ -629,7 +719,7 @@ const FuelCodeDetailBase = () => {
               title={
                 iterationLabel || t('fuelCode:detail.latestIterationTitle')
               }
-              content={<IterationCardContent data={latest} t={t} />}
+              content={<IterationCardContent data={latest} />}
               sx={{ mb: 3, width: '100%', maxWidth: '1320px' }}
             />
           </>
@@ -668,7 +758,7 @@ const FuelCodeDetailBase = () => {
                   enablePageCaching={false}
                   overlayNoRowsTemplate={t('fuelCode:noFuelCodesFound')}
                   getRowId={(params) =>
-                    params.data.id ?? params.data.fuelCodeId?.toString()
+                    (params.data.id ?? params.data.fuelCodeId?.toString()) as string
                   }
                 />
               )}
