@@ -102,10 +102,12 @@ async def search_admin_adjustments(
         ),
         # Suppliers may only see Approved adjustments.  Draft and Recommended
         # are internal workflow states never communicated to the recipient org.
+        # Government search leaves out drafts too (#5231); the analyst's own
+        # drafts stay on the Transactions page.
         (
             AdminAdjustmentStatus.status == AdminAdjustmentStatusEnum.Approved
             if not context.is_government
-            else None
+            else AdminAdjustmentStatus.status != AdminAdjustmentStatusEnum.Draft
         ),
     )
     if score is not None:
