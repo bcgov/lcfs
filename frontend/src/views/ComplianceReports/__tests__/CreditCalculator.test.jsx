@@ -329,6 +329,24 @@ describe('CreditCalculator', () => {
       ).toBeInTheDocument()
     })
 
+    it('wraps End Use labels without horizontal scrolling', () => {
+      const { container } = render(
+        <TestWrapper>
+          <CreditCalculator />
+        </TestWrapper>
+      )
+
+      const endUseGroup = container.querySelector(
+        '[data-test="endUseType-radio-group"]'
+      )
+      const endUseOption = endUseGroup.querySelector('[role="radio"]')
+
+      expect(getComputedStyle(endUseGroup).overflowX).toBe('hidden')
+      expect(getComputedStyle(endUseOption).maxWidth).toBe('100%')
+      expect(getComputedStyle(endUseOption).whiteSpace).toBe('normal')
+      expect(getComputedStyle(endUseOption).overflowWrap).toBe('anywhere')
+    })
+
     it.each([
       { fuelType: 'Diesel', fuelCategoryId: 2, fuelTypeId: 2 },
       { fuelType: 'LNG', fuelCategoryId: 3, fuelTypeId: 3 }

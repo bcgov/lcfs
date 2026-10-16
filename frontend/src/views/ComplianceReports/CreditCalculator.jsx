@@ -718,7 +718,7 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
                       width: '100%',
                       maxWidth: '100%',
                       maxHeight: { xs: 240, md: 360 },
-                      overflowX: 'auto',
+                      overflowX: 'hidden',
                       overflowY: 'auto',
                       pr: 1,
                       scrollbarGutter: 'stable'
@@ -727,15 +727,17 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
                       mr: 0,
                       mb: 0,
                       alignItems: 'flex-start',
-                      width: 'max-content',
-                      maxWidth: 'none',
-                      whiteSpace: 'nowrap'
+                      width: '100%',
+                      maxWidth: '100%',
+                      minWidth: 0,
+                      flexShrink: 0
                     },
                     '& .MuiRadio-root': {
                       flexShrink: 0
                     },
                     '& .MuiFormControlLabel-label': {
-                      whiteSpace: 'nowrap',
+                      whiteSpace: 'normal',
+                      overflowWrap: 'anywhere',
                       lineHeight: 1.35
                     }
                   }}
