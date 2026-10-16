@@ -211,29 +211,14 @@ describe('FinalSupplyEquipmentSummary', () => {
         }),
         {},
         undefined,
-        'summary'
+        'summary',
+        'vw_fse_base'
       )
     })
 
     it('renders with different status', () => {
       renderComponent({ status: COMPLIANCE_REPORT_STATUSES.SUBMITTED })
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
-    })
-
-    // vw_fse_base returns no rows for a Draft or a superseded version
-    ;[
-      COMPLIANCE_REPORT_STATUSES.DRAFT,
-      COMPLIANCE_REPORT_STATUSES.SUBMITTED,
-      COMPLIANCE_REPORT_STATUSES.ASSESSED
-    ].forEach((status) => {
-      it(`reads the base_pref source for a ${status} report`, () => {
-        renderComponent({ status })
-        expect(hookCalls.length).toBeGreaterThan(0)
-        hookCalls.forEach((args) => {
-          expect(args[4]).toBe('summary')
-          expect(args[5]).toBeUndefined()
-        })
-      })
     })
   })
 

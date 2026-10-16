@@ -838,12 +838,12 @@ class TestComplianceReportExporter:
         await exporter.export(1, is_government=True)
 
         exporter.fse_repo.get_fse_reporting_list_paginated.assert_called_once()
-        call_kwargs = (
-            exporter.fse_repo.get_fse_reporting_list_paginated.call_args.kwargs
+        assert (
+            exporter.fse_repo.get_fse_reporting_list_paginated.call_args.kwargs[
+                "source"
+            ]
+            == "vw_fse_base"
         )
-        # vw_fse_base returns no rows for a Draft or a superseded version
-        assert call_kwargs["source"] == "base_pref"
-        assert call_kwargs["mode"] == "summary"
         exporter.fse_repo.get_effective_fse_reporting_rows_for_export.assert_not_called()
 
     @pytest.mark.anyio

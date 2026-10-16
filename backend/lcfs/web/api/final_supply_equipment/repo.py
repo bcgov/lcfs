@@ -1209,10 +1209,22 @@ class FinalSupplyEquipmentRepository:
         and the total kWh shown above the table derive from the exact same set
         of rows, so they must apply identical filters. Centralizing them here
         keeps the displayed total consistent with the rows it summarizes.
+
+        ``vw_fse_base`` holds only the latest non-Draft version of each report
+        group, so it is scoped by the report's group: a Draft or an older
+        version shows the latest submitted version's rows.
         """
+        if vt is VwFSEBaseView.__table__:
+            report_scope = vt.c.compliance_report_group_uuid == (
+                select(ComplianceReport.compliance_report_group_uuid)
+                .where(ComplianceReport.compliance_report_id == compliance_report_id)
+                .scalar_subquery()
+            )
+        else:
+            report_scope = vt.c.compliance_report_id == compliance_report_id
         conditions = [
             vt.c.organization_id == organization_id,
-            vt.c.compliance_report_id == compliance_report_id,
+            report_scope,
         ]
         if include_decommissioned_attached:
             conditions.append(
@@ -1579,12 +1591,10 @@ class FinalSupplyEquipmentRepository:
         Return export rows for a BCeID (supplier) compliance report download.
 
         The row set, kWh usage and reporting data (supply dates, compliance
-        notes) come from ``mv_fse_reporting_base_pref`` using the exact same
-        summary filters as the FSE summary table.
+        notes) come from ``vw_fse_base`` using the exact same summary filters
+        as the FSE summary table.
         This guarantees the supplier's Excel kWh sum matches the total shown
-        above the table. ``vw_fse_base`` is not used: it keeps only the latest
-        non-Draft version of each report, so a Draft or superseded version
-        would export no rows.
+        above the table.
 
         Equipment metadata (serial number, manufacturer, model, level, ports,
         notes, intended uses/users) is enriched from the *latest* equipment
@@ -1595,10 +1605,11 @@ class FinalSupplyEquipmentRepository:
         are taken from it directly.
 
         ``compliance_report_group_uuid`` is retained for signature
-        compatibility; scoping is handled by ``compliance_report_id`` via the
-        view, consistent with the government export.
+        compatibility; scoping is handled by ``compliance_report_id`` through
+        the shared conditions (its report group, for this view), consistent
+        with the government export.
         """
-        vt = FSEReportingBasePrefView.__table__
+        vt = VwFSEBaseView.__table__
 
         # Authoritative row set + kWh: identical to the summary table source.
         base_conditions = self._fse_reporting_base_conditions(

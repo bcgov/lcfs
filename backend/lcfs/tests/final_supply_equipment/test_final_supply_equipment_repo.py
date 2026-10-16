@@ -691,15 +691,22 @@ async def test_get_total_kwh_usage_for_report_can_use_vw_fse_base(repo, fake_db)
     assert "vw_fse_base" in compiled
     assert "mv_fse_reporting_base_pref" not in compiled
     assert "sum(vw_fse_base.kwh_usage)" in compiled
-    assert "vw_fse_base.compliance_report_id = 10" in compiled
+    # Scoped by the report's group: vw_fse_base holds only the latest
+    # non-Draft version, which a Draft or older version shows instead.
+    assert (
+        "vw_fse_base.compliance_report_group_uuid = (SELECT "
+        "compliance_report.compliance_report_group_uuid" in compiled
+    )
+    assert "WHERE compliance_report.compliance_report_id = 10)" in compiled
+    assert "vw_fse_base.compliance_report_id" not in compiled
 
 
 @pytest.mark.anyio
 async def test_effective_fse_export_rows_match_total_view_and_filters(repo, fake_db):
     """
-    The supplier (BCeID) export must draw its row set + kWh from the
-    preferred materialized view, matching the summary table source. Equipment
-    metadata is enriched from the latest version via COALESCE.
+    The supplier (BCeID) export must draw its row set + kWh from vw_fse_base,
+    matching the summary table source. Equipment metadata is enriched from the
+    latest version via COALESCE.
     """
     data_result = MagicMock()
     data_result.fetchall.return_value = []
@@ -715,15 +722,20 @@ async def test_effective_fse_export_rows_match_total_view_and_filters(repo, fake
     compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
 
     # kWh + row set come from the same view + summary filters as the summary.
-    assert "mv_fse_reporting_base_pref.kwh_usage" in compiled
-    assert "mv_fse_reporting_base_pref.compliance_report_id = 1" in compiled
-    assert "vw_fse_base" not in compiled
+    assert "vw_fse_base" in compiled
+    assert "vw_fse_base.kwh_usage" in compiled
+    assert "mv_fse_reporting_base_pref" not in compiled
     assert "Decommissioned" in compiled
     assert "charging_equipment_compliance_id IS NOT NULL" in compiled
     assert "is_active IS true" in compiled
-    # The old group-uuid-scoped hand-rolled selection is gone; scoping is by
-    # compliance_report_id via the view (consistent with the total).
-    assert "compliance_report_group_uuid" not in compiled
+    # Scoped like the total: the report id resolves to its group, so a Draft
+    # or older version exports the latest submitted version's rows.
+    assert (
+        "vw_fse_base.compliance_report_group_uuid = (SELECT "
+        "compliance_report.compliance_report_group_uuid" in compiled
+    )
+    assert "WHERE compliance_report.compliance_report_id = 1)" in compiled
+    assert "vw_fse_base.compliance_report_id" not in compiled
     # Equipment metadata is enriched from the latest equipment version.
     assert "latest_equipment_export" in compiled
     assert "coalesce" in compiled.lower()
@@ -1099,6 +1111,11 @@ async def test_get_fse_reporting_list_paginated_can_use_vw_fse_base(repo, fake_d
 
     assert "vw_fse_base" in compiled_sql
     assert "mv_fse_reporting_base_pref" not in compiled_sql
+    assert (
+        "vw_fse_base.compliance_report_group_uuid = (SELECT "
+        "compliance_report.compliance_report_group_uuid" in compiled_sql
+    )
+    assert "WHERE compliance_report.compliance_report_id = 10)" in compiled_sql
 
 
 def test_vw_fse_base_projects_capacity_from_preferred_materialized_view():

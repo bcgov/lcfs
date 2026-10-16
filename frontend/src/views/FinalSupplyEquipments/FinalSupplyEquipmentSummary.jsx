@@ -28,14 +28,13 @@ export const FinalSupplyEquipmentSummary = ({
   const [paginationOptions, setPaginationOptions] = useState(
     defaultInitialPagination
   )
-  // Default base_pref source: vw_fse_base keeps only the latest non-Draft
-  // version of a report, so Drafts and older versions would show no rows.
   const queryData = useGetFSEReportingList(
     complianceReportId,
     paginationOptions,
     {},
     organizationId,
-    'summary'
+    'summary',
+    'vw_fse_base'
   )
   const {
   data: fseData
