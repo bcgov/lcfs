@@ -697,9 +697,9 @@ async def test_get_total_kwh_usage_for_report_can_use_vw_fse_base(repo, fake_db)
 @pytest.mark.anyio
 async def test_effective_fse_export_rows_match_total_view_and_filters(repo, fake_db):
     """
-    The supplier (BCeID) export must draw its row set + kWh from vw_fse_base,
-    matching the summary table source. Equipment metadata is enriched from the
-    latest version via COALESCE.
+    The supplier (BCeID) export must draw its row set + kWh from the
+    preferred materialized view, matching the summary table source. Equipment
+    metadata is enriched from the latest version via COALESCE.
     """
     data_result = MagicMock()
     data_result.fetchall.return_value = []
@@ -715,10 +715,9 @@ async def test_effective_fse_export_rows_match_total_view_and_filters(repo, fake
     compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
 
     # kWh + row set come from the same view + summary filters as the summary.
-    assert "vw_fse_base" in compiled
-    assert "vw_fse_base.kwh_usage" in compiled
-    assert "vw_fse_base.compliance_report_id = 1" in compiled
-    assert "mv_fse_reporting_base_pref" not in compiled
+    assert "mv_fse_reporting_base_pref.kwh_usage" in compiled
+    assert "mv_fse_reporting_base_pref.compliance_report_id = 1" in compiled
+    assert "vw_fse_base" not in compiled
     assert "Decommissioned" in compiled
     assert "charging_equipment_compliance_id IS NOT NULL" in compiled
     assert "is_active IS true" in compiled

@@ -1579,10 +1579,12 @@ class FinalSupplyEquipmentRepository:
         Return export rows for a BCeID (supplier) compliance report download.
 
         The row set, kWh usage and reporting data (supply dates, compliance
-        notes) come from ``vw_fse_base`` using the exact same summary filters
-        as the FSE summary table.
+        notes) come from ``mv_fse_reporting_base_pref`` using the exact same
+        summary filters as the FSE summary table.
         This guarantees the supplier's Excel kWh sum matches the total shown
-        above the table.
+        above the table. ``vw_fse_base`` is not used: it keeps only the latest
+        non-Draft version of each report, so a Draft or superseded version
+        would export no rows.
 
         Equipment metadata (serial number, manufacturer, model, level, ports,
         notes, intended uses/users) is enriched from the *latest* equipment
@@ -1596,7 +1598,7 @@ class FinalSupplyEquipmentRepository:
         compatibility; scoping is handled by ``compliance_report_id`` via the
         view, consistent with the government export.
         """
-        vt = VwFSEBaseView.__table__
+        vt = FSEReportingBasePrefView.__table__
 
         # Authoritative row set + kWh: identical to the summary table source.
         base_conditions = self._fse_reporting_base_conditions(
