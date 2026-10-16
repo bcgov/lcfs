@@ -29,6 +29,7 @@
     "unitOfMeasure": "Unit of measure",
     "proposedFuelCodeEffective": "Proposed fuel code effective",
     "proposedFuelCodeEffectiveHelp": "(optional, if left blank, default is the date of application receipt by the Ministry)",
+    "proposedFuelCodeEffectiveNotice": "Effective dates more than six months after the application date require additional supporting information to confirm that the information provided remains accurate and applicable at the requested effective date.",
     "saveAndProceed": "Save & proceed",
     "deleteDraft": "Delete draft application",
     "saveSuccess": "Application information saved.",
