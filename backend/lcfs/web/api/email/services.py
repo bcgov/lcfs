@@ -179,6 +179,24 @@ class CHESEmailService:
         return await self.send_email(email_payload)
 
     @service_handler
+    async def send_account_change_email(
+        self, email: EmailStr, context: Dict[str, Any]
+    ) -> bool:
+        """Send a mandatory service email independently of subscriptions."""
+        if not settings.ches_enabled or not email:
+            return False
+
+        if not self._validate_configuration():
+            return False
+
+        template = self.template_env.get_template("account_change.html")
+        body = template.render(
+            **context, environment=settings.environment.lower()
+        ).strip()
+        payload = self._build_email_payload([email], context, body)
+        return await self.send_email(payload)
+
+    @service_handler
     async def send_email(self, payload: Dict[str, Any]) -> bool:
         """
         Send an email using CHES.

@@ -1,7 +1,7 @@
 import io
 from datetime import datetime, timezone
 import structlog
-from typing import List
+from typing import Any, List
 
 from fastapi import Depends, Request, HTTPException, status
 from fastapi.responses import StreamingResponse
@@ -30,6 +30,7 @@ from lcfs.web.api.user.schema import (
     UserActivitiesResponseSchema,
     UserAssignedWorkSchema,
     ResolveOrgNameResponseSchema,
+    UserUpdateResponseSchema,
 )
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
 from lcfs.web.api.user.repo import UserRepository
@@ -38,6 +39,12 @@ from lcfs.db.models.user.Role import RoleEnum
 from lcfs.db.models.user.role_domains import allowed_roles_for_org
 from lcfs.web.api.notification.services import NotificationService
 from lcfs.web.api.role.services import RoleServices
+from lcfs.web.api.email.services import CHESEmailService
+from lcfs.web.api.user.account_change import (
+    SubscriptionSnapshot,
+    build_account_change_context,
+    subscription_snapshot,
+)
 from lcfs.settings import settings
 
 logger = structlog.get_logger(__name__)
@@ -75,12 +82,14 @@ class UserServices:
         session: AsyncSession = Depends(get_async_db_session),
         notification_service: NotificationService = Depends(NotificationService),
         role_service: RoleServices = Depends(RoleServices),
+        email_service: CHESEmailService = Depends(CHESEmailService),
     ) -> None:
         self.repo = repo
         self.request = request
         self.session = session
         self.notification_service = notification_service
         self.role_service = role_service
+        self.email_service = email_service
 
     @staticmethod
     def _is_local_env() -> bool:
@@ -172,9 +181,7 @@ class UserServices:
                 total=total_count,
                 page=pagination.page,
                 size=pagination.size,
-                total_pages=(
-                    calculate_total_pages(total_count, pagination.size)
-                ),
+                total_pages=(calculate_total_pages(total_count, pagination.size)),
             ),
             users=users,
         )
@@ -317,9 +324,7 @@ class UserServices:
         # regardless of what was submitted.
         if user.organization and not self.request.user.is_government:
             submitted_roles_lower = {r.lower() for r in (user_create.roles or [])}
-            has_ia_signer = any(
-                r == RoleEnum.IA_SIGNER for r in user.role_names
-            )
+            has_ia_signer = any(r == RoleEnum.IA_SIGNER for r in user.role_names)
             ia_signer_value_lower = RoleEnum.IA_SIGNER.value.lower()
             if has_ia_signer:
                 # Preserve the existing assignment — add it back if missing
@@ -328,7 +333,8 @@ class UserServices:
             else:
                 # Strip any attempt to grant the role
                 user_create.roles = [
-                    r for r in (user_create.roles or [])
+                    r
+                    for r in (user_create.roles or [])
                     if r.lower() != ia_signer_value_lower
                 ]
 
@@ -454,6 +460,88 @@ class UserServices:
 
         await FastAPICache.clear(namespace="users")
         return user
+
+    @service_handler
+    async def update_user_and_notify(
+        self, user_create: UserCreateSchema, user_id: int
+    ) -> UserUpdateResponseSchema:
+        """Save an account update and send its mandatory email after commit."""
+        # Authorize and copy the old values before the repository mutates its ORM
+        # instance. Build the response before committing, which expires ORM data.
+        before = await self.get_user_by_id(user_id)
+        before_subscriptions = await self._account_subscription_snapshot(user_id)
+        await self.update_user(user_create, user_id)
+        after = await self.get_user_by_id(user_id)
+        after_subscriptions = await self._account_subscription_snapshot(user_id)
+        response = UserUpdateResponseSchema(**after.model_dump())
+        context = await self._get_account_change_email_context(
+            before, after, before_subscriptions, after_subscriptions
+        )
+        if context is None:
+            return response
+
+        recipient = after.email or after.keycloak_email
+        # The request dependency owns a session.begin() context. Finish all
+        # database reads and response construction before this commit; no queries
+        # may follow it. A commit failure must prevent sending an unsaved change.
+        await self.session.commit()
+        try:
+            sent = await self.email_service.send_account_change_email(
+                recipient, context
+            )
+        except Exception:
+            logger.exception("Mandatory account change email failed")
+            sent = False
+        response.account_change_email_sent = bool(sent)
+        if not sent:
+            logger.warning(
+                "Account change saved but mandatory email was not accepted",
+                user_profile_id=user_id,
+            )
+        return response
+
+    async def _account_subscription_snapshot(
+        self, user_id: int
+    ) -> SubscriptionSnapshot:
+        subscriptions = await self.notification_service.get_notification_channel_subscriptions_by_user_id(
+            user_id
+        )
+        return subscription_snapshot(subscriptions)
+
+    async def _get_account_change_email_context(
+        self,
+        before: UserBaseSchema,
+        after: UserBaseSchema,
+        before_subscriptions: SubscriptionSnapshot,
+        after_subscriptions: SubscriptionSnapshot,
+    ) -> dict[str, Any] | None:
+        actor = self.request.user
+        actor_name = " ".join(
+            name for name in [actor.first_name, actor.last_name] if name
+        )
+        changed_by = (
+            f"{actor_name} ({actor.keycloak_username})"
+            if actor_name
+            else actor.keycloak_username
+        )
+        context = build_account_change_context(
+            before, after, before_subscriptions, after_subscriptions, changed_by
+        )
+        if context is None:
+            return None
+
+        if before.is_government_user:
+            work = await self.repo.get_user_assigned_work(before.user_profile_id)
+            context["assigned_work"] = {
+                label: len(work[key])
+                for key, label in [
+                    ("compliance_reports", "Compliance reports"),
+                    ("ci_applications", "CI applications"),
+                ]
+                if work[key]
+            }
+
+        return context
 
     def _get_government_notification_types(
         self, roles: set[RoleEnum], is_government: bool

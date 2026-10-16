@@ -3,7 +3,6 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from lcfs.web.api.email.repo import CHESEmailRepository
 from lcfs.web.api.email.services import CHESEmailService
-import os
 
 
 @pytest.fixture
@@ -20,6 +19,8 @@ def mock_environment_vars():
         mock_settings.ches_client_secret = "mock_client_secret"
         mock_settings.ches_sender_email = "noreply@gov.bc.ca"
         mock_settings.ches_sender_name = "Mock Notification System"
+        mock_settings.ches_enabled = True
+        mock_settings.environment = "test"
         yield mock_settings
 
 
@@ -194,3 +195,141 @@ def test_build_email_payload_includes_attachments(
 
     assert payload["attachments"] == [attachment]
     assert payload["bcc"] == ["user@example.com"]
+
+
+@pytest.fixture
+def account_change_context():
+    return {
+        "subject": "LCFS account change notification",
+        "user_name": "Affected User",
+        "changed_by": "Administrator <admin>",
+        "changed_at": "2026-10-16 05:00:00 PDT",
+        "status_changed": True,
+        "old_status": "Active",
+        "new_status": "Inactive",
+        "roles_added": [],
+        "roles_removed": ["Analyst"],
+        "new_roles": ["Government"],
+        "role_descriptions": {"Analyst": "Assess compliance reports"},
+        "preferences_changed": True,
+        "notifications_removed": ["Compliance Report: Submitted For Review (Email)"],
+        "notifications_added": [],
+        "preferences_removed": ["Compliance Report: Submitted For Review (Email)"],
+        "preferences_added": [],
+        "assigned_work": {"Compliance reports": 2, "CI applications": 1},
+        "loses_assigned_work_access": True,
+    }
+
+
+@pytest.mark.anyio
+async def test_account_change_email_bypasses_subscriptions_and_renders_impacts(
+    mock_email_repo, mock_environment_vars, account_change_context
+):
+    mock_environment_vars.environment = "test"
+    service = CHESEmailService(repo=mock_email_repo)
+    service.send_email = AsyncMock(return_value=True)
+    result = await service.send_account_change_email(
+        "user@example.com", account_change_context
+    )
+    assert result is True
+    mock_email_repo.get_subscribed_user_emails.assert_not_awaited()
+    service.send_email.assert_awaited_once()
+    payload = service.send_email.call_args.args[0]
+    assert payload["bcc"] == ["user@example.com"]
+    body = payload["body"]
+    assert "Administrator &lt;admin&gt;" in body
+    assert "2026-10-16 05:00:00 PDT" in body
+    assert "Active → Inactive" in body
+    assert "Roles removed: Analyst" in body
+    assert "Assess compliance reports" in body
+    assert "Compliance Report: Submitted For Review (Email)" in body
+    assert "Compliance reports: 2" in body
+    assert "CI applications: 1" in body
+    assert "Reassignment is not automatic" in body
+    assert "Previous preferences are not automatically restored" in body
+    assert "mailto:lcfs@gov.bc.ca" in body
+    assert "lcfs-test.apps.silver.devops.gov.bc.ca" in body
+
+
+@pytest.mark.anyio
+async def test_account_change_email_reports_ches_rejection(
+    mock_email_repo, mock_environment_vars, account_change_context
+):
+    service = CHESEmailService(repo=mock_email_repo)
+    service.send_email = AsyncMock(return_value=False)
+    assert (
+        await service.send_account_change_email(
+            "user@example.com", account_change_context
+        )
+        is False
+    )
+    service.send_email.assert_awaited_once()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("configuration", ["disabled", "missing"])
+async def test_account_change_email_reports_unavailable_email_service(
+    mock_email_repo, mock_environment_vars, account_change_context, configuration
+):
+    if configuration == "disabled":
+        mock_environment_vars.ches_enabled = False
+    else:
+        mock_environment_vars.ches_client_id = ""
+    service = CHESEmailService(repo=mock_email_repo)
+    service.send_email = AsyncMock()
+    assert (
+        await service.send_account_change_email(
+            "user@example.com", account_change_context
+        )
+        is False
+    )
+    service.send_email.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_account_change_email_reports_template_failure(
+    mock_email_repo, mock_environment_vars, account_change_context
+):
+    service = CHESEmailService(repo=mock_email_repo)
+    service.template_env.get_template = MagicMock(
+        side_effect=ValueError("Missing template")
+    )
+    service.send_email = AsyncMock()
+    with pytest.raises(ValueError, match="Missing template"):
+        await service.send_account_change_email(
+            "user@example.com", account_change_context
+        )
+    service.send_email.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_reactivation_email_has_secure_settings_link_and_no_reassignment_warning(
+    mock_email_repo, mock_environment_vars, account_change_context
+):
+    mock_environment_vars.environment = "test"
+    context = {
+        **account_change_context,
+        "old_status": "Inactive",
+        "new_status": "Active",
+        "roles_removed": [],
+        "roles_added": ["Analyst"],
+        "notifications_removed": [],
+        "preferences_removed": [],
+        "preferences_added": [
+            "Compliance Report: Submitted For Review (Email): disabled"
+        ],
+        "assigned_work": {},
+        "loses_assigned_work_access": False,
+    }
+    service = CHESEmailService(repo=mock_email_repo)
+    service.send_email = AsyncMock(return_value=True)
+    await service.send_account_change_email("user@example.com", context)
+    body = service.send_email.call_args.args[0]["body"]
+    assert "Inactive → Active" in body
+    assert "Roles added: Analyst" in body
+    assert "Notification preferences added" in body
+    assert "Compliance Report: Submitted For Review (Email): disabled" in body
+    assert (
+        "https://lcfs-test.apps.silver.devops.gov.bc.ca/notifications/configure" in body
+    )
+    assert "Reassignment is not automatic" not in body
