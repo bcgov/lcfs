@@ -84,6 +84,7 @@ export const CommentRow = forwardRef(function CommentRow(
     index,
     showInternalBadge,
     isGovernmentUser,
+    showOrganizationName = true,
     allowPublicVisibility = true,
     useLatestAttribution = false,
     searchQuery = '',
@@ -237,7 +238,7 @@ export const CommentRow = forwardRef(function CommentRow(
                   </time>
                 </>
               )}
-              {comment.organizationName && (
+              {showOrganizationName && comment.organizationName && (
                 <>
                   {' - '}
                   {isGovernmentUser && comment.organizationId ? (
