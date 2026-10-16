@@ -145,11 +145,12 @@ export const AssessmentRecommendation = ({
     )
   }
 
-  // Allow editing exemption checkboxes when user is analyst or director and report is submitted
+  // Exemptions can be selected before recommendation on submitted or adjusted reports.
   const canEditExemptionStatus = useMemo(() => {
     return (
       (isAnalyst || isDirector) &&
-      currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED
+      (currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED ||
+        currentStatus === COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT)
     )
   }, [isAnalyst, isDirector, currentStatus])
 
