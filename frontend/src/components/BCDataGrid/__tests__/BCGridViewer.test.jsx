@@ -603,6 +603,29 @@ describe('BCGridViewer Component', () => {
         JSON.stringify(columnState)
       )
     })
+
+    it('writes column state to localStorage for login-session grids', () => {
+      localStorage.clear()
+      const columnState = [{ colId: 'iaCode', width: 400 }]
+      mockGridApi.getColumnState.mockReturnValue(columnState)
+
+      render(
+        <TestWrapper>
+          <BCGridViewer {...defaultProps} persistForLoginSession />
+        </TestWrapper>
+      )
+
+      const gridProps = BCGridBase.mock.calls.at(-1)[0]
+      gridProps.onColumnResized({
+        finished: true,
+        source: 'uiColumnResized',
+        api: mockGridApi
+      })
+
+      expect(JSON.parse(localStorage.getItem('test-grid-column'))).toEqual(
+        columnState
+      )
+    })
   })
 })
 

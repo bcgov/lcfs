@@ -49,6 +49,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 describe('DesignatedActions (module tab)', () => {
   beforeEach(() => {
     sessionStorage.clear()
+    localStorage.clear()
     vi.clearAllMocks()
     mockRoles = [roles.ia_analyst]
     mockUseAllDesignatedActions.mockReturnValue({
@@ -72,7 +73,8 @@ describe('DesignatedActions (module tab)', () => {
     expect(mockBCGridViewer).toHaveBeenCalledWith(
       expect.objectContaining({
         gridKey: 'all-designated-actions-grid',
-        dataKey: 'designatedActions'
+        dataKey: 'designatedActions',
+        persistForLoginSession: true
       })
     )
   })
@@ -140,11 +142,11 @@ describe('DesignatedActions (module tab)', () => {
     expect(screen.getByTestId('alert-box')).toHaveTextContent('Boom')
   })
 
-  test('hydrates pagination from session storage so prefs survive navigation (#5032)', ({
+  test('hydrates pagination from localStorage so prefs survive closing the window (#5032)', ({
     render,
     app
   }) => {
-    sessionStorage.setItem(
+    localStorage.setItem(
       'all-designated-actions-grid-pagination',
       JSON.stringify({
         page: 4,

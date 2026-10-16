@@ -22,7 +22,8 @@ import {
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   getSessionPagination,
-  gridCacheKey
+  gridCacheKey,
+  removeGridCache
 } from '@/utils/grid/sessionGridCache'
 import CreateAgreement from './components/CreateAgreement'
 import InitiativeAgreementTabs from './components/InitiativeAgreementTabs'
@@ -81,12 +82,8 @@ const InitiativeAgreementsBase = () => {
 
   const handleClearFilters = useCallback(() => {
     setPaginationOptions(initialPaginationOptions)
-    try {
-      sessionStorage.removeItem(gridCacheKey(AGREEMENTS_GRID_KEY, 'filter'))
-      sessionStorage.removeItem(gridCacheKey(AGREEMENTS_GRID_KEY, 'pagination'))
-    } catch (error) {
-      console.warn('Failed to clear initiative agreements grid cache:', error)
-    }
+    removeGridCache(gridCacheKey(AGREEMENTS_GRID_KEY, 'filter'))
+    removeGridCache(gridCacheKey(AGREEMENTS_GRID_KEY, 'pagination'))
   }, [])
 
   const defaultColDef = useMemo(
@@ -141,6 +138,7 @@ const InitiativeAgreementsBase = () => {
               ...newPagination
             }))
           }
+          persistForLoginSession
           onClearFilters={handleClearFilters}
         />
       </BCBox>

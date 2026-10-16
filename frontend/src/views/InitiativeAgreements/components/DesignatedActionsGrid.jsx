@@ -61,6 +61,7 @@ export const DesignatedActionsGrid = ({ initiativeAgreementId }) => {
         queryData={queryData}
         dataKey="designatedActions"
         paginationOptions={paginationOptions}
+        persistForLoginSession
         onPaginationChange={(newPagination) =>
           setPaginationOptions((prev) => ({
             ...prev,

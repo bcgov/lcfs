@@ -34,6 +34,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 describe('DesignatedActionsGrid', () => {
   beforeEach(() => {
     sessionStorage.clear()
+    localStorage.clear()
     vi.clearAllMocks()
     mockActions.mockReturnValue({
       data: {
@@ -63,6 +64,7 @@ describe('DesignatedActionsGrid', () => {
     const props = gridProps.mock.calls[0][0]
     expect(props.dataKey).toBe('designatedActions')
     expect(props.gridKey).toBe('designated-actions-grid')
+    expect(props.persistForLoginSession).toBe(true)
   })
 
   test('builds the wireframe ID and credits formats into the column defs', ({
@@ -87,11 +89,11 @@ describe('DesignatedActionsGrid', () => {
     expect(rowUrl).toBe('designated-actions/9')
   })
 
-  test('hydrates pagination from session storage so prefs survive navigation (#5032)', ({
+  test('hydrates pagination from localStorage so prefs survive closing the window (#5032)', ({
     render,
     app
   }) => {
-    sessionStorage.setItem(
+    localStorage.setItem(
       'designated-actions-grid-pagination',
       JSON.stringify({
         page: 2,

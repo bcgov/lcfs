@@ -4,7 +4,8 @@ import {
   getSessionColumnState,
   getSessionPagination,
   gridCacheKey,
-  readSessionJson
+  readSessionJson,
+  writeGridCache
 } from '../sessionGridCache'
 
 const defaults = {
@@ -14,17 +15,23 @@ const defaults = {
   filters: []
 }
 
-const memoryStore = new Map()
-global.sessionStorage = {
-  getItem: (key) => (memoryStore.has(key) ? memoryStore.get(key) : null),
-  setItem: (key, value) => memoryStore.set(key, String(value)),
-  removeItem: (key) => memoryStore.delete(key),
-  clear: () => memoryStore.clear()
-}
+const localStore = new Map()
+const sessionStore = new Map()
+
+const createMemoryStorage = (store) => ({
+  getItem: (key) => (store.has(key) ? store.get(key) : null),
+  setItem: (key, value) => store.set(key, String(value)),
+  removeItem: (key) => store.delete(key),
+  clear: () => store.clear()
+})
+
+global.localStorage = createMemoryStorage(localStore)
+global.sessionStorage = createMemoryStorage(sessionStore)
 
 describe('sessionGridCache', () => {
   beforeEach(() => {
-    memoryStore.clear()
+    localStore.clear()
+    sessionStore.clear()
   })
 
   it('builds cache keys from the grid key', () => {
@@ -40,16 +47,19 @@ describe('sessionGridCache', () => {
     expect(getSessionColumnState('initiative-agreements-grid')).toBeNull()
   })
 
-  it('restores pagination so a remount keeps page size and sort', () => {
-    sessionStorage.setItem(
+  it('stores pagination in localStorage so a closed window can restore it', () => {
+    writeGridCache(
       'initiative-agreements-grid-pagination',
-      JSON.stringify({
+      {
         page: 3,
         size: 25,
         sortOrders: [{ field: 'iaCode', direction: 'asc' }],
         filters: []
-      })
+      },
+      'login'
     )
+
+    sessionStore.clear()
 
     expect(
       getSessionPagination('initiative-agreements-grid', defaults)
@@ -61,38 +71,52 @@ describe('sessionGridCache', () => {
     })
   })
 
-  it('restores saved column layout', () => {
+  it('restores saved column layout from localStorage after sessionStorage is empty', () => {
     const columnState = [
       { colId: 'iaCode', width: 320, hide: false },
       { colId: 'contactName', hide: true }
     ]
-    sessionStorage.setItem(
-      'initiative-agreements-grid-column',
-      JSON.stringify(columnState)
-    )
+    writeGridCache('initiative-agreements-grid-column', columnState, 'login')
+    sessionStore.clear()
 
     expect(getSessionColumnState('initiative-agreements-grid')).toEqual(
       columnState
     )
   })
 
+  it('falls back to sessionStorage values from dashboard links', () => {
+    sessionStorage.setItem(
+      'initiative-agreements-grid-pagination',
+      JSON.stringify({ page: 2, size: 20, sortOrders: [], filters: [] })
+    )
+
+    expect(
+      getSessionPagination('initiative-agreements-grid', defaults).page
+    ).toBe(2)
+    expect(localStorage.getItem('initiative-agreements-grid-pagination')).toBe(
+      JSON.stringify({ page: 2, size: 20, sortOrders: [], filters: [] })
+    )
+  })
+
   it('ignores invalid JSON instead of throwing', () => {
-    sessionStorage.setItem('initiative-agreements-grid-pagination', '{not json')
+    localStorage.setItem('initiative-agreements-grid-pagination', '{not json')
     expect(readSessionJson('initiative-agreements-grid-pagination')).toBeNull()
     expect(
       getSessionPagination('initiative-agreements-grid', defaults)
     ).toEqual(defaults)
   })
 
-  it('clears filter, pagination and column keys', () => {
+  it('clears filter, pagination and column keys from both storages', () => {
+    localStorage.setItem('ia-grid-filter', '{}')
     sessionStorage.setItem('ia-grid-filter', '{}')
-    sessionStorage.setItem('ia-grid-pagination', '{}')
-    sessionStorage.setItem('ia-grid-column', '[]')
+    localStorage.setItem('ia-grid-pagination', '{}')
+    localStorage.setItem('ia-grid-column', '[]')
 
     clearGridSessionCache('ia-grid')
 
+    expect(localStorage.getItem('ia-grid-filter')).toBeNull()
     expect(sessionStorage.getItem('ia-grid-filter')).toBeNull()
-    expect(sessionStorage.getItem('ia-grid-pagination')).toBeNull()
-    expect(sessionStorage.getItem('ia-grid-column')).toBeNull()
+    expect(localStorage.getItem('ia-grid-pagination')).toBeNull()
+    expect(localStorage.getItem('ia-grid-column')).toBeNull()
   })
 })

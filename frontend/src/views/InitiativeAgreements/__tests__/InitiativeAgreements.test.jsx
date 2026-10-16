@@ -67,6 +67,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 describe('InitiativeAgreements', () => {
   beforeEach(() => {
     sessionStorage.clear()
+    localStorage.clear()
     mockBCGridViewer.mockClear()
     mockUseGetInitiativeAgreements.mockReset()
     mockRoles = [roles.ia_analyst]
@@ -126,6 +127,7 @@ describe('InitiativeAgreements', () => {
       })
     )
     const gridProps = mockBCGridViewer.mock.calls[0][0]
+    expect(gridProps.persistForLoginSession).toBe(true)
     expect(gridProps.columnDefs.map((colDef) => colDef.field)).toContain(
       'iaCode'
     )
@@ -158,12 +160,11 @@ describe('InitiativeAgreements', () => {
       error: null
     })
 
-    // Seed session storage with pretend cached state.
-    sessionStorage.setItem(
+    localStorage.setItem(
       'initiative-agreements-grid-filter',
       '{"status":"Draft"}'
     )
-    sessionStorage.setItem(
+    localStorage.setItem(
       'initiative-agreements-grid-pagination',
       '{"page":3,"size":25}'
     )
@@ -173,17 +174,14 @@ describe('InitiativeAgreements', () => {
     const gridProps = mockBCGridViewer.mock.calls.at(-1)[0]
     expect(typeof gridProps.onClearFilters).toBe('function')
 
-    // Invoke the callback and check sessionStorage is cleared.
     gridProps.onClearFilters()
+    expect(localStorage.getItem('initiative-agreements-grid-filter')).toBeNull()
     expect(
-      sessionStorage.getItem('initiative-agreements-grid-filter')
-    ).toBeNull()
-    expect(
-      sessionStorage.getItem('initiative-agreements-grid-pagination')
+      localStorage.getItem('initiative-agreements-grid-pagination')
     ).toBeNull()
   })
 
-  test('hydrates pagination from session storage so prefs survive navigation (#5032)', ({
+  test('hydrates pagination from localStorage so prefs survive closing the window (#5032)', ({
     render,
     app
   }) => {
@@ -197,7 +195,7 @@ describe('InitiativeAgreements', () => {
       error: null
     })
 
-    sessionStorage.setItem(
+    localStorage.setItem(
       'initiative-agreements-grid-pagination',
       JSON.stringify({
         page: 2,
