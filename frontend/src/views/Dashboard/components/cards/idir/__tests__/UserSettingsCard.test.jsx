@@ -1,5 +1,6 @@
 import 'react'
 import { screen, fireEvent } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { vi, describe, expect, beforeEach } from 'vitest'
 import UserSettingsCard from '../UserSettingsCard'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -12,7 +13,10 @@ vi.mock('@/hooks/useCurrentUser')
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => `mock__${key}`
+    t: (key) =>
+      key.endsWith('.helpLinkLabel')
+        ? 'Help (opens in a new browser tab)'
+        : `mock__${key}`
   })
 }))
 
@@ -30,10 +34,12 @@ vi.mock('@/utils/withRole', () => ({
 }))
 
 vi.mock('@fortawesome/react-fontawesome', () => ({
-  FontAwesomeIcon: ({
-  style
-}) => (
-    <span data-test="font-awesome-icon" style={style}>
+  FontAwesomeIcon: ({ style, 'aria-hidden': ariaHidden }) => (
+    <span
+      aria-hidden={ariaHidden}
+      data-test="font-awesome-icon"
+      style={style}
+    >
       mock-icon
     </span>
   )
@@ -305,11 +311,36 @@ describe('UserSettingsCard', () => {
       render(<UserSettingsCard />, [query, theme])
 
       const helpLink = screen.getByRole('link', {
-        name: /mock__dashboard:userSettings\.help/
+        name: 'Help (opens in a new browser tab)'
       })
       expect(helpLink).toHaveAttribute('href', HELP_GUIDE_URL)
       expect(helpLink).toHaveAttribute('target', '_blank')
       expect(helpLink).toHaveAttribute('rel', 'noreferrer')
+      expect(
+        screen.queryByRole('button', {
+          name: 'Help (opens in a new browser tab)'
+        })
+      ).not.toBeInTheDocument()
+    })
+
+    test('can reach the help link using keyboard navigation', async ({
+      render,
+      query,
+      theme
+    }) => {
+      render(<UserSettingsCard />, [query, theme])
+
+      const helpLink = screen.getByRole('link', {
+        name: 'Help (opens in a new browser tab)'
+      })
+      const user = userEvent.setup()
+
+      await user.tab()
+      await user.tab()
+      await user.tab()
+
+      expect(helpLink).toHaveFocus()
+      expect(helpLink).toHaveClass('Mui-focusVisible')
     })
 
     test('displays FontAwesome icon in help link', ({
@@ -325,6 +356,7 @@ describe('UserSettingsCard', () => {
         color: '#547D59',
         marginLeft: '6px'
       })
+      expect(fontAwesomeIcon).toHaveAttribute('aria-hidden', 'true')
     })
   })
 

@@ -7,6 +7,7 @@ from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.initiative_agreement.schema import (
     AllDesignatedActionsListSchema,
     AgreementCreateSchema,
+    AgreementUpdateSchema,
     AnalystAssignmentSchema,
     DesignatedActionCreateSchema,
     DesignatedActionHistorySchema,
@@ -95,6 +96,24 @@ async def create_agreement(
 ):
     """Start a new initiative agreement as a draft."""
     return await service.create_agreement(data, request.user)
+
+
+@router.put(
+    "/agreements/{initiative_agreement_id}",
+    response_model=InitiativeAgreementProfileSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(IA_REVIEW_ROLES)
+async def update_agreement(
+    request: Request,
+    initiative_agreement_id: int,
+    data: AgreementUpdateSchema = Body(...),
+    service: InitiativeAgreementServices = Depends(),
+):
+    """Edit an existing agreement's details."""
+    return await service.update_agreement(
+        initiative_agreement_id, data, request.user
+    )
 
 
 @router.post(
@@ -326,14 +345,15 @@ async def update_designated_action(
     response_model=DesignatedActionSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.IA_MANAGER, RoleEnum.DIRECTOR])
+@view_handler(IA_IDIR_ROLES)
 async def assign_designated_action_analyst(
     request: Request,
     designated_action_id: int,
     data: AnalystAssignmentSchema = Body(...),
     service: InitiativeAgreementServices = Depends(),
 ):
-    """Assign, reassign or unassign an analyst (IA managers and directors)."""
+    """Assign, reassign or unassign an analyst (any IDIR IA user, as with
+    compliance reports: IA analysts, IA managers and directors)."""
     return await service.assign_designated_action_analyst(
         designated_action_id, data, request.user
     )

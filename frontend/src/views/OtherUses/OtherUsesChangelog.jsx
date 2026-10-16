@@ -41,12 +41,12 @@ export const OtherUsesChangelog = () => {
   const currentOrOriginalColumnDefs = useMemo(
     () =>
       changelogCommonColDefs(false, parseInt(compliancePeriod), optionsData),
-    [compliancePeriod, optionsData, t]
+    [compliancePeriod, optionsData]
   )
 
   const changedColumnDefs = useMemo(
     () => changelogColDefs(true, parseInt(compliancePeriod), optionsData),
-    [compliancePeriod, optionsData, t]
+    [compliancePeriod, optionsData]
   )
 
   const defaultColDef = useMemo(

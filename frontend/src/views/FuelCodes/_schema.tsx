@@ -1,4 +1,5 @@
-import type { ColDef } from 'ag-grid-community'
+import type { ICellRendererParams, ColDef } from 'ag-grid-community'
+import type { TFunction } from 'i18next'
 import { FuelCodeStatusRenderer } from '@/utils/grid/cellRenderers'
 import {
   dateFormatter,
@@ -24,7 +25,7 @@ const getCoProcessedOptions = () => ({
 })
 
 export const fuelCodeColDefs = (
-  t
+  t: TFunction
 ): ColDef[] => [
   {
     field: 'status',
@@ -202,7 +203,7 @@ export const fuelCodeColDefs = (
       suppressFilterButton: true
     },
     minWidth: 335,
-    cellRenderer: (props) => (
+    cellRenderer: (props: ICellRendererParams) => (
       <TransportModeCellRenderer
         {...props}
         relationKey="feedstockFuelTransportMode"
@@ -226,7 +227,7 @@ export const fuelCodeColDefs = (
       textMatcher: () => true,
       suppressFilterButton: true
     },
-    cellRenderer: (props) => (
+    cellRenderer: (props: ICellRendererParams) => (
       <TransportModeCellRenderer
         {...props}
         relationKey="finishedFuelTransportMode"
@@ -243,7 +244,7 @@ export const fuelCodeColDefs = (
     field: 'lastUpdated',
     filter: false,
     headerName: t('fuelCode:fuelCodeColLabels.lastUpdated'),
-    cellRenderer: (params) => (
+    cellRenderer: (params: ICellRendererParams) => (
       <BCTypography variant="body4">
         {params.value
           ? timezoneFormatter({ value: params.value })
@@ -259,7 +260,7 @@ export const fuelCodeColDefs = (
   }
 ]
 
-export const myFuelCodeColDefs = (t): ColDef[] => [
+export const myFuelCodeColDefs = (t: (key: string) => string): ColDef[] => [
   {
     field: 'status',
     headerName: t('fuelCode:fuelCodeColLabels.status'),
@@ -403,7 +404,7 @@ export const myFuelCodeColDefs = (t): ColDef[] => [
       suppressFilterButton: true
     },
     minWidth: 335,
-    cellRenderer: (props) => (
+    cellRenderer: (props: ICellRendererParams) => (
       <TransportModeCellRenderer
         {...props}
         relationKey="feedstockFuelTransportMode"
@@ -427,7 +428,7 @@ export const myFuelCodeColDefs = (t): ColDef[] => [
       suppressFilterButton: true
     },
     minWidth: 335,
-    cellRenderer: (props) => (
+    cellRenderer: (props: ICellRendererParams) => (
       <TransportModeCellRenderer
         {...props}
         relationKey="finishedFuelTransportMode"
@@ -444,7 +445,7 @@ export const myFuelCodeColDefs = (t): ColDef[] => [
     field: 'lastUpdated',
     filter: false,
     headerName: t('fuelCode:fuelCodeColLabels.lastUpdated'),
-    cellRenderer: (params) => (
+    cellRenderer: (params: ICellRendererParams) => (
       <BCTypography variant="body4">
         {params.value
           ? timezoneFormatter({ value: params.value })

@@ -53,6 +53,8 @@
     "saveAndProceed": "Save & proceed",
     "saveSuccess": "Proposed fuel pathways saved.",
     "saveSupplementalChanges": "Submit updates",
+    "deleteRowConfirmTitle": "Delete entry?",
+    "deleteRowConfirmText": "Are you sure you want to delete this entry? This action cannot be undone.",
     "action": "Action",
     "applicationType": "Application type",
     "proposedFuelCodeType": "Proposed fuel code type",

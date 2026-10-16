@@ -30,7 +30,7 @@ export const useCreateUpdateInitiativeAgreement = (
   const queryClient = useQueryClient()
   return useMutation({
     ...options,
-    mutationFn: async ({ data }: Record<string, unknown>) => {
+    mutationFn: async ({ data }: { data: Record<string, unknown> }) => {
       if (initiativeAgreementId) {
         data.initiativeAgreementId = initiativeAgreementId
         return await client.put(apiRoutes.initiativeAgreements, data)
