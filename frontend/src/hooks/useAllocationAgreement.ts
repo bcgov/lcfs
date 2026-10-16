@@ -168,8 +168,8 @@ export const useGetAllocationAgreementsList = (
 }
 
 export const useSaveAllocationAgreement = (
-  params: Record<string, unknown>,
-  options: ExtMutationOptions<unknown, unknown> = {}
+  params: { complianceReportId: number | string },
+  options: ExtMutationOptions<unknown, Record<string, unknown>> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -183,7 +183,7 @@ export const useSaveAllocationAgreement = (
   } = options
 
   return useMutation({
-    mutationFn: async (data: unknown) => {
+    mutationFn: async (data: Record<string, unknown>) => {
       if (!params?.complianceReportId) {
         throw new Error('Compliance report ID is required')
       }
@@ -250,8 +250,8 @@ export const useSaveAllocationAgreement = (
 }
 
 export const useUpdateAllocationAgreement = (
-  params: Record<string, unknown>,
-  options: ExtMutationOptions<unknown, unknown> = {}
+  params: { complianceReportId: number | string },
+  options: ExtMutationOptions<unknown, Record<string, unknown>> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -265,7 +265,7 @@ export const useUpdateAllocationAgreement = (
   } = options
 
   return useMutation({
-    mutationFn: async (data: unknown) => {
+    mutationFn: async (data: Record<string, unknown> & { id?: number | string }) => {
       if (!params?.complianceReportId) {
         throw new Error('Compliance report ID is required')
       }
@@ -332,8 +332,8 @@ export const useUpdateAllocationAgreement = (
 }
 
 export const useDeleteAllocationAgreement = (
-  params: Record<string, unknown>,
-  options: ExtMutationOptions<unknown, unknown> = {}
+  params: { complianceReportId: number | string },
+  options: ExtMutationOptions<unknown, number | string> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -346,7 +346,7 @@ export const useDeleteAllocationAgreement = (
   } = options
 
   return useMutation({
-    mutationFn: async (agreementId: unknown) => {
+    mutationFn: async (agreementId: number | string) => {
       if (!params?.complianceReportId) {
         throw new Error('Compliance report ID is required')
       }
@@ -411,7 +411,7 @@ export const useImportAllocationAgreement = (
   } = options
 
   return useMutation({
-    mutationFn: async ({ file, isOverwrite }: Record<string, unknown>) => {
+    mutationFn: async ({ file, isOverwrite }: { file: File; isOverwrite: boolean }) => {
       if (!complianceReportId) {
         throw new Error('Compliance report ID is required')
       }
@@ -427,7 +427,7 @@ export const useImportAllocationAgreement = (
       const formData = new FormData()
       formData.append('file', file)
       formData.append('filename', file.name)
-      formData.append('overwrite', isOverwrite)
+      formData.append('overwrite', isOverwrite as unknown as string)
 
       return await client.post(path, formData, {
         headers: {
@@ -499,7 +499,9 @@ export const useGetAllocationAgreementImportJobStatus = (
     gcTime,
     refetchInterval: (data) => {
       // Stop polling when job is complete or failed
-      const jobData = (data as unknown)?.state?.data
+      const jobData = (
+        data as { state?: { data?: { status?: string } } } | undefined
+      )?.state?.data
       if (jobData?.status === 'completed' || jobData?.status === 'failed') {
         return false
       }

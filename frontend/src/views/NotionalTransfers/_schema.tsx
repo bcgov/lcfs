@@ -1,7 +1,8 @@
-import type { ColDef } from 'ag-grid-community'
+import type { ICellEditorParams, ICellRendererParams, RowClassParams, ColDef } from 'ag-grid-community'
 import type { GridErrors, GridWarnings, OptionsData } from '@/types/schema'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { AsyncSuggestionEditor } from '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor'
+import type { AsyncSuggestionEditorProps } from '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor'
 import { AutocompleteCellEditor } from '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor'
 import { NumberEditor } from '@/components/BCDataGrid/components/Editors/NumberEditor'
 import { RequiredHeader } from '@/components/BCDataGrid/components/Renderers/RequiredHeader'
@@ -10,10 +11,7 @@ import { apiRoutes } from '@/constants/routes'
 import { ACTION_STATUS_MAP } from '@/constants/schemaConstants'
 import i18n from '@/i18n'
 import colors from '@/themes/base/colors'
-import {
-  formatNumberWithCommas,
-  formatNumberWithCommas as valueFormatter
-} from '@/utils/formatters'
+import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import { SelectRenderer } from '@/utils/grid/cellRenderers'
 import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
@@ -21,6 +19,10 @@ import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { isQuarterEditable } from '@/utils/grid/cellEditables'
 import { NEW_REGULATION_YEAR } from '@/constants/common'
 import { isNotionalTransferRenewableClaimEditable } from '@/utils/renewableClaimUtils'
+
+const numberCellFormatter = valueFormatter as NonNullable<
+  ColDef['valueFormatter']
+>
 
 export const notionalTransferColDefs = (
   optionsData: OptionsData,
@@ -31,19 +33,28 @@ export const notionalTransferColDefs = (
   compliancePeriod: string | number,
   isEarlyIssuance: boolean = false
 ): ColDef[] => {
-  const baseColumns = [
+  const baseColumns: ColDef[] = [
     validation,
-    actions((params) => {
-      return {
-        enableDuplicate: false,
-        enableDelete: !params.data.isNewSupplementalEntry,
-        enableUndo: isSupplemental && params.data.isNewSupplementalEntry,
-        enableStatus:
-          isSupplemental &&
-          params.data.isNewSupplementalEntry &&
-          ACTION_STATUS_MAP[params.data.actionType]
+    actions(
+      (params: {
+        data: {
+          isNewSupplementalEntry?: boolean
+          actionType?: keyof typeof ACTION_STATUS_MAP
+        }
+      }) => {
+        return {
+          enableDuplicate: false,
+          enableDelete: !params.data.isNewSupplementalEntry,
+          enableUndo: isSupplemental && params.data.isNewSupplementalEntry,
+          enableStatus:
+            isSupplemental &&
+            params.data.isNewSupplementalEntry &&
+            ACTION_STATUS_MAP[
+              params.data.actionType as keyof typeof ACTION_STATUS_MAP
+            ]
+        }
       }
-    }),
+    ),
     {
       field: 'id',
       cellEditor: 'agTextCellEditor',
@@ -71,14 +82,17 @@ export const notionalTransferColDefs = (
       headerComponent: RequiredHeader,
       cellDataType: 'object',
       cellEditor: AsyncSuggestionEditor,
-      cellEditorParams: (params) => ({
+      cellEditorParams: (params: ICellEditorParams) => ({
         queryKey: 'company-details-search',
-        queryFn: async ({ queryKey, client }) => {
+        queryFn: async ({
+          queryKey,
+          client
+        }: Parameters<AsyncSuggestionEditorProps['queryFn']>[0]) => {
           let path = apiRoutes.organizationSearch
-          path += 'org_name=' + queryKey[1]
+          path += 'org_name=' + (queryKey[1] as string)
           const response = await client.get(path)
           const filteredData = response.data.filter(
-            (org) => org.name !== orgName
+            (org: { name?: string }) => org.name !== orgName
           )
           params.node.data.apiDataCache = filteredData
           return filteredData
@@ -86,7 +100,7 @@ export const notionalTransferColDefs = (
         title: 'legalName',
         api: params.api
       }),
-      cellRenderer: (params) =>
+      cellRenderer: (params: ICellRendererParams) =>
         params.value ||
         (!params.value && (
           <BCTypography variant="body4">Enter or search a name</BCTypography>
@@ -106,7 +120,7 @@ export const notionalTransferColDefs = (
         return true
       },
       cellStyle: (params) =>
-        StandardCellWarningAndErrors(params, errors, warnings, isSupplemental)
+        StandardCellWarningAndErrors(params, errors, warnings)
     },
     {
       field: 'addressForService',
@@ -118,7 +132,7 @@ export const notionalTransferColDefs = (
       cellEditor: 'agTextCellEditor',
       cellDataType: 'text',
       cellStyle: (params) =>
-        StandardCellWarningAndErrors(params, errors, warnings, isSupplemental)
+        StandardCellWarningAndErrors(params, errors, warnings)
     },
     {
       field: 'fuelCategory',
@@ -137,7 +151,7 @@ export const notionalTransferColDefs = (
         openOnFocus: true
       },
       cellStyle: (params) =>
-        StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+        StandardCellWarningAndErrors(params, errors, warnings),
       cellRenderer: SelectRenderer,
       valueSetter: (params) => {
         if (params.newValue) {
@@ -163,7 +177,7 @@ export const notionalTransferColDefs = (
         openOnFocus: true
       },
       cellStyle: (params) =>
-        StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+        StandardCellWarningAndErrors(params, errors, warnings),
       editable: (params) =>
         isNotionalTransferRenewableClaimEditable(params.data, compliancePeriod),
       valueGetter: (params) =>
@@ -200,7 +214,7 @@ export const notionalTransferColDefs = (
         openOnFocus: true
       },
       cellStyle: (params) =>
-        StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+        StandardCellWarningAndErrors(params, errors, warnings),
       editable: (params) =>
         isNotionalTransferRenewableClaimEditable(params.data, compliancePeriod),
       valueGetter: (params) =>
@@ -235,7 +249,7 @@ export const notionalTransferColDefs = (
         openOnFocus: true
       },
       cellStyle: (params) =>
-        StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+        StandardCellWarningAndErrors(params, errors, warnings),
       cellRenderer: SelectRenderer,
       minWidth: 250
     },
@@ -250,15 +264,15 @@ export const notionalTransferColDefs = (
         min: 0,
         showStepperButtons: false
       },
-      valueFormatter: (params) => valueFormatter({ value: params.value }),
+      valueFormatter: numberCellFormatter,
       cellStyle: (params) =>
-        StandardCellWarningAndErrors(params, errors, warnings, isSupplemental)
+        StandardCellWarningAndErrors(params, errors, warnings)
     }
   ]
 
   // Swap in Quarterly Columns if it's an early issuance report
   if (isEarlyIssuance) {
-    return baseColumns.flatMap((item) => {
+    return baseColumns.flatMap<ColDef>((item) => {
       if (item.field === 'quantity') {
         return [
           {
@@ -267,7 +281,7 @@ export const notionalTransferColDefs = (
             headerName: i18n.t(
               'notionalTransfer:notionalTransferColLabels.q1Quantity'
             ),
-            valueFormatter,
+            valueFormatter: numberCellFormatter,
             cellEditor: NumberEditor,
             cellEditorParams: {
               precision: 0,
@@ -275,12 +289,7 @@ export const notionalTransferColDefs = (
               showStepperButtons: false
             },
             cellStyle: (params) =>
-              StandardCellWarningAndErrors(
-                params,
-                errors,
-                warnings,
-                isSupplemental
-              ),
+              StandardCellWarningAndErrors(params, errors, warnings),
             editable: () => {
               return isQuarterEditable(1, compliancePeriod)
             },
@@ -292,7 +301,7 @@ export const notionalTransferColDefs = (
             headerName: i18n.t(
               'notionalTransfer:notionalTransferColLabels.q2Quantity'
             ),
-            valueFormatter,
+            valueFormatter: numberCellFormatter,
             cellEditor: NumberEditor,
             cellEditorParams: {
               precision: 0,
@@ -300,12 +309,7 @@ export const notionalTransferColDefs = (
               showStepperButtons: false
             },
             cellStyle: (params) =>
-              StandardCellWarningAndErrors(
-                params,
-                errors,
-                warnings,
-                isSupplemental
-              ),
+              StandardCellWarningAndErrors(params, errors, warnings),
             editable: () => {
               return isQuarterEditable(2, compliancePeriod)
             },
@@ -317,7 +321,7 @@ export const notionalTransferColDefs = (
             headerName: i18n.t(
               'notionalTransfer:notionalTransferColLabels.q3Quantity'
             ),
-            valueFormatter,
+            valueFormatter: numberCellFormatter,
             cellEditor: NumberEditor,
             cellEditorParams: {
               precision: 0,
@@ -325,12 +329,7 @@ export const notionalTransferColDefs = (
               showStepperButtons: false
             },
             cellStyle: (params) =>
-              StandardCellWarningAndErrors(
-                params,
-                errors,
-                warnings,
-                isSupplemental
-              ),
+              StandardCellWarningAndErrors(params, errors, warnings),
             editable: () => {
               return isQuarterEditable(3, compliancePeriod)
             },
@@ -342,7 +341,7 @@ export const notionalTransferColDefs = (
             headerName: i18n.t(
               'notionalTransfer:notionalTransferColLabels.q4Quantity'
             ),
-            valueFormatter,
+            valueFormatter: numberCellFormatter,
             cellEditor: NumberEditor,
             cellEditorParams: {
               precision: 0,
@@ -350,12 +349,7 @@ export const notionalTransferColDefs = (
               showStepperButtons: false
             },
             cellStyle: (params) =>
-              StandardCellWarningAndErrors(
-                params,
-                errors,
-                warnings,
-                isSupplemental
-              ),
+              StandardCellWarningAndErrors(params, errors, warnings),
             editable: () => {
               return isQuarterEditable(4, compliancePeriod)
             },
@@ -366,14 +360,9 @@ export const notionalTransferColDefs = (
             headerName: i18n.t(
               'notionalTransfer:notionalTransferColLabels.totalQuantity'
             ),
-            valueFormatter,
+            valueFormatter: numberCellFormatter,
             cellStyle: (params) =>
-              StandardCellWarningAndErrors(
-                params,
-                errors,
-                warnings,
-                isSupplemental
-              ),
+              StandardCellWarningAndErrors(params, errors, warnings),
             valueGetter: (params) => {
               const data = params.data
               return (
@@ -400,7 +389,7 @@ export const notionalTransferSummaryColDefs = (
   isEarlyIssuance: boolean = false,
   complianceYear: string | number
 ): ColDef[] => {
-  const baseColumns = [
+  const baseColumns: ColDef[] = [
     {
       headerName: i18n.t(
         'notionalTransfer:notionalTransferColLabels.legalName'
@@ -431,7 +420,7 @@ export const notionalTransferSummaryColDefs = (
       ),
       field: 'isCanadaProduced',
       minWidth: 250,
-      hide: complianceYear < NEW_REGULATION_YEAR,
+      hide: (complianceYear as number) < NEW_REGULATION_YEAR,
       valueGetter: (params) => (params.data.isCanadaProduced ? 'Yes' : '')
     },
     {
@@ -454,7 +443,7 @@ export const notionalTransferSummaryColDefs = (
     {
       headerName: i18n.t('notionalTransfer:notionalTransferColLabels.quantity'),
       field: 'quantity',
-      valueFormatter,
+      valueFormatter: numberCellFormatter,
       minWidth: 180
     }
   ]
@@ -468,7 +457,7 @@ export const notionalTransferSummaryColDefs = (
             headerName: i18n.t(
               'notionalTransfer:notionalTransferColLabels.q1Quantity'
             ),
-            valueFormatter,
+            valueFormatter: numberCellFormatter,
             minWidth: 130
           },
           {
@@ -476,7 +465,7 @@ export const notionalTransferSummaryColDefs = (
             headerName: i18n.t(
               'notionalTransfer:notionalTransferColLabels.q2Quantity'
             ),
-            valueFormatter,
+            valueFormatter: numberCellFormatter,
             minWidth: 130
           },
           {
@@ -484,7 +473,7 @@ export const notionalTransferSummaryColDefs = (
             headerName: i18n.t(
               'notionalTransfer:notionalTransferColLabels.q3Quantity'
             ),
-            valueFormatter,
+            valueFormatter: numberCellFormatter,
             minWidth: 130
           },
           {
@@ -492,7 +481,7 @@ export const notionalTransferSummaryColDefs = (
             headerName: i18n.t(
               'notionalTransfer:notionalTransferColLabels.q4Quantity'
             ),
-            valueFormatter,
+            valueFormatter: numberCellFormatter,
             minWidth: 130
           },
           {
@@ -500,7 +489,7 @@ export const notionalTransferSummaryColDefs = (
             headerName: i18n.t(
               'notionalTransfer:notionalTransferColLabels.totalQuantity'
             ),
-            valueFormatter,
+            valueFormatter: numberCellFormatter,
             minWidth: 150,
             valueGetter: (params) => {
               const data = params.data
@@ -537,7 +526,7 @@ export const changelogCommonColDefs = (
   complianceYear: string | number,
   isEarlyIssuance: boolean
 ): ColDef[] => {
-  const baseColumns = [
+  const baseColumns: ColDef[] = [
     {
       headerName: i18n.t(
         'notionalTransfer:notionalTransferColLabels.legalName'
@@ -546,7 +535,7 @@ export const changelogCommonColDefs = (
       flex: 1,
       minWidth: 280,
       cellStyle: (params) =>
-        highlight && changelogCellStyle(params, 'legalName')
+        (highlight && changelogCellStyle(params, 'legalName')) as unknown as ReturnType<typeof changelogCellStyle>
     },
     {
       headerName: i18n.t(
@@ -556,7 +545,7 @@ export const changelogCommonColDefs = (
       flex: 1,
       minWidth: 360,
       cellStyle: (params) =>
-        highlight && changelogCellStyle(params, 'addressForService')
+        (highlight && changelogCellStyle(params, 'addressForService')) as unknown as ReturnType<typeof changelogCellStyle>
     },
     {
       headerName: i18n.t(
@@ -565,7 +554,7 @@ export const changelogCommonColDefs = (
       field: 'fuelCategory.category',
       minWidth: 150,
       cellStyle: (params) =>
-        highlight && changelogCellStyle(params, 'fuelCategory')
+        (highlight && changelogCellStyle(params, 'fuelCategory')) as unknown as ReturnType<typeof changelogCellStyle>
     },
     {
       headerName: i18n.t(
@@ -573,10 +562,10 @@ export const changelogCommonColDefs = (
       ),
       field: 'isCanadaProduced',
       minWidth: 240,
-      hide: complianceYear < NEW_REGULATION_YEAR,
+      hide: (complianceYear as number) < NEW_REGULATION_YEAR,
       valueGetter: (params) => (params.data.isCanadaProduced ? 'Yes' : 'No'),
       cellStyle: (params) =>
-        highlight && changelogCellStyle(params, 'isCanadaProduced')
+        (highlight && changelogCellStyle(params, 'isCanadaProduced')) as unknown as ReturnType<typeof changelogCellStyle>
     },
     {
       headerName: i18n.t(
@@ -587,7 +576,7 @@ export const changelogCommonColDefs = (
       minWidth: 165,
       valueGetter: (params) => (params.data.isQ1Supplied ? 'Yes' : 'No'),
       cellStyle: (params) =>
-        highlight && changelogCellStyle(params, 'isQ1Supplied')
+        (highlight && changelogCellStyle(params, 'isQ1Supplied')) as unknown as ReturnType<typeof changelogCellStyle>
     },
     {
       headerName: i18n.t(
@@ -596,13 +585,14 @@ export const changelogCommonColDefs = (
       field: 'receivedOrTransferred',
       minWidth: 240,
       cellStyle: (params) =>
-        highlight && changelogCellStyle(params, 'receivedOrTransferred')
+        (highlight && changelogCellStyle(params, 'receivedOrTransferred')) as unknown as ReturnType<typeof changelogCellStyle>
     },
     {
       headerName: i18n.t('notionalTransfer:notionalTransferColLabels.quantity'),
       field: 'quantity',
-      valueFormatter,
-      cellStyle: (params) => highlight && changelogCellStyle(params, 'quantity')
+      valueFormatter: numberCellFormatter,
+      cellStyle: (params) =>
+        (highlight && changelogCellStyle(params, 'quantity')) as unknown as ReturnType<typeof changelogCellStyle>
     }
   ]
   if (isEarlyIssuance) {
@@ -615,9 +605,9 @@ export const changelogCommonColDefs = (
             headerName: i18n.t(
               'notionalTransfer:notionalTransferColLabels.q1Quantity'
             ),
-            valueFormatter: formatNumberWithCommas,
+            valueFormatter: numberCellFormatter,
             cellStyle: (params) =>
-              highlight && changelogCellStyle(params, 'q1Quantity')
+              (highlight && changelogCellStyle(params, 'q1Quantity')) as unknown as ReturnType<typeof changelogCellStyle>
           },
           {
             field: 'q2Quantity',
@@ -625,9 +615,9 @@ export const changelogCommonColDefs = (
             headerName: i18n.t(
               'notionalTransfer:notionalTransferColLabels.q2Quantity'
             ),
-            valueFormatter: formatNumberWithCommas,
+            valueFormatter: numberCellFormatter,
             cellStyle: (params) =>
-              highlight && changelogCellStyle(params, 'q2Quantity')
+              (highlight && changelogCellStyle(params, 'q2Quantity')) as unknown as ReturnType<typeof changelogCellStyle>
           },
           {
             field: 'q3Quantity',
@@ -635,9 +625,9 @@ export const changelogCommonColDefs = (
             headerName: i18n.t(
               'notionalTransfer:notionalTransferColLabels.q3Quantity'
             ),
-            valueFormatter: formatNumberWithCommas,
+            valueFormatter: numberCellFormatter,
             cellStyle: (params) =>
-              highlight && changelogCellStyle(params, 'q3Quantity')
+              (highlight && changelogCellStyle(params, 'q3Quantity')) as unknown as ReturnType<typeof changelogCellStyle>
           },
           {
             field: 'q4Quantity',
@@ -645,9 +635,9 @@ export const changelogCommonColDefs = (
             headerName: i18n.t(
               'notionalTransfer:notionalTransferColLabels.q4Quantity'
             ),
-            valueFormatter: formatNumberWithCommas,
+            valueFormatter: numberCellFormatter,
             cellStyle: (params) =>
-              highlight && changelogCellStyle(params, 'q4Quantity')
+              (highlight && changelogCellStyle(params, 'q4Quantity')) as unknown as ReturnType<typeof changelogCellStyle>
           },
           {
             field: 'totalQuantity',
@@ -655,9 +645,9 @@ export const changelogCommonColDefs = (
             headerName: i18n.t(
               'notionalTransfer:notionalTransferColLabels.totalQuantity'
             ),
-            valueFormatter: formatNumberWithCommas,
+            valueFormatter: numberCellFormatter,
             cellStyle: (params) =>
-              highlight && changelogCellStyle(params, 'totalQuantity'),
+              (highlight && changelogCellStyle(params, 'totalQuantity')) as unknown as ReturnType<typeof changelogCellStyle>,
             valueGetter: (params) => {
               const data = params.data
               return (
@@ -735,7 +725,7 @@ export const changelogCommonGridOptions = {
 
 export const changelogGridOptions = {
   ...changelogCommonGridOptions,
-  getRowStyle: (params) => {
+  getRowStyle: (params: RowClassParams) => {
     if (params.data.actionType === 'DELETE') {
       return {
         backgroundColor: colors.alerts.error.background

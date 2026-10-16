@@ -33,6 +33,7 @@ import Box from '@mui/material/Box'
 import Close from '@mui/icons-material/Close'
 import Logout from '@mui/icons-material/Logout'
 import NotificationsIcon from '@mui/icons-material/Notifications'
+
 import { NavLink, useNavigate } from 'react-router-dom'
 import { ROUTES, buildPath } from '@/routes/routes'
 import { RoleSwitcher } from './RoleSwitcher'
@@ -82,19 +83,20 @@ const getNotificationRoute = (
     const parsed = parseNotificationPayload(notification.message)
     const { id, service, compliancePeriod } = parsed
     const serviceKey = service || notification.type
-    const routeTemplate = routesMapping(currentUser || {})[serviceKey]
+    const routeMap = routesMapping(currentUser || {})
+    const routeTemplate = routeMap[serviceKey as keyof typeof routeMap]
 
     if (!routeTemplate) {
       return null
     }
 
     return routeTemplate
-      .replace(':transactionId', id)
-      .replace(':transferId', id)
-      .replace(':compliancePeriod', compliancePeriod)
-      .replace(':complianceReportId', id)
-      .replace(':ciApplicationId', id)
-      .replace(':fuelCodeID', id)
+      .replace(':transactionId', id as string)
+      .replace(':transferId', id as string)
+      .replace(':compliancePeriod', compliancePeriod as string)
+      .replace(':complianceReportId', id as string)
+      .replace(':ciApplicationId', id as string)
+      .replace(':fuelCodeID', id as string)
   } catch {
     return null
   }
@@ -275,7 +277,9 @@ export const UserProfileActions = () => {
     setNotificationAnchorEl(event.currentTarget)
   }
 
-  const openNotificationMenuFromFocus = (event: ReactFocusEvent<HTMLElement>) => {
+  const openNotificationMenuFromFocus = (
+    event: ReactFocusEvent<HTMLElement>
+  ) => {
     cancelNotificationClose()
     setNotificationAnchorEl(event.currentTarget)
   }
@@ -493,7 +497,8 @@ export const UserProfileActions = () => {
                     disabled={notificationsCount === 0}
                   >
                     <BCTypography variant="body2" color="primary">
-                      {'✓ '}{t('notifications:markAllAsRead')}
+                      {'✓ '}
+                      {t('notifications:markAllAsRead')}
                     </BCTypography>
                   </Button>
                 </Stack>
@@ -505,8 +510,8 @@ export const UserProfileActions = () => {
                   ) : notificationMessages.length === 0 ? (
                     <BCTypography
                       variant="body2"
-                      color="text.secondary"
                       sx={{ px: 2, py: 3, textAlign: 'center' }}
+                      color="text.secondary"
                     >
                       {t('notifications:noRecentNotifications')}
                     </BCTypography>

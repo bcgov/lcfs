@@ -64,15 +64,29 @@ export const OrgUserSettingsCard = () => {
               {t('dashboard:orgUserSettings.configureNotifications')}
             </UserSettingsLink>
 
-            <a href={HELP_GUIDE_URL} target="_blank" rel="noreferrer">
-              <UserSettingsLink>
+            <ListItemButton
+              component="a"
+              href={HELP_GUIDE_URL}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={t('dashboard:orgUserSettings.helpLinkLabel')}
+              sx={{
+                '&.Mui-focusVisible': {
+                  outline: '2px solid',
+                  outlineColor: 'primary.main',
+                  outlineOffset: '2px'
+                }
+              }}
+            >
+              <Typography variant="subtitle2" sx={linkStyle} component="p">
                 {t('dashboard:orgUserSettings.help')}
                 <FontAwesomeIcon
+                  aria-hidden="true"
                   icon={faShareFromSquare}
                   style={{ color: '#547D59', marginLeft: 6 }}
                 />
-              </UserSettingsLink>
-            </a>
+              </Typography>
+            </ListItemButton>
           </List>
         </Stack>
       }

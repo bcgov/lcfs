@@ -1,7 +1,9 @@
 import colors from '@/themes/base/colors'
 
+/** @returns {import('ag-grid-community').CellStyle | undefined} */
 export const changelogCellStyle = (params, key) => {
   if (params.data.actionType === 'UPDATE' && params.data.diff?.includes(key)) {
+    /** @type {import('ag-grid-community').CellStyle} */
     const style = { backgroundColor: colors.alerts.warning.background }
     if (params.data.updated) {
       style.textDecoration = 'line-through'
@@ -26,7 +28,7 @@ export const changelogRowStyle = (params, isSupplemental) => {
       backgroundColor: colors.alerts.success.background
     }
   }
-  
+
   // For UPDATE actions, only show yellow background if it's a new supplemental entry in supplemental mode
   if (
     params.data.actionType === 'UPDATE' &&
@@ -37,7 +39,7 @@ export const changelogRowStyle = (params, isSupplemental) => {
       backgroundColor: colors.alerts.warning.background
     }
   }
-  
+
   // For DELETE actions, only show red background if it's a new supplemental entry in supplemental mode
   if (
     params.data.actionType === 'DELETE' &&
@@ -48,8 +50,7 @@ export const changelogRowStyle = (params, isSupplemental) => {
       backgroundColor: colors.alerts.error.background
     }
   }
-  
+
   // No row-level styling for other cases (prevents highlighting all rows in edit mode)
   return {}
 }
-

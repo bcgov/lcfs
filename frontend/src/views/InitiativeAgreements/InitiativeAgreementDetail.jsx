@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 import Divider from '@mui/material/Divider'
@@ -6,11 +6,12 @@ import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
 import Grid2 from '@mui/material/Grid2'
 
-import BCAlert from '@/components/BCAlert'
+import BCAlert, { FloatingAlert } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import InitiativeAgreementTabs from './components/InitiativeAgreementTabs'
 import BCTypography from '@/components/BCTypography'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
+import { WidgetEditButton } from '@/components/BCWidgetCard/WidgetEditButton'
 import Loading from '@/components/Loading'
 import { Role } from '@/components/Role'
 import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
@@ -27,6 +28,7 @@ import { useGetInitiativeAgreement } from '@/hooks/useInitiativeAgreements'
 import { useInitiativeAgreementPageStore } from '@/stores/useInitiativeAgreementPageStore'
 import { DesignatedActionsGrid } from './components/DesignatedActionsGrid'
 import { AddDesignatedAction } from './components/AddDesignatedAction'
+import { AgreementEditForm } from './components/AgreementEditForm'
 
 // The shared document machinery keys on this string for initiative agreements.
 const PARENT_TYPE = 'initiativeAgreement'
@@ -41,6 +43,8 @@ const InitiativeAgreementDetailBase = () => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const { initiativeAgreementId } = useParams()
   const [uploadOpen, setUploadOpen] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const alertRef = useRef()
 
   const {
     data: agreement,
@@ -91,6 +95,7 @@ const InitiativeAgreementDetailBase = () => {
   return (
     <BCBox>
       <InitiativeAgreementTabs />
+      <FloatingAlert ref={alertRef} data-test="agreement-alert" />
       <BCTypography
         variant="h5"
         color="primary"
@@ -105,98 +110,129 @@ const InitiativeAgreementDetailBase = () => {
         title={t('initiativeAgreement:detail.agreementHeader')}
         color="nav"
         data-test="initiative-agreement-header-section"
+        headerAction={
+          !isEditing && (
+            <Role roles={[roles.ia_analyst, roles.ia_manager]}>
+              <WidgetEditButton
+                type="button"
+                data-test="edit-agreement"
+                onClick={() => setIsEditing(true)}
+              >
+                {t('initiativeAgreement:edit.button')}
+              </WidgetEditButton>
+            </Role>
+          )
+        }
         content={
           <BCBox p={1}>
-            <Grid2 container spacing={3}>
-              <Grid2 size={{ xs: 12, md: 6 }}>
-                <Stack spacing={0.5}>
-                  <BCBox
-                    sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}
-                  >
-                    <BCTypography variant="h6" color="primary">
-                      {organization.name}
-                    </BCTypography>
-                    {agreement.lifecycleStatus?.status && (
+            {isEditing ? (
+              <AgreementEditForm
+                agreement={agreement}
+                onCancel={() => setIsEditing(false)}
+                onSaved={(code) => {
+                  setIsEditing(false)
+                  alertRef.current?.triggerAlert({
+                    severity: 'success',
+                    message: t('initiativeAgreement:edit.success', { code })
+                  })
+                }}
+              />
+            ) : (
+              <>
+                <Grid2 container spacing={3}>
+                  <Grid2 size={{ xs: 12, md: 6 }}>
+                    <Stack spacing={0.5}>
                       <BCBox
-                        component="span"
-                        data-test="agreement-status-chip"
-                        sx={{
-                          px: 1.5,
-                          py: 0.25,
-                          borderRadius: 4,
-                          // success.contrastText is computed against
-                          // success.main, so pairing it with the lighter
-                          // shade gives 3.27:1 and fails AA.
-                          bgcolor: 'success.main',
-                          color: 'success.contrastText',
-                          fontSize: '0.8rem'
-                        }}
+                        sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}
                       >
-                        {agreement.lifecycleStatus.status}
+                        <BCTypography variant="h6" color="primary">
+                          {organization.name}
+                        </BCTypography>
+                        {agreement.lifecycleStatus?.status && (
+                          <BCBox
+                            component="span"
+                            data-test="agreement-status-chip"
+                            sx={{
+                              px: 1.5,
+                              py: 0.25,
+                              borderRadius: 4,
+                              // success.contrastText is computed against
+                              // success.main, so pairing it with the lighter
+                              // shade gives 3.27:1 and fails AA.
+                              bgcolor: 'success.main',
+                              color: 'success.contrastText',
+                              fontSize: '0.8rem'
+                            }}
+                          >
+                            {agreement.lifecycleStatus.status}
+                          </BCBox>
+                        )}
                       </BCBox>
-                    )}
-                  </BCBox>
-                  {address && (
-                    <BCTypography variant="body4">{address}</BCTypography>
-                  )}
-                  {organization.phone && (
-                    <BCTypography variant="body4">
-                      {organization.phone}
+                      {address && (
+                        <BCTypography variant="body4">{address}</BCTypography>
+                      )}
+                      {organization.phone && (
+                        <BCTypography variant="body4">
+                          {organization.phone}
+                        </BCTypography>
+                      )}
+                      {organization.email && (
+                        <BCTypography variant="body4">
+                          {organization.email}
+                        </BCTypography>
+                      )}
+                    </Stack>
+                  </Grid2>
+
+                  <Grid2 size={{ xs: 12, md: 6 }}>
+                    <Stack spacing={0.5}>
+                      <LabelValue
+                        label={t('initiativeAgreement:detail.referenceNumber')}
+                        value={referenceNumber}
+                      />
+                      <LabelValue
+                        label={t(
+                          'initiativeAgreement:detail.initiativeAgreementCode'
+                        )}
+                        value={agreement.iaCode}
+                      />
+                      <LabelValue
+                        label={t('initiativeAgreement:detail.startDate')}
+                        value={dateFormatter({
+                          value: agreement.agreementStartDate
+                        })}
+                      />
+                      <LabelValue
+                        label={t('initiativeAgreement:detail.endDate')}
+                        value={dateFormatter({
+                          value: agreement.agreementEndDate
+                        })}
+                      />
+                      <LabelValue
+                        label={t('initiativeAgreement:detail.projectLocation')}
+                        value={agreement.projectLocation}
+                      />
+                    </Stack>
+                  </Grid2>
+                </Grid2>
+
+                <BCBox mt={3} data-test="initiative-agreement-brief-section">
+                  <BCTypography variant="h6" color="primary" mb={1}>
+                    {t('initiativeAgreement:detail.agreementBrief')}
+                  </BCTypography>
+                  {agreement.title && (
+                    <BCTypography variant="body4" component="p">
+                      <strong>{agreement.title}</strong>
                     </BCTypography>
                   )}
-                  {organization.email && (
-                    <BCTypography variant="body4">
-                      {organization.email}
+                  {agreement.projectDescription && (
+                    <BCTypography variant="body4" component="p" mt={1}>
+                      {agreement.projectDescription}
                     </BCTypography>
                   )}
-                </Stack>
-              </Grid2>
-
-              <Grid2 size={{ xs: 12, md: 6 }}>
-                <Stack spacing={0.5}>
-                  <LabelValue
-                    label={t('initiativeAgreement:detail.referenceNumber')}
-                    value={referenceNumber}
-                  />
-                  <LabelValue
-                    label={t(
-                      'initiativeAgreement:detail.initiativeAgreementCode'
-                    )}
-                    value={agreement.iaCode}
-                  />
-                  <LabelValue
-                    label={t('initiativeAgreement:detail.startDate')}
-                    value={dateFormatter({
-                      value: agreement.agreementStartDate
-                    })}
-                  />
-                  <LabelValue
-                    label={t('initiativeAgreement:detail.endDate')}
-                    value={dateFormatter({ value: agreement.agreementEndDate })}
-                  />
-                  <LabelValue
-                    label={t('initiativeAgreement:detail.projectLocation')}
-                    value={agreement.projectLocation}
-                  />
-                </Stack>
-              </Grid2>
-            </Grid2>
-
-            <BCBox mt={3} data-test="initiative-agreement-brief-section">
-              <BCTypography variant="h6" color="primary" mb={1}>
-                {t('initiativeAgreement:detail.agreementBrief')}
-              </BCTypography>
-              {agreement.title && (
-                <BCTypography variant="body4" component="p">
-                  <strong>{agreement.title}</strong>
-                </BCTypography>
-              )}
-              {agreement.projectDescription && (
-                <BCTypography variant="body4" component="p" mt={1}>
-                  {agreement.projectDescription}
-                </BCTypography>
-              )}
-            </BCBox>
+                </BCBox>
+              </>
+            )}
 
             <Paper
               variant="outlined"

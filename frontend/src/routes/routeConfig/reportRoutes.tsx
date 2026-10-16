@@ -32,13 +32,11 @@ export const reportRoutes: AppRouteObject[] = [
         children: [
           {
             path: 'add',
-            // @ts-expect-error - Component handles missing props when used as route element
             element: <AddEditChargingSite isEditMode={false} />,
             handle: { title: 'Add charging site' }
           },
           {
             path: ':siteId/edit',
-            // @ts-expect-error - Component handles missing props when used as route element
             element: <AddEditChargingSite isEditMode={true} />,
             handle: { title: 'Edit charging site' }
           },

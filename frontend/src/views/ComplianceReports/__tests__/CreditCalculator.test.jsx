@@ -99,7 +99,10 @@ vi.mock('@/components/BCForm/BCFormRadio', async () => {
         control={control}
         defaultValue={getValues(name) ?? ''}
         render={({ field: { value, onChange } }) => (
-          <div data-test={`${name}-radio-group`}>
+          <div
+            data-test={`${name}-radio-group`}
+            className="MuiRadioGroup-root"
+          >
             {label && (
               <span data-test={`${name}-label`} data-testid={`${name}-label`}>
                 {label}
@@ -114,7 +117,9 @@ vi.mock('@/components/BCForm/BCFormRadio', async () => {
                   key={`${name}-${testId}`}
                   data-test={testId}
                   data-testid={testId}
-                  className={isSelected ? 'selected' : ''}
+                  className={`MuiFormControlLabel-root MuiFormControlLabel-label${
+                    isSelected ? ' selected' : ''
+                  }`}
                   tabIndex={0}
                   role="radio"
                   aria-checked={isSelected}
@@ -331,6 +336,23 @@ describe('CreditCalculator', () => {
       expect(
         screen.getByText(mockT('report:qtySuppliedLabel'))
       ).toBeInTheDocument()
+    })
+
+    it('allows horizontal scrolling for long End Use labels', () => {
+      const { container } = render(
+        <TestWrapper>
+          <CreditCalculator />
+        </TestWrapper>
+      )
+
+      const endUseGroup = container.querySelector(
+        '[data-test="endUseType-radio-group"]'
+      )
+      const endUseOption = endUseGroup.querySelector('[role="radio"]')
+
+      expect(getComputedStyle(endUseGroup).overflowX).toBe('auto')
+      expect(getComputedStyle(endUseOption).maxWidth).toBe('none')
+      expect(getComputedStyle(endUseOption).whiteSpace).toBe('nowrap')
     })
 
     it.each([
