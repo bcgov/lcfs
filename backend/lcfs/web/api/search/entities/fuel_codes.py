@@ -30,9 +30,11 @@ FUEL_CODE_RESULT_LIMIT = 100
 
 
 def _visibility_scope(context: SearchContext):
-    """Limit BCeID results to owned fuel codes and public approved records."""
+    """Limit BCeID results to owned fuel codes and public approved records.
+    Government search leaves out drafts (#5231); they stay on the Fuel codes
+    page."""
     if context.is_government:
-        return None
+        return cast(FuelCodeListView.status, String) != FuelCodeStatusEnum.Draft.value
 
     approved = (
         cast(FuelCodeListView.status, String) == FuelCodeStatusEnum.Approved.value

@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lcfs.db.models.ci_application.CIApplication import CIApplication
 from lcfs.db.models.ci_application.CIApplicationStatus import CIApplicationStatus
 from lcfs.db.models.organization.Organization import Organization
+from lcfs.web.api.ci_application.schema import CIApplicationStatusEnum
 from lcfs.web.api.search.entities.base import (
     RESULT_LIMIT,
     EntitySearch,
@@ -89,6 +90,13 @@ async def search_ci_applications(
         (
             CIApplication.organization_id == context.organization_id
             if not context.is_government and context.organization_id is not None
+            else None
+        ),
+        # A Draft is the applicant's until it is submitted, so government
+        # never sees one, as in its CI application list (#5231).
+        (
+            CIApplicationStatus.status != CIApplicationStatusEnum.Draft.value
+            if context.is_government
             else None
         ),
     )
