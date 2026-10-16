@@ -25,7 +25,10 @@ import {
 import type { AgGridReact } from 'ag-grid-react'
 import type { ChangeEvent, CSSProperties } from 'react'
 import type {
+  ColumnMovedEvent,
+  ColumnResizedEvent,
   ColumnState,
+  ColumnVisibleEvent,
   ColDef,
   ColGroupDef,
   FirstDataRenderedEvent,
@@ -42,6 +45,7 @@ import {
   addFlexToColumns,
   getColumnMinWidthSum
 } from '@/components/BCDataGrid/columnSizingUtils'
+import { getSessionColumnState } from '@/utils/grid/sessionGridCache'
 import type {
   BCGridRef,
   BCGridRow,
@@ -89,44 +93,45 @@ const isIntersectionObserverSupported = () => {
   return typeof window !== 'undefined' && 'IntersectionObserver' in window
 }
 
-export const BCGridViewer = forwardRef<AgGridReact<BCGridRow>, BCGridViewerProps>(
-  (
-    {
-  gridRef: providedGridRef,
-  alertRef,
-  loading,
-  defaultColDef,
-  columnDefs,
-  gridOptions,
-  suppressPagination,
-  gridKey,
-  getRowId,
-  onRowClicked,
-  autoSizeStrategy = {},
-  paginationOptions = {
-    page: 1,
-    size: 10,
-    sortOrders: [],
-    filters: []
-  },
-  onPaginationChange,
-  queryData,
-  dataKey = 'items',
-  enableExportButton = false,
-  enableCopyButton = false,
-  enableResetButton = false,
-  enablePageCaching = true,
-  paginationPageSizeSelector = [5, 10, 20, 25, 50, 100],
-  exportName = 'ExportData',
-  enableFloatingPagination = true,
-  filterToolbarConfig = {},
-  onClearFilters,
-  suppressMovableColumns = false,
-  columnState: controlledColumnState,
-  onColumnStateChange,
-  ...props
-}
-  ) => {
+export const BCGridViewer = forwardRef<
+  AgGridReact<BCGridRow>,
+  BCGridViewerProps
+>(
+  ({
+    gridRef: providedGridRef,
+    alertRef,
+    loading,
+    defaultColDef,
+    columnDefs,
+    gridOptions,
+    suppressPagination,
+    gridKey,
+    getRowId,
+    onRowClicked,
+    autoSizeStrategy = {},
+    paginationOptions = {
+      page: 1,
+      size: 10,
+      sortOrders: [],
+      filters: []
+    },
+    onPaginationChange,
+    queryData,
+    dataKey = 'items',
+    enableExportButton = false,
+    enableCopyButton = false,
+    enableResetButton = false,
+    enablePageCaching = true,
+    paginationPageSizeSelector = [5, 10, 20, 25, 50, 100],
+    exportName = 'ExportData',
+    enableFloatingPagination = true,
+    filterToolbarConfig = {},
+    onClearFilters,
+    suppressMovableColumns = false,
+    columnState: controlledColumnState,
+    onColumnStateChange,
+    ...props
+  }) => {
     const gridRef = providedGridRef as BCGridRef
     const { data, error, isError, isLoading } = queryData || {}
     const hasInitializedFromCache = useRef(false)
@@ -152,6 +157,12 @@ export const BCGridViewer = forwardRef<AgGridReact<BCGridRow>, BCGridViewerProps
     }
     const previousGridKey = useRef(gridKey)
     const isRestoringFromCache = useRef(false)
+    const paginationOptionsRef = useRef(paginationOptions)
+    paginationOptionsRef.current = paginationOptions
+    const savedColumnState = useMemo(() => {
+      if (controlledColumnState?.length) return controlledColumnState
+      return getSessionColumnState(gridKey)
+    }, [controlledColumnState, gridKey])
 
     // Refs and state for floating pagination
     const paginationRef = useRef<HTMLDivElement | null>(null)
@@ -287,9 +298,10 @@ export const BCGridViewer = forwardRef<AgGridReact<BCGridRow>, BCGridViewerProps
                 cleanConfig.dateFrom = sanitizeDateValue(
                   cleanConfig.dateFrom
                 ) as string | null | undefined
-                cleanConfig.dateTo = sanitizeDateValue(
-                  cleanConfig.dateTo
-                ) as string | null | undefined
+                cleanConfig.dateTo = sanitizeDateValue(cleanConfig.dateTo) as
+                  | string
+                  | null
+                  | undefined
               }
               return {
                 ...baseFilter,
@@ -339,7 +351,7 @@ export const BCGridViewer = forwardRef<AgGridReact<BCGridRow>, BCGridViewerProps
         }
       }
       return paginationOptions
-    }, [gridKey, paginationOptions, enablePageCaching]);
+    }, [gridKey, paginationOptions, enablePageCaching])
 
     const getGridScrollInfo = useCallback(
       () => getGridScrollInfoUtil(gridContainerRef),
@@ -586,37 +598,46 @@ export const BCGridViewer = forwardRef<AgGridReact<BCGridRow>, BCGridViewerProps
 
     const onGridReady = useCallback(
       (params: GridReadyEvent<BCGridRow>) => {
-        const filterState = JSON.parse(
-          sessionStorage.getItem(`${gridKey}-filter`) as string
-        )
+        const filterState = (() => {
+          try {
+            const raw = sessionStorage.getItem(`${gridKey}-filter`)
+            return raw ? JSON.parse(raw) : null
+          } catch (error) {
+            console.warn('Failed to parse cached filter state:', error)
+            return null
+          }
+        })()
         const restoredColumnState =
-          controlledColumnState ??
-          JSON.parse(sessionStorage.getItem(`${gridKey}-column`) as string)
+          controlledColumnState ?? getSessionColumnState(gridKey)
+        const cachedPagination = enablePageCaching
+          ? sessionStorage.getItem(`${gridKey}-pagination`)
+          : null
+        const shouldRestore = Boolean(filterState || restoredColumnState)
+
+        if (shouldRestore) {
+          isRestoringFromCache.current = true
+        }
 
         // Apply filters if they exist
         if (filterState) {
-          // Set restoration flag to prevent filter change handler from interfering
-          isRestoringFromCache.current = true
           params.api.setFilterModel(filterState)
 
           const filterArr = convertFilterModelToArray(filterState)
           setActiveFilters(filterArr as unknown as BCPaginationFilter[])
 
-          // Always update pagination with restored filters
-          const updatedOptions = {
-            ...paginationOptions,
-            page: 1, // Reset to page 1 for new filters
-            filters: filterArr as unknown as BCPaginationFilter[]
+          // Cached pagination already has page, size, sort and filters.
+          // Rewriting it here used to reset those prefs on remount.
+          if (!cachedPagination) {
+            const updatedOptions = {
+              ...paginationOptionsRef.current,
+              page: 1,
+              filters: filterArr as unknown as BCPaginationFilter[]
+            }
+            onPaginationChange!(updatedOptions)
+            if (enablePageCaching) {
+              cachePaginationOptions(updatedOptions)
+            }
           }
-          onPaginationChange!(updatedOptions)
-          if (enablePageCaching) {
-            cachePaginationOptions(updatedOptions)
-          }
-
-          // Reset restoration flag after a brief delay to allow filter events to complete
-          setTimeout(() => {
-            isRestoringFromCache.current = false
-          }, 100)
         }
 
         // Apply column state
@@ -625,30 +646,27 @@ export const BCGridViewer = forwardRef<AgGridReact<BCGridRow>, BCGridViewerProps
             state: restoredColumnState,
             applyOrder: true
           })
-        } else {
-          // Apply sort orders from current pagination options
-          params.api.applyColumnState((() => {
-            let state: unknown[] = []
-            if (
-              paginationOptions.sortOrders &&
-              paginationOptions.sortOrders.length > 0
-            ) {
-              state = paginationOptions.sortOrders.map((col: BCSortOrder) => ({
+        } else if (paginationOptionsRef.current.sortOrders?.length) {
+          params.api.applyColumnState({
+            state: paginationOptionsRef.current.sortOrders.map(
+              (col: BCSortOrder) => ({
                 colId: col.field,
                 sort: col.direction
-              }))
-              return {
-                state,
-                defaultState: { sort: null }
-              }
-            }
-          }) as unknown as Parameters<typeof params.api.applyColumnState>[0])
+              })
+            ),
+            defaultState: { sort: null }
+          })
+        }
+
+        if (shouldRestore) {
+          setTimeout(() => {
+            isRestoringFromCache.current = false
+          }, 100)
         }
       },
       [
         gridKey,
         enablePageCaching,
-        paginationOptions,
         onPaginationChange,
         cachePaginationOptions,
         convertFilterModelToArray,
@@ -717,10 +735,10 @@ export const BCGridViewer = forwardRef<AgGridReact<BCGridRow>, BCGridViewerProps
 
     const persistColumnState = useCallback(
       (columnState: ColumnState[] | null | undefined) => {
-        if (!columnState) return
+        if (!columnState || isRestoringFromCache.current) return
         if (onColumnStateChange) {
           onColumnStateChange(columnState)
-        } else {
+        } else if (gridKey) {
           sessionStorage.setItem(
             `${gridKey}-column`,
             JSON.stringify(columnState)
@@ -731,6 +749,7 @@ export const BCGridViewer = forwardRef<AgGridReact<BCGridRow>, BCGridViewerProps
     )
 
     const handleSortChanged = useCallback(() => {
+      if (isRestoringFromCache.current) return
       const columnState = gridRef.current?.api.getColumnState()
       const sortTemp = columnState
         ?.filter((col: ColumnState) => col.sort)
@@ -744,7 +763,7 @@ export const BCGridViewer = forwardRef<AgGridReact<BCGridRow>, BCGridViewerProps
         }))
 
       const updatedOptions = {
-        ...paginationOptions,
+        ...paginationOptionsRef.current,
         sortOrders: sortTemp
       } as BCPaginationOptions
       onPaginationChange!(updatedOptions)
@@ -755,15 +774,39 @@ export const BCGridViewer = forwardRef<AgGridReact<BCGridRow>, BCGridViewerProps
     }, [
       gridRef,
       onPaginationChange,
-      paginationOptions,
       enablePageCaching,
       cachePaginationOptions,
       persistColumnState
     ])
 
     const handleColumnMoved = useCallback(
-      (params: import('ag-grid-community').ColumnMovedEvent<BCGridRow>) => {
+      (params: ColumnMovedEvent<BCGridRow>) => {
         if (params?.finished === false) return
+        const api = params?.api ?? gridRef?.current?.api
+        persistColumnState(api?.getColumnState?.())
+      },
+      [gridRef, persistColumnState]
+    )
+
+    const handleColumnResized = useCallback(
+      (params: ColumnResizedEvent<BCGridRow>) => {
+        if (params?.finished === false) return
+        // Skip autosize/flex/api updates; keep user-driven resizes.
+        if (
+          params?.source &&
+          !String(params.source).toLowerCase().includes('ui')
+        ) {
+          return
+        }
+        const api = params?.api ?? gridRef?.current?.api
+        persistColumnState(api?.getColumnState?.())
+      },
+      [gridRef, persistColumnState]
+    )
+
+    const handleColumnVisible = useCallback(
+      (params: ColumnVisibleEvent<BCGridRow>) => {
+        if (isRestoringFromCache.current) return
         const api = params?.api ?? gridRef?.current?.api
         persistColumnState(api?.getColumnState?.())
       },
@@ -834,7 +877,9 @@ export const BCGridViewer = forwardRef<AgGridReact<BCGridRow>, BCGridViewerProps
           Object.keys(currentModel).length > 0 ? currentModel : null
         api.setFilterModel(nextModel)
         setActiveFilters(
-          convertFilterModelToArray(nextModel || {}) as unknown as BCPaginationFilter[]
+          convertFilterModelToArray(
+            nextModel || {}
+          ) as unknown as BCPaginationFilter[]
         )
       },
       [gridRef, convertFilterModelToArray]
@@ -868,8 +913,11 @@ export const BCGridViewer = forwardRef<AgGridReact<BCGridRow>, BCGridViewerProps
       [columnDefs, fallbackMinWidth]
     )
     const shouldFitColumns = useMemo(
-      () => containerWidth !== null && totalMinWidth <= containerWidth,
-      [containerWidth, totalMinWidth]
+      () =>
+        !savedColumnState?.length &&
+        containerWidth !== null &&
+        totalMinWidth <= containerWidth,
+      [savedColumnState, containerWidth, totalMinWidth]
     )
 
     const transformedColumnDefs = useMemo(() => {
@@ -898,7 +946,9 @@ export const BCGridViewer = forwardRef<AgGridReact<BCGridRow>, BCGridViewerProps
 
     // Compute defaultMinWidth from columnDefs so autoSizeStrategy uses proper initial widths
     // This prevents the "squished then expand" visual effect on page load
-    const computedAutoSizeStrategy = useMemo<NonNullable<BCGridViewerProps['autoSizeStrategy']>>(() => {
+    const computedAutoSizeStrategy = useMemo<
+      NonNullable<BCGridViewerProps['autoSizeStrategy']>
+    >(() => {
       if (!columnDefs || columnDefs.length === 0) {
         return {
           type: 'fitGridWidth' as const,
@@ -916,7 +966,11 @@ export const BCGridViewer = forwardRef<AgGridReact<BCGridRow>, BCGridViewerProps
       const defaultMinWidth =
         minWidths.length > 0 ? Math.min(...minWidths) : 100
 
-      return { type: 'fitGridWidth' as const, defaultMinWidth, ...autoSizeStrategy }
+      return {
+        type: 'fitGridWidth' as const,
+        defaultMinWidth,
+        ...autoSizeStrategy
+      }
     }, [columnDefs, autoSizeStrategy])
 
     const { columnLabelLookup, columnPillRendererLookup } = useMemo(() => {
@@ -1064,13 +1118,16 @@ export const BCGridViewer = forwardRef<AgGridReact<BCGridRow>, BCGridViewerProps
           columnDefs={transformedColumnDefs}
           gridOptions={gridOptions}
           rowData={
-            (!isLoading && ((data && data[dataKey]) || [])) as unknown as BCGridRow[]
+            (!isLoading &&
+              ((data && data[dataKey]) || [])) as unknown as BCGridRow[]
           }
           onGridReady={onGridReady}
           onSortChanged={handleSortChanged}
           onFilterChanged={handleFilterChanged}
           onFirstDataRendered={onFirstDataRendered}
           onColumnMoved={handleColumnMoved}
+          onColumnResized={handleColumnResized}
+          onColumnVisible={handleColumnVisible}
           onRowClicked={onRowClicked}
           getRowId={getRowId}
           autoSizeStrategy={shouldFitColumns ? computedAutoSizeStrategy : null}

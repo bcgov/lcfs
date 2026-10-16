@@ -5,7 +5,10 @@ import BCBox from '@/components/BCBox'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { useDesignatedActions } from '@/hooks/useInitiativeAgreements'
+import { getSessionPagination } from '@/utils/grid/sessionGridCache'
 import { designatedActionColDefs } from '../_schema'
+
+export const ACTIONS_GRID_KEY = 'designated-actions-grid'
 
 const initialPaginationOptions = {
   page: 1,
@@ -19,8 +22,8 @@ const initialPaginationOptions = {
 export const DesignatedActionsGrid = ({ initiativeAgreementId }) => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const gridRef = useRef(null)
-  const [paginationOptions, setPaginationOptions] = useState(
-    initialPaginationOptions
+  const [paginationOptions, setPaginationOptions] = useState(() =>
+    getSessionPagination(ACTIONS_GRID_KEY, initialPaginationOptions)
   )
 
   const queryData = useDesignatedActions(
@@ -50,7 +53,7 @@ export const DesignatedActionsGrid = ({ initiativeAgreementId }) => {
     <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
       <BCGridViewer
         gridRef={gridRef}
-        gridKey="designated-actions-grid"
+        gridKey={ACTIONS_GRID_KEY}
         columnDefs={columnDefs}
         getRowId={getRowId}
         overlayNoRowsTemplate={t('initiativeAgreement:actions.noActionsFound')}

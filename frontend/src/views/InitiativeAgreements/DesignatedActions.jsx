@@ -12,9 +12,12 @@ import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { ROUTES } from '@/routes/routes'
 
 import { useAllDesignatedActions } from '@/hooks/useInitiativeAgreements'
+import { getSessionPagination } from '@/utils/grid/sessionGridCache'
 import { allDesignatedActionColDefs } from './_schema'
 import InitiativeAgreementTabs from './components/InitiativeAgreementTabs'
 import { defaultActionsSortModel } from './designatedActionsConfig'
+
+export const ALL_ACTIONS_GRID_KEY = 'all-designated-actions-grid'
 
 // Every designated action across every agreement, newest activity first
 // (#5078). The agreement grid answers "what agreements exist"; this one
@@ -30,8 +33,8 @@ const initialPaginationOptions = {
 const DesignatedActionsBase = () => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const gridRef = useRef(null)
-  const [paginationOptions, setPaginationOptions] = useState(
-    initialPaginationOptions
+  const [paginationOptions, setPaginationOptions] = useState(() =>
+    getSessionPagination(ALL_ACTIONS_GRID_KEY, initialPaginationOptions)
   )
   const [alertMessage, setAlertMessage] = useState('')
 
@@ -85,7 +88,7 @@ const DesignatedActionsBase = () => {
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer
           gridRef={gridRef}
-          gridKey="all-designated-actions-grid"
+          gridKey={ALL_ACTIONS_GRID_KEY}
           columnDefs={columnDefs}
           getRowId={getRowId}
           overlayNoRowsTemplate={t(

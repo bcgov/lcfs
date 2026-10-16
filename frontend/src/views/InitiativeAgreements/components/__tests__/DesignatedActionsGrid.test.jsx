@@ -1,4 +1,4 @@
-import 'react';
+import 'react'
 import { screen } from '@testing-library/react'
 
 import { describe, expect, vi, beforeEach } from 'vitest'
@@ -33,6 +33,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 
 describe('DesignatedActionsGrid', () => {
   beforeEach(() => {
+    sessionStorage.clear()
     vi.clearAllMocks()
     mockActions.mockReturnValue({
       data: {
@@ -84,5 +85,31 @@ describe('DesignatedActionsGrid', () => {
       data: { designatedActionId: 9 }
     })
     expect(rowUrl).toBe('designated-actions/9')
+  })
+
+  test('hydrates pagination from session storage so prefs survive navigation (#5032)', ({
+    render,
+    app
+  }) => {
+    sessionStorage.setItem(
+      'designated-actions-grid-pagination',
+      JSON.stringify({
+        page: 2,
+        size: 20,
+        sortOrders: [{ field: 'actionNumber', direction: 'asc' }],
+        filters: []
+      })
+    )
+
+    render(<DesignatedActionsGrid initiativeAgreementId="5" />, app)
+
+    expect(mockActions).toHaveBeenCalledWith(
+      '5',
+      expect.objectContaining({
+        page: 2,
+        size: 20,
+        sortOrders: [{ field: 'actionNumber', direction: 'asc' }]
+      })
+    )
   })
 })

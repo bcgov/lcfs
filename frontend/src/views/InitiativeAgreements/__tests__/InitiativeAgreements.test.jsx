@@ -1,5 +1,5 @@
-import 'react';
-import { describe, expect, vi } from 'vitest'
+import 'react'
+import { beforeEach, describe, expect, vi } from 'vitest'
 import { screen } from '@testing-library/react'
 import { roles } from '@/constants/roles'
 import { InitiativeAgreements } from '../InitiativeAgreements'
@@ -65,6 +65,13 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 }))
 
 describe('InitiativeAgreements', () => {
+  beforeEach(() => {
+    sessionStorage.clear()
+    mockBCGridViewer.mockClear()
+    mockUseGetInitiativeAgreements.mockReset()
+    mockRoles = [roles.ia_analyst]
+  })
+
   test('gives a proponent the same grid without the organization column (#4893)', ({
     render,
     app
@@ -152,8 +159,14 @@ describe('InitiativeAgreements', () => {
     })
 
     // Seed session storage with pretend cached state.
-    sessionStorage.setItem('initiative-agreements-grid-filter', '{"status":"Draft"}')
-    sessionStorage.setItem('initiative-agreements-grid-pagination', '{"page":3,"size":25}')
+    sessionStorage.setItem(
+      'initiative-agreements-grid-filter',
+      '{"status":"Draft"}'
+    )
+    sessionStorage.setItem(
+      'initiative-agreements-grid-pagination',
+      '{"page":3,"size":25}'
+    )
 
     render(<InitiativeAgreements />, app)
 
@@ -162,7 +175,53 @@ describe('InitiativeAgreements', () => {
 
     // Invoke the callback and check sessionStorage is cleared.
     gridProps.onClearFilters()
-    expect(sessionStorage.getItem('initiative-agreements-grid-filter')).toBeNull()
-    expect(sessionStorage.getItem('initiative-agreements-grid-pagination')).toBeNull()
+    expect(
+      sessionStorage.getItem('initiative-agreements-grid-filter')
+    ).toBeNull()
+    expect(
+      sessionStorage.getItem('initiative-agreements-grid-pagination')
+    ).toBeNull()
+  })
+
+  test('hydrates pagination from session storage so prefs survive navigation (#5032)', ({
+    render,
+    app
+  }) => {
+    mockUseGetInitiativeAgreements.mockReturnValue({
+      data: {
+        initiativeAgreements: [],
+        pagination: { total: 0, page: 2, size: 25, totalPages: 1 }
+      },
+      isLoading: false,
+      isError: false,
+      error: null
+    })
+
+    sessionStorage.setItem(
+      'initiative-agreements-grid-pagination',
+      JSON.stringify({
+        page: 2,
+        size: 25,
+        sortOrders: [{ field: 'iaCode', direction: 'asc' }],
+        filters: []
+      })
+    )
+
+    render(<InitiativeAgreements />, app)
+
+    expect(mockUseGetInitiativeAgreements).toHaveBeenCalledWith(
+      expect.objectContaining({
+        page: 2,
+        size: 25,
+        sortOrders: [{ field: 'iaCode', direction: 'asc' }]
+      })
+    )
+    expect(mockBCGridViewer.mock.calls.at(-1)[0].paginationOptions).toEqual(
+      expect.objectContaining({
+        page: 2,
+        size: 25,
+        sortOrders: [{ field: 'iaCode', direction: 'asc' }]
+      })
+    )
   })
 })

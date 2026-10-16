@@ -1,8 +1,9 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createRef } from 'react'
 import { BrowserRouter } from 'react-router-dom'
 import { BCGridViewer } from '../BCGridViewer'
+import { BCGridBase } from '@/components/BCDataGrid/BCGridBase'
 import { createAgGridFilterPills } from '@/components/FilterToolbar/filterUtils'
 
 // Unmock the components we're testing (overrides global mocks)
@@ -521,6 +522,86 @@ describe('BCGridViewer Component', () => {
           </TestWrapper>
         )
       }).not.toThrow()
+    })
+  })
+
+  describe('Session preference persistence', () => {
+    it('restores saved column layout without resetting cached pagination', async () => {
+      const onPaginationChange = vi.fn()
+      const columnState = [{ colId: 'iaCode', width: 320, hide: false }]
+      mockSessionStorage.getItem.mockImplementation((key) => {
+        if (key === 'test-grid-column') return JSON.stringify(columnState)
+        if (key === 'test-grid-pagination') {
+          return JSON.stringify({
+            page: 3,
+            size: 25,
+            sortOrders: [{ field: 'iaCode', direction: 'asc' }],
+            filters: []
+          })
+        }
+        return null
+      })
+
+      render(
+        <TestWrapper>
+          <BCGridViewer
+            {...defaultProps}
+            onPaginationChange={onPaginationChange}
+          />
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(mockGridApi.applyColumnState).toHaveBeenCalledWith({
+          state: columnState,
+          applyOrder: true
+        })
+      })
+      expect(onPaginationChange).not.toHaveBeenCalledWith(
+        expect.objectContaining({ page: 1 })
+      )
+    })
+
+    it('persists column widths after a user resize', () => {
+      const columnState = [{ colId: 'iaCode', width: 400 }]
+      mockGridApi.getColumnState.mockReturnValue(columnState)
+
+      render(
+        <TestWrapper>
+          <BCGridViewer {...defaultProps} />
+        </TestWrapper>
+      )
+
+      const gridProps = BCGridBase.mock.calls.at(-1)[0]
+      gridProps.onColumnResized({
+        finished: true,
+        source: 'uiColumnResized',
+        api: mockGridApi
+      })
+
+      expect(mockSessionStorage.setItem).toHaveBeenCalledWith(
+        'test-grid-column',
+        JSON.stringify(columnState)
+      )
+    })
+
+    it('persists column visibility changes', () => {
+      const columnState = [{ colId: 'contactName', hide: true }]
+      mockGridApi.getColumnState.mockReturnValue(columnState)
+
+      render(
+        <TestWrapper>
+          <BCGridViewer {...defaultProps} />
+        </TestWrapper>
+      )
+
+      const gridProps = BCGridBase.mock.calls.at(-1)[0]
+      gridProps.onColumnVisible({ api: mockGridApi })
+
+      expect(mockSessionStorage.setItem).toHaveBeenCalledWith(
+        'test-grid-column',
+        JSON.stringify(columnState)
+      )
     })
   })
 })

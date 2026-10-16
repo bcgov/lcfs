@@ -20,8 +20,14 @@ import {
   proponentInitiativeAgreementColDefs
 } from './_schema'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import {
+  getSessionPagination,
+  gridCacheKey
+} from '@/utils/grid/sessionGridCache'
 import CreateAgreement from './components/CreateAgreement'
 import InitiativeAgreementTabs from './components/InitiativeAgreementTabs'
+
+export const AGREEMENTS_GRID_KEY = 'initiative-agreements-grid'
 
 const initialPaginationOptions = {
   page: 1,
@@ -35,8 +41,8 @@ const InitiativeAgreementsBase = () => {
   const location = useLocation()
   const gridRef = useRef(null)
 
-  const [paginationOptions, setPaginationOptions] = useState(
-    initialPaginationOptions
+  const [paginationOptions, setPaginationOptions] = useState(() =>
+    getSessionPagination(AGREEMENTS_GRID_KEY, initialPaginationOptions)
   )
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
@@ -76,8 +82,8 @@ const InitiativeAgreementsBase = () => {
   const handleClearFilters = useCallback(() => {
     setPaginationOptions(initialPaginationOptions)
     try {
-      sessionStorage.removeItem('initiative-agreements-grid-filter')
-      sessionStorage.removeItem('initiative-agreements-grid-pagination')
+      sessionStorage.removeItem(gridCacheKey(AGREEMENTS_GRID_KEY, 'filter'))
+      sessionStorage.removeItem(gridCacheKey(AGREEMENTS_GRID_KEY, 'pagination'))
     } catch (error) {
       console.warn('Failed to clear initiative agreements grid cache:', error)
     }
@@ -121,7 +127,7 @@ const InitiativeAgreementsBase = () => {
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer
           gridRef={gridRef}
-          gridKey="initiative-agreements-grid"
+          gridKey={AGREEMENTS_GRID_KEY}
           columnDefs={columnDefs}
           getRowId={getRowId}
           overlayNoRowsTemplate={t('initiativeAgreement:noAgreementsFound')}

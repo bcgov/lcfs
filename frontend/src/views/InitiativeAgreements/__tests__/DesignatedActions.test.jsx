@@ -1,4 +1,4 @@
-import 'react';
+import 'react'
 import { describe, expect, vi, beforeEach } from 'vitest'
 import { screen } from '@testing-library/react'
 import { roles } from '@/constants/roles'
@@ -48,6 +48,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 
 describe('DesignatedActions (module tab)', () => {
   beforeEach(() => {
+    sessionStorage.clear()
     vi.clearAllMocks()
     mockRoles = [roles.ia_analyst]
     mockUseAllDesignatedActions.mockReturnValue({
@@ -137,6 +138,31 @@ describe('DesignatedActions (module tab)', () => {
     render(<DesignatedActions />, app)
 
     expect(screen.getByTestId('alert-box')).toHaveTextContent('Boom')
+  })
+
+  test('hydrates pagination from session storage so prefs survive navigation (#5032)', ({
+    render,
+    app
+  }) => {
+    sessionStorage.setItem(
+      'all-designated-actions-grid-pagination',
+      JSON.stringify({
+        page: 4,
+        size: 50,
+        sortOrders: [{ field: 'name', direction: 'asc' }],
+        filters: []
+      })
+    )
+
+    render(<DesignatedActions />, app)
+
+    expect(mockUseAllDesignatedActions).toHaveBeenCalledWith(
+      expect.objectContaining({
+        page: 4,
+        size: 50,
+        sortOrders: [{ field: 'name', direction: 'asc' }]
+      })
+    )
   })
 
   test('is not offered to a proponent', ({ render, app }) => {
