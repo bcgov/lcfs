@@ -29,15 +29,19 @@ import withRole from '@/utils/withRole'
 import {
   useDesignatedActionProfile,
   useEvidenceRequirements,
-  useSetMissingInformation,
   useSetRecommendedCredits
 } from '@/hooks/useInitiativeAgreements'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useInitiativeAgreementPageStore } from '@/stores/useInitiativeAgreementPageStore'
 import { DocumentTree } from './components/DocumentTree'
-import { EvidenceOfCompletion } from './components/EvidenceOfCompletion'
+import {
+  EvidenceOfCompletion,
+  OUTCOME_INFORMATION_REQUESTED
+} from './components/EvidenceOfCompletion'
 import {
   DesignatedActionWorkflow,
+  ACTION_ACCEPT,
+  ACTION_REQUEST_INFORMATION,
   PLACEMENT_DECISION,
   PLACEMENT_EVIDENCE
 } from './components/DesignatedActionWorkflow'
@@ -115,21 +119,6 @@ const DesignatedActionDetailBase = () => {
       saveCredits(next)
     }
   }
-  // The Missing information box (#5118): edited here because the request
-  // button beside the summary sends it, saved on leaving the field like
-  // the recommended amount.
-  const { mutate: saveMissingInformation } =
-    useSetMissingInformation(designatedActionId)
-  const [missingInformation, setMissingInformation] = useState('')
-  useEffect(() => {
-    setMissingInformation(action?.missingInformation ?? '')
-  }, [action?.missingInformation])
-  const commitMissingInformation = () => {
-    if (missingInformation.trim() !== (action?.missingInformation ?? '')) {
-      saveMissingInformation(missingInformation)
-    }
-  }
-
   const allEvidenceSatisfactory =
     requirements.length > 0 &&
     requirements.every((r) => r.reviewOutcome === 'Satisfactory')
@@ -196,6 +185,38 @@ const DesignatedActionDetailBase = () => {
         designatedActionId: siblingId
       })
     )
+
+  const renderRequestAction = (requirement, allRequestsComplete) => {
+    if (requirement.reviewOutcome !== OUTCOME_INFORMATION_REQUESTED) {
+      return null
+    }
+    return (
+      <DesignatedActionWorkflow
+        key={`request-information-${requirement.evidenceRequirementId}`}
+        designatedActionId={designatedActionId}
+        availableActions={action.availableActions}
+        onlyAction={ACTION_REQUEST_INFORMATION}
+        canRequestInformation={allRequestsComplete}
+        missingInformation={requirement.missingInformation ?? ''}
+        placement={PLACEMENT_EVIDENCE}
+        onChanged={refreshAction}
+      />
+    )
+  }
+
+  const evidenceActions = (
+    <DesignatedActionWorkflow
+      designatedActionId={designatedActionId}
+      availableActions={action.availableActions}
+      onlyAction={requirements.length ? ACTION_ACCEPT : undefined}
+      recommendedCredits={action.recommendedCredits}
+      allEvidenceSatisfactory={allEvidenceSatisfactory}
+      hasRequirements={requirements.length > 0}
+      missingInformation={action.missingInformation ?? ''}
+      placement={PLACEMENT_EVIDENCE}
+      onChanged={refreshAction}
+    />
+  )
 
   return (
     <BCBox>
@@ -402,11 +423,7 @@ const DesignatedActionDetailBase = () => {
               />
             </BCBox>
 
-            {/* Evidence of completion review (#4899) in its own box inside
-                the card, with the evidence decisions beneath its summary
-                (#5080) and the recommendation beneath the box (#5118).
-                Which buttons appear comes from the API, so the page cannot
-                offer a transition the server refuses. */}
+            {/* EOC review decisions stay visible beside the EOC they affect. */}
             <Role roles={[roles.ia_analyst, roles.ia_manager, roles.director]}>
               <EvidenceOfCompletion
                 designatedActionId={designatedActionId}
@@ -414,22 +431,9 @@ const DesignatedActionDetailBase = () => {
                 // only; directors see the review without controls that
                 // would be refused.
                 canEdit={canRecommend}
-                missingInformation={missingInformation}
-                onMissingInformationChange={setMissingInformation}
-                onMissingInformationBlur={commitMissingInformation}
                 missingInformationReadOnly={!canRecommend}
-                actions={
-                  <DesignatedActionWorkflow
-                    designatedActionId={designatedActionId}
-                    availableActions={action.availableActions}
-                    recommendedCredits={action.recommendedCredits}
-                    allEvidenceSatisfactory={allEvidenceSatisfactory}
-                    hasRequirements={requirements.length > 0}
-                    missingInformation={missingInformation}
-                    placement={PLACEMENT_EVIDENCE}
-                    onChanged={refreshAction}
-                  />
-                }
+                actions={evidenceActions}
+                renderRequestAction={renderRequestAction}
               />
               <DesignatedActionWorkflow
                 designatedActionId={designatedActionId}

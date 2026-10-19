@@ -1,17 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import Accordion from '@mui/material/Accordion'
+import AccordionDetails from '@mui/material/AccordionDetails'
+import AccordionSummary from '@mui/material/AccordionSummary'
 import Box from '@mui/material/Box'
 import Checkbox from '@mui/material/Checkbox'
 import Collapse from '@mui/material/Collapse'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import IconButton from '@mui/material/IconButton'
 import Paper from '@mui/material/Paper'
-import SvgIcon from '@mui/material/SvgIcon'
 import TextField from '@mui/material/TextField'
 import Tooltip from '@mui/material/Tooltip'
 import AddIcon from '@mui/icons-material/Add'
 import CheckIcon from '@mui/icons-material/Check'
-import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import CloseIcon from '@mui/icons-material/Close'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
@@ -55,15 +56,11 @@ const railColour = (outcome) => {
   return 'divider'
 }
 
-// A gold disc is too pale against white to carry meaning on its own
-// (WCAG 1.4.11), so the exclamation mark is dark rather than the
-// wireframe's white; the shape stays legible at any contrast setting.
-const OutstandingIcon = ({ titleAccess, sx }) => (
-  <SvgIcon titleAccess={titleAccess} sx={sx}>
-    <circle cx="12" cy="12" r="10" fill="currentColor" />
-    <path d="M13 17h-2v-2h2zm0-4h-2V7h2z" fill="#313132" />
-  </SvgIcon>
-)
+const backgroundColour = (outcome) => {
+  if (outcome === OUTCOME_SATISFACTORY) return '#f4faf5'
+  if (outcome === OUTCOME_INFORMATION_REQUESTED) return '#fff8e7'
+  return '#f5f5f5'
+}
 
 // Long entries grow the box with the text up to 1000px, then scroll
 // inside it (#5118). The autosizing textarea sets overflow inline, so
@@ -105,9 +102,22 @@ const useAutosaveField = (savedValue, onCommit) => {
 // boxes take effect at once. The title is set when the requirement is
 // added. Removing asks first: the requirement leaves the list and there
 // is no way back from this page.
-const RequirementCard = ({ requirement, onSave, onRemove, canEdit }) => {
+const RequirementCard = ({
+  requirement,
+  onSave,
+  onRemove,
+  canEdit,
+  missingInformationReadOnly,
+  actions,
+  allRequestsComplete
+}) => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const [justSaved, setJustSaved] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+  const [outcome, setOutcome] = useState(requirement.reviewOutcome)
+  useEffect(() => {
+    setOutcome(requirement.reviewOutcome)
+  }, [requirement.reviewOutcome])
   const save = (payload) => {
     onSave(payload)
     setJustSaved(true)
@@ -128,13 +138,17 @@ const RequirementCard = ({ requirement, onSave, onRemove, canEdit }) => {
   const notes = useAutosaveField(requirement.reviewNotes, (next) => {
     save({ reviewNotes: next })
   })
+  const missingInformation = useAutosaveField(
+    requirement.missingInformation,
+    (next) => save({ missingInformation: next })
+  )
 
-  const outcome = requirement.reviewOutcome
   const heading = requirementHeading(requirement)
 
   // Clicking the box that is already ticked returns the requirement to
   // unreviewed, which is how an analyst undoes a decision.
-  const setOutcome = (next) => {
+  const commitOutcome = (next) => {
+    setOutcome(next === outcome ? null : next)
     save(
       next === outcome ? { clearReviewOutcome: true } : { reviewOutcome: next }
     )
@@ -152,30 +166,92 @@ const RequirementCard = ({ requirement, onSave, onRemove, canEdit }) => {
     inputProps: { 'data-test': testId, 'aria-label': label }
   })
 
+  const expandFromOutcome = () => setExpanded(true)
+  const outcomeControl = (value, testId, label) => (
+    <FormControlLabel
+      sx={{ m: 0, whiteSpace: 'nowrap' }}
+      onClick={(event) => {
+        event.stopPropagation()
+        expandFromOutcome()
+      }}
+      control={
+        <Checkbox
+          size="small"
+          disabled={!canEdit}
+          checked={outcome === value}
+          data-test={testId}
+          onChange={() => commitOutcome(value)}
+        />
+      }
+      label={<BCTypography variant="body4">{label}</BCTypography>}
+    />
+  )
+
   return (
-    <Paper
-      variant="outlined"
+    <Accordion
+      expanded={expanded}
+      onChange={(_, isExpanded) => setExpanded(isExpanded)}
       data-test={`eoc-card-${requirement.evidenceRequirementId}`}
+      data-review-state={
+        outcome === OUTCOME_SATISFACTORY
+          ? 'satisfactory'
+          : outcome === OUTCOME_INFORMATION_REQUESTED
+            ? 'information-requested'
+            : 'unreviewed'
+      }
       sx={{
-        p: 2,
-        borderLeft: 4,
+        border: 1,
+        borderColor: 'divider',
+        borderLeft: 6,
         borderLeftColor: railColour(outcome),
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 1
+        bgcolor: backgroundColour(outcome),
+        '&:before': { display: 'none' },
+        '&.Mui-expanded': { m: 0 }
       }}
     >
-      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-        <BCBox sx={{ flexGrow: 1 }}>
-          <BCTypography
-            variant="body4"
-            component="p"
-            sx={{ fontWeight: 700, m: 0 }}
-            data-test={`eoc-heading-${requirement.evidenceRequirementId}`}
-          >
-            {requirement.requirementNumber}. {heading}
-          </BCTypography>
-        </BCBox>
+      <AccordionSummary
+        expandIcon={<ExpandMoreIcon />}
+        data-test={`eoc-summary-${requirement.evidenceRequirementId}`}
+        aria-controls={`eoc-details-${requirement.evidenceRequirementId}`}
+        id={`eoc-summary-${requirement.evidenceRequirementId}`}
+        sx={{
+          px: 2,
+          minHeight: 82,
+          '& .MuiAccordionSummary-content': {
+            alignItems: 'center',
+            gap: 3,
+            my: 1
+          },
+          '& .MuiAccordionSummary-content.Mui-expanded': { my: 1 }
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            flexShrink: 0,
+            minWidth: { xs: 190, md: 220 }
+          }}
+        >
+          {outcomeControl(
+            OUTCOME_SATISFACTORY,
+            `eoc-satisfactory-${requirement.evidenceRequirementId}`,
+            t('initiativeAgreement:evidence.satisfactory')
+          )}
+          {outcomeControl(
+            OUTCOME_INFORMATION_REQUESTED,
+            `eoc-request-${requirement.evidenceRequirementId}`,
+            t('initiativeAgreement:evidence.requestInformation')
+          )}
+        </Box>
+        <BCTypography
+          variant="body4"
+          component="p"
+          sx={{ fontWeight: 700, color: 'primary.main', m: 0, flexGrow: 1 }}
+          data-test={`eoc-heading-${requirement.evidenceRequirementId}`}
+        >
+          {requirement.requirementNumber}. {heading}
+        </BCTypography>
         {justSaved && (
           <BCBox
             component="span"
@@ -193,41 +269,57 @@ const RequirementCard = ({ requirement, onSave, onRemove, canEdit }) => {
             {t('initiativeAgreement:evidence.saved')}
           </BCBox>
         )}
-        {canEdit && (
-          <Tooltip title={t('initiativeAgreement:evidence.removeRequirement')}>
-            <IconButton
-              size="small"
-              data-test={`eoc-remove-${requirement.evidenceRequirementId}`}
-              aria-label={t('initiativeAgreement:evidence.removeRequirement')}
-              onClick={() => setConfirmingRemove(true)}
-            >
-              <CloseIcon fontSize="inherit" />
-            </IconButton>
-          </Tooltip>
-        )}
-      </Box>
+      </AccordionSummary>
 
-      <Box
-        sx={{
-          display: 'flex',
-          gap: 2,
-          flexDirection: { xs: 'column', md: 'row' }
-        }}
+      <AccordionDetails
+        id={`eoc-details-${requirement.evidenceRequirementId}`}
+        sx={{ px: 2, pt: 1, pb: 2 }}
       >
-        <BCBox
-          sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: 1 }}
-        >
-          <TextField
-            {...textFieldProps(
-              `eoc-description-${requirement.evidenceRequirementId}`,
-              t('initiativeAgreement:evidence.descriptionFor', {
-                name: heading
-              })
-            )}
-            {...description}
-          />
-          {notesShown && (
+        <BCBox sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+          {canEdit && (
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <Tooltip
+                title={t('initiativeAgreement:evidence.removeRequirement')}
+              >
+                <IconButton
+                  size="small"
+                  data-test={`eoc-remove-${requirement.evidenceRequirementId}`}
+                  aria-label={t(
+                    'initiativeAgreement:evidence.removeRequirement'
+                  )}
+                  onClick={() => setConfirmingRemove(true)}
+                >
+                  <CloseIcon fontSize="inherit" />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          )}
+          {outcome === OUTCOME_INFORMATION_REQUESTED && (
             <>
+              <MissingInformation
+                field={missingInformation}
+                label={t('initiativeAgreement:evidence.missingInformation')}
+                placeholder={t(
+                  'initiativeAgreement:evidence.missingInformationPlaceholder'
+                )}
+                readOnly={missingInformationReadOnly}
+                testId={`eoc-missing-information-${requirement.evidenceRequirementId}`}
+              />
+              {actions}
+              {!allRequestsComplete && (
+                <BCTypography
+                  variant="body4"
+                  color="text.secondary"
+                  data-test="eoc-incomplete-request"
+                >
+                  {t('initiativeAgreement:evidence.completeAllRequests')}
+                </BCTypography>
+              )}
+            </>
+          )}
+
+          {notesShown && (
+            <BCBox sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
               <BCTypography variant="body4" sx={{ fontWeight: 700 }}>
                 {t('initiativeAgreement:evidence.notesLabel')}
               </BCTypography>
@@ -238,70 +330,13 @@ const RequirementCard = ({ requirement, onSave, onRemove, canEdit }) => {
                 )}
                 {...notes}
               />
-            </>
+            </BCBox>
           )}
-          <BCTypography variant="body4" sx={{ fontWeight: 700 }}>
-            {t('initiativeAgreement:evidence.evaluationLabel')}
-          </BCTypography>
-          <TextField
-            {...textFieldProps(
-              `eoc-review-${requirement.evidenceRequirementId}`,
-              t('initiativeAgreement:evidence.evaluationFor', { name: heading })
-            )}
-            placeholder={
-              canEdit
-                ? t('initiativeAgreement:evidence.evidencePlaceholder')
-                : ''
-            }
-            {...evaluation}
-          />
-        </BCBox>
-
-        <BCBox
-          sx={{
-            minWidth: 220,
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'flex-start'
-          }}
-        >
           <FormControlLabel
+            sx={{ alignSelf: 'flex-start', m: 0 }}
             control={
               <Checkbox
                 size="small"
-                disabled={!canEdit}
-                checked={outcome === OUTCOME_SATISFACTORY}
-                data-test={`eoc-satisfactory-${requirement.evidenceRequirementId}`}
-                onChange={() => setOutcome(OUTCOME_SATISFACTORY)}
-              />
-            }
-            label={
-              <BCTypography variant="body4">
-                {t('initiativeAgreement:evidence.satisfactory')}
-              </BCTypography>
-            }
-          />
-          <FormControlLabel
-            control={
-              <Checkbox
-                size="small"
-                disabled={!canEdit}
-                checked={outcome === OUTCOME_INFORMATION_REQUESTED}
-                data-test={`eoc-request-${requirement.evidenceRequirementId}`}
-                onChange={() => setOutcome(OUTCOME_INFORMATION_REQUESTED)}
-              />
-            }
-            label={
-              <BCTypography variant="body4">
-                {t('initiativeAgreement:evidence.requestInformation')}
-              </BCTypography>
-            }
-          />
-          <FormControlLabel
-            control={
-              <Checkbox
-                size="small"
-                disabled={!canEdit}
                 checked={notesShown}
                 data-test={`eoc-notes-toggle-${requirement.evidenceRequirementId}`}
                 onChange={(event) => setNotesShown(event.target.checked)}
@@ -313,8 +348,41 @@ const RequirementCard = ({ requirement, onSave, onRemove, canEdit }) => {
               </BCTypography>
             }
           />
+          <BCBox sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <BCTypography variant="body4" sx={{ fontWeight: 700 }}>
+              {t('initiativeAgreement:evidence.evidenceSummary')}
+            </BCTypography>
+            <TextField
+              {...textFieldProps(
+                `eoc-description-${requirement.evidenceRequirementId}`,
+                t('initiativeAgreement:evidence.descriptionFor', {
+                  name: heading
+                })
+              )}
+              {...description}
+            />
+          </BCBox>
+          <BCBox sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <BCTypography variant="body4" sx={{ fontWeight: 700 }}>
+              {t('initiativeAgreement:evidence.evaluationLabel')}
+            </BCTypography>
+            <TextField
+              {...textFieldProps(
+                `eoc-review-${requirement.evidenceRequirementId}`,
+                t('initiativeAgreement:evidence.evaluationFor', {
+                  name: heading
+                })
+              )}
+              placeholder={
+                canEdit
+                  ? t('initiativeAgreement:evidence.evidencePlaceholder')
+                  : ''
+              }
+              {...evaluation}
+            />
+          </BCBox>
         </BCBox>
-      </Box>
+      </AccordionDetails>
 
       <BCModal
         open={confirmingRemove}
@@ -341,129 +409,41 @@ const RequirementCard = ({ requirement, onSave, onRemove, canEdit }) => {
           )
         }}
       />
-    </Paper>
+    </Accordion>
   )
 }
 
-// Compact and wide (#5118): tight rows and small icons, half the row on
-// wider screens, and titles free to wrap rather than setting its width.
-const ReviewSummary = ({ requirements }) => {
-  const { t } = useTranslation(['initiativeAgreement'])
-  return (
-    <Paper
-      variant="outlined"
-      sx={{
-        px: 1.5,
-        py: 1,
-        borderRadius: 1,
-        flex: { xs: '1 1 100%', md: '0 1 50%' },
-        minWidth: 0
-      }}
-      data-test="eoc-review-summary"
+const MissingInformation = ({
+  field,
+  label,
+  placeholder,
+  readOnly,
+  testId
+}) => (
+  <BCBox sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+    <BCTypography
+      variant="body4"
+      component="label"
+      htmlFor={testId}
+      color="primary"
+      sx={{ fontWeight: 700 }}
     >
-      <BCTypography
-        variant="body4"
-        component="p"
-        color="primary"
-        sx={{ fontWeight: 700, m: 0, mb: 0.5 }}
-      >
-        {t('initiativeAgreement:evidence.reviewSummary')}
-      </BCTypography>
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
-        {requirements.map((requirement) => (
-          <Box
-            key={requirement.evidenceRequirementId}
-            sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.75 }}
-          >
-            {/* Two states, as the wireframe has it: satisfied, or still
-                outstanding. The icon carries the outcome, so it needs
-                words — colour and shape alone are not an accessible
-                name — and the words still say which kind of outstanding. */}
-            {requirement.reviewOutcome === OUTCOME_SATISFACTORY ? (
-              <CheckCircleIcon
-                color="success"
-                sx={{ fontSize: 16, mt: '2px', flexShrink: 0 }}
-                titleAccess={t('initiativeAgreement:evidence.satisfactory')}
-              />
-            ) : (
-              <OutstandingIcon
-                sx={{
-                  fontSize: 16,
-                  mt: '2px',
-                  flexShrink: 0,
-                  color: OUTSTANDING_COLOUR
-                }}
-                titleAccess={
-                  requirement.reviewOutcome === OUTCOME_INFORMATION_REQUESTED
-                    ? t('initiativeAgreement:evidence.requestInformation')
-                    : t('initiativeAgreement:evidence.pending')
-                }
-              />
-            )}
-            <BCTypography
-              variant="body4"
-              sx={{ minWidth: 0, overflowWrap: 'anywhere', lineHeight: 1.5 }}
-            >
-              {requirementHeading(requirement)}
-            </BCTypography>
-          </Box>
-        ))}
-      </Box>
-    </Paper>
-  )
-}
-
-// What the analyst needs from the proponent (#5118). Always on the page,
-// not only inside the request dialog, so the current ask is visible
-// between rounds; Request additional information sends it.
-const MissingInformation = ({ value, onChange, onBlur, readOnly }) => {
-  const { t } = useTranslation(['initiativeAgreement'])
-  const label = t('initiativeAgreement:evidence.missingInformation')
-  return (
-    <Paper
-      variant="outlined"
-      data-test="eoc-missing-information"
-      sx={{
-        p: 1.5,
-        borderLeft: 4,
-        borderLeftColor: 'success.main',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 1
-      }}
-    >
-      <BCTypography
-        variant="body4"
-        component="label"
-        htmlFor="eoc-missing-information-input"
-        color="primary"
-        sx={{ fontWeight: 700 }}
-      >
-        {label}
-      </BCTypography>
-      <TextField
-        id="eoc-missing-information-input"
-        multiline
-        minRows={2}
-        fullWidth
-        size="small"
-        sx={GROWING_TEXT_SX}
-        value={value}
-        placeholder={
-          readOnly
-            ? ''
-            : t('initiativeAgreement:evidence.missingInformationPlaceholder')
-        }
-        // Read-only, not disabled, for the same contrast reason as the
-        // requirement fields.
-        InputProps={{ readOnly }}
-        inputProps={{ 'data-test': 'eoc-missing-information-input' }}
-        onChange={(event) => onChange?.(event.target.value)}
-        onBlur={onBlur}
-      />
-    </Paper>
-  )
-}
+      {label}
+    </BCTypography>
+    <TextField
+      id={testId}
+      multiline
+      minRows={2}
+      fullWidth
+      size="small"
+      sx={GROWING_TEXT_SX}
+      placeholder={readOnly ? '' : placeholder}
+      InputProps={{ readOnly }}
+      inputProps={{ 'data-test': testId }}
+      {...field}
+    />
+  </BCBox>
+)
 
 // Adding a requirement: a title and the description of what is required,
 // in a modal, created only on confirm.
@@ -531,15 +511,10 @@ const AddRequirementModal = ({ open, onClose, onCreate, isPending }) => {
 export const EvidenceOfCompletion = ({
   designatedActionId,
   canEdit = true,
-  // The evidence decisions — accept, request information — rendered
-  // beneath the review summary they act on (#5080). The page owns them;
-  // this section only says where they go.
+  // Accept is a designated-action decision; request-information buttons
+  // are rendered in the matching EOC accordion.
   actions = null,
-  // The Missing information box (#5118). The page owns its text because
-  // the request button sends it.
-  missingInformation = '',
-  onMissingInformationChange,
-  onMissingInformationBlur,
+  renderRequestAction = null,
   missingInformationReadOnly = false
 }) => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
@@ -554,11 +529,17 @@ export const EvidenceOfCompletion = ({
     useUpdateEvidenceRequirement(designatedActionId)
   const { mutate: removeRequirement } =
     useDeleteEvidenceRequirement(designatedActionId)
+  const requestedRequirements = requirements.filter(
+    (requirement) => requirement.reviewOutcome === OUTCOME_INFORMATION_REQUESTED
+  )
+  const allRequestsComplete =
+    requestedRequirements.length > 0 &&
+    requestedRequirements.every((requirement) =>
+      (requirement.missingInformation ?? '').trim()
+    )
 
   return (
-    // A box of its own inside the designated action card (#5118): the
-    // evidence review, its summary and its decisions read as one unit,
-    // with the recommendation beneath it.
+    // A box of its own inside the designated action card (#5118).
     <Paper
       variant="outlined"
       sx={{ mt: 3, p: 2, borderRadius: 1 }}
@@ -593,12 +574,18 @@ export const EvidenceOfCompletion = ({
         {isLoading ? (
           <Loading message={t('initiativeAgreement:evidence.loading')} />
         ) : (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
             {requirements.map((requirement) => (
               <RequirementCard
                 key={requirement.evidenceRequirementId}
                 requirement={requirement}
                 canEdit={canEdit}
+                missingInformationReadOnly={missingInformationReadOnly}
+                actions={renderRequestAction?.(
+                  requirement,
+                  allRequestsComplete
+                )}
+                allRequestsComplete={allRequestsComplete}
                 onSave={(payload) =>
                   updateRequirement({
                     evidenceRequirementId: requirement.evidenceRequirementId,
@@ -617,25 +604,12 @@ export const EvidenceOfCompletion = ({
               </BCTypography>
             )}
 
-            <MissingInformation
-              value={missingInformation}
-              onChange={onMissingInformationChange}
-              onBlur={onMissingInformationBlur}
-              readOnly={missingInformationReadOnly}
-            />
-
             <Box
               sx={{
                 display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start',
-                gap: 2,
-                flexWrap: 'wrap'
+                justifyContent: 'flex-end'
               }}
             >
-              {requirements.length > 0 && (
-                <ReviewSummary requirements={requirements} />
-              )}
               <Role roles={[roles.ia_analyst, roles.ia_manager]}>
                 <BCButton
                   type="button"

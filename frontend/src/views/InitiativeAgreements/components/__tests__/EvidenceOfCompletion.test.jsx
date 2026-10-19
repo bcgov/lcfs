@@ -1,4 +1,4 @@
-import 'react';
+import 'react'
 import { fireEvent, screen } from '@testing-library/react'
 
 import { describe, expect, vi, beforeEach } from 'vitest'
@@ -48,10 +48,14 @@ const requirement = (overrides = {}) => ({
   analystReview: '',
   reviewOutcome: null,
   reviewNotes: null,
+  missingInformation: null,
   reviewedBy: null,
   reviewedDate: null,
   ...overrides
 })
+
+const openEoc = (id = 1) =>
+  fireEvent.click(screen.getByTestId(`eoc-heading-${id}`))
 
 describe('EvidenceOfCompletion', () => {
   beforeEach(() => {
@@ -60,21 +64,25 @@ describe('EvidenceOfCompletion', () => {
     mockList.mockReturnValue({ data: [requirement()], isLoading: false })
   })
 
-  test('renders a requirement card and the review summary', ({
+  test('renders a collapsed EOC header with controls and no Summary section', ({
     render,
     app
   }) => {
     render(<EvidenceOfCompletion designatedActionId="9" />, app)
 
-    // The title appears twice on purpose: once as the card's heading,
-    // once in the review summary, matching the wireframe. The description
-    // is the card's body.
     expect(screen.getByTestId('eoc-heading-1')).toHaveTextContent('Permits')
+    expect(screen.getByTestId('eoc-request-1')).toBeInTheDocument()
+    expect(screen.getByTestId('eoc-satisfactory-1')).toBeInTheDocument()
+    expect(screen.getByTestId('eoc-description-1')).not.toBeVisible()
+    expect(screen.queryByTestId('eoc-review-summary')).not.toBeInTheDocument()
+    expect(screen.getByTestId('eoc-card-1')).toHaveAttribute(
+      'data-review-state',
+      'unreviewed'
+    )
+
+    openEoc()
     expect(screen.getByTestId('eoc-description-1')).toHaveValue(
       'List of major permits and approvals'
-    )
-    expect(screen.getByTestId('eoc-review-summary')).toHaveTextContent(
-      'Permits'
     )
   })
 
@@ -89,6 +97,14 @@ describe('EvidenceOfCompletion', () => {
       evidenceRequirementId: 1,
       reviewOutcome: OUTCOME_SATISFACTORY
     })
+    expect(screen.getByTestId('eoc-summary-1')).toHaveAttribute(
+      'aria-expanded',
+      'true'
+    )
+    expect(screen.getByTestId('eoc-card-1')).toHaveAttribute(
+      'data-review-state',
+      'satisfactory'
+    )
   })
 
   test('records a request for information', ({ render, app }) => {
@@ -100,6 +116,15 @@ describe('EvidenceOfCompletion', () => {
       evidenceRequirementId: 1,
       reviewOutcome: OUTCOME_INFORMATION_REQUESTED
     })
+    expect(screen.getByTestId('eoc-summary-1')).toHaveAttribute(
+      'aria-expanded',
+      'true'
+    )
+    expect(screen.getByTestId('eoc-card-1')).toHaveAttribute(
+      'data-review-state',
+      'information-requested'
+    )
+    expect(screen.getByTestId('eoc-missing-information-1')).toBeInTheDocument()
   })
 
   test('clicking the ticked outcome returns it to unreviewed', ({
@@ -135,6 +160,10 @@ describe('EvidenceOfCompletion', () => {
     expect(
       screen.getByTestId('eoc-request-1').querySelector('input')
     ).not.toBeChecked()
+    expect(screen.getByTestId('eoc-card-1')).toHaveAttribute(
+      'data-review-state',
+      'satisfactory'
+    )
   })
 
   test('shows the number and title as the heading, with the evaluation always present', ({
@@ -144,6 +173,7 @@ describe('EvidenceOfCompletion', () => {
     render(<EvidenceOfCompletion designatedActionId="9" />, app)
 
     expect(screen.getByTestId('eoc-heading-1')).toHaveTextContent('1. Permits')
+    openEoc()
     // Editable in place: there is no Edit step (#5118).
     expect(screen.getByTestId('eoc-review-1')).not.toHaveAttribute('readonly')
     expect(screen.queryByTestId('eoc-edit-1')).not.toBeInTheDocument()
@@ -169,6 +199,7 @@ describe('EvidenceOfCompletion', () => {
     app
   }) => {
     render(<EvidenceOfCompletion designatedActionId="9" />, app)
+    openEoc()
 
     const evaluation = screen.getByTestId('eoc-review-1')
     fireEvent.focus(evaluation)
@@ -187,6 +218,7 @@ describe('EvidenceOfCompletion', () => {
 
   test('does not save a field that was left unchanged', ({ render, app }) => {
     render(<EvidenceOfCompletion designatedActionId="9" />, app)
+    openEoc()
 
     const description = screen.getByTestId('eoc-description-1')
     fireEvent.focus(description)
@@ -197,6 +229,7 @@ describe('EvidenceOfCompletion', () => {
 
   test('saves the description when the field is left', ({ render, app }) => {
     render(<EvidenceOfCompletion designatedActionId="9" />, app)
+    openEoc()
 
     const description = screen.getByTestId('eoc-description-1')
     fireEvent.focus(description)
@@ -216,6 +249,7 @@ describe('EvidenceOfCompletion', () => {
     app
   }) => {
     render(<EvidenceOfCompletion designatedActionId="9" />, app)
+    openEoc()
 
     const description = screen.getByTestId('eoc-description-1')
     fireEvent.focus(description)
@@ -228,6 +262,7 @@ describe('EvidenceOfCompletion', () => {
 
   test('saves notes when the field is left', ({ render, app }) => {
     render(<EvidenceOfCompletion designatedActionId="9" />, app)
+    openEoc()
     fireEvent.click(
       screen.getByTestId('eoc-notes-toggle-1').querySelector('input')
     )
@@ -251,6 +286,7 @@ describe('EvidenceOfCompletion', () => {
       <EvidenceOfCompletion designatedActionId="9" />,
       app
     )
+    openEoc()
     const evaluation = screen.getByTestId('eoc-review-1')
     fireEvent.focus(evaluation)
     fireEvent.change(evaluation, { target: { value: 'Half a thought' } })
@@ -268,6 +304,7 @@ describe('EvidenceOfCompletion', () => {
   test('offers no editing to someone who cannot edit', ({ render, app }) => {
     render(<EvidenceOfCompletion designatedActionId="9" canEdit={false} />, app)
 
+    openEoc()
     expect(screen.queryByTestId('eoc-remove-1')).not.toBeInTheDocument()
     expect(screen.getByTestId('eoc-review-1')).toHaveAttribute('readonly')
     expect(screen.getByTestId('eoc-description-1')).toHaveAttribute('readonly')
@@ -281,6 +318,7 @@ describe('EvidenceOfCompletion', () => {
     app
   }) => {
     render(<EvidenceOfCompletion designatedActionId="9" />, app)
+    openEoc()
     expect(screen.queryByTestId('eoc-notes-1')).not.toBeInTheDocument()
 
     fireEvent.click(
@@ -300,6 +338,7 @@ describe('EvidenceOfCompletion', () => {
     })
     render(<EvidenceOfCompletion designatedActionId="9" />, app)
 
+    openEoc()
     expect(screen.getByTestId('eoc-notes-1')).toBeInTheDocument()
   })
 
@@ -380,6 +419,7 @@ describe('EvidenceOfCompletion', () => {
   }) => {
     render(<EvidenceOfCompletion designatedActionId="9" />, app)
 
+    openEoc()
     fireEvent.click(screen.getByTestId('eoc-remove-1'))
 
     // Nothing is removed until the user confirms.
@@ -398,6 +438,7 @@ describe('EvidenceOfCompletion', () => {
   test('cancelling the removal keeps the requirement', ({ render, app }) => {
     render(<EvidenceOfCompletion designatedActionId="9" />, app)
 
+    openEoc()
     fireEvent.click(screen.getByTestId('eoc-remove-1'))
     fireEvent.click(screen.getByText('common:cancelBtn'))
 
@@ -432,72 +473,106 @@ describe('EvidenceOfCompletion', () => {
     ).toBeInTheDocument()
   })
 
-  test('always shows the Missing information box, even with nothing added (#5118)', ({
+  test('shows Missing information only for a requested EOC and saves it per EOC', ({
     render,
     app
   }) => {
-    mockList.mockReturnValue({ data: [], isLoading: false })
-    render(
-      <EvidenceOfCompletion
-        designatedActionId="9"
-        missingInformation="The signed stage two permit."
-      />,
-      app
-    )
+    mockList.mockReturnValue({
+      data: [
+        requirement({
+          reviewOutcome: OUTCOME_INFORMATION_REQUESTED,
+          missingInformation: 'The signed permit.'
+        }),
+        requirement({
+          evidenceRequirementId: 2,
+          requirementNumber: 2,
+          title: 'Risk register',
+          description: 'Risk register',
+          reviewOutcome: OUTCOME_INFORMATION_REQUESTED,
+          missingInformation: 'Update the mitigation owners.'
+        }),
+        requirement({
+          evidenceRequirementId: 3,
+          requirementNumber: 3,
+          title: 'Completion letter',
+          reviewOutcome: OUTCOME_SATISFACTORY,
+          missingInformation: 'Must remain saved.'
+        })
+      ],
+      isLoading: false
+    })
+    render(<EvidenceOfCompletion designatedActionId="9" />, app)
 
-    expect(screen.getByTestId('eoc-missing-information')).toBeInTheDocument()
     expect(
-      screen.getByLabelText('initiativeAgreement:evidence.missingInformation')
-    ).toHaveValue('The signed stage two permit.')
-  })
+      screen.queryByTestId('eoc-missing-information-3')
+    ).not.toBeInTheDocument()
 
-  test('hands edits to the Missing information box back to the page', ({
-    render,
-    app
-  }) => {
-    const onChange = vi.fn()
-    const onBlur = vi.fn()
-    render(
-      <EvidenceOfCompletion
-        designatedActionId="9"
-        missingInformation=""
-        onMissingInformationChange={onChange}
-        onMissingInformationBlur={onBlur}
-      />,
-      app
+    openEoc(1)
+    const first = screen.getByTestId('eoc-missing-information-1')
+    expect(first).toHaveValue('The signed permit.')
+    fireEvent.focus(first)
+    fireEvent.change(first, { target: { value: 'The updated permit.' } })
+    fireEvent.blur(first)
+    expect(mockUpdate).toHaveBeenCalledWith({
+      evidenceRequirementId: 1,
+      missingInformation: 'The updated permit.'
+    })
+
+    openEoc(2)
+    expect(screen.getByTestId('eoc-missing-information-2')).toHaveValue(
+      'Update the mitigation owners.'
     )
-
-    const box = screen.getByTestId('eoc-missing-information-input')
-    fireEvent.change(box, { target: { value: 'The risk register.' } })
-    fireEvent.blur(box)
-
-    expect(onChange).toHaveBeenCalledWith('The risk register.')
-    expect(onBlur).toHaveBeenCalled()
   })
 
-  test('shows the Missing information read-only when the page says so', ({
+  test('persists individual request values when the page is reopened', ({
     render,
     app
   }) => {
+    mockList.mockReturnValue({
+      data: [
+        requirement({
+          reviewOutcome: OUTCOME_INFORMATION_REQUESTED,
+          missingInformation: 'The signed permit.'
+        }),
+        requirement({
+          evidenceRequirementId: 2,
+          requirementNumber: 2,
+          title: 'Risks',
+          reviewOutcome: OUTCOME_INFORMATION_REQUESTED,
+          missingInformation: 'The updated risk register.'
+        })
+      ],
+      isLoading: false
+    })
     render(
       <EvidenceOfCompletion
         designatedActionId="9"
-        missingInformation="The signed stage two permit."
         missingInformationReadOnly
       />,
       app
     )
 
-    // Read-only rather than disabled, so it keeps its contrast.
-    const box = screen.getByTestId('eoc-missing-information-input')
-    expect(box).toHaveAttribute('readonly')
-    expect(box).not.toBeDisabled()
+    openEoc(1)
+    const first = screen.getByTestId('eoc-missing-information-1')
+    expect(first).toHaveValue('The signed permit.')
+    expect(first).toHaveAttribute('readonly')
+    expect(first).not.toBeDisabled()
+    openEoc(2)
+    expect(screen.getByTestId('eoc-missing-information-2')).toHaveValue(
+      'The updated risk register.'
+    )
   })
 
-  test('names each outcome in the review summary', ({ render, app }) => {
+  test('offers the request action in requested EOCs and blocks incomplete requests', ({
+    render,
+    app
+  }) => {
     mockList.mockReturnValue({
       data: [
-        requirement({ reviewOutcome: OUTCOME_SATISFACTORY }),
+        requirement({
+          reviewOutcome: OUTCOME_INFORMATION_REQUESTED,
+          missingInformation: 'The signed permit.'
+        }),
         requirement({
           evidenceRequirementId: 2,
           requirementNumber: 2,
@@ -507,22 +582,71 @@ describe('EvidenceOfCompletion', () => {
         requirement({
           evidenceRequirementId: 3,
           requirementNumber: 3,
-          title: 'Letter'
+          title: 'Letter',
+          reviewOutcome: OUTCOME_SATISFACTORY
+        })
+      ],
+      isLoading: false
+    })
+    const renderRequestAction = vi.fn((item, complete) => (
+      <div
+        data-test={`request-action-${item.evidenceRequirementId}`}
+        data-complete={String(complete)}
+      />
+    ))
+    render(
+      <EvidenceOfCompletion
+        designatedActionId="9"
+        renderRequestAction={renderRequestAction}
+      />,
+      app
+    )
+
+    expect(screen.getByTestId('request-action-1')).toHaveAttribute(
+      'data-complete',
+      'false'
+    )
+    expect(screen.getByTestId('request-action-2')).toHaveAttribute(
+      'data-complete',
+      'false'
+    )
+    expect(screen.queryByTestId('request-action-3')).not.toBeInTheDocument()
+    expect(screen.getAllByTestId('eoc-incomplete-request')).toHaveLength(2)
+  })
+
+  test('renders grey, yellow and green accordion states for multiple EOCs', ({
+    render,
+    app
+  }) => {
+    mockList.mockReturnValue({
+      data: [
+        requirement(),
+        requirement({
+          evidenceRequirementId: 2,
+          requirementNumber: 2,
+          reviewOutcome: OUTCOME_INFORMATION_REQUESTED
+        }),
+        requirement({
+          evidenceRequirementId: 3,
+          requirementNumber: 3,
+          reviewOutcome: OUTCOME_SATISFACTORY
         })
       ],
       isLoading: false
     })
     render(<EvidenceOfCompletion designatedActionId="9" />, app)
 
-    // The icons carry the outcome, so each needs a name, and the gold
-    // one still says which kind of outstanding.
-    const names = [
-      ...screen.getByTestId('eoc-review-summary').querySelectorAll('svg title')
-    ].map((title) => title.textContent)
-    expect(names).toEqual([
-      'initiativeAgreement:evidence.satisfactory',
-      'initiativeAgreement:evidence.requestInformation',
-      'initiativeAgreement:evidence.pending'
-    ])
+    expect(screen.getByTestId('eoc-card-1')).toHaveAttribute(
+      'data-review-state',
+      'unreviewed'
+    )
+    expect(screen.getByTestId('eoc-card-2')).toHaveAttribute(
+      'data-review-state',
+      'information-requested'
+    )
+    expect(screen.getByTestId('eoc-card-3')).toHaveAttribute(
+      'data-review-state',
+      'satisfactory'
+    )
   })
 })

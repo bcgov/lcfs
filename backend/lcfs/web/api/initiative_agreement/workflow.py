@@ -103,8 +103,8 @@ TRANSITIONS = {
     # Sends the action back to the proponent for more evidence. The
     # snapshot carries the full review, so this round's findings survive
     # the next one.
-    # The reason is the page's Missing information box (#5118): sent as the
-    # comment, or read from the saved box when the request carries none.
+    # The reason is composed from each requested EOC's saved text; legacy DA
+    # text is used only while the action has no active EOC.
     ACTION_REQUEST_INFORMATION: Transition(
         roles=(RoleEnum.IA_ANALYST, RoleEnum.IA_MANAGER),
         from_statuses=IN_REVIEW_STATUSES,

@@ -198,6 +198,7 @@ class EvidenceRequirementSchema(BaseSchema):
     analyst_review: Optional[str] = None
     review_outcome: Optional[str] = None
     review_notes: Optional[str] = None
+    missing_information: Optional[str] = None
     reviewed_by: Optional[AssignedAnalystSchema] = None
     reviewed_date: Optional[datetime] = None
 
@@ -219,6 +220,7 @@ class EvidenceRequirementUpdateSchema(BaseSchema):
     requirement_number: Optional[int] = None
     analyst_review: Optional[str] = None
     review_notes: Optional[str] = None
+    missing_information: Optional[str] = None
     # Absent leaves the outcome untouched; explicit null clears it back to
     # unreviewed, which is how the UI unchecks both boxes.
     review_outcome: Optional[str] = None

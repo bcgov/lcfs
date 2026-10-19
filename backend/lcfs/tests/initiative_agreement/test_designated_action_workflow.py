@@ -102,14 +102,18 @@ async def test_requesting_information_keeps_the_round_in_the_audit_trail(
     round happened — otherwise the next round overwrites this one's
     findings and they are gone."""
     action = await _seed_da(dbsession, "IA-26WF1")
-    await _seed_requirement(dbsession, action, REVIEW_OUTCOME_INFORMATION_REQUESTED)
+    requirement = await _seed_requirement(
+        dbsession, action, REVIEW_OUTCOME_INFORMATION_REQUESTED
+    )
+    requirement.missing_information = "Please send the signed permit for stage two."
+    await dbsession.flush()
     set_mock_user(fastapi_app, IDIR_IA_ANALYST)
 
     response = await client.put(
         _workflow_url(fastapi_app, action),
         json={
             "action": "request_information",
-            "comment": "Please send the signed permit for stage two.",
+            "comment": "The client-supplied text is not used for EOC requests.",
         },
     )
 
@@ -119,10 +123,80 @@ async def test_requesting_information_keeps_the_round_in_the_audit_trail(
     entries = await _history(dbsession, action)
     assert [e.event for e in entries] == [EVENT_INFORMATION_REQUESTED]
     snapshot = entries[0].snapshot
-    assert snapshot["comment"] == "Please send the signed permit for stage two."
+    assert snapshot["comment"] == (
+        "EOC 1 - List of major permits: Please send the signed permit for stage two."
+    )
     captured = snapshot["evidence_requirements"]
     assert captured[0]["analyst_review"] == "Permits verified."
     assert captured[0]["review_outcome"] == REVIEW_OUTCOME_INFORMATION_REQUESTED
+    assert (
+        captured[0]["missing_information"]
+        == "Please send the signed permit for stage two."
+    )
+
+
+@pytest.mark.anyio
+async def test_requesting_information_combines_all_requested_eocs(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    action = await _seed_da(dbsession, "IA-26WF1A")
+    first = await _seed_requirement(
+        dbsession, action, REVIEW_OUTCOME_INFORMATION_REQUESTED
+    )
+    first.missing_information = "Send the permit."
+    second = EvidenceRequirement(
+        designated_action_id=action.designated_action_id,
+        requirement_number=2,
+        title="Risk register",
+        description="Risk register",
+        review_outcome=REVIEW_OUTCOME_INFORMATION_REQUESTED,
+        missing_information="Update the mitigation owners.",
+    )
+    dbsession.add(second)
+    await dbsession.flush()
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    response = await client.put(
+        _workflow_url(fastapi_app, action), json={"action": "request_information"}
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    entries = await _history(dbsession, action)
+    assert entries[0].snapshot["comment"] == (
+        "EOC 1 - List of major permits: Send the permit.\n\n"
+        "EOC 2 - Risk register: Update the mitigation owners."
+    )
+    await dbsession.refresh(action)
+    assert action.missing_information is None
+
+
+@pytest.mark.anyio
+async def test_requesting_information_requires_text_for_each_selected_eoc(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    action = await _seed_da(dbsession, "IA-26WF1B")
+    requirement = await _seed_requirement(
+        dbsession, action, REVIEW_OUTCOME_INFORMATION_REQUESTED
+    )
+    requirement.missing_information = "The permit."
+    second = EvidenceRequirement(
+        designated_action_id=action.designated_action_id,
+        requirement_number=2,
+        title="Risk register",
+        description="Risk register",
+        review_outcome=REVIEW_OUTCOME_INFORMATION_REQUESTED,
+    )
+    dbsession.add(second)
+    await dbsession.flush()
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    response = await client.put(
+        _workflow_url(fastapi_app, action),
+        json={"action": "request_information", "comment": "Only one EOC has text."},
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "every EOC" in response.json()["detail"]
 
 
 @pytest.mark.anyio
@@ -643,6 +717,22 @@ async def test_directors_cannot_write_the_missing_information(
     )
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.anyio
+async def test_da_level_missing_information_is_refused_when_an_eoc_exists(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    action = await _seed_da(dbsession, "IA-26MI2A")
+    await _seed_requirement(dbsession, action)
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    response = await client.put(
+        _missing_information_url(fastapi_app, action),
+        json={"missingInformation": "This belongs to an EOC."},
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
 
 
 @pytest.mark.anyio

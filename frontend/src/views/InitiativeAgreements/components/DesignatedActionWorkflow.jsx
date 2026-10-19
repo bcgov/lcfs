@@ -111,9 +111,11 @@ export const DesignatedActionWorkflow = ({
   recommendedCredits,
   allEvidenceSatisfactory,
   hasRequirements = true,
-  // The Missing information box's current text; it is what a request for
-  // additional information sends.
+  // Used only for the legacy no-EOC path; requests with EOCs are composed
+  // from their saved Missing information fields by the API.
   missingInformation = '',
+  canRequestInformation,
+  onlyAction,
   // Omitted: every available action, as before the split.
   placement,
   onChanged
@@ -169,6 +171,7 @@ export const DesignatedActionWorkflow = ({
   const visible = BUTTONS.filter(
     (button) =>
       availableActions.includes(button.action) &&
+      (!onlyAction || button.action === onlyAction) &&
       (!placement || button.placement === placement)
   )
   // Nothing to offer here: render nothing rather than an empty block
@@ -182,7 +185,8 @@ export const DesignatedActionWorkflow = ({
     (action === ACTION_ACCEPT || action === ACTION_RECOMMEND_TO_MANAGER) &&
     !allEvidenceSatisfactory
   const blockedByMissingInformation = (action) =>
-    action === ACTION_REQUEST_INFORMATION && !missingInformation.trim()
+    action === ACTION_REQUEST_INFORMATION &&
+    !(canRequestInformation ?? Boolean(missingInformation.trim()))
 
   // A disabled button should say what would enable it, not just refuse.
   const tooltipFor = (action) => {
