@@ -407,8 +407,12 @@ class AgreementCreateSchema(BaseSchema):
 
 
 class AgreementUpdateSchema(BaseSchema):
-    """Partial update: only fields present in the request are applied."""
+    """Partial update: only fields present in the request are applied.
 
+    organization_id fills in an organization the agreement was saved
+    without (#5186); once set, it cannot be changed or cleared."""
+
+    organization_id: Optional[int] = None
     ia_code: Optional[str] = Field(None, max_length=50)
     agreement_type: Optional[str] = None
     title: Optional[str] = Field(None, max_length=500)

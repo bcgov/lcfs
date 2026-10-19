@@ -1311,6 +1311,71 @@ async def test_update_agreement_cannot_reach_a_draft(
 
 
 @pytest.mark.anyio
+async def test_update_agreement_fills_in_a_missing_organization(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """An agreement saved before its organization was known (#5186) gets
+    one when it is edited."""
+    org_id, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(dbsession, None, "IA-26EDTO")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    url = fastapi_app.url_path_for(
+        "update_agreement", initiative_agreement_id=agreement.initiative_agreement_id
+    )
+    response = await client.put(url, json={"organizationId": org_id})
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert response.json()["organization"]["organizationId"] == org_id
+    await dbsession.refresh(agreement)
+    assert agreement.to_organization_id == org_id
+
+
+@pytest.mark.anyio
+async def test_update_agreement_cannot_change_or_clear_a_set_organization(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """Credits the agreement issues go to its organization, so once set it
+    stays. Sending the same organization back is not a change."""
+    org1, org2 = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(dbsession, org1, "IA-26EDTC")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    url = fastapi_app.url_path_for(
+        "update_agreement", initiative_agreement_id=agreement.initiative_agreement_id
+    )
+    for organization_id in (org2, None):
+        response = await client.put(url, json={"organizationId": organization_id})
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "cannot be changed" in response.json()["detail"]
+
+    response = await client.put(
+        url, json={"organizationId": org1, "title": "Same organization"}
+    )
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert response.json()["title"] == "Same organization"
+    await dbsession.refresh(agreement)
+    assert agreement.to_organization_id == org1
+
+
+@pytest.mark.anyio
+async def test_update_agreement_refuses_an_unknown_organization(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    agreement = await _seed_agreement(dbsession, None, "IA-26EDTU")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    url = fastapi_app.url_path_for(
+        "update_agreement", initiative_agreement_id=agreement.initiative_agreement_id
+    )
+    response = await client.put(url, json={"organizationId": 999999})
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    await dbsession.refresh(agreement)
+    assert agreement.to_organization_id is None
+
+
+@pytest.mark.anyio
 async def test_update_agreement_refuses_a_legacy_credit_award(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):

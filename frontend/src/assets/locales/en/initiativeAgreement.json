@@ -278,6 +278,7 @@
   "edit": {
     "button": "Edit details",
     "descriptionLabel": "Project description",
+    "organizationHint": "Once saved, the organization cannot be changed.",
     "tooLong": "Must be {{max}} characters or fewer.",
     "codeRequired": "Initiative agreement code is required.",
     "endBeforeStart": "The end date cannot be before the start date.",

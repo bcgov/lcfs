@@ -446,6 +446,7 @@ export const useUpdateAgreement = (initiativeAgreementId: number | string) => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (payload: {
+      organizationId?: number | null
       iaCode?: string
       agreementType?: string
       title?: string | null

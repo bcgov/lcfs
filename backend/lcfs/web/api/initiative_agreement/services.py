@@ -385,6 +385,22 @@ class InitiativeAgreementServices:
 
         provided = data.model_fields_set
 
+        # An agreement may be saved before its organization is known (#5186).
+        # The organization can be filled in later, but once set it stays:
+        # credits the agreement issues go to that organization.
+        if (
+            "organization_id" in provided
+            and data.organization_id != agreement.to_organization_id
+        ):
+            if agreement.to_organization_id is not None:
+                raise HTTPException(
+                    status_code=400,
+                    detail="The agreement's organization is already set and cannot be changed.",
+                )
+            agreement.to_organization = await self.org_service.get_organization(
+                data.organization_id
+            )
+
         if "ia_code" in provided:
             ia_code = (data.ia_code or "").strip()
             if not ia_code:
