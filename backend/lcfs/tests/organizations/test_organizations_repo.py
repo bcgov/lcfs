@@ -861,8 +861,8 @@ async def test_get_penalty_analytics_data_ignores_tfrs_fossil_fuel_volume(
 
     # (year, line_11_fossil_derived_base_fuel_total, gasoline, diesel penalty)
     rows = [
-        ("2019", 1_980_726_630.0, 0.0, 0.0),
-        ("2020", 1_468_546_615.0, 1500.5, 300.0),
+        ("2019", 2_500_000_000.0, 0.0, 0.0),
+        ("2020", 1_200_000_000.0, 1500.5, 300.0),
         ("2024", 18000.35, 0.0, 18000.0),
     ]
     reports = []
