@@ -1,5 +1,5 @@
-import React from 'react'
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import 'react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { AssessmentRecommendation } from '../components/AssessmentRecommendation'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
@@ -11,7 +11,7 @@ const mockNavigate = vi.fn()
 const mockCreateAnalystAdjustment = vi.fn()
 const mockUpdateComplianceReport = vi.fn()
 const mockHasRoles = vi.fn(() => false)
-const mockIsFeatureEnabled = vi.fn(() => false)
+vi.fn(() => false);
 const mockCurrentUserData = { isGovernmentUser: true }
 
 // Mock hooks
@@ -279,6 +279,62 @@ describe('AssessmentRecommendation', () => {
       expect(
         screen.queryByText('report:notSubjectToAssessment')
       ).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Exemption editing', () => {
+    it.each([roles.analyst, roles.director])(
+      'allows %s to select an exemption during Analyst adjustment',
+      (role) => {
+        mockHasRoles.mockImplementation(
+          (candidateRole) => candidateRole === role
+        )
+
+        const props = {
+          ...defaultProps,
+          currentStatus: COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT
+        }
+
+        render(<AssessmentRecommendation {...props} />)
+
+        const renewableExemption = screen.getByLabelText(
+          'report:renewableFuelExemptionDescription'
+        )
+        expect(renewableExemption).toBeEnabled()
+
+        fireEvent.click(renewableExemption)
+
+        expect(props.methods.setValue).toHaveBeenCalledWith(
+          'isRenewableFuelExempted',
+          true
+        )
+        expect(mockUpdateComplianceReport).toHaveBeenCalledWith(
+          {
+            status: COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT,
+            isRenewableFuelExempted: true
+          },
+          expect.objectContaining({ onSuccess: expect.any(Function) })
+        )
+      }
+    )
+
+    it('keeps exemptions disabled when the report is marked as non-assessment', () => {
+      mockHasRoles.mockImplementation((role) => role === roles.analyst)
+
+      const props = {
+        ...defaultProps,
+        currentStatus: COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT,
+        methods: {
+          ...defaultProps.methods,
+          watch: vi.fn((field) => field === 'isNonAssessment')
+        }
+      }
+
+      render(<AssessmentRecommendation {...props} />)
+
+      expect(
+        screen.getByLabelText('report:renewableFuelExemptionDescription')
+      ).toBeDisabled()
     })
   })
 

@@ -4,8 +4,9 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db.dependencies import get_async_db_session
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.db.models.user.UserProfile import UserProfile
-from lcfs.web.api.role.schema import is_government_user
+from lcfs.web.api.role.schema import is_government_user, user_has_roles
 from lcfs.web.api.search.entities import SEARCH_ENTITIES
 from lcfs.web.api.search.entities.base import SearchContext
 from lcfs.web.api.search.query import parse_query
@@ -31,6 +32,7 @@ class SearchService:
                 None if government_user else cast(Optional[int], user.organization_id)
             ),
             is_government=government_user,
+            is_analyst=user_has_roles(user, [RoleEnum.ANALYST]),
         )
         groups = await self._search_entities(context)
         return SearchResponse(

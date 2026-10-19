@@ -1,7 +1,7 @@
 import { test } from '@/tests/utils/fixtures'
-import React from 'react'
-import { describe, expect, it, vi } from 'vitest'
-import { render } from '@testing-library/react'
+import 'react';
+import { describe, expect, vi } from 'vitest';
+import '@testing-library/react';
 import BCUserInitials from '../BCUserInitials'
 
 describe('BCUserInitials tooltip sanitisation', () => {

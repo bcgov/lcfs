@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { ColDef } from 'ag-grid-community'
 import { dateFormatter } from '@/utils/formatters'
 import { actions } from '@/components/BCDataGrid/columns'
@@ -8,12 +7,12 @@ export { routesMapping } from './routeMapping'
 
 export const columnDefs = (
   t: (key: string) => string,
-  currentUser: Record<string, any>
+  currentUser: { organization?: { organizationId?: number | string } }
 ): ColDef[] => [
   {
     ...actions({ enableDelete: true }),
     headerName: 'Delete',
-    pinned: ''
+    pinned: '' as unknown as boolean
   },
   {
     colId: 'type',

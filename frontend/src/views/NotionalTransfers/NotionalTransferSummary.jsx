@@ -4,7 +4,7 @@ import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { LinkRenderer } from '@/utils/grid/cellRenderers'
 import { notionalTransferSummaryColDefs } from '@/views/NotionalTransfers/_schema'
 import Grid2 from '@mui/material/Grid2'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { defaultInitialPagination } from '@/constants/schedules'
 import { REPORT_SCHEDULES } from '@/constants/common'
@@ -15,7 +15,7 @@ export const NotionalTransferSummary = ({ data, status }) => {
     defaultInitialPagination
   )
   const gridRef = useRef()
-  const { complianceReportId, compliancePeriod } = useParams()
+  const { compliancePeriod } = useParams()
 
   // Client-side pagination logic
   const paginatedData = useMemo(() => {
@@ -100,6 +100,16 @@ export const NotionalTransferSummary = ({ data, status }) => {
   const { currentReport } = useComplianceReportStore()
   const isEarlyIssuance =
     currentReport?.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
+
+  const columnDefs = useMemo(
+    () =>
+      notionalTransferSummaryColDefs(
+        isEarlyIssuance,
+        parseInt(compliancePeriod)
+      ),
+    [isEarlyIssuance, compliancePeriod]
+  )
+
   const defaultColDef = useMemo(
     () => ({
       floatingFilter: false,
@@ -113,10 +123,6 @@ export const NotionalTransferSummary = ({ data, status }) => {
     [status]
   )
 
-  const onFirstDataRendered = useCallback((params) => {
-    params.api?.autoSizeAllColumns?.()
-  }, [])
-
   return (
     <Grid2 className="notional-transfer-container" mx={-1}>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
@@ -124,10 +130,7 @@ export const NotionalTransferSummary = ({ data, status }) => {
           gridKey="notional-transfers"
           gridRef={gridRef}
           getRowId={getRowId}
-          columnDefs={notionalTransferSummaryColDefs(
-            isEarlyIssuance,
-            parseInt(compliancePeriod)
-          )}
+          columnDefs={columnDefs}
           defaultColDef={defaultColDef}
           queryData={paginatedData}
           dataKey="notionalTransfers"
@@ -138,7 +141,6 @@ export const NotionalTransferSummary = ({ data, status }) => {
             defaultMaxWidth: 800
           }}
           enableCellTextSelection
-          onFirstDataRendered={onFirstDataRendered}
           paginationOptions={paginationOptions}
           onPaginationChange={(newPagination) =>
             setPaginationOptions((prev) => ({

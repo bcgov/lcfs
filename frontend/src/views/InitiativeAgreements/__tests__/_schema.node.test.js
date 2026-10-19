@@ -1,17 +1,17 @@
 import { describe, expect, it, vi } from 'vitest'
 
-vi.mock('@/constants/config', () => ({
-  CONFIG: { API_BASE: '', ENVIRONMENT: 'test' },
-  FEATURE_FLAGS: { INITIATIVE_AGREEMENTS: 'initiativeAgreements' },
-  isFeatureEnabled: vi.fn(() => false)
-}))
-
 import {
   allDesignatedActionColDefs,
   defaultSortModel,
   designatedActionColDefs,
   initiativeAgreementColDefs
 } from '../_schema'
+
+vi.mock('@/constants/config', () => ({
+  CONFIG: { API_BASE: '', ENVIRONMENT: 'test' },
+  FEATURE_FLAGS: { INITIATIVE_AGREEMENTS: 'initiativeAgreements' },
+  isFeatureEnabled: vi.fn(() => false)
+}))
 
 describe('initiativeAgreementColDefs', () => {
   const t = (key) => key
@@ -95,7 +95,7 @@ describe('designatedActionColDefs', () => {
 describe('allDesignatedActionColDefs (module tab, #5078)', () => {
   const t = (key) => key
 
-  it('adds the organization and IA name after the ID and keeps the agreement grid columns (#5203)', () => {
+  it('adds the organization and IA name after the ID and keeps the agreement grid columns (#5197, #5203)', () => {
     const ids = allDesignatedActionColDefs(t).map(
       (colDef) => colDef.colId ?? colDef.field
     )

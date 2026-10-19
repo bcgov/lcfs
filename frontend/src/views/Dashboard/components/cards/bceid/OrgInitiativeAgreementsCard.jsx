@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import Stack from '@mui/material/Stack'
@@ -14,27 +14,12 @@ import { FEATURE_FLAGS } from '@/constants/config'
 import { FILTER_KEYS } from '@/constants/common'
 import { ROUTES } from '@/routes/routes'
 import { useOrgInitiativeAgreementCounts } from '@/hooks/useDashboard'
+import { CountDisplay } from '../../CountDisplay'
+import { countDigits } from '../../countDigits'
 
 // BCeID dashboard card for a proponent's initiative agreements (#4893):
 // the organization's agreements by lifecycle status, each a link into
 // the index already narrowed to that status. Mirrors OrgFuelCodeCard.
-
-// When `hidden`, the number is rendered invisibly but still occupies
-// layout, so plain links share the indent and row height of counted ones.
-const CountDisplay = ({ count, hidden = false }) => (
-  <BCTypography
-    component="span"
-    variant="h3"
-    aria-hidden={hidden || undefined}
-    sx={{
-      color: 'success.main',
-      marginX: 3,
-      ...(hidden && { visibility: 'hidden' })
-    }}
-  >
-    {count}
-  </BCTypography>
-)
 
 const linkSx = {
   textDecoration: 'underline',
@@ -49,6 +34,8 @@ const OrgInitiativeAgreementsCard = () => {
   const underway = counts?.underway || 0
   const completed = counts?.completed || 0
   const hasAgreements = underway > 0 || completed > 0
+  // One counter width for the whole list, so its links line up (#4911).
+  const digits = countDigits(underway, completed)
 
   // The index grid restores `${gridKey}-filter` from sessionStorage, so a
   // counter link lands on the grid already narrowed to its status.
@@ -73,7 +60,7 @@ const OrgInitiativeAgreementsCard = () => {
   const renderLinkWithCount = (text, count, onClick, testId) =>
     count > 0 ? (
       <ListItemButton component="a" onClick={onClick} data-test={testId}>
-        <CountDisplay count={count} />
+        <CountDisplay count={count} digits={digits} />
         <BCTypography variant="body2" color="link" sx={linkSx}>
           {text}
         </BCTypography>
@@ -130,7 +117,7 @@ const OrgInitiativeAgreementsCard = () => {
                 onClick={() => navigateWithStatus(null)}
                 data-test="org-ia-view-all"
               >
-                <CountDisplay count={0} hidden />
+                <CountDisplay digits={digits} hidden />
                 <BCTypography variant="body2" color="link" sx={linkSx}>
                   {t('dashboard:orgInitiativeAgreements.viewAll')}
                 </BCTypography>

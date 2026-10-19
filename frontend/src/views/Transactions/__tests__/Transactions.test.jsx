@@ -46,8 +46,11 @@ vi.mock('react-i18next', () => ({
 
 // Mock components
 vi.mock('@/components/DownloadButton', () => ({
-  DownloadButton: forwardRef(
-    ({ onDownload, dataTest, isDownloading, label, downloadLabel }, ref) => (
+  DownloadButton: forwardRef(function MockDownloadButton(
+    { onDownload, dataTest, isDownloading, label, downloadLabel },
+    ref
+  ) {
+    return (
       <button
         ref={ref}
         data-test={dataTest}
@@ -57,7 +60,7 @@ vi.mock('@/components/DownloadButton', () => ({
         {isDownloading ? downloadLabel : label}
       </button>
     )
-  )
+  })
 }))
 
 vi.mock('@/components/ClearFiltersButton', () => ({
@@ -92,7 +95,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 
     // Test getRowId function if provided
     if (getRowId && queryData?.data?.transactions?.[0]) {
-      const rowId = getRowId({ data: queryData.data.transactions[0] })
+      getRowId({ data: queryData.data.transactions[0] })
     }
 
     // Test defaultColDef if provided
@@ -100,7 +103,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
       const mockProps = { data: { data: queryData.data.transactions[0] } }
       try {
         defaultColDef.cellRenderer(mockProps)
-      } catch (e) {
+      } catch {
         // Ignore rendering errors in tests
       }
     }
@@ -183,7 +186,7 @@ vi.mock('@/components/Role', () => ({
 }))
 
 vi.mock('@/components/BCAlert', () => ({
-  default: ({ children, severity, sx }) => (
+  default: ({ children, severity }) => (
     <div data-test="alert-box" data-severity={severity}>
       {children}
     </div>
@@ -216,7 +219,7 @@ vi.mock('@/components/BCTypography', () => ({
 }))
 
 vi.mock('@fortawesome/react-fontawesome', () => ({
-  FontAwesomeIcon: ({ icon, className, size }) => (
+  FontAwesomeIcon: ({ icon }) => (
     <span data-test="font-awesome-icon" data-icon={icon?.iconName}>
       Icon
     </span>
@@ -290,14 +293,15 @@ vi.mock('@/routes/routes', () => ({
 }))
 
 vi.mock('@/utils/grid/cellRenderers', () => ({
-  ConditionalLinkRenderer: (shouldRenderLink) => (props) => {
-    const canRender = shouldRenderLink(props)
-    return (
-      <div data-test="conditional-link-renderer" data-can-render={canRender}>
-        Link
-      </div>
-    )
-  },
+  ConditionalLinkRenderer: (shouldRenderLink) =>
+    function ConditionalLinkMock(props) {
+      const canRender = shouldRenderLink(props)
+      return (
+        <div data-test="conditional-link-renderer" data-can-render={canRender}>
+          Link
+        </div>
+      )
+    },
   TransactionStatusRenderer: () => (
     <div data-test="transaction-status-renderer">Status</div>
   ),
@@ -1044,7 +1048,6 @@ describe('Transactions Component', () => {
 
         // Simulate an organization change with incomplete data
         const orgList = screen.getByTestId('organization-list')
-        const mockEvent = { id: null, label: 'Incomplete Org' }
 
         // This would be handled by the updateOrgFilter function
         // The test verifies the component doesn't break with incomplete data

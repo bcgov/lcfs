@@ -4,11 +4,10 @@ import { apiRoutes } from '@/constants/routes'
 import { getKeycloak, logout } from '@/utils/keycloak'
 import { ReactKeycloakProvider } from '@react-keycloak/web'
 import axios from 'axios'
-import React, { useContext, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
+import { KeycloakContext } from '@/components/KeycloakContext'
 
 const keycloak = getKeycloak()
-
-export const KeycloakContext = React.createContext()
 
 // const MIN_VALIDITY = 60
 const TOKEN_LIFESPAN_MS = 5 * 60 * 1000
@@ -19,7 +18,7 @@ export const KeycloakProvider = ({ children }) => {
   const refreshTokenRef = useRef(null)
   const lastRefreshRef = useRef(Date.now())
 
-  const scheduleRefreshCheck = () => {
+  const scheduleRefreshCheck = useCallback(() => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
 
     const now = Date.now()
@@ -34,9 +33,9 @@ export const KeycloakProvider = ({ children }) => {
         }
       }, delay)
     }
-  }
+  }, [])
 
-  const refreshToken = async (force = false) => {
+  const refreshToken = useCallback(async (force = false) => {
     if (!keycloak.authenticated) return
 
     const now = Date.now()
@@ -56,14 +55,14 @@ export const KeycloakProvider = ({ children }) => {
       console.error('Failed to refresh token', error)
       logout()
     }
-  }
+  }, [scheduleRefreshCheck])
 
   refreshTokenRef.current = refreshToken
 
   useEffect(() => {
     scheduleRefreshCheck()
     return () => timeoutRef.current && clearTimeout(timeoutRef.current)
-  }, [])
+  }, [scheduleRefreshCheck])
 
   useEffect(() => {
     const events = [
@@ -75,16 +74,15 @@ export const KeycloakProvider = ({ children }) => {
       'touchstart'
     ]
 
-    events.forEach((event) =>
-      window.addEventListener(event, () => refreshToken())
-    )
+    const refreshOnActivity = () => refreshToken()
+    events.forEach((event) => window.addEventListener(event, refreshOnActivity))
 
     return () => {
       events.forEach((event) =>
         window.removeEventListener(event, () => refreshToken())
       )
     }
-  }, [])
+  }, [refreshToken])
 
   // Cannot use API Service before Keycloak is initialized
   const trackLogin = async () => {

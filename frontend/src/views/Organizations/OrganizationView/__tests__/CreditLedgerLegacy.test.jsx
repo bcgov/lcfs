@@ -1,15 +1,23 @@
-import {
-  cleanup,
-  render,
-  screen,
-  fireEvent,
-  waitFor
-} from '@testing-library/react'
+import React from 'react'
+import { cleanup, render, screen, fireEvent } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CreditLedgerLegacy } from '../CreditLedgerLegacy'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import theme from '@/themes'
+
+// Import mocked functions after mocking
+import {
+  useCreditLedger,
+  useDownloadCreditLedger,
+  useCreditLedgerYears
+} from '@/hooks/useCreditLedger'
+import {
+  useOrganizationBalance,
+  useCurrentOrgBalance
+} from '@/hooks/useOrganization'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useTranslation } from 'react-i18next'
 
 // Mock translation
 vi.mock('react-i18next', () => ({
@@ -27,7 +35,7 @@ vi.mock('@/utils/formatters', () => ({
 
 // Mock components
 vi.mock('@/components/BCBox', () => ({
-  default: ({ children, alignItems, ...props }) => {
+  default: ({ children, ...props }) => {
     const domProps = {}
     // Only pass through standard DOM attributes
     Object.keys(props).forEach((key) => {
@@ -92,10 +100,9 @@ vi.mock('@/components/DownloadButton', () => ({
 let lastGridProps = null
 
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => {
-  const React = require('react')
   return {
     BCGridViewer: React.forwardRef(
-      (
+      function CreditLedgerGridMock(
         {
           queryData,
           onPaginationChange,
@@ -110,7 +117,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => {
           ...props
         },
         ref
-      ) => {
+      ) {
         lastGridProps = {
           queryData,
           onPaginationChange,
@@ -177,26 +184,13 @@ vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: vi.fn()
 }))
 
-// Import mocked functions after mocking
-import {
-  useCreditLedger,
-  useDownloadCreditLedger,
-  useCreditLedgerYears
-} from '@/hooks/useCreditLedger'
-import {
-  useOrganizationBalance,
-  useCurrentOrgBalance
-} from '@/hooks/useOrganization'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useTranslation } from 'react-i18next'
-
 const mockUseCreditLedger = vi.mocked(useCreditLedger)
 const mockUseDownloadCreditLedger = vi.mocked(useDownloadCreditLedger)
 const mockUseCreditLedgerYears = vi.mocked(useCreditLedgerYears)
 const mockUseOrganizationBalance = vi.mocked(useOrganizationBalance)
 const mockUseCurrentOrgBalance = vi.mocked(useCurrentOrgBalance)
 const mockUseCurrentUser = vi.mocked(useCurrentUser)
-const mockUseTranslation = vi.mocked(useTranslation)
+vi.mocked(useTranslation);
 
 const renderComponent = (props = {}) => {
   const queryClient = new QueryClient({

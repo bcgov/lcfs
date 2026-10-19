@@ -19,7 +19,7 @@ import { useTranslation } from 'react-i18next'
 import { Role } from '@/components/Role'
 import { defaultSortModel, transactionsColDefs } from './_schema'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useOrganization } from '@/hooks/useOrganization'
+import '@/hooks/useOrganization'
 import {
   ORGANIZATION_STATUSES,
   TRANSACTION_STATUSES,
@@ -34,7 +34,7 @@ import {
   useGetTransactionList,
   useDownloadTransactions
 } from '@/hooks/useTransactions'
-import { defaultInitialPagination } from '@/constants/schedules'
+import '@/constants/schedules'
 import { CreditTradingMarket } from './CreditTradingMarket/CreditTradingMarket'
 import { CreditMarketAuditLogTable } from './CreditTradingMarket/CreditMarketAuditLogTable'
 
@@ -63,7 +63,7 @@ export const Transactions = () => {
   const { t } = useTranslation(['common', 'transaction'])
   const navigate = useNavigate()
   const location = useLocation()
-  const apiService = useApiService()
+  useApiService()
   const gridRef = useRef()
   const downloadButtonRef = useRef(null)
   const { data: currentUser, hasAnyRole, hasRoles } = useCurrentUser()
@@ -114,23 +114,26 @@ export const Transactions = () => {
     )
   }, [])
 
-  const shouldRenderLink = (props) => {
-    // Legacy/Standalone and Aggregator Issuance transactions have no detail view page
-    if (
-      props.data.transactionType === 'StandaloneTransaction' ||
-      props.data.transactionType === 'AggregatorIssuance'
-    ) {
-      return false
-    }
-    return (
-      props.data.transactionType !== 'ComplianceReport' ||
-      hasAnyRole(
-        roles.government,
-        roles.signing_authority,
-        roles.compliance_reporting
+  const shouldRenderLink = useCallback(
+    (props) => {
+      // Legacy/Standalone and Aggregator Issuance transactions have no detail view page
+      if (
+        props.data.transactionType === 'StandaloneTransaction' ||
+        props.data.transactionType === 'AggregatorIssuance'
+      ) {
+        return false
+      }
+      return (
+        props.data.transactionType !== 'ComplianceReport' ||
+        hasAnyRole(
+          roles.government,
+          roles.signing_authority,
+          roles.compliance_reporting
+        )
       )
-    )
-  }
+    },
+    [hasAnyRole]
+  )
 
   const defaultColDef = useMemo(
     () => ({
@@ -198,7 +201,7 @@ export const Transactions = () => {
         }
       }
     }),
-    [currentUser]
+    [currentUser, shouldRenderLink]
   )
 
   // Determine the appropriate export API endpoint
@@ -212,7 +215,7 @@ export const Transactions = () => {
       )
     }
     return apiRoutes.exportTransactions
-  }, [selectedOrg, currentUser, hasRoles])
+  }, [selectedOrg, hasRoles])
 
   const convertToBackendFilters = (model = {}) =>
     Object.entries(model).map(([field, cfg]) => ({
@@ -235,7 +238,7 @@ export const Transactions = () => {
     setIsDownloadingTransactions(true)
     setAlertMessage('')
     try {
-      const endpoint = getExportApiEndpoint()
+      getExportApiEndpoint()
       await downloadTransactions({
         format: 'xlsx',
         endpoint: getExportApiEndpoint(),
@@ -302,13 +305,6 @@ export const Transactions = () => {
     }
   }, [updateOrgFilter])
 
-  const handleClearFilters = () => {
-    if (gridRef?.current?.clearFilters) {
-      gridRef.current.clearFilters()
-    }
-    resetGridFiltersState()
-  }
-
   const filterToolbarConfig = useMemo(() => {
     if (!selectedOrg.id || !selectedOrg.label) {
       return { additionalPills: [] }
@@ -324,11 +320,7 @@ export const Transactions = () => {
         }
       ]
     }
-  }, [selectedOrg.id, selectedOrg.label, t, updateOrgFilter])
-
-  if (!currentUser) {
-    return <Loading />
-  }
+  }, [selectedOrg.id, selectedOrg.label, selectedOrg.name, t, updateOrgFilter])
 
   // Determine if the user is eligible for credit trading market tab
   const isBCeIDUser = !hasRoles(roles.government)
@@ -355,6 +347,8 @@ export const Transactions = () => {
   }
 
   useEffect(() => {
+    if (!currentUser) return
+
     const onMarketPath =
       normalizedPath === ROUTES.TRANSACTIONS.CREDIT_TRADING_MARKET
     const onAuditPath =
@@ -368,7 +362,11 @@ export const Transactions = () => {
     if (onAuditPath && !hasRoles(roles.government)) {
       navigate(ROUTES.TRANSACTIONS.LIST, { replace: true })
     }
-  }, [normalizedPath, showCreditTradingTab, hasRoles, navigate])
+  }, [currentUser, normalizedPath, showCreditTradingTab, hasRoles, navigate])
+
+  if (!currentUser) {
+    return <Loading />
+  }
 
   const handleChangeTab = (event, newValue) => {
     const nextRoute = tabRoutes[newValue] || ROUTES.TRANSACTIONS.LIST

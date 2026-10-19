@@ -100,27 +100,22 @@ describe('ComplianceUnitsTotal', () => {
     expect(element).toBeInTheDocument()
   })
 
-  it('applies correct styling for positive values', () => {
-    const { container } = render(
+  it('applies bold styling to positive values', () => {
+    render(
       <ComplianceUnitsTotal label="Total compliance units:" value={1500} />
-    )
+    );
 
     const valueElement = screen.getByText('1,500')
-    const styles = window.getComputedStyle(valueElement)
-    // Note: The actual color value might be computed differently
-    // This is a basic check that the element exists
-    expect(valueElement).toBeInTheDocument()
+    expect(window.getComputedStyle(valueElement).fontWeight).toBe('700')
   })
 
-  it('applies correct styling for negative values', () => {
-    const { container } = render(
+  it('applies bold styling to negative values', () => {
+    render(
       <ComplianceUnitsTotal label="Total compliance units:" value={-500} />
-    )
+    );
 
     const valueElement = screen.getByText('-500')
-    // Note: The actual color value might be computed differently
-    // This is a basic check that the element exists
-    expect(valueElement).toBeInTheDocument()
+    expect(window.getComputedStyle(valueElement).fontWeight).toBe('700')
   })
 
   it('renders with custom label', () => {
@@ -202,4 +197,3 @@ describe('ComplianceUnitsTotal', () => {
     })
   })
 })
-

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import BCBox from '@/components/BCBox'
 import { useApiService } from '@/services/useApiService'
 import Autocomplete from '@mui/material/Autocomplete'
@@ -9,22 +8,30 @@ import { useQuery } from '@tanstack/react-query'
 import match from 'autosuggest-highlight/match'
 import parse from 'autosuggest-highlight/parse'
 import { debounce } from 'lodash'
-import { useCallback, useState } from 'react'
-import type { KeyboardEvent } from 'react'
+import { useMemo, useState } from 'react'
+import type { KeyboardEvent, SyntheticEvent } from 'react'
+import type { GridApi } from 'ag-grid-community'
+import type { ApiServiceInstance } from '@/services/useApiService'
+
+type AsyncSuggestionOption = Record<string, unknown>
+type AsyncSuggestion = string | AsyncSuggestionOption
 
 export interface AsyncSuggestionEditorProps {
-  value?: any
-  onValueChange: (value: any) => void
+  value?: AsyncSuggestion | null
+  onValueChange: (value: unknown) => void
   enabled?: boolean
   minWords?: number
   queryKey?: string
-  queryFn: (params: { client: any; queryKey: readonly unknown[] }) => Promise<any[]>
+  queryFn: (params: {
+    client: ApiServiceInstance
+    queryKey: readonly unknown[]
+  }) => Promise<AsyncSuggestionOption[]>
   debounceValue?: number
   onKeyDownCapture?: (event: KeyboardEvent) => void
-  api?: any
+  api?: Pick<GridApi, 'stopEditing' | 'tabToPreviousCell' | 'tabToNextCell'>
   optionLabel?: string
   valueKey?: string
-  groupBy?: (option: any) => string
+  groupBy?: (option: AsyncSuggestionOption) => string
 }
 
 /**
@@ -56,7 +63,8 @@ export const AsyncSuggestionEditor = ({
   groupBy
 }: AsyncSuggestionEditorProps) => {
   const [inputValue, setInputValue] = useState('')
-  const [highlightedOption, setHighlightedOption] = useState(null)
+  const [highlightedOption, setHighlightedOption] =
+    useState<AsyncSuggestion | null>(null)
   const apiService = useApiService()
 
   const { data: options = [], isLoading } = useQuery({
@@ -67,31 +75,31 @@ export const AsyncSuggestionEditor = ({
     refetchOnWindowFocus: false
   })
 
-  const debouncedSetInputValue = useCallback(
-    debounce((newInputValue) => setInputValue(newInputValue), debounceValue),
+  const debouncedSetInputValue = useMemo(
+    () => debounce((newInputValue: string) => setInputValue(newInputValue), debounceValue),
     [debounceValue]
   )
 
-  const handleInputChange = (_, newInputValue) => {
+  const handleInputChange = (_event: SyntheticEvent, newInputValue: string) => {
     debouncedSetInputValue(newInputValue)
     // Update the value based on the input
     onValueChange(newInputValue)
   }
 
-  const handleChange = (_, newValue) => {
+  const handleChange = (_event: SyntheticEvent, newValue: AsyncSuggestion | null) => {
     if (typeof newValue === 'string') {
       debouncedSetInputValue(newValue)
       onValueChange(newValue)
     } else if (newValue && typeof newValue === 'object') {
       const storedValue = valueKey ? newValue[valueKey] : newValue
-      debouncedSetInputValue(newValue[optionLabel])
+      debouncedSetInputValue(newValue[optionLabel] as string)
       onValueChange(storedValue)
     } else {
       onValueChange('')
     }
   }
 
-  const handleKeyDown = (event) => {
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (onKeyDownCapture) {
       onKeyDownCapture(event)
     }
@@ -109,10 +117,10 @@ export const AsyncSuggestionEditor = ({
       event.preventDefault()
       if (event.shiftKey) {
         // Shift + Tab: Move to the previous cell
-        api.tabToPreviousCell()
+        api!.tabToPreviousCell()
       } else {
         // Tab: Move to the next cell
-        api.tabToNextCell()
+        api!.tabToNextCell()
       }
     }
   }
@@ -138,7 +146,9 @@ export const AsyncSuggestionEditor = ({
         freeSolo
         id="async-search-editor"
         getOptionLabel={(option) =>
-          typeof option === 'string' ? option : option[optionLabel]
+          typeof option === 'string'
+            ? option
+            : (option as AsyncSuggestionOption)[optionLabel] as string
         }
         options={options || []}
         groupBy={groupBy}
@@ -155,7 +165,9 @@ export const AsyncSuggestionEditor = ({
         renderInput={(params) => <TextField {...params} fullWidth autoFocus />}
         renderOption={({ key, ...props }, option, { inputValue }) => {
           const label =
-            typeof option === 'string' ? option : option[optionLabel]
+            typeof option === 'string'
+              ? option
+              : (option as AsyncSuggestionOption)[optionLabel] as string
           const matches = match(label, inputValue, { insideWords: true })
           const parts = parse(label, matches)
 

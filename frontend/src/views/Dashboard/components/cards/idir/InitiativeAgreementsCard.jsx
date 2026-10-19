@@ -10,19 +10,8 @@ import ListItemButton from '@mui/material/ListItemButton'
 import Stack from '@mui/material/Stack'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-
-const CountDisplay = ({ count }) => (
-  <BCTypography
-    component="span"
-    variant="h3"
-    sx={{
-      color: 'success.main',
-      marginX: 3
-    }}
-  >
-    {count}
-  </BCTypography>
-)
+import { CountDisplay } from '../../CountDisplay'
+import { countDigits } from '../../countDigits'
 
 // IDIR dashboard links card for the Initiative Agreements module (#4895).
 // The wireframe's "Change order(s)" and "Expression of interest" counters
@@ -61,10 +50,14 @@ export const InitiativeAgreementsCard = () => {
     navigate(ROUTES.INITIATIVE_AGREEMENTS.LIST)
   }
 
+  // One counter width for the whole list, so its links line up (#4911); a
+  // row without a count keeps an empty counter, so its link lines up too.
+  const digits = countDigits(counts?.underway || 0, counts?.draft || 0)
+
   const renderLinkWithCount = (text, count, onClick) => {
     return (
       <>
-        {count != null && <CountDisplay count={count} />}
+        <CountDisplay count={count} digits={digits} hidden={count == null} />
         <BCTypography
           variant="body2"
           color="link"
