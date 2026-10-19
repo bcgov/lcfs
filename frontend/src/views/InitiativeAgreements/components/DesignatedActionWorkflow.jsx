@@ -102,6 +102,7 @@ export const DesignatedActionWorkflow = ({
   hasRequirements = true,
   missingInformation = '',
   canRequestInformation,
+  beforeAction,
   onlyAction,
   // Omitted: every available action, as before the split.
   placement,
@@ -111,6 +112,7 @@ export const DesignatedActionWorkflow = ({
   const [pendingAction, setPendingAction] = useState(null)
   const [comment, setComment] = useState('')
   const [error, setError] = useState('')
+  const [waitingForSave, setWaitingForSave] = useState(false)
 
   const { mutate: performAction, isPending } =
     useDesignatedActionWorkflow(designatedActionId)
@@ -143,7 +145,26 @@ export const DesignatedActionWorkflow = ({
       return
     }
     if (action === ACTION_REQUEST_INFORMATION) {
-      run(action, { comment: missingInformation.trim() })
+      if (!beforeAction) {
+        run(action, { comment: missingInformation.trim() })
+        return
+      }
+      const requestInformation = async () => {
+        setWaitingForSave(true)
+        try {
+          await beforeAction?.()
+          run(action, { comment: missingInformation.trim() })
+        } catch (err) {
+          setError(
+            err?.response?.data?.detail ||
+              err?.message ||
+              t('initiativeAgreement:workflow.actionFailed')
+          )
+        } finally {
+          setWaitingForSave(false)
+        }
+      }
+      requestInformation()
       return
     }
     if (action === ACTION_RECOMMEND_TO_MANAGER) {
@@ -222,6 +243,7 @@ export const DesignatedActionWorkflow = ({
                 size="small"
                 disabled={
                   isPending ||
+                  waitingForSave ||
                   blockedByEvidence(button.action) ||
                   blockedByMissingInformation(button.action)
                 }

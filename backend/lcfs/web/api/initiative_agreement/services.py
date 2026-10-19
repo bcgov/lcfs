@@ -1,6 +1,7 @@
 import json
 import math
 from datetime import datetime, timezone
+from html import unescape
 from typing import List, Optional
 
 import structlog
@@ -831,7 +832,12 @@ class InitiativeAgreementServices:
                         status_code=400,
                         detail="Mark at least one EOC as Request information first.",
                     )
-                if any(not (r.missing_information or "").strip() for r in requested):
+                if any(
+                    not unescape(
+                        sanitize_comment_text(r.missing_information)
+                    ).strip()
+                    for r in requested
+                ):
                     raise HTTPException(
                         status_code=400,
                         detail=(

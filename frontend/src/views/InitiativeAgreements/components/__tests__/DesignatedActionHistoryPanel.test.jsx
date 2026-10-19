@@ -126,6 +126,41 @@ describe('DesignatedActionHistoryPanel', () => {
     expect(screen.getByTestId('history-entry-4')).toHaveTextContent('1,200')
   })
 
+  test('renders rich-text Evaluation changes as visible text', ({
+    render,
+    app
+  }) => {
+    mockHistory.mockReturnValue({
+      data: [
+        entry({
+          designatedActionHistoryId: 41,
+          event: 'DETAILS_EDITED',
+          status: null,
+          snapshot: {
+            changed: {
+              evaluation: {
+                from: '<p><strong>Permit missing</strong></p>',
+                to: '<p>Permit <em>verified</em>.</p>'
+              }
+            }
+          }
+        })
+      ],
+      isLoading: false
+    })
+    render(<DesignatedActionHistoryPanel designatedActionId="1" />, app)
+
+    expect(screen.getByTestId('history-entry-summary-41')).toHaveTextContent(
+      'Permit missing'
+    )
+    expect(screen.getByTestId('history-entry-summary-41')).toHaveTextContent(
+      'Permit verified.'
+    )
+    expect(screen.getByTestId('history-entry-summary-41')).not.toHaveTextContent(
+      '<p>'
+    )
+  })
+
   test('shows a recommendation of nought rather than treating it as absent', ({
     render,
     app

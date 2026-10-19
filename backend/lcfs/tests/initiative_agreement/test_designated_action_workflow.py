@@ -105,7 +105,9 @@ async def test_requesting_information_keeps_the_round_in_the_audit_trail(
     requirement = await _seed_requirement(
         dbsession, action, REVIEW_OUTCOME_INFORMATION_REQUESTED
     )
-    requirement.missing_information = "Please send the signed permit for stage two."
+    requirement.missing_information = (
+        "<p>Please send the <strong>signed permit</strong> for stage two.</p>"
+    )
     await dbsession.flush()
     set_mock_user(fastapi_app, IDIR_IA_ANALYST)
 
@@ -124,14 +126,15 @@ async def test_requesting_information_keeps_the_round_in_the_audit_trail(
     assert [e.event for e in entries] == [EVENT_INFORMATION_REQUESTED]
     snapshot = entries[0].snapshot
     assert snapshot["comment"] == (
-        "EOC 1 - List of major permits: Please send the signed permit for stage two."
+        "EOC 1 - List of major permits: "
+        "<p>Please send the <strong>signed permit</strong> for stage two.</p>"
     )
     captured = snapshot["evidence_requirements"]
     assert captured[0]["analyst_review"] == "Permits verified."
     assert captured[0]["review_outcome"] == REVIEW_OUTCOME_INFORMATION_REQUESTED
     assert (
         captured[0]["missing_information"]
-        == "Please send the signed permit for stage two."
+        == "<p>Please send the <strong>signed permit</strong> for stage two.</p>"
     )
 
 
@@ -193,6 +196,38 @@ async def test_requesting_information_requires_text_for_each_selected_eoc(
     response = await client.put(
         _workflow_url(fastapi_app, action),
         json={"action": "request_information", "comment": "Only one EOC has text."},
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "every EOC" in response.json()["detail"]
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "missing_information",
+    ["<p><br></p>", "<p>&nbsp;</p>", "<p> &#160; </p>"],
+)
+async def test_requesting_information_rejects_visually_empty_rich_text(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    dbsession,
+    missing_information,
+):
+    action = await _seed_da(dbsession, "IA-26WF1C")
+    requirement = await _seed_requirement(
+        dbsession, action, REVIEW_OUTCOME_INFORMATION_REQUESTED
+    )
+    requirement.missing_information = missing_information
+    await dbsession.flush()
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    response = await client.put(
+        _workflow_url(fastapi_app, action),
+        json={
+            "action": "request_information",
+            "comment": "A client-supplied comment cannot replace visible text.",
+        },
     )
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST

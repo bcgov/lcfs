@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Box from '@mui/material/Box'
 import Link from '@mui/material/Link'
@@ -30,6 +30,8 @@ export const EvidenceOfCompletion = ({
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const [expandedIds, setExpandedIds] = useState([])
   const [adding, setAdding] = useState(false)
+  const pendingSaves = useRef(new Map())
+  const failedSaves = useRef(new Map())
 
   const { data: requirements = [], isLoading } =
     useEvidenceRequirements(designatedActionId)
@@ -56,6 +58,13 @@ export const EvidenceOfCompletion = ({
           : [...previous, id]
         : previous.filter((expandedId) => expandedId !== id)
     )
+  }
+
+  const waitForRequirementSave = async (id) => {
+    const pendingSave = pendingSaves.current.get(id)
+    if (pendingSave) await pendingSave
+    const saveError = failedSaves.current.get(id)
+    if (saveError) throw saveError
   }
 
   return (
@@ -135,20 +144,37 @@ export const EvidenceOfCompletion = ({
               }
               canEdit={canEdit}
               missingInformationReadOnly={missingInformationReadOnly}
-              actions={renderRequestAction?.(requirement, allRequestsComplete)}
+              actions={renderRequestAction?.(
+                requirement,
+                allRequestsComplete,
+                () => waitForRequirementSave(requirement.evidenceRequirementId)
+              )}
               allRequestsComplete={allRequestsComplete}
-              onSave={async (payload, callbacks) => {
-                let result
-                try {
-                  result = await updateRequirement({
-                    evidenceRequirementId: requirement.evidenceRequirementId,
-                    ...payload
-                  })
-                } catch (err) {
-                  callbacks.onError(err)
-                  return
+              onSave={(payload, callbacks) => {
+                const id = requirement.evidenceRequirementId
+                failedSaves.current.delete(id)
+                const save = updateRequirement({
+                  evidenceRequirementId: id,
+                  ...payload
+                })
+                  .then(
+                    (result) => {
+                      callbacks.onSuccess(result)
+                      return result
+                    },
+                    (err) => {
+                      failedSaves.current.set(id, err)
+                      callbacks.onError(err)
+                      throw err
+                    }
+                  )
+                pendingSaves.current.set(id, save)
+                const clearPending = () => {
+                    if (pendingSaves.current.get(id) === save) {
+                      pendingSaves.current.delete(id)
+                    }
                 }
-                callbacks.onSuccess(result)
+                save.then(clearPending, clearPending)
               }}
               onRemove={() =>
                 removeRequirement(requirement.evidenceRequirementId)

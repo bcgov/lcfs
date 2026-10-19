@@ -725,6 +725,54 @@ describe('EvidenceOfCompletion', () => {
     })
   })
 
+  test('waits for description attachments before creating a requirement', async ({
+    render,
+    app
+  }) => {
+    let finishUpload
+    mockUpload.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finishUpload = resolve
+      })
+    )
+    render(<EvidenceOfCompletion designatedActionId="9" />, app)
+    fireEvent.click(screen.getByTestId('eoc-add-button'))
+    fireEvent.change(screen.getByTestId('eoc-new-title'), {
+      target: { value: 'Risk register' }
+    })
+    fireEvent.change(screen.getByTestId('eoc-new-description'), {
+      target: { value: '<p>Risk register evidence</p>' }
+    })
+    fireEvent.change(screen.getByTestId('eoc-new-description-attach-input'), {
+      target: {
+        files: [new File(['pdf'], 'risk-register.pdf', { type: 'application/pdf' })]
+      }
+    })
+
+    const createButton = screen
+      .getByText('initiativeAgreement:evidence.createRequirement')
+      .closest('button')
+    await waitFor(() => expect(mockUpload).toHaveBeenCalledOnce())
+    await waitFor(() =>
+      expect(
+        screen.getByText('initiativeAgreement:evidence.attachmentUploading')
+      ).toBeVisible()
+    )
+    fireEvent.click(createButton)
+    expect(mockCreate).not.toHaveBeenCalled()
+
+    await act(async () => finishUpload([42]))
+    await waitFor(() => expect(createButton).not.toBeDisabled())
+    fireEvent.click(createButton)
+
+    expect(mockCreate).toHaveBeenCalledWith({
+      title: 'Risk register',
+      description: expect.stringContaining(
+        '<a href="#eoc-document-42">risk-register.pdf</a>'
+      )
+    })
+  })
+
   test('does not create a requirement without both a title and nonempty description', ({
     render,
     app

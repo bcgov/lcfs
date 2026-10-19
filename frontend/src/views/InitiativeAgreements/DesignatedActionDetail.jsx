@@ -204,7 +204,11 @@ const DesignatedActionDetailBase = () => {
       })
     )
 
-  const renderRequestAction = (requirement, allRequestsComplete) => {
+  const renderRequestAction = (
+    requirement,
+    allRequestsComplete,
+    beforeRequest
+  ) => {
     if (requirement.reviewOutcome !== OUTCOME_INFORMATION_REQUESTED) {
       return null
     }
@@ -216,6 +220,7 @@ const DesignatedActionDetailBase = () => {
         onlyAction={ACTION_REQUEST_INFORMATION}
         canRequestInformation={allRequestsComplete}
         missingInformation={requirement.missingInformation ?? ''}
+        beforeAction={beforeRequest}
         placement={PLACEMENT_EVIDENCE}
         onChanged={refreshAction}
       />

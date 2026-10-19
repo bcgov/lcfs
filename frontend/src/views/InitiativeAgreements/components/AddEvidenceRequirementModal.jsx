@@ -17,15 +17,19 @@ export const AddEvidenceRequirementModal = ({
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+  const [isUploading, setIsUploading] = useState(false)
 
   const close = () => {
     setTitle('')
     setDescription('')
     onClose()
   }
-  const canCreate = title.trim().length > 0 && !!evidencePlainText(description)
+  const canCreate =
+    title.trim().length > 0 &&
+    !!evidencePlainText(description) &&
+    !isUploading
   const submit = () => {
-    if (!canCreate) return
+    if (!canCreate || isUploading) return
     onCreate({ title: title.trim(), description: description.trim() })
     close()
   }
@@ -65,6 +69,7 @@ export const AddEvidenceRequirementModal = ({
               canEdit
               inline
               locked={false}
+              onUploadingChange={setIsUploading}
               field={{
                 value: description,
                 onChange: (event) => setDescription(event.target.value)

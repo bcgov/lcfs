@@ -52,7 +52,8 @@ export const EvidenceRichTextField = ({
   allowPencil = true,
   required = false,
   inline = false,
-  placeholder
+  placeholder,
+  onUploadingChange
 }) => {
   const { t } = useTranslation(['common'])
   const editorRef = useRef(null)
@@ -137,6 +138,7 @@ export const EvidenceRichTextField = ({
     setError('')
     uploadingRef.current = true
     setUploading(true)
+    onUploadingChange?.(true)
     const editor = editorRef.current.getEditor()
     let index =
       attachmentRange.current?.index ?? Math.max(0, editor.getLength() - 1)
@@ -170,6 +172,7 @@ export const EvidenceRichTextField = ({
     } finally {
       uploadingRef.current = false
       setUploading(false)
+      onUploadingChange?.(false)
       focusOnEdit.current = true
     }
   }

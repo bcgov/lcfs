@@ -147,6 +147,7 @@ const detailLines = (entry, t) => {
       const richText = [
         'description',
         'analyst_review',
+        'evaluation',
         'review_notes',
         'missing_information'
       ].includes(field)

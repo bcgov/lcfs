@@ -1,5 +1,5 @@
 import 'react'
-import { cleanup, fireEvent, screen } from '@testing-library/react'
+import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 
 import { describe, expect, vi, beforeEach } from 'vitest'
 
@@ -167,7 +167,7 @@ describe('DesignatedActionWorkflow', () => {
     )
   })
 
-  test('sends the Missing information box when requesting information', ({
+  test('sends the Missing information box when requesting information', async ({
     render,
     app
   }) => {
@@ -185,10 +185,75 @@ describe('DesignatedActionWorkflow', () => {
     fireEvent.click(screen.getByTestId('workflow-request_information'))
 
     expect(screen.queryByTestId('workflow-comment')).not.toBeInTheDocument()
+    await waitFor(() =>
+      expect(mockPerform).toHaveBeenCalledWith(
+        { action: 'request_information', comment: 'Send the signed permit.' },
+        expect.anything()
+      )
+    )
+  })
+
+  test('waits for the Missing information save before requesting it', async ({
+    render,
+    app
+  }) => {
+    let finishSave
+    const beforeAction = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          finishSave = resolve
+        })
+    )
+    render(
+      <DesignatedActionWorkflow
+        designatedActionId="9"
+        availableActions={analystActions}
+        allEvidenceSatisfactory
+        missingInformation="Updated request."
+        beforeAction={beforeAction}
+      />,
+      app
+    )
+
+    const button = screen.getByTestId('workflow-request_information')
+    fireEvent.click(button)
+
+    expect(beforeAction).toHaveBeenCalledOnce()
+    expect(button).toBeDisabled()
+    expect(mockPerform).not.toHaveBeenCalled()
+
+    finishSave()
+    await waitFor(() => expect(mockPerform).toHaveBeenCalledOnce())
     expect(mockPerform).toHaveBeenCalledWith(
-      { action: 'request_information', comment: 'Send the signed permit.' },
+      { action: 'request_information', comment: 'Updated request.' },
       expect.anything()
     )
+  })
+
+  test('does not request information when its save fails', async ({
+    render,
+    app
+  }) => {
+    const beforeAction = vi.fn().mockRejectedValue(new Error('Save failed'))
+    render(
+      <DesignatedActionWorkflow
+        designatedActionId="9"
+        availableActions={analystActions}
+        allEvidenceSatisfactory
+        missingInformation="Updated request."
+        beforeAction={beforeAction}
+      />,
+      app
+    )
+
+    fireEvent.click(screen.getByTestId('workflow-request_information'))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('workflow-error')).toHaveTextContent(
+        'Save failed'
+      )
+    )
+    expect(mockPerform).not.toHaveBeenCalled()
   })
 
   test('cannot request information until the box says what is missing', ({
