@@ -992,6 +992,8 @@ class InitiativeAgreementServices:
             if not existing_requirements
             else ""
         )
+        if legacy_missing_information:
+            action.missing_information = None
         requirement = await self.repo.add_evidence_requirement(
             EvidenceRequirement(
                 designated_action_id=designated_action_id,
@@ -1004,8 +1006,6 @@ class InitiativeAgreementServices:
                 update_user=username,
             )
         )
-        if legacy_missing_information:
-            action.missing_information = None
         return EvidenceRequirementSchema.model_validate(requirement)
 
     @service_handler

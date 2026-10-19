@@ -49,6 +49,16 @@ describe('DesignatedActionHistoryPanel', () => {
     expect(row).toHaveTextContent('Approved')
   })
 
+  test('uses a text label inside the accordion heading without a nested heading', ({
+    render,
+    app
+  }) => {
+    render(<DesignatedActionHistoryPanel designatedActionId="1" />, app)
+    const toggle = screen.getByTestId('history-toggle')
+    expect(toggle).toHaveAccessibleName('initiativeAgreement:history.title')
+    expect(toggle.querySelector('h1, h2, h3, h4, h5, h6')).toBeNull()
+  })
+
   test('names the analyst on an assignment rather than showing an id', ({
     render,
     app

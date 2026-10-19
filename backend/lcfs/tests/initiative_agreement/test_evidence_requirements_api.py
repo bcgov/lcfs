@@ -135,7 +135,16 @@ async def test_creating_the_first_requirement_transfers_legacy_da_text(
         json={"title": "Permits", "description": "Permits"},
     )
 
+    assert created.status_code == status.HTTP_201_CREATED
     assert created.json()["missingInformation"] == "The signed permit."
+    requirement_id = created.json()["evidenceRequirementId"]
+    requirements = await client.get(_list_url(fastapi_app, action))
+    assert requirements.status_code == status.HTTP_200_OK
+    assert next(
+        requirement["missingInformation"]
+        for requirement in requirements.json()
+        if requirement["evidenceRequirementId"] == requirement_id
+    ) == "The signed permit."
     await dbsession.refresh(action)
     assert action.missing_information is None
 

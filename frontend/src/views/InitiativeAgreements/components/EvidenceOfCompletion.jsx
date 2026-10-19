@@ -35,7 +35,7 @@ export const EvidenceOfCompletion = ({
     useEvidenceRequirements(designatedActionId)
   const { mutate: createRequirement, isPending: isCreating } =
     useCreateEvidenceRequirement(designatedActionId)
-  const { mutate: updateRequirement } =
+  const { mutateAsync: updateRequirement } =
     useUpdateEvidenceRequirement(designatedActionId)
   const { mutate: removeRequirement } =
     useDeleteEvidenceRequirement(designatedActionId)
@@ -137,15 +137,19 @@ export const EvidenceOfCompletion = ({
               missingInformationReadOnly={missingInformationReadOnly}
               actions={renderRequestAction?.(requirement, allRequestsComplete)}
               allRequestsComplete={allRequestsComplete}
-              onSave={(payload, callbacks) =>
-                updateRequirement(
-                  {
+              onSave={async (payload, callbacks) => {
+                let result
+                try {
+                  result = await updateRequirement({
                     evidenceRequirementId: requirement.evidenceRequirementId,
                     ...payload
-                  },
-                  callbacks
-                )
-              }
+                  })
+                } catch (err) {
+                  callbacks.onError(err)
+                  return
+                }
+                callbacks.onSuccess(result)
+              }}
               onRemove={() =>
                 removeRequirement(requirement.evidenceRequirementId)
               }

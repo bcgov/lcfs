@@ -446,7 +446,7 @@ export const DesignatedActionHistoryPanel = ({ designatedActionId }) => {
           px: 3
         }}
       >
-        <BCTypography variant="h6" color="primary">
+        <BCTypography variant="h6" component="span" color="primary">
           {t('initiativeAgreement:history.title')}
         </BCTypography>
       </AccordionSummary>

@@ -1,5 +1,6 @@
 import 'react'
-import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor } from '@testing-library/react'
+import { useMutation } from '@tanstack/react-query'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, vi, beforeEach } from 'vitest'
 
@@ -124,7 +125,13 @@ vi.mock('@/hooks/useInitiativeAgreements', () => ({
     mutate: mockCreate,
     isPending: false
   }),
-  useUpdateEvidenceRequirement: () => ({ mutate: mockUpdate }),
+  useUpdateEvidenceRequirement: () =>
+    useMutation({
+      mutationFn: (payload) =>
+        new Promise((resolve, reject) =>
+          mockUpdate(payload, { onSuccess: resolve, onError: reject })
+        )
+    }),
   useDeleteEvidenceRequirement: () => ({ mutate: mockRemove })
 }))
 
@@ -149,7 +156,9 @@ const editField = (name, id = 1) => {
   if (pencil) fireEvent.click(pencil)
 }
 const saveField = (name, id = 1) =>
-  fireEvent.blur(screen.getByTestId(`eoc-${name}-${id}`))
+  act(async () => {
+    fireEvent.blur(screen.getByTestId(`eoc-${name}-${id}`))
+  })
 
 describe('EvidenceOfCompletion', () => {
   beforeEach(() => {
@@ -162,6 +171,57 @@ describe('EvidenceOfCompletion', () => {
     mockUpload.mockResolvedValue([42])
     mockDownload.mockResolvedValue(new Blob())
   })
+
+  for (const firstFails of [false, true]) {
+    test(`settles overlapping autosaves independently when the first save ${firstFails ? 'fails' : 'succeeds'}`, async ({
+      render,
+      app
+    }) => {
+      const pending = []
+      mockUpdate.mockImplementation((_payload, callbacks) =>
+        pending.push(callbacks)
+      )
+      mockList.mockReturnValue({
+        data: [
+          requirement(),
+          requirement({ evidenceRequirementId: 2, requirementNumber: 2 })
+        ],
+        isLoading: false
+      })
+      render(<EvidenceOfCompletion designatedActionId="9" />, app)
+      openEoc(1)
+      openEoc(2)
+      for (const id of [1, 2]) {
+        fireEvent.change(screen.getByTestId(`eoc-review-${id}`), {
+          target: { value: `Draft ${id}` }
+        })
+        await saveField('review', id)
+      }
+      await waitFor(() => expect(pending).toHaveLength(2))
+      expect(screen.getByTestId('eoc-review-1')).toHaveAttribute('readonly')
+      expect(screen.getByTestId('eoc-review-2')).toHaveAttribute('readonly')
+      await act(async () => {
+        if (firstFails) pending[0].onError(new Error('First save failed'))
+        else pending[0].onSuccess()
+      })
+      await waitFor(() =>
+        expect(screen.getByTestId('eoc-review-1')).not.toHaveAttribute(
+          'readonly'
+        )
+      )
+      expect(screen.getByTestId('eoc-review-2')).toHaveAttribute('readonly')
+      if (firstFails) {
+        expect(screen.getByText('First save failed')).toBeVisible()
+        expect(screen.getByTestId('eoc-review-1')).toHaveValue('Draft 1')
+      }
+      await act(async () => pending[1].onSuccess())
+      await waitFor(() =>
+        expect(screen.getByTestId('eoc-review-2')).not.toHaveAttribute(
+          'readonly'
+        )
+      )
+    })
+  }
 
   test('uploads attachments into designated-action documents and autosaves filename links', async ({
     render,
@@ -187,7 +247,9 @@ describe('EvidenceOfCompletion', () => {
     await waitFor(() =>
       expect(field).toHaveValue('Evaluation draft\npermit.pdf')
     )
-    fireEvent.blur(field)
+    await act(async () => {
+      fireEvent.blur(field)
+    })
     expect(mockUpdate).toHaveBeenCalledWith(
       {
         evidenceRequirementId: 1,
@@ -294,7 +356,7 @@ describe('EvidenceOfCompletion', () => {
     OUTCOME_SATISFACTORY,
     OUTCOME_INFORMATION_REQUESTED
   ]) {
-    test(`autosaves editable fields and locks Notes and summary for ${outcome ?? 'unreviewed'} evidence`, ({
+    test(`autosaves editable fields and locks Notes and summary for ${outcome ?? 'unreviewed'} evidence`, async ({
       render,
       app
     }) => {
@@ -337,7 +399,7 @@ describe('EvidenceOfCompletion', () => {
         })
         expect(mockUpdate).not.toHaveBeenCalled()
         expect(field).not.toHaveAttribute('readonly')
-        saveField(name)
+        await saveField(name)
         const payloadKey = {
           notes: 'reviewNotes',
           description: 'description',
@@ -360,7 +422,7 @@ describe('EvidenceOfCompletion', () => {
     })
   }
 
-  test('autosaves rich HTML on blur and acknowledges a successful save', ({
+  test('autosaves rich HTML on blur and acknowledges a successful save', async ({
     render,
     app
   }) => {
@@ -372,7 +434,7 @@ describe('EvidenceOfCompletion', () => {
       target: { value: '<p><strong>Permits</strong> verified.</p>' }
     })
     expect(mockUpdate).not.toHaveBeenCalled()
-    saveField('review')
+    await saveField('review')
     expect(mockUpdate).toHaveBeenCalledWith(
       {
         evidenceRequirementId: 1,
@@ -406,21 +468,21 @@ describe('EvidenceOfCompletion', () => {
     }
   })
 
-  test('saving an unchanged field does not send an update', ({
+  test('saving an unchanged field does not send an update', async ({
     render,
     app
   }) => {
     render(<EvidenceOfCompletion designatedActionId="9" />, app)
     openEoc()
     editField('description')
-    saveField('description')
+    await saveField('description')
     expect(mockUpdate).not.toHaveBeenCalled()
     expect(screen.getByTestId('eoc-description-1')).not.toHaveAttribute(
       'readonly'
     )
   })
 
-  test('keeps a failed save editable and displays the error instead of reporting success', ({
+  test('keeps a failed save editable and displays the error instead of reporting success', async ({
     render,
     app
   }) => {
@@ -433,14 +495,14 @@ describe('EvidenceOfCompletion', () => {
     fireEvent.change(screen.getByTestId('eoc-review-1'), {
       target: { value: '<p>Keep my draft</p>' }
     })
-    saveField('review')
+    await saveField('review')
     expect(screen.getByText('Unable to save evidence')).toBeVisible()
     expect(screen.getByTestId('eoc-review-1')).not.toHaveAttribute('readonly')
     expect(screen.getByTestId('eoc-review-1')).toHaveValue('Keep my draft')
     expect(screen.queryByTestId('eoc-saved-1')).not.toBeInTheDocument()
   })
 
-  test('restores empty rich-text descriptions but allows clearing optional fields', ({
+  test('restores empty rich-text descriptions but allows clearing optional fields', async ({
     render,
     app
   }) => {
@@ -454,7 +516,7 @@ describe('EvidenceOfCompletion', () => {
     fireEvent.change(screen.getByTestId('eoc-description-1'), {
       target: { value: '<p><br></p>' }
     })
-    saveField('description')
+    await saveField('description')
     expect(screen.getByTestId('eoc-description-1')).toHaveValue(
       'List of major permits and approvals'
     )
@@ -463,7 +525,7 @@ describe('EvidenceOfCompletion', () => {
     fireEvent.change(screen.getByTestId('eoc-review-1'), {
       target: { value: '<p><br></p>' }
     })
-    saveField('review')
+    await saveField('review')
     expect(mockUpdate).toHaveBeenCalledWith(
       {
         evidenceRequirementId: 1,
@@ -473,7 +535,7 @@ describe('EvidenceOfCompletion', () => {
     )
   })
 
-  test('keeps an active draft when a refetch updates the saved value', ({
+  test('keeps an active draft when a refetch updates the saved value', async ({
     render,
     app
   }) => {
@@ -493,7 +555,7 @@ describe('EvidenceOfCompletion', () => {
     })
     rerender(<EvidenceOfCompletion designatedActionId="9" />)
     expect(screen.getByTestId('eoc-review-1')).toHaveValue('Half a thought')
-    saveField('review')
+    await saveField('review')
     expect(mockUpdate).toHaveBeenCalledWith(
       { evidenceRequirementId: 1, analystReview: 'Half a thought' },
       expect.any(Object)
@@ -534,14 +596,16 @@ describe('EvidenceOfCompletion', () => {
     ['satisfactory', OUTCOME_SATISFACTORY, 'satisfactory'],
     ['request', OUTCOME_INFORMATION_REQUESTED, 'information-requested']
   ]) {
-    test(`records ${outcome}, expands the card, and keeps outcome controls outside the toggle button`, ({
+    test(`records ${outcome}, expands the card, and keeps outcome controls outside the toggle button`, async ({
       render,
       app
     }) => {
       render(<EvidenceOfCompletion designatedActionId="9" />, app)
       const checkbox = screen.getByTestId(`eoc-${control}-1`)
       expect(checkbox.closest('button')).toBeNull()
-      fireEvent.click(checkbox.querySelector('input'))
+      await act(async () => {
+        fireEvent.click(checkbox.querySelector('input'))
+      })
       expect(mockUpdate).toHaveBeenCalledWith(
         {
           evidenceRequirementId: 1,
@@ -560,7 +624,7 @@ describe('EvidenceOfCompletion', () => {
     })
   }
 
-  test('outcomes are mutually exclusive and clicking the selected outcome clears it', ({
+  test('outcomes are mutually exclusive and clicking the selected outcome clears it', async ({
     render,
     app
   }) => {
@@ -575,9 +639,11 @@ describe('EvidenceOfCompletion', () => {
     expect(
       screen.getByTestId('eoc-request-1').querySelector('input')
     ).not.toBeChecked()
-    fireEvent.click(
-      screen.getByTestId('eoc-satisfactory-1').querySelector('input')
-    )
+    await act(async () => {
+      fireEvent.click(
+        screen.getByTestId('eoc-satisfactory-1').querySelector('input')
+      )
+    })
     expect(mockUpdate).toHaveBeenCalledWith(
       {
         evidenceRequirementId: 1,
