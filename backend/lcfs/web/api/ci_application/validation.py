@@ -2,7 +2,8 @@
 Authorization / access validation for CI application endpoints.
 
 Suppliers can only see and mutate CI applications belonging to their own
-organization. Government users can read every application.
+organization. Government users can read every application that has been
+submitted; a Draft stays the applicant's (#5231).
 """
 
 from fastapi import Depends, HTTPException, Request, status
@@ -10,6 +11,7 @@ from fastapi import Depends, HTTPException, Request, status
 from lcfs.db.models.ci_application import CIApplication
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.ci_application.repo import CIApplicationRepository
+from lcfs.web.api.ci_application.schema import CIApplicationStatusEnum
 from lcfs.web.api.role.schema import user_has_roles
 
 
@@ -32,6 +34,19 @@ class CIApplicationValidation:
 
         is_government = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
         if is_government:
+            # A Draft is the applicant's until it is submitted. Government
+            # lists leave drafts out; a direct link must not reach one
+            # either (#5231).
+            status_value = (
+                ci_application.ci_application_status.status
+                if ci_application.ci_application_status
+                else None
+            )
+            if status_value == CIApplicationStatusEnum.Draft.value:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="CI application not found.",
+                )
             return ci_application
 
         user_org_id = (
