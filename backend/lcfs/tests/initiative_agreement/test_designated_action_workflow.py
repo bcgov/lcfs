@@ -2,8 +2,7 @@
 
 The transition table is the feature, so most of these assert against it
 directly: who may act, from where, what lands, and what the audit trail
-keeps. Credit issuance is out of scope for this story and no test here
-expects any transaction to move.
+keeps. Director approval also issues the recommended credits.
 """
 
 import pytest
@@ -12,6 +11,7 @@ from httpx import AsyncClient
 from sqlalchemy import select
 
 from lcfs.db.models.initiative_agreement.DesignatedActionHistory import (
+    EVENT_CREDITS_ISSUED,
     EVENT_CREDITS_RECOMMENDED,
     EVENT_EVIDENCE_REVIEWED,
     EVENT_INFORMATION_REQUESTED,
@@ -277,11 +277,10 @@ async def test_the_manager_returns_or_advances_to_the_director(
 async def test_the_director_approves(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
-    """Approved is the terminal reviewed state the ticket calls Completed.
-    No credits move — issuance is a separate step."""
     action = await _seed_da(
         dbsession, "IA-26WF9", status_name="Recommended to director"
     )
+    action.recommended_credits = 1200
     await _seed_requirement(dbsession, action)
     set_mock_user(fastapi_app, IDIR_DIRECTOR)
 
@@ -291,12 +290,15 @@ async def test_the_director_approves(
 
     assert response.status_code == status.HTTP_200_OK
     assert await _status_of(dbsession, action) == "Approved"
-    assert response.json()["transactionId"] is None
+    assert response.json()["transactionId"] is not None
 
     entries = await _history(dbsession, action)
-    assert entries[-1].event == EVENT_STATUS_CHANGE
-    # The approval preserves what was approved.
-    assert "evidence_requirements" in entries[-1].snapshot
+    assert [entry.event for entry in entries] == [
+        EVENT_STATUS_CHANGE,
+        EVENT_CREDITS_ISSUED,
+    ]
+    assert "evidence_requirements" in entries[0].snapshot
+    assert entries[1].snapshot["recommended_credits"] == 1200
 
 
 @pytest.mark.anyio

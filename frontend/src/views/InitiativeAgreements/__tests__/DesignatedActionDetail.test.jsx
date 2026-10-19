@@ -1,4 +1,4 @@
-import 'react';
+import 'react'
 import { cleanup, fireEvent, screen } from '@testing-library/react'
 import { describe, expect, vi, beforeEach } from 'vitest'
 import { roles } from '@/constants/roles'
@@ -243,6 +243,29 @@ describe('DesignatedActionDetail', () => {
   test('renders the evidence of completion section', ({ render, app }) => {
     render(<DesignatedActionDetail />, app)
     expect(screen.getByTestId('evidence-of-completion')).toBeInTheDocument()
+  })
+
+  test('shows the issued amount as read-only after approval', ({
+    render,
+    app
+  }) => {
+    mockProfile.mockReturnValue({
+      data: {
+        ...action,
+        currentStatus: { status: 'Approved' },
+        transactionId: 42,
+        recommendedCredits: 1200,
+        availableActions: []
+      },
+      isLoading: false,
+      isError: false
+    })
+    render(<DesignatedActionDetail />, app)
+
+    expect(
+      screen.queryByTestId('recommended-credits-input')
+    ).not.toBeInTheDocument()
+    expect(screen.getByText('1,200')).toBeInTheDocument()
   })
 
   test('passes the available actions and evidence state to the workflow', ({

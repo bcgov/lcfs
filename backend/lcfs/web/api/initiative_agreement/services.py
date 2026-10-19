@@ -11,6 +11,7 @@ from lcfs.db.models.initiative_agreement.DesignatedActionHistory import (
     EVENT_ANALYST_ASSIGNED,
     EVENT_ANALYST_REASSIGNED,
     EVENT_ANALYST_UNASSIGNED,
+    EVENT_CREDITS_ISSUED,
     EVENT_DETAILS_EDITED,
     DesignatedActionHistory,
 )
@@ -22,6 +23,7 @@ from lcfs.db.models.initiative_agreement.EvidenceRequirement import (
 from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
     AGREEMENT_TYPES,
     RECORD_KIND_AGREEMENT,
+    RECORD_KIND_LEGACY_AWARD,
     InitiativeAgreement,
 )
 from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
@@ -29,6 +31,7 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
 )
 from lcfs.db.models.transaction.Transaction import TransactionActionEnum
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.utils.dates import PACIFIC_TZ
 from lcfs.web.api.base import (
     PaginationRequestSchema,
@@ -63,7 +66,9 @@ from lcfs.web.api.initiative_agreement.schema import (
     LastCommentSchema,
 )
 from lcfs.web.api.initiative_agreement.workflow import (
+    ACTION_APPROVE,
     LIFECYCLE_STATUS_DRAFT,
+    STATUS_APPROVED,
     STATUS_NOT_STARTED,
     TRANSITIONS,
     WORKFLOW_ACTIONS,
@@ -85,6 +90,7 @@ from lcfs.web.api.notification.schema import (
 from lcfs.web.api.notification.services import NotificationService
 from lcfs.web.api.organizations.services import OrganizationsService
 from lcfs.web.api.role.schema import user_has_roles
+from lcfs.web.api.transaction.repo import TransactionRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
 
@@ -104,12 +110,14 @@ class InitiativeAgreementServices:
         ),
         notfn_service: NotificationService = Depends(NotificationService),
         request: Request = None,
+        transaction_repo: TransactionRepository = Depends(TransactionRepository),
     ) -> None:
         self.repo = repo
         self.org_service = org_service
         self.internal_comment_service = internal_comment_service
         self.request = request
         self.notfn_service = notfn_service
+        self.transaction_repo = transaction_repo
 
     @service_handler
     async def get_initiative_agreement(
@@ -674,8 +682,12 @@ class InitiativeAgreementServices:
             ),
         )
 
-    async def _get_action_or_404(self, designated_action_id: int):
-        action = await self.repo.get_designated_action_by_id(designated_action_id)
+    async def _get_action_or_404(
+        self, designated_action_id: int, *, for_update: bool = False
+    ) -> DesignatedAction:
+        action = await self.repo.get_designated_action_by_id(
+            designated_action_id, for_update=for_update
+        )
         if not action:
             raise DataNotFoundException(
                 f"Designated action with id {designated_action_id} not found"
@@ -739,7 +751,14 @@ class InitiativeAgreementServices:
         No history event: this is a working value until a recommendation is
         actually made, and that event records the figure that counted.
         """
-        action = await self._get_action_or_404(designated_action_id)
+        action = await self._get_action_or_404(designated_action_id, for_update=True)
+        if action.transaction_id is not None or (
+            action.current_status and action.current_status.status == STATUS_APPROVED
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Recommended credits cannot be changed after approval.",
+            )
         if credits is not None:
             if credits < 0:
                 raise HTTPException(
@@ -785,7 +804,8 @@ class InitiativeAgreementServices:
         self, designated_action_id: int, data: DesignatedActionWorkflowSchema, user
     ) -> DesignatedActionSchema:
         """Advance a designated action through its review workflow (#4898)."""
-        action = await self._get_action_or_404(designated_action_id)
+        # Hold through issuance to serialize approvals and returns.
+        action = await self._get_action_or_404(designated_action_id, for_update=True)
 
         transition = TRANSITIONS.get(data.action)
         if transition is None:
@@ -883,11 +903,100 @@ class InitiativeAgreementServices:
                 snapshot=snapshot or None,
             )
         )
+        if data.action == ACTION_APPROVE:
+            await self._issue_designated_action_credits(action, user, display_name)
         action.update_user = getattr(user, "keycloak_username", None)
         await self.repo.db.flush()
 
         refreshed = await self.repo.get_designated_action_by_id(designated_action_id)
         return DesignatedActionSchema.model_validate(refreshed)
+
+    async def _issue_designated_action_credits(
+        self, action: DesignatedAction, user: UserProfile, display_name: str
+    ) -> None:
+        """Use the existing credit-award records consumed by transaction views."""
+        if action.transaction_id is not None:
+            return
+
+        credits = action.recommended_credits
+        if credits is None or credits < 0:
+            raise HTTPException(
+                status_code=400,
+                detail="A non-negative recommended credit amount is required for approval.",
+            )
+        if credits > action.credit_allocation:
+            raise HTTPException(
+                status_code=400,
+                detail="Recommended credits cannot exceed the allocation for this action.",
+            )
+        agreement = action.initiative_agreement
+        if agreement.to_organization_id is None:
+            raise HTTPException(
+                status_code=400,
+                detail="The initiative agreement must have a receiving organization.",
+            )
+        approved = await self.repo.get_initiative_agreement_status_by_name(
+            InitiativeAgreementStatusEnum.Approved
+        )
+        # Zero-credit approvals still need an auditable transaction.
+        transaction = await self.transaction_repo.create_transaction(
+            transaction_action=TransactionActionEnum.Adjustment,
+            compliance_units=credits,
+            organization_id=agreement.to_organization_id,
+        )
+        username = getattr(user, "keycloak_username", None)
+        today = datetime.now(PACIFIC_TZ).date()
+        transaction.effective_date = today
+        award = await self.repo.create_initiative_agreement(
+            InitiativeAgreement(
+                record_kind=RECORD_KIND_LEGACY_AWARD,
+                agreement_type=agreement.agreement_type,
+                compliance_units=credits,
+                to_organization_id=agreement.to_organization_id,
+                current_status_id=approved.initiative_agreement_status_id,
+                transaction_id=transaction.transaction_id,
+                transaction_effective_date=today,
+                gov_comment=(
+                    f"System-generated from approval of designated action "
+                    f"{action.designated_action_id} (DA{action.action_number}), "
+                    f"initiative agreement {agreement.ia_code or agreement.initiative_agreement_id}."
+                ),
+                create_user=username,
+                update_user=username,
+            )
+        )
+        action.transaction_id = transaction.transaction_id
+        if action.determination_date is None:
+            action.determination_date = today
+        await self.repo.add_initiative_agreement_history(
+            CreateInitiativeAgreementHistorySchema(
+                initiative_agreement_id=award.initiative_agreement_id,
+                initiative_agreement_status_id=approved.initiative_agreement_status_id,
+                user_profile_id=user.user_profile_id,
+                display_name=display_name,
+            )
+        )
+        await self.repo.add_issued_credits(agreement.initiative_agreement_id, credits)
+        await self.repo.add_designated_action_history(
+            DesignatedActionHistory(
+                designated_action_id=action.designated_action_id,
+                designated_action_group_uuid=action.group_uuid,
+                event=EVENT_CREDITS_ISSUED,
+                status_id=action.current_status_id,
+                display_name="System",
+                create_user=username,
+                update_user=username,
+                snapshot={
+                    "system_generated": True,
+                    "designated_action_id": action.designated_action_id,
+                    "initiative_agreement_id": agreement.initiative_agreement_id,
+                    "credit_transaction_id": award.initiative_agreement_id,
+                    "transaction_id": transaction.transaction_id,
+                    "recommended_credits": credits,
+                    "approved_by_user_profile_id": user.user_profile_id,
+                },
+            )
+        )
 
     @service_handler
     async def get_designated_action_history(

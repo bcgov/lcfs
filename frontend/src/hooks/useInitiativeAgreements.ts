@@ -219,9 +219,11 @@ export const useEvidenceRequirements = (
   })
 }
 
-const useEvidenceMutation = <TVariables,>(
+const useEvidenceMutation = <TVariables>(
   designatedActionId: number | string,
-  mutationFn: (client: ApiServiceInstance) => (variables: TVariables) => Promise<unknown>
+  mutationFn: (
+    client: ApiServiceInstance
+  ) => (variables: TVariables) => Promise<unknown>
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -310,11 +312,27 @@ export const useDesignatedActionWorkflow = (
           payload
         )
       ).data,
-    onSuccess: () => {
+    onSuccess: (_data, payload) => {
       queryClient.invalidateQueries({ queryKey: ['designated-actions'] })
       queryClient.invalidateQueries({
         queryKey: ['designated-action-history', String(designatedActionId)]
       })
+      if (payload.action === 'approve') {
+        for (const key of [
+          'initiative-agreements',
+          'transactions-list',
+          'credit-ledger',
+          'period-credit-ledger',
+          'credit-ledger-years',
+          'organization',
+          'organization-balance',
+          'current-org-balance',
+          'transaction-counts',
+          'org-transaction-counts'
+        ]) {
+          queryClient.invalidateQueries({ queryKey: [key] })
+        }
+      }
     }
   })
 }

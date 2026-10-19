@@ -56,9 +56,7 @@ class DesignatedAction(BaseModel, Auditable, Versioning):
             name="uq_designated_action_agreement_number_version",
         ),
         Index("ix_designated_action_group_uuid", "group_uuid"),
-        # One designated action may claim a given ledger transaction at most
-        # once. Guards against a concurrent double-issuance on approval, where
-        # two requests both observe transaction_id IS NULL.
+        # Prevent shared transactions; row locks prevent duplicate issuance.
         Index(
             "uq_designated_action_transaction_id",
             "transaction_id",
@@ -163,7 +161,7 @@ class DesignatedAction(BaseModel, Auditable, Versioning):
         comment=(
             "Ledger transaction created when credits were issued for this "
             "action; set by consolidation of legacy award records and by "
-            "future issuance on director approval"
+            "automatic issuance on director approval"
         ),
     )
 
