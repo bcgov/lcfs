@@ -3436,9 +3436,9 @@ async def test_locked_supplemental_normalization_skips_flush_when_already_correc
     "compliance_year, line_17, line_20, line_21, line_22",
     [
         # TFRS offset the whole debit with banked credits (TFRS Line 26).
-        ("2019", 0, -219626, 0, -219626),
+        ("2019", 0, -1000, 0, -1000),
         # TFRS assessed a penalty on debits the supplier left unoffset.
-        ("2021", 148737, -148737, 23297400, 0),
+        ("2021", 600, -600, 80000, 0),
     ],
 )
 async def test_locked_supplemental_normalization_skips_pre_2024_reports(
@@ -3454,7 +3454,7 @@ async def test_locked_supplemental_normalization_skips_pre_2024_reports(
     """TFRS-era summaries keep the penalty TFRS assessed (issue #5257)."""
     summary = make_summary(locked=True)
     summary.summary_id = 1
-    summary.compliance_report_id = 71
+    summary.compliance_report_id = 1001
     summary.line_17_non_banked_units_used = line_17
     summary.line_18_units_to_be_banked = line_20
     summary.line_19_units_to_be_exported = 0
@@ -3465,7 +3465,7 @@ async def test_locked_supplemental_normalization_skips_pre_2024_reports(
 
     report = make_report(1, ComplianceReportStatusEnum.Assessed, compliance_year)
     report.summary = summary
-    report.compliance_report_id = 71
+    report.compliance_report_id = 1001
 
     mock_repo.get_compliance_report_by_id = AsyncMock(return_value=report)
     mock_repo.get_prior_assessed_compliance_report_in_group = AsyncMock(
@@ -3477,7 +3477,7 @@ async def test_locked_supplemental_normalization_skips_pre_2024_reports(
 
     result = (
         await compliance_report_summary_service.calculate_compliance_report_summary(
-            report_id=71
+            report_id=1001
         )
     )
 
