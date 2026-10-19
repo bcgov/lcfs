@@ -18,6 +18,7 @@ import {
   COMPLIANCE_REPORT_FILE_TYPES
 } from '@/constants/common'
 import { validateFile } from '@/utils/fileValidation'
+import { quillAttachIcon } from '@/utils/quillAttachIcon'
 
 // Register a paperclip icon for the custom Quill "attach" toolbar button.
 // `react-quill` exposes Quill as a static property of its default export
@@ -25,8 +26,7 @@ import { validateFile } from '@/utils/fileValidation'
 // bundler CJS/ESM interop. Quill's icon registry is global — register once.
 const Quill = ReactQuill.Quill
 const quillIcons = Quill.import('ui/icons')
-quillIcons.attach =
-  '<svg viewBox="0 0 18 18"><path class="ql-stroke" d="M14.5,7.5l-5.6,5.6c-1.3,1.3-3.4,1.3-4.7,0c-1.3-1.3-1.3-3.4,0-4.7l6-6c0.8-0.8,2.2-0.8,3,0c0.8,0.8,0.8,2.2,0,3l-6,6c-0.4,0.4-1,0.4-1.3,0c-0.4-0.4-0.4-1,0-1.3l5.3-5.3"/></svg>'
+quillIcons.attach = quillAttachIcon
 
 const VisibilityToggle = ({
   visibility,

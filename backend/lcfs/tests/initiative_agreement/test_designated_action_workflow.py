@@ -245,7 +245,7 @@ async def test_accepting_evidence_requires_every_requirement_satisfactory(
 
 
 @pytest.mark.anyio
-async def test_the_analyst_recommends_with_an_amount(
+async def test_the_analyst_accepts_and_recommends_with_an_amount(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
     action = await _seed_da(dbsession, "IA-26WF4", credits=1850)
@@ -262,8 +262,13 @@ async def test_the_analyst_recommends_with_an_amount(
     assert await _status_of(dbsession, action) == "Recommended to manager"
 
     entries = await _history(dbsession, action)
+    assert len(entries) == 1
     assert entries[-1].event == EVENT_CREDITS_RECOMMENDED
     assert entries[-1].snapshot["recommended_credits"] == 1200
+    evidence = entries[-1].snapshot["evidence_requirements"]
+    assert len(evidence) == 1
+    assert evidence[0]["review_outcome"] == REVIEW_OUTCOME_SATISFACTORY
+    assert evidence[0]["analyst_review"] == "Permits verified."
 
 
 @pytest.mark.anyio

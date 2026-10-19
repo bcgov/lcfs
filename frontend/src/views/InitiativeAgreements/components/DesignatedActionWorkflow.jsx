@@ -15,7 +15,6 @@ import { useDesignatedActionWorkflow } from '@/hooks/useInitiativeAgreements'
 // is decided by the API — availableActions comes from the same transition
 // table the endpoint enforces, so the page can never offer an action the
 // server would refuse.
-export const ACTION_ACCEPT = 'accept_evidence'
 export const ACTION_REQUEST_INFORMATION = 'request_information'
 export const ACTION_RECOMMEND_TO_MANAGER = 'recommend_to_manager'
 export const ACTION_NOT_RECOMMEND = 'not_recommend'
@@ -40,20 +39,10 @@ const PROMPT_KEYS = {
   [ACTION_NOT_RECOMMEND]: 'initiativeAgreement:workflow.prompt.not_recommend'
 }
 
-// Where on the page each action belongs (#5080). Evidence decisions sit
-// beneath the review summary they act on; recommendation and approval
-// decisions close the page. Same component, rendered once per placement.
 export const PLACEMENT_EVIDENCE = 'evidence'
 export const PLACEMENT_DECISION = 'decision'
 
 const BUTTONS = [
-  {
-    action: ACTION_ACCEPT,
-    labelKey: 'accept',
-    variant: 'contained',
-    colour: 'primary',
-    placement: PLACEMENT_EVIDENCE
-  },
   {
     action: ACTION_REQUEST_INFORMATION,
     labelKey: 'requestInformation',
@@ -63,7 +52,7 @@ const BUTTONS = [
   },
   {
     action: ACTION_RECOMMEND_TO_MANAGER,
-    labelKey: 'recommendToManager',
+    labelKey: 'acceptAndRecommendToManager',
     variant: 'contained',
     colour: 'primary',
     placement: PLACEMENT_DECISION
@@ -111,8 +100,6 @@ export const DesignatedActionWorkflow = ({
   recommendedCredits,
   allEvidenceSatisfactory,
   hasRequirements = true,
-  // Used only for the legacy no-EOC path; requests with EOCs are composed
-  // from their saved Missing information fields by the API.
   missingInformation = '',
   canRequestInformation,
   onlyAction,
@@ -178,12 +165,8 @@ export const DesignatedActionWorkflow = ({
   // with its own margin.
   if (visible.length === 0 && !error) return null
 
-  // Accepting and recommending both need every requirement satisfactory;
-  // showing that as a disabled button explains itself better than a
-  // rejected click would.
   const blockedByEvidence = (action) =>
-    (action === ACTION_ACCEPT || action === ACTION_RECOMMEND_TO_MANAGER) &&
-    !allEvidenceSatisfactory
+    action === ACTION_RECOMMEND_TO_MANAGER && !allEvidenceSatisfactory
   const blockedByMissingInformation = (action) =>
     action === ACTION_REQUEST_INFORMATION &&
     !(canRequestInformation ?? Boolean(missingInformation.trim()))

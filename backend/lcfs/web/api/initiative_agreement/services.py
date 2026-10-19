@@ -845,8 +845,6 @@ class InitiativeAgreementServices:
                     for r in requested
                 )
             else:
-                # Keep legacy DA text usable until an EOC exists. Creating
-                # the first EOC transfers this value to that requirement.
                 comment = comment or (action.missing_information or "").strip()
                 if comment:
                     action.missing_information = comment

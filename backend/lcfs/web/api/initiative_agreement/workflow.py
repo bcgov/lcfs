@@ -103,8 +103,6 @@ TRANSITIONS = {
     # Sends the action back to the proponent for more evidence. The
     # snapshot carries the full review, so this round's findings survive
     # the next one.
-    # The reason is composed from each requested EOC's saved text; legacy DA
-    # text is used only while the action has no active EOC.
     ACTION_REQUEST_INFORMATION: Transition(
         roles=(RoleEnum.IA_ANALYST, RoleEnum.IA_MANAGER),
         from_statuses=IN_REVIEW_STATUSES,
@@ -121,6 +119,7 @@ TRANSITIONS = {
         event=EVENT_CREDITS_RECOMMENDED,
         requires_credits=True,
         requires_all_evidence_satisfactory=True,
+        captures_evidence=True,
     ),
     # The analyst's negative recommendation (#5118). It goes to the
     # manager like a positive one, but carries no amount and does not

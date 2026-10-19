@@ -117,7 +117,6 @@ vi.mock('../components/EditDesignatedAction', () => ({
 
 const workflowProps = vi.fn()
 vi.mock('../components/DesignatedActionWorkflow', () => ({
-  ACTION_ACCEPT: 'accept_evidence',
   ACTION_REQUEST_INFORMATION: 'request_information',
   PLACEMENT_EVIDENCE: 'evidence',
   PLACEMENT_DECISION: 'decision',
@@ -261,13 +260,10 @@ describe('DesignatedActionDetail', () => {
   }) => {
     render(<DesignatedActionDetail />, app)
 
-    // Rendered twice (#5080): the evidence decisions inside the evidence
-    // section, the recommendation decisions after it. Both get the same
-    // facts.
     const evidenceWorkflows = screen.getAllByTestId(
       'designated-action-workflow-evidence'
     )
-    expect(evidenceWorkflows).toHaveLength(2)
+    expect(evidenceWorkflows).toHaveLength(1)
     for (const evidence of evidenceWorkflows) {
       expect(screen.getByTestId('evidence-of-completion')).toContainElement(
         evidence
@@ -277,7 +273,7 @@ describe('DesignatedActionDetail', () => {
     expect(screen.getByTestId('evidence-of-completion')).not.toContainElement(
       decision
     )
-    for (const placement of ['evidence', 'decision']) {
+    for (const placement of ['decision']) {
       expect(workflowProps).toHaveBeenCalledWith(
         expect.objectContaining({
           placement,
@@ -289,6 +285,9 @@ describe('DesignatedActionDetail', () => {
         })
       )
     }
+    expect(workflowProps).not.toHaveBeenCalledWith(
+      expect.objectContaining({ onlyAction: 'accept_evidence' })
+    )
   })
 
   test('puts the evidence review and the recommendation inside the action card (#5118)', ({
