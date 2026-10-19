@@ -368,11 +368,17 @@ class InitiativeAgreementServices:
         data: AgreementUpdateSchema,
         user,
     ) -> InitiativeAgreementProfileSchema:
-        """Edit an agreement's details, in any lifecycle status."""
+        """Edit an agreement's details, in any lifecycle status the caller
+        can see. A draft is hidden from government (#5186), so it reads as
+        missing here too."""
         agreement = await self.repo.get_initiative_agreement_by_id(
             initiative_agreement_id
         )
-        if not agreement or agreement.record_kind != RECORD_KIND_AGREEMENT:
+        if (
+            not agreement
+            or agreement.record_kind != RECORD_KIND_AGREEMENT
+            or is_hidden_from(agreement, user)
+        ):
             raise DataNotFoundException(
                 f"Initiative Agreement with id {initiative_agreement_id} not found"
             )

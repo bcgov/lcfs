@@ -1285,6 +1285,32 @@ async def test_update_agreement_404s_on_a_missing_agreement(
 
 
 @pytest.mark.anyio
+async def test_update_agreement_cannot_reach_a_draft(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """A draft is hidden from IDIR users (#5186), so its page 404s and so
+    does an edit; nothing on it changes."""
+    org_id, _ = await _two_org_ids(dbsession)
+    draft = await _seed_agreement(
+        dbsession,
+        org_id,
+        "IA-26EDTD",
+        title="Proponent's title",
+        lifecycle_status_id=await _lifecycle_status_id(dbsession, "Draft"),
+    )
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    url = fastapi_app.url_path_for(
+        "update_agreement", initiative_agreement_id=draft.initiative_agreement_id
+    )
+    response = await client.put(url, json={"title": "Changed by IDIR"})
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    await dbsession.refresh(draft)
+    assert draft.title == "Proponent's title"
+
+
+@pytest.mark.anyio
 async def test_update_agreement_refuses_a_legacy_credit_award(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
