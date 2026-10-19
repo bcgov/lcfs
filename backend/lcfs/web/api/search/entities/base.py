@@ -21,6 +21,9 @@ class SearchContext:
     query: SearchQuery
     organization_id: Optional[int]
     is_government: bool
+    # Compliance reports in Analyst adjustment are listed only for analysts,
+    # so search follows the same rule (#5231).
+    is_analyst: bool = False
 
     @property
     def can_access_organization_records(self) -> bool:
