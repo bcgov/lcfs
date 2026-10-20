@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from types import SimpleNamespace
@@ -170,6 +172,41 @@ def test_build_entity_link_path_designated_action_without_parent_falls_back():
         _build_entity_link_path(EntityTypeEnum.DESIGNATED_ACTION, 12, None)
         == "/initiative-agreements/designated-actions"
     )
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "entity_type,entity_id,year,expected_path",
+    [
+        (EntityTypeEnum.TRANSFER, 10, None, "/transfers/10"),
+        (EntityTypeEnum.INITIATIVE_AGREEMENT, 11, None, "/initiative-agreements/11"),
+        (
+            EntityTypeEnum.DESIGNATED_ACTION,
+            12,
+            None,
+            "/initiative-agreements/4/designated-actions/12",
+        ),
+        (EntityTypeEnum.ADMIN_ADJUSTMENT, 13, None, "/admin-adjustment/13"),
+        (EntityTypeEnum.COMPLIANCE_REPORT, 14, 2024, "/compliance-reporting/2024/14"),
+        (EntityTypeEnum.CI_APPLICATION, 15, None, "/ci-applications/15"),
+        (EntityTypeEnum.ORGANIZATION, 16, None, "/organizations/16/comment-log"),
+    ],
+)
+async def test_mention_notification_in_app_link_matches_email(
+    entity_type, entity_id, year, expected_path
+):
+    service, mock_repo, notification_service = _mention_service()
+    mock_repo.get_initiative_agreement_id_for_action = AsyncMock(return_value=4)
+    comment = mock_repo.create_internal_comment.return_value
+    comment.compliance_year = year
+
+    await service._notify_mentioned_users(comment, entity_type, entity_id, [5])
+
+    notification_service.send_mention_notification.assert_awaited_once()
+    kwargs = notification_service.send_mention_notification.await_args.kwargs
+    payload = json.loads(kwargs["notification_data"].message)
+    assert payload["linkPath"] == expected_path
+    assert kwargs["email_context"]["link_path"] == expected_path
 
 
 @pytest.mark.anyio

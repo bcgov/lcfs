@@ -149,11 +149,18 @@ export const Notifications = () => {
 
   const handleRowClicked = useCallback(
     (params) => {
-      const { id, service, compliancePeriod } = JSON.parse(params.data.message)
+      const { id, service, compliancePeriod, linkPath } = JSON.parse(
+        params.data.message
+      )
       // Select the appropriate route based on the notification type
       // For fuel codes, use the notification type since they don't have a service field
       const serviceKey = service || params.data.type
-      const routeTemplate = routesMapping(currentUser)[serviceKey]
+      // Mention links are resolved alongside their email links on the server,
+      // including the parent agreement needed to open a designated action.
+      const routeTemplate =
+        params.data.type === 'Mention' && linkPath
+          ? linkPath
+          : routesMapping(currentUser)[serviceKey]
 
       if (routeTemplate && params.event.target.dataset.action !== 'delete') {
         navigate(

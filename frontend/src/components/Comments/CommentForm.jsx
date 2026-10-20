@@ -270,10 +270,20 @@ const CommentForm = ({
 
   const isCommentEmpty = !commentText || commentText.trim() === ''
 
-  // Remount only to refresh the placeholder: a remount re-parses the value and
-  // trims whitespace, so skip it once there's content.
-  const quillInstanceKey =
-    showVisibilityToggle && isCommentEmpty ? visibility : 'static'
+  const placeholder = showVisibilityToggle
+    ? visibility === 'Public'
+      ? t('internalComment:publicCommentPlaceholder')
+      : t('internalComment:internalCommentPlaceholder')
+    : undefined
+
+  // ReactQuill only applies the placeholder when mounting. Update it in place
+  // so typing and visibility changes preserve focus, selection and whitespace.
+  useEffect(() => {
+    const root = quillRef.current?.getEditor?.()?.root
+    if (!root) return
+    if (placeholder) root.setAttribute('data-placeholder', placeholder)
+    else root.removeAttribute('data-placeholder')
+  }, [placeholder])
 
   // Quill renders the toolbar buttons' innerHTML itself, so labels, tooltips
   // and visibility have to be set imperatively once the toolbar DOM exists.
@@ -382,7 +392,6 @@ const CommentForm = ({
     return () => observer.disconnect()
   }, [
     t,
-    quillInstanceKey,
     attachmentsEnabled,
     enableMentions,
     mentionsPausedByVisibility
@@ -550,18 +559,11 @@ const CommentForm = ({
       )}
       <div data-mention-conflict={hasMentionConflict ? 'true' : 'false'}>
         <ReactQuill
-          key={quillInstanceKey}
           ref={quillRef}
           value={commentText}
           onChange={handleEditorChange}
           onChangeSelection={mentionEditor.handleSelectionChange}
-          placeholder={
-            showVisibilityToggle
-              ? visibility === 'Public'
-                ? t('internalComment:publicCommentPlaceholder')
-                : t('internalComment:internalCommentPlaceholder')
-              : undefined
-          }
+          placeholder={placeholder}
           theme="snow"
           modules={quillModules}
           formats={['bold', 'italic', 'list', 'bullet', 'mention']}

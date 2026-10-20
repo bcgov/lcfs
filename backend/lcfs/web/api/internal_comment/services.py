@@ -373,6 +373,7 @@ class InternalCommentService:
                     "service": entity_type.value,
                     "compliancePeriod": comment.compliance_year,
                     "type": "Mention",
+                    "linkPath": link_path,
                 }
             )
 
