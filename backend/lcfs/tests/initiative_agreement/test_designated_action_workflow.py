@@ -712,7 +712,8 @@ async def test_a_director_cannot_not_recommend(
     assert wrong_role.status_code == status.HTTP_403_FORBIDDEN
 
 
-def test_designated_action_missing_information_endpoint_is_removed(fastapi_app):
+@pytest.mark.anyio
+async def test_designated_action_missing_information_endpoint_is_removed(fastapi_app):
     assert not any(
         route.name == "set_designated_action_missing_information"
         for route in fastapi_app.routes
