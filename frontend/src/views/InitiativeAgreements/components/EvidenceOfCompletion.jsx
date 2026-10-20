@@ -67,6 +67,16 @@ export const EvidenceOfCompletion = ({
     if (saveError) throw saveError
   }
 
+  const waitForAllRequirementSaves = async () => {
+    const results = await Promise.allSettled(
+      requirements.map((requirement) =>
+        waitForRequirementSave(requirement.evidenceRequirementId)
+      )
+    )
+    const failedSave = results.find((result) => result.status === 'rejected')
+    if (failedSave) throw failedSave.reason
+  }
+
   return (
     <Box sx={{ mt: 3 }} data-test="evidence-of-completion-section">
       <Box
@@ -147,7 +157,7 @@ export const EvidenceOfCompletion = ({
               actions={renderRequestAction?.(
                 requirement,
                 allRequestsComplete,
-                () => waitForRequirementSave(requirement.evidenceRequirementId)
+                waitForAllRequirementSaves
               )}
               allRequestsComplete={allRequestsComplete}
               onSave={(payload, callbacks) => {

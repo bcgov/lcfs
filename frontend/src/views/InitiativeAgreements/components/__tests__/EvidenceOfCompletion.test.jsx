@@ -223,6 +223,68 @@ describe('EvidenceOfCompletion', () => {
     })
   }
 
+  for (const saveFails of [false, true]) {
+    test(`requesting information from one EOC waits for another EOC's save and ${saveFails ? 'blocks on failure' : 'continues on success'}`, async ({
+      render,
+      app
+    }) => {
+      let saveCallbacks
+      let beforeRequest
+      mockUpdate.mockImplementation((_payload, callbacks) => {
+        saveCallbacks = callbacks
+      })
+      mockList.mockReturnValue({
+        data: [
+          requirement({
+            reviewOutcome: OUTCOME_INFORMATION_REQUESTED,
+            missingInformation: '<p>Existing explanation A</p>'
+          }),
+          requirement({
+            evidenceRequirementId: 2,
+            requirementNumber: 2,
+            reviewOutcome: OUTCOME_INFORMATION_REQUESTED,
+            missingInformation: '<p>Existing explanation B</p>'
+          })
+        ],
+        isLoading: false
+      })
+      render(
+        <EvidenceOfCompletion
+          designatedActionId="9"
+          renderRequestAction={(item, _complete, waitForSaves) => {
+            if (item.evidenceRequirementId === 2) beforeRequest = waitForSaves
+            return null
+          }}
+        />,
+        app
+      )
+
+      openEoc(1)
+      editField('missing-information', 1)
+      fireEvent.change(screen.getByTestId('eoc-missing-information-1'), {
+        target: { value: '<p>Updated explanation A</p>' }
+      })
+      await saveField('missing-information', 1)
+
+      const requestResult = beforeRequest().then(
+        () => ({ success: true }),
+        (error) => ({ success: false, error })
+      )
+      expect(
+        await Promise.race([requestResult, Promise.resolve('pending')])
+      ).toBe('pending')
+
+      await act(async () => {
+        if (saveFails) saveCallbacks.onError(new Error('Save failed'))
+        else saveCallbacks.onSuccess()
+      })
+
+      const result = await requestResult
+      expect(result.success).toBe(!saveFails)
+      if (saveFails) expect(result.error).toHaveProperty('message', 'Save failed')
+    })
+  }
+
   test('uploads attachments into designated-action documents and autosaves filename links', async ({
     render,
     app
