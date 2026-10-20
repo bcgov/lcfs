@@ -94,7 +94,6 @@ This document lists the key software, services, frameworks, and libraries that t
 - **Frontend Unit/Integration Testing**: Vitest, React Testing Library, JSDOM, MSW (Mock Service Worker).
 - **Frontend E2E Testing**: Cypress, Cucumber (`@badeball/cypress-cucumber-preprocessor`).
 - **Frontend Linting/Formatting**: ESLint, Prettier.
-- **Component Development (Frontend)**: Storybook.
 
 ---
 
