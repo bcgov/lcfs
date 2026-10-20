@@ -163,7 +163,9 @@ const editField = (name, id = 1) => {
 }
 const saveField = (name, id = 1) =>
   act(async () => {
-    fireEvent.blur(screen.getByTestId(`eoc-${name}-${id}`))
+    const field = screen.getByTestId(`eoc-${name}-${id}`)
+    if (document.activeElement === field) field.blur()
+    else fireEvent.blur(field)
   })
 
 describe('EvidenceOfCompletion', () => {
@@ -287,7 +289,8 @@ describe('EvidenceOfCompletion', () => {
 
       const result = await requestResult
       expect(result.success).toBe(!saveFails)
-      if (saveFails) expect(result.error).toHaveProperty('message', 'Save failed')
+      if (saveFails)
+        expect(result.error).toHaveProperty('message', 'Save failed')
     })
   }
 
@@ -392,6 +395,8 @@ describe('EvidenceOfCompletion', () => {
       target: { value: '<p>Updated explanation</p>' }
     })
     await saveField('missing-information')
+    expect(screen.getByTestId('eoc-missing-information-1')).not.toHaveFocus()
+    expect(pending).toHaveLength(1)
     await act(async () =>
       pending[0].onError(new Error('Explanation save failed'))
     )
@@ -401,6 +406,11 @@ describe('EvidenceOfCompletion', () => {
       target: { value: '<p>Updated evaluation</p>' }
     })
     await saveField('review')
+    expect(pending).toHaveLength(2)
+    expect(mockUpdate.mock.calls[1][0]).toEqual({
+      evidenceRequirementId: 1,
+      analystReview: '<p>Updated evaluation</p>'
+    })
     await act(async () => pending[1].onSuccess())
     await expect(beforeRequest()).rejects.toThrow('Explanation save failed')
 
@@ -932,7 +942,9 @@ describe('EvidenceOfCompletion', () => {
     })
     fireEvent.change(screen.getByTestId('eoc-new-description-attach-input'), {
       target: {
-        files: [new File(['pdf'], 'risk-register.pdf', { type: 'application/pdf' })]
+        files: [
+          new File(['pdf'], 'risk-register.pdf', { type: 'application/pdf' })
+        ]
       }
     })
 
