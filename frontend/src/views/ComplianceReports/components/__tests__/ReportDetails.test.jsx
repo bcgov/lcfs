@@ -1,9 +1,8 @@
 import 'react'
 import { screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import { test } from '@/tests/utils/fixtures'
-import 'chai'
 
 // Create mock functions at the top level
 const mockNavigate = vi.fn()

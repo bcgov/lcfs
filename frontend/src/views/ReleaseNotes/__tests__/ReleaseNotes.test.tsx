@@ -1,5 +1,5 @@
 import { screen, fireEvent, waitFor, within } from '@testing-library/react'
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import { test } from '@/tests/utils/fixtures'
 import { ReleaseNotes } from '../ReleaseNotes'
 
@@ -53,14 +53,18 @@ const mockHasAnyRole = vi.fn()
 
 vi.mock('@/hooks/useReleaseNotes', () => ({
   useReleaseNotes: () => mockUseReleaseNotes(),
-  useUpdateReleaseNote: (options: { onSuccess?: (data: unknown, variables: unknown, context: undefined) => void }) => ({
+  useUpdateReleaseNote: (options: {
+    onSuccess?: (data: unknown, variables: unknown, context: undefined) => void
+  }) => ({
     mutate: (variables: unknown) => {
       mockUpdateMutate(variables)
       options?.onSuccess?.({}, variables, undefined)
     },
     isPending: false
   }),
-  useResetReleaseNote: (options: { onSuccess?: (data: unknown, variables: unknown, context: undefined) => void }) => ({
+  useResetReleaseNote: (options: {
+    onSuccess?: (data: unknown, variables: unknown, context: undefined) => void
+  }) => ({
     mutate: (variables: unknown) => {
       mockResetMutate(variables)
       options?.onSuccess?.({}, variables, undefined)

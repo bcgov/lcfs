@@ -1,13 +1,21 @@
 import { ApiDocs } from '@/components/ApiDocs'
 import { screen } from '@testing-library/react'
 import { useTranslation } from 'react-i18next'
-import { expect } from 'vitest'
+import { expect } from 'vite-plus/test'
 import { test } from '@/tests/utils/fixtures'
 
 const keycloak = vi.hoisted(() => ({
   useKeycloak: vi.fn()
 }))
 vi.mock('@react-keycloak/web', () => keycloak)
+vi.mock('swagger-ui-react', () => ({
+  default: ({ url, requestInterceptor }) => (
+    <div data-test="swaggerui">
+      <p>{url}</p>
+      <p>{requestInterceptor({ headers: {} }).headers.Authorization}</p>
+    </div>
+  )
+}))
 
 describe('ApiDocs.jsx', () => {
   afterEach(() => {
@@ -48,16 +56,6 @@ describe('ApiDocs.jsx', () => {
       router,
       i18n
     }) => {
-      vi.mock('swagger-ui-react', () => ({
-        default: ({ url, requestInterceptor }) => {
-          return (
-            <div data-test="swaggerui">
-              <p>{url}</p>
-              <p>{requestInterceptor({ headers: {} }).headers.Authorization}</p>
-            </div>
-          )
-        }
-      }))
       keycloak.useKeycloak.mockReturnValue({
         keycloak: { authenticated: true, idToken: 'idToken' }
       })

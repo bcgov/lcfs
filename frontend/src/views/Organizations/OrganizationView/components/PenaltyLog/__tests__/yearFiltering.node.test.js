@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from 'vite-plus/test'
 
 /**
  * Focused unit tests for year filtering logic in PenaltyLogManage
@@ -141,9 +141,11 @@ describe('Year Filtering - PenaltyLogManage', () => {
     const result = filterCompliancePeriods(periods, 2024)
 
     expect(result).toHaveLength(5) // 2020-2024
-    expect(result.every(r => {
-      const year = parseInt(r.label.match(/(\d{4})/)[1], 10)
-      return year <= 2024
-    })).toBe(true)
+    expect(
+      result.every((r) => {
+        const year = parseInt(r.label.match(/(\d{4})/)[1], 10)
+        return year <= 2024
+      })
+    ).toBe(true)
   })
 })

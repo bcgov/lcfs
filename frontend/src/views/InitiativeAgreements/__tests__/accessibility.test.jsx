@@ -10,8 +10,8 @@
  * in the Cypress pass; and axe finds machine-checkable failures, which is
  * a floor, not a substitute for driving the pages with a keyboard.
  */
-import 'react';
-import { describe, expect, vi, beforeEach } from 'vitest'
+import 'react'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import axe from 'axe-core'
 
 import { roles } from '@/constants/roles'

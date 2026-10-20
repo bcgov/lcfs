@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { AddPlainComment } from '../AddPlainComment'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import { test } from '@/tests/utils/fixtures'
 
 vi.mock('@/hooks/useCurrentUser')

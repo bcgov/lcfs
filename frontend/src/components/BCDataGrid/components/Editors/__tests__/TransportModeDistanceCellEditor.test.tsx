@@ -1,7 +1,7 @@
 import { createRef } from 'react'
 import type { ElementRef } from 'react'
 import { fireEvent, screen } from '@testing-library/react'
-import { describe, expect, vi } from 'vitest'
+import { describe, expect, vi } from 'vite-plus/test'
 import { test } from '@/tests/utils/fixtures'
 
 import { TransportModeDistanceCellEditor } from '../TransportModeDistanceCellEditor'
@@ -30,7 +30,10 @@ describe('TransportModeDistanceCellEditor', () => {
     ])
   })
 
-  test('defaults Adjacent distance to zero when selected', ({ render, i18n }) => {
+  test('defaults Adjacent distance to zero when selected', ({
+    render,
+    i18n
+  }) => {
     const ref = createRef<ElementRef<typeof TransportModeDistanceCellEditor>>()
 
     render(
@@ -48,9 +51,9 @@ describe('TransportModeDistanceCellEditor', () => {
     expect(ref.current?.getValue()).toEqual([
       { transportMode: 'Adjacent', distance: 0 }
     ])
-    expect(screen.getByLabelText('Adjacent distance in kilometers')).toHaveValue(
-      0
-    )
+    expect(
+      screen.getByLabelText('Adjacent distance in kilometers')
+    ).toHaveValue(0)
     expect(
       screen.getByLabelText('Adjacent distance in kilometers')
     ).toBeDisabled()

@@ -1,9 +1,12 @@
-import { describe, it, expect, vi } from 'vitest'
-import { equipmentButtonConfigFn, buildButtonContext } from '../../components/buttonConfig'
+import { describe, it, expect, vi } from 'vite-plus/test'
+import {
+  equipmentButtonConfigFn,
+  buildButtonContext
+} from '../../components/buttonConfig'
 
 describe('buttonConfig', () => {
   const mockT = (key) => key
-  
+
   const createMockContext = (overrides = {}) => ({
     t: mockT,
     setModalData: vi.fn(),
@@ -58,7 +61,7 @@ describe('buttonConfig', () => {
       const context = createMockContext({
         hasRoles: vi.fn((role) => role === 'supplier')
       })
-      
+
       const buttons = equipmentButtonConfigFn(context)
       expect(buttons).toBeInstanceOf(Array)
       expect(buttons.length).toBeGreaterThan(0)
@@ -68,10 +71,12 @@ describe('buttonConfig', () => {
       const context = createMockContext({
         hasRoles: vi.fn((role) => role === 'compliance_reporting')
       })
-      
+
       const buttons = equipmentButtonConfigFn(context)
       expect(buttons).toBeInstanceOf(Array)
-      expect(buttons.some(btn => btn.id === 'select-all-draft-btn')).toBe(true)
+      expect(buttons.some((btn) => btn.id === 'select-all-draft-btn')).toBe(
+        true
+      )
     })
 
     it('returns buttons for IDIR analyst', () => {
@@ -80,31 +85,31 @@ describe('buttonConfig', () => {
         hasAnyRole: vi.fn(() => true),
         hasRoles: vi.fn((role) => role === 'analyst')
       })
-      
+
       const buttons = equipmentButtonConfigFn(context)
       expect(buttons).toBeInstanceOf(Array)
-      expect(buttons.some(btn => btn.id === 'clear-filters-btn')).toBe(true)
+      expect(buttons.some((btn) => btn.id === 'clear-filters-btn')).toBe(true)
     })
 
     it('includes clear filters button for all users', () => {
       const context = createMockContext()
       const buttons = equipmentButtonConfigFn(context)
-      
-      expect(buttons.some(btn => btn.id === 'clear-filters-btn')).toBe(true)
+
+      expect(buttons.some((btn) => btn.id === 'clear-filters-btn')).toBe(true)
     })
 
     it('handles empty equipment list', () => {
       const context = createMockContext({ equipmentList: [] })
       const buttons = equipmentButtonConfigFn(context)
-      
+
       expect(buttons).toBeInstanceOf(Array)
     })
 
     it('creates buttons with proper structure', () => {
       const context = createMockContext()
       const buttons = equipmentButtonConfigFn(context)
-      
-      buttons.forEach(button => {
+
+      buttons.forEach((button) => {
         expect(button).toHaveProperty('id')
         expect(button).toHaveProperty('label')
         expect(button).toHaveProperty('handler')

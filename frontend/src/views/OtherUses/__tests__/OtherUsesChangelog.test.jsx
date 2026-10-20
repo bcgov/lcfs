@@ -1,6 +1,6 @@
 import 'react'
 import { screen, waitFor } from '@testing-library/react'
-import { describe, expect, beforeEach, vi } from 'vitest'
+import { describe, expect, beforeEach, vi } from 'vite-plus/test'
 import { OtherUsesChangelog } from '../OtherUsesChangelog'
 import { test } from '@/tests/utils/fixtures'
 

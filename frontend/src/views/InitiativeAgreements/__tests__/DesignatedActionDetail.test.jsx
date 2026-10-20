@@ -1,6 +1,6 @@
 import 'react'
 import { cleanup, fireEvent, screen } from '@testing-library/react'
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import { roles } from '@/constants/roles'
 import { DesignatedActionDetail } from '../DesignatedActionDetail'
 import { useInitiativeAgreementPageStore } from '@/stores/useInitiativeAgreementPageStore'

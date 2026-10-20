@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vite-plus/test'
 import { createRef } from 'react'
 import { BrowserRouter } from 'react-router-dom'
 import { BCGridViewer } from '../BCGridViewer'

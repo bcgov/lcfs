@@ -1,6 +1,6 @@
-import { describe, expect, vi, beforeEach } from 'vitest'
-import { screen } from '@testing-library/react';
-import 'react';
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
+import { screen } from '@testing-library/react'
+import 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 import { FuelExportChangelog } from '../FuelExportChangelog'
@@ -9,8 +9,8 @@ import {
   useGetChangeLog
 } from '@/hooks/useComplianceReports'
 import { test } from '@/tests/utils/fixtures'
-import '@/themes/base/colors';
-import '@/constants/schedules';
+import '@/themes/base/colors'
+import '@/constants/schedules'
 
 let render
 const fixtureOptions = undefined
@@ -40,13 +40,7 @@ vi.mock('@/components/Loading', () => ({
 
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: vi.fn(
-    ({
-  gridKey,
-  queryData,
-  getRowId,
-  columnDefs,
-  suppressPagination
-}) => (
+    ({ gridKey, queryData, getRowId, columnDefs, suppressPagination }) => (
       <div data-test="bc-grid-viewer">
         <div data-test="grid-key">{gridKey}</div>
         <div data-test="row-count">{queryData?.data?.items?.length || 0}</div>
@@ -71,11 +65,11 @@ vi.mock('@/components/BCTypography', () => ({
 }))
 
 vi.mock('@mui/material/Box', () => ({
-    default: ({ children, ...props }) => <div {...props}>{children}</div>
+  default: ({ children, ...props }) => <div {...props}>{children}</div>
 }))
 
 vi.mock('@mui/material/TextField', () => ({
-    default: ({ children, ...props }) => <input {...props}>{children}</input>
+  default: ({ children, ...props }) => <input {...props}>{children}</input>
 }))
 
 vi.mock('./_schema', () => ({

@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach } from 'vite-plus/test'
 import { TransferView } from '../TransferView'
 import { roles } from '@/constants/roles'
 import { TRANSFER_STATUSES } from '@/constants/statuses'
@@ -56,19 +56,31 @@ vi.mock('@/constants/statuses', async () => {
 
 // Mock all complex components to avoid dependency issues
 vi.mock('@/components/BCBox', () => ({
-  default: ({ children, ...props }) => <div data-test="bc-box" {...props}>{children}</div>
+  default: ({ children, ...props }) => (
+    <div data-test="bc-box" {...props}>
+      {children}
+    </div>
+  )
 }))
 
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, ...props }) => <div data-test="bc-typography" {...props}>{children}</div>
+  default: ({ children, ...props }) => (
+    <div data-test="bc-typography" {...props}>
+      {children}
+    </div>
+  )
 }))
 
 vi.mock('./TransferHistory', () => {
   return {
     default: (props) => (
-      <div 
-        data-test="transfer-history" 
-        data-transfer-history={props.transferHistory ? JSON.stringify(props.transferHistory) : 'undefined'}
+      <div
+        data-test="transfer-history"
+        data-transfer-history={
+          props.transferHistory
+            ? JSON.stringify(props.transferHistory)
+            : 'undefined'
+        }
       />
     )
   }
@@ -76,7 +88,7 @@ vi.mock('./TransferHistory', () => {
 
 vi.mock('@/views/Transfers/components/TransferDetailsCard', () => ({
   TransferDetailsCard: (props) => (
-    <div 
+    <div
       data-test="transfer-details-card"
       data-from-org-id={props.fromOrgId}
       data-from-organization={props.fromOrganization}
@@ -92,7 +104,7 @@ vi.mock('@/views/Transfers/components/TransferDetailsCard', () => ({
 
 vi.mock('@/views/Transfers/components', () => ({
   Comments: (props) => (
-    <div 
+    <div
       data-test="comments"
       data-editor-mode={props.editorMode}
       data-is-government-user={props.isGovernmentUser}
@@ -104,9 +116,11 @@ vi.mock('@/views/Transfers/components', () => ({
 
 vi.mock('@/views/Transfers/components/CommentList', () => ({
   CommentList: (props) => (
-    <div 
+    <div
       data-test="comment-list"
-      data-comments={props.comments ? JSON.stringify(props.comments) : 'undefined'}
+      data-comments={
+        props.comments ? JSON.stringify(props.comments) : 'undefined'
+      }
       data-viewer-is-government={props.viewerIsGovernment}
     />
   )
@@ -128,7 +142,7 @@ vi.mock('@/hooks/useOrganization', () => ({
 describe('TransferView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    
+
     // Setup default mock implementations
     mockUseTranslation.mockReturnValue({
       t: (key) => key
@@ -141,7 +155,10 @@ describe('TransferView', () => {
     mockFormatNumberWithCommas.mockReturnValue('1,000')
     mockCurrencyFormatter.mockReturnValue('$10.00')
     mockCalculateTotalValue.mockReturnValue(10000)
-    mockGetAllTerminalTransferStatuses.mockReturnValue(['COMPLETED', 'CANCELLED'])
+    mockGetAllTerminalTransferStatuses.mockReturnValue([
+      'COMPLETED',
+      'CANCELLED'
+    ])
   })
 
   it('renders with minimal props', () => {
@@ -157,21 +174,21 @@ describe('TransferView', () => {
       toOrganization: { name: 'Org B', organizationId: 2 },
       fromOrganization: { name: 'Org A', organizationId: 1 },
       quantity: 1000,
-      pricePerUnit: 10.50,
+      pricePerUnit: 10.5,
       transferHistory: [],
       comments: []
     }
 
     render(<TransferView transferData={transferData} />)
-    
-    expect(mockCalculateTotalValue).toHaveBeenCalledWith(1000, 10.50)
+
+    expect(mockCalculateTotalValue).toHaveBeenCalledWith(1000, 10.5)
     expect(mockFormatNumberWithCommas).toHaveBeenCalledWith({ value: 1000 })
-    expect(mockCurrencyFormatter).toHaveBeenCalledWith({ value: 10.50 })
+    expect(mockCurrencyFormatter).toHaveBeenCalledWith({ value: 10.5 })
   })
 
   it('handles null transferData gracefully', () => {
     render(<TransferView transferData={null} />)
-    
+
     expect(mockCalculateTotalValue).toHaveBeenCalledWith(undefined, undefined)
     expect(screen.getByTestId('transfer-details-card')).toBeInTheDocument()
   })
@@ -194,7 +211,7 @@ describe('TransferView', () => {
     mockGetAllTerminalTransferStatuses.mockReturnValue([])
 
     render(<TransferView transferData={transferData} />)
-    
+
     const comments = screen.getByTestId('comments')
     expect(comments).toHaveAttribute('data-is-government-user', 'true')
     expect(comments).toHaveAttribute('data-comment-field', 'govComment')
@@ -214,7 +231,7 @@ describe('TransferView', () => {
     }
 
     render(<TransferView transferData={transferData} />)
-    
+
     const transferDetails = screen.getByTestId('transfer-details-card')
     expect(transferDetails).toHaveAttribute('data-is-government-user', 'false')
   })
@@ -235,7 +252,7 @@ describe('TransferView', () => {
     mockGetAllTerminalTransferStatuses.mockReturnValue([])
 
     render(<TransferView transferData={transferData} />)
-    
+
     const comments = screen.getByTestId('comments')
     expect(comments).toHaveAttribute('data-is-default-expanded', 'true')
   })
@@ -247,7 +264,7 @@ describe('TransferView', () => {
     }
 
     render(<TransferView transferData={transferData} />)
-    
+
     expect(screen.getByTestId('comment-list')).toBeInTheDocument()
   })
 
@@ -258,12 +275,15 @@ describe('TransferView', () => {
     }
 
     render(<TransferView transferData={transferData} />)
-    
+
     expect(screen.queryByTestId('comment-list')).not.toBeInTheDocument()
   })
 
   it('shows comments section for non-terminal status', () => {
-    mockGetAllTerminalTransferStatuses.mockReturnValue(['COMPLETED', 'CANCELLED'])
+    mockGetAllTerminalTransferStatuses.mockReturnValue([
+      'COMPLETED',
+      'CANCELLED'
+    ])
 
     const transferData = {
       currentStatus: { status: 'DRAFT' },
@@ -272,12 +292,15 @@ describe('TransferView', () => {
     }
 
     render(<TransferView transferData={transferData} />)
-    
+
     expect(screen.getByTestId('comments')).toBeInTheDocument()
   })
 
   it('hides comments section for terminal status', () => {
-    mockGetAllTerminalTransferStatuses.mockReturnValue(['COMPLETED', 'CANCELLED'])
+    mockGetAllTerminalTransferStatuses.mockReturnValue([
+      'COMPLETED',
+      'CANCELLED'
+    ])
 
     const transferData = {
       currentStatus: { status: 'COMPLETED' },
@@ -286,13 +309,13 @@ describe('TransferView', () => {
     }
 
     render(<TransferView transferData={transferData} />)
-    
+
     expect(screen.queryByTestId('comments')).not.toBeInTheDocument()
   })
 
   it('sets fromOrgComment field for DRAFT status and same from organization', () => {
     const mockSameOrganization = vi.fn((orgId) => orgId === 1)
-    
+
     mockUseCurrentUser.mockReturnValue({
       data: { isGovernmentUser: false },
       sameOrganization: mockSameOrganization,
@@ -310,14 +333,14 @@ describe('TransferView', () => {
     mockGetAllTerminalTransferStatuses.mockReturnValue([])
 
     render(<TransferView transferData={transferData} />)
-    
+
     const comments = screen.getByTestId('comments')
     expect(comments).toHaveAttribute('data-comment-field', 'fromOrgComment')
   })
 
   it('sets toOrgComment field for SENT status and same to organization', () => {
     const mockSameOrganization = vi.fn((orgId) => orgId === 2)
-    
+
     mockUseCurrentUser.mockReturnValue({
       data: { isGovernmentUser: false },
       sameOrganization: mockSameOrganization,
@@ -335,14 +358,14 @@ describe('TransferView', () => {
     mockGetAllTerminalTransferStatuses.mockReturnValue([])
 
     render(<TransferView transferData={transferData} />)
-    
+
     const comments = screen.getByTestId('comments')
     expect(comments).toHaveAttribute('data-comment-field', 'toOrgComment')
   })
 
   it('sets no comment field for non-matching conditions', () => {
     const mockSameOrganization = vi.fn(() => false)
-    
+
     mockUseCurrentUser.mockReturnValue({
       data: { isGovernmentUser: false },
       sameOrganization: mockSameOrganization,
@@ -360,7 +383,7 @@ describe('TransferView', () => {
     mockGetAllTerminalTransferStatuses.mockReturnValue([])
 
     render(<TransferView transferData={transferData} />)
-    
+
     const comments = screen.getByTestId('comments')
     expect(comments).toHaveAttribute('data-comment-field', 'undefined')
   })
@@ -374,7 +397,7 @@ describe('TransferView', () => {
     }
 
     render(<TransferView transferData={transferData} />)
-    
+
     expect(mockCalculateTotalValue).toHaveBeenCalledWith(500, 25.75)
     expect(mockFormatNumberWithCommas).toHaveBeenCalledWith({ value: 500 })
     expect(mockCurrencyFormatter).toHaveBeenCalledWith({ value: 25.75 })
@@ -394,7 +417,7 @@ describe('TransferView', () => {
     }
 
     render(<TransferView transferData={transferData} />)
-    
+
     // Component renders successfully with undefined currentUser
     expect(screen.getByTestId('transfer-details-card')).toBeInTheDocument()
   })
@@ -405,7 +428,7 @@ describe('TransferView', () => {
       toOrganization: { name: 'Org B', organizationId: 2 },
       fromOrganization: { name: 'Org A', organizationId: 1 },
       quantity: 1000,
-      pricePerUnit: 10.50,
+      pricePerUnit: 10.5,
       transferHistory: [],
       comments: []
     }
@@ -417,7 +440,7 @@ describe('TransferView', () => {
     })
 
     render(<TransferView transferData={transferData} />)
-    
+
     const card = screen.getByTestId('transfer-details-card')
     expect(card).toHaveAttribute('data-from-org-id', '1')
     expect(card).toHaveAttribute('data-from-organization', 'Org A')
@@ -431,7 +454,7 @@ describe('TransferView', () => {
 
   it('passes correct props to CommentList when comments exist', () => {
     const comments = [{ id: 1, comment: 'Test' }]
-    
+
     mockUseCurrentUser.mockReturnValue({
       data: { isGovernmentUser: true },
       sameOrganization: vi.fn(),
@@ -444,7 +467,7 @@ describe('TransferView', () => {
     }
 
     render(<TransferView transferData={transferData} />)
-    
+
     const commentList = screen.getByTestId('comment-list')
     expect(commentList).toHaveAttribute('data-viewer-is-government', 'true')
   })
@@ -459,7 +482,7 @@ describe('TransferView', () => {
     }
 
     render(<TransferView editorMode={true} transferData={transferData} />)
-    
+
     const comments = screen.getByTestId('comments')
     expect(comments).toHaveAttribute('data-editor-mode', 'true')
   })

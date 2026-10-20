@@ -1,4 +1,4 @@
-/* eslint-disable cypress/unsafe-to-chain-command */
+/* oxlint-disable cypress/unsafe-to-chain-command */
 import { When, Then } from '@badeball/cypress-cucumber-preprocessor'
 
 const SELECTORS = {

@@ -52,7 +52,7 @@ export interface UseLocationServiceReturn {
  * caching, error handling, and consistency across the application.
  */
 export const useLocationService = (): UseLocationServiceReturn => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // oxlint-disable-next-line typescript/no-explicit-any
   const { checkBCBoundary, reverseGeocode, validateAddress } = useGeocoder() as any
 
   /**

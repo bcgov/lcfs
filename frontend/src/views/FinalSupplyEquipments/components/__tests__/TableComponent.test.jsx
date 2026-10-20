@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from 'vite-plus/test'
 import { ExcelStyledTable } from '../TableComponent'
 
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (k) => k }) }))
@@ -11,7 +11,12 @@ describe('ExcelStyledTable', () => {
     records
   })
 
-  const createMockRecord = (uniqueId, fromDate, toDate, hasOverlap = false) => ({
+  const createMockRecord = (
+    uniqueId,
+    fromDate,
+    toDate,
+    hasOverlap = false
+  ) => ({
     uniqueId,
     supplyFromDate: fromDate,
     supplyToDate: toDate,
@@ -25,7 +30,9 @@ describe('ExcelStyledTable', () => {
       ])
     }
 
-    render(<ExcelStyledTable uniqueSupplyUnits={uniqueSupplyUnits} overlapMap={{}} />)
+    render(
+      <ExcelStyledTable uniqueSupplyUnits={uniqueSupplyUnits} overlapMap={{}} />
+    )
 
     expect(screen.getByText('Serial #')).toBeInTheDocument()
     expect(screen.getByText('Periods')).toBeInTheDocument()
@@ -39,7 +46,9 @@ describe('ExcelStyledTable', () => {
       ])
     }
 
-    render(<ExcelStyledTable uniqueSupplyUnits={uniqueSupplyUnits} overlapMap={{}} />)
+    render(
+      <ExcelStyledTable uniqueSupplyUnits={uniqueSupplyUnits} overlapMap={{}} />
+    )
 
     expect(screen.getByText('SN001')).toBeInTheDocument()
     expect(screen.getByText('2023-01-01 → 2023-06-30')).toBeInTheDocument()
@@ -54,10 +63,10 @@ describe('ExcelStyledTable', () => {
 
     render(
       <ExcelStyledTable uniqueSupplyUnits={uniqueSupplyUnits} overlapMap={{}} />
-    );
+    )
 
     expect(screen.getByText('✓ No overlap')).toBeInTheDocument()
-    
+
     const statusCell = screen.getByText('✓ No overlap').closest('td')
     expect(statusCell).toHaveStyle({ color: 'rgb(0, 128, 0)' })
   })
@@ -74,11 +83,14 @@ describe('ExcelStyledTable', () => {
     }
 
     render(
-      <ExcelStyledTable uniqueSupplyUnits={uniqueSupplyUnits} overlapMap={overlapMap} />
-    );
+      <ExcelStyledTable
+        uniqueSupplyUnits={uniqueSupplyUnits}
+        overlapMap={overlapMap}
+      />
+    )
 
     expect(screen.getByText('⚠️ Period overlap')).toBeInTheDocument()
-    
+
     const statusCell = screen.getByText('⚠️ Period overlap').closest('td')
     expect(statusCell).toHaveStyle({ color: 'rgb(255, 165, 0)' })
   })
@@ -97,15 +109,17 @@ describe('ExcelStyledTable', () => {
 
     const periodCells = container.querySelectorAll('td')
     const periodCell = Array.from(periodCells).find(
-      cell => cell.textContent.includes('2023-01-01 → 2023-06-30') && cell.textContent.includes('2023-07-01 → 2023-12-31')
+      (cell) =>
+        cell.textContent.includes('2023-01-01 → 2023-06-30') &&
+        cell.textContent.includes('2023-07-01 → 2023-12-31')
     )
-    
+
     const periodDivs = periodCell.querySelectorAll('div')
     const overlappingPeriod = Array.from(periodDivs).find(
-      div => div.textContent === '2023-01-01 → 2023-06-30'
+      (div) => div.textContent === '2023-01-01 → 2023-06-30'
     )
     const normalPeriod = Array.from(periodDivs).find(
-      div => div.textContent === '2023-07-01 → 2023-12-31'
+      (div) => div.textContent === '2023-07-01 → 2023-12-31'
     )
 
     expect(overlappingPeriod).toHaveStyle({ color: 'rgb(255, 165, 0)' })
@@ -121,7 +135,9 @@ describe('ExcelStyledTable', () => {
       ])
     }
 
-    render(<ExcelStyledTable uniqueSupplyUnits={uniqueSupplyUnits} overlapMap={{}} />)
+    render(
+      <ExcelStyledTable uniqueSupplyUnits={uniqueSupplyUnits} overlapMap={{}} />
+    )
 
     expect(screen.getByText('2023-01-01 → 2023-05-31')).toBeInTheDocument()
     expect(screen.getByText('2023-03-01 → 2023-08-31')).toBeInTheDocument()
@@ -143,13 +159,20 @@ describe('ExcelStyledTable', () => {
     }
 
     render(
-      <ExcelStyledTable uniqueSupplyUnits={uniqueSupplyUnits} overlapMap={overlapMap} />
+      <ExcelStyledTable
+        uniqueSupplyUnits={uniqueSupplyUnits}
+        overlapMap={overlapMap}
+      />
     )
 
     expect(screen.getByText('Details for period:')).toBeInTheDocument()
     expect(screen.getByText('⚠️ Overlaps with:')).toBeInTheDocument()
-    expect(screen.getByText('Period: 2023-02-01 → 2023-02-15')).toBeInTheDocument()
-    expect(screen.getByText('Period: 2023-03-01 → 2023-03-15')).toBeInTheDocument()
+    expect(
+      screen.getByText('Period: 2023-02-01 → 2023-02-15')
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('Period: 2023-03-01 → 2023-03-15')
+    ).toBeInTheDocument()
   })
 
   it('does not render detail rows when unit has no overlap', () => {
@@ -159,7 +182,9 @@ describe('ExcelStyledTable', () => {
       ])
     }
 
-    render(<ExcelStyledTable uniqueSupplyUnits={uniqueSupplyUnits} overlapMap={{}} />)
+    render(
+      <ExcelStyledTable uniqueSupplyUnits={uniqueSupplyUnits} overlapMap={{}} />
+    )
 
     expect(screen.queryByText('Details for period:')).not.toBeInTheDocument()
     expect(screen.queryByText('⚠️ Overlaps with:')).not.toBeInTheDocument()
@@ -180,14 +205,21 @@ describe('ExcelStyledTable', () => {
     }
 
     render(
-      <ExcelStyledTable uniqueSupplyUnits={uniqueSupplyUnits} overlapMap={overlapMap} />
+      <ExcelStyledTable
+        uniqueSupplyUnits={uniqueSupplyUnits}
+        overlapMap={overlapMap}
+      />
     )
 
     const detailSections = screen.getAllByText('Details for period:')
     expect(detailSections).toHaveLength(2)
-    
-    expect(screen.getByText('Period: 2023-02-01 → 2023-02-15')).toBeInTheDocument()
-    expect(screen.getByText('Period: 2023-08-01 → 2023-08-15')).toBeInTheDocument()
+
+    expect(
+      screen.getByText('Period: 2023-02-01 → 2023-02-15')
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('Period: 2023-08-01 → 2023-08-15')
+    ).toBeInTheDocument()
   })
 
   it('handles multiple units with mixed overlap status', () => {
@@ -208,7 +240,10 @@ describe('ExcelStyledTable', () => {
     }
 
     render(
-      <ExcelStyledTable uniqueSupplyUnits={uniqueSupplyUnits} overlapMap={overlapMap} />
+      <ExcelStyledTable
+        uniqueSupplyUnits={uniqueSupplyUnits}
+        overlapMap={overlapMap}
+      />
     )
 
     expect(screen.getByText('SN001')).toBeInTheDocument()
@@ -217,7 +252,7 @@ describe('ExcelStyledTable', () => {
 
     const noOverlapElements = screen.getAllByText('✓ No overlap')
     const overlapElements = screen.getAllByText('⚠️ Period overlap')
-    
+
     expect(noOverlapElements).toHaveLength(2)
     expect(overlapElements).toHaveLength(1)
   })
@@ -228,7 +263,7 @@ describe('ExcelStyledTable', () => {
     expect(screen.getByText('Serial #')).toBeInTheDocument()
     expect(screen.getByText('Periods')).toBeInTheDocument()
     expect(screen.getByText('Status')).toBeInTheDocument()
-    
+
     expect(screen.queryByText('SN')).not.toBeInTheDocument()
   })
 
@@ -237,7 +272,9 @@ describe('ExcelStyledTable', () => {
       s1: createMockUnit('SN001', false, [])
     }
 
-    render(<ExcelStyledTable uniqueSupplyUnits={uniqueSupplyUnits} overlapMap={{}} />)
+    render(
+      <ExcelStyledTable uniqueSupplyUnits={uniqueSupplyUnits} overlapMap={{}} />
+    )
 
     expect(screen.getByText('SN001')).toBeInTheDocument()
     expect(screen.getByText('✓ No overlap')).toBeInTheDocument()
@@ -250,7 +287,9 @@ describe('ExcelStyledTable', () => {
       ])
     }
 
-    render(<ExcelStyledTable uniqueSupplyUnits={uniqueSupplyUnits} overlapMap={{}} />)
+    render(
+      <ExcelStyledTable uniqueSupplyUnits={uniqueSupplyUnits} overlapMap={{}} />
+    )
 
     expect(screen.getByText('SN1')).toBeInTheDocument()
     expect(screen.getByText('✓ No overlap')).toBeInTheDocument()

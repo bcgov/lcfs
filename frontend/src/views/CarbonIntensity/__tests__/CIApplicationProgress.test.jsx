@@ -1,6 +1,6 @@
 import { CIApplicationProgress } from '@/views/CarbonIntensity/components/CIApplicationProgress'
 import 'react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import { cleanup, screen } from '@testing-library/react'
 
 import {

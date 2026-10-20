@@ -1,6 +1,6 @@
 import { test } from '@/tests/utils/fixtures'
 import { screen, fireEvent } from '@testing-library/react'
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import { ROUTES } from '@/routes/routes'
 import { PublicDashboard } from '../PublicDashboard'
 

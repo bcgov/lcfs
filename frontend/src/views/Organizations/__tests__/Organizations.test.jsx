@@ -1,5 +1,5 @@
 import React from 'react'
-import { vi, describe, expect, beforeEach, afterEach } from 'vitest'
+import { vi, describe, expect, beforeEach, afterEach } from 'vite-plus/test'
 import { screen, fireEvent, waitFor } from '@testing-library/react'
 import { Organizations } from '../Organizations'
 import { test } from '@/tests/utils/fixtures'
@@ -168,12 +168,7 @@ vi.mock('@/components/BCTypography', () => ({
 }))
 
 vi.mock('@mui/material/Stack', () => ({
-    default: ({
-  children,
-  direction,
-  spacing,
-  flexWrap
-}) => (
+  default: ({ children, direction, spacing, flexWrap }) => (
     <div
       data-test="mui-stack"
       style={{
@@ -189,7 +184,7 @@ vi.mock('@mui/material/Stack', () => ({
 }))
 
 vi.mock('@mui/material/TextField', () => ({
-    default: ({ value, onChange, label, disabled }) => (
+  default: ({ value, onChange, label, disabled }) => (
     <input
       data-test="mui-textfield"
       value={value}
@@ -210,12 +205,11 @@ vi.mock('@fortawesome/react-fontawesome', () => ({
 
 vi.mock('@/components/DownloadButton', () => {
   return {
-    DownloadButton: React.forwardRef(
-      function MockDownloadButton(
-        { onDownload, isDownloading, label, downloadLabel, dataTest },
-        ref
-      ) {
-        return (
+    DownloadButton: React.forwardRef(function MockDownloadButton(
+      { onDownload, isDownloading, label, downloadLabel, dataTest },
+      ref
+    ) {
+      return (
         <button
           ref={ref}
           data-test={dataTest || 'download-button'}
@@ -224,9 +218,8 @@ vi.mock('@/components/DownloadButton', () => {
         >
           {isDownloading ? downloadLabel : label}
         </button>
-        )
-      }
-    )
+      )
+    })
   }
 })
 

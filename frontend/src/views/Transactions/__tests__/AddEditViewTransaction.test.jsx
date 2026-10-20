@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import ThemeProvider from '@mui/material/styles/ThemeProvider'
@@ -190,12 +190,11 @@ vi.mock('react-hook-form', () => ({
     register: vi.fn(),
     control: {}
   })),
-  Controller: ({
-  render
-}) => render({
-    field: { value: '', onChange: vi.fn() },
-    fieldState: { error: null }
-  })
+  Controller: ({ render }) =>
+    render({
+      field: { value: '', onChange: vi.fn() },
+      fieldState: { error: null }
+    })
 }))
 
 const renderComponent = () => {
@@ -220,7 +219,6 @@ const renderComponent = () => {
     mutate: vi.fn(),
     isLoading: false
   })
-
 
   return render(
     <QueryClientProvider client={queryClient}>
@@ -249,7 +247,6 @@ describe('AddEditViewTransaction Component Tests', () => {
     useInitiativeAgreement.mockReturnValue({ data: null })
     renderComponent()
   })
-
 
   it('displays an error message when there is a loading error', () => {
     useInitiativeAgreement.mockReturnValue({
@@ -606,7 +603,11 @@ describe('AddEditViewTransaction Component Tests', () => {
       })
 
       renderComponent('view', ADMIN_ADJUSTMENT)
-      expect(screen.getByText('administrativeAdjustment:administrativeAdjustment AA123')).toBeInTheDocument()
+      expect(
+        screen.getByText(
+          'administrativeAdjustment:administrativeAdjustment AA123'
+        )
+      ).toBeInTheDocument()
     })
 
     it('should format initiative agreement transaction ID correctly', () => {
@@ -628,7 +629,9 @@ describe('AddEditViewTransaction Component Tests', () => {
       })
 
       renderComponent('view', INITIATIVE_AGREEMENT)
-      expect(screen.getByText('initiativeAgreement:initiativeAgreement IA456')).toBeInTheDocument()
+      expect(
+        screen.getByText('initiativeAgreement:initiativeAgreement IA456')
+      ).toBeInTheDocument()
     })
   })
 
@@ -657,8 +660,4 @@ describe('AddEditViewTransaction Component Tests', () => {
       })
     })
   })
-
-
-
-
 })

@@ -1,7 +1,7 @@
 import { screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { TransferDetails } from '../TransferDetails'
 import { useForm, FormProvider } from 'react-hook-form'
-import { beforeEach, describe, expect, vi } from 'vitest'
+import { beforeEach, describe, expect, vi } from 'vite-plus/test'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useRegExtOrgs } from '@/hooks/useOrganizations'
 import { useCurrentOrgBalance } from '@/hooks/useOrganization'

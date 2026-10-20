@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { screen, act } from '@testing-library/react'
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import { AddEditFuelExports } from '../AddEditFuelExports'
 import { test } from '@/tests/utils/fixtures'
 
@@ -421,9 +421,8 @@ describe('AddEditFuelExports', () => {
       }
 
       screen.getByTestId('bc-grid-editor')
-      const gridEditorModule = await import(
-        '@/components/BCDataGrid/BCGridEditor'
-      )
+      const gridEditorModule =
+        await import('@/components/BCDataGrid/BCGridEditor')
       const bcGridEditorMock = gridEditorModule.BCGridEditor
       const lastCall =
         bcGridEditorMock.mock.calls[bcGridEditorMock.mock.calls.length - 1]
@@ -445,9 +444,8 @@ describe('AddEditFuelExports', () => {
         api: mockGridApi
       }
 
-      const gridEditorModule = await import(
-        '@/components/BCDataGrid/BCGridEditor'
-      )
+      const gridEditorModule =
+        await import('@/components/BCDataGrid/BCGridEditor')
       const bcGridEditorMock = gridEditorModule.BCGridEditor
       const lastCall =
         bcGridEditorMock.mock.calls[bcGridEditorMock.mock.calls.length - 1]
@@ -470,9 +468,8 @@ describe('AddEditFuelExports', () => {
         api: mockGridApi
       }
 
-      const gridEditorModule = await import(
-        '@/components/BCDataGrid/BCGridEditor'
-      )
+      const gridEditorModule =
+        await import('@/components/BCDataGrid/BCGridEditor')
       const bcGridEditorMock = gridEditorModule.BCGridEditor
       const lastCall =
         bcGridEditorMock.mock.calls[bcGridEditorMock.mock.calls.length - 1]
@@ -497,9 +494,8 @@ describe('AddEditFuelExports', () => {
         node: mockNode
       }
 
-      const gridEditorModule = await import(
-        '@/components/BCDataGrid/BCGridEditor'
-      )
+      const gridEditorModule =
+        await import('@/components/BCDataGrid/BCGridEditor')
       const bcGridEditorMock = gridEditorModule.BCGridEditor
       const lastCall =
         bcGridEditorMock.mock.calls[bcGridEditorMock.mock.calls.length - 1]
@@ -566,9 +562,8 @@ describe('AddEditFuelExports', () => {
     it('handles undo action', async () => {
       render(<AddEditFuelExports />, { fixtureOptions })
 
-      const gridEditorModule = await import(
-        '@/components/BCDataGrid/BCGridEditor'
-      )
+      const gridEditorModule =
+        await import('@/components/BCDataGrid/BCGridEditor')
       const bcGridEditorMock = gridEditorModule.BCGridEditor
       const lastCall =
         bcGridEditorMock.mock.calls[bcGridEditorMock.mock.calls.length - 1]

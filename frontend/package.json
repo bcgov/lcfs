@@ -7,38 +7,36 @@
     "node": ">=24"
   },
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "lint": "eslint . --ext js,jsx,ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "lint:fix": "eslint . --fix --ext js,jsx,ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "prettier": "prettier . --check",
-    "prettier:fix": "prettier . --write",
-    "preview": "vite preview",
-    "storybook": "cross-env NODE_ENV=development storybook dev -p 6006",
-    "storybook:build": "storybook build",
-    "test": "vitest",
-    "test.coverage": "cross-env ENFORCE_COVERAGE_THRESHOLDS=true vitest run --coverage",
-    "test:run": "vitest run",
-    "test:ci": "vitest run --reporter=verbose --reporter=junit --outputFile.junit=vitest-results.xml",
-    "test:ci:memory": "node --max-old-space-size=8192 ./node_modules/.bin/vitest run --reporter=github-actions --reporter=blob --shard=$SHARD_INDEX/$SHARD_TOTAL",
-    "test:run:components": "vitest run src/components",
-    "test:run:hooks": "vitest run src/hooks",
-    "test:run:layouts": "vitest run src/layouts",
-    "test:run:services": "vitest run src/services",
-    "test:run:utils": "vitest run src/utils",
-    "test:run:views": "vitest run src/views",
+    "dev": "vp dev",
+    "build": "vp build",
+    "lint": "vp lint --report-unused-disable-directives --max-warnings 0",
+    "lint:fix": "vp lint --fix --report-unused-disable-directives --max-warnings 0",
+    "prettier": "vp fmt . --check",
+    "prettier:fix": "vp fmt .",
+    "preview": "vp preview",
+    "test": "vp test",
+    "test.coverage": "cross-env ENFORCE_COVERAGE_THRESHOLDS=true vp test run --coverage",
+    "test:run": "vp test run",
+    "test:ci": "vp test run --reporter=verbose --reporter=junit --outputFile.junit=vitest-results.xml",
+    "test:ci:memory": "node --max-old-space-size=8192 ./node_modules/.bin/vp test run --reporter=github-actions --reporter=blob --shard=$SHARD_INDEX/$SHARD_TOTAL",
+    "test:run:components": "vp test run src/components",
+    "test:run:hooks": "vp test run src/hooks",
+    "test:run:layouts": "vp test run src/layouts",
+    "test:run:services": "vp test run src/services",
+    "test:run:utils": "vp test run src/utils",
+    "test:run:views": "vp test run src/views",
     "cypress:install": "cypress install",
     "cypress:verify": "cypress verify",
     "cypress:open": "cypress open",
     "cypress:run": "cypress run --headless --browser chrome",
     "cypress:dev": "cypress run --config baseUrl=https://lcfs-dev.apps.silver.devops.gov.bc.ca/",
     "cypress:clear": "cypress cache clear",
-    "type-check": "tsc --noEmit"
+    "type-check": "vp lint --type-aware --type-check"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
-      "eslint",
-      "prettier --write"
+      "vp lint --max-warnings 0",
+      "vp fmt"
     ]
   },
   "dependencies": {
@@ -59,7 +57,7 @@
     "@mui/x-tree-view": "^7.29.10",
     "@react-keycloak/web": "^3.4.0",
     "@tanstack/react-query": "^5.69.0",
-    "@vitejs/plugin-react": "^4.3.4",
+    "@vitejs/plugin-react": "^6.1.2",
     "ag-grid-community": "^35.3.1",
     "ag-grid-react": "^35.3.1",
     "autosuggest-highlight": "^3.3.4",
@@ -100,8 +98,8 @@
     "react-snowfall": "^2.2.0",
     "swagger-ui-react": "^5.32.11",
     "uuid": "^14.0.0",
-    "vite": "^6.4.3",
-    "vite-plugin-svgr": "^4.3.0",
+    "vite": "npm:@voidzero-dev/vite-plus-core@1.3.0",
+    "vite-plugin-svgr": "^5.2.0",
     "xlsx": "^0.18.5",
     "yup": "^1.6.1",
     "zustand": "^5.0.3"
@@ -109,17 +107,6 @@
   "devDependencies": {
     "@badeball/cypress-cucumber-preprocessor": "^22.0.1",
     "@bahmutov/cypress-esbuild-preprocessor": "^2.2.4",
-    "@storybook/addon-a11y": "^8.6.10",
-    "@storybook/addon-docs": "^8.2.9",
-    "@storybook/addon-essentials": "^8.6.10",
-    "@storybook/addon-interactions": "^8.6.10",
-    "@storybook/addon-links": "^8.6.10",
-    "@storybook/addon-onboarding": "^8.6.10",
-    "@storybook/addon-themes": "^8.6.10",
-    "@storybook/blocks": "^8.2.9",
-    "@storybook/react": "^8.2.9",
-    "@storybook/react-vite": "^8.6.10",
-    "@storybook/test": "^8.2.9",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
     "@testing-library/user-event": "^14.6.1",
@@ -127,26 +114,16 @@
     "@types/node": "^24.0.0",
     "@types/react": "^18.3.23",
     "@types/react-dom": "^18.3.7",
-    "@typescript-eslint/eslint-plugin": "^8.34.0",
-    "@typescript-eslint/parser": "^8.34.0",
-    "@vitest/coverage-v8": "4.1.11",
-    "@vitest/ui": "4.1.11",
+    "@vitest/coverage-v8": "5.0.5",
+    "@vitest/ui": "5.0.5",
     "axe-core": "^4.10.3",
     "cross-env": "^7.0.3",
     "cypress": "^14.2.1",
     "cypress-axe": "^1.6.0",
     "cypress-react-selector": "^3.0.0",
     "cypress-real-events": "^1.14.0",
-    "cypress-vite": "^1.6.0",
-    "eslint": "^8.57.1",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-config-standard": "^17.1.0",
     "eslint-plugin-chai-friendly": "^1.0.1",
     "eslint-plugin-cypress": "^3.6.0",
-    "eslint-plugin-react": "^7.37.4",
-    "eslint-plugin-react-hooks": "^5.2.0",
-    "eslint-plugin-react-refresh": "^0.4.19",
-    "eslint-plugin-storybook": "^0.12.0",
     "husky": "^9.1.7",
     "jsdoc": "^4.0.4",
     "jsdom": "^26.0.0",
@@ -154,13 +131,10 @@
     "mochawesome": "^7.1.3",
     "msw": "^2.7.3",
     "pg": "^8.14.1",
-    "prettier": "3.5.3",
     "prop-types": "^15.8.1",
-    "standard": "^17.1.2",
-    "storybook": "^8.6.17",
     "typescript": "^5.8.3",
-    "vite-plugin-terminal": "^1.3.0",
-    "vitest": "4.1.11"
+    "vitest": "5.0.5",
+    "vite-plus": "1.3.0"
   },
   "optionalDependencies": {
     "@rollup/rollup-linux-x64-gnu": "4.6.1"
@@ -189,11 +163,10 @@
     "@cucumber/messages": {
       "uuid": "^11.1.1"
     },
-    "@storybook/addon-actions": {
-      "uuid": "^11.1.1"
-    },
     "mochawesome": {
       "uuid": "^11.1.1"
-    }
+    },
+    "vite": "npm:@voidzero-dev/vite-plus-core@1.3.0",
+    "vitest": "5.0.5"
   }
 }

@@ -1,5 +1,5 @@
 import { omitProperties } from '@/utils/omitProperties'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vite-plus/test'
 import { render, screen, fireEvent, cleanup, act } from '@testing-library/react'
 import { BCDateFloatingFilter } from '../BCDateFloatingFilter'
 
@@ -27,7 +27,13 @@ vi.mock('@mui/material/FormControl', () => ({
   default: vi.fn((props) => (
     <div
       data-test="form-control"
-      {...omitProperties(props, ['children', 'fullWidth', 'size', 'role', 'sx'])}
+      {...omitProperties(props, [
+        'children',
+        'fullWidth',
+        'size',
+        'role',
+        'sx'
+      ])}
     >
       {props.children}
     </div>
