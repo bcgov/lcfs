@@ -1524,3 +1524,87 @@ async def test_an_underway_agreements_comment_threads_stay_open(
     assert [(c["comment"], c["fullName"]) for c in read.json()] == [
         ("Permits received", "Dana Reed")
     ]
+
+
+@pytest.mark.anyio
+async def test_the_organization_comment_log_leaves_out_a_drafts_comments(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """The organization's comment log gathers comments from all its records.
+    A draft agreement's comments stay out of it for IDIR users (#5186), and
+    an underway agreement's still show."""
+    org_id, _ = await _two_org_ids(dbsession)
+    analyst = await _seed_ia_analyst(dbsession, "dreed", "Dana", "Reed")
+    for lifecycle_status, ia_code, text_ in (
+        ("Draft", "IA-26LOGD", "About the draft"),
+        ("Underway", "IA-26LOGU", "About the underway agreement"),
+    ):
+        agreement = await _seed_agreement(
+            dbsession,
+            org_id,
+            ia_code,
+            lifecycle_status_id=await _lifecycle_status_id(dbsession, lifecycle_status),
+        )
+        comment = InternalComment(
+            comment=text_,
+            visibility="Public",
+            create_user=analyst.keycloak_username,
+        )
+        dbsession.add(comment)
+        await dbsession.flush()
+        dbsession.add(
+            InitiativeAgreementInternalComment(
+                internal_comment_id=comment.internal_comment_id,
+                initiative_agreement_id=agreement.initiative_agreement_id,
+            )
+        )
+    await dbsession.flush()
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    response = await client.get(
+        fastapi_app.url_path_for("get_organization_comments", organization_id=org_id),
+        params={"size": 100},
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    texts = [c["comment"] for c in response.json()["comments"]]
+    assert "About the underway agreement" in texts
+    assert "About the draft" not in texts
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("entity", ["initiativeAgreement", "designatedAction"])
+async def test_a_comment_on_a_draft_cannot_be_edited(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession, entity
+):
+    """A comment is edited by its own id, not through its thread. On a draft
+    agreement or one of its actions it reads as missing too (#5186), even to
+    its author, and its text does not change."""
+    _, entity_id, link_model, link_column = await _comment_thread_for(
+        dbsession, "Draft", "IA-26EDTC", entity
+    )
+    await _seed_ia_analyst(dbsession, "mockuser", "Dana", "Reed")
+    comment = InternalComment(
+        comment="Original", visibility="Public", create_user="mockuser"
+    )
+    dbsession.add(comment)
+    await dbsession.flush()
+    dbsession.add(
+        link_model(
+            internal_comment_id=comment.internal_comment_id,
+            **{link_column.key: entity_id},
+        )
+    )
+    await dbsession.flush()
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    response = await client.put(
+        fastapi_app.url_path_for(
+            "update_comment", internal_comment_id=comment.internal_comment_id
+        ),
+        json={"comment": "Changed"},
+    )
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    await dbsession.refresh(comment)
+    assert comment.comment == "Original"

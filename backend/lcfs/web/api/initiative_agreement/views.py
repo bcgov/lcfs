@@ -414,6 +414,10 @@ async def update_initiative_agreement(
     validate: InitiativeAgreementValidation = Depends(),
 ):
     """Endpoint to update an existing initiative agreement."""
+    # A draft is hidden from government (#5186), here as on every other route.
+    await validate.validate_organization_access(
+        initiative_agreement_data.initiative_agreement_id
+    )
     await validate.validate_initiative_agreement_update(
         request, initiative_agreement_data
     )

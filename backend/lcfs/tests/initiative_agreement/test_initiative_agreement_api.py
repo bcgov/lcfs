@@ -17,6 +17,10 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
     RECORD_KIND_AGREEMENT,
     RECORD_KIND_LEGACY_AWARD,
 )
+from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
+    InitiativeAgreementStatus,
+    InitiativeAgreementStatusEnum,
+)
 from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.user.Role import RoleEnum
 
@@ -1373,6 +1377,46 @@ async def test_update_agreement_refuses_an_unknown_organization(
     assert response.status_code == status.HTTP_404_NOT_FOUND
     await dbsession.refresh(agreement)
     assert agreement.to_organization_id is None
+
+
+@pytest.mark.anyio
+async def test_the_legacy_award_update_cannot_reach_a_draft(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """The Transactions page's award update shares this table. A draft is
+    hidden from government (#5186) there too: it reads as missing and its
+    status does not move."""
+    org_id, _ = await _two_org_ids(dbsession)
+    legacy_draft_id = (
+        await dbsession.execute(
+            select(InitiativeAgreementStatus.initiative_agreement_status_id).where(
+                InitiativeAgreementStatus.status == InitiativeAgreementStatusEnum.Draft
+            )
+        )
+    ).scalar_one()
+    draft = await _seed_agreement(
+        dbsession,
+        org_id,
+        "IA-26LEGD",
+        compliance_units=500,
+        current_status_id=legacy_draft_id,
+        lifecycle_status_id=await _lifecycle_status_id(dbsession, "Draft"),
+    )
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
+
+    response = await client.put(
+        fastapi_app.url_path_for("update_initiative_agreement"),
+        json={
+            "initiativeAgreementId": draft.initiative_agreement_id,
+            "complianceUnits": 500,
+            "currentStatus": "Recommended",
+            "toOrganizationId": org_id,
+        },
+    )
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    await dbsession.refresh(draft)
+    assert draft.current_status_id == legacy_draft_id
 
 
 @pytest.mark.anyio

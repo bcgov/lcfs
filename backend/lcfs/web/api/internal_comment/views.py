@@ -181,6 +181,7 @@ async def update_comment(
 
     if not existing_comment:
         raise HTTPException(status_code=404, detail="Internal comment not found.")
+    await service.require_visible_comment(internal_comment_id)
 
     current_username = request.user.keycloak_username
     # Administrators may edit any comment; Company Overview is a shared

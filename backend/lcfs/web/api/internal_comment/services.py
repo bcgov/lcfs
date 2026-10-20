@@ -135,6 +135,19 @@ class InternalCommentService:
         if agreement is None or is_hidden_from(agreement, self.request.user):
             raise HTTPException(status_code=404, detail="Not found")
 
+    async def require_visible_comment(self, internal_comment_id: int) -> None:
+        """
+        A comment on a draft agreement, or on one of its designated actions,
+        reads as missing to government (#5186), like its thread.
+        """
+        from lcfs.web.api.initiative_agreement.workflow import is_hidden_from
+
+        agreement = await self.repo.get_parent_initiative_agreement_of_comment(
+            internal_comment_id
+        )
+        if agreement is not None and is_hidden_from(agreement, self.request.user):
+            raise HTTPException(status_code=404, detail="Internal comment not found.")
+
     async def _send_ci_comment_notification(
         self,
         ci_application_id: int,
@@ -566,6 +579,12 @@ class InternalCommentService:
         if size > 100:
             size = 100
 
+        # Imported here: the initiative agreement package imports this
+        # service, so a module-level import would be circular.
+        from lcfs.web.api.initiative_agreement.workflow import (
+            hidden_lifecycle_statuses,
+        )
+
         rows, total = await self.repo.get_comments_for_organization(
             organization_id=organization_id,
             page=page,
@@ -578,6 +597,8 @@ class InternalCommentService:
             search=filters.search,
             sort_by=filters.sort_by.value,
             sort_order=filters.sort_order.value,
+            # A draft agreement's comments are hidden from government (#5186).
+            hidden_lifecycle_statuses=tuple(hidden_lifecycle_statuses(current_user)),
         )
 
         username = getattr(current_user, "keycloak_username", None)
