@@ -161,6 +161,9 @@
     "moveFileToRoot": "Move {{name}} to top level"
   },
   "evidence": {
+    "attachmentUploadFailed": "The attachment could not be uploaded. Please try again.",
+    "attachmentDownloadFailed": "The attachment could not be downloaded. Please try again.",
+    "attachmentUploading": "Uploading attachment...",
     "sectionTitle": "Evidence of completion of designated action:",
     "addEoc": "Add EOC",
     "removeRequirement": "Remove this requirement",
@@ -174,6 +177,8 @@
     "reviewSummary": "Review summary",
     "missingInformation": "Missing information",
     "missingInformationPlaceholder": "Describe the information needed from the proponent...",
+    "completeAllRequests": "Enter Missing information for every EOC marked Request information before submitting.",
+    "evidenceSummary": "Evidence summary",
     "empty": "No evidence requirements have been added yet.",
     "loading": "Loading evidence requirements...",
     "newRequirementTitle": "New evidence requirement",
@@ -193,7 +198,7 @@
   "workflow": {
     "accept": "Accept",
     "requestInformation": "Request additional information",
-    "recommendToManager": "Recommend to manager",
+    "acceptAndRecommendToManager": "Accept & recommend to manager",
     "notRecommended": "Not recommended",
     "recommendToDirector": "Recommend to director",
     "approve": "Approve",
@@ -216,7 +221,7 @@
     "tip": {
       "accept_evidence": "Record that the evidence is accepted. Unlocks recommending.",
       "request_information": "Send the designated action back to the proponent with the missing information.",
-      "recommend_to_manager": "Send your recommendation, with an amount, to a manager.",
+      "recommend_to_manager": "Accept the satisfactory evidence and send your credit recommendation to a manager.",
       "not_recommend": "Send the designated action to a manager without recommending credits.",
       "recommend_to_director": "Send the manager's endorsement to the director.",
       "approve": "Approve the designated action. No credits are issued by this.",
@@ -254,7 +259,9 @@
     },
     "changed": "{{field}}: {{from}} → {{to}}",
     "groups": {
-      "evidenceReview": "Evidence review",
+      "evidenceReview": "Evidence of completion: Evaluated",
+      "informationRequests": "Evidence of completion: Information requested",
+      "recommendations": "Recommendations",
       "workflow": "Workflow",
       "assignment": "Assignment",
       "recordChanges": "Record changes",

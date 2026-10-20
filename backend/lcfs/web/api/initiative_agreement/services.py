@@ -1,6 +1,7 @@
 import json
 import math
 from datetime import datetime, timezone
+from html import unescape
 from typing import List, Optional
 
 import structlog
@@ -15,6 +16,7 @@ from lcfs.db.models.initiative_agreement.DesignatedActionHistory import (
     DesignatedActionHistory,
 )
 from lcfs.db.models.initiative_agreement.EvidenceRequirement import (
+    REVIEW_OUTCOME_INFORMATION_REQUESTED,
     REVIEW_OUTCOME_SATISFACTORY,
     REVIEW_OUTCOMES,
     EvidenceRequirement,
@@ -714,6 +716,7 @@ class InitiativeAgreementServices:
                     "analyst_review": r.analyst_review,
                     "review_outcome": r.review_outcome,
                     "review_notes": r.review_notes,
+                    "missing_information": r.missing_information,
                     "reviewed_date": (
                         r.reviewed_date.isoformat() if r.reviewed_date else None
                     ),
@@ -767,13 +770,16 @@ class InitiativeAgreementServices:
     async def set_missing_information(
         self, designated_action_id: int, text: Optional[str], user
     ) -> DesignatedActionSchema:
-        """Persist the Missing information box between review rounds (#5118).
+        """Persist legacy DA text while the action has no active EOC.
 
-        No history event, for the same reason as the recommended amount:
-        this is working text. Requesting additional information records
-        what was actually sent.
+        Once an EOC exists, its own update endpoint owns this value instead.
         """
         action = await self._get_action_or_404(designated_action_id)
+        if await self.repo.get_evidence_requirements(designated_action_id):
+            raise HTTPException(
+                status_code=409,
+                detail="Missing information must be saved on an evidence requirement.",
+            )
         action.missing_information = (text or "").strip() or None
         action.update_user = getattr(user, "keycloak_username", None)
         await self.repo.db.flush()
@@ -811,11 +817,43 @@ class InitiativeAgreementServices:
 
         comment = (data.comment or "").strip()
         if transition.uses_missing_information:
-            if comment:
-                # The box and what was sent must agree afterwards.
-                action.missing_information = comment
+            requirements = await self.repo.get_evidence_requirements(
+                designated_action_id
+            )
+            if requirements:
+                requested = [
+                    requirement
+                    for requirement in requirements
+                    if requirement.review_outcome
+                    == REVIEW_OUTCOME_INFORMATION_REQUESTED
+                ]
+                if not requested:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Mark at least one EOC as Request information first.",
+                    )
+                if any(
+                    not unescape(
+                        sanitize_comment_text(r.missing_information)
+                    ).strip()
+                    for r in requested
+                ):
+                    raise HTTPException(
+                        status_code=400,
+                        detail=(
+                            "Enter Missing information for every EOC marked "
+                            "Request information."
+                        ),
+                    )
+                comment = "\n\n".join(
+                    f"EOC {r.requirement_number} - {r.title or r.description}: "
+                    f"{r.missing_information.strip()}"
+                    for r in requested
+                )
             else:
-                comment = (action.missing_information or "").strip()
+                comment = comment or (action.missing_information or "").strip()
+                if comment:
+                    action.missing_information = comment
         if transition.requires_comment and not comment:
             raise HTTPException(
                 status_code=400,
@@ -937,7 +975,7 @@ class InitiativeAgreementServices:
         user,
     ) -> EvidenceRequirementSchema:
         """Add an evidence requirement to an action (the wireframe's Add EOC)."""
-        await self._get_action_or_404(designated_action_id)
+        action = await self._get_action_or_404(designated_action_id)
         title = (data.title or "").strip()
         if not title:
             raise HTTPException(
@@ -952,6 +990,16 @@ class InitiativeAgreementServices:
         if number is None:
             number = await self.repo.next_requirement_number(designated_action_id)
         username = getattr(user, "keycloak_username", None)
+        existing_requirements = await self.repo.get_evidence_requirements(
+            designated_action_id
+        )
+        legacy_missing_information = (
+            (action.missing_information or "").strip()
+            if not existing_requirements
+            else ""
+        )
+        if legacy_missing_information:
+            action.missing_information = None
         requirement = await self.repo.add_evidence_requirement(
             EvidenceRequirement(
                 designated_action_id=designated_action_id,
@@ -959,6 +1007,7 @@ class InitiativeAgreementServices:
                 title=title,
                 description=description,
                 evidence_type=data.evidence_type,
+                missing_information=legacy_missing_information or None,
                 create_user=username,
                 update_user=username,
             )
@@ -1024,6 +1073,10 @@ class InitiativeAgreementServices:
                 }
             requirement.analyst_review = data.analyst_review
             review_touched = True
+        if data.missing_information is not None:
+            requirement.missing_information = (
+                data.missing_information.strip() or None
+            )
         if data.review_notes is not None:
             requirement.review_notes = data.review_notes
             review_touched = True

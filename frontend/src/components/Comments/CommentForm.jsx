@@ -29,6 +29,15 @@ import {
 import MentionDropdown from './MentionDropdown'
 import { useMentionEditor } from './useMentionEditor'
 import './quillExtensions'
+import { quillAttachIcon } from '@/utils/quillAttachIcon'
+
+// Register a paperclip icon for the custom Quill "attach" toolbar button.
+// `react-quill` exposes Quill as a static property of its default export
+// (not a separate named export), so access it that way to stay safe across
+// bundler CJS/ESM interop. Quill's icon registry is global — register once.
+const Quill = ReactQuill.Quill
+const quillIcons = Quill.import('ui/icons')
+quillIcons.attach = quillAttachIcon
 
 const VisibilityToggle = ({
   visibility,
