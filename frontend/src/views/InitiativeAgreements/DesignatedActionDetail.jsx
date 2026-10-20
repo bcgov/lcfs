@@ -3,7 +3,6 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import Divider from '@mui/material/Divider'
-import IconButton from '@mui/material/IconButton'
 import Stack from '@mui/material/Stack'
 import Step from '@mui/material/Step'
 import StepLabel from '@mui/material/StepLabel'
@@ -14,6 +13,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
+import BCButton from '@/components/BCButton'
 import InitiativeAgreementTabs from './components/InitiativeAgreementTabs'
 import BCTypography from '@/components/BCTypography'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
@@ -29,15 +29,16 @@ import withRole from '@/utils/withRole'
 import {
   useDesignatedActionProfile,
   useEvidenceRequirements,
-  useSetMissingInformation,
   useSetRecommendedCredits
 } from '@/hooks/useInitiativeAgreements'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useInitiativeAgreementPageStore } from '@/stores/useInitiativeAgreementPageStore'
 import { DocumentTree } from './components/DocumentTree'
 import { EvidenceOfCompletion } from './components/EvidenceOfCompletion'
+import { OUTCOME_INFORMATION_REQUESTED } from './components/evidenceConstants'
 import {
   DesignatedActionWorkflow,
+  ACTION_REQUEST_INFORMATION,
   PLACEMENT_DECISION,
   PLACEMENT_EVIDENCE
 } from './components/DesignatedActionWorkflow'
@@ -66,6 +67,27 @@ const LabelValue = ({ label, value }) => (
     <strong>{label}</strong> {value ?? '—'}
   </BCTypography>
 )
+
+const navButtonSx = {
+  backgroundColor: '#003366',
+  color: 'white !important',
+  borderRadius: '50%',
+  width: 25,
+  height: 25,
+  padding: 0,
+  '& .MuiSvgIcon-root': {
+    color: 'white',
+    fontSize: '18px !important'
+  },
+  '&:hover': {
+    backgroundColor: '#004080',
+    '& .MuiSvgIcon-root': { color: 'white' }
+  },
+  '&.Mui-disabled': {
+    backgroundColor: '#c0c0c0',
+    color: '#808080'
+  }
+}
 
 const DesignatedActionDetailBase = () => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
@@ -119,21 +141,6 @@ const DesignatedActionDetailBase = () => {
       saveCredits(next)
     }
   }
-  // The Missing information box (#5118): edited here because the request
-  // button beside the summary sends it, saved on leaving the field like
-  // the recommended amount.
-  const { mutate: saveMissingInformation } =
-    useSetMissingInformation(designatedActionId)
-  const [missingInformation, setMissingInformation] = useState('')
-  useEffect(() => {
-    setMissingInformation(action?.missingInformation ?? '')
-  }, [action?.missingInformation])
-  const commitMissingInformation = () => {
-    if (missingInformation.trim() !== (action?.missingInformation ?? '')) {
-      saveMissingInformation(missingInformation)
-    }
-  }
-
   const allEvidenceSatisfactory =
     requirements.length > 0 &&
     requirements.every((r) => r.reviewOutcome === 'Satisfactory')
@@ -200,6 +207,43 @@ const DesignatedActionDetailBase = () => {
         designatedActionId: siblingId
       })
     )
+
+  const renderRequestAction = (
+    requirement,
+    allRequestsComplete,
+    beforeRequest
+  ) => {
+    if (requirement.reviewOutcome !== OUTCOME_INFORMATION_REQUESTED) {
+      return null
+    }
+    return (
+      <DesignatedActionWorkflow
+        key={`request-information-${requirement.evidenceRequirementId}`}
+        designatedActionId={designatedActionId}
+        availableActions={action.availableActions}
+        onlyAction={ACTION_REQUEST_INFORMATION}
+        canRequestInformation={allRequestsComplete}
+        missingInformation={requirement.missingInformation ?? ''}
+        beforeAction={beforeRequest}
+        placement={PLACEMENT_EVIDENCE}
+        onChanged={refreshAction}
+      />
+    )
+  }
+
+  const evidenceActions = requirements.length ? null : (
+    <DesignatedActionWorkflow
+      designatedActionId={designatedActionId}
+      availableActions={action.availableActions}
+      onlyAction={ACTION_REQUEST_INFORMATION}
+      recommendedCredits={action.recommendedCredits}
+      allEvidenceSatisfactory={allEvidenceSatisfactory}
+      hasRequirements={requirements.length > 0}
+      missingInformation={action.missingInformation ?? ''}
+      placement={PLACEMENT_EVIDENCE}
+      onChanged={refreshAction}
+    />
+  )
 
   return (
     <BCBox>
@@ -270,7 +314,10 @@ const DesignatedActionDetailBase = () => {
                 )}
               </BCBox>
               <BCBox sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <IconButton
+                <BCButton
+                  variant="contained"
+                  color="primary"
+                  iconOnly
                   size="small"
                   data-test="previous-action-button"
                   aria-label={t(
@@ -278,19 +325,24 @@ const DesignatedActionDetailBase = () => {
                   )}
                   disabled={!previousId}
                   onClick={() => goToSibling(previousId)}
+                  sx={navButtonSx}
                 >
                   <ChevronLeftIcon />
-                </IconButton>
+                </BCButton>
                 <BCTypography variant="body4">{actionLabel}</BCTypography>
-                <IconButton
+                <BCButton
+                  variant="contained"
+                  color="primary"
+                  iconOnly
                   size="small"
                   data-test="next-action-button"
                   aria-label={t('initiativeAgreement:actionDetail.nextAction')}
                   disabled={!nextId}
                   onClick={() => goToSibling(nextId)}
+                  sx={navButtonSx}
                 >
                   <ChevronRightIcon />
-                </IconButton>
+                </BCButton>
               </BCBox>
             </BCBox>
 
@@ -377,6 +429,7 @@ const DesignatedActionDetailBase = () => {
               <DocumentTree
                 parentType={PARENT_TYPE}
                 parentID={designatedActionId}
+                enablePreview
                 // Subfolders turned on at the business area's request
                 // (2026-09-01), superseding the earlier one-level cap.
                 allowSubfolders
@@ -405,12 +458,7 @@ const DesignatedActionDetailBase = () => {
                 }
               />
             </BCBox>
-
-            {/* Evidence of completion review (#4899) in its own box inside
-                the card, with the evidence decisions beneath its summary
-                (#5080) and the recommendation beneath the box (#5118).
-                Which buttons appear comes from the API, so the page cannot
-                offer a transition the server refuses. */}
+            <hr style={{ margin: '2rem 0' }} />
             <Role roles={[roles.ia_analyst, roles.ia_manager, roles.director]}>
               <EvidenceOfCompletion
                 designatedActionId={designatedActionId}
@@ -418,22 +466,9 @@ const DesignatedActionDetailBase = () => {
                 // only; directors see the review without controls that
                 // would be refused.
                 canEdit={canRecommend}
-                missingInformation={missingInformation}
-                onMissingInformationChange={setMissingInformation}
-                onMissingInformationBlur={commitMissingInformation}
                 missingInformationReadOnly={!canRecommend}
-                actions={
-                  <DesignatedActionWorkflow
-                    designatedActionId={designatedActionId}
-                    availableActions={action.availableActions}
-                    recommendedCredits={action.recommendedCredits}
-                    allEvidenceSatisfactory={allEvidenceSatisfactory}
-                    hasRequirements={requirements.length > 0}
-                    missingInformation={missingInformation}
-                    placement={PLACEMENT_EVIDENCE}
-                    onChanged={refreshAction}
-                  />
-                }
+                actions={evidenceActions}
+                renderRequestAction={renderRequestAction}
               />
               <DesignatedActionWorkflow
                 designatedActionId={designatedActionId}

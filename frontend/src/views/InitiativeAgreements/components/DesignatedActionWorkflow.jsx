@@ -15,7 +15,6 @@ import { useDesignatedActionWorkflow } from '@/hooks/useInitiativeAgreements'
 // is decided by the API — availableActions comes from the same transition
 // table the endpoint enforces, so the page can never offer an action the
 // server would refuse.
-export const ACTION_ACCEPT = 'accept_evidence'
 export const ACTION_REQUEST_INFORMATION = 'request_information'
 export const ACTION_RECOMMEND_TO_MANAGER = 'recommend_to_manager'
 export const ACTION_NOT_RECOMMEND = 'not_recommend'
@@ -40,20 +39,10 @@ const PROMPT_KEYS = {
   [ACTION_NOT_RECOMMEND]: 'initiativeAgreement:workflow.prompt.not_recommend'
 }
 
-// Where on the page each action belongs (#5080). Evidence decisions sit
-// beneath the review summary they act on; recommendation and approval
-// decisions close the page. Same component, rendered once per placement.
 export const PLACEMENT_EVIDENCE = 'evidence'
 export const PLACEMENT_DECISION = 'decision'
 
 const BUTTONS = [
-  {
-    action: ACTION_ACCEPT,
-    labelKey: 'accept',
-    variant: 'contained',
-    colour: 'primary',
-    placement: PLACEMENT_EVIDENCE
-  },
   {
     action: ACTION_REQUEST_INFORMATION,
     labelKey: 'requestInformation',
@@ -63,7 +52,7 @@ const BUTTONS = [
   },
   {
     action: ACTION_RECOMMEND_TO_MANAGER,
-    labelKey: 'recommendToManager',
+    labelKey: 'acceptAndRecommendToManager',
     variant: 'contained',
     colour: 'primary',
     placement: PLACEMENT_DECISION
@@ -111,9 +100,10 @@ export const DesignatedActionWorkflow = ({
   recommendedCredits,
   allEvidenceSatisfactory,
   hasRequirements = true,
-  // The Missing information box's current text; it is what a request for
-  // additional information sends.
   missingInformation = '',
+  canRequestInformation,
+  beforeAction,
+  onlyAction,
   // Omitted: every available action, as before the split.
   placement,
   onChanged
@@ -122,6 +112,7 @@ export const DesignatedActionWorkflow = ({
   const [pendingAction, setPendingAction] = useState(null)
   const [comment, setComment] = useState('')
   const [error, setError] = useState('')
+  const [waitingForSave, setWaitingForSave] = useState(false)
 
   const { mutate: performAction, isPending } =
     useDesignatedActionWorkflow(designatedActionId)
@@ -154,7 +145,26 @@ export const DesignatedActionWorkflow = ({
       return
     }
     if (action === ACTION_REQUEST_INFORMATION) {
-      run(action, { comment: missingInformation.trim() })
+      if (!beforeAction) {
+        run(action, { comment: missingInformation.trim() })
+        return
+      }
+      const requestInformation = async () => {
+        setWaitingForSave(true)
+        try {
+          await beforeAction?.()
+          run(action, { comment: missingInformation.trim() })
+        } catch (err) {
+          setError(
+            err?.response?.data?.detail ||
+              err?.message ||
+              t('initiativeAgreement:workflow.actionFailed')
+          )
+        } finally {
+          setWaitingForSave(false)
+        }
+      }
+      requestInformation()
       return
     }
     if (action === ACTION_RECOMMEND_TO_MANAGER) {
@@ -169,20 +179,18 @@ export const DesignatedActionWorkflow = ({
   const visible = BUTTONS.filter(
     (button) =>
       availableActions.includes(button.action) &&
+      (!onlyAction || button.action === onlyAction) &&
       (!placement || button.placement === placement)
   )
   // Nothing to offer here: render nothing rather than an empty block
   // with its own margin.
   if (visible.length === 0 && !error) return null
 
-  // Accepting and recommending both need every requirement satisfactory;
-  // showing that as a disabled button explains itself better than a
-  // rejected click would.
   const blockedByEvidence = (action) =>
-    (action === ACTION_ACCEPT || action === ACTION_RECOMMEND_TO_MANAGER) &&
-    !allEvidenceSatisfactory
+    action === ACTION_RECOMMEND_TO_MANAGER && !allEvidenceSatisfactory
   const blockedByMissingInformation = (action) =>
-    action === ACTION_REQUEST_INFORMATION && !missingInformation.trim()
+    action === ACTION_REQUEST_INFORMATION &&
+    !(canRequestInformation ?? Boolean(missingInformation.trim()))
 
   // A disabled button should say what would enable it, not just refuse.
   const tooltipFor = (action) => {
@@ -235,6 +243,7 @@ export const DesignatedActionWorkflow = ({
                 size="small"
                 disabled={
                   isPending ||
+                  waitingForSave ||
                   blockedByEvidence(button.action) ||
                   blockedByMissingInformation(button.action)
                 }
