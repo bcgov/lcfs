@@ -171,7 +171,6 @@ class DesignatedActionSchema(BaseSchema):
     determination_date: Optional[date] = None
     credit_allocation: int
     recommended_credits: Optional[int] = None
-    missing_information: Optional[str] = None
     determination: Optional[str] = None
     current_status: DesignatedActionStatusSchema
     assigned_analyst: Optional[AssignedAnalystSchema] = None
@@ -194,6 +193,7 @@ class EvidenceRequirementSchema(BaseSchema):
     title: Optional[str] = None
     description: str
     evidence_type: Optional[str] = None
+    missing_information: Optional[str] = None
     is_active: bool = True
     analyst_review: Optional[str] = None
     review_outcome: Optional[str] = None
@@ -213,6 +213,7 @@ class EvidenceRequirementCreateSchema(BaseSchema):
 
 
 class EvidenceRequirementUpdateSchema(BaseSchema):
+    missing_information: Optional[str] = None
     title: Optional[str] = None
     description: Optional[str] = None
     evidence_type: Optional[str] = None
@@ -227,18 +228,15 @@ class EvidenceRequirementUpdateSchema(BaseSchema):
 
 class DesignatedActionWorkflowSchema(BaseSchema):
     action: str
-    # The dedicated text area behind Request additional information, and the
-    # reason a manager or director returns or rejects (#4898).
+    # Request information applies to one evidence requirement. Other workflow
+    # actions continue to use the designated-action-level comment.
+    evidence_requirement_id: Optional[int] = None
     comment: Optional[str] = None
     recommended_credits: Optional[int] = None
 
 
 class RecommendedCreditsSchema(BaseSchema):
     recommended_credits: Optional[int] = None
-
-
-class MissingInformationSchema(BaseSchema):
-    missing_information: Optional[str] = None
 
 
 class DesignatedActionHistorySchema(BaseSchema):

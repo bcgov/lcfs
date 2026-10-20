@@ -83,6 +83,14 @@ class EvidenceRequirement(BaseModel, Auditable):
         nullable=True,
         comment="Type of evidence expected (vocabulary defined by the business)",
     )
+    missing_information = Column(
+        Text,
+        nullable=True,
+        comment=(
+            "Information requested from the proponent for this evidence "
+            "requirement; retained between review rounds"
+        ),
+    )
     is_active = Column(
         Boolean,
         nullable=False,

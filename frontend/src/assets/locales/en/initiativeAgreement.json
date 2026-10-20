@@ -214,7 +214,7 @@
     },
     "tip": {
       "accept_evidence": "Record that the evidence is accepted. Unlocks recommending.",
-      "request_information": "Send the designated action back to the proponent with the missing information.",
+      "request_information": "Send the designated action back to the proponent with this evidence item's missing information.",
       "recommend_to_manager": "Send your recommendation, with an amount, to a manager.",
       "not_recommend": "Send the designated action to a manager without recommending credits.",
       "recommend_to_director": "Send the manager's endorsement to the director.",
@@ -224,7 +224,7 @@
     },
     "blockedByEvidence": "Every evidence requirement must be marked satisfactory first.",
     "blockedNoRequirements": "Add at least one evidence requirement and mark it satisfactory first.",
-    "blockedNoMissingInformation": "Enter the missing information first."
+    "blockedNoMissingInformation": "Enter the missing information for this evidence item first."
   },
   "history": {
     "title": "Activity",

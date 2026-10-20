@@ -636,6 +636,7 @@ class InitiativeAgreementServices:
                     "analyst_review": r.analyst_review,
                     "review_outcome": r.review_outcome,
                     "review_notes": r.review_notes,
+                    "missing_information": r.missing_information,
                     "reviewed_date": (
                         r.reviewed_date.isoformat() if r.reviewed_date else None
                     ),
@@ -686,23 +687,6 @@ class InitiativeAgreementServices:
         return DesignatedActionSchema.model_validate(refreshed)
 
     @service_handler
-    async def set_missing_information(
-        self, designated_action_id: int, text: Optional[str], user
-    ) -> DesignatedActionSchema:
-        """Persist the Missing information box between review rounds (#5118).
-
-        No history event, for the same reason as the recommended amount:
-        this is working text. Requesting additional information records
-        what was actually sent.
-        """
-        action = await self._get_action_or_404(designated_action_id)
-        action.missing_information = (text or "").strip() or None
-        action.update_user = getattr(user, "keycloak_username", None)
-        await self.repo.db.flush()
-        refreshed = await self.repo.get_designated_action_by_id(designated_action_id)
-        return DesignatedActionSchema.model_validate(refreshed)
-
-    @service_handler
     async def perform_workflow_action(
         self, designated_action_id: int, data: DesignatedActionWorkflowSchema, user
     ) -> DesignatedActionSchema:
@@ -732,12 +716,35 @@ class InitiativeAgreementServices:
             )
 
         comment = (data.comment or "").strip()
+        requested_requirement = None
         if transition.uses_missing_information:
+            if data.evidence_requirement_id is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "A specific evidence requirement is required when "
+                        "requesting information."
+                    ),
+                )
+            requested_requirement = await self.repo.get_evidence_requirement(
+                data.evidence_requirement_id
+            )
+            if (
+                requested_requirement is None
+                or requested_requirement.designated_action_id != designated_action_id
+                or not requested_requirement.is_active
+            ):
+                raise DataNotFoundException(
+                    "Evidence requirement not found for this designated action."
+                )
             if comment:
-                # The box and what was sent must agree afterwards.
-                action.missing_information = comment
+                # Keep the saved text and the request history in sync.
+                requested_requirement.missing_information = comment
+                requested_requirement.update_user = getattr(
+                    user, "keycloak_username", None
+                )
             else:
-                comment = (action.missing_information or "").strip()
+                comment = (requested_requirement.missing_information or "").strip()
         if transition.requires_comment and not comment:
             raise HTTPException(
                 status_code=400,
@@ -771,6 +778,10 @@ class InitiativeAgreementServices:
         snapshot = {}
         if comment:
             snapshot["comment"] = comment
+        if requested_requirement is not None:
+            snapshot["evidence_requirement_id"] = (
+                requested_requirement.evidence_requirement_id
+            )
         if transition.captures_evidence:
             snapshot.update(await self._evidence_snapshot(designated_action_id))
         if transition.requires_credits:
@@ -936,6 +947,10 @@ class InitiativeAgreementServices:
             requirement.evidence_type = data.evidence_type
         if data.requirement_number is not None:
             requirement.requirement_number = data.requirement_number
+        if "missing_information" in data.model_fields_set:
+            requirement.missing_information = (
+                data.missing_information or ""
+            ).strip() or None
 
         review_touched = False
         if data.analyst_review is not None:

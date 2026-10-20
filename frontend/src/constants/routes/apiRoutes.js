@@ -97,8 +97,6 @@ export const apiRoutes = {
     '/initiative-agreements/designated-actions/:designatedActionId/workflow',
   designatedActionRecommendedCredits:
     '/initiative-agreements/designated-actions/:designatedActionId/recommended-credits',
-  designatedActionMissingInformation:
-    '/initiative-agreements/designated-actions/:designatedActionId/missing-information',
   designatedActionHistory:
     '/initiative-agreements/designated-actions/:designatedActionId/history',
   documentFolderTree: '/document-folders/:parentType/:parentID',

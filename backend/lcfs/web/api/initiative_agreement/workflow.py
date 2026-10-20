@@ -100,11 +100,10 @@ TRANSITIONS = {
         requires_all_evidence_satisfactory=True,
         captures_evidence=True,
     ),
-    # Sends the action back to the proponent for more evidence. The
+    # Sends the action back to the proponent for evidence on one EOC. The
     # snapshot carries the full review, so this round's findings survive
-    # the next one.
-    # The reason is the page's Missing information box (#5118): sent as the
-    # comment, or read from the saved box when the request carries none.
+    # the next one. The reason comes from that EOC's Missing information
+    # field unless the request supplies an updated value.
     ACTION_REQUEST_INFORMATION: Transition(
         roles=(RoleEnum.IA_ANALYST, RoleEnum.IA_MANAGER),
         from_statuses=IN_REVIEW_STATUSES,

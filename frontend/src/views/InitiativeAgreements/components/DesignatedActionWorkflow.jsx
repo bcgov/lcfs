@@ -23,8 +23,7 @@ export const ACTION_REJECT = 'reject'
 
 // Actions that must say why. The API requires the comment too; asking for
 // it here means the user finds out before they lose the click. Requesting
-// information is the exception: its reason is the page's Missing
-// information box (#5118), so it asks for nothing more.
+// information uses the selected EOC's Missing information field.
 const REQUIRES_COMMENT = new Set([
   ACTION_NOT_RECOMMEND,
   ACTION_RETURN,
@@ -104,12 +103,12 @@ const BUTTONS = [
 
 export const DesignatedActionWorkflow = ({
   designatedActionId,
+  evidenceRequirementId,
   availableActions = [],
   recommendedCredits,
   allEvidenceSatisfactory,
   hasRequirements = true,
-  // The Missing information box's current text; it is what a request for
-  // additional information sends.
+  // The selected EOC's text; it is what the information request sends.
   missingInformation = '',
   // Omitted: every available action, as before the split.
   placement,
@@ -151,7 +150,10 @@ export const DesignatedActionWorkflow = ({
       return
     }
     if (action === ACTION_REQUEST_INFORMATION) {
-      run(action, { comment: missingInformation.trim() })
+      run(action, {
+        evidenceRequirementId,
+        comment: missingInformation.trim()
+      })
       return
     }
     if (action === ACTION_RECOMMEND_TO_MANAGER) {
@@ -179,7 +181,8 @@ export const DesignatedActionWorkflow = ({
     (action === ACTION_ACCEPT || action === ACTION_RECOMMEND_TO_MANAGER) &&
     !allEvidenceSatisfactory
   const blockedByMissingInformation = (action) =>
-    action === ACTION_REQUEST_INFORMATION && !missingInformation.trim()
+    action === ACTION_REQUEST_INFORMATION &&
+    (!evidenceRequirementId || !missingInformation.trim())
 
   // A disabled button should say what would enable it, not just refuse.
   const tooltipFor = (action) => {
@@ -202,7 +205,9 @@ export const DesignatedActionWorkflow = ({
     <BCBox
       mt={placement === PLACEMENT_EVIDENCE ? 2 : 3}
       data-test={
-        placement
+        evidenceRequirementId
+          ? `designated-action-workflow-eoc-${evidenceRequirementId}`
+          : placement
           ? `designated-action-workflow-${placement}`
           : 'designated-action-workflow'
       }

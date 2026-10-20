@@ -38,11 +38,9 @@ vi.mock('react-router-dom', async (importOriginal) => {
 })
 
 const mockProfile = vi.fn()
-const mockSaveMissingInformation = vi.fn()
 vi.mock('@/hooks/useInitiativeAgreements', () => ({
   useDesignatedActionProfile: () => mockProfile(),
   useSetRecommendedCredits: () => ({ mutate: vi.fn() }),
-  useSetMissingInformation: () => ({ mutate: mockSaveMissingInformation }),
   useEvidenceRequirements: () => ({
     data: [{ evidenceRequirementId: 1, reviewOutcome: 'Satisfactory' }]
   })
@@ -73,25 +71,18 @@ vi.mock('../components/DocumentTree', () => ({
 }))
 
 vi.mock('../components/EvidenceOfCompletion', () => ({
-  // The section takes the evidence decisions as a slot (#5080) and the
-  // Missing information box's text from the page (#5118); the stub
-  // renders both so the page's wiring is observable.
+  // The section renders a request action for each EOC and an action-wide
+  // evidence decision after its summary.
   EvidenceOfCompletion: ({
     actions,
     canEdit,
-    missingInformation,
-    onMissingInformationChange,
-    onMissingInformationBlur,
-    missingInformationReadOnly
+    renderRequirementActions
   }) => (
     <div data-test="evidence-of-completion" data-can-edit={String(canEdit)}>
-      <textarea
-        data-test="missing-information-stub"
-        value={missingInformation}
-        readOnly={missingInformationReadOnly}
-        onChange={(event) => onMissingInformationChange(event.target.value)}
-        onBlur={onMissingInformationBlur}
-      />
+      {renderRequirementActions?.(
+        { evidenceRequirementId: 1 },
+        'The signed stage two permit.'
+      )}
       {actions}
     </div>
   )
@@ -109,11 +100,21 @@ vi.mock('../components/EditDesignatedAction', () => ({
 
 const workflowProps = vi.fn()
 vi.mock('../components/DesignatedActionWorkflow', () => ({
+  ACTION_ACCEPT: 'accept_evidence',
+  ACTION_REQUEST_INFORMATION: 'request_information',
   PLACEMENT_EVIDENCE: 'evidence',
   PLACEMENT_DECISION: 'decision',
   DesignatedActionWorkflow: (props) => {
     workflowProps(props)
-    return <div data-test={`designated-action-workflow-${props.placement}`} />
+    return (
+      <div
+        data-test={
+          props.evidenceRequirementId
+            ? `designated-action-workflow-eoc-${props.evidenceRequirementId}`
+            : `designated-action-workflow-${props.placement}`
+        }
+      />
+    )
   }
 }))
 
@@ -132,8 +133,11 @@ const action = {
   initiativeAgreementId: 5,
   iaCode: 'IA-26ORG1',
   siblingActionIds: [9, 12, 15],
-  missingInformation: 'The signed stage two permit.',
-  availableActions: ['accept_evidence', 'recommend_to_manager']
+  availableActions: [
+    'accept_evidence',
+    'request_information',
+    'recommend_to_manager'
+  ]
 }
 
 describe('DesignatedActionDetail', () => {
@@ -230,9 +234,11 @@ describe('DesignatedActionDetail', () => {
   it('passes the available actions and evidence state to the workflow', () => {
     render(<DesignatedActionDetail />, { wrapper })
 
-    // Rendered twice (#5080): the evidence decisions inside the evidence
-    // section, the recommendation decisions after it. Both get the same
-    // facts.
+    // Request information belongs to one EOC, while Accept remains the
+    // single evidence decision after the summary.
+    expect(
+      screen.getByTestId('designated-action-workflow-eoc-1')
+    ).toBeInTheDocument()
     const evidence = screen.getByTestId('designated-action-workflow-evidence')
     expect(screen.getByTestId('evidence-of-completion')).toContainElement(
       evidence
@@ -241,18 +247,32 @@ describe('DesignatedActionDetail', () => {
     expect(screen.getByTestId('evidence-of-completion')).not.toContainElement(
       decision
     )
-    for (const placement of ['evidence', 'decision']) {
-      expect(workflowProps).toHaveBeenCalledWith(
-        expect.objectContaining({
-          placement,
-          availableActions: ['accept_evidence', 'recommend_to_manager'],
-          allEvidenceSatisfactory: true,
-          // The amount is edited in the header now (#5079); the workflow
-          // only carries the saved value into the recommend action.
-          recommendedCredits: null
-        })
-      )
-    }
+    expect(workflowProps).toHaveBeenCalledWith(
+      expect.objectContaining({
+        evidenceRequirementId: 1,
+        availableActions: ['request_information'],
+        missingInformation: 'The signed stage two permit.'
+      })
+    )
+    expect(workflowProps).toHaveBeenCalledWith(
+      expect.objectContaining({
+        placement: 'evidence',
+        availableActions: ['accept_evidence'],
+        allEvidenceSatisfactory: true
+      })
+    )
+    expect(workflowProps).toHaveBeenCalledWith(
+      expect.objectContaining({
+        placement: 'decision',
+        availableActions: [
+          'accept_evidence',
+          'request_information',
+          'recommend_to_manager'
+        ],
+        allEvidenceSatisfactory: true,
+        recommendedCredits: null
+      })
+    )
   })
 
   it('puts the evidence review and the recommendation inside the action card (#5118)', () => {
@@ -268,43 +288,6 @@ describe('DesignatedActionDetail', () => {
     // The activity trail and comments stay outside it.
     expect(card).not.toContainElement(
       screen.getByTestId('designated-action-history')
-    )
-  })
-
-  it('shows the saved missing information and saves it on leaving the box', () => {
-    render(<DesignatedActionDetail />, { wrapper })
-
-    const box = screen.getByTestId('missing-information-stub')
-    expect(box).toHaveValue('The signed stage two permit.')
-
-    fireEvent.change(box, { target: { value: 'The risk register too.' } })
-    // The request button sends what is in the box, saved or not.
-    expect(workflowProps).toHaveBeenCalledWith(
-      expect.objectContaining({
-        placement: 'evidence',
-        missingInformation: 'The risk register too.'
-      })
-    )
-    fireEvent.blur(box)
-    expect(mockSaveMissingInformation).toHaveBeenCalledWith(
-      'The risk register too.'
-    )
-  })
-
-  it('does not save the missing information when it has not changed', () => {
-    render(<DesignatedActionDetail />, { wrapper })
-
-    fireEvent.blur(screen.getByTestId('missing-information-stub'))
-
-    expect(mockSaveMissingInformation).not.toHaveBeenCalled()
-  })
-
-  it('shows directors the missing information without letting them edit it', () => {
-    mockRoles = [{ name: roles.director }]
-    render(<DesignatedActionDetail />, { wrapper })
-
-    expect(screen.getByTestId('missing-information-stub')).toHaveAttribute(
-      'readonly'
     )
   })
 

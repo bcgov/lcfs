@@ -46,6 +46,7 @@ const requirement = (overrides = {}) => ({
   analystReview: '',
   reviewOutcome: null,
   reviewNotes: null,
+  missingInformation: null,
   reviewedBy: null,
   reviewedDate: null,
   ...overrides
@@ -390,55 +391,97 @@ describe('EvidenceOfCompletion', () => {
     ).toBeInTheDocument()
   })
 
-  it('always shows the Missing information box, even with nothing added (#5118)', () => {
-    mockList.mockReturnValue({ data: [], isLoading: false })
+  it('shows each EOC its own Missing information value', () => {
+    mockList.mockReturnValue({
+      data: [
+        requirement({ missingInformation: 'The signed stage two permit.' }),
+        requirement({
+          evidenceRequirementId: 2,
+          requirementNumber: 2,
+          title: 'Risk register',
+          missingInformation: 'The latest risk register.'
+        })
+      ],
+      isLoading: false
+    })
     render(
-      <EvidenceOfCompletion
-        designatedActionId="9"
-        missingInformation="The signed stage two permit."
-      />,
+      <EvidenceOfCompletion designatedActionId="9" />,
       { wrapper }
     )
 
-    expect(screen.getByTestId('eoc-missing-information')).toBeInTheDocument()
     expect(
-      screen.getByLabelText('initiativeAgreement:evidence.missingInformation')
+      screen.getByTestId('eoc-missing-information-input-1')
     ).toHaveValue('The signed stage two permit.')
+    expect(
+      screen.getByTestId('eoc-missing-information-input-2')
+    ).toHaveValue('The latest risk register.')
   })
 
-  it('hands edits to the Missing information box back to the page', () => {
-    const onChange = vi.fn()
-    const onBlur = vi.fn()
+  it('saves Missing information to the EOC that owns the field', () => {
     render(
-      <EvidenceOfCompletion
-        designatedActionId="9"
-        missingInformation=""
-        onMissingInformationChange={onChange}
-        onMissingInformationBlur={onBlur}
-      />,
+      <EvidenceOfCompletion designatedActionId="9" />,
       { wrapper }
     )
 
-    const box = screen.getByTestId('eoc-missing-information-input')
+    const box = screen.getByTestId('eoc-missing-information-input-1')
     fireEvent.change(box, { target: { value: 'The risk register.' } })
     fireEvent.blur(box)
 
-    expect(onChange).toHaveBeenCalledWith('The risk register.')
-    expect(onBlur).toHaveBeenCalled()
+    expect(mockUpdate).toHaveBeenCalledWith({
+      evidenceRequirementId: 1,
+      missingInformation: 'The risk register.'
+    })
   })
 
-  it('shows the Missing information read-only when the page says so', () => {
+  it('passes each EOC identifier and text to its request action', () => {
+    const renderActions = vi.fn((row, text) => (
+      <button data-test={`request-info-${row.evidenceRequirementId}`}>
+        {text}
+      </button>
+    ))
+    mockList.mockReturnValue({
+      data: [
+        requirement({ missingInformation: 'The signed stage two permit.' }),
+        requirement({
+          evidenceRequirementId: 2,
+          requirementNumber: 2,
+          missingInformation: 'The latest risk register.'
+        })
+      ],
+      isLoading: false
+    })
+
     render(
       <EvidenceOfCompletion
         designatedActionId="9"
-        missingInformation="The signed stage two permit."
-        missingInformationReadOnly
+        renderRequirementActions={renderActions}
+      />,
+      { wrapper }
+    )
+
+    expect(renderActions).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ evidenceRequirementId: 1 }),
+      'The signed stage two permit.'
+    )
+    expect(renderActions).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ evidenceRequirementId: 2 }),
+      'The latest risk register.'
+    )
+  })
+
+  it('shows directors the EOC Missing information field read-only', () => {
+    render(
+      <EvidenceOfCompletion
+        designatedActionId="9"
+        canEdit={false}
       />,
       { wrapper }
     )
 
     // Read-only rather than disabled, so it keeps its contrast.
-    const box = screen.getByTestId('eoc-missing-information-input')
+    const box = screen.getByTestId('eoc-missing-information-input-1')
     expect(box).toHaveAttribute('readonly')
     expect(box).not.toBeDisabled()
   })

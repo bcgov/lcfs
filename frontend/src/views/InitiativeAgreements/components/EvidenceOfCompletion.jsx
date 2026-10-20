@@ -107,7 +107,13 @@ const useAutosaveField = (savedValue, onCommit) => {
 // boxes take effect at once. The title is set when the requirement is
 // added. Removing asks first: the requirement leaves the list and there
 // is no way back from this page.
-const RequirementCard = ({ requirement, onSave, onRemove, canEdit }) => {
+const RequirementCard = ({
+  requirement,
+  onSave,
+  onRemove,
+  canEdit,
+  renderActions
+}) => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const [justSaved, setJustSaved] = useState(false)
   const save = (payload) => {
@@ -130,6 +136,12 @@ const RequirementCard = ({ requirement, onSave, onRemove, canEdit }) => {
   const notes = useAutosaveField(requirement.reviewNotes, (next) => {
     save({ reviewNotes: next })
   })
+  const missingInformation = useAutosaveField(
+    requirement.missingInformation,
+    (next) => {
+      save({ missingInformation: next.trim() })
+    }
+  )
 
   const outcome = requirement.reviewOutcome
   const heading = requirementHeading(requirement)
@@ -318,6 +330,50 @@ const RequirementCard = ({ requirement, onSave, onRemove, canEdit }) => {
         </BCBox>
       </Box>
 
+      <Paper
+        variant="outlined"
+        data-test={`eoc-missing-information-${requirement.evidenceRequirementId}`}
+        sx={{
+          p: 1.5,
+          borderLeft: 4,
+          borderLeftColor: 'success.main',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 1
+        }}
+      >
+        <BCTypography
+          variant="body4"
+          component="label"
+          htmlFor={`eoc-missing-information-input-${requirement.evidenceRequirementId}`}
+          color="primary"
+        >
+          {t('initiativeAgreement:evidence.missingInformation')}
+        </BCTypography>
+        <TextField
+          id={`eoc-missing-information-input-${requirement.evidenceRequirementId}`}
+          multiline
+          minRows={2}
+          fullWidth
+          size="small"
+          sx={GROWING_TEXT_SX}
+          value={missingInformation.value}
+          placeholder={
+            canEdit
+              ? t('initiativeAgreement:evidence.missingInformationPlaceholder')
+              : ''
+          }
+          InputProps={{ readOnly: !canEdit }}
+          inputProps={{
+            'data-test': `eoc-missing-information-input-${requirement.evidenceRequirementId}`,
+            'aria-label': `${t('initiativeAgreement:evidence.missingInformation')} - ${heading}`
+          }}
+          {...missingInformation}
+        />
+      </Paper>
+
+      {renderActions && renderActions(requirement, missingInformation.value)}
+
       <BCModal
         open={confirmingRemove}
         onClose={() => setConfirmingRemove(false)}
@@ -415,58 +471,6 @@ const ReviewSummary = ({ requirements }) => {
   )
 }
 
-// What the analyst needs from the proponent (#5118). Always on the page,
-// not only inside the request dialog, so the current ask is visible
-// between rounds; Request additional information sends it.
-const MissingInformation = ({ value, onChange, onBlur, readOnly }) => {
-  const { t } = useTranslation(['initiativeAgreement'])
-  const label = t('initiativeAgreement:evidence.missingInformation')
-  return (
-    <Paper
-      variant="outlined"
-      data-test="eoc-missing-information"
-      sx={{
-        p: 1.5,
-        borderLeft: 4,
-        borderLeftColor: 'success.main',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 1
-      }}
-    >
-      <BCTypography
-        variant="body4"
-        component="label"
-        htmlFor="eoc-missing-information-input"
-        color="primary"
-        sx={{ fontWeight: 700 }}
-      >
-        {label}
-      </BCTypography>
-      <TextField
-        id="eoc-missing-information-input"
-        multiline
-        minRows={2}
-        fullWidth
-        size="small"
-        sx={GROWING_TEXT_SX}
-        value={value}
-        placeholder={
-          readOnly
-            ? ''
-            : t('initiativeAgreement:evidence.missingInformationPlaceholder')
-        }
-        // Read-only, not disabled, for the same contrast reason as the
-        // requirement fields.
-        InputProps={{ readOnly }}
-        inputProps={{ 'data-test': 'eoc-missing-information-input' }}
-        onChange={(event) => onChange?.(event.target.value)}
-        onBlur={onBlur}
-      />
-    </Paper>
-  )
-}
-
 // Adding a requirement: a title and the description of what is required,
 // in a modal, created only on confirm.
 const AddRequirementModal = ({ open, onClose, onCreate, isPending }) => {
@@ -533,16 +537,10 @@ const AddRequirementModal = ({ open, onClose, onCreate, isPending }) => {
 export const EvidenceOfCompletion = ({
   designatedActionId,
   canEdit = true,
-  // The evidence decisions — accept, request information — rendered
-  // beneath the review summary they act on (#5080). The page owns them;
-  // this section only says where they go.
+  // The action-wide evidence decision is rendered beneath the summary.
   actions = null,
-  // The Missing information box (#5118). The page owns its text because
-  // the request button sends it.
-  missingInformation = '',
-  onMissingInformationChange,
-  onMissingInformationBlur,
-  missingInformationReadOnly = false
+  // Each request action receives this EOC's ID and current text.
+  renderRequirementActions = null
 }) => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const [expanded, setExpanded] = useState(true)
@@ -610,6 +608,7 @@ export const EvidenceOfCompletion = ({
                 onRemove={() =>
                   removeRequirement(requirement.evidenceRequirementId)
                 }
+                renderActions={renderRequirementActions}
               />
             ))}
 
@@ -618,13 +617,6 @@ export const EvidenceOfCompletion = ({
                 {t('initiativeAgreement:evidence.empty')}
               </BCTypography>
             )}
-
-            <MissingInformation
-              value={missingInformation}
-              onChange={onMissingInformationChange}
-              onBlur={onMissingInformationBlur}
-              readOnly={missingInformationReadOnly}
-            />
 
             <Box
               sx={{

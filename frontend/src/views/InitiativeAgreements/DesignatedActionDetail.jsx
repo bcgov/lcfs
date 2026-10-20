@@ -31,7 +31,6 @@ import withRole from '@/utils/withRole'
 import {
   useDesignatedActionProfile,
   useEvidenceRequirements,
-  useSetMissingInformation,
   useSetRecommendedCredits
 } from '@/hooks/useInitiativeAgreements'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -39,6 +38,8 @@ import { useInitiativeAgreementPageStore } from '@/stores/useInitiativeAgreement
 import { DocumentTree } from './components/DocumentTree'
 import { EvidenceOfCompletion } from './components/EvidenceOfCompletion'
 import {
+  ACTION_ACCEPT,
+  ACTION_REQUEST_INFORMATION,
   DesignatedActionWorkflow,
   PLACEMENT_DECISION,
   PLACEMENT_EVIDENCE
@@ -117,21 +118,6 @@ const DesignatedActionDetailBase = () => {
       saveCredits(next)
     }
   }
-  // The Missing information box (#5118): edited here because the request
-  // button beside the summary sends it, saved on leaving the field like
-  // the recommended amount.
-  const { mutate: saveMissingInformation } =
-    useSetMissingInformation(designatedActionId)
-  const [missingInformation, setMissingInformation] = useState('')
-  useEffect(() => {
-    setMissingInformation(action?.missingInformation ?? '')
-  }, [action?.missingInformation])
-  const commitMissingInformation = () => {
-    if (missingInformation.trim() !== (action?.missingInformation ?? '')) {
-      saveMissingInformation(missingInformation)
-    }
-  }
-
   const allEvidenceSatisfactory =
     requirements.length > 0 &&
     requirements.every((r) => r.reviewOutcome === 'Satisfactory')
@@ -417,18 +403,28 @@ const DesignatedActionDetailBase = () => {
                 // only; directors see the review without controls that
                 // would be refused.
                 canEdit={canRecommend}
-                missingInformation={missingInformation}
-                onMissingInformationChange={setMissingInformation}
-                onMissingInformationBlur={commitMissingInformation}
-                missingInformationReadOnly={!canRecommend}
+                renderRequirementActions={(requirement, missingInformation) => (
+                  <DesignatedActionWorkflow
+                    designatedActionId={designatedActionId}
+                    evidenceRequirementId={requirement.evidenceRequirementId}
+                    availableActions={action.availableActions.filter(
+                      (workflowAction) =>
+                        workflowAction === ACTION_REQUEST_INFORMATION
+                    )}
+                    missingInformation={missingInformation}
+                    placement={PLACEMENT_EVIDENCE}
+                    onChanged={refreshAction}
+                  />
+                )}
                 actions={
                   <DesignatedActionWorkflow
                     designatedActionId={designatedActionId}
-                    availableActions={action.availableActions}
+                    availableActions={action.availableActions.filter(
+                      (workflowAction) => workflowAction === ACTION_ACCEPT
+                    )}
                     recommendedCredits={action.recommendedCredits}
                     allEvidenceSatisfactory={allEvidenceSatisfactory}
                     hasRequirements={requirements.length > 0}
-                    missingInformation={missingInformation}
                     placement={PLACEMENT_EVIDENCE}
                     onChanged={refreshAction}
                   />

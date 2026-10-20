@@ -109,6 +109,7 @@ describe('DesignatedActionWorkflow', () => {
     render(
       <DesignatedActionWorkflow
         designatedActionId="9"
+        evidenceRequirementId={2}
         availableActions={analystActions}
         allEvidenceSatisfactory={false}
         missingInformation="The signed permit."
@@ -144,11 +145,11 @@ describe('DesignatedActionWorkflow', () => {
     )
   })
 
-  it('sends the Missing information box when requesting information', () => {
-    // The reason is on the page (#5118); there is nothing more to ask.
+  it('sends the selected EOC and its Missing information when requesting', () => {
     render(
       <DesignatedActionWorkflow
         designatedActionId="9"
+        evidenceRequirementId={7}
         availableActions={analystActions}
         allEvidenceSatisfactory
         missingInformation="  Send the signed permit.  "
@@ -160,7 +161,11 @@ describe('DesignatedActionWorkflow', () => {
 
     expect(screen.queryByTestId('workflow-comment')).not.toBeInTheDocument()
     expect(mockPerform).toHaveBeenCalledWith(
-      { action: 'request_information', comment: 'Send the signed permit.' },
+      {
+        action: 'request_information',
+        evidenceRequirementId: 7,
+        comment: 'Send the signed permit.'
+      },
       expect.anything()
     )
   })
@@ -169,6 +174,7 @@ describe('DesignatedActionWorkflow', () => {
     render(
       <DesignatedActionWorkflow
         designatedActionId="9"
+        evidenceRequirementId={7}
         availableActions={analystActions}
         allEvidenceSatisfactory
         missingInformation="   "
@@ -183,6 +189,19 @@ describe('DesignatedActionWorkflow', () => {
       'aria-label',
       expect.stringContaining('blockedNoMissingInformation')
     )
+  })
+
+  it('cannot request information without an EOC identifier', () => {
+    render(
+      <DesignatedActionWorkflow
+        designatedActionId="9"
+        availableActions={analystActions}
+        missingInformation="The signed permit."
+      />,
+      { wrapper }
+    )
+
+    expect(screen.getByTestId('workflow-request_information')).toBeDisabled()
   })
 
   it('asks why before not recommending', () => {

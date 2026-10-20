@@ -74,6 +74,7 @@ async def test_requirements_are_added_numbered_and_listed_in_order(
 
     assert first.status_code == status.HTTP_201_CREATED
     assert first.json()["requirementNumber"] == 1
+    assert first.json()["designatedActionId"] == action.designated_action_id
     assert second.json()["requirementNumber"] == 2
 
     listed = await client.get(_list_url(fastapi_app, action))
@@ -86,6 +87,7 @@ async def test_requirements_are_added_numbered_and_listed_in_order(
     # Nothing is reviewed until someone reviews it.
     assert all(r["reviewOutcome"] is None for r in rows)
     assert all(r["reviewedBy"] is None for r in rows)
+    assert all(r["missingInformation"] is None for r in rows)
 
 
 @pytest.mark.anyio
@@ -116,6 +118,77 @@ async def test_recording_an_assessment_stamps_who_and_when(
     assert data["reviewNotes"] == "Copies filed in the evidence folder."
     assert data["reviewedDate"] is not None
     assert data["reviewedBy"]["firstName"] is not None
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("cleared_value", ["   ", None])
+async def test_missing_information_is_saved_and_cleared_per_requirement(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession, cleared_value
+):
+    action = await _seed_da(dbsession, "IA-26EOC-MISSING")
+    first = EvidenceRequirement(
+        designated_action_id=action.designated_action_id,
+        requirement_number=1,
+        description="Signed permit",
+    )
+    second = EvidenceRequirement(
+        designated_action_id=action.designated_action_id,
+        requirement_number=2,
+        description="Risk register",
+    )
+    dbsession.add_all([first, second])
+    await dbsession.flush()
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    saved = await client.put(
+        _update_url(fastapi_app, first.evidence_requirement_id),
+        json={"missingInformation": "  Provide the signed permit.  "},
+    )
+    listed = await client.get(_list_url(fastapi_app, action))
+
+    assert saved.status_code == status.HTTP_200_OK
+    assert saved.json()["missingInformation"] == "Provide the signed permit."
+    assert [row["missingInformation"] for row in listed.json()] == [
+        "Provide the signed permit.",
+        None,
+    ]
+
+    unchanged = await client.put(
+        _update_url(fastapi_app, first.evidence_requirement_id),
+        json={"reviewNotes": "Keep the saved request."},
+    )
+    assert unchanged.status_code == status.HTTP_200_OK
+    assert unchanged.json()["missingInformation"] == "Provide the signed permit."
+
+    cleared = await client.put(
+        _update_url(fastapi_app, first.evidence_requirement_id),
+        json={"missingInformation": cleared_value},
+    )
+
+    assert cleared.status_code == status.HTTP_200_OK
+    assert cleared.json()["missingInformation"] is None
+
+
+@pytest.mark.anyio
+async def test_directors_cannot_edit_eoc_missing_information(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    action = await _seed_da(dbsession, "IA-26EOC-MISSING-DIRECTOR")
+    requirement = EvidenceRequirement(
+        designated_action_id=action.designated_action_id,
+        requirement_number=1,
+        description="Signed permit",
+    )
+    dbsession.add(requirement)
+    await dbsession.flush()
+    set_mock_user(fastapi_app, IDIR_DIRECTOR)
+
+    response = await client.put(
+        _update_url(fastapi_app, requirement.evidence_requirement_id),
+        json={"missingInformation": "Not the director's text."},
+    )
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.anyio
@@ -197,6 +270,10 @@ async def test_removing_a_requirement_hides_it_but_keeps_the_record(
         json={"title": "Withdrawn requirement", "description": "Withdrawn requirement"},
     )
     requirement_id = created.json()["evidenceRequirementId"]
+    await client.put(
+        _update_url(fastapi_app, requirement_id),
+        json={"missingInformation": "The permit renewal date."},
+    )
 
     removed = await client.delete(
         fastapi_app.url_path_for(
@@ -217,6 +294,7 @@ async def test_removing_a_requirement_hides_it_but_keeps_the_record(
         )
     ).scalar_one()
     assert row.is_active is False
+    assert row.missing_information == "The permit renewal date."
 
 
 @pytest.mark.anyio

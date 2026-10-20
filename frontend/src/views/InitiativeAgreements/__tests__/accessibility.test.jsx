@@ -74,7 +74,6 @@ vi.mock('@/hooks/useInitiativeAgreements', () => ({
   useDeleteEvidenceRequirement: () => ({ mutate: vi.fn() }),
   useDesignatedActionWorkflow: () => ({ mutate: vi.fn(), isPending: false }),
   useSetRecommendedCredits: () => ({ mutate: vi.fn() }),
-  useSetMissingInformation: () => ({ mutate: vi.fn() }),
   useDesignatedActionHistory: () => ({
     data: [
       {
