@@ -4,17 +4,16 @@ import { useMatches, Outlet } from 'react-router-dom'
 import PublicLayout from '../PublicLayout'
 import { test } from '@/tests/utils/fixtures'
 
+const routerMocks = vi.hoisted(() => ({
+  useMatches: vi.fn(),
+  Outlet: vi.fn()
+}))
+
 // Mock react-router-dom
-vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual('react-router-dom')
-  return {
-    ...actual,
-    useMatches: vi.fn(),
-    Outlet: vi
-      .fn()
-      .mockReturnValue(<div data-test="outlet-content">Child Content</div>)
-  }
-})
+vi.mock('react-router-dom', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('react-router-dom')>()),
+  ...routerMocks
+}))
 
 const mockedUseMatches = useMatches as unknown as Mock
 const mockedOutlet = Outlet as unknown as Mock
@@ -22,6 +21,9 @@ const mockedOutlet = Outlet as unknown as Mock
 describe('PublicLayout', () => {
   test.beforeEach(() => {
     vi.clearAllMocks()
+    routerMocks.Outlet.mockReturnValue(
+      <div data-test="outlet-content">Child Content</div>
+    )
   })
 
   test('renders children via Outlet component', ({

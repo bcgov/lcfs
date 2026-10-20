@@ -18,9 +18,11 @@ const createWrapper = () => {
       mutations: { retry: false }
     }
   })
-  return ({ children }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  )
+  return function QueryClientWrapper({ children }) {
+    return (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    )
+  }
 }
 
 describe('useMentionableUsers', () => {
