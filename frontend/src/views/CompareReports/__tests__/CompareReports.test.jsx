@@ -1,10 +1,10 @@
-import { fireEvent, render, screen, waitFor, act } from '@testing-library/react'
+import { fireEvent, screen, waitFor, act } from '@testing-library/react'
 import { vi } from 'vitest'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useGetComplianceReportSummary } from '@/hooks/useComplianceReports'
 import useComplianceReportStore from '@/stores/useComplianceReportStore'
 import { CompareReports } from '@/views/CompareReports/CompareReports'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 
 // Mock hooks and stores
@@ -170,8 +170,11 @@ describe('CompareReports Component', () => {
     vi.clearAllMocks()
   })
 
-  it('initializes with default report selections in correct order', () => {
-    render(<CompareReports />, { wrapper })
+  test('initializes with default report selections in correct order', ({
+    render,
+    theme
+  }) => {
+    render(<CompareReports />, [theme])
 
     const report1Select = screen.getAllByRole('combobox')[0]
     const report2Select = screen.getAllByRole('combobox')[1]
@@ -181,8 +184,11 @@ describe('CompareReports Component', () => {
     expect(report2Select).toHaveTextContent('Government Adjustment 2')
   })
 
-  it('ensures column ordering follows chronological order (earliest left, latest right)', () => {
-    render(<CompareReports />, { wrapper })
+  test('ensures column ordering follows chronological order (earliest left, latest right)', ({
+    render,
+    theme
+  }) => {
+    render(<CompareReports />, [theme])
 
     const report1Select = screen.getAllByRole('combobox')[0]
     const report2Select = screen.getAllByRole('combobox')[1]
@@ -202,8 +208,11 @@ describe('CompareReports Component', () => {
     expect(report2Select).toHaveTextContent('Original Report')
   })
 
-  it('does not label reports as not assessed when no assessed report exists in the chain', async () => {
-    render(<CompareReports />, { wrapper })
+  test('does not label reports as not assessed when no assessed report exists in the chain', async ({
+    render,
+    theme
+  }) => {
+    render(<CompareReports />, [theme])
 
     await waitFor(() => {
       expect(
@@ -212,8 +221,8 @@ describe('CompareReports Component', () => {
     })
   })
 
-  it('allows selecting different reports', async () => {
-    render(<CompareReports />, { wrapper })
+  test('allows selecting different reports', async ({ render, theme }) => {
+    render(<CompareReports />, [theme])
 
     const report1Select = screen.getAllByRole('combobox')[0]
     const report2Select = screen.getAllByRole('combobox')[1]
@@ -237,8 +246,11 @@ describe('CompareReports Component', () => {
     expect(report2Select).toHaveTextContent('Supplemental Report 1')
   })
 
-  it('should not allow selecting the same report in both dropdowns', async () => {
-    render(<CompareReports />, { wrapper })
+  test('should not allow selecting the same report in both dropdowns', async ({
+    render,
+    theme
+  }) => {
+    render(<CompareReports />, [theme])
 
     const report1Select = screen.getAllByRole('combobox')[0]
     const report2Select = screen.getAllByRole('combobox')[1]
@@ -266,8 +278,11 @@ describe('CompareReports Component', () => {
     ).toBeInTheDocument()
   })
 
-  it('displays data in CompareTable when reports are selected by default', async () => {
-    render(<CompareReports />, { wrapper })
+  test('displays data in CompareTable when reports are selected by default', async ({
+    render,
+    theme
+  }) => {
+    render(<CompareReports />, [theme])
 
     // The component automatically selects the two most recent reports,
     // so we should see data in the tables immediately
@@ -286,8 +301,11 @@ describe('CompareReports Component', () => {
     expect(value70Elements.length).toBeGreaterThan(0)
   })
 
-  it('displays correct data in CompareTable after changing report selections', async () => {
-    render(<CompareReports />, { wrapper })
+  test('displays correct data in CompareTable after changing report selections', async ({
+    render,
+    theme
+  }) => {
+    render(<CompareReports />, [theme])
 
     const report1Select = screen.getAllByRole('combobox')[0]
     const report2Select = screen.getAllByRole('combobox')[1]
@@ -321,26 +339,29 @@ describe('CompareReports Component', () => {
     expect(value70Elements.length).toBeGreaterThan(0)
   })
 
-  it('shows loading state when isLoading is true', () => {
+  test('shows loading state when isLoading is true', ({ render, theme }) => {
     // Mock loading state
     useComplianceReportStore.mockReturnValue({ currentReport: null })
-    
-    render(<CompareReports />, { wrapper })
-    
+
+    render(<CompareReports />, [theme])
+
     // Should show loading component
     expect(screen.getByTestId('loading')).toBeInTheDocument()
   })
 
-  it('handles no currentReport scenario', () => {
+  test('handles no currentReport scenario', ({ render, theme }) => {
     useComplianceReportStore.mockReturnValue({ currentReport: null })
-    
-    render(<CompareReports />, { wrapper })
-    
+
+    render(<CompareReports />, [theme])
+
     // Should show loading when no currentReport
     expect(screen.getByTestId('loading')).toBeInTheDocument()
   })
 
-  it('handles report chain with less than 2 reports', async () => {
+  test('handles report chain with less than 2 reports', async ({
+    render,
+    theme
+  }) => {
     useComplianceReportStore.mockReturnValue({
       currentReport: {
         chain: [mockReportChain[0]], // Only one report
@@ -349,7 +370,7 @@ describe('CompareReports Component', () => {
     })
 
     await act(async () => {
-      render(<CompareReports />, { wrapper })
+      render(<CompareReports />, [theme])
     })
 
     // Should render selects but with no default selections
@@ -357,7 +378,7 @@ describe('CompareReports Component', () => {
     expect(selects).toHaveLength(2)
   })
 
-  it('handles empty report chain', async () => {
+  test('handles empty report chain', async ({ render, theme }) => {
     useComplianceReportStore.mockReturnValue({
       currentReport: {
         chain: [], // Empty chain
@@ -366,7 +387,7 @@ describe('CompareReports Component', () => {
     })
 
     await act(async () => {
-      render(<CompareReports />, { wrapper })
+      render(<CompareReports />, [theme])
     })
 
     // Should render selects but with no options
@@ -374,7 +395,10 @@ describe('CompareReports Component', () => {
     expect(selects).toHaveLength(2)
   })
 
-  it('handles data processing with missing matching rows', () => {
+  test('handles data processing with missing matching rows', ({
+    render,
+    theme
+  }) => {
     // Mock report data where second report has no matching rows
     const incompleteReportData2 = {
       data: {
@@ -392,14 +416,18 @@ describe('CompareReports Component', () => {
       return { data: null }
     })
 
-    render(<CompareReports />, { wrapper })
+    render(<CompareReports />, [theme])
 
     // Should render without errors even with incomplete data
-    expect(screen.getAllByText(/renewableFuelTargetSummary/i).length).toBeGreaterThan(0)
+    expect(
+      screen.getAllByText(/renewableFuelTargetSummary/i).length
+    ).toBeGreaterThan(0)
   })
 
-
-  it('handles conflict resolution when no available alternatives exist', async () => {
+  test('handles conflict resolution when no available alternatives exist', async ({
+    render,
+    theme
+  }) => {
     // Test with only 2 reports to force edge case
     useComplianceReportStore.mockReturnValue({
       currentReport: {
@@ -408,7 +436,7 @@ describe('CompareReports Component', () => {
       }
     })
 
-    render(<CompareReports />, { wrapper })
+    render(<CompareReports />, [theme])
 
     const report1Select = screen.getAllByRole('combobox')[0]
     const report2Select = screen.getAllByRole('combobox')[1]
@@ -418,15 +446,21 @@ describe('CompareReports Component', () => {
     expect(report2Select).toBeInTheDocument()
   })
 
-  it('processes different fuel types correctly', async () => {
-    render(<CompareReports />, { wrapper })
+  test('processes different fuel types correctly', async ({
+    render,
+    theme
+  }) => {
+    render(<CompareReports />, [theme])
 
     // Should render fuel control buttons and allow fuel type changes
     const renewableTable = screen.getByText('report:renewableFuelTargetSummary')
     expect(renewableTable).toBeInTheDocument()
   })
 
-  it('labels non-assessed reports when an assessed report exists in the chain', async () => {
+  test('labels non-assessed reports when an assessed report exists in the chain', async ({
+    render,
+    theme
+  }) => {
     useComplianceReportStore.mockReturnValue({
       currentReport: {
         chain: [
@@ -449,7 +483,7 @@ describe('CompareReports Component', () => {
       }
     })
 
-    render(<CompareReports />, { wrapper })
+    render(<CompareReports />, [theme])
 
     await waitFor(() => {
       // Original Report is not assessed, so it should show the not-assessed label
@@ -459,7 +493,10 @@ describe('CompareReports Component', () => {
     })
   })
 
-  it('does not label a report as not assessed when no report in the chain is assessed', async () => {
+  test('does not label a report as not assessed when no report in the chain is assessed', async ({
+    render,
+    theme
+  }) => {
     useComplianceReportStore.mockReturnValue({
       currentReport: {
         chain: [
@@ -476,7 +513,7 @@ describe('CompareReports Component', () => {
       }
     })
 
-    render(<CompareReports />, { wrapper })
+    render(<CompareReports />, [theme])
 
     await waitFor(() => {
       expect(
@@ -485,7 +522,10 @@ describe('CompareReports Component', () => {
     })
   })
 
-  it('auto-selects the available fuel type and disables empty options', async () => {
+  test('auto-selects the available fuel type and disables empty options', async ({
+    render,
+    theme
+  }) => {
     const dieselOnlySummary = {
       data: {
         complianceReportId: 2,
@@ -528,7 +568,7 @@ describe('CompareReports Component', () => {
 
     useGetComplianceReportSummary.mockImplementation(() => dieselOnlySummary)
 
-    render(<CompareReports />, { wrapper })
+    render(<CompareReports />, [theme])
 
     await waitFor(() => {
       expect(screen.getByDisplayValue('diesel')).toBeChecked()
@@ -538,7 +578,10 @@ describe('CompareReports Component', () => {
     expect(screen.getByDisplayValue('jetFuel')).toBeDisabled()
   })
 
-  it('prefers gasoline when multiple fuel categories have content', async () => {
+  test('prefers gasoline when multiple fuel categories have content', async ({
+    render,
+    theme
+  }) => {
     const multiFuelSummary = {
       data: {
         complianceReportId: 2,
@@ -567,7 +610,7 @@ describe('CompareReports Component', () => {
 
     useGetComplianceReportSummary.mockImplementation(() => multiFuelSummary)
 
-    render(<CompareReports />, { wrapper })
+    render(<CompareReports />, [theme])
 
     await waitFor(() => {
       expect(screen.getByDisplayValue('gasoline')).toBeChecked()
@@ -576,31 +619,40 @@ describe('CompareReports Component', () => {
     expect(screen.getByDisplayValue('diesel')).not.toBeDisabled()
   })
 
-  it('handles null/undefined data values in processing', () => {
+  test('handles null/undefined data values in processing', ({
+    render,
+    theme
+  }) => {
     // Mock data with null/undefined values
     const nullValueReportData = {
       data: {
         complianceReportId: 1,
-        renewableFuelTargetSummary: [{
-          line: 1,
-          description: 'test',
-          format: 'number',
-          gasoline: null
-        }],
-        lowCarbonFuelTargetSummary: [{
-          line: 1,
-          description: 'test',
-          format: 'number',
-          value: null
-        }],
-        nonCompliancePenaltySummary: [{
-          line: 1,
-          description: 'test',
-          format: 'number',
-          value: null,
-          totalValue: null,
-          amount: null
-        }]
+        renewableFuelTargetSummary: [
+          {
+            line: 1,
+            description: 'test',
+            format: 'number',
+            gasoline: null
+          }
+        ],
+        lowCarbonFuelTargetSummary: [
+          {
+            line: 1,
+            description: 'test',
+            format: 'number',
+            value: null
+          }
+        ],
+        nonCompliancePenaltySummary: [
+          {
+            line: 1,
+            description: 'test',
+            format: 'number',
+            value: null,
+            totalValue: null,
+            amount: null
+          }
+        ]
       }
     }
 
@@ -610,21 +662,29 @@ describe('CompareReports Component', () => {
       return { data: null }
     })
 
-    render(<CompareReports />, { wrapper })
+    render(<CompareReports />, [theme])
 
     // Should handle null values without errors
-    expect(screen.getAllByText(/renewableFuelTargetSummary/i).length).toBeGreaterThan(0)
+    expect(
+      screen.getAllByText(/renewableFuelTargetSummary/i).length
+    ).toBeGreaterThan(0)
   })
 
-  it('displays correct report names when reports are selected', () => {
-    render(<CompareReports />, { wrapper })
+  test('displays correct report names when reports are selected', ({
+    render,
+    theme
+  }) => {
+    render(<CompareReports />, [theme])
 
     // Report names should be resolved correctly from the chain
     const tables = screen.getAllByRole('table')
     expect(tables.length).toBeGreaterThan(0)
   })
 
-  it('handles non-compliance penalty data with different field names', () => {
+  test('handles non-compliance penalty data with different field names', ({
+    render,
+    theme
+  }) => {
     // Test different field combinations for non-compliance penalty
     const diverseReportData = {
       data: {
@@ -640,7 +700,7 @@ describe('CompareReports Component', () => {
           },
           {
             line: 2,
-            description: 'test2', 
+            description: 'test2',
             format: 'number',
             totalValue: 200 // Using totalValue field
           },
@@ -666,13 +726,18 @@ describe('CompareReports Component', () => {
       return { data: null }
     })
 
-    render(<CompareReports />, { wrapper })
+    render(<CompareReports />, [theme])
 
     // Should process all different field types without errors
-    expect(screen.getAllByText(/nonCompliancePenaltySummary/i).length).toBeGreaterThan(0)
+    expect(
+      screen.getAllByText(/nonCompliancePenaltySummary/i).length
+    ).toBeGreaterThan(0)
   })
 
-  it('handles report selection with single report available', async () => {
+  test('handles report selection with single report available', async ({
+    render,
+    theme
+  }) => {
     // Test edge case where only one report is available for selection
     useComplianceReportStore.mockReturnValue({
       currentReport: {
@@ -681,11 +746,11 @@ describe('CompareReports Component', () => {
       }
     })
 
-    render(<CompareReports />, { wrapper })
+    render(<CompareReports />, [theme])
 
     const selects = screen.getAllByRole('combobox')
     expect(selects).toHaveLength(2)
-    
+
     // Each select should be present but may have limited options
     expect(selects[0]).toBeInTheDocument()
     expect(selects[1]).toBeInTheDocument()
@@ -703,7 +768,10 @@ describe('CompareReports Component', () => {
         value: 999
       }))
 
-    it('marks lines 12,13,14,16,19 as greyed for a 2023 compliance period', async () => {
+    test('marks lines 12,13,14,16,19 as greyed for a 2023 compliance period', async ({
+      render,
+      theme
+    }) => {
       const allLines = [...greyedLines, ...greyedLinesPre2023, 15, 18, 20]
       const summary = {
         data: {
@@ -725,7 +793,7 @@ describe('CompareReports Component', () => {
       })
       useGetComplianceReportSummary.mockReturnValue(summary)
 
-      render(<CompareReports />, { wrapper })
+      render(<CompareReports />, [theme])
 
       // Lines 12,13,14,16,19 should have greyed=true so values are suppressed
       // They appear in the DOM but value cells should be empty (greyed out)
@@ -734,7 +802,10 @@ describe('CompareReports Component', () => {
       })
     })
 
-    it('does NOT grey lines 17,22 for a 2023 compliance period', async () => {
+    test('does NOT grey lines 17,22 for a 2023 compliance period', async ({
+      render,
+      theme
+    }) => {
       const summary = {
         data: {
           complianceReportId: 2,
@@ -755,7 +826,7 @@ describe('CompareReports Component', () => {
       })
       useGetComplianceReportSummary.mockReturnValue(summary)
 
-      render(<CompareReports />, { wrapper })
+      render(<CompareReports />, [theme])
 
       // Lines 17 and 22 should NOT be greyed for 2023
       await waitFor(() => {
@@ -764,7 +835,10 @@ describe('CompareReports Component', () => {
       })
     })
 
-    it('greys lines 17 and 22 for 2022 compliance period', async () => {
+    test('greys lines 17 and 22 for 2022 compliance period', async ({
+      render,
+      theme
+    }) => {
       const summary = {
         data: {
           complianceReportId: 2,
@@ -785,7 +859,7 @@ describe('CompareReports Component', () => {
       })
       useGetComplianceReportSummary.mockReturnValue(summary)
 
-      render(<CompareReports />, { wrapper })
+      render(<CompareReports />, [theme])
 
       await waitFor(() => {
         expect(screen.getByText('Line 17')).toBeInTheDocument()
@@ -793,7 +867,10 @@ describe('CompareReports Component', () => {
       })
     })
 
-    it('does NOT grey any low carbon lines for a 2024 compliance period', async () => {
+    test('does NOT grey any low carbon lines for a 2024 compliance period', async ({
+      render,
+      theme
+    }) => {
       const allTargetLines = [12, 13, 14, 16, 17, 19, 22]
       const summary = {
         data: {
@@ -815,7 +892,7 @@ describe('CompareReports Component', () => {
       })
       useGetComplianceReportSummary.mockReturnValue(summary)
 
-      render(<CompareReports />, { wrapper })
+      render(<CompareReports />, [theme])
 
       await waitFor(() => {
         allTargetLines.forEach((line) => {
@@ -824,7 +901,10 @@ describe('CompareReports Component', () => {
       })
     })
 
-    it('sets report1, report2 and delta to null for greyed rows', async () => {
+    test('sets report1, report2 and delta to null for greyed rows', async ({
+      render,
+      theme
+    }) => {
       const summary = {
         data: {
           complianceReportId: 2,
@@ -848,7 +928,7 @@ describe('CompareReports Component', () => {
       })
       useGetComplianceReportSummary.mockReturnValue(summary)
 
-      render(<CompareReports />, { wrapper })
+      render(<CompareReports />, [theme])
 
       // Line 12 is greyed: value 500 must NOT appear in the table
       await waitFor(() => {
@@ -857,7 +937,10 @@ describe('CompareReports Component', () => {
       expect(screen.queryByText('500')).not.toBeInTheDocument()
     })
 
-    it('does not break when compliancePeriodYear is missing from store', () => {
+    test('does not break when compliancePeriodYear is missing from store', ({
+      render,
+      theme
+    }) => {
       useComplianceReportStore.mockReturnValue({
         currentReport: {
           chain: mockReportChain.slice(0, 2),
@@ -866,7 +949,7 @@ describe('CompareReports Component', () => {
       })
       useGetComplianceReportSummary.mockReturnValue(reportData1)
 
-      expect(() => render(<CompareReports />, { wrapper })).not.toThrow()
+      expect(() => render(<CompareReports />, [theme])).not.toThrow()
     })
   })
 })

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { Box, Stack } from '@mui/material'
+import Box from '@mui/material/Box'
+import Stack from '@mui/material/Stack'
 
 import BCTypography from '@/components/BCTypography'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
@@ -14,23 +15,42 @@ import {
 } from '@/views/FuelCodes/AddFuelCode/_schema'
 import type { OptionsData } from '@/types/schema'
 
+import type { ColDef, CellValueChangedEvent, EditableCallbackParams, RowClassParams, GetRowIdParams } from 'ag-grid-community'
+import type { AgGridReact } from 'ag-grid-react'
+import type { BCAlert2Handle } from '@/components/BCAlert/BCAlert2'
+import type { BCGridEditContext, BCGridRow } from '@/components/BCDataGrid/types'
+import { omitProperties } from '@/utils/omitProperties'
+
+interface GeneratedFuelCode extends Record<string, unknown> {
+  id: string
+  isValid?: boolean
+  validationErrors?: Record<string, unknown>
+  validationMsg?: string | Record<string, unknown>
+  validationStatus?: string
+  modified?: boolean
+}
+interface ValidationDetail { loc?: string | (string | number)[]; msg?: string }
+interface RequestError {
+  message?: string
+  response?: {data?: {errors?: {fields?: string[]; message?: string}[]; detail?: string | ValidationDetail[]}}
+}
 type GeneratedFuelCodesSectionProps = {
-  ciApplication: any
+  ciApplication: {ciApplicationId?: number; generatedFuelCodes?: GeneratedFuelCode[]}
   readOnly?: boolean
 }
 
-const getValidationStatus = (row: any) => {
+const getValidationStatus = (row: GeneratedFuelCode) => {
   if (row?.isValid) return 'success'
   if (row?.validationErrors || row?.validationMsg) return 'error'
   return undefined
 }
 
-const toGridRow = (row: any) => ({
+const toGridRow = (row: GeneratedFuelCode) => ({
   ...row,
   validationStatus: getValidationStatus(row)
 })
 
-const getValidationFields = (row: any) =>
+const getValidationFields = (row: GeneratedFuelCode) =>
   Object.keys(
     row?.validationErrors ||
       (row?.validationMsg && typeof row.validationMsg === 'object'
@@ -38,7 +58,7 @@ const getValidationFields = (row: any) =>
         : {})
   )
 
-const toErrorMap = (rows: any[]) =>
+const toErrorMap = (rows: GeneratedFuelCode[]) =>
   rows.reduce(
     (acc, row) => {
       const rowErrors = getValidationFields(row)
@@ -50,17 +70,8 @@ const toErrorMap = (rows: any[]) =>
     {} as Record<string, string[]>
   )
 
-const toUpdatePayload = (row: any) => {
-  const {
-    id,
-    pathwayId,
-    pathwayLabel,
-    isValid,
-    validationMsg,
-    validationErrors,
-    validationStatus,
-    ...rest
-  } = row
+const toUpdatePayload = (row: GeneratedFuelCode) => {
+  const rest = omitProperties(row, ['id', 'pathwayId', 'pathwayLabel', 'isValid', 'validationMsg', 'validationErrors', 'validationStatus'])
   return {
     ...rest,
     feedstockFuelTransportMode: normalizeTransportModeDistancesForSave(
@@ -72,10 +83,10 @@ const toUpdatePayload = (row: any) => {
   }
 }
 
-const replaceRow = (rows: any[], nextRow: any) =>
+const replaceRow = (rows: GeneratedFuelCode[], nextRow: GeneratedFuelCode) =>
   rows.map((row) => (row.id === nextRow.id ? nextRow : row))
 
-const mergeIncomingRows = (currentRows: any[], incomingRows: any[]) => {
+const mergeIncomingRows = (currentRows: GeneratedFuelCode[], incomingRows: GeneratedFuelCode[]) => {
   const currentRowsById = new Map(currentRows.map((row) => [row.id, row]))
 
   return incomingRows.map((incomingRow) => {
@@ -84,7 +95,7 @@ const mergeIncomingRows = (currentRows: any[], incomingRows: any[]) => {
   })
 }
 
-const formatFastApiDetail = (detail: any) => {
+const formatFastApiDetail = (detail: string | ValidationDetail[] | undefined) => {
   if (!Array.isArray(detail)) return detail
   return detail
     .map((item) => {
@@ -95,37 +106,38 @@ const formatFastApiDetail = (detail: any) => {
     .join('; ')
 }
 
-const getErrorMessage = (error: any, fallback: string) => {
-  if (error?.response?.data?.errors?.[0]) {
-    const { fields, message } = error.response.data.errors[0]
+const getErrorMessage = (error: unknown, fallback: string) => {
+  const requestError = error as RequestError
+  if (requestError?.response?.data?.errors?.[0]) {
+    const { fields, message } = requestError.response.data.errors[0]
     const fieldText = fields?.length === 1 ? `${fields[0]} ` : ''
     return `Unable to save row: ${fieldText}${message}`
   }
   return (
-    formatFastApiDetail(error?.response?.data?.detail) ||
-    error?.message ||
+    formatFastApiDetail(requestError?.response?.data?.detail) ||
+    requestError?.message ||
     fallback
   )
 }
 
-const getErrorFields = (error: any) =>
-  error?.response?.data?.errors?.[0]?.fields || []
+const getErrorFields = (error: unknown) =>
+  (error as RequestError)?.response?.data?.errors?.[0]?.fields || []
 
 export const GeneratedFuelCodesSection = ({
   ciApplication,
   readOnly = false
 }: GeneratedFuelCodesSectionProps) => {
   const { t } = useTranslation(['carbonIntensity'])
-  const gridRef = useRef<any>(null)
-  const alertRef = useRef<any>(null)
+  const gridRef = useRef<AgGridReact<BCGridRow> | null>(null)
+  const alertRef = useRef<BCAlert2Handle | null>(null)
   const ciApplicationId = ciApplication?.ciApplicationId
   const { data: fuelCodeOptions } = useFuelCodeOptions({}, {})
   const { mutateAsync: updateGeneratedFuelCode } =
     useUpdateCIApplicationGeneratedFuelCode(ciApplicationId)
 
   const previousCIApplicationId = useRef(ciApplicationId)
-  const rowDataRef = useRef<any[]>([])
-  const [rowData, setRowData] = useState<any[]>([])
+  const rowDataRef = useRef<GeneratedFuelCode[]>([])
+  const [rowData, setRowData] = useState<GeneratedFuelCode[]>([])
   const [errors, setErrors] = useState<Record<string, string[]>>({})
   const [pendingUpdates, setPendingUpdates] = useState<Set<string>>(new Set())
   const [isUpdating, setIsUpdating] = useState(false)
@@ -152,14 +164,16 @@ export const GeneratedFuelCodesSection = ({
       !readOnly,
       false,
       true
-    ).map((col: any) => {
+    ).map((col: ColDef<GeneratedFuelCode>) => {
       if (col.colId === 'action') {
         return { ...col, hide: true }
       }
       return {
         ...col,
-        editable: (params: any) => {
-          const isRowUpdating = pendingUpdates.has(params.data.id)
+        editable: (params: EditableCallbackParams<GeneratedFuelCode>) => {
+          const isRowUpdating = pendingUpdates.has(
+            (params.data as GeneratedFuelCode).id
+          )
           const originalEditable =
             typeof col.editable === 'function'
               ? col.editable(params)
@@ -197,8 +211,10 @@ export const GeneratedFuelCodesSection = ({
   )
 
   const getRowStyle = useCallback(
-    (params: any) => {
-      const isRowUpdating = pendingUpdates.has(params.data.id)
+    (params: RowClassParams<BCGridRow>) => {
+      const isRowUpdating = pendingUpdates.has(
+        (params.data as GeneratedFuelCode).id
+      )
       return {
         opacity: isRowUpdating ? 0.6 : 1,
         pointerEvents: isRowUpdating ? 'none' : 'auto',
@@ -208,9 +224,9 @@ export const GeneratedFuelCodesSection = ({
     [pendingUpdates]
   )
 
-  const onCellValueChanged = useCallback((params: any) => {
+  const onCellValueChanged = useCallback((params: CellValueChangedEvent<BCGridRow>) => {
     const updatedData = {
-      ...params.data,
+      ...(params.data as GeneratedFuelCode),
       modified: true
     }
     params.api.applyTransaction({ update: [updatedData] })
@@ -222,7 +238,7 @@ export const GeneratedFuelCodesSection = ({
   }, [])
 
   const updateRowWithValidation = useCallback(
-    async (updatedData: any) => {
+    async (updatedData: GeneratedFuelCode) => {
       const rowId = updatedData.id
 
       setPendingUpdates((prev) => new Set([...prev, rowId]))
@@ -230,15 +246,16 @@ export const GeneratedFuelCodesSection = ({
       setErrors((prev) => ({ ...prev, [rowId]: [] }))
 
       try {
-        const updatedRow = await updateGeneratedFuelCode({
+        const updatedResponse = await updateGeneratedFuelCode({
           generatedFuelCodeId: rowId,
           payload: toUpdatePayload(updatedData)
         })
+        const updatedRow = updatedResponse as GeneratedFuelCode
         const nextRow = toGridRow(updatedRow)
         const nextMessage = nextRow.isValid
           ? t('carbonIntensity:step5.generatedFuelCodeRowSaved')
-          : nextRow.validationMsg ||
-            t('carbonIntensity:step5.generatedFuelCodeRowIncomplete')
+          : (nextRow.validationMsg ||
+              t('carbonIntensity:step5.generatedFuelCodeRowIncomplete')) as string
         setErrors((prev) => ({
           ...prev,
           [nextRow.id]: getValidationFields(nextRow)
@@ -248,7 +265,7 @@ export const GeneratedFuelCodesSection = ({
           severity: nextRow.isValid ? 'success' : 'warning'
         })
         return nextRow
-      } catch (error: any) {
+      } catch (error) {
         const fallback = t(
           'carbonIntensity:step5.generatedFuelCodeRowSaveError'
         )
@@ -280,10 +297,11 @@ export const GeneratedFuelCodesSection = ({
   )
 
   const onCellEditingStopped = useCallback(
-    async (params: any) => {
+    async (params: BCGridEditContext<BCGridRow>) => {
       if (params.oldValue === params.newValue) return
 
-      const rowId = params.node.data.id
+      const currentRow = params.node.data as GeneratedFuelCode
+      const rowId = currentRow.id
       if (pendingUpdates.has(rowId)) {
         alertRef.current?.triggerAlert?.({
           message: 'Please wait for the current update to complete.',
@@ -292,7 +310,7 @@ export const GeneratedFuelCodesSection = ({
         return
       }
 
-      const pendingRow = { ...params.node.data, validationStatus: 'pending' }
+      const pendingRow = { ...currentRow, validationStatus: 'pending' }
       params.node.updateData(pendingRow)
       alertRef.current?.triggerAlert?.({
         message: 'Updating row...',
@@ -323,7 +341,7 @@ export const GeneratedFuelCodesSection = ({
       <BCGridEditor
         gridRef={gridRef}
         alertRef={alertRef}
-        columnDefs={columnDefs}
+        columnDefs={columnDefs as ColDef<BCGridRow>[]}
         defaultColDef={defaultColDef}
         rowData={rowData}
         onCellValueChanged={onCellValueChanged}
@@ -333,7 +351,9 @@ export const GeneratedFuelCodesSection = ({
         popupParent={popupParent}
         context={{ errors }}
         getRowStyle={getRowStyle}
-        getRowId={(params: any) => params.data.id}
+        getRowId={(params: GetRowIdParams<BCGridRow>) =>
+          params.data.id as string
+        }
         {...gridOptions}
       />
     </Box>

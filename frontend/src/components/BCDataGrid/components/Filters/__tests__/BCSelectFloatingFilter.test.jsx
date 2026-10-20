@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event'
 import { BCSelectFloatingFilter } from '../BCSelectFloatingFilter'
 
 // Mock Material-UI components
-vi.mock('@mui/material', () => ({
-  IconButton: vi.fn(({ children, onClick, onMouseDown, ...props }) => (
+vi.mock('@mui/material/IconButton', () => ({
+    default: vi.fn(({ children, onClick, onMouseDown, ...props }) => (
     <button
       data-test="icon-button"
       onClick={onClick}
@@ -17,8 +17,8 @@ vi.mock('@mui/material', () => ({
   ))
 }))
 
-vi.mock('@mui/icons-material', () => ({
-  Clear: vi.fn(() => <span data-test="clear-icon">Clear</span>)
+vi.mock('@mui/icons-material/Clear', () => ({
+    default: vi.fn(() => <span data-test="clear-icon">Clear</span>)
 }))
 
 describe('BCSelectFloatingFilter', () => {

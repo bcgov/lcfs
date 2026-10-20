@@ -2,26 +2,6 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-// Mock external components
-vi.mock('@/components/BCButton', () => ({
-  default: ({ children, ...rest }) => <button {...rest}>{children}</button>
-}))
-
-vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, gutterBottom, ...rest }) => <div {...rest}>{children}</div>
-}))
-
-vi.mock('@mui/material', () => ({
-  Alert: ({ children, severity, ...rest }) => (
-    <div data-test="alert" data-severity={severity} {...rest}>
-      {children}
-    </div>
-  ),
-  CircularProgress: ({ size }) => (
-    <div data-test="progress" data-size={size} />
-  )
-}))
-
 import {
   GeofencingStatus,
   OverlapSummary,
@@ -29,6 +9,32 @@ import {
   ErrorState,
   NoDataState
 } from '../StatusComponent'
+
+// Mock external components
+vi.mock('@/components/BCButton', () => ({
+  default: ({ children, ...rest }) => <button {...rest}>{children}</button>
+}))
+
+vi.mock('@/components/BCTypography', () => ({
+  default: ({
+  children,
+  ...rest
+}) => { delete rest.gutterBottom; return <div {...rest}>{children}</div>; }
+}))
+
+vi.mock('@mui/material/Alert', () => ({
+    default: ({ children, severity, ...rest }) => (
+    <div data-test="alert" data-severity={severity} {...rest}>
+      {children}
+    </div>
+  )
+}))
+
+vi.mock('@mui/material/CircularProgress', () => ({
+    default: ({ size }) => (
+    <div data-test="progress" data-size={size} />
+  )
+}))
 
 describe('StatusComponent', () => {
   beforeEach(() => {

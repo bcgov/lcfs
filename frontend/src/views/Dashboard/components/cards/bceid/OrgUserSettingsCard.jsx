@@ -1,5 +1,8 @@
-import React from 'react'
-import { List, ListItemButton, Stack, Typography } from '@mui/material'
+import 'react'
+import List from '@mui/material/List'
+import ListItemButton from '@mui/material/ListItemButton'
+import Stack from '@mui/material/Stack'
+import Typography from '@mui/material/Typography'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
@@ -18,7 +21,7 @@ const linkStyle = {
   '&:hover': { color: 'info.main' }
 }
 
-const UserSettingsLink = ({ onClick, children }) => (
+export const UserSettingsLink = ({ onClick, children }) => (
   <ListItemButton onClick={onClick}>
     <Typography variant="subtitle2" sx={linkStyle} component="p">
       {children}
@@ -26,7 +29,7 @@ const UserSettingsLink = ({ onClick, children }) => (
   </ListItemButton>
 )
 
-const OrgUserSettingsCard = () => {
+export const OrgUserSettingsCard = () => {
   const { t } = useTranslation(['dashboard'])
   const { data: currentUser } = useCurrentUser()
   const navigate = useNavigate()
@@ -61,15 +64,29 @@ const OrgUserSettingsCard = () => {
               {t('dashboard:orgUserSettings.configureNotifications')}
             </UserSettingsLink>
 
-            <a href={HELP_GUIDE_URL} target="_blank" rel="noreferrer">
-              <UserSettingsLink>
+            <ListItemButton
+              component="a"
+              href={HELP_GUIDE_URL}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={t('dashboard:orgUserSettings.helpLinkLabel')}
+              sx={{
+                '&.Mui-focusVisible': {
+                  outline: '2px solid',
+                  outlineColor: 'primary.main',
+                  outlineOffset: '2px'
+                }
+              }}
+            >
+              <Typography variant="subtitle2" sx={linkStyle} component="p">
                 {t('dashboard:orgUserSettings.help')}
                 <FontAwesomeIcon
+                  aria-hidden="true"
                   icon={faShareFromSquare}
                   style={{ color: '#547D59', marginLeft: 6 }}
                 />
-              </UserSettingsLink>
-            </a>
+              </Typography>
+            </ListItemButton>
           </List>
         </Stack>
       }
@@ -77,4 +94,9 @@ const OrgUserSettingsCard = () => {
   )
 }
 
-export default withRole(OrgUserSettingsCard, nonGovRoles)
+const OrgUserSettingsCardWithRole = withRole(
+  OrgUserSettingsCard,
+  nonGovRoles
+)
+
+export default OrgUserSettingsCardWithRole

@@ -1,15 +1,15 @@
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { screen, fireEvent, act, waitFor } from '@testing-library/react'
+import { describe, expect, vi } from 'vitest'
 import { RoleSwitcher } from '../RoleSwitcher'
 import { useUpdateUser } from '@/hooks/useUser'
 import { idirRoleOptions } from '@/views/Users/AddEditUser/_schema'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import { CONFIG } from '@/constants/config'
 import type { CSSProperties, ReactNode, ElementType } from 'react'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => key
+    t: (key: string) => key
   })
 }))
 
@@ -67,14 +67,21 @@ vi.mock('@/components/BCTypography', () => ({
 }))
 
 vi.mock('@/components/BCForm/CustomLabel', () => ({
-  CustomLabel: ({ children }: { children?: ReactNode }) => <label>{children}</label>
+  CustomLabel: ({ children }: { children?: ReactNode }) => (
+    <label>{children}</label>
+  )
 }))
 
 vi.mock('@/hooks/useUser')
 vi.mock('@/views/Users/AddEditUser/_schema')
 
 const mutateMock = vi.fn()
-let hookOptions: any
+let hookOptions: {
+  onSuccess?: (
+    data: unknown,
+    variables: { meta: { admin: boolean; role: string } }
+  ) => void
+} | null
 const originalRoleSwitcherFlag = CONFIG.feature_flags.roleSwitcher
 
 const defaultUser = {
@@ -97,24 +104,26 @@ const defaultUser = {
   ]
 }
 
-beforeEach(() => {
+test.beforeEach(() => {
   vi.clearAllMocks()
   mutateMock.mockReset()
   hookOptions = null
   CONFIG.feature_flags.roleSwitcher = true
 
   vi.mocked(idirRoleOptions).mockReturnValue([
-    { label: 'Analyst', value: 'analyst' },
-    { label: 'Director', value: 'director' }
+    { label: 'Analyst', header: '', text: 'Analyst', value: 'analyst' },
+    { label: 'Director', header: '', text: 'Director', value: 'director' }
   ])
 
   vi.mocked(useUpdateUser).mockImplementation((options) => {
-    hookOptions = options
-    return { mutate: mutateMock, isPending: false }
+    hookOptions = options as unknown as typeof hookOptions
+    return { mutate: mutateMock, isPending: false } as unknown as ReturnType<
+      typeof useUpdateUser
+    >
   })
 })
 
-afterEach(() => {
+test.afterEach(() => {
   CONFIG.feature_flags.roleSwitcher = originalRoleSwitcherFlag
 })
 
@@ -125,7 +134,12 @@ const createAnchor = () => {
 }
 
 describe('RoleSwitcher', () => {
-  it('returns null when anchor element is not provided', () => {
+  test('returns null when anchor element is not provided', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     const { container } = render(
       <RoleSwitcher
         currentUser={defaultUser}
@@ -134,13 +148,18 @@ describe('RoleSwitcher', () => {
         anchorEl={null}
         onClose={vi.fn()}
       />,
-      { wrapper }
+      [query, theme, router]
     )
 
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('does not render when role switcher feature flag is disabled', () => {
+  test('does not render when role switcher feature flag is disabled', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     const anchor = createAnchor()
     const onClose = vi.fn()
 
@@ -149,12 +168,12 @@ describe('RoleSwitcher', () => {
     const { container } = render(
       <RoleSwitcher
         currentUser={defaultUser}
-        hasRoles={(role) => role === 'Administrator'}
+        hasRoles={(role: string) => role === 'Administrator'}
         open
         anchorEl={anchor}
         onClose={onClose}
       />,
-      { wrapper }
+      [query, theme, router]
     )
 
     expect(container).toBeEmptyDOMElement()
@@ -163,19 +182,24 @@ describe('RoleSwitcher', () => {
     anchor.remove()
   })
 
-  it('renders available roles for government administrators', () => {
+  test('renders available roles for government administrators', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     const anchor = createAnchor()
     const onClose = vi.fn()
 
     render(
       <RoleSwitcher
         currentUser={defaultUser}
-        hasRoles={(role) => role === 'Administrator'}
+        hasRoles={(role: string) => role === 'Administrator'}
         open
         anchorEl={anchor}
         onClose={onClose}
       />,
-      { wrapper }
+      [query, theme, router]
     )
 
     const titleButton = screen.getByText('roleSwitcher.title')
@@ -186,29 +210,30 @@ describe('RoleSwitcher', () => {
 
     fireEvent.click(titleButton)
 
-    expect(
-      screen.getByRole('radio', { name: 'Analyst' })
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole('radio', { name: 'Director' })
-    ).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'Analyst' })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'Director' })).toBeInTheDocument()
 
     anchor.remove()
   })
 
-  it('updates user roles when a new role is selected', () => {
+  test('updates user roles when a new role is selected', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     const anchor = createAnchor()
     const onClose = vi.fn()
 
     render(
       <RoleSwitcher
         currentUser={defaultUser}
-        hasRoles={(role) => role === 'Administrator'}
+        hasRoles={(role: string) => role === 'Administrator'}
         open
         anchorEl={anchor}
         onClose={onClose}
       />,
-      { wrapper }
+      [query, theme, router]
     )
 
     fireEvent.click(screen.getByText('roleSwitcher.title'))
@@ -231,28 +256,35 @@ describe('RoleSwitcher', () => {
     anchor.remove()
   })
 
-  it('invokes onClose after a successful role update', () => {
+  test('invokes onClose after a successful role update', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     const anchor = createAnchor()
     const onClose = vi.fn()
 
     render(
       <RoleSwitcher
         currentUser={defaultUser}
-        hasRoles={(role) => role === 'Administrator'}
+        hasRoles={(role: string) => role === 'Administrator'}
         open
         anchorEl={anchor}
         onClose={onClose}
       />,
-      { wrapper }
+      [query, theme, router]
     )
 
     fireEvent.click(screen.getByText('roleSwitcher.title'))
     const directorRadio = screen.getByRole('radio', { name: 'Director' })
     fireEvent.click(directorRadio)
 
-    expect(hookOptions).toBeDefined()
+    const onSuccess = hookOptions?.onSuccess
+    expect(onSuccess).toBeDefined()
+    if (!onSuccess) throw new Error('useUpdateUser onSuccess option was missing')
     act(() => {
-      hookOptions.onSuccess(
+      onSuccess(
         {},
         {
           meta: {
@@ -268,7 +300,12 @@ describe('RoleSwitcher', () => {
     anchor.remove()
   })
 
-  it('displays an error when the user profile id is missing', async () => {
+  test('displays an error when the user profile id is missing', async ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     const anchor = createAnchor()
     const onClose = vi.fn()
     const userWithoutId = {
@@ -279,12 +316,12 @@ describe('RoleSwitcher', () => {
     render(
       <RoleSwitcher
         currentUser={userWithoutId}
-        hasRoles={(role) => role === 'Administrator'}
+        hasRoles={(role: string) => role === 'Administrator'}
         open
         anchorEl={anchor}
         onClose={onClose}
       />,
-      { wrapper }
+      [query, theme, router]
     )
 
     fireEvent.click(screen.getByText('roleSwitcher.title'))
@@ -295,17 +332,23 @@ describe('RoleSwitcher', () => {
     })
 
     expect(mutateMock).not.toHaveBeenCalled()
-    
-    await waitFor(() => {
-      expect(
-        screen.getByText('common:submitError')
-      ).toBeInTheDocument()
-    }, { timeout: 3000 })
+
+    await waitFor(
+      () => {
+        expect(screen.getByText('common:submitError')).toBeInTheDocument()
+      },
+      { timeout: 3000 }
+    )
 
     anchor.remove()
   })
 
-  it('calls onClose when the user is not a government administrator', () => {
+  test('calls onClose when the user is not a government administrator', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     const anchor = createAnchor()
     const onClose = vi.fn()
 
@@ -317,13 +360,11 @@ describe('RoleSwitcher', () => {
         anchorEl={anchor}
         onClose={onClose}
       />,
-      { wrapper }
+      [query, theme, router]
     )
 
     expect(onClose).toHaveBeenCalled()
-    expect(
-      screen.queryByText('roleSwitcher.title')
-    ).not.toBeInTheDocument()
+    expect(screen.queryByText('roleSwitcher.title')).not.toBeInTheDocument()
 
     anchor.remove()
   })

@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import PropTypes from 'prop-types'
-import { IconButton, Tooltip } from '@mui/material'
-import { Visibility } from '@mui/icons-material'
+import IconButton from '@mui/material/IconButton'
+import Tooltip from '@mui/material/Tooltip'
+import Visibility from '@mui/icons-material/Visibility'
 
 import DocumentPreviewDialog from '@/components/Documents/DocumentPreviewDialog'
 import { getDocumentDisplayName } from '@/utils/documents'

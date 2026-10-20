@@ -5,22 +5,13 @@ import { FILTER_KEYS } from '@/constants/common'
 import { ROUTES } from '@/routes/routes'
 import { CI_APPLICATION_STATUSES } from '@/constants/statuses'
 import { useCIApplicationCounts } from '@/hooks/useDashboard'
-import { List, ListItemButton, Stack } from '@mui/material'
+import List from '@mui/material/List'
+import ListItemButton from '@mui/material/ListItemButton'
+import Stack from '@mui/material/Stack'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-
-const CountDisplay = ({ count }) => (
-  <BCTypography
-    component="span"
-    variant="h3"
-    sx={{
-      color: 'success.main',
-      marginX: 3
-    }}
-  >
-    {count}
-  </BCTypography>
-)
+import { CountDisplay } from '../../CountDisplay'
+import { countDigits } from '../../countDigits'
 
 export const CIApplicationCard = () => {
   const { t } = useTranslation(['dashboard'])
@@ -44,10 +35,13 @@ export const CIApplicationCard = () => {
     navigate(ROUTES.CI_APPLICATIONS.LIST)
   }
 
+  const inProgress = counts?.inProgress || 0
+  const digits = countDigits(inProgress)
+
   const renderLinkWithCount = (text, count, onClick) => {
     return (
       <>
-        {count != null && <CountDisplay count={count} />}
+        <CountDisplay count={count} digits={digits} hidden={count == null} />
         <BCTypography
           variant="body2"
           color="link"
@@ -90,7 +84,7 @@ export const CIApplicationCard = () => {
               <ListItemButton component="a" onClick={handleNavigation}>
                 {renderLinkWithCount(
                   t('dashboard:ciApplications.inProgress'),
-                  counts?.inProgress || 0,
+                  inProgress,
                   handleNavigation
                 )}
               </ListItemButton>

@@ -4,29 +4,30 @@
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createRef } from 'react'
+import Autocomplete from '@mui/material/Autocomplete'
 import { AutocompleteCellEditor } from '../AutocompleteCellEditor'
 
 // Mock MUI components
-vi.mock('@mui/material', () => ({
-  Autocomplete: vi.fn(
+vi.mock('@mui/material/Autocomplete', () => ({
+  default: vi.fn(
     ({
-      children,
-      onChange,
-      onOpen,
-      onClose,
-      onKeyDown,
-      onHighlightChange,
-      getOptionLabel,
-      renderOption,
-      renderInput,
-      renderTags,
-      isOptionEqualToValue,
-      multiple,
-      options: autocompleteOptions = [],
-      inputValue,
-      onInputChange,
-      ...props
-    }) => {
+  onChange,
+  onOpen,
+  onKeyDown,
+  onHighlightChange,
+  getOptionLabel,
+  renderOption,
+  renderInput,
+  renderTags,
+  isOptionEqualToValue,
+  multiple,
+  options: autocompleteOptions = [],
+  inputValue,
+  onInputChange,
+  ...props
+}) => {
+delete props.children; delete props.onClose;
+
       // Test getOptionLabel if provided
       if (getOptionLabel) {
         getOptionLabel('test')
@@ -93,34 +94,55 @@ vi.mock('@mui/material', () => ({
         </div>
       )
     }
-  ),
-  TextField: vi.fn(({ onBlur, inputRef, ...props }) => (
+  )
+}))
+
+vi.mock('@mui/material/TextField', () => ({
+  default: vi.fn(({ onBlur, inputRef, ...props }) => (
     <input data-test="textfield" ref={inputRef} onBlur={onBlur} {...props} />
-  )),
-  Checkbox: vi.fn((props) => (
+  ))
+}))
+
+vi.mock('@mui/material/Checkbox', () => ({
+  default: vi.fn((props) => (
     <input type="checkbox" data-test="checkbox" {...props} />
-  )),
-  Box: vi.fn(({ children, ...props }) => (
+  ))
+}))
+
+vi.mock('@mui/material/Box', () => ({
+  default: vi.fn(({ children, ...props }) => (
     <div data-test="box" {...props}>
       {children}
     </div>
-  )),
-  Chip: vi.fn(({ label, ...props }) => (
+  ))
+}))
+
+vi.mock('@mui/material/Chip', () => ({
+  default: vi.fn(({ label, ...props }) => (
     <span data-test="chip" {...props}>
       {label}
     </span>
-  )),
-  Stack: vi.fn(({ children, ...props }) => (
+  ))
+}))
+
+vi.mock('@mui/material/Stack', () => ({
+  default: vi.fn(({ children, ...props }) => (
     <div data-test="stack" {...props}>
       {children}
     </div>
-  )),
-  Divider: vi.fn((props) => <hr data-test="divider" {...props} />)
+  ))
 }))
 
-vi.mock('@mui/icons-material', () => ({
-  CheckBox: vi.fn(() => <span data-test="checkbox-icon">CheckBox</span>),
-  CheckBoxOutlineBlank: vi.fn(() => (
+vi.mock('@mui/material/Divider', () => ({
+  default: vi.fn((props) => <hr data-test="divider" {...props} />)
+}))
+
+vi.mock('@mui/icons-material/CheckBox', () => ({
+  default: vi.fn(() => <span data-test="checkbox-icon">CheckBox</span>)
+}))
+
+vi.mock('@mui/icons-material/CheckBoxOutlineBlank', () => ({
+  default: vi.fn(() => (
     <span data-test="checkbox-outline-icon">CheckBoxOutlineBlank</span>
   ))
 }))
@@ -191,6 +213,13 @@ describe('AutocompleteCellEditor Component', () => {
       render(<AutocompleteCellEditor {...props} ref={mockRef} />)
 
       expect(screen.getByTestId('autocomplete')).toBeInTheDocument()
+    })
+
+    it('formats numeric option labels as strings', () => {
+      render(<AutocompleteCellEditor {...mockProps} ref={mockRef} />)
+
+      const autocompleteProps = vi.mocked(Autocomplete).mock.lastCall?.[0]
+      expect(autocompleteProps.getOptionLabel(42)).toBe('42')
     })
   })
 

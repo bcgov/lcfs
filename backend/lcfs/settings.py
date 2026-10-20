@@ -90,7 +90,7 @@ class Settings(BaseSettings):
     keycloak_audience: str = "low-carbon-fuel-standard-5147"
 
     # Variables for S3
-    s3_endpoint: str = "http://minio:9000"
+    s3_endpoint: str = "http://localhost:9000"
     s3_bucket: str = "lcfs"
     s3_access_key: str = "s3_access_key"
     s3_secret_key: str = "development_only"

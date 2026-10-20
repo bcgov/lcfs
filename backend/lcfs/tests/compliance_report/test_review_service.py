@@ -167,6 +167,136 @@ def test_fse_usage_utilization_series_hides_when_no_usage_or_utilization_data():
     assert "FSE equipment counts" in titles
 
 
+def test_renewable_liquid_fuel_volume_series_uses_liquid_target_fuels_only():
+    service = _service()
+
+    def fuel_supply(fuel_type, category, quantity, renewable, unit):
+        return SimpleNamespace(
+            fuel_type=SimpleNamespace(fuel_type=fuel_type, renewable=renewable),
+            fuel_category=SimpleNamespace(category=category),
+            quantity=quantity,
+            q1_quantity=None,
+            q2_quantity=None,
+            q3_quantity=None,
+            q4_quantity=None,
+            units=unit,
+        )
+
+    current = {
+        "fuel_supplies": [
+            fuel_supply("Ethanol", "Gasoline", 1000, True, QuantityUnitsEnum.Litres),
+            fuel_supply("HDRD", "Diesel", 2000, True, QuantityUnitsEnum.Litres),
+            fuel_supply(
+                "Alternative jet fuel",
+                "Jet fuel",
+                3000,
+                True,
+                QuantityUnitsEnum.Litres,
+            ),
+            fuel_supply(
+                "Fossil-derived gasoline",
+                "Gasoline",
+                4000,
+                False,
+                QuantityUnitsEnum.Litres,
+            ),
+            fuel_supply(
+                "Electricity",
+                "Diesel",
+                5000,
+                True,
+                QuantityUnitsEnum.Kilowatt_hour,
+            ),
+            fuel_supply("Propane", "Other", 6000, False, QuantityUnitsEnum.Litres),
+        ]
+    }
+    prior = {
+        "fuel_supplies": [
+            fuel_supply("Biodiesel", "Diesel", 250, True, QuantityUnitsEnum.Litres),
+            fuel_supply(
+                "Fossil-derived diesel",
+                "Diesel",
+                750,
+                False,
+                QuantityUnitsEnum.Litres,
+            ),
+        ]
+    }
+    prior_report = SimpleNamespace(
+        compliance_period=SimpleNamespace(description="2024")
+    )
+
+    series = service._build_renewable_liquid_fuel_volume_series(
+        current,
+        [(prior_report, prior)],
+        "2025",
+    )
+
+    assert len(series) == 1
+    assert series[0].title == "Renewable vs non-renewable liquid fuel supply"
+    points = {point.label: point for point in series[0].points}
+    assert points["Renewable"].current_value == 6000
+    assert points["Renewable"].comparison_value == 250
+    assert points["Non-renewable"].current_value == 4000
+    assert points["Non-renewable"].comparison_value == 750
+
+
+def test_renewable_liquid_fuel_volume_series_uses_single_prior_baseline():
+    service = _service()
+
+    def fuel_supply(fuel_type, category, quantity, renewable):
+        return SimpleNamespace(
+            fuel_type=SimpleNamespace(fuel_type=fuel_type, renewable=renewable),
+            fuel_category=SimpleNamespace(category=category),
+            quantity=quantity,
+            q1_quantity=None,
+            q2_quantity=None,
+            q3_quantity=None,
+            q4_quantity=None,
+            units=QuantityUnitsEnum.Litres,
+        )
+
+    current = {
+        "fuel_supplies": [
+            fuel_supply("Ethanol", "Gasoline", 1000, True),
+            fuel_supply("Fossil-derived diesel", "Diesel", 2000, False),
+        ]
+    }
+    prior_2024 = {
+        "fuel_supplies": [
+            fuel_supply("Biodiesel", "Diesel", 300, True),
+            fuel_supply("Fossil-derived gasoline", "Gasoline", 700, False),
+        ]
+    }
+    prior_2023 = {
+        "fuel_supplies": [
+            fuel_supply("Biodiesel", "Diesel", 400, True),
+            fuel_supply("Fossil-derived gasoline", "Gasoline", 800, False),
+        ]
+    }
+
+    series = service._build_renewable_liquid_fuel_volume_series(
+        current,
+        [
+            (
+                SimpleNamespace(compliance_period=SimpleNamespace(description="2024")),
+                prior_2024,
+            ),
+            (
+                SimpleNamespace(compliance_period=SimpleNamespace(description="2023")),
+                prior_2023,
+            ),
+        ],
+        "2025",
+    )
+
+    assert len(series) == 1
+    assert series[0].comparison_label == "2024"
+    points = {point.label: point for point in series[0].points}
+    assert points["Renewable"].comparison_value == 300
+    assert points["Non-renewable"].comparison_value == 700
+
+
 def test_supplemental_line_20_finding_uses_magnitude_gap_delta():
     service = _service()
     current_summary = SimpleNamespace(
@@ -202,6 +332,35 @@ def test_comparison_point_can_use_magnitude_gap_delta_mode():
     assert point.current_value == 890
     assert point.comparison_value == -180
     assert point.delta == 710
+
+
+def test_comparison_points_normalize_petroleum_fuel_labels():
+    service = _service()
+
+    points = service._comparison_points(
+        {
+            "Diesel - Fossil-derived diesel": 150,
+            "Gasoline - Fossil-derived gasoline": 100,
+        },
+        {
+            "Diesel - Petroleum-based diesel": 100,
+            "Gasoline - Petroleum-based gasoline": 200,
+        },
+        units="reported units",
+    )
+
+    by_label = {point.label: point for point in points}
+
+    assert set(by_label) == {
+        "Diesel - Fossil-derived diesel",
+        "Gasoline - Fossil-derived gasoline",
+    }
+    assert by_label["Diesel - Fossil-derived diesel"].current_value == 150
+    assert by_label["Diesel - Fossil-derived diesel"].comparison_value == 100
+    assert by_label["Diesel - Fossil-derived diesel"].percent_change == 50
+    assert by_label["Gasoline - Fossil-derived gasoline"].current_value == 100
+    assert by_label["Gasoline - Fossil-derived gasoline"].comparison_value == 200
+    assert by_label["Gasoline - Fossil-derived gasoline"].percent_change == -50
 
 
 def test_correlation_findings_identify_aligned_supply_and_fse_trends():
@@ -476,6 +635,39 @@ def test_build_summary_includes_analyst_style_highlights():
         "Diesel - HDRD for other uses shows a 64.0% year-over-year increase." in summary
     )
     assert "Prior-year assessed comparison was available." in summary
+
+
+def test_other_uses_variance_matches_legacy_fuel_rows_for_rationale():
+    service = _service()
+
+    findings = service._other_uses_variance_findings(
+        {
+            "other_uses": [
+                SimpleNamespace(
+                    quantity_supplied=150,
+                    rationale="Used outside BC",
+                    fuel_category=SimpleNamespace(category="Diesel"),
+                    fuel_type=SimpleNamespace(fuel_type="Petroleum-based diesel"),
+                )
+            ]
+        },
+        {
+            "other_uses": {
+                "Diesel - Petroleum-based diesel": 150,
+            }
+        },
+        {
+            "other_uses": {
+                "Diesel - Petroleum-based diesel": 100,
+            }
+        },
+    )
+
+    assert len(findings) == 1
+    assert findings[0].title == (
+        "Other uses variance needs explanation for Diesel - Fossil-derived diesel"
+    )
+    assert "Supplier rationale is captured on 1 record(s)." in findings[0].detail
 
 
 def test_zero_value_narratives_confirm_consistent_absence():

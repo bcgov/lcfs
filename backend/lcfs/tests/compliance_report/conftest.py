@@ -172,7 +172,6 @@ def mock_org_snapshot_repo():
 @pytest.fixture
 def mock_trxn_repo():
     repo = AsyncMock(spec=TransactionRepository)
-    repo.calculate_available_balance_for_period = AsyncMock(return_value=2000)
     repo.delete_transaction = AsyncMock()
     repo.get_group_adjustments_excluded_from_line_17 = AsyncMock(return_value=0)
     repo.get_prior_group_adjustments_excluded_from_line_17 = AsyncMock(return_value=0)
@@ -334,9 +333,6 @@ def mock_org_service():
     mock_org_service = MagicMock()
     mock_org_service.adjust_balance = AsyncMock()  # Mock the adjust_balance method
     mock_org_service.calculate_available_balance = AsyncMock(return_value=1000)
-    mock_org_service.calculate_available_balance_for_period = AsyncMock(
-        return_value=1000
-    )
     return mock_org_service
 
 

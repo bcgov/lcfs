@@ -1,31 +1,32 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { screen, fireEvent } from '@testing-library/react'
 import SupplierBalance from '../SupplierBalance'
-import { vi, describe, it, expect, beforeEach, afterEach, type Mock } from 'vitest'
+import { vi, describe, expect, type Mock } from 'vitest'
 import { useCurrentOrgBalance } from '@/hooks/useOrganization'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 
 // Mock hooks
 vi.mock('@/hooks/useOrganization')
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => (key === 'balance' ? 'Balance' : key)
+    t: (key: string) => (key === 'balance' ? 'Balance' : key)
   })
 }))
 
 const mockedUseCurrentOrgBalance = useCurrentOrgBalance as unknown as Mock
+const getItemMock = vi.fn<Storage['getItem']>()
 
 describe('SupplierBalance', () => {
   // Mock sessionStorage
   const sessionStorageMock: Storage = {
-    getItem: vi.fn(),
-    setItem: vi.fn(),
-    clear: vi.fn(),
-    removeItem: vi.fn(),
-    key: vi.fn(),
+    getItem: getItemMock,
+    setItem: vi.fn<Storage['setItem']>(),
+    clear: vi.fn<Storage['clear']>(),
+    removeItem: vi.fn<Storage['removeItem']>(),
+    key: vi.fn<Storage['key']>(),
     length: 0
   }
 
-  beforeEach(() => {
+  test.beforeEach(() => {
     // Set up default mock data
     mockedUseCurrentOrgBalance.mockReturnValue({
       data: {
@@ -40,23 +41,33 @@ describe('SupplierBalance', () => {
     })
 
     // Default to showing balance
-    sessionStorageMock.getItem.mockReturnValue('1')
+    getItemMock.mockReturnValue('1')
   })
 
-  afterEach(() => {
+  test.afterEach(() => {
     vi.clearAllMocks()
   })
 
-  it('renders with visible balance by default', () => {
-    render(<SupplierBalance />, { wrapper })
+  test('renders with visible balance by default', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<SupplierBalance />, [query, theme, router])
 
     expect(screen.getByText(/Balance:/)).toBeInTheDocument()
     expect(screen.getByText(/100 \(20\)/)).toBeInTheDocument()
     expect(screen.getByText('visibility')).toBeInTheDocument()
   })
 
-  it('hides balance when visibility is toggled off', () => {
-    render(<SupplierBalance />, { wrapper })
+  test('hides balance when visibility is toggled off', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<SupplierBalance />, [query, theme, router])
 
     // Initially visible
     expect(screen.getByText(/100 \(20\)/)).toBeInTheDocument()
@@ -74,24 +85,34 @@ describe('SupplierBalance', () => {
     const balanceSpan =
       screen.getByText(/Balance:/).nextSibling ||
       screen.getByText(/Balance:/).parentElement
-    expect(balanceSpan.textContent).toContain('****')
+    expect(balanceSpan?.textContent).toContain('****')
 
     // Verify sessionStorage was updated
     expect(sessionStorageMock.setItem).toHaveBeenCalledWith('showBalance', '0')
   })
 
-  it('handles missing balance data gracefully', () => {
+  test('handles missing balance data gracefully', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     mockedUseCurrentOrgBalance.mockReturnValue({
       data: null
     })
 
-    render(<SupplierBalance />, { wrapper })
+    render(<SupplierBalance />, [query, theme, router])
 
     expect(screen.getByText(/Balance:/)).toBeInTheDocument()
     expect(screen.getByText(/N\/A \(N\/A\)/)).toBeInTheDocument()
   })
 
-  it('formats balance values correctly', () => {
+  test('formats balance values correctly', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     mockedUseCurrentOrgBalance.mockReturnValue({
       data: {
         totalBalance: 1234567.89,
@@ -99,7 +120,7 @@ describe('SupplierBalance', () => {
       }
     })
 
-    render(<SupplierBalance />, { wrapper })
+    render(<SupplierBalance />, [query, theme, router])
 
     // Exact display depends on numberFormatter implementation
     // This test assumes it formats with commas for thousands

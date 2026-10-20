@@ -1,41 +1,37 @@
-// @ts-nocheck
 import { forwardRef, useEffect, useRef } from 'react'
-import { TextField } from '@mui/material'
+import TextField from '@mui/material/TextField'
 import InputMask from 'react-input-mask'
+import type { ChangeEvent } from 'react'
 
 export interface TextCellEditorProps {
   value?: string
   onValueChange: (value: string) => void
   eventKey?: string
   rowIndex?: number
-  column?: any
+  column?: unknown
   mask?: string
   formatChars?: Record<string, string>
-  inputProps?: Record<string, any>
-  [key: string]: any
+  inputProps?: Record<string, unknown>
 }
 
-export const TextCellEditor = forwardRef(
+export const TextCellEditor = forwardRef<HTMLDivElement, TextCellEditorProps>(
   (
     {
       value,
       onValueChange,
-      eventKey,
-      rowIndex,
-      column,
       ...props
-    }: TextCellEditorProps,
+    },
     ref
   ) => {
-    const handleTextFieldChange = (event) => {
+    const handleTextFieldChange = (event: ChangeEvent<HTMLInputElement>) => {
       onValueChange(event.target.value)
     }
 
-    const inputRef = useRef(null)
+    const inputRef = useRef<HTMLInputElement | null>(null)
 
     useEffect(() => {
       if (inputRef) {
-        inputRef.current.focus()
+        inputRef.current!.focus()
       }
     }, [])
 

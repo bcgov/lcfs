@@ -179,8 +179,8 @@ const LCFS_CONTAINER_PATTERNS = [
   /^\/rabbitmq$/,
   /^\/backend$/,
   /^\/frontend$/,
-  /^\/lcfs-minio-\d+$/,
-  /^\/minio_init$/,
+  /^\/lcfs-rustfs-\d+$/,
+  /^\/lcfs-create_bucket-\d+$/,
   /^\/lcfs-mcp-server$/,
 ];
 
@@ -190,13 +190,13 @@ const CONTAINER_DEPENDENCIES: Record<string, string[]> = {
   'db': [],
   'redis': [],
   'rabbitmq': [],
-  'minio': [],
+  'rustfs': [],
   
-  // MinIO initialization depends on MinIO
-  'minio_init': ['minio'],
+  // Bucket creation depends on RustFS
+  'create_bucket': ['rustfs'],
   
   // Application containers depend on infrastructure
-  'backend': ['db', 'redis', 'rabbitmq', 'minio_init'],
+  'backend': ['db', 'redis', 'rabbitmq', 'create_bucket'],
   'frontend': [], // Frontend doesn't have strict dependencies on other containers
   'lcfs-mcp-server': ['db', 'redis'],
 };
@@ -235,9 +235,10 @@ export function normalizeContainerName(containerName: string): string {
   // Remove leading slash and extract the base service name
   const cleanName = containerName.replace(/^\//, '');
   
-  // Handle minio with instance number
-  if (cleanName.match(/^lcfs-minio-\d+$/)) {
-    return 'minio';
+  // Handle compose-numbered containers (e.g. lcfs-rustfs-1)
+  const numbered = cleanName.match(/^lcfs-(rustfs|create_bucket)-\d+$/);
+  if (numbered) {
+    return numbered[1];
   }
   
   return cleanName;

@@ -1,11 +1,72 @@
-import { Box } from '@mui/material'
+import Box from '@mui/material/Box'
 import * as echarts from 'echarts/core'
+import { AriaComponent } from 'echarts/components'
 import { useEffect, useRef } from 'react'
 
+echarts.use([AriaComponent])
+
+/**
+ * @param {import('echarts').EChartsOption} option
+ * @param {string | undefined} ariaLabel
+ * @param {string | undefined} ariaDescription
+ */
+const getAccessibleOption = (option, ariaLabel, ariaDescription) => {
+  if (!option || typeof option !== 'object') return option
+
+  const existingAria = option.aria || {}
+  const existingLabel = existingAria.label || {}
+  const description =
+    ariaDescription ?? existingLabel.description ?? existingAria.description
+  const hasExplicitDescription = description != null
+  const title = Array.isArray(option.title)
+    ? option.title.find((item) => item?.text)?.text
+    : option.title?.text
+  const general = { ...existingLabel.general }
+
+  if (ariaLabel && !hasExplicitDescription) {
+    if (title) {
+      general.withTitle = ariaLabel.includes(String(title))
+        ? ariaLabel
+        : `${ariaLabel}. ${title}`
+    } else {
+      general.withoutTitle = ariaLabel
+    }
+  }
+
+  return {
+    ...option,
+    aria: {
+      ...existingAria,
+      enabled: existingAria.enabled ?? existingAria.show ?? true,
+      ...(description != null || Object.keys(general).length
+        ? {
+            label: {
+              ...existingLabel,
+              ...(description != null ? { description } : {}),
+              ...(Object.keys(general).length ? { general } : {})
+            }
+          }
+        : {})
+    }
+  }
+}
+
+/**
+ * @param {{
+ *   option: import('echarts').EChartsOption,
+ *   height?: number | string,
+ *   ariaLabel?: string,
+ *   ariaDescription?: string,
+ *   ariaDescribedBy?: string,
+ *   tabIndex?: number,
+ *   sx?: import('@mui/system').SystemStyleObject<import('@mui/material/styles').Theme>
+ * }} props
+ */
 export const BCResponsiveEChart = ({
   option,
   height = 300,
   ariaLabel = undefined,
+  ariaDescription = undefined,
   ariaDescribedBy = undefined,
   tabIndex = 0,
   sx = undefined
@@ -44,8 +105,11 @@ export const BCResponsiveEChart = ({
 
   useEffect(() => {
     if (!chartInstance.current || !option) return
-    chartInstance.current.setOption(option, true)
-  }, [option])
+    chartInstance.current.setOption(
+      getAccessibleOption(option, ariaLabel, ariaDescription),
+      true
+    )
+  }, [ariaDescription, ariaLabel, option])
 
   return (
     <Box

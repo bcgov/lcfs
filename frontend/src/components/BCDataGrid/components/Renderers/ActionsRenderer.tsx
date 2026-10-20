@@ -1,12 +1,20 @@
 import BCTypography from '@/components/BCTypography'
-import { Cancel, Delete, Edit, Queue, Replay } from '@mui/icons-material'
-import { Box, IconButton, Stack, Tooltip } from '@mui/material'
+import Cancel from '@mui/icons-material/Cancel'
+import Delete from '@mui/icons-material/Delete'
+import Edit from '@mui/icons-material/Edit'
+import Queue from '@mui/icons-material/Queue'
+import Replay from '@mui/icons-material/Replay'
+import Box from '@mui/material/Box'
+import IconButton from '@mui/material/IconButton'
+import Stack from '@mui/material/Stack'
+import Tooltip from '@mui/material/Tooltip'
 import type { ReactNode } from 'react'
+import type { GridApi } from 'ag-grid-community'
 
 export interface ActionsRendererProps {
-  api: any
+  api: GridApi
   node: { rowIndex: number | null }
-  data: { validationStatus?: string; [key: string]: any }
+  data: { validationStatus?: string; [key: string]: unknown }
   enableDuplicate?: boolean
   enableEdit?: boolean
   enableDelete?: boolean
@@ -48,9 +56,12 @@ export const ActionsRenderer = (props: ActionsRendererProps) => {
             data-testid="edit-button"
             color="primary"
             onClick={() => {
+              const column = props.api.getDisplayedCenterColumns()[2] as unknown as {
+                colId: string
+              }
               return props.api.startEditingCell({
-                rowIndex: props.node.rowIndex,
-                colKey: props.api.getDisplayedCenterColumns()[2].colId
+                rowIndex: props.node.rowIndex as number,
+                colKey: column.colId
               })
             }}
           >

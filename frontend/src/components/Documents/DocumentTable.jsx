@@ -1,14 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import {
-  Box,
-  Card,
-  CardContent,
-  CircularProgress,
-  Icon,
-  IconButton,
-  Tooltip
-} from '@mui/material'
-import { CloudUpload, Delete } from '@mui/icons-material'
+import Box from '@mui/material/Box'
+import Card from '@mui/material/Card'
+import CardContent from '@mui/material/CardContent'
+import CircularProgress from '@mui/material/CircularProgress'
+import Icon from '@mui/material/Icon'
+import IconButton from '@mui/material/IconButton'
+import Tooltip from '@mui/material/Tooltip'
+import CloudUpload from '@mui/icons-material/CloudUpload'
+import Delete from '@mui/icons-material/Delete'
 import { useTranslation } from 'react-i18next'
 import { styled } from '@mui/system'
 import BCTypography from '@/components/BCTypography'
@@ -50,7 +49,7 @@ const StyledCard = styled(Card)(({ theme, isDragActive = false }) => ({
   }
 }))
 
-const FileTable = styled(Box)(({ theme }) => ({
+const FileTable = styled(Box)(() => ({
   width: '100%',
   maxWidth: '100%',
   display: 'grid',
@@ -69,7 +68,7 @@ const TableCell = styled(Box)({
 
 function DocumentTable({ parentType, parentID }) {
   const { t } = useTranslation(['report', 'common'])
-  const [isDragActive, setIsDragActive] = useState(false)
+  const [, setIsDragActive] = useState(false)
   const fileInputRef = useRef(null)
   const [files, setFiles] = useState([])
   const [errorMessage, setErrorMessage] = useState(null)
@@ -327,7 +326,7 @@ function DocumentTable({ parentType, parentID }) {
         </TableCell>
         <TableCell></TableCell>
 
-        {files.map((file, i) => {
+        {files.map((file) => {
           const displayName = getDocumentDisplayName(file)
           const canRename =
             renameEnabled &&

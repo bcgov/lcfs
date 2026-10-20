@@ -1,5 +1,7 @@
 import PropTypes from 'prop-types'
-import { Stack, useMediaQuery, useTheme } from '@mui/material'
+import Stack from '@mui/material/Stack'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import useTheme from '@mui/material/styles/useTheme'
 import BCTypography from '@/components/BCTypography'
 import BCBox from '@/components/BCBox'
 import { OrganizationBadge } from '@/views/Transfers/components'
@@ -9,7 +11,8 @@ import {
   currencyFormatter,
   formatNumberWithCommas
 } from '@/utils/formatters'
-import { SwapVert, SyncAlt } from '@mui/icons-material'
+import SwapVert from '@mui/icons-material/SwapVert'
+import SyncAlt from '@mui/icons-material/SyncAlt'
 
 export const TransferDetailsCard = ({
   fromOrgId,

@@ -1,7 +1,11 @@
-import React from 'react'
+import 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import TransactionsCard from '../TransactionsCard'
+
+import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
+import { useTransactionCounts } from '@/hooks/useDashboard'
 
 // Mock external dependencies
 vi.mock('react-i18next', () => ({
@@ -30,8 +34,14 @@ vi.mock('@/components/BCWidgetCard/BCWidgetCard', () => ({
 }))
 
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, onClick, variant, component, sx, color, ...props }) => (
-    <div
+  default: ({
+  children,
+  onClick,
+  variant,
+  component,
+  color,
+  ...props
+}) => { delete props.sx; return <div
       data-test="bc-typography"
       data-variant={variant}
       data-component={component}
@@ -40,8 +50,7 @@ vi.mock('@/components/BCTypography', () => ({
       {...props}
     >
       {children}
-    </div>
-  )
+    </div>; }
 }))
 
 vi.mock('@/components/Loading', () => ({
@@ -50,19 +59,21 @@ vi.mock('@/components/Loading', () => ({
   )
 }))
 
-vi.mock('@mui/material', () => ({
-  Stack: ({ children, ...props }) => <div data-test="stack" {...props}>{children}</div>,
-  List: ({ children, ...props }) => <div data-test="list" {...props}>{children}</div>,
-  ListItemButton: ({ children, onClick, ...props }) => (
+vi.mock('@mui/material/Stack', () => ({
+    default: ({ children, ...props }) => <div data-test="stack" {...props}>{children}</div>
+}))
+
+vi.mock('@mui/material/List', () => ({
+    default: ({ children, ...props }) => <div data-test="list" {...props}>{children}</div>
+}))
+
+vi.mock('@mui/material/ListItemButton', () => ({
+    default: ({ children, onClick, ...props }) => (
     <button data-test="list-item-button" onClick={onClick} {...props}>
       {children}
     </button>
   )
 }))
-
-import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
-import { useTransactionCounts } from '@/hooks/useDashboard'
 
 describe('TransactionsCard', () => {
   const mockT = vi.fn()
@@ -185,9 +196,13 @@ describe('TransactionsCard', () => {
     it('should not render count for viewAll item', () => {
       render(<TransactionsCard />)
 
-      // Check that "View all transactions" doesn't have a count before it
+      // "View all transactions" has no number, only an empty counter that
+      // screen readers skip, so its link lines up with the counted ones
+      // (#4911).
       const viewAllText = screen.getByText('View all transactions')
-      expect(viewAllText.previousSibling).toBe(null)
+      const spacer = viewAllText.previousSibling
+      expect(spacer).toHaveAttribute('aria-hidden', 'true')
+      expect(spacer.textContent).not.toMatch(/\d/)
     })
   })
 
@@ -205,11 +220,14 @@ describe('TransactionsCard', () => {
       render(<TransactionsCard />)
 
       const typographyElements = screen.getAllByTestId('bc-typography')
-      const countElements = typographyElements.filter(el => 
-        el.getAttribute('data-variant') === 'h3'
+      const countElements = typographyElements.filter(
+        (el) =>
+          el.getAttribute('data-variant') === 'h3' &&
+          !el.hasAttribute('aria-hidden')
       )
 
-      // Only the item with count 0 should have a count displayed
+      // Only the item with count 0 should have a count displayed; the rest
+      // keep empty counters so their links stay in line.
       expect(countElements).toHaveLength(1)
       expect(countElements[0]).toHaveTextContent('0')
     })

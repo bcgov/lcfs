@@ -1,0 +1,80 @@
+%%{init: {'theme': 'neutral'}}%%
+flowchart TB
+    subgraph Dev["Local Development — docker-compose.yml"]
+        direction TB
+        dc_fe["frontend container<br/>Vite dev server :3000"]
+        dc_be["backend container<br/>uvicorn --reload :8000"]
+        dc_db[("db container<br/>postgres:17")]
+        dc_redis[("redis container<br/>redis:8.2.1")]
+        dc_minio[("minio + create_bucket containers")]
+        dc_mcp["mcp-server container<br/>(commented out by default)"]
+    end
+
+    subgraph EtlLocal["Local ETL — etl/docker-compose.yml"]
+        direction TB
+        dc_nifi["nifi"]
+        dc_registry["registry"]
+        dc_zk["zookeeper"]
+        dc_tfrs[("tfrs db")]
+    end
+
+    subgraph OCP["BC Gov OpenShift — dev / test / prod namespaces"]
+        direction TB
+        subgraph AppNS["Application namespace"]
+            ocp_fe["frontend pods<br/>nginx + static build<br/>(own Route)"]
+            ocp_be["backend pods<br/>FastAPI, scaled replicas<br/>(own Route)"]
+            ocp_redis[("redis pod")]
+            ocp_minio[("object storage (S3-compatible)")]
+            ocp_clamav["clamav pod (optional, env-gated)"]
+            ocp_cron["dynamic_scheduler.py CronJob<br/>(scheduled_task table driven)"]
+        end
+        subgraph DataNS["Database namespace"]
+            crunchy_lcfs[("Crunchy PostgreSQL<br/>lcfs-crunchy-&lt;env&gt;<br/>primary + replica")]
+            crunchy_tfrs[("Crunchy PostgreSQL<br/>tfrs-crunchy-&lt;env&gt;")]
+            backups["scheduled backup + cleanup CronJobs"]
+        end
+        netpol["NetworkPolicies<br/>allow-crunchy-accept, allow-redis-accept"]
+    end
+
+    subgraph ExtSvc["External services (outside the cluster)"]
+        direction TB
+        ext_keycloak["Keycloak (SSO IDP)"]
+        ext_ches["CHES (email)"]
+        ext_geo["BC Address Geocoder"]
+        ext_metabase["Metabase (BI dashboards)"]
+    end
+
+    subgraph CICD["GitHub Actions"]
+        direction TB
+        pr["pr-build / pr-test / pr-teardown<br/>(ephemeral PR environments)"]
+        envci["dev-ci / test-ci / prod-ci"]
+        bc["OpenShift BuildConfigs<br/>backend-bc, frontend-bc<br/>(Dockerfile.openshift)"]
+    end
+
+    dc_be --> dc_db
+    dc_be --> dc_redis
+    dc_be --> dc_minio
+    dc_nifi --> dc_tfrs
+    dc_nifi -.->|"shared_network"| dc_db
+
+    ocp_fe -->|"REST/JSON, separate Route"| ocp_be
+    ocp_be --> crunchy_lcfs
+    ocp_be --> ocp_redis
+    ocp_be --> ocp_minio
+    ocp_be --> ocp_clamav
+    ocp_cron --> crunchy_lcfs
+    ocp_be -.-> ext_keycloak
+    ocp_fe -.-> ext_keycloak
+    ocp_be -.-> ext_ches
+    ocp_cron -.-> ext_ches
+    ocp_be -.-> ext_geo
+    ocp_be -.-> ext_metabase
+    ext_metabase -.-> crunchy_lcfs
+    netpol -.-> crunchy_lcfs
+    netpol -.-> ocp_redis
+
+    envci --> bc --> AppNS
+    pr --> bc
+
+    classDef optional stroke-dasharray: 4 3
+    class dc_mcp,ocp_clamav optional

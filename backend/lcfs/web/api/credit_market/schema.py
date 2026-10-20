@@ -81,6 +81,22 @@ class MarketReportPeriodSchema(BaseSchema):
     transfers: int
     volume: int
     weighted_avg_price: Optional[float] = None
+    min_price: Optional[float] = None
+    max_price: Optional[float] = None
+    category_a_transfers: int = 0
+    category_a_average_price: Optional[float] = None
+    category_a_credit_volume: int = 0
+    category_b_transfers: int = 0
+    category_b_average_price: Optional[float] = None
+    category_b_credit_volume: int = 0
+    category_c_transfers: int = 0
+    category_c_average_price: Optional[float] = None
+    category_c_credit_volume: int = 0
+    category_a1_transfers: int = 0
+    category_a1_average_price: Optional[float] = None
+    category_a1_credit_volume: int = 0
+    min_a1_price: Optional[float] = None
+    max_a1_price: Optional[float] = None
     transfer_value: float = 0.0
 
 
@@ -103,6 +119,8 @@ class MarketReportAllTimeSchema(BaseSchema):
     transfers: int = 0
     volume: int = 0
     weighted_avg_price: Optional[float] = None
+    min_price: Optional[float] = None
+    max_price: Optional[float] = None
     transfer_value: float = 0.0
 
 
@@ -110,13 +128,16 @@ class PublicMarketReportSchema(BaseSchema):
     """
     Public, aggregate-only market report. Periods with fewer than the
     published thresholds of transfers/participants are withheld; no individual
-    prices (min/max) or low-count category detail are exposed.
+    transaction detail or low-count category detail is exposed.
     """
 
     monthly: List[MarketReportPeriodSchema]
+    a1_monthly: List[MarketReportPeriodSchema]
     quarterly: List[MarketReportPeriodSchema]
     annual: List[MarketReportPeriodSchema]
     all_time: MarketReportAllTimeSchema
     kpis: MarketReportKpiSchema
+    ytd_kpis: MarketReportKpiSchema
+    a1_kpis: Optional[MarketReportKpiSchema] = None
     min_transfers: int
     min_participants: int

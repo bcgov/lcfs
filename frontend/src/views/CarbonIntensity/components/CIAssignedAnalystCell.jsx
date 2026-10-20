@@ -1,14 +1,12 @@
 import { useState } from 'react'
-import {
-  Box,
-  Chip,
-  CircularProgress,
-  FormControl,
-  MenuItem,
-  Select,
-  Tooltip,
-  useTheme
-} from '@mui/material'
+import Box from '@mui/material/Box'
+import Chip from '@mui/material/Chip'
+import CircularProgress from '@mui/material/CircularProgress'
+import FormControl from '@mui/material/FormControl'
+import MenuItem from '@mui/material/MenuItem'
+import Select from '@mui/material/Select'
+import Tooltip from '@mui/material/Tooltip'
+import useTheme from '@mui/material/styles/useTheme'
 
 import {
   useAssignCIApplicationAnalyst,

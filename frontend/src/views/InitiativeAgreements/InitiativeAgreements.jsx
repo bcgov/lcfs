@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'react-router-dom'
-import { Divider, Stack } from '@mui/material'
+import Divider from '@mui/material/Divider'
+import Stack from '@mui/material/Stack'
 
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
@@ -72,6 +73,16 @@ const InitiativeAgreementsBase = () => {
 
   const getRowId = (params) => params.data.initiativeAgreementId.toString()
 
+  const handleClearFilters = useCallback(() => {
+    setPaginationOptions(initialPaginationOptions)
+    try {
+      sessionStorage.removeItem('initiative-agreements-grid-filter')
+      sessionStorage.removeItem('initiative-agreements-grid-pagination')
+    } catch (error) {
+      console.warn('Failed to clear initiative agreements grid cache:', error)
+    }
+  }, [])
+
   const defaultColDef = useMemo(
     () => ({
       cellRenderer: LinkRenderer,
@@ -124,6 +135,7 @@ const InitiativeAgreementsBase = () => {
               ...newPagination
             }))
           }
+          onClearFilters={handleClearFilters}
         />
       </BCBox>
     </BCBox>

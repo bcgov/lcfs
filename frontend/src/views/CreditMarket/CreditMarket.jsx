@@ -1,12 +1,10 @@
 import { useMemo, useState } from 'react'
-import {
-  Card,
-  CardContent,
-  Grid,
-  ToggleButton,
-  ToggleButtonGroup,
-  CircularProgress
-} from '@mui/material'
+import Card from '@mui/material/Card'
+import CardContent from '@mui/material/CardContent'
+import Grid from '@mui/material/Grid'
+import ToggleButton from '@mui/material/ToggleButton'
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
+import CircularProgress from '@mui/material/CircularProgress'
 import ReactECharts from 'echarts-for-react'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
@@ -23,6 +21,9 @@ const COLORS = {
   balance: '#2e7d32',
   net: 'rgba(33, 150, 243, 0.55)'
 }
+
+const EMPTY_ARRAY = []
+const EMPTY_OBJECT = {}
 
 const numberFmt = new Intl.NumberFormat('en-CA')
 const currencyFmt = new Intl.NumberFormat('en-CA', {
@@ -81,9 +82,9 @@ const CreditMarketBase = () => {
   const [interval, setInterval] = useState('quarter')
   const { data, isLoading, isError } = useCreditMarketOverview(interval)
 
-  const priceIndex = data?.priceIndex ?? []
-  const marketBalance = data?.marketBalance ?? []
-  const concentration = data?.concentration ?? {}
+  const priceIndex = data?.priceIndex ?? EMPTY_ARRAY
+  const marketBalance = data?.marketBalance ?? EMPTY_ARRAY
+  const concentration = data?.concentration ?? EMPTY_OBJECT
 
   const periods = useMemo(() => priceIndex.map((p) => p.period), [priceIndex])
 

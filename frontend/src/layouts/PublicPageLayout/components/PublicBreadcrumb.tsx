@@ -1,8 +1,13 @@
-import { Breadcrumbs, Typography, Container } from '@mui/material'
+import Breadcrumbs from '@mui/material/Breadcrumbs'
+import Typography from '@mui/material/Typography'
+import Container from '@mui/material/Container'
 import { Link, useLocation, useMatches } from 'react-router-dom'
-import { NavigateNext as NavigateNextIcon } from '@mui/icons-material'
+import NavigateNextIcon from '@mui/icons-material/NavigateNext'
 import { emphasize, styled } from '@mui/material/styles'
 import Chip from '@mui/material/Chip'
+import type { ChipProps } from '@mui/material/Chip'
+import type { ComponentType, ElementType } from 'react'
+import type { Theme } from '@mui/material/styles'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 
@@ -17,6 +22,13 @@ type RouteHandle = {
   title?: string
 }
 
+type ApplicationTheme = Theme & {
+  palette: Theme['palette'] & {
+    text: Theme['palette']['text'] & { main: string }
+  }
+  borders: { borderRadius: { xl: string | number } }
+}
+
 interface PublicBreadcrumbProps {
   customBreadcrumbs?: BreadcrumbMap
   rootLabel?: string
@@ -24,14 +36,15 @@ interface PublicBreadcrumbProps {
 }
 
 const StyledBreadcrumb = styled(Chip)(({ theme }) => {
+  const applicationTheme = theme as ApplicationTheme
   const backgroundColor = theme.palette.common.white
   return {
     backgroundColor,
     height: theme.spacing(3),
-    color: theme.palette.text.main,
+    color: applicationTheme.palette.text.main,
     fontWeight: theme.typography.fontWeightRegular,
     fontSize: theme.typography.pxToRem(16),
-    borderRadius: theme.borders.borderRadius.xl,
+    borderRadius: applicationTheme.borders.borderRadius.xl,
     '& span': {
       padding: 0
     },
@@ -43,7 +56,7 @@ const StyledBreadcrumb = styled(Chip)(({ theme }) => {
       backgroundColor: emphasize(backgroundColor, 0.12)
     }
   }
-})
+}) as ComponentType<ChipProps & { to?: string; component?: ElementType }>
 
 export const PublicBreadcrumb = ({
   customBreadcrumbs = {},
@@ -104,7 +117,14 @@ export const PublicBreadcrumb = ({
     }
 
     // Default formatting: capitalize and replace hyphens with spaces
-    return name.charAt(0).toUpperCase() + name.slice(1).replaceAll('-', ' ')
+    return (
+      name.charAt(0).toUpperCase() +
+      (
+        name.slice(1) as unknown as {
+          replaceAll(searchValue: string, replaceValue: string): string
+        }
+      ).replaceAll('-', ' ')
+    )
   }
 
   const getBreadcrumbRoute = (name: string, index: number): string => {

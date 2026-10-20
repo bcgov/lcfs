@@ -1,5 +1,62 @@
 [
   {
+    "version": "1.3.10",
+    "tag": "v1.3.10",
+    "date": "2026-10-07",
+    "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/v1.3.10",
+    "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/v1.3.9...v1.3.10",
+    "summary": "This release includes 3 new features, 4 bug fixes, 1 security update, 4 dependency updates and 23 other changes. Highlights: Improve Company Overview Comment UI - 5043, 4909; Credit Market Snapshot Alignment with Metabase Credit Market Report; Maintain Supply History Continuity for Petroleum and Fossil Derived Fuel Labels; combine open Dependabot updates, clear the security backlog, group future security PRs.",
+    "sections": {
+      "features": [
+        "Improve Company Overview Comment UI - 5043, 4909",
+        "Credit Market Snapshot Alignment with Metabase Credit Market Report",
+        "LCFS - Maintain Supply History Continuity for Petroleum and Fossil Derived Fuel Labels"
+      ],
+      "fixes": [
+        "LCFS - Input Filters in Multiple Tables Not Accessible to Screen Readers",
+        "LCFS - Credit Market Snapshot Alignment with Metabase Credit Market Report",
+        "rebuild 2027-2030 EERs from 2026 and fail on missing EERs (#5113)",
+        "Allow returning CI application from second to first verification"
+      ],
+      "security": [
+        "combine open Dependabot updates, clear the security backlog, group future security PRs"
+      ],
+      "breaking": [],
+      "dependencies": [
+        "bump @grpc/grpc-js from 1.14.4 to 1.14.5 in /mcp-server by @dependabot[bot] in https://github.com/bcgov/lcfs/pull/5178",
+        "bump fast-uri from 3.1.7 to 3.1.8 in /mcp-server by @dependabot[bot] in https://github.com/bcgov/lcfs/pull/5180",
+        "bump axios from 1.18.1 to 1.20.0 in /frontend by @dependabot[bot] in https://github.com/bcgov/lcfs/pull/5179",
+        "bump lupa from 2.5 to 2.7 in /backend in the pip-security group across 1 directory by @dependabot[bot] in https://github.com/bcgov/lcfs/pull/5201"
+      ],
+      "other": [
+        "Test Release v1.3.9",
+        "Replace removed kevin-hashimoto with mr-moto as test approver",
+        "Auto-request a PR reviewer from the dev rotation",
+        "narrow MUI and component imports",
+        "lazy-load test fixtures",
+        "Fix Supply History double counting supplemental fuel supply rows (#5045)",
+        "split Vitest node and jsdom projects",
+        "assign PR reviewer as assignee",
+        "Bump pyjwt, undici, markdown-it and ip-address (#5160-#5163)",
+        "Replace Supply History CU per unit box with renewable fuel volume (#5046)",
+        "Update time zone data for BC's permanent UTC-7 (#5125)",
+        "Replace withdrawn Bitnami images (Cypress Daily redis, ETL ZooKeeper, frontend nginx)",
+        "Replace MinIO with RustFS in local Docker Compose (#5159)",
+        "Align Summary Card with Dashboard Standard - 4924",
+        "Update architecture diagram - 4109",
+        "Add compliance period display to comment log entries",
+        "reorganize and clean up .gitignore",
+        "Add Agreement Date and A1 category to the transactions export (#5030)",
+        "Show the year in internal comment timestamps (#5134)",
+        "Reserve compliance report deficits against the Line 17 balance (#5031)",
+        "Let a Director assess a reassessment straight from Analyst adjustment (#5075)",
+        "Improve accessibility for pagination, comments, and organization tabs",
+        "Add fuel category breakdown to Supply History (#5047)"
+      ]
+    },
+    "contributors": []
+  },
+  {
     "version": "1.3.9",
     "tag": "v1.3.9",
     "date": "2026-09-25",

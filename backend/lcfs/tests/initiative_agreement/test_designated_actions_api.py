@@ -329,17 +329,41 @@ async def test_manager_assignment_writes_the_change_log(
 
 @pytest.mark.parametrize(
     "role_set",
-    [[RoleEnum.IA_ANALYST, RoleEnum.GOVERNMENT], [RoleEnum.IA_PROPONENT]],
-    ids=["ia-analyst", "proponent"],
+    [IDIR_IA_ANALYST, IDIR_IA_MANAGER, IDIR_DIRECTOR],
+    ids=["ia-analyst", "ia-manager", "director"],
 )
 @pytest.mark.anyio
-async def test_assignment_is_refused_below_manager(
+async def test_any_idir_ia_user_can_assign(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession, role_set
 ):
+    """As with compliance reports, assignment is open to every IDIR user
+    who works the module (#5197), not only managers."""
     org_id, _ = await _two_org_ids(dbsession)
     agreement = await _seed_agreement(dbsession, org_id, "IA-26ASGN2")
     action = await _seed_action(dbsession, agreement, 1, "Commission station")
+    analyst = await _seed_ia_analyst(dbsession, "assignable", "Ada", "Lovelace")
     set_mock_user(fastapi_app, role_set)
+
+    url = fastapi_app.url_path_for(
+        "assign_designated_action_analyst",
+        designated_action_id=action.designated_action_id,
+    )
+    response = await client.put(
+        url, json={"assignedAnalystId": analyst.user_profile_id}
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["assignedAnalyst"]["firstName"] == "Ada"
+
+
+@pytest.mark.anyio
+async def test_assignment_is_refused_to_proponents(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    org_id, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(dbsession, org_id, "IA-26ASGN4")
+    action = await _seed_action(dbsession, agreement, 1, "Commission station")
+    set_mock_user(fastapi_app, [RoleEnum.IA_PROPONENT])
 
     url = fastapi_app.url_path_for(
         "assign_designated_action_analyst",
@@ -943,6 +967,51 @@ async def test_the_tab_honours_a_caller_sort(
 
     names = [r["name"] for r in response.json()["designatedActions"]]
     assert names.index("Apple orchard") < names.index("Zebra crossing")
+
+
+@pytest.mark.anyio
+async def test_the_tab_returns_and_filters_by_assigned_analyst(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """The assigned analyst column (#5197) shows on the module-wide tab:
+    each row carries its analyst, and the analyst filter works across
+    agreements."""
+    org_id, other_org = await _two_org_ids(dbsession)
+    first = await _seed_agreement(dbsession, org_id, "IA-26ALL5")
+    second = await _seed_agreement(dbsession, other_org, "IA-26ALL6")
+    analyst = await _seed_ia_analyst(dbsession, "tanalyst", "Tess", "Analyst")
+    await _seed_action(
+        dbsession,
+        first,
+        1,
+        "Assigned work",
+        assigned_analyst_id=analyst.user_profile_id,
+    )
+    await _seed_action(dbsession, second, 1, "Unassigned work")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    listing = await client.post(_all_url(fastapi_app), json=PAGINATION_BODY)
+    by_name = {r["name"]: r for r in listing.json()["designatedActions"]}
+    assert by_name["Assigned work"]["assignedAnalyst"]["firstName"] == "Tess"
+    assert by_name["Unassigned work"]["assignedAnalyst"] is None
+
+    filtered = await client.post(
+        _all_url(fastapi_app),
+        json={
+            **PAGINATION_BODY,
+            "filters": [
+                {
+                    "field": "assignedAnalyst",
+                    "filterType": "number",
+                    "type": "equals",
+                    "filter": str(analyst.user_profile_id),
+                }
+            ],
+        },
+    )
+    assert [r["name"] for r in filtered.json()["designatedActions"]] == [
+        "Assigned work"
+    ]
 
 
 @pytest.mark.anyio

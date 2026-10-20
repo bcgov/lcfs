@@ -1,6 +1,6 @@
-import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
+import { screen, fireEvent } from '@testing-library/react'
+import { describe, expect, vi, beforeEach } from 'vitest'
 import { ROUTES } from '@/routes/routes'
 import { PublicDashboard } from '../PublicDashboard'
 
@@ -60,50 +60,70 @@ describe('PublicDashboard', () => {
     sessionStorage.clear()
   })
 
-  it('forwards a just-authenticated visitor into the app dashboard', () => {
+  test('forwards a just-authenticated visitor into the app dashboard', ({
+    render,
+    theme,
+    router
+  }) => {
     keycloakState.initialized = true
     keycloakState.authenticated = true
-    render(<PublicDashboard />, { wrapper })
+    render(<PublicDashboard />, [theme, router])
     expect(navigateMock).toHaveBeenCalledWith(ROUTES.DASHBOARD, {
       replace: true
     })
   })
 
-  it('forwards only once so it cannot loop with the auth guard', () => {
+  test('forwards only once so it cannot loop with the auth guard', ({
+    render,
+    theme,
+    router
+  }) => {
     keycloakState.initialized = true
     keycloakState.authenticated = true
     // First mount forwards; a re-render (e.g. RequireAuth bounced the visitor
     // straight back, as happens for an authenticated user with no LCFS
     // account) must not forward again.
-    const { unmount } = render(<PublicDashboard />, { wrapper })
+    const { unmount } = render(<PublicDashboard />, [theme, router])
     expect(navigateMock).toHaveBeenCalledTimes(1)
     unmount()
-    render(<PublicDashboard />, { wrapper })
+    render(<PublicDashboard />, [theme, router])
     expect(navigateMock).toHaveBeenCalledTimes(1)
   })
 
-  it('does not forward an unauthenticated visitor', () => {
+  test('does not forward an unauthenticated visitor', ({
+    render,
+    theme,
+    router
+  }) => {
     keycloakState.initialized = true
     keycloakState.authenticated = false
-    render(<PublicDashboard />, { wrapper })
+    render(<PublicDashboard />, [theme, router])
     expect(navigateMock).not.toHaveBeenCalled()
   })
 
-  it('does not forward before keycloak has initialized', () => {
+  test('does not forward before keycloak has initialized', ({
+    render,
+    theme,
+    router
+  }) => {
     keycloakState.initialized = false
     keycloakState.authenticated = true
-    render(<PublicDashboard />, { wrapper })
+    render(<PublicDashboard />, [theme, router])
     expect(navigateMock).not.toHaveBeenCalled()
   })
 
-  it('renders the hero and program title', () => {
-    render(<PublicDashboard />, { wrapper })
+  test('renders the hero and program title', ({ render, theme, router }) => {
+    render(<PublicDashboard />, [theme, router])
     expect(screen.getByText('publicDashboard.hero.title')).toBeInTheDocument()
     expect(screen.getByText('publicDashboard.cardTitle')).toBeInTheDocument()
   })
 
-  it('shows all-time generated credits in the hero stats', () => {
-    render(<PublicDashboard />, { wrapper })
+  test('shows all-time generated credits in the hero stats', ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<PublicDashboard />, [theme, router])
     expect(
       screen.getByTestId('hero-stat-totalGeneratedCredits')
     ).toHaveTextContent('publicDashboard.stats.totalGeneratedCredits')
@@ -112,8 +132,8 @@ describe('PublicDashboard', () => {
     ).toHaveTextContent('9.2M')
   })
 
-  it('renders the public tool tiles', () => {
-    render(<PublicDashboard />, { wrapper })
+  test('renders the public tool tiles', ({ render, theme, router }) => {
+    render(<PublicDashboard />, [theme, router])
     expect(screen.getByTestId('tool-calculator')).toBeInTheDocument()
     expect(screen.getByTestId('tool-calculationData')).toBeInTheDocument()
     expect(
@@ -121,16 +141,24 @@ describe('PublicDashboard', () => {
     ).toBeInTheDocument()
   })
 
-  it('renders tool tiles as accessible links to their routes', () => {
-    render(<PublicDashboard />, { wrapper })
+  test('renders tool tiles as accessible links to their routes', ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<PublicDashboard />, [theme, router])
     expect(screen.getByTestId('tool-calculator')).toHaveAttribute(
       'href',
       '/credit-calculator'
     )
   })
 
-  it('links to the BC Gov legislation and requirements pages', () => {
-    render(<PublicDashboard />, { wrapper })
+  test('links to the BC Gov legislation and requirements pages', ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<PublicDashboard />, [theme, router])
     const links = screen.getAllByTestId('legislation-link')
     expect(links).toHaveLength(2)
     expect(links[0]).toHaveAttribute(
@@ -143,16 +171,24 @@ describe('PublicDashboard', () => {
     )
   })
 
-  it('triggers keycloak login from the login buttons', () => {
-    render(<PublicDashboard />, { wrapper })
+  test('triggers keycloak login from the login buttons', ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<PublicDashboard />, [theme, router])
     fireEvent.click(screen.getAllByTestId('public-login-bceid')[0])
     expect(loginMock).toHaveBeenCalledWith(
       expect.objectContaining({ idpHint: 'bceidbusiness' })
     )
   })
 
-  it('renders a "Trouble logging in?" link pointing to the CMS Lite support page', () => {
-    render(<PublicDashboard />, { wrapper })
+  test('renders a "Trouble logging in?" link pointing to the CMS Lite support page', ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<PublicDashboard />, [theme, router])
     const link = screen.getByTestId('trouble-logging-in')
     expect(link).toBeInTheDocument()
     expect(link).toHaveAttribute(

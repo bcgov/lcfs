@@ -1,21 +1,13 @@
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import { test } from '@/tests/utils/fixtures'
+import { screen, fireEvent, act } from '@testing-library/react'
 import { UserProfileActions } from '../UserProfileActions'
-import {
-  vi,
-  describe,
-  it,
-  expect,
-  beforeEach,
-  afterEach,
-  type Mock
-} from 'vitest'
+import { vi, describe, expect, beforeEach, afterEach, type Mock } from 'vitest'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   useGetNotificationMessages,
   useMarkNotificationAsRead,
   useNotificationsCount
 } from '@/hooks/useNotifications'
-import { wrapper } from '@/tests/utils/wrapper'
 import { logout } from '@/utils/keycloak'
 import { CONFIG } from '@/constants/config'
 import type { ReactNode } from 'react'
@@ -30,7 +22,7 @@ type RoleSwitcherMockProps = {
 const mockRefetch = vi.fn()
 const mockMarkAsRead = vi.fn()
 const mockNavigate = vi.fn()
-const mockRoleSwitcher = vi.fn<void, [RoleSwitcherMockProps]>()
+const mockRoleSwitcher = vi.fn<(props: RoleSwitcherMockProps) => void>()
 const originalRoleSwitcherFlag = CONFIG.feature_flags.roleSwitcher
 const initialHiddenDescriptor = Object.getOwnPropertyDescriptor(
   document,
@@ -38,7 +30,7 @@ const initialHiddenDescriptor = Object.getOwnPropertyDescriptor(
 )
 
 const getLastRoleSwitcherProps = () =>
-  mockRoleSwitcher.mock.calls.at(-1)?.[0] as RoleSwitcherMockProps | undefined
+  mockRoleSwitcher.mock.calls[mockRoleSwitcher.mock.calls.length - 1]?.[0]
 
 vi.mock('@/hooks/useCurrentUser')
 vi.mock('@/hooks/useNotifications')
@@ -66,7 +58,10 @@ vi.mock('react-router-dom', async () => {
 })
 
 vi.mock('../RoleSwitcher', async () => {
-  const { CONFIG: actualConfig } = await vi.importActual('@/constants/config')
+  const { CONFIG: actualConfig } =
+    await vi.importActual<typeof import('@/constants/config')>(
+      '@/constants/config'
+    )
   return {
     RoleSwitcher: (props: RoleSwitcherMockProps) => {
       mockRoleSwitcher(props)
@@ -75,7 +70,10 @@ vi.mock('../RoleSwitcher', async () => {
       }
       return (
         <>
-          <button aria-label="roleSwitcher.buttonLabel" onClick={props.onToggle as () => void}>
+          <button
+            aria-label="roleSwitcher.buttonLabel"
+            onClick={props.onToggle as () => void}
+          >
             Toggle Role
           </button>
           <div data-testid="role-switcher" data-open={props.open} />
@@ -93,7 +91,7 @@ vi.mock('@react-keycloak/web', () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => key
+    t: (key: string) => key
   })
 }))
 
@@ -180,57 +178,87 @@ describe('UserProfileActions', () => {
     if (initialHiddenDescriptor) {
       Object.defineProperty(document, 'hidden', initialHiddenDescriptor)
     } else {
-      delete document.hidden
+      Reflect.deleteProperty(document, 'hidden')
     }
   })
 
-  it('renders user information and the logout button', () => {
-    render(<UserProfileActions />, { wrapper })
+  test('renders user information and the logout button', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<UserProfileActions />, [query, theme, router])
 
     expect(screen.getByText('John Doe')).toBeInTheDocument()
     expect(screen.getByTestId('logout-button')).toBeInTheDocument()
   }, 30000)
 
-  it('shows the notifications badge when the count is greater than zero', () => {
-    render(<UserProfileActions />, { wrapper })
+  test('shows the notifications badge when the count is greater than zero', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<UserProfileActions />, [query, theme, router])
 
     expect(screen.getByText('5')).toBeInTheDocument()
   })
 
-  it('does not show a badge when notifications count is zero', () => {
+  test('does not show a badge when notifications count is zero', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     mockedUseNotificationsCount.mockReturnValue({
       data: { count: 0 },
       isLoading: false,
       refetch: mockRefetch
     })
 
-    render(<UserProfileActions />, { wrapper })
+    render(<UserProfileActions />, [query, theme, router])
 
     expect(screen.queryByText('0')).not.toBeInTheDocument()
   })
 
-  it('shows a loading spinner while notifications are fetching', () => {
+  test('shows a loading spinner while notifications are fetching', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     mockedUseNotificationsCount.mockReturnValue({
       data: null,
       isLoading: true,
       refetch: mockRefetch
     })
 
-    render(<UserProfileActions />, { wrapper })
+    render(<UserProfileActions />, [query, theme, router])
 
     expect(screen.getByRole('progressbar')).toBeInTheDocument()
   })
 
-  it('calls logout when the logout button is clicked', () => {
-    render(<UserProfileActions />, { wrapper })
+  test('calls logout when the logout button is clicked', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<UserProfileActions />, [query, theme, router])
 
     fireEvent.click(screen.getByRole('button', { name: 'logout' }))
 
     expect(mockedLogout).toHaveBeenCalled()
   }, 30000)
 
-  it('shows latest notifications on hover', () => {
-    render(<UserProfileActions />, { wrapper })
+  test('shows latest notifications on hover', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<UserProfileActions />, [query, theme, router])
 
     fireEvent.mouseEnter(screen.getByLabelText('Notifications'))
 
@@ -238,7 +266,9 @@ describe('UserProfileActions', () => {
       expect.objectContaining({ size: 3 }),
       expect.any(Object)
     )
-    expect(screen.getByText('notifications:latestNotifications')).toBeInTheDocument()
+    expect(
+      screen.getByText('notifications:latestNotifications')
+    ).toBeInTheDocument()
     expect(screen.getByText('Transfer submitted')).toBeInTheDocument()
     expect(screen.getByText(/Acme Fuels Ltd. \\| Aug 12/)).toBeInTheDocument()
     expect(
@@ -248,8 +278,13 @@ describe('UserProfileActions', () => {
     ).toHaveAttribute('href', '/notifications')
   }, 30000)
 
-  it('navigates to all notifications when the navbar icon is clicked', () => {
-    render(<UserProfileActions />, { wrapper })
+  test('navigates to all notifications when the navbar icon is clicked', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<UserProfileActions />, [query, theme, router])
 
     expect(screen.getByLabelText('Notifications')).toHaveAttribute(
       'href',
@@ -257,8 +292,13 @@ describe('UserProfileActions', () => {
     )
   })
 
-  it('opens the notification preview when the navbar icon receives keyboard focus', () => {
-    render(<UserProfileActions />, { wrapper })
+  test('opens the notification preview when the navbar icon receives keyboard focus', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<UserProfileActions />, [query, theme, router])
 
     fireEvent.focus(screen.getByLabelText('Notifications'))
 
@@ -273,8 +313,13 @@ describe('UserProfileActions', () => {
     )
   })
 
-  it('keeps the notification preview open while keyboard focus moves inside it', () => {
-    render(<UserProfileActions />, { wrapper })
+  test('keeps the notification preview open while keyboard focus moves inside it', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<UserProfileActions />, [query, theme, router])
 
     const notificationTrigger = screen.getByLabelText('Notifications')
     fireEvent.focus(notificationTrigger)
@@ -292,8 +337,13 @@ describe('UserProfileActions', () => {
     ).toBeInTheDocument()
   })
 
-  it('closes the notification preview with Escape', () => {
-    render(<UserProfileActions />, { wrapper })
+  test('closes the notification preview with Escape', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<UserProfileActions />, [query, theme, router])
 
     fireEvent.focus(screen.getByLabelText('Notifications'))
     fireEvent.keyDown(
@@ -310,8 +360,13 @@ describe('UserProfileActions', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('opens a notification with Enter when the preview item has focus', () => {
-    render(<UserProfileActions />, { wrapper })
+  test('opens a notification with Enter when the preview item has focus', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<UserProfileActions />, [query, theme, router])
 
     fireEvent.focus(screen.getByLabelText('Notifications'))
     fireEvent.keyDown(
@@ -327,8 +382,13 @@ describe('UserProfileActions', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/transfers/99')
   })
 
-  it('marks a single dropdown notification as read from the x button', () => {
-    render(<UserProfileActions />, { wrapper })
+  test('marks a single dropdown notification as read from the x button', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<UserProfileActions />, [query, theme, router])
 
     fireEvent.mouseEnter(screen.getByLabelText('Notifications'))
     fireEvent.click(
@@ -342,8 +402,13 @@ describe('UserProfileActions', () => {
     })
   })
 
-  it('marks all notifications as read from the dropdown', () => {
-    render(<UserProfileActions />, { wrapper })
+  test('marks all notifications as read from the dropdown', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<UserProfileActions />, [query, theme, router])
 
     fireEvent.mouseEnter(screen.getByLabelText('Notifications'))
     fireEvent.click(
@@ -355,9 +420,14 @@ describe('UserProfileActions', () => {
     expect(mockMarkAsRead).toHaveBeenCalledWith({ applyToAll: true })
   }, 30000)
 
-  it('refetches notifications on the manual interval', () => {
+  test('refetches notifications on the manual interval', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     vi.useFakeTimers()
-    render(<UserProfileActions />, { wrapper })
+    render(<UserProfileActions />, [query, theme, router])
 
     act(() => {
       vi.advanceTimersByTime(60000)
@@ -366,8 +436,13 @@ describe('UserProfileActions', () => {
     expect(mockRefetch).toHaveBeenCalled()
   })
 
-  it('refetches notifications when the window gains focus', () => {
-    render(<UserProfileActions />, { wrapper })
+  test('refetches notifications when the window gains focus', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<UserProfileActions />, [query, theme, router])
 
     mockRefetch.mockClear()
 
@@ -378,8 +453,13 @@ describe('UserProfileActions', () => {
     expect(mockRefetch).toHaveBeenCalled()
   })
 
-  it('refetches notifications when the page becomes visible', () => {
-    render(<UserProfileActions />, { wrapper })
+  test('refetches notifications when the page becomes visible', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<UserProfileActions />, [query, theme, router])
 
     mockRefetch.mockClear()
 
@@ -395,8 +475,13 @@ describe('UserProfileActions', () => {
     expect(mockRefetch).toHaveBeenCalled()
   })
 
-  it('renders the RoleSwitcher with anchor props for administrators', () => {
-    const { rerender } = render(<UserProfileActions />, { wrapper })
+  test('renders the RoleSwitcher with anchor props for administrators', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    const { rerender } = render(<UserProfileActions />, [query, theme, router])
 
     expect(mockRoleSwitcher).toHaveBeenCalled()
     const initialProps = getLastRoleSwitcherProps()
@@ -409,7 +494,12 @@ describe('UserProfileActions', () => {
     expect(rerenderedProps?.anchorEl).toBeInstanceOf(HTMLElement)
   })
 
-  it('does not render the RoleSwitcher toggle for non administrators', () => {
+  test('does not render the RoleSwitcher toggle for non administrators', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     mockedUseCurrentUser.mockReturnValue({
       data: {
         firstName: 'Jane',
@@ -421,7 +511,7 @@ describe('UserProfileActions', () => {
       hasRoles: () => false
     })
 
-    render(<UserProfileActions />, { wrapper })
+    render(<UserProfileActions />, [query, theme, router])
 
     expect(
       screen.queryByRole('button', {
@@ -430,10 +520,15 @@ describe('UserProfileActions', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('does not render the RoleSwitcher toggle when the feature flag is disabled', () => {
+  test('does not render the RoleSwitcher toggle when the feature flag is disabled', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     CONFIG.feature_flags.roleSwitcher = false
 
-    render(<UserProfileActions />, { wrapper })
+    render(<UserProfileActions />, [query, theme, router])
 
     expect(
       screen.queryByRole('button', {
@@ -442,18 +537,17 @@ describe('UserProfileActions', () => {
     ).not.toBeInTheDocument()
   }, 30000)
 
-  it('cleans up timers and listeners on unmount', () => {
+  test('cleans up timers and listeners on unmount', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     const clearIntervalSpy = vi.spyOn(global, 'clearInterval')
-    const removeDocumentListenerSpy = vi.spyOn(
-      document,
-      'removeEventListener'
-    )
-    const removeWindowListenerSpy = vi.spyOn(
-      window,
-      'removeEventListener'
-    )
+    const removeDocumentListenerSpy = vi.spyOn(document, 'removeEventListener')
+    const removeWindowListenerSpy = vi.spyOn(window, 'removeEventListener')
 
-    const { unmount } = render(<UserProfileActions />, { wrapper })
+    const { unmount } = render(<UserProfileActions />, [query, theme, router])
     unmount()
 
     expect(clearIntervalSpy).toHaveBeenCalled()

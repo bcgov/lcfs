@@ -1,6 +1,10 @@
 import PropTypes from 'prop-types'
-import { FormControl, InputLabel, MenuItem, Select } from '@mui/material'
+import FormControl from '@mui/material/FormControl'
+import InputLabel from '@mui/material/InputLabel'
+import MenuItem from '@mui/material/MenuItem'
+import Select from '@mui/material/Select'
 import { Controller } from 'react-hook-form'
+import type { Control, FieldValues } from 'react-hook-form'
 import type { ReactNode } from 'react'
 
 export interface BCFormSelectOption {
@@ -10,7 +14,7 @@ export interface BCFormSelectOption {
 
 export interface BCFormSelectProps {
   name: string
-  control: any
+  control: Control<FieldValues>
   label?: ReactNode
   options: BCFormSelectOption[]
 }

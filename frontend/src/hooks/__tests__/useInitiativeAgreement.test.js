@@ -1,7 +1,7 @@
-import { renderHook, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { waitFor } from '@testing-library/react'
+import { describe, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useApiService } from '@/services/useApiService'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import {
   useInitiativeAgreement,
   useCreateUpdateInitiativeAgreement
@@ -21,7 +21,10 @@ describe('useInitiativeAgreement', () => {
     vi.clearAllMocks()
   })
 
-  it('should fetch initiative agreement successfully', async () => {
+  test('should fetch initiative agreement successfully', async ({
+    renderHook,
+    query
+  }) => {
     const mockData = {
       initiativeAgreementId: 123,
       transactionType: 'Compliance Report',
@@ -29,9 +32,7 @@ describe('useInitiativeAgreement', () => {
     }
     mockGet.mockResolvedValue({ data: mockData })
 
-    const { result } = renderHook(() => useInitiativeAgreement(123), {
-      wrapper
-    })
+    const { result } = renderHook(() => useInitiativeAgreement(123), [query])
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true)
@@ -41,9 +42,12 @@ describe('useInitiativeAgreement', () => {
     expect(mockGet).toHaveBeenCalledWith('/initiative-agreements/123')
   })
 
-  it('should attempt to fetch when ID is missing but fail', async () => {
+  test('should attempt to fetch when ID is missing but fail', async ({
+    renderHook,
+    query
+  }) => {
     mockGet.mockRejectedValue(new Error('Request failed'))
-    const { result } = renderHook(() => useInitiativeAgreement(), { wrapper })
+    const { result } = renderHook(() => useInitiativeAgreement(), [query])
 
     // Should attempt to call with undefined ID
     await waitFor(() => {
@@ -52,11 +56,15 @@ describe('useInitiativeAgreement', () => {
     expect(mockGet).toHaveBeenCalledWith('/initiative-agreements/undefined')
   })
 
-  it('should attempt to fetch when ID is undefined but fail', async () => {
+  test('should attempt to fetch when ID is undefined but fail', async ({
+    renderHook,
+    query
+  }) => {
     mockGet.mockRejectedValue(new Error('Request failed'))
-    const { result } = renderHook(() => useInitiativeAgreement(undefined), {
-      wrapper
-    })
+    const { result } = renderHook(
+      () => useInitiativeAgreement(undefined),
+      [query]
+    )
 
     // Should attempt to call with undefined ID
     await waitFor(() => {
@@ -65,13 +73,13 @@ describe('useInitiativeAgreement', () => {
     expect(mockGet).toHaveBeenCalledWith('/initiative-agreements/undefined')
   })
 
-  it('should handle API errors', async () => {
+  test('should handle API errors', async ({ renderHook, query }) => {
     const errorMessage = 'Failed to fetch initiative agreement'
     mockGet.mockRejectedValue(new Error(errorMessage))
 
     const { result } = renderHook(
       () => useInitiativeAgreement(123, { retry: false }),
-      { wrapper }
+      [query]
     )
 
     await waitFor(() => {
@@ -82,13 +90,13 @@ describe('useInitiativeAgreement', () => {
     expect(mockGet).toHaveBeenCalledWith('/initiative-agreements/123')
   })
 
-  it('should pass through custom options', async () => {
+  test('should pass through custom options', async ({ renderHook, query }) => {
     const mockData = { initiativeAgreementId: 123 }
     mockGet.mockResolvedValue({ data: mockData })
 
     const { result } = renderHook(
       () => useInitiativeAgreement(123, { staleTime: 5000 }),
-      { wrapper }
+      [query]
     )
 
     await waitFor(() => {
@@ -115,13 +123,17 @@ describe('useCreateUpdateInitiativeAgreement', () => {
     vi.clearAllMocks()
   })
 
-  it('should create new initiative agreement when no ID provided', async () => {
+  test('should create new initiative agreement when no ID provided', async ({
+    renderHook,
+    query
+  }) => {
     const mockData = { message: 'Initiative agreement created successfully' }
     mockPost.mockResolvedValue({ data: mockData })
 
-    const { result } = renderHook(() => useCreateUpdateInitiativeAgreement(), {
-      wrapper
-    })
+    const { result } = renderHook(
+      () => useCreateUpdateInitiativeAgreement(),
+      [query]
+    )
 
     const testData = { transactionType: 'Compliance Report' }
     result.current.mutate({ data: testData })
@@ -134,13 +146,16 @@ describe('useCreateUpdateInitiativeAgreement', () => {
     expect(result.current.data).toEqual({ data: mockData })
   })
 
-  it('should update existing initiative agreement when ID provided', async () => {
+  test('should update existing initiative agreement when ID provided', async ({
+    renderHook,
+    query
+  }) => {
     const mockData = { message: 'Initiative agreement updated successfully' }
     mockPut.mockResolvedValue({ data: mockData })
 
     const { result } = renderHook(
       () => useCreateUpdateInitiativeAgreement(123),
-      { wrapper }
+      [query]
     )
 
     const testData = { transactionType: 'Compliance Report' }
@@ -157,13 +172,17 @@ describe('useCreateUpdateInitiativeAgreement', () => {
     expect(result.current.data).toEqual({ data: mockData })
   })
 
-  it('should handle API errors during creation', async () => {
+  test('should handle API errors during creation', async ({
+    renderHook,
+    query
+  }) => {
     const errorMessage = 'Failed to create initiative agreement'
     mockPost.mockRejectedValue(new Error(errorMessage))
 
-    const { result } = renderHook(() => useCreateUpdateInitiativeAgreement(), {
-      wrapper
-    })
+    const { result } = renderHook(
+      () => useCreateUpdateInitiativeAgreement(),
+      [query]
+    )
 
     const testData = { transactionType: 'Compliance Report' }
     result.current.mutate({ data: testData })
@@ -175,13 +194,16 @@ describe('useCreateUpdateInitiativeAgreement', () => {
     expect(result.current.error).toEqual(new Error(errorMessage))
   })
 
-  it('should handle API errors during update', async () => {
+  test('should handle API errors during update', async ({
+    renderHook,
+    query
+  }) => {
     const errorMessage = 'Failed to update initiative agreement'
     mockPut.mockRejectedValue(new Error(errorMessage))
 
     const { result } = renderHook(
       () => useCreateUpdateInitiativeAgreement(123),
-      { wrapper }
+      [query]
     )
 
     const testData = { transactionType: 'Compliance Report' }

@@ -9,7 +9,7 @@ description: Use this skill when working in the LCFS repository to understand th
 
 LCFS is the BC Low Carbon Fuel Standard web application. It is a monorepo with:
 
-- `backend/`: Python 3.9 FastAPI service using SQLAlchemy async ORM, Alembic, Redis, MinIO/S3, Keycloak auth, Poetry, pytest, Black, Isort, Flake8, and MyPy.
+- `backend/`: Python 3.9 FastAPI service using SQLAlchemy async ORM, Alembic, Redis, S3 object storage (RustFS locally), Keycloak auth, Poetry, pytest, Black, Isort, Flake8, and MyPy.
 - `frontend/`: React 18 + Vite app using MUI 6, React Query, React Hook Form, Yup, Zustand, AG Grid, Vitest, Testing Library, Cypress, ESLint, and Prettier.
 - `etl/`: Apache NiFi, Groovy scripts, PostgreSQL migration/import tooling, anonymization scripts, and a Python migration subsystem.
 - `openshift/`: deployment templates and maintenance/cleanup resources.
@@ -58,7 +58,7 @@ poetry run mypy lcfs
 ./migrate.sh -u
 ```
 
-Backend tests require PostgreSQL. The root `docker-compose.yml` provides `db`, `redis`, `minio`, `backend`, and `frontend`; `docker-compose-db-only.yml` is available when only the database is needed.
+Backend tests require PostgreSQL. The root `docker-compose.yml` provides `db`, `redis`, `rustfs` (plus the one-off `create_bucket` job), `backend`, and `frontend`; `docker-compose-db-only.yml` is available when only the database is needed.
 
 ## Frontend conventions
 
@@ -104,8 +104,8 @@ The root compose stack exposes:
 - Backend docs: `http://localhost:8000/docs`
 - PostgreSQL: `localhost:5432`
 - Redis: `localhost:6379`
-- MinIO API: `http://localhost:9000`
-- MinIO console: `http://localhost:9001`
+- RustFS S3 API: `http://localhost:9000`
+- RustFS console: `http://localhost:9001/rustfs/console/`
 
 ETL compose exposes:
 

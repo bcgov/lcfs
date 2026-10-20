@@ -1,21 +1,22 @@
 import { useState } from 'react'
 import { Controller } from 'react-hook-form'
-import { Box, InputLabel, Stack } from '@mui/material'
-import { Info } from '@mui/icons-material'
+import Box from '@mui/material/Box'
+import InputLabel from '@mui/material/InputLabel'
+import Stack from '@mui/material/Stack'
+import Info from '@mui/icons-material/Info'
 import BCTypography from '@/components/BCTypography'
 import PropTypes from 'prop-types'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Checkbox from '@mui/material/Checkbox'
 import { AddressAutocomplete } from './AddressAutocomplete'
 import type { AddressOption } from './AddressAutocomplete'
-import { POSTAL_CODE_REGEX } from '@/constants/common'
 import type { ChangeEventHandler } from 'react'
-
-export type AddressValue = string | AddressOption | null | undefined
+import type { Control, FieldValues } from 'react-hook-form'
+import { addressHasPostalCode, type AddressValue } from './addressHelpers'
 
 export interface BCFormAddressAutocompleteProps {
   name: string
-  control: any
+  control: Control<FieldValues>
   label?: string
   optional?: boolean
   checkbox?: boolean
@@ -25,15 +26,6 @@ export interface BCFormAddressAutocompleteProps {
   disabled?: boolean
   onSelectAddress?: (address: AddressOption | string) => void
 }
-
-export const addressHasPostalCode = (value: AddressValue) =>
-  POSTAL_CODE_REGEX.test(
-    typeof value === 'string'
-      ? value
-      : [value?.fullAddress, value?.postalCode, value?.postal_code]
-          .filter(Boolean)
-          .join(' ')
-  )
 
 export const BCFormAddressAutocomplete = ({
   name,

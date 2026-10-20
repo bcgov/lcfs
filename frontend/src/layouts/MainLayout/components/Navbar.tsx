@@ -8,13 +8,12 @@ import { useTranslation } from 'react-i18next'
 import { HeaderComponent } from './HeaderComponent'
 import { UserProfileActions } from './UserProfileActions'
 import { GlobalSearch } from '@/components/GlobalSearch/GlobalSearch'
-import { useMediaQuery, useTheme } from '@mui/material'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import useTheme from '@mui/material/styles/useTheme'
 
-type NavItem = {
-  name: string
-  route: string
-  hide?: boolean
-}
+import type { NavbarRoute } from '@/components/BCNavbar/types'
+
+type NavItem = NavbarRoute
 
 export const Navbar = () => {
   const { t } = useTranslation()
@@ -62,7 +61,7 @@ export const Navbar = () => {
       },
       { name: t('Administration'), route: ROUTES.ADMIN.MAIN, hide: !isAdmin }
     ]
-    const bceidRoutes = [
+    const bceidRoutes: NavItem[] = [
       { name: t('Dashboard'), route: ROUTES.DASHBOARD },
       { name: t('Transactions'), route: ROUTES.TRANSACTIONS.LIST },
       {
@@ -89,12 +88,12 @@ export const Navbar = () => {
       },
       { name: t('Organization'), route: ROUTES.ORGANIZATION.ORG }
     ]
-    const mobileRoutes = [
+    const mobileRoutes: NavItem[] = [
       { name: t('Notifications'), route: ROUTES.NOTIFICATIONS.LIST },
       { name: t('logout'), route: ROUTES.AUTH.LOG_OUT }
     ]
 
-    const activeRoutes = currentUser?.isGovernmentUser
+    const activeRoutes: NavItem[] = currentUser?.isGovernmentUser
       ? idirRoutes
       : bceidRoutes
 

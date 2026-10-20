@@ -1,6 +1,5 @@
 import {
   forwardRef,
-  useCallback,
   useEffect,
   useImperativeHandle,
   useMemo,
@@ -9,27 +8,28 @@ import {
 } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
-import {
-  Autocomplete,
-  Box,
-  InputLabel,
-  MenuItem,
-  Stack,
-  TextField
-} from '@mui/material'
-import { DatePicker } from '@mui/x-date-pickers'
+import Autocomplete from '@mui/material/Autocomplete'
+import Box from '@mui/material/Box'
+import InputLabel from '@mui/material/InputLabel'
+import MenuItem from '@mui/material/MenuItem'
+import Stack from '@mui/material/Stack'
+import TextField from '@mui/material/TextField'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { format as formatDate, isValid as isValidDate, parseISO } from 'date-fns'
 import { debounce } from 'lodash'
 import * as Yup from 'yup'
 import { yupResolver } from '@hookform/resolvers/yup'
 import Grid2 from '@mui/material/Grid2'
+import InfoIcon from '@mui/icons-material/Info'
 
+import BCAlertRoot from '@/components/BCAlert/BCAlertRoot'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import { useCIFacilityLocationSearch } from '@/hooks/useCIApplication'
 import colors from '@/themes/base/colors'
 
 const DATE_FORMAT = 'yyyy-MM-dd'
+const EFFECTIVE_DATE_NOTICE_ID = 'proposedFuelCodeEffectiveDateNotice'
 
 // Match plain TextField padding
 const LOCATION_AUTOCOMPLETE_SX = {
@@ -57,8 +57,8 @@ const FacilityLocationAutocomplete = ({
   const [debouncedSearch, setDebouncedSearch] = useState(value || '')
   const autofillToken = `lcfs-no-autofill-${id}`
 
-  const debouncedSetSearch = useCallback(
-    debounce((v) => setDebouncedSearch(v), 500),
+  const debouncedSetSearch = useMemo(
+    () => debounce((v) => setDebouncedSearch(v), 500),
     []
   )
 
@@ -212,7 +212,8 @@ export const ApplicationInformationStep = forwardRef(
       onSave,
       onDelete,
       isSaving = false,
-      readOnly = false
+      readOnly = false,
+      showEffectiveDateNotice = false
     },
     ref
   ) => {
@@ -533,6 +534,32 @@ export const ApplicationInformationStep = forwardRef(
               control={control}
               render={({ field, fieldState }) => (
                 <Box mb={2}>
+                  {/* Static notice, not a live region; the date input
+                      references it so screen readers read it on focus. */}
+                  {showEffectiveDateNotice && (
+                    <BCAlertRoot
+                      ownerState={{ color: 'info' }}
+                      id={EFFECTIVE_DATE_NOTICE_ID}
+                      role="note"
+                      data-test={EFFECTIVE_DATE_NOTICE_ID}
+                      sx={{
+                        justifyContent: 'flex-start',
+                        alignItems: 'flex-start',
+                        gap: 1,
+                        mb: 2
+                      }}
+                    >
+                      <InfoIcon
+                        aria-hidden="true"
+                        sx={{ flexShrink: 0, mt: '3px' }}
+                      />
+                      <BCTypography variant="body2" component="p">
+                        {t(
+                          'carbonIntensity:step1.proposedFuelCodeEffectiveNotice'
+                        )}
+                      </BCTypography>
+                    </BCAlertRoot>
+                  )}
                   <InputLabel
                     htmlFor="proposedFuelCodeEffectiveDate"
                     sx={{ pb: 1 }}
@@ -565,7 +592,18 @@ export const ApplicationInformationStep = forwardRef(
                         InputLabelProps: { shrink: true },
                         inputProps: {
                           'data-test': 'proposedFuelCodeEffectiveDate',
-                          placeholder: 'yyyy-mm-dd'
+                          placeholder: 'yyyy-mm-dd',
+                          // inputProps replaces the helper-text reference
+                          // MUI adds, so keep it alongside the notice
+                          'aria-describedby':
+                            [
+                              showEffectiveDateNotice &&
+                                EFFECTIVE_DATE_NOTICE_ID,
+                              fieldState.error &&
+                                'proposedFuelCodeEffectiveDate-helper-text'
+                            ]
+                              .filter(Boolean)
+                              .join(' ') || undefined
                         },
                         sx: { width: { xs: '100%', sm: 240 } }
                       }

@@ -57,10 +57,6 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    environment: 'jsdom',
-    setupFiles: './testSetup.js',
-    // vitest 4 no longer excludes cypress/dist by default, so scope to src
-    include: ['src/**/*.{test,spec}.{js,jsx,ts,tsx}'],
     coverage: {
       provider: 'v8',
       thresholds: enforceCoverageThresholds ? COVERAGE_THRESHOLDS : undefined,
@@ -74,7 +70,28 @@ export default defineConfig({
         'src/themes',
         'src/tests'
       ]
-    }
+    },
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'node',
+          environment: 'node',
+          include: ['src/**/*.{node.test,node.spec}.{js,jsx,ts,tsx}'],
+          setupFiles: []
+        }
+      },
+      {
+        extends: true,
+        test: {
+          name: 'jsdom',
+          environment: 'jsdom',
+          include: ['src/**/*.{test,spec}.{js,jsx,ts,tsx}'],
+          exclude: ['src/**/*.{node.test,node.spec}.{js,jsx,ts,tsx}'],
+          setupFiles: './testSetup.js'
+        }
+      }
+    ]
   },
   optimizeDeps: {
     include: [

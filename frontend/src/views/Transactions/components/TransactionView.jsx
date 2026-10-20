@@ -1,8 +1,10 @@
-import React from 'react'
+import 'react';
 import { useTranslation } from 'react-i18next'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
-import { Grid, List, ListItemButton } from '@mui/material'
+import Grid from '@mui/material/Grid'
+import List from '@mui/material/List'
+import ListItemButton from '@mui/material/ListItemButton'
 import { LabelBox } from './LabelBox'
 import { roles } from '@/constants/roles'
 import { useCurrentUser } from '@/hooks/useCurrentUser'

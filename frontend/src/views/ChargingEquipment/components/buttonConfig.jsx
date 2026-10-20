@@ -1,4 +1,5 @@
-import { AddCircleOutlineRounded, CheckBox } from '@mui/icons-material'
+import AddCircleOutlineRounded from '@mui/icons-material/AddCircleOutlineRounded'
+import CheckBox from '@mui/icons-material/CheckBox'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faFilterCircleXmark } from '@fortawesome/free-solid-svg-icons'
 
@@ -42,8 +43,6 @@ class ButtonActionFactory {
       (e) => e.status === 'Draft' || e.status === 'Updated'
     )
     const ids = draftOrUpdated.map((e) => e.charging_equipment_id)
-    const allSelected = ids.length > 0 && ids.every((id) => this.context.selectedRows.includes(id))
-
     return this.createButton({
       style: BUTTON_STYLES.PRIMARY_CONTAINED,
       id: 'select-all-draft-updated-btn',
@@ -57,7 +56,6 @@ class ButtonActionFactory {
   selectAllValidated() {
     const validated = this.context.equipmentList.filter((e) => e.status === 'Validated')
     const ids = validated.map((e) => e.charging_equipment_id)
-    const allSelected = ids.length > 0 && ids.every((id) => this.context.selectedRows.includes(id))
     return this.createButton({
       style: BUTTON_STYLES.PRIMARY_CONTAINED,
       id: 'select-all-validated-btn',
@@ -137,5 +135,4 @@ export const buildFseButtonContext = ({
   handleNewFSE,
   handleClearFilters
 })
-
 

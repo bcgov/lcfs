@@ -20,14 +20,12 @@ import {
   useInitiativeAgreement,
   useCreateUpdateInitiativeAgreement
 } from '@/hooks/useInitiativeAgreement'
-import {
-  useTheme,
-  Stack,
-  useMediaQuery,
-  Step,
-  StepLabel,
-  Stepper
-} from '@mui/material'
+import useTheme from '@mui/material/styles/useTheme'
+import Stack from '@mui/material/Stack'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import Step from '@mui/material/Step'
+import StepLabel from '@mui/material/StepLabel'
+import Stepper from '@mui/material/Stepper'
 import BCTypography from '@/components/BCTypography'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
@@ -54,7 +52,7 @@ import {
   INITIATIVE_AGREEMENT
 } from '@/views/Transactions/constants'
 import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog.jsx'
-import { SupportingDocumentSummary } from '@/views/SupportingDocuments/SupportingDocumentSummary.jsx'
+import '@/views/SupportingDocuments/SupportingDocumentSummary.jsx';
 import { useTransactionDocuments } from '@/hooks/useTransactions.js'
 import TransactionDocuments from '@/views/Transactions/components/Documents.jsx'
 
@@ -125,7 +123,6 @@ export const AddEditViewTransaction = () => {
   const {
     watch,
     setValue,
-    formState: { errors },
     handleSubmit
   } = methods
 
@@ -159,10 +156,9 @@ export const AddEditViewTransaction = () => {
       : INITIATIVE_AGREEMENT
   }
 
-  const { data: documentData, isLoading: documentsLoading } =
-    useTransactionDocuments(transactionId, txnType, {
+  useTransactionDocuments(transactionId, txnType, {
       enabled: !!transactionId && !!txnType
-    })
+    });
 
   // Conditionally fetch data if in edit mode and txnType is set
   const transactionDataHook =

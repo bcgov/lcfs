@@ -1,7 +1,7 @@
-import { renderHook, waitFor } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, vi } from 'vitest'
 import { useApiService } from '@/services/useApiService'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import {
   useAssignCIApplicationAnalyst,
   useCIApplicationOptions,
@@ -58,37 +58,39 @@ describe('useCIApplication hooks', () => {
   // ------------------------------------------------------------------
 
   describe('useCIApplicationOptions', () => {
-    it('GETs /ci-applications/table-options and returns data', async () => {
+    test('GETs /ci-applications/table-options and returns data', async ({
+      renderHook,
+      query
+    }) => {
       const data = { statuses: [], unitsOfMeasure: [] }
       mockGet.mockResolvedValue({ data })
 
-      const { result } = renderHook(() => useCIApplicationOptions(), {
-        wrapper
-      })
+      const { result } = renderHook(() => useCIApplicationOptions(), [query])
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true))
       expect(result.current.data).toEqual(data)
       expect(mockGet).toHaveBeenCalledWith('/ci-applications/table-options')
     })
 
-    it('surfaces errors', async () => {
+    test('surfaces errors', async ({ renderHook, query }) => {
       const err = new Error('boom')
       mockGet.mockRejectedValue(err)
-      const { result } = renderHook(() => useCIApplicationOptions(), {
-        wrapper
-      })
+      const { result } = renderHook(() => useCIApplicationOptions(), [query])
       await waitFor(() => expect(result.current.isError).toBe(true))
       expect(result.current.error).toBe(err)
     })
   })
 
   describe('useCIFacilityLocationSearch', () => {
-    it('GETs /ci-applications/location-search with city param', async () => {
+    test('GETs /ci-applications/location-search with city param', async ({
+      renderHook,
+      query
+    }) => {
       mockGet.mockResolvedValue({ data: ['Vancouver, BC, Canada'] })
 
       const { result } = renderHook(
         () => useCIFacilityLocationSearch({ city: 'Van' }),
-        { wrapper }
+        [query]
       )
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -98,10 +100,13 @@ describe('useCIApplication hooks', () => {
       )
     })
 
-    it('does not fetch when no search term is provided', async () => {
+    test('does not fetch when no search term is provided', async ({
+      renderHook,
+      query
+    }) => {
       const { result } = renderHook(
         () => useCIFacilityLocationSearch({}),
-        { wrapper }
+        [query]
       )
 
       expect(result.current.fetchStatus).toBe('idle')
@@ -114,11 +119,14 @@ describe('useCIApplication hooks', () => {
   // ------------------------------------------------------------------
 
   describe('useGetCIApplications', () => {
-    it('POSTs /ci-applications/list with default pagination', async () => {
+    test('POSTs /ci-applications/list with default pagination', async ({
+      renderHook,
+      query
+    }) => {
       const data = { ciApplications: [], pagination: { total: 0 } }
       mockPost.mockResolvedValue({ data })
 
-      const { result } = renderHook(() => useGetCIApplications(), { wrapper })
+      const { result } = renderHook(() => useGetCIApplications(), [query])
       await waitFor(() => expect(result.current.isSuccess).toBe(true))
       expect(mockPost).toHaveBeenCalledWith('/ci-applications/list', {
         page: 1,
@@ -128,7 +136,7 @@ describe('useCIApplication hooks', () => {
       })
     })
 
-    it('passes through custom pagination', async () => {
+    test('passes through custom pagination', async ({ renderHook, query }) => {
       mockPost.mockResolvedValue({
         data: { ciApplications: [], pagination: {} }
       })
@@ -138,9 +146,7 @@ describe('useCIApplication hooks', () => {
         sortOrders: [{ field: 'updateDate', direction: 'desc' }],
         filters: [{ field: 'facilityCountry', filter: 'Canada' }]
       }
-      const { result } = renderHook(() => useGetCIApplications(params), {
-        wrapper
-      })
+      const { result } = renderHook(() => useGetCIApplications(params), [query])
       await waitFor(() => expect(result.current.isSuccess).toBe(true))
       expect(mockPost).toHaveBeenCalledWith('/ci-applications/list', params)
     })
@@ -151,27 +157,29 @@ describe('useCIApplication hooks', () => {
   // ------------------------------------------------------------------
 
   describe('useGetCIApplication', () => {
-    it('GETs /ci-applications/:id when id is provided', async () => {
+    test('GETs /ci-applications/:id when id is provided', async ({
+      renderHook,
+      query
+    }) => {
       const data = { ciApplicationId: 7 }
       mockGet.mockResolvedValue({ data })
-      const { result } = renderHook(() => useGetCIApplication(7), { wrapper })
+      const { result } = renderHook(() => useGetCIApplication(7), [query])
       await waitFor(() => expect(result.current.isSuccess).toBe(true))
       expect(mockGet).toHaveBeenCalledWith('/ci-applications/7')
       expect(result.current.data).toEqual(data)
     })
 
-    it('does not fetch when id is undefined', () => {
-      const { result } = renderHook(() => useGetCIApplication(undefined), {
-        wrapper
-      })
+    test('does not fetch when id is undefined', ({ renderHook, query }) => {
+      const { result } = renderHook(
+        () => useGetCIApplication(undefined),
+        [query]
+      )
       expect(result.current.fetchStatus).toBe('idle')
       expect(mockGet).not.toHaveBeenCalled()
     })
 
-    it('does not fetch when id is null', () => {
-      const { result } = renderHook(() => useGetCIApplication(null), {
-        wrapper
-      })
+    test('does not fetch when id is null', ({ renderHook, query }) => {
+      const { result } = renderHook(() => useGetCIApplication(null), [query])
       expect(result.current.fetchStatus).toBe('idle')
       expect(mockGet).not.toHaveBeenCalled()
     })
@@ -182,11 +190,14 @@ describe('useCIApplication hooks', () => {
   // ------------------------------------------------------------------
 
   describe('useCreateCIApplication', () => {
-    it('POSTs /ci-applications and primes detail cache on success', async () => {
+    test('POSTs /ci-applications and primes detail cache on success', async ({
+      renderHook,
+      query
+    }) => {
       const created = { ciApplicationId: 99, facilityCountry: 'Argentina' }
       mockPost.mockResolvedValue({ data: created })
 
-      const { result } = renderHook(() => useCreateCIApplication(), { wrapper })
+      const { result } = renderHook(() => useCreateCIApplication(), [query])
       const payload = { facilityCountry: 'Argentina' }
       const out = await result.current.mutateAsync(payload)
 
@@ -201,9 +212,9 @@ describe('useCIApplication hooks', () => {
       )
     })
 
-    it('propagates errors', async () => {
+    test('propagates errors', async ({ renderHook, query }) => {
       mockPost.mockRejectedValue(new Error('api down'))
-      const { result } = renderHook(() => useCreateCIApplication(), { wrapper })
+      const { result } = renderHook(() => useCreateCIApplication(), [query])
       await expect(result.current.mutateAsync({})).rejects.toThrow('api down')
     })
   })
@@ -213,13 +224,17 @@ describe('useCIApplication hooks', () => {
   // ------------------------------------------------------------------
 
   describe('useUpdateCIApplicationStep1', () => {
-    it('PUTs /ci-applications/:id/step1 and updates cache', async () => {
+    test('PUTs /ci-applications/:id/step1 and updates cache', async ({
+      renderHook,
+      query
+    }) => {
       const updated = { ciApplicationId: 12, facilityCountry: 'Canada' }
       mockPut.mockResolvedValue({ data: updated })
 
-      const { result } = renderHook(() => useUpdateCIApplicationStep1(12), {
-        wrapper
-      })
+      const { result } = renderHook(
+        () => useUpdateCIApplicationStep1(12),
+        [query]
+      )
       const out = await result.current.mutateAsync({
         facilityCountry: 'Canada'
       })
@@ -239,7 +254,10 @@ describe('useCIApplication hooks', () => {
   })
 
   describe('useAssignCIApplicationAnalyst', () => {
-    it('PUTs /ci-applications/:id/assign and updates detail and list caches', async () => {
+    test('PUTs /ci-applications/:id/assign and updates detail and list caches', async ({
+      renderHook,
+      query
+    }) => {
       const updated = {
         ciApplicationId: 12,
         assignedAnalyst: null,
@@ -248,9 +266,10 @@ describe('useCIApplication hooks', () => {
       }
       mockPut.mockResolvedValue({ data: updated })
 
-      const { result } = renderHook(() => useAssignCIApplicationAnalyst(12), {
-        wrapper
-      })
+      const { result } = renderHook(
+        () => useAssignCIApplicationAnalyst(12),
+        [query]
+      )
       const out = await result.current.mutateAsync(null)
 
       expect(mockPut).toHaveBeenCalledWith('/ci-applications/12/assign', {
@@ -280,13 +299,14 @@ describe('useCIApplication hooks', () => {
   // ------------------------------------------------------------------
 
   describe('useSubmitCIApplication', () => {
-    it('POSTs /ci-applications/:id/submit and updates cache', async () => {
+    test('POSTs /ci-applications/:id/submit and updates cache', async ({
+      renderHook,
+      query
+    }) => {
       const submitted = { ciApplicationId: 12, status: { status: 'Submitted' } }
       mockPost.mockResolvedValue({ data: submitted })
 
-      const { result } = renderHook(() => useSubmitCIApplication(12), {
-        wrapper
-      })
+      const { result } = renderHook(() => useSubmitCIApplication(12), [query])
       const out = await result.current.mutateAsync({
         declarationInformationTrue: true,
         declarationResponse8Weeks: true,
@@ -314,11 +334,14 @@ describe('useCIApplication hooks', () => {
   // ------------------------------------------------------------------
 
   describe('useRecordCIDecision', () => {
-    it('POSTs /ci-applications/:id/decision and invalidates the list cache', async () => {
+    test('POSTs /ci-applications/:id/decision and invalidates the list cache', async ({
+      renderHook,
+      query
+    }) => {
       const completed = { ciApplicationId: 12, status: { status: 'Completed' } }
       mockPost.mockResolvedValue({ data: completed })
 
-      const { result } = renderHook(() => useRecordCIDecision(12), { wrapper })
+      const { result } = renderHook(() => useRecordCIDecision(12), [query])
       const out = await result.current.mutateAsync({ status: 'Completed' })
 
       expect(mockPost).toHaveBeenCalledWith('/ci-applications/12/decision', {
@@ -332,7 +355,10 @@ describe('useCIApplication hooks', () => {
   })
 
   describe('useUpdateCIApplicationRiskAssessment', () => {
-    it('PUTs /ci-applications/:id/risk-assessment and updates caches', async () => {
+    test('PUTs /ci-applications/:id/risk-assessment and updates caches', async ({
+      renderHook,
+      query
+    }) => {
       const saved = {
         ciApplicationId: 12,
         preliminaryRiskAssessment: 'Low',
@@ -342,7 +368,7 @@ describe('useCIApplication hooks', () => {
 
       const { result } = renderHook(
         () => useUpdateCIApplicationRiskAssessment(12),
-        { wrapper }
+        [query]
       )
       const out = await result.current.mutateAsync({
         preliminaryRiskAssessment: 'Low',
@@ -360,7 +386,10 @@ describe('useCIApplication hooks', () => {
       )
     })
 
-    it('serializes PUTs so the latest autosave owns the final cache state', async () => {
+    test('serializes PUTs so the latest autosave owns the final cache state', async ({
+      renderHook,
+      query
+    }) => {
       const first = {
         ciApplicationId: 12,
         preliminaryRiskAssessment: 'Low',
@@ -383,7 +412,7 @@ describe('useCIApplication hooks', () => {
 
       const { result } = renderHook(
         () => useUpdateCIApplicationRiskAssessment(12),
-        { wrapper }
+        [query]
       )
 
       result.current.mutate({
@@ -415,7 +444,10 @@ describe('useCIApplication hooks', () => {
       )
     })
 
-    it('continues with the latest queued autosave after an earlier PUT fails', async () => {
+    test('continues with the latest queued autosave after an earlier PUT fails', async ({
+      renderHook,
+      query
+    }) => {
       const latest = {
         ciApplicationId: 12,
         preliminaryRiskAssessment: 'High',
@@ -427,7 +459,7 @@ describe('useCIApplication hooks', () => {
 
       const { result } = renderHook(
         () => useUpdateCIApplicationRiskAssessment(12),
-        { wrapper }
+        [query]
       )
 
       result.current.mutate({
@@ -450,7 +482,10 @@ describe('useCIApplication hooks', () => {
   })
 
   describe('useRequestCIApplicationPathwayChanges', () => {
-    it('POSTs the supplemental pathway request and updates the detail cache', async () => {
+    test('POSTs the supplemental pathway request and updates the detail cache', async ({
+      renderHook,
+      query
+    }) => {
       const submitted = {
         ciApplicationId: 12,
         status: { status: 'Submitted' },
@@ -461,7 +496,7 @@ describe('useCIApplication hooks', () => {
 
       const { result } = renderHook(
         () => useRequestCIApplicationPathwayChanges(12),
-        { wrapper }
+        [query]
       )
       const out = await result.current.mutateAsync()
 
@@ -483,11 +518,14 @@ describe('useCIApplication hooks', () => {
   // with the /ci-applications/{id}/comments endpoints.
 
   describe('useDeleteCIApplication', () => {
-    it('DELETEs /ci-applications/:id and invalidates the list cache', async () => {
+    test('DELETEs /ci-applications/:id and invalidates the list cache', async ({
+      renderHook,
+      query
+    }) => {
       mockDelete.mockResolvedValue({
         data: { message: 'CI application deleted.' }
       })
-      const { result } = renderHook(() => useDeleteCIApplication(), { wrapper })
+      const { result } = renderHook(() => useDeleteCIApplication(), [query])
 
       await result.current.mutateAsync(50)
 

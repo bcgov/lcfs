@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { Stack, List, ListItemButton } from '@mui/material'
+import Stack from '@mui/material/Stack'
+import List from '@mui/material/List'
+import ListItemButton from '@mui/material/ListItemButton'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
@@ -11,22 +13,10 @@ import { useOrganization } from '@/hooks/useOrganization'
 import { useOrgTransactionCounts } from '@/hooks/useDashboard'
 import { FILTER_KEYS } from '@/constants/common'
 import { TRANSACTION_TYPES, TRANSFER_STATUSES } from '@/constants/statuses'
+import { CountDisplay } from '../../CountDisplay'
+import { countDigits } from '../../countDigits'
 
-const CountDisplay = ({ count }) => (
-  <BCTypography
-    component="span"
-    variant="h3"
-    sx={{
-      color: 'success.main',
-      marginX: 3,
-      visibility: count != null ? 'visible' : 'hidden'
-    }}
-  >
-    {count ?? 0}
-  </BCTypography>
-)
-
-const OrgTransactionsCard = () => {
+export const OrgTransactionsCard = () => {
   const { t } = useTranslation(['dashboard'])
   const navigate = useNavigate()
 
@@ -56,10 +46,15 @@ const OrgTransactionsCard = () => {
     navigate(route)
   }
 
+  // One counter width for the whole list, so its links line up (#4911); a
+  // link without a count keeps an empty counter, so it lines up too.
+  const transfers = counts?.transfers || 0
+  const digits = countDigits(transfers)
+
   const renderLinkWithCount = (text, count, onClick) => {
     return (
       <>
-        <CountDisplay count={count} />
+        <CountDisplay count={count} digits={digits} hidden={count == null} />
         <BCTypography
           variant="body2"
           color="link"
@@ -105,7 +100,7 @@ const OrgTransactionsCard = () => {
               >
                 {renderLinkWithCount(
                   t('dashboard:orgTransactions.transfersInProgress'),
-                  counts?.transfers || 0,
+                  transfers,
                   () => handleNavigation(ROUTES.TRANSACTIONS.LIST)
                 )}
               </ListItemButton>
@@ -140,9 +135,9 @@ const OrgTransactionsCard = () => {
 }
 
 const AllowedRoles = [roles.transfers]
-const orgTransactionsWidgetWithRole = withRole(
+const OrgTransactionsCardWithRole = withRole(
   OrgTransactionsCard,
   AllowedRoles
 )
 
-export default orgTransactionsWidgetWithRole
+export default OrgTransactionsCardWithRole

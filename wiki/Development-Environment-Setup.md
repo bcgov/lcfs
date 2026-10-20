@@ -26,14 +26,14 @@ cd lcfs
 
 ## 3. Running the Full Application (Docker Compose)
 
-The main Docker Compose file starts the frontend, backend, PostgreSQL, Redis, and MinIO services. Its default host ports are:
+The main Docker Compose file starts the frontend, backend, PostgreSQL, Redis, and RustFS (S3-compatible object storage) services. A one-off `create_bucket` job creates the `lcfs` bucket once RustFS is healthy, and the backend starts after it finishes. Its default host ports are:
 
 | Service | Published port | Override variable |
 | --- | ---: | --- |
 | PostgreSQL | 5432 | `LCFS_DB_PUBLISHED_PORT` |
 | Redis | 6379 | `LCFS_REDIS_PUBLISHED_PORT` |
-| MinIO API | 9000 | `LCFS_MINIO_PUBLISHED_PORT` |
-| MinIO console | 9001 | `LCFS_MINIO_CONSOLE_PUBLISHED_PORT` |
+| RustFS S3 API | 9000 | `LCFS_RUSTFS_PUBLISHED_PORT` |
+| RustFS console | 9001 | `LCFS_RUSTFS_CONSOLE_PUBLISHED_PORT` |
 | Backend API | 8000 | `LCFS_BACKEND_PUBLISHED_PORT` |
 | Backend debugger | 5678 | `LCFS_BACKEND_DEBUG_PUBLISHED_PORT` |
 | Frontend | 3000 | `LCFS_FRONTEND_PUBLISHED_PORT` |
@@ -54,13 +54,17 @@ Stop the default stack with:
 docker compose down
 ```
 
+The RustFS console (`http://localhost:9001/rustfs/console/`) signs in with the development access key and secret key from `docker-compose.yml`.
+
+Local object storage moved from MinIO to RustFS in #5159. Files uploaded to the old MinIO volume are not migrated. After switching, remove that volume with `docker volume rm lcfs_s3` (the prefix is your Compose project name).
+
 To run an isolated stack, set alternate published ports in a dedicated terminal. Compose scopes its containers, volumes, and network to the supplied project name:
 
 ```bash
 export LCFS_DB_PUBLISHED_PORT=15432
 export LCFS_REDIS_PUBLISHED_PORT=16379
-export LCFS_MINIO_PUBLISHED_PORT=19000
-export LCFS_MINIO_CONSOLE_PUBLISHED_PORT=19001
+export LCFS_RUSTFS_PUBLISHED_PORT=19000
+export LCFS_RUSTFS_CONSOLE_PUBLISHED_PORT=19001
 export LCFS_BACKEND_PUBLISHED_PORT=18000
 export LCFS_BACKEND_DEBUG_PUBLISHED_PORT=15678
 export LCFS_FRONTEND_PUBLISHED_PORT=13000

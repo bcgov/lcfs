@@ -1,6 +1,9 @@
-import { Box, Checkbox, FormControl, FormControlLabel } from '@mui/material'
+import Box from '@mui/material/Box'
+import Checkbox from '@mui/material/Checkbox'
+import FormControl from '@mui/material/FormControl'
+import FormControlLabel from '@mui/material/FormControlLabel'
 import { Controller } from 'react-hook-form'
-import { BCFormCheckbox } from '@/components/BCForm'
+import { BCFormCheckbox } from '@/components/BCForm/BCFormCheckbox'
 import { CustomLabel } from '@/components/BCForm/CustomLabel'
 import { roles } from '@/constants/roles'
 import {

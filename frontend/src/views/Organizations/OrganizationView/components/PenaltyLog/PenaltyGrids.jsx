@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Stack } from '@mui/material'
+import Stack from '@mui/material/Stack'
 import { useNavigate } from 'react-router-dom'
 
 import BCBox from '@/components/BCBox'
@@ -278,7 +278,7 @@ export const DiscretionaryPenaltyLogGrid = ({ organizationId }) => {
   const handleClearFilters = useCallback(() => {
     try {
       penaltyLogGridRef.current?.clearFilters?.()
-    } catch (e) {
+    } catch {
       // no-op
     }
     setPaginationOptions({ ...initialPaginationOptions })

@@ -32,12 +32,17 @@ const ALLOCATING_ORG_FIELDS = [
   'allocatingOrganizationName'
 ]
 
-export const AddEditChargingSite = ({
-  isEditMode = false,
-  setIsEditMode,
-  data,
-  refetch
-}) => {
+/**
+ * @typedef {Object} AddEditChargingSiteProps
+ * @property {boolean} [isEditMode]
+ * @property {(value: boolean) => void} [setIsEditMode]
+ * @property {Record<string, unknown>} [data]
+ * @property {() => unknown} [refetch]
+ */
+
+/** @param {AddEditChargingSiteProps} props */
+export const AddEditChargingSite = (props) => {
+  const { isEditMode = false, setIsEditMode, data, refetch } = props
   const [rowData, setRowData] = useState([])
   const gridRef = useRef(null)
   const [errors, setErrors] = useState({})
@@ -418,11 +423,7 @@ export const AddEditChargingSite = ({
     if (isEditMode) {
       setIsEditMode?.(false)
       const latestSiteId = rowData?.[0]?.chargingSiteId
-      if (
-        latestSiteId &&
-        siteId &&
-        String(latestSiteId) !== String(siteId)
-      ) {
+      if (latestSiteId && siteId && String(latestSiteId) !== String(siteId)) {
         navigate(
           ROUTES.REPORTS.CHARGING_SITE.VIEW.replace(':siteId', latestSiteId),
           { replace: true }

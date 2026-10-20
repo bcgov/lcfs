@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react'
-import { AppBar, Box, Tab, Tabs } from '@mui/material'
+import AppBar from '@mui/material/AppBar'
+import Box from '@mui/material/Box'
+import Tab from '@mui/material/Tab'
+import Tabs from '@mui/material/Tabs'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import BCTypography from '@/components/BCTypography'
-import { ROUTES } from '@/routes/routes'
+import '@/routes/routes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { roles } from '@/constants/roles'
 import { ComplianceReports } from '../ComplianceReports/ComplianceReports'
@@ -25,9 +28,11 @@ function TabPanel({ children, value, index }) {
 
 export const ComplianceReporting = () => {
   const { t } = useTranslation(['common', 'reports', 'chargingEquipment'])
-  const navigate = useNavigate()
-  const location = useLocation()
-  const { hasRoles, hasAnyRole } = useCurrentUser()
+  useNavigate();
+  useLocation();
+  const {
+  hasAnyRole
+} = useCurrentUser()
   
   const [searchParams, setSearchParams] = useSearchParams()
   const currentTab = searchParams.get('tab') || 'reports'

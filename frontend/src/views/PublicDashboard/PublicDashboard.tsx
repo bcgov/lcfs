@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react'
-import { Box, Button } from '@mui/material'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
 import CalculateOutlinedIcon from '@mui/icons-material/CalculateOutlined'
 import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined'
 import VerifiedOutlinedIcon from '@mui/icons-material/VerifiedOutlined'
@@ -57,6 +58,34 @@ const priceFmt = new Intl.NumberFormat('en-CA', {
   maximumFractionDigits: 2
 })
 
+interface PublicPricePoint {
+  period: string
+  vwap: number | null
+  volume: number | null
+  low: number | null
+  high: number | null
+}
+
+interface PublicMarketOverview {
+  priceIndex?: PublicPricePoint[]
+  totalVolumeTraded?: number | null
+  totalCreditsIssued?: number | null
+  participatingOrganizations?: number | null
+}
+
+interface ActiveLoginBackground {
+  loginBgImageId: number | string
+  displayName?: string | null
+  caption?: string | null
+}
+
+interface MarketTooltipParam {
+  seriesName: string
+  value: number | null
+  marker: string
+  axisValue: string
+}
+
 // Break a section out of the constrained page container to full viewport width.
 const fullBleed = {
   position: 'relative',
@@ -72,8 +101,13 @@ export const PublicDashboard = () => {
   const { t } = useTranslation()
   const { keycloak, initialized } = useKeycloak()
   const navigate = useNavigate()
-  const { data } = useCreditMarketPublicOverview('quarter')
-  const { data: activeBg } = useActiveLoginBgImage()
+  const { data } = useCreditMarketPublicOverview('quarter') as {
+    data: PublicMarketOverview | undefined
+  }
+  const { data: activeBg } = useActiveLoginBgImage() as {
+    data: ActiveLoginBackground | undefined
+  }
+  const publicMarketDataEnabled = CONFIG.feature_flags.publicMarketData
 
   // After login the OIDC callback returns to the app root, which can briefly
   // bounce an authenticated user here (the public landing) before the session
@@ -89,20 +123,20 @@ export const PublicDashboard = () => {
     navigate(ROUTES.DASHBOARD, { replace: true })
   }, [initialized, keycloak.authenticated, navigate])
 
-  const priceIndex = data?.priceIndex ?? []
+  const priceIndex = useMemo(() => data?.priceIndex ?? [], [data?.priceIndex])
   const periods = priceIndex.map((p) => p.period)
 
   const bgUrl = activeBg?.loginBgImageId
     ? `${CONFIG.API_BASE}${apiRoutes.loginBgImageStream.replace(
         ':imageId',
-        activeBg.loginBgImageId
+        activeBg.loginBgImageId as string
       )}`
     : bgFallbackImage
   const credits = activeBg
     ? [activeBg.displayName, activeBg.caption].filter(Boolean).join(' — ')
     : null
 
-  const login = (idpHint) =>
+  const login = (idpHint: string) =>
     keycloak.login({ idpHint, redirectUri: window.location.origin })
 
   // Latest VWAP and quarter-over-quarter change for the snapshot card.
@@ -115,7 +149,8 @@ export const PublicDashboard = () => {
       latestPeriod: last?.period ?? '',
       deltaPct:
         last && prev && prev.vwap
-          ? ((last.vwap - prev.vwap) / prev.vwap) * 100
+          ? (((last.vwap as number) - (prev.vwap as number)) /
+              (prev.vwap as number)) * 100
           : null
     }
   }, [priceIndex])
@@ -153,7 +188,7 @@ export const PublicDashboard = () => {
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'cross' },
-        formatter: (params) => {
+        formatter: (params: MarketTooltipParam[]) => {
           if (!params || !params.length) return ''
           const priceName = t('publicDashboard.market.priceSeries')
           const volName = t('publicDashboard.market.volumeSeries')
@@ -626,25 +661,27 @@ export const PublicDashboard = () => {
                   {t('publicDashboard.market.volumeSeries')}
                 </BCBox>
               </BCBox>
-              <Box
-                component={Link}
-                to={ROUTES.PUBLIC_MARKET_DATA}
-                data-test="explore-market-data"
-                sx={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: LINK,
-                  textDecoration: 'none',
-                  '&:hover': { color: NAVY },
-                  '&:focus-visible': {
-                    outline: `3px solid ${GOLD}`,
-                    outlineOffset: '3px',
-                    borderRadius: '3px'
-                  }
-                }}
-              >
-                {t('publicDashboard.market.explore')} →
-              </Box>
+              {publicMarketDataEnabled && (
+                <Box
+                  component={Link}
+                  to={ROUTES.PUBLIC_MARKET_DATA}
+                  data-test="explore-market-data"
+                  sx={{
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: LINK,
+                    textDecoration: 'none',
+                    '&:hover': { color: NAVY },
+                    '&:focus-visible': {
+                      outline: `3px solid ${GOLD}`,
+                      outlineOffset: '3px',
+                      borderRadius: '3px'
+                    }
+                  }}
+                >
+                  {t('publicDashboard.market.explore')} →
+                </Box>
+              )}
             </BCBox>
           </BCBox>
         </BCBox>

@@ -29,6 +29,7 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
 )
 from lcfs.db.models.transaction.Transaction import TransactionActionEnum
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.utils.dates import PACIFIC_TZ
 from lcfs.web.api.base import (
     PaginationRequestSchema,
     PaginationResponseSchema,
@@ -40,6 +41,7 @@ from lcfs.web.api.initiative_agreement.schema import (
     AllDesignatedActionsListSchema,
     DesignatedActionListItemSchema,
     AgreementCreateSchema,
+    AgreementUpdateSchema,
     AnalystAssignmentSchema,
     CreateInitiativeAgreementHistorySchema,
     DesignatedActionCreateSchema,
@@ -311,6 +313,82 @@ class InitiativeAgreementServices:
         return await self.get_initiative_agreement_profile(
             agreement.initiative_agreement_id
         )
+
+    @service_handler
+    async def update_agreement(
+        self,
+        initiative_agreement_id: int,
+        data: AgreementUpdateSchema,
+        user,
+    ) -> InitiativeAgreementProfileSchema:
+        """Edit an agreement's details, in any lifecycle status."""
+        agreement = await self.repo.get_initiative_agreement_by_id(
+            initiative_agreement_id
+        )
+        if not agreement or agreement.record_kind != RECORD_KIND_AGREEMENT:
+            raise DataNotFoundException(
+                f"Initiative Agreement with id {initiative_agreement_id} not found"
+            )
+
+        provided = data.model_fields_set
+
+        if "ia_code" in provided:
+            ia_code = (data.ia_code or "").strip()
+            if not ia_code:
+                raise HTTPException(
+                    status_code=400,
+                    detail="An initiative agreement code is required.",
+                )
+            if ia_code.lower() != (agreement.ia_code or "").lower():
+                existing = await self.repo.get_agreement_by_ia_code(ia_code)
+                if existing and (
+                    existing.initiative_agreement_id
+                    != agreement.initiative_agreement_id
+                ):
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Agreement code '{ia_code}' is already in use.",
+                    )
+            agreement.ia_code = ia_code
+
+        if "agreement_type" in provided and data.agreement_type is not None:
+            if data.agreement_type not in AGREEMENT_TYPES:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"'{data.agreement_type}' is not a valid agreement type.",
+                )
+            agreement.agreement_type = data.agreement_type
+
+        for field in (
+            "title",
+            "project_description",
+            "project_location",
+            "contact_name",
+            "contact_email",
+            "contact_phone",
+        ):
+            if field in provided:
+                value = getattr(data, field)
+                setattr(agreement, field, (value or "").strip() or None)
+
+        if "agreement_start_date" in provided:
+            agreement.agreement_start_date = data.agreement_start_date
+        if "agreement_end_date" in provided:
+            agreement.agreement_end_date = data.agreement_end_date
+
+        if (
+            agreement.agreement_start_date
+            and agreement.agreement_end_date
+            and agreement.agreement_end_date < agreement.agreement_start_date
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="The agreement end date cannot precede its start date.",
+            )
+
+        agreement.update_user = getattr(user, "keycloak_username", None)
+        await self.repo.db.flush()
+        return await self.get_initiative_agreement_profile(initiative_agreement_id)
 
     @service_handler
     async def create_designated_action(
@@ -1251,10 +1329,12 @@ class InitiativeAgreementServices:
         )
         initiative_agreement.transaction = to_transaction
 
-        # Set effective date to today if the analyst left it blank
+        # Set effective date to today if the analyst left it blank. The
+        # transaction views read it as a Pacific calendar date, so take
+        # today's Pacific date, not UTC's (which is tomorrow after 5 PM).
         if initiative_agreement.transaction_effective_date is None:
             initiative_agreement.transaction_effective_date = datetime.now(
-                timezone.utc
+                PACIFIC_TZ
             ).date()
 
         await self.repo.refresh_initiative_agreement(initiative_agreement)

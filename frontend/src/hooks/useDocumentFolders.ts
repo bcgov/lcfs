@@ -2,6 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
+import type { ApiServiceInstance } from '@/services/useApiService'
+import type { AxiosError } from 'axios'
+import type { QueryOptions } from './types'
 
 // Folder layer for the Initiative Agreements module (#4925). The tree,
 // its mutations and placements are keyed together so any change refreshes
@@ -25,7 +28,7 @@ const fillPath = (
 export const useDocumentTree = (
   parentType: string,
   parentID: number | string,
-  options: Record<string, unknown> = {}
+  options: QueryOptions<unknown> = {}
 ) => {
   const client = useApiService()
   return useQuery({
@@ -122,9 +125,10 @@ export const useUpdateFolder = (
       }
       return { previous }
     },
-    onError: (_error, _variables, context: any) => {
-      if (context?.previous) {
-        queryClient.setQueryData(key, context.previous)
+    onError: (_error, _variables, context) => {
+      const previous = (context as { previous?: unknown } | undefined)?.previous
+      if (previous) {
+        queryClient.setQueryData(key, previous)
       }
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: key })
@@ -197,9 +201,10 @@ export const useMoveDocuments = (
       }
       return { previous }
     },
-    onError: (_error, _variables, context: any) => {
-      if (context?.previous) {
-        queryClient.setQueryData(key, context.previous)
+    onError: (_error, _variables, context) => {
+      const previous = (context as { previous?: unknown } | undefined)?.previous
+      if (previous) {
+        queryClient.setQueryData(key, previous)
       }
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: key })
@@ -254,13 +259,23 @@ export const useFolderUpload = (
             headers: { 'Content-Type': 'multipart/form-data' }
           })
           documentIds.push(response.data.documentId)
-        } catch (error: any) {
+        } catch (error) {
+          const uploadError = error as AxiosError<{
+            message?: string
+            detail?: string
+            errors?: unknown
+            reference_number?: string
+          }>
           await fileIntoFolder()
           // Name the file: "that file type is not allowed" is no help
           // when five were dropped at once.
           const detail =
-            error?.response?.data?.detail || error?.message || 'Upload failed'
-          const failure: any = new Error(`${file.name}: ${detail}`)
+            uploadError?.response?.data?.detail ||
+            uploadError?.message ||
+            'Upload failed'
+          const failure = new Error(`${file.name}: ${detail}`) as Error & {
+            uploadedCount?: number
+          }
           failure.uploadedCount = documentIds.length
           throw failure
         }
@@ -284,7 +299,7 @@ const deletedKey = (parentType: string, parentID: number | string) => [
 export const useDeletedDocuments = (
   parentType: string,
   parentID: number | string,
-  options: Record<string, unknown> = {}
+  options: QueryOptions<unknown> = {}
 ) => {
   const client = useApiService()
   return useQuery({
@@ -303,7 +318,7 @@ export const useDeletedDocuments = (
 const useBinMutation = (
   parentType: string,
   parentID: number | string,
-  run: (client: any) => (documentId: number) => Promise<unknown>
+  run: (client: ApiServiceInstance) => (documentId: number) => Promise<unknown>
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()

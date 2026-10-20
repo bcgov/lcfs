@@ -1,9 +1,9 @@
-import React from 'react'
-import { describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import 'react';
+import { describe, expect, vi } from 'vitest'
+import { screen } from '@testing-library/react'
 import { roles } from '@/constants/roles'
-import { wrapper } from '@/tests/utils/wrapper'
 import { InitiativeAgreements } from '../InitiativeAgreements'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -65,14 +65,17 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 }))
 
 describe('InitiativeAgreements', () => {
-  it('gives a proponent the same grid without the organization column (#4893)', () => {
+  test('gives a proponent the same grid without the organization column (#4893)', ({
+    render,
+    app
+  }) => {
     mockRoles = [roles.ia_proponent]
     mockUseGetInitiativeAgreements.mockReturnValue({
       data: { initiativeAgreements: [], pagination: { total: 0 } },
       isLoading: false,
       isError: false
     })
-    render(<InitiativeAgreements />, { wrapper })
+    render(<InitiativeAgreements />, app)
     mockRoles = [roles.ia_analyst]
 
     const { columnDefs } = mockBCGridViewer.mock.calls[0][0]
@@ -84,7 +87,10 @@ describe('InitiativeAgreements', () => {
     expect(fields).toContain('lastComment')
   })
 
-  it('renders the index grid wired to the agreements list query', () => {
+  test('renders the index grid wired to the agreements list query', ({
+    render,
+    app
+  }) => {
     mockUseGetInitiativeAgreements.mockReturnValue({
       data: {
         initiativeAgreements: [],
@@ -95,7 +101,7 @@ describe('InitiativeAgreements', () => {
       error: null
     })
 
-    render(<InitiativeAgreements />, { wrapper })
+    render(<InitiativeAgreements />, app)
 
     expect(
       screen.getByTestId('initiative-agreements-title')
@@ -118,7 +124,7 @@ describe('InitiativeAgreements', () => {
     )
   })
 
-  it('surfaces query errors in the alert box', () => {
+  test('surfaces query errors in the alert box', ({ render, app }) => {
     mockUseGetInitiativeAgreements.mockReturnValue({
       data: undefined,
       isLoading: false,
@@ -126,8 +132,37 @@ describe('InitiativeAgreements', () => {
       error: { message: 'boom' }
     })
 
-    render(<InitiativeAgreements />, { wrapper })
+    render(<InitiativeAgreements />, app)
 
     expect(screen.getByTestId('alert-box')).toHaveTextContent('boom')
+  })
+
+  test('passes onClearFilters to BCGridViewer and removes cached keys when called', ({
+    render,
+    app
+  }) => {
+    mockUseGetInitiativeAgreements.mockReturnValue({
+      data: {
+        initiativeAgreements: [],
+        pagination: { total: 0, page: 1, size: 10, totalPages: 0 }
+      },
+      isLoading: false,
+      isError: false,
+      error: null
+    })
+
+    // Seed session storage with pretend cached state.
+    sessionStorage.setItem('initiative-agreements-grid-filter', '{"status":"Draft"}')
+    sessionStorage.setItem('initiative-agreements-grid-pagination', '{"page":3,"size":25}')
+
+    render(<InitiativeAgreements />, app)
+
+    const gridProps = mockBCGridViewer.mock.calls.at(-1)[0]
+    expect(typeof gridProps.onClearFilters).toBe('function')
+
+    // Invoke the callback and check sessionStorage is cleared.
+    gridProps.onClearFilters()
+    expect(sessionStorage.getItem('initiative-agreements-grid-filter')).toBeNull()
+    expect(sessionStorage.getItem('initiative-agreements-grid-pagination')).toBeNull()
   })
 })

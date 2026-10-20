@@ -1,14 +1,9 @@
-import {
-  AsyncSuggestionEditor,
-  AutocompleteCellEditor,
-  RequiredHeader,
-  TextCellEditor
-} from '@/components/BCDataGrid/components'
+import { AsyncSuggestionEditor } from '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor'
+import { AutocompleteCellEditor } from '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor'
+import { RequiredHeader } from '@/components/BCDataGrid/components/Renderers/RequiredHeader'
+import '@/components/BCDataGrid/components/Editors/TextCellEditor'
 import { actions, validation } from '@/components/BCDataGrid/columns'
-import {
-  CommonArrayRenderer,
-  MultiSelectRenderer
-} from '@/utils/grid/cellRenderers'
+import { MultiSelectRenderer } from '@/utils/grid/cellRenderers'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import i18n from '@/i18n'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
@@ -20,23 +15,23 @@ const isEditableByStatus = (params) => {
   return ['Draft', 'Updated', 'Validated'].includes(status)
 }
 
-export const bulkChargingEquipmentColDefs = (
-  chargingSites = [],
-  organizations = [],
-  levels = [],
-  endUseTypes = [],
-  endUserTypes = [],
-  errors = {},
-  warnings = {},
-  actionsOptions = null,
-  allowAllocatingOrg = true,
-  showActions = true,
-  isChargingSiteLocked = false
-) => {
+export const bulkChargingEquipmentColDefs = (chargingSites = [], ...args) => {
+  const [
+    ,
+    levels = [],
+    endUseTypes = [],
+    endUserTypes = [],
+    errors = {},
+    warnings = {},
+    actionsOptions = null,
+    ,
+    showActions = true,
+    isChargingSiteLocked = false
+  ] = args
   const cols = [validation]
   if (showActions) {
     cols.push(
-      actions((params) => ({
+      actions(() => ({
         enableDuplicate: false,
         enableDelete: true,
         enableUndo: false,
@@ -119,7 +114,7 @@ export const bulkChargingEquipmentColDefs = (
       headerName: i18n.t('chargingEquipment:manufacturer'),
       minWidth: 320,
       cellEditor: AsyncSuggestionEditor,
-      cellEditorParams: (params) => ({
+      cellEditorParams: () => ({
         queryKey: 'fuel-code-search',
         queryFn: async ({ client, queryKey }) => {
           try {
@@ -182,8 +177,7 @@ export const bulkChargingEquipmentColDefs = (
       },
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings),
-      minWidth: 400,
-      editable: isEditableByStatus
+      minWidth: 400
     },
     {
       field: 'ports',
@@ -253,8 +247,7 @@ export const bulkChargingEquipmentColDefs = (
       },
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings),
-      minWidth: 200,
-      editable: isEditableByStatus
+      minWidth: 200
     },
     {
       field: 'intendedUserIds',
@@ -298,8 +291,7 @@ export const bulkChargingEquipmentColDefs = (
       },
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings),
-      minWidth: 200,
-      editable: isEditableByStatus
+      minWidth: 200
     },
     {
       field: 'latitude',

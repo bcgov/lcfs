@@ -2,7 +2,8 @@ import { useEffect } from 'react'
 import { Outlet, useLocation, useMatches, useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/routes/routes'
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
-import { Container, Stack } from '@mui/material'
+import Container from '@mui/material/Container'
+import Stack from '@mui/material/Stack'
 import BCTypography from '@/components/BCTypography'
 import Footer from '@/components/Footer'
 import { RequireAuth } from '@/components/RequireAuth'
@@ -39,7 +40,9 @@ export const MainLayout = () => {
   const { t } = useTranslation()
   const { data: currentUser } = useCurrentUser()
   const isGovernmentRole =
-    currentUser?.roles?.some(({ name }) => name === t('gov')) ?? false
+    currentUser?.roles?.some(
+      (role: { name?: string | null }) => role.name === t('gov')
+    ) ?? false
   const matches = useMatches()
   const location = useLocation()
   const currentMatch = matches[matches.length - 1] as
@@ -64,7 +67,7 @@ export const MainLayout = () => {
 
   useEffect(() => {
     refreshToken(true)
-  }, [location.pathname])
+  }, [location.pathname, refreshToken])
 
   // Route root visitors to the public dashboard when enabled, else to login.
   const showCreditMarketLoginPage = isFeatureEnabled(

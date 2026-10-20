@@ -1,4 +1,4 @@
-import type { ColumnState } from '@ag-grid-community/core'
+import type { ColumnState } from 'ag-grid-community'
 import { create } from 'zustand'
 
 /**

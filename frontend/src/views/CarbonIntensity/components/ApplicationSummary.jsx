@@ -1,14 +1,13 @@
-import { Edit, FileDownloadOutlined } from '@mui/icons-material'
-import {
-  Box,
-  Divider,
-  FormControlLabel,
-  Grid,
-  IconButton,
-  Stack,
-  Switch,
-  Tooltip
-} from '@mui/material'
+import Edit from '@mui/icons-material/Edit'
+import FileDownloadOutlined from '@mui/icons-material/FileDownloadOutlined'
+import Box from '@mui/material/Box'
+import Divider from '@mui/material/Divider'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Grid from '@mui/material/Grid'
+import IconButton from '@mui/material/IconButton'
+import Stack from '@mui/material/Stack'
+import Switch from '@mui/material/Switch'
+import Tooltip from '@mui/material/Tooltip'
 import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -241,7 +240,12 @@ const getOrganizationAddress = (organization = {}) => {
  * Pulls every field straight off ``ciApplication`` so a single render
  * mirrors what the wizard captured.
  */
-export const ApplicationSummary = ({
+export const ApplicationSummary = (props) =>
+  props.ciApplication ? <ApplicationSummaryDetails {...props} /> : null
+
+const EMPTY_PATHWAYS = []
+
+const ApplicationSummaryDetails = ({
   ciApplication,
   currentUser,
   canEditDocuments = false,
@@ -253,7 +257,6 @@ export const ApplicationSummary = ({
   isSavingPathways = false
 }) => {
   const { t } = useTranslation(['common', 'carbonIntensity'])
-  if (!ciApplication) return null
   const pathwayGridRef = useRef(null)
   const [showPathwayChangelog, setShowPathwayChangelog] = useState(false)
   const [isEditingPathways, setIsEditingPathways] = useState(false)
@@ -288,7 +291,7 @@ export const ApplicationSummary = ({
       : ''
 
   const documents = ciApplication.documents || []
-  const pathways = ciApplication.pathways || []
+  const pathways = ciApplication.pathways || EMPTY_PATHWAYS
   const pathwayDescription = ciApplication.pathwayDescription?.trim()
   const pathwayChangeLogs = [
     ...(ciApplication.pathwayChangeLogs ||

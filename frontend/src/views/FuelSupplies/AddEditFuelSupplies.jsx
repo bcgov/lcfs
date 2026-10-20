@@ -1,21 +1,17 @@
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import BCTypography from '@/components/BCTypography'
-import {
-  DEFAULT_CI_FUEL,
-  NEW_REGULATION_YEAR,
-  REPORT_SCHEDULES
-} from '@/constants/common'
-import { useGetComplianceReport } from '@/hooks/useComplianceReports'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { NEW_REGULATION_YEAR, REPORT_SCHEDULES } from '@/constants/common';
+import { useComplianceReportWithCache } from '@/hooks/useComplianceReports';
+import '@/hooks/useCurrentUser';
 import { buildPath, ROUTES } from '@/routes/routes'
 import {
   useFuelSupplyOptions,
   useGetFuelSuppliesList,
   useSaveFuelSupply
 } from '@/hooks/useFuelSupply'
-import { cleanEmptyStringValues } from '@/utils/formatters'
-import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
+import '@/utils/formatters';
+import { handleScheduleDelete } from '@/utils/schedules.js';
 import {
   processFuelSupplyRowData,
   calculateColumnVisibility,
@@ -34,7 +30,6 @@ import { v4 as uuid } from 'uuid'
 import * as schema from './_schema'
 // Legacy schema removed - all fuel supplies (including TFRS-migrated) use standard schema
 import { REPORT_SCHEDULES_VIEW } from '@/constants/statuses'
-import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 import Loading from '@/components/Loading'
 
 export const AddEditFuelSupplies = () => {

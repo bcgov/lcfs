@@ -9,17 +9,15 @@ import PropTypes from 'prop-types'
 import { useTranslation } from 'react-i18next'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
-import {
-  ClickAwayListener,
-  FormControl,
-  FormControlLabel,
-  Paper,
-  Popper,
-  Radio,
-  RadioGroup,
-  IconButton
-} from '@mui/material'
-import { Close } from '@mui/icons-material'
+import ClickAwayListener from '@mui/material/ClickAwayListener'
+import FormControl from '@mui/material/FormControl'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Paper from '@mui/material/Paper'
+import Popper from '@mui/material/Popper'
+import Radio from '@mui/material/Radio'
+import RadioGroup from '@mui/material/RadioGroup'
+import IconButton from '@mui/material/IconButton'
+import Close from '@mui/icons-material/Close'
 import { useUpdateUser } from '@/hooks/useUser'
 import { roles } from '@/constants/roles'
 import { idirRoleOptions } from '@/views/Users/AddEditUser/_schema'
@@ -74,8 +72,8 @@ const RoleSwitcherComponent = ({
   const [roleUpdateError, setRoleUpdateError] = useState<string | null>(null)
   const [areOptionsVisible, setAreOptionsVisible] = useState<boolean>(false)
 
-  const isGovernmentAdmin =
-    currentUser?.isGovernmentUser && hasRoles?.(roles.administrator)
+  const isGovernmentAdmin = (currentUser?.isGovernmentUser &&
+    hasRoles?.(roles.administrator)) as boolean
   const idirOptions = useMemo<RoleOption[]>(() => idirRoleOptions(t), [t])
   const optionsContainerId = 'role-switcher-options'
 
@@ -115,7 +113,10 @@ const RoleSwitcherComponent = ({
 
   const { mutate: updateCurrentUserRoles, isPending: isUpdatingRoles } =
     useUpdateUser({
-      onSuccess: (_data, variables) => {
+      onSuccess: (
+        _data: unknown,
+        variables: { meta?: { admin?: boolean; role?: string } } | undefined
+      ) => {
         const meta = variables?.meta || {}
         if (typeof meta?.admin === 'boolean') {
           setIsAdministratorSelected(meta.admin)
@@ -126,7 +127,7 @@ const RoleSwitcherComponent = ({
         setRoleUpdateError(null)
         onClose()
       },
-      onError: (error) => {
+      onError: (error: Error) => {
         console.error('Error updating current user roles:', error)
         setRoleUpdateError(t('common:submitError'))
       }
@@ -208,9 +209,7 @@ const RoleSwitcherComponent = ({
     setAreOptionsVisible((prev) => !prev)
   }
 
-  const handleTitleKeyDown = (
-    event: ReactKeyboardEvent<HTMLDivElement>
-  ) => {
+  const handleTitleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault()
       toggleOptionsVisibility()
@@ -344,19 +343,26 @@ const RoleSwitcherComponent = ({
   )
 }
 
-RoleSwitcherComponent.propTypes = {
-  currentUser: PropTypes.object,
-  hasRoles: PropTypes.func,
-  open: PropTypes.bool.isRequired,
-  anchorEl: PropTypes.any,
-  onClose: PropTypes.func.isRequired
-}
+const RoleSwitcherComponentWithPropTypes = Object.assign(
+  RoleSwitcherComponent,
+  {
+    propTypes: {
+      currentUser: PropTypes.object,
+      hasRoles: PropTypes.func,
+      open: PropTypes.bool.isRequired,
+      anchorEl: PropTypes.any,
+      onClose: PropTypes.func.isRequired
+    }
+  }
+)
 
 export const RoleSwitcher = withFeatureFlag(
-  RoleSwitcherComponent,
+  RoleSwitcherComponentWithPropTypes,
   FEATURE_FLAGS.ROLE_SWITCHER
 )
 
-RoleSwitcher.propTypes = RoleSwitcherComponent.propTypes
+Object.assign(RoleSwitcher, {
+  propTypes: RoleSwitcherComponentWithPropTypes.propTypes
+})
 
 export { RoleSwitcherComponent as RoleSwitcherBase }

@@ -1,6 +1,6 @@
-import { renderHook, waitFor } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
-import { wrapper } from '@/tests/utils/wrapper'
+import { waitFor } from '@testing-library/react'
+import { vi, describe, expect, beforeEach } from 'vitest'
+import { test } from '@/tests/utils/fixtures'
 import {
   useFuelExportOptions,
   useGetFuelExports,
@@ -32,7 +32,7 @@ vi.mock('@/constants/routes', () => ({
   }
 }))
 
-// Using the standard test wrapper from utils
+// Using the native test fixtures from utils
 
 describe('useFuelExport', () => {
   beforeEach(() => {
@@ -40,7 +40,10 @@ describe('useFuelExport', () => {
   })
 
   describe('useFuelExportOptions', () => {
-    it('should fetch fuel export options successfully', async () => {
+    test('should fetch fuel export options successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockOptions = {
         fuelTypes: ['Gasoline', 'Diesel'],
         destinations: ['USA', 'Canada']
@@ -49,7 +52,7 @@ describe('useFuelExport', () => {
 
       const { result } = renderHook(
         () => useFuelExportOptions({ compliancePeriod: 2024 }),
-        { wrapper: wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -62,33 +65,34 @@ describe('useFuelExport', () => {
       )
     })
 
-    it('should not fetch when compliancePeriod is missing', () => {
-      const { result } = renderHook(() => useFuelExportOptions({}), {
-        wrapper: wrapper
-      })
+    test('should not fetch when compliancePeriod is missing', ({
+      renderHook,
+      query
+    }) => {
+      const { result } = renderHook(() => useFuelExportOptions({}), [query])
 
       expect(result.current.status).toBe('pending')
       expect(mockApiService.get).not.toHaveBeenCalled()
     })
 
-    it('should handle enabled option', () => {
+    test('should handle enabled option', ({ renderHook, query }) => {
       const { result } = renderHook(
         () =>
           useFuelExportOptions({ compliancePeriod: 2024 }, { enabled: false }),
-        { wrapper: wrapper }
+        [query]
       )
 
       expect(result.current.status).toBe('pending')
       expect(mockApiService.get).not.toHaveBeenCalled()
     })
 
-    it('should handle API errors', async () => {
+    test('should handle API errors', async ({ renderHook, query }) => {
       const mockError = new Error('API Error')
       mockApiService.get.mockRejectedValue(mockError)
 
       const { result } = renderHook(
         () => useFuelExportOptions({ compliancePeriod: 2024 }, { retry: 0 }),
-        { wrapper: wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -100,7 +104,10 @@ describe('useFuelExport', () => {
   })
 
   describe('useGetFuelExports', () => {
-    it('should fetch fuel exports with string params successfully', async () => {
+    test('should fetch fuel exports with string params successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockExports = {
         fuelExports: [
           { id: 1, fuelType: 'Gasoline' },
@@ -113,7 +120,7 @@ describe('useFuelExport', () => {
       const pagination = { page: 1, size: 10 }
       const { result } = renderHook(
         () => useGetFuelExports('123', pagination),
-        { wrapper: wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -127,7 +134,10 @@ describe('useFuelExport', () => {
       })
     })
 
-    it('should fetch fuel exports with object params successfully', async () => {
+    test('should fetch fuel exports with object params successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockExports = {
         fuelExports: [{ id: 1, fuelType: 'Gasoline' }],
         pagination: { total: 1, page: 1 }
@@ -138,7 +148,7 @@ describe('useFuelExport', () => {
       const pagination = { page: 1, size: 10 }
       const { result } = renderHook(
         () => useGetFuelExports(params, pagination),
-        { wrapper: wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -152,21 +162,21 @@ describe('useFuelExport', () => {
       })
     })
 
-    it('should not fetch when params is missing', () => {
+    test('should not fetch when params is missing', ({ renderHook, query }) => {
       const { result } = renderHook(
         () => useGetFuelExports(null, { page: 1, size: 10 }),
-        { wrapper: wrapper }
+        [query]
       )
 
       expect(result.current.status).toBe('pending')
       expect(mockApiService.post).not.toHaveBeenCalled()
     })
 
-    it('should handle enabled option', () => {
+    test('should handle enabled option', ({ renderHook, query }) => {
       const { result } = renderHook(
         () =>
           useGetFuelExports('123', { page: 1, size: 10 }, { enabled: false }),
-        { wrapper: wrapper }
+        [query]
       )
 
       expect(result.current.status).toBe('pending')
@@ -175,7 +185,10 @@ describe('useFuelExport', () => {
   })
 
   describe('useGetFuelExportsList', () => {
-    it('should fetch fuel exports list successfully', async () => {
+    test('should fetch fuel exports list successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockExports = {
         fuelExports: [
           { id: 1, fuelType: 'Gasoline' },
@@ -188,7 +201,7 @@ describe('useFuelExport', () => {
       const pagination = { page: 1, size: 10 }
       const { result } = renderHook(
         () => useGetFuelExportsList({ complianceReportId: 123 }, pagination),
-        { wrapper: wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -203,7 +216,10 @@ describe('useFuelExport', () => {
       })
     })
 
-    it('should fetch fuel exports list with changelog', async () => {
+    test('should fetch fuel exports list with changelog', async ({
+      renderHook,
+      query
+    }) => {
       const mockExports = { fuelExports: [], pagination: { total: 0, page: 1 } }
       mockApiService.post.mockResolvedValue({ data: mockExports })
 
@@ -214,7 +230,7 @@ describe('useFuelExport', () => {
             { complianceReportId: 123, changelog: true },
             pagination
           ),
-        { wrapper: wrapper }
+        [query]
       )
 
       await waitFor(() => {
@@ -228,10 +244,13 @@ describe('useFuelExport', () => {
       })
     })
 
-    it('should not fetch when complianceReportId is missing', () => {
+    test('should not fetch when complianceReportId is missing', ({
+      renderHook,
+      query
+    }) => {
       const { result } = renderHook(
         () => useGetFuelExportsList({}, { page: 1, size: 10 }),
-        { wrapper: wrapper }
+        [query]
       )
 
       expect(result.current.status).toBe('pending')
@@ -240,13 +259,16 @@ describe('useFuelExport', () => {
   })
 
   describe('useSaveFuelExport', () => {
-    it('should save fuel export successfully', async () => {
+    test('should save fuel export successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockResponse = { data: { id: 1, fuelType: 'Gasoline' } }
       mockApiService.post.mockResolvedValue(mockResponse)
 
       const { result } = renderHook(
         () => useSaveFuelExport({ complianceReportId: 123 }),
-        { wrapper: wrapper }
+        [query]
       )
 
       const exportData = {
@@ -266,13 +288,13 @@ describe('useFuelExport', () => {
       })
     })
 
-    it('should handle save errors', async () => {
+    test('should handle save errors', async ({ renderHook, query }) => {
       const mockError = new Error('Save failed')
       mockApiService.post.mockRejectedValue(mockError)
 
       const { result } = renderHook(
         () => useSaveFuelExport({ complianceReportId: 123 }),
-        { wrapper: wrapper }
+        [query]
       )
 
       result.current.mutate({ fuelType: 'Gasoline' })
@@ -286,13 +308,16 @@ describe('useFuelExport', () => {
   })
 
   describe('useUpdateFuelExport', () => {
-    it('should update fuel export successfully', async () => {
+    test('should update fuel export successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockResponse = { data: { id: 1, fuelType: 'Updated Gasoline' } }
       mockApiService.put.mockResolvedValue(mockResponse)
 
       const { result } = renderHook(
         () => useUpdateFuelExport({ complianceReportId: 123 }),
-        { wrapper: wrapper }
+        [query]
       )
 
       const exportData = {
@@ -313,13 +338,13 @@ describe('useFuelExport', () => {
       })
     })
 
-    it('should handle update errors', async () => {
+    test('should handle update errors', async ({ renderHook, query }) => {
       const mockError = new Error('Update failed')
       mockApiService.put.mockRejectedValue(mockError)
 
       const { result } = renderHook(
         () => useUpdateFuelExport({ complianceReportId: 123 }),
-        { wrapper: wrapper }
+        [query]
       )
 
       result.current.mutate({ id: 1, fuelType: 'Gasoline' })
@@ -333,12 +358,15 @@ describe('useFuelExport', () => {
   })
 
   describe('useDeleteFuelExport', () => {
-    it('should delete fuel export successfully', async () => {
+    test('should delete fuel export successfully', async ({
+      renderHook,
+      query
+    }) => {
       mockApiService.delete.mockResolvedValue({ data: {} })
 
       const { result } = renderHook(
         () => useDeleteFuelExport({ complianceReportId: 123 }),
-        { wrapper: wrapper }
+        [query]
       )
 
       result.current.mutate(1)
@@ -350,13 +378,13 @@ describe('useFuelExport', () => {
       expect(mockApiService.delete).toHaveBeenCalledWith('/fuel-exports/1')
     })
 
-    it('should handle delete errors', async () => {
+    test('should handle delete errors', async ({ renderHook, query }) => {
       const mockError = new Error('Delete failed')
       mockApiService.delete.mockRejectedValue(mockError)
 
       const { result } = renderHook(
         () => useDeleteFuelExport({ complianceReportId: 123 }),
-        { wrapper: wrapper }
+        [query]
       )
 
       result.current.mutate(1)
@@ -370,13 +398,14 @@ describe('useFuelExport', () => {
   })
 
   describe('useImportFuelExports', () => {
-    it('should import fuel exports successfully', async () => {
+    test('should import fuel exports successfully', async ({
+      renderHook,
+      query
+    }) => {
       const mockResponse = { data: { jobId: 'job-123', status: 'started' } }
       mockApiService.post.mockResolvedValue(mockResponse)
 
-      const { result } = renderHook(() => useImportFuelExports(123), {
-        wrapper: wrapper
-      })
+      const { result } = renderHook(() => useImportFuelExports(123), [query])
 
       const file = new File(['csv content'], 'exports.csv', {
         type: 'text/csv'
@@ -396,13 +425,11 @@ describe('useFuelExport', () => {
       )
     })
 
-    it('should handle import errors', async () => {
+    test('should handle import errors', async ({ renderHook, query }) => {
       const mockError = new Error('File is required for import')
       mockApiService.post.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useImportFuelExports(123), {
-        wrapper: wrapper
-      })
+      const { result } = renderHook(() => useImportFuelExports(123), [query])
 
       const file = new File(['csv content'], 'exports.csv', {
         type: 'text/csv'

@@ -1,9 +1,17 @@
 """Compliance-report search definition."""
 
-from sqlalchemy import select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lcfs.db.models.compliance.ComplianceReport import (
+    ComplianceReport,
+    SupplementalInitiatorType,
+)
 from lcfs.db.models.compliance.ComplianceReportListView import ComplianceReportListView
+from lcfs.db.models.compliance.ComplianceReportStatus import (
+    ComplianceReportStatus,
+    ComplianceReportStatusEnum,
+)
 from lcfs.web.api.search.entities.base import (
     RESULT_LIMIT,
     EntitySearch,
@@ -24,6 +32,113 @@ from lcfs.web.api.search.schema import SearchResultDetail, SearchResultItem
 ENTITY_TYPE = "report"
 SUPPORTED_FILTERS = {"status", "year"}
 
+# DB-level status values that must never be shown to BCeID (supplier) users.
+# Every record in one of these states is displayed as "Submitted" on all
+# supplier-facing pages (mirrors ComplianceReportServices._mask_report_status).
+_SUPPLIER_MASKED_STATUS_VALUES: frozenset[str] = frozenset(
+    {
+        ComplianceReportStatusEnum.Recommended_by_analyst.value,
+        ComplianceReportStatusEnum.Recommended_by_manager.value,
+        ComplianceReportStatusEnum.Analyst_adjustment.value,
+        ComplianceReportStatusEnum.Analyst_adjustment.underscore_value(),
+    }
+)
+# The same statuses as stored in the DB (enum member names, e.g.
+# "Recommended_by_analyst"). Status filters compare against the stored text,
+# so they need these rather than the display values above.
+_SUPPLIER_MASKED_STATUS_DB_VALUES: tuple[str, ...] = (
+    ComplianceReportStatusEnum.Recommended_by_analyst.name,
+    ComplianceReportStatusEnum.Recommended_by_manager.name,
+    ComplianceReportStatusEnum.Analyst_adjustment.name,
+)
+_SUBMITTED_VALUE = ComplianceReportStatusEnum.Submitted.value
+
+# Field labels that must not be included in supplier-facing searches.
+# Exposing them would allow a supplier to discover: who the assigned analyst
+# is, or what draft assessment text the analyst has written.
+_SUPPLIER_EXCLUDED_FIELD_LABELS: frozenset[str] = frozenset(
+    {"Analyst first name", "Analyst last name", "Assessment statement"}
+)
+
+
+def _effective_status_values_for_supplier(
+    raw_values: tuple[str, ...],
+) -> tuple[str, ...]:
+    """
+    Translate a BCeID-supplied status filter into actual DB-level values.
+
+    - Any name that belongs to an internal-only status is silently dropped:
+      the supplier should not know those states exist.
+    - If "Submitted" is requested it is expanded to include every status
+      that is *displayed* as "Submitted" to suppliers, so the filter
+      keeps working correctly after the status-masking step.
+    """
+    masked_casefold = frozenset(
+        v.casefold()
+        for v in (*_SUPPLIER_MASKED_STATUS_VALUES, *_SUPPLIER_MASKED_STATUS_DB_VALUES)
+    )
+    wants_submitted = any(
+        v.strip().casefold() == _SUBMITTED_VALUE.casefold() for v in raw_values
+    )
+    # Drop any value whose casefolded form is an internal-only status name.
+    safe = [v for v in raw_values if v.strip().casefold() not in masked_casefold]
+    if wants_submitted:
+        # Include the real "Submitted" value plus every masked equivalent so
+        # the supplier's "submitted" filter returns all visible records.
+        safe = [v for v in safe if v.strip().casefold() != _SUBMITTED_VALUE.casefold()]
+        safe.append(_SUBMITTED_VALUE)
+        safe.extend(_SUPPLIER_MASKED_STATUS_DB_VALUES)
+    return tuple(safe)
+
+
+def _hidden_statuses(context: SearchContext) -> list[ComplianceReportStatusEnum]:
+    """
+    Statuses the caller's compliance report list leaves out, so search shows
+    the same reports (mirrors ComplianceReportRepository.get_reports_paginated).
+
+    A Draft is the supplier's own until it is submitted, so government never
+    sees one (#5231); an Analyst adjustment is the analyst's until it is
+    recommended.
+    """
+    hidden = []
+    if not context.is_analyst:
+        hidden.append(ComplianceReportStatusEnum.Analyst_adjustment)
+    if context.is_government:
+        hidden.append(ComplianceReportStatusEnum.Draft)
+    return hidden
+
+
+def _latest_visible_version(view, context: SearchContext, hidden_status_ids):
+    """
+    The newest version of each report the caller may see, picked as the
+    compliance report list picks it (mirrors ComplianceReportRepository.
+    get_latest_visible_reports_query): when the newest version is hidden from
+    the caller, the version before it stands in, rather than the report
+    vanishing or the hidden version showing.
+    """
+    versions = select(func.max(ComplianceReport.version)).where(
+        ComplianceReport.compliance_report_group_uuid
+        == view.compliance_report_group_uuid,
+        ComplianceReport.current_status_id.notin_(hidden_status_ids),
+    )
+    if not context.is_government:
+        # A government reassessment stays out of the supplier's sight until
+        # it is assessed.
+        assessed_id = (
+            select(ComplianceReportStatus.compliance_report_status_id)
+            .where(ComplianceReportStatus.status == ComplianceReportStatusEnum.Assessed)
+            .scalar_subquery()
+        )
+        versions = versions.where(
+            or_(
+                ComplianceReport.current_status_id == assessed_id,
+                ComplianceReport.supplemental_initiator
+                != SupplementalInitiatorType.GOVERNMENT_REASSESSMENT,
+                ComplianceReport.supplemental_initiator.is_(None),
+            )
+        )
+    return versions.scalar_subquery()
+
 
 async def search_compliance_reports(
     db: AsyncSession, context: SearchContext
@@ -36,11 +151,22 @@ async def search_compliance_reports(
         return []
 
     view = ComplianceReportListView
-    fields = [
+    # Suppliers see masked statuses as "Submitted", so match and echo that
+    # instead of the raw internal status.
+    status_text = text_expression(view.report_status)
+    supplier_status_text = case(
+        (status_text.in_(_SUPPLIER_MASKED_STATUS_DB_VALUES), _SUBMITTED_VALUE),
+        else_=status_text,
+    )
+    all_fields = [
         SearchField("Organization", view.organization_name, primary=True, fuzzy=True),
         SearchField("Compliance period", view.compliance_period, primary=True),
         SearchField("Report type", view.report_type, primary=True),
-        SearchField("Status", text_expression(view.report_status), primary=True),
+        SearchField(
+            "Status",
+            status_text if context.is_government else supplier_status_text,
+            primary=True,
+        ),
         SearchField("Report ID", view.compliance_report_id, primary=True),
         SearchField(
             "Analyst first name", view.assigned_analyst_first_name, primary=True
@@ -51,6 +177,18 @@ async def search_compliance_reports(
         SearchField("Assessment statement", view.assessment_statement),
         SearchField("Legacy ID", view.legacy_id),
     ]
+    # Government-only fields are removed for supplier queries so that
+    # sensitive data is neither matched against nor echoed in match_context.
+    fields = (
+        all_fields
+        if context.is_government
+        else [
+            f
+            for f in all_fields
+            if f.label not in _SUPPLIER_EXCLUDED_FIELD_LABELS
+        ]
+    )
+
     match_context = match_context_expression(fields, query)
     clause, score = search_clause(fields, query)
     if clause is None and query.numeric_id is not None:
@@ -58,11 +196,28 @@ async def search_compliance_reports(
     if query.text and clause is None:
         return []
 
-    statement = select(view, match_context).where(view.is_latest.is_(True))
+    # For non-government callers, translate the status filter so that
+    # searching for "submitted" also surfaces records in masked internal
+    # states, and searching for an internal-only status name yields nothing.
+    status_values = query.values("status")
+    if not context.is_government and status_values:
+        status_values = _effective_status_values_for_supplier(status_values)
+        if not status_values:
+            # Only internal-only statuses were requested; an empty filter
+            # would otherwise be treated as "no status restriction".
+            return []
+
+    hidden_status_ids = select(
+        ComplianceReportStatus.compliance_report_status_id
+    ).where(ComplianceReportStatus.status.in_(_hidden_statuses(context)))
+    statement = select(view, match_context).where(
+        view.report_status_id.notin_(hidden_status_ids),
+        view.version == _latest_visible_version(view, context, hidden_status_ids),
+    )
     statement = where_present(
         statement,
         clause,
-        equals_any(view.report_status, query.values("status")),
+        equals_any(view.report_status, status_values),
         starts_with_any(view.compliance_period, query.values("year")),
         (
             view.organization_id == context.organization_id
@@ -77,23 +232,39 @@ async def search_compliance_reports(
     rows = (await db.execute(statement)).all()
     results = []
     for report, matched_value in rows:
-        analyst = " ".join(
-            value
-            for value in (
-                report.assigned_analyst_first_name,
-                report.assigned_analyst_last_name,
+        # Mask internal workflow statuses for BCeID users (mirrors
+        # ComplianceReportServices._mask_report_status).
+        if report.report_status is not None:
+            raw_status = report.report_status.value
+            displayed_status = (
+                _SUBMITTED_VALUE
+                if not context.is_government
+                and raw_status in _SUPPLIER_MASKED_STATUS_VALUES
+                else raw_status
             )
-            if value
-        )
+        else:
+            displayed_status = None
+
         meta = [report.report_type] if report.report_type else []
         details: list[SearchResultDetail] = []
         if report.report_type:
             details.append(
                 SearchResultDetail(label="Report type", value=report.report_type)
             )
-        if analyst:
-            meta.append(f"Analyst: {analyst}")
-            details.append(SearchResultDetail(label="Analyst", value=analyst))
+        # Analyst assignment is a government-internal field; never expose it
+        # to supplier users.
+        if context.is_government:
+            analyst = " ".join(
+                value
+                for value in (
+                    report.assigned_analyst_first_name,
+                    report.assigned_analyst_last_name,
+                )
+                if value
+            )
+            if analyst:
+                meta.append(f"Analyst: {analyst}")
+                details.append(SearchResultDetail(label="Analyst", value=analyst))
         results.append(
             SearchResultItem(
                 entity_type=ENTITY_TYPE,
@@ -104,7 +275,7 @@ async def search_compliance_reports(
                     f"/compliance-reporting/{report.compliance_period}/"
                     f"{report.compliance_report_id}"
                 ),
-                status=report.report_status.value if report.report_status else None,
+                status=displayed_status,
                 meta=" · ".join(meta) or None,
                 match_context=matched_value or None,
                 details=details,

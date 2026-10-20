@@ -1,21 +1,20 @@
 import { useCallback, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  Box,
-  Card,
-  CardMedia,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  FormControlLabel,
-  Grid,
-  Radio,
-  TextField,
-  Typography
-} from '@mui/material'
-import { CloudUpload, Edit } from '@mui/icons-material'
-import { CircularProgress } from '@mui/material'
+import Box from '@mui/material/Box'
+import Card from '@mui/material/Card'
+import CardMedia from '@mui/material/CardMedia'
+import Dialog from '@mui/material/Dialog'
+import DialogActions from '@mui/material/DialogActions'
+import DialogContent from '@mui/material/DialogContent'
+import DialogTitle from '@mui/material/DialogTitle'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Grid from '@mui/material/Grid'
+import Radio from '@mui/material/Radio'
+import TextField from '@mui/material/TextField'
+import Typography from '@mui/material/Typography'
+import CloudUpload from '@mui/icons-material/CloudUpload'
+import Edit from '@mui/icons-material/Edit'
+import CircularProgress from '@mui/material/CircularProgress'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'

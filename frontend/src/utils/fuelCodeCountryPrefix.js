@@ -28,11 +28,7 @@ export const getCountryPrefix = (country) => {
  * @param {number|string} compliancePeriod - The compliance period (e.g., 2025)
  * @returns {string} The formatted fuel code with prefix if applicable
  */
-export const formatFuelCodeWithCountryPrefix = (
-  fuelCode,
-  country,
-  compliancePeriod
-) => {
+export const formatFuelCodeWithCountryPrefix = (fuelCode) => {
   return fuelCode
 }
 

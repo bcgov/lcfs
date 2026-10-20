@@ -1,13 +1,15 @@
 import BCBox from '@/components/BCBox'
 import { TRANSFER_STATUSES } from '@/constants/statuses'
 import { useTransfer } from '@/hooks/useTransfer'
-import { FormControlLabel, Radio, RadioGroup } from '@mui/material'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Radio from '@mui/material/Radio'
+import RadioGroup from '@mui/material/RadioGroup'
 import BCTypography from '@/components/BCTypography'
 import { Controller, useFormContext } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 
-export const Recommendation = ({ currentStatus }) => {
+export const Recommendation = () => {
   const { t } = useTranslation(['common', 'transfer'])
   const { transferId } = useParams()
   const { data: transferData } = useTransfer(transferId, {

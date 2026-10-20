@@ -1,12 +1,24 @@
 import React from 'react'
-import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { fireEvent, screen } from '@testing-library/react'
+
+import { describe, expect, vi, beforeEach } from 'vitest'
+
 import { EditDesignatedAction } from '../EditDesignatedAction'
 import { roles } from '@/constants/roles'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
+}))
+
+// The global setup stubs FloatingAlert with an inert triggerAlert; expose a
+// spy so the tests can assert what the user is told.
+const mockTriggerAlert = vi.fn()
+vi.mock('@/components/BCAlert', () => ({
+  FloatingAlert: React.forwardRef(function FloatingAlertMock(_props, ref) {
+    React.useImperativeHandle(ref, () => ({ triggerAlert: mockTriggerAlert }))
+    return null
+  })
 }))
 
 let mockRoles = [roles.ia_analyst]
@@ -38,8 +50,8 @@ describe('EditDesignatedAction', () => {
     mockRoles = [roles.ia_analyst]
   })
 
-  it('opens with the current values already filled in', () => {
-    render(<EditDesignatedAction action={action} />, { wrapper })
+  test('opens with the current values already filled in', ({ render, app }) => {
+    render(<EditDesignatedAction action={action} />, app)
     open()
 
     expect(screen.getByTestId('edit-action-name')).toHaveValue(
@@ -49,8 +61,8 @@ describe('EditDesignatedAction', () => {
     expect(screen.getByTestId('edit-action-date')).toHaveValue('2026-09-30')
   })
 
-  it('saves a correction', () => {
-    render(<EditDesignatedAction action={action} />, { wrapper })
+  test('saves a correction', ({ render, app }) => {
+    render(<EditDesignatedAction action={action} />, app)
     open()
 
     fireEvent.change(screen.getByTestId('edit-action-name'), {
@@ -71,8 +83,11 @@ describe('EditDesignatedAction', () => {
     )
   })
 
-  it('clearing the date asks for it to be cleared, not left alone', () => {
-    render(<EditDesignatedAction action={action} />, { wrapper })
+  test('clearing the date asks for it to be cleared, not left alone', ({
+    render,
+    app
+  }) => {
+    render(<EditDesignatedAction action={action} />, app)
     open()
 
     fireEvent.change(screen.getByTestId('edit-action-date'), {
@@ -86,8 +101,8 @@ describe('EditDesignatedAction', () => {
     )
   })
 
-  it('will not save a blank name', () => {
-    render(<EditDesignatedAction action={action} />, { wrapper })
+  test('will not save a blank name', ({ render, app }) => {
+    render(<EditDesignatedAction action={action} />, app)
     open()
 
     fireEvent.change(screen.getByTestId('edit-action-name'), {
@@ -98,24 +113,37 @@ describe('EditDesignatedAction', () => {
     expect(mockUpdate).not.toHaveBeenCalled()
   })
 
-  it('surfaces the reason the API refused', () => {
+  test('tells the user the action was updated', ({ render, app }) => {
+    mockUpdate.mockImplementation((_payload, handlers) => handlers.onSuccess())
+    render(<EditDesignatedAction action={action} />, app)
+    open()
+    fireEvent.click(screen.getByText('initiativeAgreement:actions.save'))
+
+    expect(mockTriggerAlert).toHaveBeenCalledWith({
+      severity: 'success',
+      message: 'initiativeAgreement:actions.editSuccess'
+    })
+  })
+
+  test('surfaces the reason the API refused', ({ render, app }) => {
     mockUpdate.mockImplementation((_payload, handlers) =>
       handlers.onError({
         response: { data: { detail: 'Compliance units cannot be negative.' } }
       })
     )
-    render(<EditDesignatedAction action={action} />, { wrapper })
+    render(<EditDesignatedAction action={action} />, app)
     open()
     fireEvent.click(screen.getByText('initiativeAgreement:actions.save'))
 
     expect(screen.getByTestId('edit-action-error')).toHaveTextContent(
       'cannot be negative'
     )
+    expect(mockTriggerAlert).not.toHaveBeenCalled()
   })
 
-  it('is absent for a director', () => {
+  test('is absent for a director', ({ render, app }) => {
     mockRoles = [roles.director]
-    render(<EditDesignatedAction action={action} />, { wrapper })
+    render(<EditDesignatedAction action={action} />, app)
 
     expect(
       screen.queryByTestId('edit-designated-action')

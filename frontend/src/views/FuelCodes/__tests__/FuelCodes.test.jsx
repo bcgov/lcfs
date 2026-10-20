@@ -1,22 +1,25 @@
-import React from 'react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  act
-} from '@testing-library/react'
+import 'react'
+import { afterEach, beforeEach, describe, expect, vi } from 'vitest'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { FuelCodes } from '@/views/FuelCodes'
-import { formatTransportModeDistances } from '@/views/FuelCodes/_schema'
+import { formatTransportModeDistances } from '../fuelCodeGridUtils'
 import { roles } from '@/constants/roles'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import { ROUTES } from '@/routes/routes'
+
+import '@/views/FuelCodes/FuelCodes.jsx'
+
+let render
+const fixtureOptions = undefined
+const it = (name, fn) =>
+  test(name, ({ render: fixtureRender, theme }) => {
+    render = (ui, options) => fixtureRender(ui, [theme], options)
+    return fn()
+  })
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key, options) => {
+    t: (key) => {
       const translations = {
         FuelCodes: 'Fuel codes',
         'fuelCode:fuelCodes': 'Fuel codes',
@@ -32,6 +35,10 @@ vi.mock('react-i18next', () => ({
       return translations[key] || key
     }
   })
+}))
+
+vi.mock('@/i18n', () => ({
+  default: { t: (key) => key }
 }))
 
 vi.mock('@react-keycloak/web', () => ({
@@ -56,7 +63,7 @@ vi.mock('@/hooks/useCurrentUser', () => ({
 }))
 
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  BCGridViewer: ({ gridRef, columnDefs, queryData, dataKey, className }) => (
+  BCGridViewer: ({ dataKey, className }) => (
     <div
       data-test="bc-grid-container"
       className={className || 'ag-theme-material'}
@@ -119,27 +126,14 @@ vi.mock('@/hooks/useFuelCode', () => ({
 }))
 
 vi.mock('@/components/BCBox', () => ({
-  default: ({ children, jsx, ...props }) => <div {...props}>{children}</div>
+  default: ({ children, ...props }) => {
+    delete props.jsx
+    return <div {...props}>{children}</div>
+  }
 }))
 
-import { FuelCodes as FuelCodesComponent } from '@/views/FuelCodes/FuelCodes.jsx'
-
-const createMockGridRef = (filterModel = {}, columnState = []) => ({
-  current: {
-    api: {
-      getFilterModel: vi.fn(() => filterModel),
-      clearFilters: vi.fn(),
-      getColumnState: vi.fn(() => columnState)
-    },
-    clearFilters: vi.fn()
-  }
-})
-
 describe('FuelCodes Component Tests', () => {
-  let mockGridRef
-
   beforeEach(() => {
-    mockGridRef = createMockGridRef()
     mockDownloadMutate = vi.fn().mockResolvedValue(undefined)
     mockLocationState.state = null
     vi.clearAllMocks()
@@ -147,7 +141,6 @@ describe('FuelCodes Component Tests', () => {
   })
 
   afterEach(() => {
-    cleanup()
     vi.resetAllMocks()
   })
 
@@ -254,25 +247,25 @@ describe('FuelCodes Component Tests', () => {
 
   describe('Component Rendering', () => {
     it('should render title correctly', () => {
-      render(<FuelCodes />, { wrapper })
+      render(<FuelCodes />, { fixtureOptions })
       const title = screen.getByTestId('title')
       expect(title).toBeInTheDocument()
       expect(title.textContent).toBe('Fuel codes')
     })
 
     it('should render the Current fuel codes tab strip', () => {
-      render(<FuelCodes />, { wrapper })
+      render(<FuelCodes />, { fixtureOptions })
       expect(screen.getByRole('tablist')).toBeInTheDocument()
     })
 
     it('should render grid viewer with correct props', () => {
-      render(<FuelCodes />, { wrapper })
+      render(<FuelCodes />, { fixtureOptions })
       const gridContainer = screen.getByTestId('bc-grid-container')
       expect(gridContainer).toBeInTheDocument()
     })
 
     it('should render download button with correct initial state', () => {
-      render(<FuelCodes />, { wrapper })
+      render(<FuelCodes />, { fixtureOptions })
       const downloadButton = screen.getByTestId('fuel-code-download-btn')
       expect(downloadButton).toBeInTheDocument()
       expect(downloadButton).toBeEnabled()
@@ -282,7 +275,7 @@ describe('FuelCodes Component Tests', () => {
     })
 
     it('should render new fuel code button for analysts', () => {
-      render(<FuelCodes />, { wrapper })
+      render(<FuelCodes />, { fixtureOptions })
       const newFuelCodeBtn = screen.getByTestId('new-fuel-code-btn')
       expect(newFuelCodeBtn).toBeInTheDocument()
       expect(newFuelCodeBtn).toHaveTextContent('New fuel code')
@@ -292,7 +285,7 @@ describe('FuelCodes Component Tests', () => {
   describe('Alert Message Handling', () => {
     it('should not render alert when no location state message', () => {
       mockLocationState.state = null
-      render(<FuelCodes />, { wrapper })
+      render(<FuelCodes />, { fixtureOptions })
       const alertBox = screen.queryByTestId('alert-box')
       expect(alertBox).not.toBeInTheDocument()
     })
@@ -303,7 +296,7 @@ describe('FuelCodes Component Tests', () => {
         severity: 'success'
       }
 
-      render(<FuelCodes />, { wrapper })
+      render(<FuelCodes />, { fixtureOptions })
 
       await waitFor(() => {
         const alertBox = screen.getByTestId('alert-box')
@@ -317,7 +310,7 @@ describe('FuelCodes Component Tests', () => {
         message: 'Test message without severity'
       }
 
-      render(<FuelCodes />, { wrapper })
+      render(<FuelCodes />, { fixtureOptions })
 
       await waitFor(() => {
         const alertBox = screen.getByTestId('alert-box')
@@ -332,7 +325,7 @@ describe('FuelCodes Component Tests', () => {
         severity: 'error'
       }
 
-      render(<FuelCodes />, { wrapper })
+      render(<FuelCodes />, { fixtureOptions })
 
       await waitFor(() => {
         const alertBox = screen.getByTestId('alert-box')
@@ -344,14 +337,14 @@ describe('FuelCodes Component Tests', () => {
 
   describe('User Interactions', () => {
     it('should navigate to add fuel code page when new button clicked', () => {
-      render(<FuelCodes />, { wrapper })
+      render(<FuelCodes />, { fixtureOptions })
       const newFuelCodeBtn = screen.getByTestId('new-fuel-code-btn')
       fireEvent.click(newFuelCodeBtn)
       expect(mockNavigate).toHaveBeenCalledWith(ROUTES.FUEL_CODES.ADD)
     })
 
     it('should handle download button click', async () => {
-      render(<FuelCodes />, { wrapper })
+      render(<FuelCodes />, { fixtureOptions })
       const downloadButton = screen.getByTestId('fuel-code-download-btn')
 
       fireEvent.click(downloadButton)
@@ -379,7 +372,7 @@ describe('FuelCodes Component Tests', () => {
     it('should show loading state during download', async () => {
       mockDownloadMutate = vi.fn(() => new Promise(() => {}))
 
-      render(<FuelCodes />, { wrapper })
+      render(<FuelCodes />, { fixtureOptions })
       const downloadButton = screen.getByTestId('fuel-code-download-btn')
 
       fireEvent.click(downloadButton)
@@ -395,7 +388,7 @@ describe('FuelCodes Component Tests', () => {
     it('should reset button state after successful download', async () => {
       mockDownloadMutate = vi.fn().mockResolvedValue(undefined)
 
-      render(<FuelCodes />, { wrapper })
+      render(<FuelCodes />, { fixtureOptions })
       const downloadButton = screen.getByTestId('fuel-code-download-btn')
 
       fireEvent.click(downloadButton)
@@ -413,7 +406,7 @@ describe('FuelCodes Component Tests', () => {
         .fn()
         .mockRejectedValue(new Error('Download failed'))
 
-      render(<FuelCodes />, { wrapper })
+      render(<FuelCodes />, { fixtureOptions })
       const downloadButton = screen.getByTestId('fuel-code-download-btn')
 
       fireEvent.click(downloadButton)
@@ -432,7 +425,7 @@ describe('FuelCodes Component Tests', () => {
         .fn()
         .mockRejectedValue(new Error('Download failed'))
 
-      render(<FuelCodes />, { wrapper })
+      render(<FuelCodes />, { fixtureOptions })
       const downloadButton = screen.getByTestId('fuel-code-download-btn')
 
       fireEvent.click(downloadButton)
@@ -446,15 +439,7 @@ describe('FuelCodes Component Tests', () => {
     })
 
     it('should handle export payload with filters', async () => {
-      const mockFilterModel = {
-        name: {
-          filterType: 'text',
-          type: 'contains',
-          filter: 'test'
-        }
-      }
-
-      render(<FuelCodes />, { wrapper })
+      render(<FuelCodes />, { fixtureOptions })
       const downloadButton = screen.getByTestId('fuel-code-download-btn')
 
       fireEvent.click(downloadButton)
@@ -473,7 +458,7 @@ describe('FuelCodes Component Tests', () => {
     })
 
     it('should handle missing grid reference gracefully', async () => {
-      render(<FuelCodes />, { wrapper })
+      render(<FuelCodes />, { fixtureOptions })
       const downloadButton = screen.getByTestId('fuel-code-download-btn')
 
       fireEvent.click(downloadButton)
@@ -498,7 +483,7 @@ describe('FuelCodes Component Tests', () => {
 
     it('should include format on the default (Fuel codes) tab', async () => {
       mockDownloadMutate = vi.fn().mockResolvedValue(undefined)
-      render(<FuelCodes />, { wrapper })
+      render(<FuelCodes />, { fixtureOptions })
       const downloadButton = screen.getByTestId('fuel-code-download-btn')
 
       fireEvent.click(downloadButton)
@@ -518,7 +503,7 @@ describe('FuelCodes Component Tests', () => {
         isLoading: true
       }
 
-      render(<FuelCodes />, { wrapper })
+      render(<FuelCodes />, { fixtureOptions })
       const gridContainer = screen.getByTestId('bc-grid-container')
       expect(gridContainer).toBeInTheDocument()
     })
@@ -533,7 +518,7 @@ describe('FuelCodes Component Tests', () => {
         }
       }
 
-      render(<FuelCodes />, { wrapper })
+      render(<FuelCodes />, { fixtureOptions })
       const gridContainer = screen.getByTestId('bc-grid-container')
       expect(gridContainer).toBeInTheDocument()
     })
@@ -549,7 +534,7 @@ describe('FuelCodes Component Tests', () => {
         isError: false
       }
 
-      render(<FuelCodes />, { wrapper })
+      render(<FuelCodes />, { fixtureOptions })
       const gridContainer = screen.getByTestId('bc-grid-container')
       expect(gridContainer).toBeInTheDocument()
     })
@@ -557,13 +542,13 @@ describe('FuelCodes Component Tests', () => {
 
   describe('Component State Management', () => {
     it('should initialize with correct default state', () => {
-      render(<FuelCodes />, { wrapper })
+      render(<FuelCodes />, { fixtureOptions })
       expect(screen.getByTestId('title')).toBeInTheDocument()
       expect(screen.queryByTestId('alert-box')).not.toBeInTheDocument()
     })
 
     it('should handle pagination options correctly', () => {
-      render(<FuelCodes />, { wrapper })
+      render(<FuelCodes />, { fixtureOptions })
       const gridContainer = screen.getByTestId('bc-grid-container')
       expect(gridContainer).toBeInTheDocument()
     })
@@ -571,7 +556,7 @@ describe('FuelCodes Component Tests', () => {
 
   describe('Grid Integration', () => {
     it('should pass correct props to BCGridViewer', () => {
-      render(<FuelCodes />, { wrapper })
+      render(<FuelCodes />, { fixtureOptions })
       const gridContainer = screen.getByTestId('bc-grid-container')
       expect(gridContainer).toBeInTheDocument()
     })
@@ -632,7 +617,7 @@ describe('FuelCodes Component Tests', () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
       mockDownloadMutate = vi.fn().mockRejectedValue(new Error('Network error'))
 
-      render(<FuelCodes />, { wrapper })
+      render(<FuelCodes />, { fixtureOptions })
       const downloadButton = screen.getByTestId('fuel-code-download-btn')
 
       fireEvent.click(downloadButton)
@@ -653,7 +638,7 @@ describe('FuelCodes Component Tests', () => {
         severity: 'info'
       }
 
-      render(<FuelCodes />, { wrapper })
+      render(<FuelCodes />, { fixtureOptions })
 
       await waitFor(() => {
         expect(screen.getByTestId('alert-box')).toBeInTheDocument()
@@ -670,13 +655,13 @@ describe('FuelCodes Component Tests', () => {
 
   describe('Conditional Rendering', () => {
     it('should render new fuel code button only for analysts', () => {
-      render(<FuelCodes />, { wrapper })
+      render(<FuelCodes />, { fixtureOptions })
       const newFuelCodeBtn = screen.getByTestId('new-fuel-code-btn')
       expect(newFuelCodeBtn).toBeInTheDocument()
     })
 
     it('should always render download button', () => {
-      render(<FuelCodes />, { wrapper })
+      render(<FuelCodes />, { fixtureOptions })
 
       expect(screen.getByTestId('fuel-code-download-btn')).toBeInTheDocument()
     })
@@ -684,7 +669,7 @@ describe('FuelCodes Component Tests', () => {
 
   describe('Translation Integration', () => {
     it('should use translation keys for all text content', () => {
-      render(<FuelCodes />, { wrapper })
+      render(<FuelCodes />, { fixtureOptions })
 
       expect(screen.getByText('Fuel codes')).toBeInTheDocument()
       expect(screen.getByText('New fuel code')).toBeInTheDocument()

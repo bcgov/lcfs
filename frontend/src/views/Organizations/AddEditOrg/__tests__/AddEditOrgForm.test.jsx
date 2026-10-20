@@ -5,9 +5,8 @@ import userEvent from '@testing-library/user-event'
 import { AddEditOrgForm } from '../AddEditOrgForm'
 import { useApiService } from '@/services/useApiService'
 import { useOrganization, useOrganizationTypes } from '@/hooks/useOrganization'
-import { useNavigate, useParams, useLocation } from 'react-router-dom'
-import { ROUTES } from '@/routes/routes'
-import { MemoryRouter } from 'react-router-dom'
+import { useNavigate, useParams, useLocation , MemoryRouter } from 'react-router-dom'
+import '@/routes/routes';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { I18nextProvider } from 'react-i18next'
 import i18n from '@/i18n'
@@ -62,7 +61,10 @@ vi.mock('react-i18next', async (importOriginal) => {
   return {
     ...actual,
     useTranslation: vi.fn(() => ({
-      t: (key) => key,
+      t: (key) =>
+        key === 'org:sameAsLegalNameLabel'
+          ? 'Same as legal name'
+          : key,
       i18n: { changeLanguage: vi.fn() }
     })),
     I18nextProvider: ({ children }) => children
@@ -87,8 +89,8 @@ vi.mock('react-hook-form', () => ({
     clearErrors: vi.fn(),
     control: {}
   }),
-  Controller: React.forwardRef(({ name, control, render }, ref) => (
-    <div data-testid={`controller-${name}`} data-test={`controller-${name}`}>
+  Controller: React.forwardRef(function ControllerMock({ name, render }, ref) {
+    return <div data-testid={`controller-${name}`} data-test={`controller-${name}`}>
       {render({
         field: {
           onChange: vi.fn(),
@@ -99,7 +101,7 @@ vi.mock('react-hook-form', () => ({
         fieldState: {}
       })}
     </div>
-  ))
+  })
 }))
 
 vi.mock('@tanstack/react-query', async (importOriginal) => {
@@ -133,7 +135,7 @@ vi.mock('@/components/BCAlert', () => ({
       {props.children}
     </div>
   ),
-  BCAlert2: React.forwardRef((props, ref) => {
+  BCAlert2: React.forwardRef(function BCAlertMock(props, ref) {
     React.useImperativeHandle(ref, () => ({
       triggerAlert: vi.fn()
     }))
@@ -149,8 +151,9 @@ vi.mock('@/components/Loading', () => ({
   default: (props) => <div data-testid="loading">{props.message}</div>
 }))
 
-vi.mock('@/components/BCForm/index.js', () => ({
-  AddressAutocomplete: React.forwardRef((props, ref) => (
+vi.mock('@/components/BCForm/AddressAutocomplete', () => ({
+  AddressAutocomplete: React.forwardRef(function AddressAutocompleteMock(props, ref) {
+    return (
     <input
       ref={ref}
       data-test={`address-autocomplete-${props.name || 'default'}`}
@@ -158,7 +161,8 @@ vi.mock('@/components/BCForm/index.js', () => ({
       value={props.value || ''}
       onChange={(e) => props.onChange && props.onChange(e.target.value)}
     />
-  )),
+    )
+  }),
   BCFormCheckbox: ({ name, label, options }) => (
     <div
       data-test={`${name}-checkbox-group`}
@@ -190,39 +194,50 @@ vi.mock('../ReferenceCompareBox', () => ({
 }))
 
 // Material UI simple mocks
-vi.mock('@mui/material', () => ({
-  Box: ({ children, component = 'div', flexWrap, ...props }) => {
+vi.mock('@mui/material/Box', () => ({
+    default: ({ children, component = 'div', flexWrap, ...props }) => {
     const domProps = { ...props }
     if (flexWrap) domProps.style = { ...domProps.style, flexWrap }
     return React.createElement(component, domProps, children)
-  },
-  Paper: ({ children, ...props }) => (
+  }
+}))
+
+vi.mock('@mui/material/Paper', () => ({
+    default: ({ children, ...props }) => (
     <div data-test="addEditOrgContainer" {...props}>
       {children}
     </div>
-  ),
-  Grid: ({
-    children,
-    container,
-    item,
-    xs,
-    sm,
-    md,
-    lg,
-    xl,
-    spacing,
-    direction,
-    justifyContent,
-    alignItems,
-    wrap,
-    zeroMinWidth,
-    ...props
-  }) => {
+  )
+}))
+
+vi.mock('@mui/material/Grid', () => ({
+  default: (props) => {
+    const { children, ...domProps } = props
     // Filter out Grid-specific props that shouldn't be passed to DOM
-    return <div {...props}>{children}</div>
-  },
-  TextField: React.forwardRef(
-    (
+    for (const key of [
+      'container',
+      'item',
+      'xs',
+      'sm',
+      'md',
+      'lg',
+      'xl',
+      'spacing',
+      'direction',
+      'justifyContent',
+      'alignItems',
+      'wrap',
+      'zeroMinWidth'
+    ]) {
+      delete domProps[key]
+    }
+    return <div {...domProps}>{children}</div>
+  }
+}))
+
+vi.mock('@mui/material/TextField', () => ({
+    default: React.forwardRef(
+    function TextFieldMock(
       {
         id,
         label,
@@ -231,12 +246,13 @@ vi.mock('@mui/material', () => ({
         fullWidth,
         variant,
         select,
-        SelectProps, // eslint-disable-line no-unused-vars
         children,
         ...props
       },
       ref
-    ) => (
+    ) {
+      delete props.SelectProps
+      return (
       <div data-testid={id || 'text-field'}>
         {label && <label htmlFor={id}>{label}</label>}
         {select ? (
@@ -255,34 +271,47 @@ vi.mock('@mui/material', () => ({
         )}
         {error && <span>{helperText}</span>}
       </div>
-    )
-  ),
-  FormControl: ({
-    children,
-    fullWidth,
-    variant,
-    component,
-    margin,
-    ...props
-  }) => <div {...props}>{children}</div>,
-  FormControlLabel: ({ control, label, ...props }) => (
-    <div {...props}>
-      {control}
-      <span>{label}</span>
-    </div>
-  ),
-  FormLabel: ({ children, ...props }) => <div {...props}>{children}</div>,
-  InputLabel: ({ children, ...props }) => <label {...props}>{children}</label>,
-  RadioGroup: ({
-    children,
-    row,
-    defaultValue,
-    value,
-    onChange,
-    name,
-    ...props
-  }) => <div {...props}>{children}</div>,
-  Radio: React.forwardRef((props, ref) => (
+      )
+    }
+  )
+}))
+
+vi.mock('@mui/material/FormControl', () => ({
+  default: (props) => {
+    const { children, ...domProps } = props
+    for (const key of ['fullWidth', 'variant', 'component', 'margin']) {
+      delete domProps[key]
+    }
+    return <div {...domProps}>{children}</div>
+  }
+}))
+
+vi.mock('@mui/material/FormControlLabel', async (importOriginal) => {
+  const actual = await importOriginal()
+  return { default: actual.default }
+})
+
+vi.mock('@mui/material/FormLabel', () => ({
+    default: ({ children, ...props }) => <div {...props}>{children}</div>
+}))
+
+vi.mock('@mui/material/InputLabel', () => ({
+    default: ({ children, ...props }) => <label {...props}>{children}</label>
+}))
+
+vi.mock('@mui/material/RadioGroup', () => ({
+  default: (props) => {
+    const { children, ...domProps } = props
+    for (const key of ['row', 'defaultValue', 'value', 'onChange', 'name']) {
+      delete domProps[key]
+    }
+    return <div {...domProps}>{children}</div>
+  }
+}))
+
+vi.mock('@mui/material/Radio', () => ({
+    default: React.forwardRef(function RadioMock(props, ref) {
+      return (
     <input
       ref={ref}
       type="radio"
@@ -291,17 +320,14 @@ vi.mock('@mui/material', () => ({
       data-test={props['data-test'] || `radio-${props.value}`}
       {...props}
     />
-  )),
-  Checkbox: (props) => (
-    <input
-      type="checkbox"
-      checked={props.checked || false}
-      onChange={props.onChange}
-      data-test={props['data-test'] || 'checkbox'}
-      {...props}
-    />
-  )
+      )
+    })
 }))
+
+vi.mock('@mui/material/Checkbox', async (importOriginal) => {
+  const actual = await importOriginal()
+  return { default: actual.default }
+})
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false }, mutations: { retry: false } }
@@ -498,7 +524,8 @@ describe('AddEditOrgForm Component', () => {
       expect(mockHandleCancelEdit).toHaveBeenCalled()
     })
 
-    it('handles same as legal name checkbox interaction', () => {
+    it('exposes and toggles the same as legal name checkbox by its visible label', async () => {
+      const user = userEvent.setup()
       mockWatch.mockImplementation((field) => {
         if (field === 'orgLegalName') return 'Test Legal Name'
         return ''
@@ -510,9 +537,22 @@ describe('AddEditOrgForm Component', () => {
         </Wrapper>
       )
 
-      const checkbox = screen.getByTestId('sameAsLegalName')
-      fireEvent.click(checkbox)
+      const checkbox = screen.getByRole('checkbox', {
+        name: 'Same as legal name'
+      })
+      expect(checkbox).not.toBeChecked()
 
+      await user.click(checkbox)
+
+      expect(checkbox).toBeChecked()
+      expect(mockSetValue).toHaveBeenCalledWith(
+        'orgOperatingName',
+        'Test Legal Name'
+      )
+
+      await user.click(checkbox)
+
+      expect(checkbox).not.toBeChecked()
       expect(mockSetValue).toHaveBeenCalledWith(
         'orgOperatingName',
         'Test Legal Name'

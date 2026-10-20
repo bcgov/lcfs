@@ -18,7 +18,7 @@ This document outlines the key integration points and Application Programming In
     *   CRUD (Create, Read, Update, Delete) operations for core LCFS data entities.
     *   Endpoints for business logic and workflow processing.
     *   Endpoints for initiating asynchronous tasks via RabbitMQ.
-    *   Endpoints for file uploads/downloads via MinIO.
+    *   Endpoints for file uploads/downloads via S3 object storage.
 
 ## 2. Frontend to Backend Communication
 

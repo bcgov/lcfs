@@ -1,9 +1,21 @@
-import { Link } from '@mui/material'
+import Link from '@mui/material/Link'
 import { Link as RouterLink } from 'react-router-dom'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
-import { GitHub, NewReleases } from '@mui/icons-material'
+import GitHub from '@mui/icons-material/GitHub'
+import NewReleases from '@mui/icons-material/NewReleases'
 import typography from '@/themes/base/typography'
+import type { Theme } from '@mui/material/styles'
+
+type FooterTheme = Theme & {
+  functions: { pxToRem: (value: number) => string }
+  palette: Theme['palette'] & {
+    borderDivider: { main: string; focus: string }
+    primary: Theme['palette']['primary'] & { nav: string }
+    secondary: Theme['palette']['secondary']
+    white: { main: string }
+  }
+}
 
 type FooterLink = {
   href: string
@@ -55,10 +67,10 @@ function Footer({
         key={link.name}
         component="li"
         px={2}
-        sx={(theme: any) => {
-          const typedTheme = theme as any
-          const { pxToRem } = typedTheme.functions
-          const { borderDivider } = typedTheme.palette
+        sx={(theme) => {
+          const footerTheme = theme as FooterTheme
+          const { pxToRem } = footerTheme.functions
+          const { borderDivider } = footerTheme.palette
           return {
             lineHeight: 1,
             borderRight: `2px solid ${borderDivider.main}`,
@@ -92,10 +104,10 @@ function Footer({
       component="footer"
       width="100%"
       px={1.5}
-      sx={(theme: any) => {
-        const typedTheme = theme as any
-        const { pxToRem } = typedTheme.functions
-        const { primary, secondary, white } = typedTheme.palette
+      sx={(theme) => {
+        const footerTheme = theme as FooterTheme
+        const { pxToRem } = footerTheme.functions
+        const { primary, secondary, white } = footerTheme.palette
         return {
           display: 'flex',
           flexDirection: { xs: 'column', lg: 'row' },
@@ -111,7 +123,7 @@ function Footer({
     >
       <BCBox
         component="ul"
-        sx={(theme: any) => ({
+        sx={(theme: Theme) => ({
           display: 'flex',
           flexWrap: 'wrap',
           alignItems: 'center',

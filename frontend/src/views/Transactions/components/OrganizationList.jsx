@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
-import { Box, Stack, Autocomplete, TextField } from '@mui/material'
+import Box from '@mui/material/Box'
+import Stack from '@mui/material/Stack'
+import Autocomplete from '@mui/material/Autocomplete'
+import TextField from '@mui/material/TextField'
 import BCTypography from '@/components/BCTypography'
 import { useTranslation } from 'react-i18next'
 import { useOrganizationNames } from '@/hooks/useOrganizations'
@@ -87,7 +90,7 @@ const OrganizationList = ({
                 String(option.organizationId) === String(selectedOrg?.id)
             ) || null
           }
-          sx={({ functions: { pxToRem }, palette: { primary, light } }) => ({
+          sx={({ functions: { pxToRem } }) => ({
             width: 300,
             '& .MuiOutlinedInput-root': { padding: pxToRem(0) }
           })}

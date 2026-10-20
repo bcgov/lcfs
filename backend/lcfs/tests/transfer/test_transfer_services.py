@@ -685,3 +685,103 @@ async def test_director_can_recommend_transfer(
         assert result == mock_transfer
         mock_transfer_repo.update_transfer.assert_called_once()
 
+
+# ---------------------------------------------------------------------------
+# A transfer opens only for viewers whose lists show its status (#5231)
+# ---------------------------------------------------------------------------
+
+# status: (transferor, transferee, government), as seeded in transfer_status.
+_TRANSFER_STATUS_FLAGS = {
+    "Draft": (True, False, False),
+    "Deleted": (False, False, False),
+    "Sent": (True, True, False),
+    "Submitted": (True, True, True),
+    "Recommended": (True, True, True),
+    "Recorded": (True, True, True),
+    "Refused": (True, True, True),
+    "Declined": (True, True, False),
+}
+
+
+def _transfer_in(status_name):
+    transferor, transferee, government = _TRANSFER_STATUS_FLAGS[status_name]
+    transfer = Transfer(
+        transfer_id=7,
+        from_organization_id=1,
+        to_organization_id=2,
+        from_organization=Organization(organization_id=1, name="org1"),
+        to_organization=Organization(organization_id=2, name="org2"),
+        agreement_date=date.today(),
+        quantity=1,
+        price_per_unit=5.75,
+        current_status=TransferStatus(
+            transfer_status_id=1,
+            status=status_name,
+            visible_to_transferor=transferor,
+            visible_to_transferee=transferee,
+            visible_to_government=government,
+        ),
+    )
+    transfer.transfer_comments = []
+    transfer.transfer_history = []
+    return transfer
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("status_name", ["Draft", "Sent", "Declined", "Deleted"])
+async def test_government_cannot_open_a_transfer_not_yet_submitted_to_it(
+    transfer_service, mock_transfer_repo, status_name
+):
+    from lcfs.web.exception.exceptions import DataNotFoundException
+
+    mock_transfer_repo.get_transfer_by_id.return_value = _transfer_in(status_name)
+
+    with pytest.raises(DataNotFoundException):
+        await transfer_service.get_transfer(_make_govt_user(), 7)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("status_name", ["Submitted", "Recommended", "Recorded"])
+async def test_government_opens_a_submitted_transfer(
+    transfer_service, mock_transfer_repo, status_name
+):
+    mock_transfer_repo.get_transfer_by_id.return_value = _transfer_in(status_name)
+
+    result = await transfer_service.get_transfer(_make_govt_user(), 7)
+
+    assert result.transfer_id == 7
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("status_name", ["Draft", "Deleted"])
+async def test_the_receiving_organization_cannot_open_the_senders_draft(
+    transfer_service, mock_transfer_repo, status_name
+):
+    from lcfs.web.exception.exceptions import DataNotFoundException
+
+    mock_transfer_repo.get_transfer_by_id.return_value = _transfer_in(status_name)
+
+    with pytest.raises(DataNotFoundException):
+        await transfer_service.get_transfer(_make_supplier_user(org_id=2), 7)
+
+
+@pytest.mark.anyio
+async def test_the_receiving_organization_opens_a_sent_transfer(
+    transfer_service, mock_transfer_repo
+):
+    mock_transfer_repo.get_transfer_by_id.return_value = _transfer_in("Sent")
+
+    result = await transfer_service.get_transfer(_make_supplier_user(org_id=2), 7)
+
+    assert result.transfer_id == 7
+
+
+@pytest.mark.anyio
+async def test_the_sender_still_opens_its_own_draft(
+    transfer_service, mock_transfer_repo
+):
+    mock_transfer_repo.get_transfer_by_id.return_value = _transfer_in("Draft")
+
+    result = await transfer_service.get_transfer(_make_supplier_user(org_id=1), 7)
+
+    assert result.transfer_id == 7

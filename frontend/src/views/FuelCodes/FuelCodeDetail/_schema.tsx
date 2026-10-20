@@ -1,11 +1,8 @@
-// @ts-nocheck
-import type { ColDef } from '@ag-grid-community/core'
+import type { ColDef } from 'ag-grid-community'
 import { FuelCodeStatusRenderer } from '@/utils/grid/cellRenderers'
 import { dateFormatter } from '@/utils/formatters'
-import {
-  BCDateFloatingFilter,
-  BCSelectFloatingFilter
-} from '@/components/BCDataGrid/components'
+import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
+import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
 import { useFuelCodeStatuses } from '@/hooks/useFuelCode'
 
 export const iterationColDefs = (t: (key: string) => string): ColDef[] => [
@@ -75,7 +72,10 @@ export const iterationColDefs = (t: (key: string) => string): ColDef[] => [
     suppressFloatingFilterButton: true,
     filterParams: {
       suppressAndOrCondition: true,
-      comparator: (filterLocalDateAtMidnight, cellValue) => {
+      comparator: (
+        filterLocalDateAtMidnight: Date,
+        cellValue: string | null | undefined
+      ) => {
         if (!cellValue) return -1
         const cellDate = new Date(cellValue)
         if (Number.isNaN(cellDate.getTime())) return -1
@@ -105,7 +105,10 @@ export const iterationColDefs = (t: (key: string) => string): ColDef[] => [
     suppressFloatingFilterButton: true,
     filterParams: {
       suppressAndOrCondition: true,
-      comparator: (filterLocalDateAtMidnight, cellValue) => {
+      comparator: (
+        filterLocalDateAtMidnight: Date,
+        cellValue: string | null | undefined
+      ) => {
         if (!cellValue) return -1
         const cellDate = new Date(cellValue)
         if (Number.isNaN(cellDate.getTime())) return -1
@@ -135,7 +138,10 @@ export const iterationColDefs = (t: (key: string) => string): ColDef[] => [
     suppressFloatingFilterButton: true,
     filterParams: {
       suppressAndOrCondition: true,
-      comparator: (filterLocalDateAtMidnight, cellValue) => {
+      comparator: (
+        filterLocalDateAtMidnight: Date,
+        cellValue: string | null | undefined
+      ) => {
         if (!cellValue) return -1
         const cellDate = new Date(cellValue)
         if (Number.isNaN(cellDate.getTime())) return -1
@@ -165,7 +171,10 @@ export const iterationColDefs = (t: (key: string) => string): ColDef[] => [
     suppressFloatingFilterButton: true,
     filterParams: {
       suppressAndOrCondition: true,
-      comparator: (filterLocalDateAtMidnight, cellValue) => {
+      comparator: (
+        filterLocalDateAtMidnight: Date,
+        cellValue: string | null | undefined
+      ) => {
         if (!cellValue) return -1
         const cellDate = new Date(cellValue)
         if (Number.isNaN(cellDate.getTime())) return -1

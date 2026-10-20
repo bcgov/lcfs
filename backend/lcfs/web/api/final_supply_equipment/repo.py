@@ -1284,6 +1284,7 @@ class FinalSupplyEquipmentRepository:
             "compliance_notes": vt.c.compliance_notes,
             "level_of_equipment": vt.c.level_of_equipment,
             "ports": vt.c.ports,
+            "allocating_organization_name": vt.c.allocating_organization_name,
             "status": vt.c.charging_equipment_status,
             "is_active": vt.c.is_active,
             "power_output": vt.c.power_output,

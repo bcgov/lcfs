@@ -1,12 +1,16 @@
 import React from 'react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, expect, vi, beforeEach } from 'vitest'
+import { screen, fireEvent } from '@testing-library/react'
 import { ChargingSiteFSEGrid } from '../../components/ChargingSiteFSEGrid'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { test } from '@/tests/utils/fixtures'
+
+import {
+  useChargingSiteEquipmentPaginated,
+  useBulkUpdateEquipmentStatus
+} from '@/hooks/useChargingSite'
 
 const mockNavigate = vi.fn()
 const mockPathname = '/compliance-reporting/charging-sites/123'
-let lastGridProps
 
 vi.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
@@ -22,13 +26,7 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('@/components/BCButton', () => ({
   __esModule: true,
-  default: ({
-    children,
-    onClick,
-    startIcon,
-    fullWidth,
-    ...props
-  }) => (
+  default: ({ children, onClick, startIcon, fullWidth, ...props }) => (
     <button
       type="button"
       onClick={onClick}
@@ -43,30 +41,26 @@ vi.mock('@/components/BCButton', () => ({
 
 vi.mock('@/hooks/useChargingSite')
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  BCGridViewer: React.forwardRef((props, ref) => (
-    (lastGridProps = props,
-    <div data-testid="bc-grid-viewer">
-      <button
-        onClick={() =>
-          props.onCellClicked?.({ data: { chargingEquipmentId: 456 } })
-        }
-      >
-        Row Click
-      </button>
-    </div>)
-  ))
+  BCGridViewer: React.forwardRef(
+    function BCGridViewerMock(props) {
+  return <div data-testid="bc-grid-viewer">
+          <button onClick={() => props.onCellClicked?.({
+      data: {
+        chargingEquipmentId: 456
+      }
+    })}>
+            Row Click
+          </button>
+        </div>;
+}
+  )
 }))
 
 vi.mock('@/components/BCAlert', () => ({
-  BCAlert2: React.forwardRef((props, ref) => (
-    <div data-testid="bc-alert">Alert</div>
-  ))
+  BCAlert2: React.forwardRef(function BCAlert2Mock() {
+  return <div data-testid="bc-alert">Alert</div>;
+})
 }))
-
-import {
-  useChargingSiteEquipmentPaginated,
-  useBulkUpdateEquipmentStatus
-} from '@/hooks/useChargingSite'
 
 describe('ChargingSiteFSEGrid', () => {
   const mockEquipmentData = {
@@ -90,7 +84,6 @@ describe('ChargingSiteFSEGrid', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    lastGridProps = null
     useChargingSiteEquipmentPaginated.mockReturnValue({
       data: mockEquipmentData,
       isLoading: false,
@@ -102,16 +95,38 @@ describe('ChargingSiteFSEGrid', () => {
     })
   })
 
-  it('renders grid with equipment data', () => {
-    render(<ChargingSiteFSEGrid {...mockProps} />, { wrapper })
+  test('renders grid with equipment data', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<ChargingSiteFSEGrid {...mockProps} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     expect(screen.getByText('gridTitle')).toBeInTheDocument()
     expect(screen.getByText('gridDescription')).toBeInTheDocument()
     expect(screen.getByText('Row Click')).toBeInTheDocument()
   })
 
-  it('handles row click navigation with returnTo state and chargingSiteId', () => {
-    render(<ChargingSiteFSEGrid {...mockProps} />, { wrapper })
+  test('handles row click navigation with returnTo state and chargingSiteId', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<ChargingSiteFSEGrid {...mockProps} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     const rowButton = screen.getByText('Row Click')
     fireEvent.click(rowButton)
@@ -119,7 +134,7 @@ describe('ChargingSiteFSEGrid', () => {
     expect(mockNavigate).toHaveBeenCalledWith(
       '/compliance-reporting/fse/456/edit',
       {
-        state: { 
+        state: {
           returnTo: mockPathname,
           chargingSiteId: '123'
         }
@@ -127,8 +142,19 @@ describe('ChargingSiteFSEGrid', () => {
     )
   })
 
-  it('renders New FSE button for BCeID users', () => {
-    render(<ChargingSiteFSEGrid {...mockProps} />, { wrapper })
+  test('renders New FSE button for BCeID users', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<ChargingSiteFSEGrid {...mockProps} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
 
     const newFSEButton = screen.getByText('chargingSite:buttons.newFSE')
     expect(newFSEButton).toBeInTheDocument()

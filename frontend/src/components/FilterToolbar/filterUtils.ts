@@ -1,8 +1,8 @@
 import startCase from 'lodash/startCase'
 
-export const FILTER_VALUE_DISPLAY_LIMIT = 12
-
 import { ReactNode } from 'react'
+
+export const FILTER_VALUE_DISPLAY_LIMIT = 12
 
 export interface FilterToolbarPill {
   id: string
@@ -36,9 +36,7 @@ export interface FilterPillRendererParams {
   field: string
 }
 
-export type FilterPillRenderer = (
-  params: FilterPillRendererParams
-) => ReactNode
+export type FilterPillRenderer = (params: FilterPillRendererParams) => ReactNode
 
 export interface CreateAgGridPillsOptions {
   filters?: AgGridFilterModel[]
@@ -123,7 +121,7 @@ const extractFilterValues = (
     }
 
     if (startValue || endValue) {
-      return [startValue ?? endValue]
+      return [startValue ?? endValue] as Array<string | number | boolean | null>
     }
   }
 
@@ -131,14 +129,13 @@ const extractFilterValues = (
     if (filter.dateFrom && filter.dateTo) {
       return [`${filter.dateFrom} – ${filter.dateTo}`]
     }
-    return [filter.dateFrom ?? filter.dateTo]
+    return [filter.dateFrom ?? filter.dateTo] as Array<
+      string | number | boolean | null
+    >
   }
 
   if (filter.filter !== undefined && filter.filter !== null) {
-    if (
-      typeof filter.filter === 'string' &&
-      filter.filter.includes(',')
-    ) {
+    if (typeof filter.filter === 'string' && filter.filter.includes(',')) {
       return filter.filter
         .split(',')
         .map((value) => value.trim())

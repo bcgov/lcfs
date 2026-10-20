@@ -1,8 +1,8 @@
 import { ApiDocs } from '@/components/ApiDocs'
-import { wrapper } from '@/tests/utils/wrapper'
-import { render, renderHook, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import { useTranslation } from 'react-i18next'
 import { expect } from 'vitest'
+import { test } from '@/tests/utils/fixtures'
 
 const keycloak = vi.hoisted(() => ({
   useKeycloak: vi.fn()
@@ -14,14 +14,25 @@ describe('ApiDocs.jsx', () => {
     vi.clearAllMocks()
   })
   describe('is not authenticated', () => {
-    it('should render login', async () => {
+    test('should render login', async ({
+      render,
+      renderHook,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       keycloak.useKeycloak.mockReturnValue({
         keycloak: { authenticated: false }
       })
 
-      renderHook(() => useTranslation(), { wrapper })
+      renderHook(
+        () => useTranslation(),
+        [query, theme, localization, router, i18n]
+      )
 
-      render(<ApiDocs />, { wrapper })
+      render(<ApiDocs />, [query, theme, localization, router, i18n])
 
       const login = await screen.findByTestId('login')
 
@@ -29,7 +40,14 @@ describe('ApiDocs.jsx', () => {
     })
   })
   describe('is authenticated', () => {
-    it('should render ApiDocs', () => {
+    test('should render ApiDocs', ({
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n
+    }) => {
       vi.mock('swagger-ui-react', () => ({
         default: ({ url, requestInterceptor }) => {
           return (
@@ -44,7 +62,7 @@ describe('ApiDocs.jsx', () => {
         keycloak: { authenticated: true, idToken: 'idToken' }
       })
 
-      render(<ApiDocs />, { wrapper })
+      render(<ApiDocs />, [query, theme, localization, router, i18n])
 
       const docs = screen.getByTestId('swaggerui')
 

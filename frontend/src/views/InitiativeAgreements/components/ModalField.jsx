@@ -1,4 +1,5 @@
-import { InputLabel, TextField } from '@mui/material'
+import InputLabel from '@mui/material/InputLabel'
+import TextField from '@mui/material/TextField'
 import BCTypography from '@/components/BCTypography'
 
 // A labelled field for the module's modals.

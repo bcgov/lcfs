@@ -40,6 +40,7 @@ class ViewCreator:
         self.execution_order = [
             # Level 1: Base views (no view dependencies)
             "Compliance Reports List View",
+            "Compliance Report Versions View",
             "Transfer base Analytics View",
             "User Login Analytics Base View",
             "Transaction Base View",

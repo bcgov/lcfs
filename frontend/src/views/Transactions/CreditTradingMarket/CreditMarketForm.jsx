@@ -1,14 +1,12 @@
-import React, { useState } from 'react'
-import { 
-  Box, 
-  Card, 
-  CardContent, 
-  TextField, 
-  FormControlLabel, 
-  Switch, 
-  Grid,
-  Collapse
-} from '@mui/material'
+import { useState } from 'react';
+import Box from '@mui/material/Box'
+import Card from '@mui/material/Card'
+import CardContent from '@mui/material/CardContent'
+import TextField from '@mui/material/TextField'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Switch from '@mui/material/Switch'
+import Grid from '@mui/material/Grid'
+import Collapse from '@mui/material/Collapse'
 import BCTypography from '@/components/BCTypography'
 import BCButton from '@/components/BCButton'
 import { useTranslation } from 'react-i18next'
@@ -18,7 +16,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
 export const CreditMarketForm = () => {
   const { t } = useTranslation(['common', 'creditMarket'])
-  const { data: currentUser } = useCurrentUser()
+  useCurrentUser();
   
   const [isEditing, setIsEditing] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)

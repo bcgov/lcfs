@@ -1,11 +1,21 @@
 import React from 'react'
-import { Icon, Toolbar } from '@mui/material'
+import Icon from '@mui/material/Icon'
+import Toolbar from '@mui/material/Toolbar'
 import { bindTrigger } from 'material-ui-popup-state'
 import type { PopupState } from 'material-ui-popup-state/hooks'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import logoDark from '@/assets/images/logo-banner.svg'
 import type { NavbarContextData } from '@/components/BCNavbar/types'
+import type { Theme } from '@mui/material/styles'
+
+type NavbarTheme = Theme & {
+  functions: { rgba: (color: string, opacity: number) => string }
+  palette: Theme['palette'] & {
+    white: { main: string }
+    primary: Theme['palette']['primary'] & { nav: string }
+  }
+}
 
 interface HeaderBarProps {
   isMobileView?: boolean
@@ -20,9 +30,10 @@ const HeaderBar = ({
 }: HeaderBarProps) => {
   return (
     <Toolbar
-      sx={(theme: any) => {
-        const { white, primary } = theme.palette
-        const { rgba } = theme.functions
+      sx={(theme) => {
+        const navbarTheme = theme as NavbarTheme
+        const { white, primary } = navbarTheme.palette
+        const { rgba } = navbarTheme.functions
         return {
           backgroundColor: rgba(primary.nav, 1),
           backdropFilter: `saturate(200%) blur(30px)`,

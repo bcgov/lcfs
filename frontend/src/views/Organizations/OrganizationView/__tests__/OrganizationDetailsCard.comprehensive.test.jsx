@@ -1,7 +1,7 @@
 import { render, screen, cleanup } from '@testing-library/react'
 import { describe, it, vi, afterEach, beforeEach } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ThemeProvider } from '@mui/material'
+import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import theme from '@/themes'
 import { roles } from '@/constants/roles'
 import { MemoryRouter } from 'react-router-dom'
@@ -60,7 +60,9 @@ vi.mock('@/hooks/useOrganization', () => ({
 
 // Mock Role component to always render children for government role
 vi.mock('@/components/Role', () => ({
-  Role: ({ children, roles }) => {
+  Role: ({
+  children
+}) => {
     // Always show children for this test (we're mocking appropriate user roles)
     return <div data-test="role-component">{children}</div>
   }
@@ -72,10 +74,6 @@ const govUser = {
 }
 const adminUser = {
   roles: [{ name: roles.administrator }],
-  organization: { organizationId: '123' }
-}
-const analystUser = {
-  roles: [{ name: roles.analyst }],
   organization: { organizationId: '123' }
 }
 const nonGovUser = {

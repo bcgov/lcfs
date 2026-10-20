@@ -1,5 +1,5 @@
 import { styled } from '@mui/material/styles'
-import { ListItem } from '@mui/material'
+import ListItem from '@mui/material/ListItem'
 
 export const StyledListItem = styled(ListItem)({
   display: 'list-item',
