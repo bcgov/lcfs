@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, vi, beforeEach } from 'vitest'
 
 import { EvidenceOfCompletion } from '../EvidenceOfCompletion'
+import { DesignatedActionWorkflow } from '../DesignatedActionWorkflow'
 import {
   OUTCOME_INFORMATION_REQUESTED,
   OUTCOME_SATISFACTORY
@@ -119,7 +120,12 @@ const mockList = vi.fn()
 const mockCreate = vi.fn()
 const mockUpdate = vi.fn()
 const mockRemove = vi.fn()
+const mockPerformAction = vi.fn()
 vi.mock('@/hooks/useInitiativeAgreements', () => ({
+  useDesignatedActionWorkflow: () => ({
+    mutate: mockPerformAction,
+    isPending: false
+  }),
   useEvidenceRequirements: () => mockList(),
   useCreateEvidenceRequirement: () => ({
     mutate: mockCreate,
@@ -284,6 +290,125 @@ describe('EvidenceOfCompletion', () => {
       if (saveFails) expect(result.error).toHaveProperty('message', 'Save failed')
     })
   }
+
+  for (const saveFails of [false, true]) {
+    test(`waits for an earlier Missing information save after Evaluation finishes and ${saveFails ? 'blocks on failure' : 'continues on success'}`, async ({
+      render,
+      app
+    }) => {
+      const pending = []
+      mockUpdate.mockImplementation((_payload, callbacks) =>
+        pending.push(callbacks)
+      )
+      mockList.mockReturnValue({
+        data: [
+          requirement({
+            reviewOutcome: OUTCOME_INFORMATION_REQUESTED,
+            missingInformation: '<p>Existing explanation</p>'
+          })
+        ],
+        isLoading: false
+      })
+      render(
+        <EvidenceOfCompletion
+          designatedActionId="9"
+          renderRequestAction={(item, complete, beforeRequest) => (
+            <DesignatedActionWorkflow
+              designatedActionId="9"
+              availableActions={['request_information']}
+              canRequestInformation={complete}
+              missingInformation={item.missingInformation}
+              beforeAction={beforeRequest}
+            />
+          )}
+        />,
+        app
+      )
+      openEoc()
+      for (const name of ['missing-information', 'review']) {
+        editField(name)
+        fireEvent.change(screen.getByTestId(`eoc-${name}-1`), {
+          target: { value: `<p>Updated ${name}</p>` }
+        })
+        await saveField(name)
+      }
+      expect(pending).toHaveLength(2)
+      await act(async () => pending[1].onSuccess())
+
+      const requestButton = screen.getByTestId('workflow-request_information')
+      await act(async () => fireEvent.click(requestButton))
+      expect(requestButton).toBeDisabled()
+      expect(mockPerformAction).not.toHaveBeenCalled()
+      expect(screen.getByTestId('eoc-missing-information-1')).toHaveAttribute(
+        'readonly'
+      )
+
+      await act(async () => {
+        if (saveFails) pending[0].onError(new Error('Explanation save failed'))
+        else pending[0].onSuccess()
+      })
+      if (saveFails) {
+        expect(mockPerformAction).not.toHaveBeenCalled()
+        expect(screen.getByTestId('workflow-error')).toHaveTextContent(
+          'Explanation save failed'
+        )
+      } else {
+        expect(mockPerformAction).toHaveBeenCalledOnce()
+      }
+    })
+  }
+
+  test('retains a failed explanation across other field saves until the explanation is successfully retried', async ({
+    render,
+    app
+  }) => {
+    const pending = []
+    mockUpdate.mockImplementation((_payload, callbacks) =>
+      pending.push(callbacks)
+    )
+    let beforeRequest
+    mockList.mockReturnValue({
+      data: [
+        requirement({
+          reviewOutcome: OUTCOME_INFORMATION_REQUESTED,
+          missingInformation: '<p>Existing explanation</p>'
+        })
+      ],
+      isLoading: false
+    })
+    render(
+      <EvidenceOfCompletion
+        designatedActionId="9"
+        renderRequestAction={(_item, _complete, waitForSaves) => {
+          beforeRequest = waitForSaves
+          return null
+        }}
+      />,
+      app
+    )
+    openEoc()
+    editField('missing-information')
+    fireEvent.change(screen.getByTestId('eoc-missing-information-1'), {
+      target: { value: '<p>Updated explanation</p>' }
+    })
+    await saveField('missing-information')
+    await act(async () =>
+      pending[0].onError(new Error('Explanation save failed'))
+    )
+
+    editField('review')
+    fireEvent.change(screen.getByTestId('eoc-review-1'), {
+      target: { value: '<p>Updated evaluation</p>' }
+    })
+    await saveField('review')
+    await act(async () => pending[1].onSuccess())
+    await expect(beforeRequest()).rejects.toThrow('Explanation save failed')
+
+    await saveField('missing-information')
+    expect(pending).toHaveLength(3)
+    await act(async () => pending[2].onSuccess())
+    await expect(beforeRequest()).resolves.toBeUndefined()
+  })
 
   test('uploads attachments into designated-action documents and autosaves filename links', async ({
     render,

@@ -61,9 +61,10 @@ export const EvidenceOfCompletion = ({
   }
 
   const waitForRequirementSave = async (id) => {
-    const pendingSave = pendingSaves.current.get(id)
-    if (pendingSave) await pendingSave
-    const saveError = failedSaves.current.get(id)
+    while (pendingSaves.current.get(id)?.size) {
+      await Promise.allSettled([...pendingSaves.current.get(id)])
+    }
+    const saveError = failedSaves.current.get(id)?.values().next().value
     if (saveError) throw saveError
   }
 
@@ -162,27 +163,33 @@ export const EvidenceOfCompletion = ({
               allRequestsComplete={allRequestsComplete}
               onSave={(payload, callbacks) => {
                 const id = requirement.evidenceRequirementId
-                failedSaves.current.delete(id)
+                const pending = pendingSaves.current.get(id) ?? new Set()
+                const failures = failedSaves.current.get(id) ?? new Map()
+                pendingSaves.current.set(id, pending)
+                failedSaves.current.set(id, failures)
+                const fields = Object.keys(payload).map((field) =>
+                  field === 'clearReviewOutcome' ? 'reviewOutcome' : field
+                )
                 const save = updateRequirement({
                   evidenceRequirementId: id,
                   ...payload
                 })
                   .then(
                     (result) => {
+                      fields.forEach((field) => failures.delete(field))
                       callbacks.onSuccess(result)
                       return result
                     },
                     (err) => {
-                      failedSaves.current.set(id, err)
+                      fields.forEach((field) => failures.set(field, err))
                       callbacks.onError(err)
                       throw err
                     }
                   )
-                pendingSaves.current.set(id, save)
+                pending.add(save)
                 const clearPending = () => {
-                    if (pendingSaves.current.get(id) === save) {
-                      pendingSaves.current.delete(id)
-                    }
+                  pending.delete(save)
+                  if (!pending.size) pendingSaves.current.delete(id)
                 }
                 save.then(clearPending, clearPending)
               }}
