@@ -5,7 +5,7 @@ actions that do not yet have an active EOC; the first EOC created for such an
 action receives that text in the application service.
 
 Revision ID: 5f7a5242e0c1
-Revises: c4d6e8f0a2b5
+Revises: c2d4f6a8e0b1
 Create Date: 2026-10-16 09:00:00
 """
 
@@ -13,7 +13,7 @@ from alembic import op
 import sqlalchemy as sa
 
 revision = "5f7a5242e0c1"
-down_revision = "c4d6e8f0a2b5"
+down_revision = "c2d4f6a8e0b1"
 branch_labels = None
 depends_on = None
 
