@@ -75,6 +75,8 @@ const mockGridApi = {
   getSelectedNodes: getSelectedNodesMock
 }
 
+let rowNotification
+
 const createMockNode = (id, selected = false) => ({
   data: { notificationMessageId: id },
   isSelected: () => selected,
@@ -107,10 +109,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => {
           <div 
             data-test="test-row" 
             onClick={() => onRowClicked?.({
-              data: {
-                notificationMessageId: 'test-id',
-                message: JSON.stringify({ id: 'test-id', service: 'testService' })
-              },
+              data: rowNotification,
               event: { target: { dataset: {} } }
             })}
           >
@@ -153,6 +152,10 @@ vi.mock('@/constants/schedules', () => ({
 describe('Notifications Component', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    rowNotification = {
+      notificationMessageId: 'test-id',
+      message: JSON.stringify({ id: 'test-id', service: 'testService' })
+    }
     forEachNodeMock.mockClear()
     getSelectedNodesMock.mockClear().mockReturnValue([])
     setSelectedMock.mockClear()
@@ -372,6 +375,32 @@ describe('Notifications Component', () => {
   })
 
   describe('Handle Row Clicked', () => {
+    it.each([
+      ['Transfer', '/transfers/10'],
+      ['initiativeAgreement', '/initiative-agreements/11'],
+      ['designatedAction', '/initiative-agreements/4/designated-actions/12'],
+      ['administrativeAdjustment', '/admin-adjustment/13'],
+      ['complianceReport', '/compliance-reporting/2024/14'],
+      ['ciApplication', '/ci-applications/15'],
+      ['Organization', '/organizations/16/comment-log'],
+      ['designatedAction', '/initiative-agreements/designated-actions']
+    ])('opens a %s mention and marks it as read', (service, linkPath) => {
+      rowNotification = {
+        notificationMessageId: 'mention-id',
+        type: 'Mention',
+        message: JSON.stringify({ id: 10, service, linkPath })
+      }
+      render(<Notifications />, { wrapper: createWrapper() })
+
+      fireEvent.click(screen.getByTestId('test-row'))
+
+      expect(navigateMock).toHaveBeenCalledWith(linkPath)
+      expect(markAsReadMutateMock).toHaveBeenCalledWith(
+        { notification_ids: ['mention-id'] },
+        expect.any(Object)
+      )
+    })
+
     it('navigates and marks as read with valid route', async () => {
       render(<Notifications />, { wrapper: createWrapper() })
       const testRow = screen.getByTestId('test-row')

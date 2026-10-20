@@ -45,7 +45,8 @@ const mockHook = vi.fn(() => baseHookState())
 vi.mock('@/hooks/useOrganizationComments', () => ({
   useOrganizationComments: (...args) => mockHook(...args),
   useCommentCategories: () => ({ data: [] }),
-  useEditOrganizationComment: () => ({ mutate: vi.fn(), isPending: false })
+  useEditOrganizationComment: () => ({ mutate: vi.fn(), isPending: false }),
+  COMPANY_OVERVIEW_ENTITY_TYPE: 'Organization'
 }))
 
 const mockUser = vi.fn(() => ({
@@ -54,6 +55,11 @@ const mockUser = vi.fn(() => ({
 }))
 vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: () => mockUser()
+}))
+
+// The @mention lookup needs the API service; it's covered by its own tests.
+vi.mock('@/hooks/useMentionableUsers', () => ({
+  useMentionableUsers: () => ({ data: [], isFetching: false })
 }))
 
 // Stub the filter bar to a single visible category select to keep
