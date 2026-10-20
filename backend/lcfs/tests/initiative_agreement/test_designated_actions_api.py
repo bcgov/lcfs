@@ -11,6 +11,9 @@ from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.comment.DesignatedActionInternalComment import (
     DesignatedActionInternalComment,
 )
+from lcfs.db.models.comment.InitiativeAgreementInternalComment import (
+    InitiativeAgreementInternalComment,
+)
 from lcfs.db.models.comment.InternalComment import InternalComment
 from lcfs.db.models.initiative_agreement import DesignatedAction
 from lcfs.db.models.initiative_agreement.DesignatedActionHistory import (
@@ -1409,3 +1412,115 @@ async def test_every_route_to_a_drafts_action_reads_as_missing(
     )
     assert requirement_ids.scalars().all() == [requirement.evidence_requirement_id]
     assert await _action_history(dbsession, action) == []
+
+
+async def _comment_thread_for(dbsession, lifecycle_status, ia_code, entity):
+    """An agreement in this lifecycle status with one designated action, and
+    the comment-thread address (entity type, id) of the agreement or the
+    action, plus the association model that links comments to it."""
+    org_id, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(
+        dbsession,
+        org_id,
+        ia_code,
+        lifecycle_status_id=await _lifecycle_status_id(dbsession, lifecycle_status),
+    )
+    action = await _seed_action(dbsession, agreement, 1, "Proposed work")
+    if entity == "initiativeAgreement":
+        return (
+            entity,
+            agreement.initiative_agreement_id,
+            InitiativeAgreementInternalComment,
+            InitiativeAgreementInternalComment.initiative_agreement_id,
+        )
+    return (
+        entity,
+        action.designated_action_id,
+        DesignatedActionInternalComment,
+        DesignatedActionInternalComment.designated_action_id,
+    )
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("entity", ["initiativeAgreement", "designatedAction"])
+async def test_a_drafts_comment_threads_read_as_missing(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession, entity
+):
+    """The comments API is separate from the agreement's routes, so it
+    applies the same rule: a draft's comment threads, and its actions',
+    read as missing to IDIR users (#5186). Nothing is returned and nothing
+    is added."""
+    entity_type, entity_id, link_model, link_column = await _comment_thread_for(
+        dbsession, "Draft", "IA-26HIDC", entity
+    )
+    comment = InternalComment(comment="Kept from government", visibility="Public")
+    dbsession.add(comment)
+    await dbsession.flush()
+    dbsession.add(
+        link_model(
+            internal_comment_id=comment.internal_comment_id,
+            **{link_column.key: entity_id},
+        )
+    )
+    await dbsession.flush()
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    read = await client.get(
+        fastapi_app.url_path_for(
+            "get_comments", entity_type=entity_type, entity_id=entity_id
+        )
+    )
+    write = await client.post(
+        fastapi_app.url_path_for("create_comment"),
+        json={
+            "entityType": entity_type,
+            "entityId": entity_id,
+            "comment": "Added by IDIR",
+            "visibility": "Public",
+        },
+    )
+
+    assert read.status_code == status.HTTP_404_NOT_FOUND
+    assert "Kept from government" not in read.text
+    assert write.status_code == status.HTTP_404_NOT_FOUND
+    linked = await dbsession.execute(
+        select(link_model.internal_comment_id).where(link_column == entity_id)
+    )
+    assert linked.scalars().all() == [comment.internal_comment_id]
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("entity", ["initiativeAgreement", "designatedAction"])
+async def test_an_underway_agreements_comment_threads_stay_open(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession, entity
+):
+    """The rule hides drafts only: an underway agreement's threads, and its
+    actions', still take and return comments."""
+    entity_type, entity_id, _, _ = await _comment_thread_for(
+        dbsession, "Underway", "IA-26OPNC", entity
+    )
+    # A thread lists comments with their author's name, so the mock user
+    # needs a profile.
+    await _seed_ia_analyst(dbsession, "mockuser", "Dana", "Reed")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    write = await client.post(
+        fastapi_app.url_path_for("create_comment"),
+        json={
+            "entityType": entity_type,
+            "entityId": entity_id,
+            "comment": "Permits received",
+            "visibility": "Public",
+        },
+    )
+    read = await client.get(
+        fastapi_app.url_path_for(
+            "get_comments", entity_type=entity_type, entity_id=entity_id
+        )
+    )
+
+    assert write.status_code == status.HTTP_201_CREATED, write.text
+    assert read.status_code == status.HTTP_200_OK, read.text
+    assert [(c["comment"], c["fullName"]) for c in read.json()] == [
+        ("Permits received", "Dana Reed")
+    ]

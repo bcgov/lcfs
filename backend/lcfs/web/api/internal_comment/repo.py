@@ -584,6 +584,27 @@ class InternalCommentRepository:
         return result.scalar_one_or_none()
 
     @repo_handler
+    async def get_parent_initiative_agreement(
+        self, entity_type: EntityTypeEnum, entity_id: int
+    ) -> Optional[InitiativeAgreement]:
+        """
+        The agreement an initiative agreement or designated action comment
+        thread belongs to, with its lifecycle status loaded.
+        """
+        stmt = select(InitiativeAgreement).options(
+            selectinload(InitiativeAgreement.lifecycle_status)
+        )
+        if entity_type == EntityTypeEnum.DESIGNATED_ACTION:
+            stmt = stmt.join(
+                DesignatedAction,
+                DesignatedAction.initiative_agreement_id
+                == InitiativeAgreement.initiative_agreement_id,
+            ).where(DesignatedAction.designated_action_id == entity_id)
+        else:
+            stmt = stmt.where(InitiativeAgreement.initiative_agreement_id == entity_id)
+        return (await self.db.execute(stmt)).scalars().first()
+
+    @repo_handler
     async def get_entity_org_and_year(
         self, entity_type: EntityTypeEnum, entity_id: int
     ) -> Tuple[Optional[int], Optional[int]]:

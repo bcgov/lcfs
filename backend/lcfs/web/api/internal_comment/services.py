@@ -112,6 +112,29 @@ class InternalCommentService:
         if org_id is None or user_org_id is None or org_id != user_org_id:
             raise HTTPException(status_code=403, detail="Forbidden resource")
 
+    async def _require_visible_initiative_agreement(
+        self, entity_type: EntityTypeEnum, entity_id: int
+    ) -> None:
+        """
+        A proponent's unsubmitted draft agreement is hidden from government
+        (#5186). Its comment thread, and those of its designated actions,
+        read as missing, like the agreement itself.
+        """
+        # Imported here: the initiative agreement package imports this
+        # service, so a module-level import would be circular.
+        from lcfs.web.api.initiative_agreement.workflow import is_hidden_from
+
+        if entity_type not in (
+            EntityTypeEnum.INITIATIVE_AGREEMENT,
+            EntityTypeEnum.DESIGNATED_ACTION,
+        ):
+            return
+        agreement = await self.repo.get_parent_initiative_agreement(
+            entity_type, entity_id
+        )
+        if agreement is None or is_hidden_from(agreement, self.request.user):
+            raise HTTPException(status_code=404, detail="Not found")
+
     async def _send_ci_comment_notification(
         self,
         ci_application_id: int,
@@ -244,6 +267,9 @@ class InternalCommentService:
                     status_code=422,
                     detail="audience_scope is required for internal comments.",
                 )
+        await self._require_visible_initiative_agreement(
+            data.entity_type, data.entity_id
+        )
 
         username = self.request.user.keycloak_username
 
@@ -350,6 +376,7 @@ class InternalCommentService:
                 raise HTTPException(status_code=403, detail="Forbidden resource")
             await self._require_own_organization(entity_type, entity_id)
             visibility_filter = CommentVisibilityEnum.PUBLIC.value
+        await self._require_visible_initiative_agreement(entity_type, entity_id)
 
         comments = await self.repo.get_internal_comments(
             entity_type, entity_id, visibility_filter
