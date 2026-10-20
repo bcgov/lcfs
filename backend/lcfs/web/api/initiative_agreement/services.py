@@ -1,6 +1,7 @@
 import json
 import math
 from datetime import datetime, timezone
+from html import unescape
 from typing import List, Optional
 
 import structlog
@@ -15,6 +16,7 @@ from lcfs.db.models.initiative_agreement.DesignatedActionHistory import (
     DesignatedActionHistory,
 )
 from lcfs.db.models.initiative_agreement.EvidenceRequirement import (
+    REVIEW_OUTCOME_INFORMATION_REQUESTED,
     REVIEW_OUTCOME_SATISFACTORY,
     REVIEW_OUTCOMES,
     EvidenceRequirement,
@@ -794,35 +796,36 @@ class InitiativeAgreementServices:
             )
 
         comment = (data.comment or "").strip()
-        requested_requirement = None
         if transition.uses_missing_information:
-            if data.evidence_requirement_id is None:
+            requirements = await self.repo.get_evidence_requirements(
+                designated_action_id
+            )
+            requested = [
+                requirement
+                for requirement in requirements
+                if requirement.review_outcome == REVIEW_OUTCOME_INFORMATION_REQUESTED
+            ]
+            if not requested:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Mark at least one EOC as Request information first.",
+                )
+            if any(
+                not unescape(sanitize_comment_text(r.missing_information)).strip()
+                for r in requested
+            ):
                 raise HTTPException(
                     status_code=400,
                     detail=(
-                        "A specific evidence requirement is required when "
-                        "requesting information."
+                        "Enter Missing information for every EOC marked "
+                        "Request information."
                     ),
                 )
-            requested_requirement = await self.repo.get_evidence_requirement(
-                data.evidence_requirement_id
+            comment = "\n\n".join(
+                f"EOC {r.requirement_number} - {r.title or r.description}: "
+                f"{r.missing_information.strip()}"
+                for r in requested
             )
-            if (
-                requested_requirement is None
-                or requested_requirement.designated_action_id != designated_action_id
-                or not requested_requirement.is_active
-            ):
-                raise DataNotFoundException(
-                    "Evidence requirement not found for this designated action."
-                )
-            if comment:
-                # Keep the saved text and the request history in sync.
-                requested_requirement.missing_information = comment
-                requested_requirement.update_user = getattr(
-                    user, "keycloak_username", None
-                )
-            else:
-                comment = (requested_requirement.missing_information or "").strip()
         if transition.requires_comment and not comment:
             raise HTTPException(
                 status_code=400,
@@ -856,10 +859,6 @@ class InitiativeAgreementServices:
         snapshot = {}
         if comment:
             snapshot["comment"] = comment
-        if requested_requirement is not None:
-            snapshot["evidence_requirement_id"] = (
-                requested_requirement.evidence_requirement_id
-            )
         if transition.captures_evidence:
             snapshot.update(await self._evidence_snapshot(designated_action_id))
         if transition.requires_credits:
@@ -1025,10 +1024,6 @@ class InitiativeAgreementServices:
             requirement.evidence_type = data.evidence_type
         if data.requirement_number is not None:
             requirement.requirement_number = data.requirement_number
-        if "missing_information" in data.model_fields_set:
-            requirement.missing_information = (
-                data.missing_information or ""
-            ).strip() or None
 
         review_touched = False
         if data.analyst_review is not None:
@@ -1039,6 +1034,10 @@ class InitiativeAgreementServices:
                 }
             requirement.analyst_review = data.analyst_review
             review_touched = True
+        if "missing_information" in data.model_fields_set:
+            requirement.missing_information = (
+                data.missing_information or ""
+            ).strip() or None
         if data.review_notes is not None:
             requirement.review_notes = data.review_notes
             review_touched = True

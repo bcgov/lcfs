@@ -1,4 +1,4 @@
-import 'react';
+import 'react'
 import { cleanup, fireEvent, screen } from '@testing-library/react'
 import { describe, expect, vi, beforeEach } from 'vitest'
 import { roles } from '@/constants/roles'
@@ -42,7 +42,13 @@ vi.mock('@/hooks/useInitiativeAgreements', () => ({
   useDesignatedActionProfile: () => mockProfile(),
   useSetRecommendedCredits: () => ({ mutate: vi.fn() }),
   useEvidenceRequirements: () => ({
-    data: [{ evidenceRequirementId: 1, reviewOutcome: 'Satisfactory' }]
+    data: [
+      {
+        evidenceRequirementId: 1,
+        reviewOutcome: 'Satisfactory',
+        missingInformation: null
+      }
+    ]
   })
 }))
 
@@ -71,19 +77,26 @@ vi.mock('../components/DocumentTree', () => ({
 }))
 
 vi.mock('../components/EvidenceOfCompletion', () => ({
-  // The section renders a request action for each EOC and an action-wide
-  // evidence decision after its summary.
+  OUTCOME_INFORMATION_REQUESTED: 'Information requested',
+  // The section renders a request action beside each requested EOC.
   EvidenceOfCompletion: ({
-    actions,
     canEdit,
-    renderRequirementActions
+    missingInformationReadOnly,
+    renderRequestAction
   }) => (
-    <div data-test="evidence-of-completion" data-can-edit={String(canEdit)}>
-      {renderRequirementActions?.(
-        { evidenceRequirementId: 1 },
-        'The signed stage two permit.'
+    <div
+      data-test="evidence-of-completion"
+      data-can-edit={String(canEdit)}
+      data-missing-information-read-only={String(missingInformationReadOnly)}
+    >
+      {renderRequestAction?.(
+        {
+          evidenceRequirementId: 1,
+          reviewOutcome: 'Information requested',
+          missingInformation: 'The signed stage two permit.'
+        },
+        true
       )}
-      {actions}
     </div>
   )
 }))
@@ -100,21 +113,12 @@ vi.mock('../components/EditDesignatedAction', () => ({
 
 const workflowProps = vi.fn()
 vi.mock('../components/DesignatedActionWorkflow', () => ({
-  ACTION_ACCEPT: 'accept_evidence',
   ACTION_REQUEST_INFORMATION: 'request_information',
   PLACEMENT_EVIDENCE: 'evidence',
   PLACEMENT_DECISION: 'decision',
   DesignatedActionWorkflow: (props) => {
     workflowProps(props)
-    return (
-      <div
-        data-test={
-          props.evidenceRequirementId
-            ? `designated-action-workflow-eoc-${props.evidenceRequirementId}`
-            : `designated-action-workflow-${props.placement}`
-        }
-      />
-    )
+    return <div data-test={`designated-action-workflow-${props.placement}`} />
   }
 }))
 
@@ -133,11 +137,8 @@ const action = {
   initiativeAgreementId: 5,
   iaCode: 'IA-26ORG1',
   siblingActionIds: [9, 12, 15],
-  availableActions: [
-    'accept_evidence',
-    'request_information',
-    'recommend_to_manager'
-  ]
+  missingInformation: 'The signed stage two permit.',
+  availableActions: ['accept_evidence', 'recommend_to_manager']
 }
 
 describe('DesignatedActionDetail', () => {
@@ -255,44 +256,33 @@ describe('DesignatedActionDetail', () => {
   }) => {
     render(<DesignatedActionDetail />, app)
 
-    // Request information belongs to one EOC, while Accept remains the
-    // single evidence decision after the summary.
-    expect(
-      screen.getByTestId('designated-action-workflow-eoc-1')
-    ).toBeInTheDocument()
-    const evidence = screen.getByTestId('designated-action-workflow-evidence')
-    expect(screen.getByTestId('evidence-of-completion')).toContainElement(
-      evidence
+    const evidenceWorkflows = screen.getAllByTestId(
+      'designated-action-workflow-evidence'
     )
+    expect(evidenceWorkflows).toHaveLength(1)
+    for (const evidence of evidenceWorkflows) {
+      expect(screen.getByTestId('evidence-of-completion')).toContainElement(
+        evidence
+      )
+    }
     const decision = screen.getByTestId('designated-action-workflow-decision')
     expect(screen.getByTestId('evidence-of-completion')).not.toContainElement(
       decision
     )
-    expect(workflowProps).toHaveBeenCalledWith(
-      expect.objectContaining({
-        evidenceRequirementId: 1,
-        availableActions: ['request_information'],
-        missingInformation: 'The signed stage two permit.'
-      })
-    )
-    expect(workflowProps).toHaveBeenCalledWith(
-      expect.objectContaining({
-        placement: 'evidence',
-        availableActions: ['accept_evidence'],
-        allEvidenceSatisfactory: true
-      })
-    )
-    expect(workflowProps).toHaveBeenCalledWith(
-      expect.objectContaining({
-        placement: 'decision',
-        availableActions: [
-          'accept_evidence',
-          'request_information',
-          'recommend_to_manager'
-        ],
-        allEvidenceSatisfactory: true,
-        recommendedCredits: null
-      })
+    for (const placement of ['decision']) {
+      expect(workflowProps).toHaveBeenCalledWith(
+        expect.objectContaining({
+          placement,
+          availableActions: ['accept_evidence', 'recommend_to_manager'],
+          allEvidenceSatisfactory: true,
+          // The amount is edited in the header now (#5079); the workflow
+          // only carries the saved value into the recommend action.
+          recommendedCredits: null
+        })
+      )
+    }
+    expect(workflowProps).not.toHaveBeenCalledWith(
+      expect.objectContaining({ onlyAction: 'accept_evidence' })
     )
   })
 
@@ -312,6 +302,32 @@ describe('DesignatedActionDetail', () => {
     // The activity trail and comments stay outside it.
     expect(card).not.toContainElement(
       screen.getByTestId('designated-action-history')
+    )
+  })
+
+  test('passes the EOC request action beside that EOC', ({ render, app }) => {
+    render(<DesignatedActionDetail />, app)
+
+    expect(workflowProps).toHaveBeenCalledWith(
+      expect.objectContaining({
+        placement: 'evidence',
+        onlyAction: 'request_information',
+        canRequestInformation: true,
+        missingInformation: 'The signed stage two permit.'
+      })
+    )
+  })
+
+  test('shows directors the missing information without letting them edit it', ({
+    render,
+    app
+  }) => {
+    mockRoles = [{ name: roles.director }]
+    render(<DesignatedActionDetail />, app)
+
+    expect(screen.getByTestId('evidence-of-completion')).toHaveAttribute(
+      'data-missing-information-read-only',
+      'true'
     )
   })
 

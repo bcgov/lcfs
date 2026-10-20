@@ -91,6 +91,39 @@ async def test_requirements_are_added_numbered_and_listed_in_order(
 
 
 @pytest.mark.anyio
+async def test_missing_information_is_saved_and_listed_per_requirement(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    action = await _seed_da(dbsession, "IA-26EOCMI1")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+    first = await client.post(
+        _create_url(fastapi_app, action),
+        json={"title": "Permits", "description": "Permits"},
+    )
+    second = await client.post(
+        _create_url(fastapi_app, action),
+        json={"title": "Risk register", "description": "Risk register"},
+    )
+
+    saved_first = await client.put(
+        _update_url(fastapi_app, first.json()["evidenceRequirementId"]),
+        json={"missingInformation": "The signed permit."},
+    )
+    saved_second = await client.put(
+        _update_url(fastapi_app, second.json()["evidenceRequirementId"]),
+        json={"missingInformation": "The updated risk register."},
+    )
+    listed = await client.get(_list_url(fastapi_app, action))
+
+    assert saved_first.json()["missingInformation"] == "The signed permit."
+    assert saved_second.json()["missingInformation"] == "The updated risk register."
+    assert [row["missingInformation"] for row in listed.json()] == [
+        "The signed permit.",
+        "The updated risk register.",
+    ]
+
+
+@pytest.mark.anyio
 async def test_recording_an_assessment_stamps_who_and_when(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):

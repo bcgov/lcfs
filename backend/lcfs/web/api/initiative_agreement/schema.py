@@ -193,11 +193,11 @@ class EvidenceRequirementSchema(BaseSchema):
     title: Optional[str] = None
     description: str
     evidence_type: Optional[str] = None
-    missing_information: Optional[str] = None
     is_active: bool = True
     analyst_review: Optional[str] = None
     review_outcome: Optional[str] = None
     review_notes: Optional[str] = None
+    missing_information: Optional[str] = None
     reviewed_by: Optional[AssignedAnalystSchema] = None
     reviewed_date: Optional[datetime] = None
 
@@ -213,13 +213,13 @@ class EvidenceRequirementCreateSchema(BaseSchema):
 
 
 class EvidenceRequirementUpdateSchema(BaseSchema):
-    missing_information: Optional[str] = None
     title: Optional[str] = None
     description: Optional[str] = None
     evidence_type: Optional[str] = None
     requirement_number: Optional[int] = None
     analyst_review: Optional[str] = None
     review_notes: Optional[str] = None
+    missing_information: Optional[str] = None
     # Absent leaves the outcome untouched; explicit null clears it back to
     # unreviewed, which is how the UI unchecks both boxes.
     review_outcome: Optional[str] = None
@@ -228,9 +228,6 @@ class EvidenceRequirementUpdateSchema(BaseSchema):
 
 class DesignatedActionWorkflowSchema(BaseSchema):
     action: str
-    # Request information applies to one evidence requirement. Other workflow
-    # actions continue to use the designated-action-level comment.
-    evidence_requirement_id: Optional[int] = None
     comment: Optional[str] = None
     recommended_credits: Optional[int] = None
 

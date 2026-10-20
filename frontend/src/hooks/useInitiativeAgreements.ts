@@ -301,7 +301,6 @@ export const useDesignatedActionWorkflow = (
   return useMutation({
     mutationFn: async (payload: {
       action: string
-      evidenceRequirementId?: number
       comment?: string
       recommendedCredits?: number | null
     }) =>
@@ -313,9 +312,6 @@ export const useDesignatedActionWorkflow = (
       ).data,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['designated-actions'] })
-      queryClient.invalidateQueries({
-        queryKey: evidenceKey(designatedActionId)
-      })
       queryClient.invalidateQueries({
         queryKey: ['designated-action-history', String(designatedActionId)]
       })

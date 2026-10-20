@@ -1,4 +1,4 @@
-"""Focused data-mapping coverage for the Missing information migration."""
+"""Coverage for the merged EOC backfill and legacy-column retirement."""
 
 import importlib.util
 from pathlib import Path
@@ -8,224 +8,200 @@ from alembic.migration import MigrationContext
 from alembic.operations import Operations
 from sqlalchemy import create_engine, text
 
-MIGRATION_PATH = (
-    Path(__file__).parents[2]
-    / "db"
-    / "migrations"
-    / "versions"
-    / "2026-10-19-10-00_4f2a9c8d6e1b.py"
-)
-SPEC = importlib.util.spec_from_file_location(
-    "move_missing_information_to_eoc", MIGRATION_PATH
-)
-MIGRATION = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(MIGRATION)
+MIGRATIONS = Path(__file__).parents[2] / "db" / "migrations" / "versions"
 
 
-def _requirement(requirement_id, *, active=True, outcome=None):
+def _load_migration(filename, name):
+    spec = importlib.util.spec_from_file_location(name, MIGRATIONS / filename)
+    migration = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(migration)
+    return migration
+
+
+BACKFILL = _load_migration(
+    "2026-10-16-09-00_5f7a5242e0c1.py", "backfill_missing_information_per_eoc"
+)
+RETIRE = _load_migration(
+    "2026-10-19-10-00_4f2a9c8d6e1b.py", "retire_da_missing_information"
+)
+
+
+def _database(legacy_value, eocs):
+    engine = create_engine("sqlite:///:memory:")
+    with engine.begin() as connection:
+        connection.connection.driver_connection.create_function(
+            "BTRIM", 1, lambda value: value.strip() if value else value
+        )
+        connection.execute(
+            text(
+                "CREATE TABLE designated_action ("
+                "designated_action_id INTEGER PRIMARY KEY, "
+                "missing_information TEXT)"
+            )
+        )
+        connection.execute(
+            text(
+                "CREATE TABLE evidence_requirement ("
+                "evidence_requirement_id INTEGER PRIMARY KEY, "
+                "designated_action_id INTEGER NOT NULL, "
+                "requirement_number INTEGER NOT NULL, title TEXT, "
+                "description TEXT NOT NULL, is_active BOOLEAN NOT NULL)"
+            )
+        )
+        connection.execute(
+            text(
+                "INSERT INTO designated_action "
+                "(designated_action_id, missing_information) VALUES (1, :value)"
+            ),
+            {"value": legacy_value},
+        )
+        if eocs:
+            connection.execute(
+                text(
+                    "INSERT INTO evidence_requirement "
+                    "(evidence_requirement_id, designated_action_id, "
+                    "requirement_number, title, description, is_active) "
+                    "VALUES (:id, 1, :number, :title, :description, :active)"
+                ),
+                [
+                    {
+                        "id": requirement_id,
+                        "number": number,
+                        "title": title,
+                        "description": description,
+                        "active": active,
+                    }
+                    for requirement_id, number, title, description, active in eocs
+                ],
+            )
+    return engine
+
+
+def _run(connection, migration, direction="upgrade"):
+    with Operations.context(MigrationContext.configure(connection)):
+        getattr(migration, direction)()
+
+
+def _column_names(connection, table):
     return {
-        "evidence_requirement_id": requirement_id,
-        "is_active": active,
-        "review_outcome": outcome,
+        column[1] for column in connection.execute(text(f"PRAGMA table_info({table})"))
     }
 
 
-def test_migration_maps_to_the_only_active_eoc():
-    requirements = [
-        _requirement(1, active=False),
-        _requirement(2),
-    ]
-
-    assert MIGRATION._resolve_requirement_id(requirements) == 2
-
-
-def test_migration_does_not_infer_ownership_from_review_outcomes():
-    requirements = [
-        _requirement(1, outcome="Satisfactory"),
-        _requirement(2, outcome="Information requested"),
-        _requirement(3, active=False, outcome="Information requested"),
-    ]
-
-    with pytest.raises(ValueError, match="No unique active evidence requirement"):
-        MIGRATION._resolve_requirement_id(requirements)
-
-
 @pytest.mark.parametrize(
-    "requirements",
+    ("legacy_value", "eocs", "expected_values", "blocked"),
     [
-        [],
-        [_requirement(1, active=False)],
-        [_requirement(1), _requirement(2)],
-        [
-            _requirement(1, outcome="Information requested"),
-            _requirement(2, outcome="Information requested"),
-        ],
+        ("Original request", [], None, True),
+        ("   ", [], [], False),
+        (
+            "Original request",
+            [(101, 1, "Permits", "Permit", True)],
+            ["Original request"],
+            False,
+        ),
+        (
+            "Original request",
+            [
+                (101, 1, "Permits", "Permit", True),
+                (102, 2, "Risk register", "Risk register", True),
+                (103, 3, "Inactive", "Inactive", False),
+            ],
+            ["Original request", "Original request", None],
+            False,
+        ),
     ],
 )
-def test_migration_refuses_zero_or_ambiguous_active_eoc_mappings(requirements):
-    with pytest.raises(ValueError, match="No unique active evidence requirement"):
-        MIGRATION._resolve_requirement_id(requirements)
-
-
-@pytest.mark.parametrize("legacy_value", ["Single EOC", "   ", None])
-def test_migration_round_trip_preserves_values_and_parent_links(
-    legacy_value,
+def test_backfill_and_retirement_preserve_values_and_parent_links(
+    legacy_value, eocs, expected_values, blocked
 ):
-    second_value = "Second action EOC" if legacy_value is not None else None
-    engine = create_engine("sqlite:///:memory:")
+    engine = _database(legacy_value, eocs)
     with engine.begin() as connection:
-        connection.execute(
-            text(
-                "CREATE TABLE designated_action ("
-                "designated_action_id INTEGER PRIMARY KEY, "
-                "missing_information TEXT)"
-            )
-        )
-        connection.execute(
-            text(
-                "CREATE TABLE evidence_requirement ("
-                "evidence_requirement_id INTEGER PRIMARY KEY, "
-                "designated_action_id INTEGER NOT NULL, "
-                "requirement_number INTEGER NOT NULL, "
-                "is_active BOOLEAN NOT NULL, "
-                "review_outcome TEXT)"
-            )
-        )
-        connection.execute(
-            text(
-                "INSERT INTO designated_action VALUES "
-                "(1, :legacy_value), (2, :second_value), (3, NULL)"
-            ),
-            {"legacy_value": legacy_value, "second_value": second_value},
-        )
-        connection.execute(
-            text(
-                "INSERT INTO evidence_requirement VALUES "
-                "(101, 1, 1, 1, NULL), "
-                "(201, 2, 1, 0, 'Satisfactory'), "
-                "(202, 2, 2, 1, 'Information requested')"
-            )
-        )
+        _run(connection, BACKFILL)
 
-        with Operations.context(MigrationContext.configure(connection)):
-            MIGRATION.upgrade()
-
-        values = connection.execute(
-            text(
-                "SELECT evidence_requirement_id, designated_action_id, "
-                "missing_information "
-                "FROM evidence_requirement ORDER BY evidence_requirement_id"
-            )
-        ).all()
-        action_columns = connection.execute(
-            text("PRAGMA table_info(designated_action)")
-        ).all()
-        with Operations.context(MigrationContext.configure(connection)):
-            MIGRATION.downgrade()
-        restored_values = connection.execute(
-            text(
-                "SELECT designated_action_id, missing_information "
-                "FROM designated_action ORDER BY designated_action_id"
-            )
-        ).all()
-
-    assert values == [
-        (101, 1, legacy_value),
-        (201, 2, None),
-        (202, 2, second_value),
-    ]
-    assert "missing_information" not in {column[1] for column in action_columns}
-    assert restored_values == [
-        (1, legacy_value),
-        (2, second_value),
-        (3, None),
-    ]
-    engine.dispose()
-
-
-@pytest.mark.parametrize("eoc_count", [0, 2])
-def test_upgrade_keeps_legacy_value_when_no_eoc_can_be_selected(eoc_count):
-    engine = create_engine("sqlite:///:memory:")
     with engine.begin() as connection:
-        connection.execute(
-            text(
-                "CREATE TABLE designated_action ("
-                "designated_action_id INTEGER PRIMARY KEY, "
-                "missing_information TEXT)"
+        if blocked:
+            with pytest.raises(RuntimeError, match="legacy values remain unmapped"):
+                _run(connection, RETIRE)
+            assert (
+                connection.execute(
+                    text("SELECT missing_information FROM designated_action")
+                ).scalar_one()
+                == legacy_value
             )
-        )
-        connection.execute(
-            text(
-                "CREATE TABLE evidence_requirement ("
-                "evidence_requirement_id INTEGER PRIMARY KEY, "
-                "designated_action_id INTEGER NOT NULL, "
-                "requirement_number INTEGER NOT NULL, "
-                "is_active BOOLEAN NOT NULL, "
-                "review_outcome TEXT)"
+            assert "missing_information" in _column_names(
+                connection, "designated_action"
             )
-        )
-        connection.execute(
-            text(
-                "INSERT INTO designated_action VALUES "
-                "(0, 'Mapped legacy text'), (1, 'Unmapped legacy text')"
-            )
-        )
-        connection.execute(
-            text("INSERT INTO evidence_requirement VALUES (101, 0, 1, 1, NULL)")
-        )
-        for requirement_id in range(1, eoc_count + 1):
-            connection.execute(
+        else:
+            _run(connection, RETIRE)
+            rows = connection.execute(
                 text(
-                    "INSERT INTO evidence_requirement VALUES "
-                    "(:requirement_id, 1, :requirement_id, 1, NULL)"
-                ),
-                {"requirement_id": requirement_id},
+                    "SELECT designated_action_id, missing_information "
+                    "FROM evidence_requirement ORDER BY evidence_requirement_id"
+                )
+            ).all()
+            assert "missing_information" not in _column_names(
+                connection, "designated_action"
             )
-
-        with Operations.context(MigrationContext.configure(connection)):
-            with pytest.raises(RuntimeError, match="Cannot safely map"):
-                MIGRATION.upgrade()
-
-        legacy_value = connection.execute(
-            text(
-                "SELECT missing_information FROM designated_action "
-                "WHERE designated_action_id = 1"
-            )
-        ).scalar_one()
-        requirement_columns = connection.execute(
-            text("PRAGMA table_info(evidence_requirement)")
-        ).all()
-
-    assert legacy_value == "Unmapped legacy text"
-    assert "missing_information" not in {column[1] for column in requirement_columns}
+            assert [row[0] for row in rows] == [1] * len(expected_values)
+            assert [row[1] for row in rows] == expected_values
     engine.dispose()
 
 
-@pytest.mark.parametrize("second_value", ["Another request", "   "])
-def test_downgrade_preserves_multiple_eoc_values(second_value):
-    engine = create_engine("sqlite:///:memory:")
+def test_downgrade_restores_identical_eoc_values_without_data_loss():
+    engine = _database(
+        None,
+        [
+            (101, 1, "Permits", "Permit", True),
+            (102, 2, "Risk register", "Risk register", True),
+        ],
+    )
     with engine.begin() as connection:
+        _run(connection, BACKFILL)
         connection.execute(
             text(
-                "CREATE TABLE evidence_requirement "
-                "(designated_action_id INTEGER, missing_information TEXT)"
+                "UPDATE evidence_requirement SET missing_information = "
+                "'Same request' WHERE designated_action_id = 1"
             )
         )
-        connection.execute(
-            text("INSERT INTO evidence_requirement VALUES (1, :value)"),
-            [{"value": "First request"}, {"value": second_value}],
-        )
-        with Operations.context(MigrationContext.configure(connection)):
-            with pytest.raises(RuntimeError, match="multiple EOCs have values"):
-                MIGRATION.downgrade()
-
-        values = (
+        _run(connection, RETIRE)
+        _run(connection, RETIRE, "downgrade")
+        assert (
             connection.execute(
-                text("SELECT missing_information FROM evidence_requirement")
-            )
-            .scalars()
-            .all()
+                text("SELECT missing_information FROM designated_action")
+            ).scalar_one()
+            == "Same request"
         )
+    engine.dispose()
 
-    assert values == ["First request", second_value]
+
+def test_downgrade_refuses_to_choose_between_distinct_eoc_values():
+    engine = _database(
+        None,
+        [
+            (101, 1, "Permits", "Permit", True),
+            (102, 2, "Risk register", "Risk register", True),
+        ],
+    )
+    with engine.begin() as connection:
+        _run(connection, BACKFILL)
+        connection.execute(
+            text(
+                "UPDATE evidence_requirement SET missing_information = "
+                "CASE evidence_requirement_id "
+                "WHEN 101 THEN 'The signed permit.' "
+                "ELSE 'The risk register.' END"
+            )
+        )
+        _run(connection, RETIRE)
+        with pytest.raises(RuntimeError, match="different EOC values exist"):
+            _run(connection, RETIRE, "downgrade")
+        assert "missing_information" not in _column_names(
+            connection, "designated_action"
+        )
+        assert connection.execute(
+            text(
+                "SELECT missing_information FROM evidence_requirement "
+                "ORDER BY evidence_requirement_id"
+            )
+        ).scalars().all() == ["The signed permit.", "The risk register."]
     engine.dispose()
