@@ -10,8 +10,19 @@ from lcfs.db.models.organization.OrganizationEarlyIssuanceByYear import (
     OrganizationEarlyIssuanceByYear,
 )
 from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
-from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+from lcfs.db.models.compliance.ComplianceReport import (
+    ComplianceReport,
+    ReportingFrequency,
+)
+from lcfs.db.models.compliance.ComplianceReportStatus import (
+    ComplianceReportStatus,
+    ComplianceReportStatusEnum,
+)
+from lcfs.db.models.compliance.ComplianceReportSummary import (
+    ComplianceReportSummary,
+)
 from lcfs.db.models.user.UserProfile import UserProfile
+from sqlalchemy import select
 from lcfs.utils.constants import LCFS_Constants
 from unittest.mock import patch
 
@@ -809,3 +820,78 @@ async def test_get_available_forms_for_link_keys_success(
     assert "Anonymous Form 1" in form_names
     assert "Anonymous Form 2" in form_names
     assert "Private Form" not in form_names
+
+
+@pytest.mark.anyio
+async def test_get_penalty_analytics_data_ignores_tfrs_fossil_fuel_volume(
+    organizations_repo, dbsession, add_models, unique_id
+):
+    """
+    TFRS-era summaries hold fossil fuel litres in
+    line_11_fossil_derived_base_fuel_total, so pre-2024 renewable penalties must
+    come from the per-fuel Line 11 columns (issue #5257). 2024+ keeps the
+    persisted total.
+    """
+    await add_models(
+        [
+            Organization(
+                organization_id=unique_id,
+                name="Penalty Test Org",
+                operating_name="Penalty Test Org",
+                organization_type_id=1,
+                organization_status_id=2,
+            )
+        ]
+    )
+    period_ids = {
+        period.description: period.compliance_period_id
+        for period in (
+            await dbsession.execute(
+                select(CompliancePeriod).where(
+                    CompliancePeriod.description.in_(["2019", "2020", "2024"])
+                )
+            )
+        ).scalars()
+    }
+    assessed_status_id = await dbsession.scalar(
+        select(ComplianceReportStatus.compliance_report_status_id).where(
+            ComplianceReportStatus.status == ComplianceReportStatusEnum.Assessed
+        )
+    )
+
+    # (year, line_11_fossil_derived_base_fuel_total, gasoline, diesel penalty)
+    rows = [
+        ("2019", 1_980_726_630.0, 0.0, 0.0),
+        ("2020", 1_468_546_615.0, 1500.5, 300.0),
+        ("2024", 18000.35, 0.0, 18000.0),
+    ]
+    reports = []
+    for year, line_11_total, gasoline, diesel in rows:
+        report = ComplianceReport(
+            compliance_period_id=period_ids[year],
+            organization_id=unique_id,
+            current_status_id=assessed_status_id,
+            compliance_report_group_uuid=str(uuid.uuid4()),
+            version=0,
+            reporting_frequency=ReportingFrequency.ANNUAL,
+            nickname="Compliance report",
+        )
+        report.summary = ComplianceReportSummary(
+            line_11_fossil_derived_base_fuel_total=line_11_total,
+            line_11_non_compliance_penalty_gasoline=gasoline,
+            line_11_non_compliance_penalty_diesel=diesel,
+            line_11_non_compliance_penalty_jet_fuel=0.0,
+        )
+        reports.append(report)
+    await add_models(reports)
+
+    summaries, _ = await organizations_repo.get_penalty_analytics_data(
+        unique_id, include_government_reports=True
+    )
+
+    line_11_by_year = {
+        row["compliance_year"]: row["line_11_penalty_payable"] for row in summaries
+    }
+    assert line_11_by_year == pytest.approx(
+        {"2019": 0.0, "2020": 1800.5, "2024": 18000.35}
+    )
