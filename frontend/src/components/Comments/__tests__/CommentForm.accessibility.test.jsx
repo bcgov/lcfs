@@ -102,7 +102,7 @@ describe('CommentForm Quill toolbar accessibility', () => {
     expect(quill.getFormat(5, 5).list).toBe('ordered')
   })
 
-  test('rebinds accessibility after visibility remounts and attachment availability changes', ({
+  test('preserves toolbar accessibility when visibility and attachment availability change', ({
     render,
     theme
   }) => {
@@ -122,7 +122,7 @@ describe('CommentForm Quill toolbar accessibility', () => {
     )
 
     const publicToolbar = getToolbar(container)
-    expect(publicToolbar).not.toBe(internalToolbar)
+    expect(publicToolbar).toBe(internalToolbar)
     expect(
       screen.getByRole('toolbar', { name: 'Comment formatting' })
     ).toBeInTheDocument()
