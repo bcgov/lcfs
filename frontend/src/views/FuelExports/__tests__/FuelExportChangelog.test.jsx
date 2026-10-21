@@ -69,7 +69,7 @@ vi.mock('@mui/material/Box', () => ({
 }))
 
 vi.mock('@mui/material/TextField', () => ({
-  default: ({ children, ...props }) => <input {...props}>{children}</input>
+  default: (props) => <input {...props} />
 }))
 
 vi.mock('./_schema', () => ({

@@ -275,7 +275,9 @@ export const useUpdateNotionalTransfer = (
   } = options
 
   return useMutation({
-    mutationFn: async (data: Record<string, unknown> & { id?: number | string }) => {
+    mutationFn: async (
+      data: Record<string, unknown> & { id?: number | string }
+    ) => {
       if (!data?.id) {
         throw new Error('Transfer ID is required for update')
       }
@@ -439,7 +441,10 @@ export const useDeleteNotionalTransfer = (
 
 export const useImportNotionalTransfers = (
   complianceReportId: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, { file: File; isOverwrite: boolean }> = {}
+  options: ExtMutationOptions<
+    unknown,
+    { file: File; isOverwrite: boolean }
+  > = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -452,7 +457,13 @@ export const useImportNotionalTransfers = (
   } = options
 
   return useMutation({
-    mutationFn: async ({ file, isOverwrite }: { file: File; isOverwrite: boolean }) => {
+    mutationFn: async ({
+      file,
+      isOverwrite
+    }: {
+      file: File
+      isOverwrite: boolean
+    }) => {
       if (!complianceReportId) {
         throw new Error('Compliance report ID is required')
       }

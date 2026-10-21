@@ -173,19 +173,18 @@ export const EvidenceOfCompletion = ({
                 const save = updateRequirement({
                   evidenceRequirementId: id,
                   ...payload
-                })
-                  .then(
-                    (result) => {
-                      fields.forEach((field) => failures.delete(field))
-                      callbacks.onSuccess(result)
-                      return result
-                    },
-                    (err) => {
-                      fields.forEach((field) => failures.set(field, err))
-                      callbacks.onError(err)
-                      throw err
-                    }
-                  )
+                }).then(
+                  (result) => {
+                    fields.forEach((field) => failures.delete(field))
+                    callbacks.onSuccess(result)
+                    return result
+                  },
+                  (err) => {
+                    fields.forEach((field) => failures.set(field, err))
+                    callbacks.onError(err)
+                    throw err
+                  }
+                )
                 pending.add(save)
                 const clearPending = () => {
                   pending.delete(save)

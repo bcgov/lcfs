@@ -49,8 +49,7 @@ export type { BCGridEditorProps } from './types'
 const getColumnDef = (column: Column<BCGridRow>): ColDef<BCGridRow> =>
   (column as unknown as { colDef: ColDef<BCGridRow> }).colDef
 
-const getColumnId = (column: Column<BCGridRow>): string =>
-  column.getColId()
+const getColumnId = (column: Column<BCGridRow>): string => column.getColId()
 
 /**
  * @typedef {import('ag-grid-community').GridOptions} GridOptions
@@ -193,12 +192,12 @@ export const BCGridEditor = ({
     if (!firstEditableColumnRef.current) {
       const columns = ref.current.api.getAllDisplayedColumns()
       firstEditableColumnRef.current = columns.find((col) => {
-          const colDef = getColumnDef(col)
-          return (
-            colDef.editable !== false &&
-            !['action', 'checkbox'].includes(colDef.field ?? '')
-          )
-        }) as Column<BCGridRow> | null
+        const colDef = getColumnDef(col)
+        return (
+          colDef.editable !== false &&
+          !['action', 'checkbox'].includes(colDef.field ?? '')
+        )
+      }) as Column<BCGridRow> | null
     }
     return firstEditableColumnRef.current
   }, [])
@@ -270,16 +269,17 @@ export const BCGridEditor = ({
       // Build a proper params-like object for each pasted row so downstream
       // handlers (which expect AG Grid CellEditingStopped params) don't crash.
       const firstEditableCol = findFirstEditableColumn()
-      const colDef =
-        (firstEditableCol as
+      const colDef = (
+        firstEditableCol as
           | (Column<BCGridRow> & { colDef?: ColDef<BCGridRow> })
-          | null)?.colDef || {
-          field: (
-            editableColumns[0] as
-              | (Column<BCGridRow> & { colDef?: ColDef<BCGridRow> })
-              | undefined
-          )?.colDef?.field
-        }
+          | null
+      )?.colDef || {
+        field: (
+          editableColumns[0] as
+            | (Column<BCGridRow> & { colDef?: ColDef<BCGridRow> })
+            | undefined
+        )?.colDef?.field
+      }
 
       // Save rows sequentially so each save completes before the next starts.
       // This prevents cache invalidation from wiping unsaved rows.
@@ -390,7 +390,8 @@ export const BCGridEditor = ({
       ((params.event as MouseEvent).target as HTMLElement).dataset.action &&
       onAction
     ) {
-      const action = ((params.event as MouseEvent).target as HTMLElement).dataset.action
+      const action = ((params.event as MouseEvent).target as HTMLElement)
+        .dataset.action
       const transaction = (await onAction(action as string, params)) as
         | RowDataTransaction<BCGridRow>
         | undefined
@@ -567,7 +568,11 @@ export const BCGridEditor = ({
       <BCBox sx={{ height: '40px', margin: '15px 0', width: '100%' }}>
         <BCAlert2
           dismissible={true}
-          ref={alertRef as React.Ref<import('@/components/BCAlert/BCAlert2').BCAlert2Handle>}
+          ref={
+            alertRef as React.Ref<
+              import('@/components/BCAlert/BCAlert2').BCAlert2Handle
+            >
+          }
           data-test="alert-box"
         />
       </BCBox>

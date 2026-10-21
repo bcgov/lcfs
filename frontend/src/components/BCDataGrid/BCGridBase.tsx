@@ -78,7 +78,12 @@ export const BCGridBase = forwardRef<BCGridBaseHandle, BCGridBaseProps>(
     const gridProps = Object.fromEntries(
       Object.entries(props).filter(
         ([key]) =>
-          !['queryData', 'dataKey', 'paginationOptions', 'onPaginationChange'].includes(key)
+          ![
+            'queryData',
+            'dataKey',
+            'paginationOptions',
+            'onPaginationChange'
+          ].includes(key)
       )
     )
     const [searchParams] = useSearchParams()
@@ -187,9 +192,10 @@ export const BCGridBase = forwardRef<BCGridBaseHandle, BCGridBaseProps>(
           if (onRowClicked) {
             e.preventDefault()
             e.stopPropagation()
-            onRowClicked(
-              { ...params, event: e } as unknown as RowClickedEvent<BCGridRow>
-            )
+            onRowClicked({
+              ...params,
+              event: e
+            } as unknown as RowClickedEvent<BCGridRow>)
             return
           }
         }
@@ -245,9 +251,7 @@ export const BCGridBase = forwardRef<BCGridBaseHandle, BCGridBaseProps>(
         }
 
         // Also check if we clicked directly on the selection checkbox wrapper
-        if (
-          target?.closest?.('.ag-selection-checkbox')
-        ) {
+        if (target?.closest?.('.ag-selection-checkbox')) {
           return true
         }
 
@@ -270,10 +274,7 @@ export const BCGridBase = forwardRef<BCGridBaseHandle, BCGridBaseProps>(
               | (HTMLInputElement & { tagName?: string; type?: string })
               | null
               | undefined
-            if (
-              target?.tagName === 'INPUT' &&
-              target.type === 'checkbox'
-            ) {
+            if (target?.tagName === 'INPUT' && target.type === 'checkbox') {
               return // Let AG Grid handle the direct checkbox click
             }
 
@@ -309,15 +310,14 @@ export const BCGridBase = forwardRef<BCGridBaseHandle, BCGridBaseProps>(
     )
 
     // Expose clearFilters method through ref
-    useImperativeHandle(
-      forwardedRef,
-      (): BCGridBaseHandle => ({
-        ...ref.current,
-        clearFilters
-      })
-    )
+    useImperativeHandle(forwardedRef, (): BCGridBaseHandle => ({
+      ...ref.current,
+      clearFilters
+    }))
 
-    const resolvedAutoSizeStrategy = useMemo<AutoSizeStrategy | undefined>(() => {
+    const resolvedAutoSizeStrategy = useMemo<
+      AutoSizeStrategy | undefined
+    >(() => {
       if (autoSizeStrategy === null) {
         return undefined
       }

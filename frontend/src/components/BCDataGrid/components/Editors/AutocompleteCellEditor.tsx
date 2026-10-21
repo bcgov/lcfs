@@ -40,14 +40,23 @@ export interface AutocompleteCellEditorProps {
   disableCloseOnSelect?: boolean
   openOnFocus?: boolean
   freeSolo?: boolean
-  colDef?: { cellEditorParams?: { returnObject?: boolean; noLabel?: boolean; label?: string } }
+  colDef?: {
+    cellEditorParams?: {
+      returnObject?: boolean
+      noLabel?: boolean
+      label?: string
+    }
+  }
   column?: unknown
   node?: unknown
   api?: {
     stopEditing?: () => void
     tabToPreviousCell?: () => void
     tabToNextCell?: () => void
-    getFocusedCell?: () => { rowIndex: number; column: { getId: () => string } } | null
+    getFocusedCell?: () => {
+      rowIndex: number
+      column: { getId: () => string }
+    } | null
     startEditingCell?: (params: { rowIndex: number; colKey: string }) => void
   }
   onValueChange?: (value: unknown) => void
@@ -109,7 +118,9 @@ export const AutocompleteCellEditor = forwardRef<
     return optionOrValue
   }
 
-  const findOptionByRaw = (raw: unknown): AutocompleteCellEditorOption | null => {
+  const findOptionByRaw = (
+    raw: unknown
+  ): AutocompleteCellEditorOption | null => {
     if (raw == null) return null
     return options.find((opt) =>
       typeof opt === 'object' ? opt?.value === raw : opt === raw
@@ -125,7 +136,9 @@ export const AutocompleteCellEditor = forwardRef<
         // `value` could be an array of objects or ids/strings
         return value
           .map((v) => (typeof v === 'object' ? v : findOptionByRaw(v)))
-          .filter((option): option is AutocompleteCellEditorOption => option != null)
+          .filter(
+            (option): option is AutocompleteCellEditorOption => option != null
+          )
       }
       if (value == null || value === '') return []
       if (typeof value === 'string') {
@@ -133,7 +146,9 @@ export const AutocompleteCellEditor = forwardRef<
           .split(',')
           .map((v) => v.trim())
           .map((rv) => findOptionByRaw(rv))
-          .filter((option): option is AutocompleteCellEditorOption => option != null)
+          .filter(
+            (option): option is AutocompleteCellEditorOption => option != null
+          )
       }
       // single primitive
       const option = findOptionByRaw(value)
@@ -368,7 +383,11 @@ export const AutocompleteCellEditor = forwardRef<
               key={
                 typeof option === 'string'
                   ? option
-                  : ((option as AutocompleteCellEditorOption).value as string | number | undefined) ?? (option as AutocompleteCellEditorOption).label
+                  : (((option as AutocompleteCellEditorOption).value as
+                      | string
+                      | number
+                      | undefined) ??
+                    (option as AutocompleteCellEditorOption).label)
               }
             >
               <Box
@@ -392,7 +411,9 @@ export const AutocompleteCellEditor = forwardRef<
                     inputProps={{ 'aria-label': 'controlled' }}
                   />
                 )}
-                {typeof option === 'string' ? option : (option as AutocompleteCellEditorOption).label}
+                {typeof option === 'string'
+                  ? option
+                  : (option as AutocompleteCellEditorOption).label}
               </Box>
               <Divider />
             </React.Fragment>
@@ -421,9 +442,17 @@ export const AutocompleteCellEditor = forwardRef<
                 key={
                   typeof option === 'string'
                     ? option
-                    : ((option as AutocompleteCellEditorOption).value as string | number | undefined) ?? (option as AutocompleteCellEditorOption).label
+                    : (((option as AutocompleteCellEditorOption).value as
+                        | string
+                        | number
+                        | undefined) ??
+                      (option as AutocompleteCellEditorOption).label)
                 }
-                label={typeof option === 'string' ? option : (option as AutocompleteCellEditorOption).label}
+                label={
+                  typeof option === 'string'
+                    ? option
+                    : (option as AutocompleteCellEditorOption).label
+                }
               />
             ))}
             {value.length > limitTags && (

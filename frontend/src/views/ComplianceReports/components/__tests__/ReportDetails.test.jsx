@@ -112,11 +112,7 @@ vi.mock('@/constants/roles', () => ({
 
 // Mock other components to prevent rendering issues
 vi.mock('@/components/TogglePanel.jsx', () => ({
-  TogglePanel: ({
-  label,
-  offComponent,
-  disabled
-}) => (
+  TogglePanel: ({ label, offComponent, disabled }) => (
     <div data-testid="toggle-panel">
       <div>{label}</div>
       <div>{disabled ? 'disabled' : 'enabled'}</div>
@@ -126,9 +122,7 @@ vi.mock('@/components/TogglePanel.jsx', () => ({
 }))
 
 vi.mock('@/components/Documents/DocumentUploadDialog', () => ({
-  default: ({
-  open
-}) =>
+  default: ({ open }) =>
     open ? <div data-testid="document-upload-dialog">Upload Dialog</div> : null
 }))
 

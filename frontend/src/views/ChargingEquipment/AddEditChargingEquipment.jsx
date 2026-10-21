@@ -25,10 +25,7 @@ import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { chargingEquipmentSchema } from './_formSchema'
 import { bulkChargingEquipmentColDefs, defaultBulkColDef } from './_bulkSchema'
-import {
-  createDuplicatedBulkRow,
-  isRowValid
-} from './bulkRowHelpers'
+import { createDuplicatedBulkRow, isRowValid } from './bulkRowHelpers'
 
 import BCAlert, { BCAlert2 } from '@/components/BCAlert'
 import BCButton from '@/components/BCButton'
@@ -94,15 +91,15 @@ export const AddEditChargingEquipment = ({ mode }) => {
   } = useGetChargingEquipment(fseId)
 
   const {
-  levels,
-  endUseTypes,
-  endUserTypes,
-  isLoading: metadataLoading
-} = useChargingEquipmentMetadata()
+    levels,
+    endUseTypes,
+    endUserTypes,
+    isLoading: metadataLoading
+  } = useChargingEquipmentMetadata()
 
   const { data: chargingSites, isLoading: sitesLoading } = useChargingSites()
   const { data: organizations, isLoading: orgsLoading } = useOrganizations()
-  useHasAllocationAgreements();
+  useHasAllocationAgreements()
 
   const createMutation = useCreateChargingEquipment()
   const updateMutation = useUpdateChargingEquipment()
@@ -117,7 +114,7 @@ export const AddEditChargingEquipment = ({ mode }) => {
         (row) => !row.chargingEquipmentId && !row.charging_equipment_id
       ),
     [bulkData]
-  );
+  )
   const [gridErrors, setGridErrors] = useState({})
   const [gridWarnings, setGridWarnings] = useState({})
   const gridRef = useRef(null)

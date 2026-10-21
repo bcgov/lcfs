@@ -150,7 +150,8 @@ export const PublicDashboard = () => {
       deltaPct:
         last && prev && prev.vwap
           ? (((last.vwap as number) - (prev.vwap as number)) /
-              (prev.vwap as number)) * 100
+              (prev.vwap as number)) *
+            100
           : null
     }
   }, [priceIndex])

@@ -274,7 +274,7 @@ describe('useLoadingStore', () => {
 
       // Both false
       run(() => {
-        result.current.setLoading(false && false)
+        result.current.setLoading(false)
       })
       expect(result.current.loading).toBe(false)
     })

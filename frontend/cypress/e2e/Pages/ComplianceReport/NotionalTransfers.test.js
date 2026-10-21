@@ -15,7 +15,10 @@ const NOTIONAL_CHANGELOG_GROUP_UUID = 'mock-notional-transfers-group'
  */
 const saveAndReturn = () => {
   cy.get(SELECTORS.saveButton).click()
-  cy.url({ timeout: 30000 }).should('match', /\/compliance-reporting\/\d+\/\d+$/)
+  cy.url({ timeout: 30000 }).should(
+    'match',
+    /\/compliance-reporting\/\d+\/\d+$/
+  )
 }
 
 /**
@@ -131,7 +134,13 @@ const setupNotionalChangelogMocks = ({
 
 When(
   'the supplier adds a notional transfer with legal name {string}, address {string}, fuel category {string}, transfer type {string}, and quantity {string}',
-  (legalName, addressForService, fuelCategory, receivedOrTransferred, quantity) => {
+  (
+    legalName,
+    addressForService,
+    fuelCategory,
+    receivedOrTransferred,
+    quantity
+  ) => {
     cy.get(SELECTORS.scheduleLink).click()
     cy.get(SELECTORS.addRowButton).click({ force: true })
 
@@ -272,18 +281,25 @@ When(
 // Then steps
 // ---------------------------------------------------------------------------
 
-Then('the notional transfer summary includes legal name {string}', (legalName) => {
-  // Navigate back to the schedule page and confirm the grid row is visible.
-  cy.get(SELECTORS.scheduleLink, { timeout: 20000 }).should('be.visible').click()
-  cy.contains('[col-id="legalName"]', legalName, { timeout: 30000 })
-    .scrollIntoView()
-    .should('exist')
-})
+Then(
+  'the notional transfer summary includes legal name {string}',
+  (legalName) => {
+    // Navigate back to the schedule page and confirm the grid row is visible.
+    cy.get(SELECTORS.scheduleLink, { timeout: 20000 })
+      .should('be.visible')
+      .click()
+    cy.contains('[col-id="legalName"]', legalName, { timeout: 30000 })
+      .scrollIntoView()
+      .should('exist')
+  }
+)
 
 Then(
   'the notional transfer summary includes quantity {string}',
   (formattedQuantity) => {
-    cy.get(SELECTORS.scheduleLink, { timeout: 20000 }).should('be.visible').click()
+    cy.get(SELECTORS.scheduleLink, { timeout: 20000 })
+      .should('be.visible')
+      .click()
     // Assert quantity on the same row as the created legal name.
     cy.get('@lastNotionalLegalName').then((legalName) => {
       cy.contains('div.ag-cell[col-id="legalName"]', legalName, {
@@ -304,7 +320,5 @@ Then('the notional transfer changelog is shown', () => {
   cy.wait('@mockNotionalChangelog', { timeout: 30000 })
     .its('response.statusCode')
     .should('eq', 200)
-  cy.get('@mockNotionalChangelog')
-    .its('response.body')
-    .should('have.length', 2)
+  cy.get('@mockNotionalChangelog').its('response.body').should('have.length', 2)
 })

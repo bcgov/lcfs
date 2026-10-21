@@ -14,7 +14,10 @@ const OTHER_USES_CHANGELOG_GROUP_UUID = 'mock-other-uses-group'
  */
 const saveAndReturn = () => {
   cy.get(SELECTORS.saveButton).click()
-  cy.url({ timeout: 30000 }).should('match', /\/compliance-reporting\/\d+\/\d+$/)
+  cy.url({ timeout: 30000 }).should(
+    'match',
+    /\/compliance-reporting\/\d+\/\d+$/
+  )
 }
 
 /**
@@ -130,7 +133,14 @@ const setupOtherUsesChangelogMocks = ({
 
 When(
   'the supplier adds an other uses record with fuel type {string}, fuel category {string}, provision {string}, quantity {string}, units {string}, and expected use {string}',
-  (fuelType, fuelCategory, provisionOfTheAct, quantitySupplied, units, expectedUse) => {
+  (
+    fuelType,
+    fuelCategory,
+    provisionOfTheAct,
+    quantitySupplied,
+    units,
+    expectedUse
+  ) => {
     cy.get(SELECTORS.scheduleLink).click()
     cy.get(SELECTORS.addRowButton).click({ force: true })
 
@@ -255,27 +265,34 @@ When(
 // ---------------------------------------------------------------------------
 
 Then('the other uses summary includes fuel type {string}', (fuelType) => {
-  cy.get(SELECTORS.scheduleLink, { timeout: 20000 }).should('be.visible').click()
+  cy.get(SELECTORS.scheduleLink, { timeout: 20000 })
+    .should('be.visible')
+    .click()
   cy.contains('[col-id="fuelType"]', fuelType, { timeout: 30000 })
     .scrollIntoView()
     .should('exist')
 })
 
-Then('the other uses summary includes quantity {string}', (formattedQuantity) => {
-  cy.get(SELECTORS.scheduleLink, { timeout: 20000 }).should('be.visible').click()
-  // Assert quantity on the same row as the created fuel type.
-  cy.get('@lastOtherUsesFuelType').then((fuelType) => {
-    cy.contains('div.ag-cell[col-id="fuelType"]', fuelType, {
-      timeout: 30000
-    })
-      .closest('div.ag-row')
-      .within(() => {
-        cy.contains('[col-id="quantitySupplied"]', formattedQuantity, {
-          timeout: 30000
-        }).should('exist')
+Then(
+  'the other uses summary includes quantity {string}',
+  (formattedQuantity) => {
+    cy.get(SELECTORS.scheduleLink, { timeout: 20000 })
+      .should('be.visible')
+      .click()
+    // Assert quantity on the same row as the created fuel type.
+    cy.get('@lastOtherUsesFuelType').then((fuelType) => {
+      cy.contains('div.ag-cell[col-id="fuelType"]', fuelType, {
+        timeout: 30000
       })
-  })
-})
+        .closest('div.ag-row')
+        .within(() => {
+          cy.contains('[col-id="quantitySupplied"]', formattedQuantity, {
+            timeout: 30000
+          }).should('exist')
+        })
+    })
+  }
+)
 
 Then('the other uses changelog is shown', () => {
   cy.wait('@mockOtherUsesChangelog', { timeout: 30000 })

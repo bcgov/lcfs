@@ -118,16 +118,23 @@ export const useTransactionDocuments = (
 }
 
 export const useDownloadTransactions = (
-  options: ExtMutationOptions<unknown, {
-    format: string
-    body?: Record<string, unknown>
-    endpoint: string
-  }>
+  options: ExtMutationOptions<
+    unknown,
+    {
+      format: string
+      body?: Record<string, unknown>
+      endpoint: string
+    }
+  >
 ) => {
   const client = useApiService()
   return useMutation({
     ...options,
-    mutationFn: async ({ format, body, endpoint }: {
+    mutationFn: async ({
+      format,
+      body,
+      endpoint
+    }: {
       format: string
       body?: Record<string, unknown>
       endpoint: string

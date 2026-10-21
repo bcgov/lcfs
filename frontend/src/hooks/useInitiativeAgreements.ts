@@ -219,9 +219,11 @@ export const useEvidenceRequirements = (
   })
 }
 
-const useEvidenceMutation = <TVariables,>(
+const useEvidenceMutation = <TVariables>(
   designatedActionId: number | string,
-  mutationFn: (client: ApiServiceInstance) => (variables: TVariables) => Promise<unknown>
+  mutationFn: (
+    client: ApiServiceInstance
+  ) => (variables: TVariables) => Promise<unknown>
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()

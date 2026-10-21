@@ -20,7 +20,7 @@ const appVersion: string = existsSync(releaseNotesPath)
 // Vitest checks them against whatever was collected in the current process:
 //   - a filtered run (`vitest run src/views/Foo.test.jsx`) or a CI shard
 //     (`--shard=N/M`) only covers a slice of the suite and would always fail;
-//   - `npm run test.coverage` (full run) and the CI `--merge-reports` step
+//   - `npm run test:coverage` (full run) and the CI `--merge-reports` step
 //     (all shards merged) are the two places that see the whole suite, and
 //     both set the variable.
 const COVERAGE_THRESHOLDS = {
@@ -37,14 +37,7 @@ const enforceCoverageThresholds =
 // https://vitejs.dev/config/
 export default defineConfig({
   lint: {
-    plugins: [
-      'eslint',
-      'typescript',
-      'import',
-      'node',
-      'promise',
-      'react'
-    ],
+    plugins: ['eslint', 'typescript', 'import', 'node', 'promise', 'react'],
     env: { browser: true, es2020: true, jest: true },
     globals: { vi: 'writable' },
     settings: { react: { version: '18.2' } },
@@ -68,10 +61,7 @@ export default defineConfig({
       'typescript/no-redundant-type-constituents': 'off',
       'typescript/require-array-sort-compare': 'off',
       'typescript/no-implied-eval': 'off',
-      'react/only-export-components': [
-        'warn',
-        { allowConstantExport: true }
-      ],
+      'react/only-export-components': ['warn', { allowConstantExport: true }],
       'react/rules-of-hooks': 'error',
       'react/exhaustive-deps': 'warn',
       'react/react-in-jsx-scope': 'off',

@@ -39,9 +39,16 @@ export interface AddressValidationResult {
 
 export interface UseLocationServiceReturn {
   checkLocationInBC: (lat: number, lng: number) => Promise<boolean>
-  getLocationDetails: (lat: number, lng: number) => Promise<LocationDetails | null>
-  batchProcessGeofencing: (locations: LocationInput[]) => Promise<GeofencingResults>
-  batchValidateAddresses: (addresses: string[]) => Promise<AddressValidationResult[]>
+  getLocationDetails: (
+    lat: number,
+    lng: number
+  ) => Promise<LocationDetails | null>
+  batchProcessGeofencing: (
+    locations: LocationInput[]
+  ) => Promise<GeofencingResults>
+  batchValidateAddresses: (
+    addresses: string[]
+  ) => Promise<AddressValidationResult[]>
   isLoading: boolean
   error: Error | null
 }
@@ -53,7 +60,8 @@ export interface UseLocationServiceReturn {
  */
 export const useLocationService = (): UseLocationServiceReturn => {
   // oxlint-disable-next-line typescript/no-explicit-any
-  const { checkBCBoundary, reverseGeocode, validateAddress } = useGeocoder() as any
+  const { checkBCBoundary, reverseGeocode, validateAddress } =
+    useGeocoder() as any
 
   /**
    * Check if a location is within BC boundaries using the geocoder service.
@@ -62,7 +70,10 @@ export const useLocationService = (): UseLocationServiceReturn => {
    * @param lng - Longitude
    * @returns True if location is in BC
    */
-  const checkLocationInBC = async (lat: number, lng: number): Promise<boolean> => {
+  const checkLocationInBC = async (
+    lat: number,
+    lng: number
+  ): Promise<boolean> => {
     try {
       const result = await checkBCBoundary.mutateAsync({
         latitude: lat,

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from 'react'
 import Box from '@mui/material/Box'
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
@@ -11,13 +11,18 @@ import BCTypography from '@/components/BCTypography'
 import BCButton from '@/components/BCButton'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { faEdit, faSave, faTrash, faPlus } from '@fortawesome/free-solid-svg-icons'
+import {
+  faEdit,
+  faSave,
+  faTrash,
+  faPlus
+} from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
 export const CreditMarketForm = () => {
   const { t } = useTranslation(['common', 'creditMarket'])
-  useCurrentUser();
-  
+  useCurrentUser()
+
   const [isEditing, setIsEditing] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
   const [formData, setFormData] = useState({
@@ -31,8 +36,11 @@ export const CreditMarketForm = () => {
   const [hasExistingListing] = useState(false)
 
   const handleInputChange = (field) => (event) => {
-    const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value
-    setFormData(prev => ({
+    const value =
+      event.target.type === 'checkbox'
+        ? event.target.checked
+        : event.target.value
+    setFormData((prev) => ({
       ...prev,
       [field]: value
     }))
@@ -74,11 +82,19 @@ export const CreditMarketForm = () => {
   return (
     <Card sx={{ mb: 3 }}>
       <CardContent>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Box
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          mb={2}
+        >
           <BCTypography variant="h6">
-            {t('creditMarket:manageListing', 'Manage Your Credit Market Listing')}
+            {t(
+              'creditMarket:manageListing',
+              'Manage Your Credit Market Listing'
+            )}
           </BCTypography>
-          
+
           {!hasExistingListing && !isExpanded && (
             <BCButton
               variant="contained"
@@ -90,7 +106,7 @@ export const CreditMarketForm = () => {
               {t('creditMarket:addListing', 'Add Listing')}
             </BCButton>
           )}
-          
+
           {hasExistingListing && !isEditing && (
             <Box display="flex" gap={1}>
               <BCButton
@@ -128,7 +144,7 @@ export const CreditMarketForm = () => {
                 sx={{ mb: 2 }}
               />
             </Grid>
-            
+
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
@@ -141,7 +157,7 @@ export const CreditMarketForm = () => {
                 sx={{ mb: 2 }}
               />
             </Grid>
-            
+
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
@@ -153,7 +169,7 @@ export const CreditMarketForm = () => {
                 sx={{ mb: 2 }}
               />
             </Grid>
-            
+
             <Grid item xs={12} md={6}>
               <FormControlLabel
                 control={
@@ -163,7 +179,10 @@ export const CreditMarketForm = () => {
                     disabled={!isEditing}
                   />
                 }
-                label={t('creditMarket:creditsAvailable', 'Credits Available for Sale')}
+                label={t(
+                  'creditMarket:creditsAvailable',
+                  'Credits Available for Sale'
+                )}
                 sx={{ mb: 2 }}
               />
             </Grid>
@@ -179,10 +198,7 @@ export const CreditMarketForm = () => {
               >
                 {t('common:save', 'Save')}
               </BCButton>
-              <BCButton
-                variant="outlined"
-                onClick={handleCancel}
-              >
+              <BCButton variant="outlined" onClick={handleCancel}>
                 {t('common:cancel', 'Cancel')}
               </BCButton>
             </Box>
@@ -191,9 +207,11 @@ export const CreditMarketForm = () => {
 
         {!isExpanded && !hasExistingListing && (
           <BCTypography variant="body2" color="text.secondary">
-            {t('creditMarket:noListingMessage', 
+            {t(
+              'creditMarket:noListingMessage',
               'Your organization is not currently listed in the credit trading market. ' +
-              'Add a listing to let other organizations know you are interested in credit trading.')}
+                'Add a listing to let other organizations know you are interested in credit trading.'
+            )}
           </BCTypography>
         )}
       </CardContent>

@@ -41,7 +41,11 @@ export const processFuelSupplyRowData = ({
 /**
  * Determines which columns should be visible based on row data and fuel types
  */
-export const calculateColumnVisibility = (rowData, optionsData, compliancePeriod) =>
+export const calculateColumnVisibility = (
+  rowData,
+  optionsData,
+  compliancePeriod
+) =>
   calculateRenewableClaimColumnVisibility(
     Array.isArray(rowData) ? rowData : [],
     optionsData,
@@ -59,7 +63,11 @@ export const updateGridColumnsVisibility = (gridRef, columnVisibility) => {
 /**
  * Handles fuel type selection changes
  */
-export const handleFuelTypeChange = (params, optionsData, updateRowDataValues) => {
+export const handleFuelTypeChange = (
+  params,
+  optionsData,
+  updateRowDataValues
+) => {
   const selectedFuelType = optionsData?.fuelTypes?.find(
     (obj) => params.node.data.fuelType === obj.fuelType
   )
@@ -89,7 +97,11 @@ export const handleFuelTypeChange = (params, optionsData, updateRowDataValues) =
 /**
  * Handles fuel category selection changes
  */
-export const handleFuelCategoryChange = (params, optionsData, updateRowDataValues) => {
+export const handleFuelCategoryChange = (
+  params,
+  optionsData,
+  updateRowDataValues
+) => {
   const selectedFuelType = optionsData?.fuelTypes?.find(
     (obj) => params.node.data.fuelType === obj.fuelType
   )
@@ -97,8 +109,7 @@ export const handleFuelCategoryChange = (params, optionsData, updateRowDataValue
   if (selectedFuelType) {
     const endUseTypes = selectedFuelType.eerRatios
       .filter(
-        (item) =>
-          item.fuelCategory.fuelCategory === params.data.fuelCategory
+        (item) => item.fuelCategory.fuelCategory === params.data.fuelCategory
       )
       .map((item) => item.endUseType)
 
@@ -117,7 +128,13 @@ export const handleFuelCategoryChange = (params, optionsData, updateRowDataValue
 /**
  * Validation utility for fuel supply data
  */
-export const validateFuelSupply = (params, validationFn, errorMessage, alertRef, field = null) => {
+export const validateFuelSupply = (
+  params,
+  validationFn,
+  errorMessage,
+  alertRef,
+  field = null
+) => {
   const value = field ? params.node?.data[field] : params
 
   if (field && params.colDef.field !== field) {
