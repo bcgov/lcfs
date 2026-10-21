@@ -498,14 +498,19 @@ async def test_update_user_supplier_own_org_succeeds(
     """A supplier with MANAGE_USERS can update a user in their own org."""
     set_mock_user(fastapi_app, [RoleEnum.MANAGE_USERS], {"organization_id": 1})
 
-    mock_user_services.update_user.return_value = None
-    mock_user_services.get_user_by_id.return_value = _USER_RESPONSE
+    mock_user_services.update_user_and_notify.return_value = {
+        **_USER_RESPONSE,
+        "account_change_email_sent": True,
+    }
     fastapi_app.dependency_overrides[UserServices] = lambda: mock_user_services
 
     url = fastapi_app.url_path_for("update_user", organization_id=1, user_id=42)
     response = await client.put(url, json=_UPDATE_USER_PAYLOAD)
 
     assert response.status_code == 200
+    assert response.json()["userProfileId"] == 42
+    assert response.json()["accountChangeEmailSent"] is True
+    mock_user_services.update_user_and_notify.assert_awaited_once()
 
 
 @pytest.mark.anyio
