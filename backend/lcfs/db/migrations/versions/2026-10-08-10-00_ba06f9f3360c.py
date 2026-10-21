@@ -12,7 +12,7 @@ agreement moved by this migration gets a row with no user, marked with this
 migration's name.
 
 Revision ID: ba06f9f3360c
-Revises: c4d6e8f0a2b5
+Revises: 5f7a5242e0c1
 Create Date: 2026-10-08 10:00:00.000000
 """
 
@@ -21,7 +21,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "ba06f9f3360c"
-down_revision = "c4d6e8f0a2b5"
+down_revision = "5f7a5242e0c1"
 branch_labels = None
 depends_on = None
 
