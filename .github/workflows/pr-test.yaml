@@ -564,39 +564,13 @@ jobs:
           cd frontend
           echo "=== Running tests for shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} ==="
 
-          # Run tests and capture exit code
-          set +e
+          # Preserve the test runner's exit code; missing tests or reports must
+          # not turn an incomplete run into a successful coverage gate.
           npm run test:ci:memory
-          EXIT_CODE=$?
-          set -e
-
-          # Handle exit codes appropriately
-          if [ $EXIT_CODE -eq 0 ]; then
-            echo "✅ Tests completed successfully"
-          elif [ $EXIT_CODE -eq 1 ]; then
-            # Check if this is due to no test files (empty shard) or real failure
-            echo "Checking if shard ${{ matrix.shardIndex }} is empty..."
-            
-            # Try to determine if this shard should have test files
-            if SHARD_INDEX=${{ matrix.shardIndex }} SHARD_TOTAL=${{ matrix.shardTotal }} node --max-old-space-size=8192 ./node_modules/.bin/vitest run --reporter=verbose --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --run=false 2>&1 | grep -q "No test files found"; then
-              echo "✅ Empty shard detected - this is expected for shard ${{ matrix.shardIndex }} with 195 total test files"
-              
-              # For empty shards, we'll let the blob report merging step handle the missing report
-              # The merge step has logic to handle missing blob reports gracefully
-              echo "✅ Empty shard handled successfully - no blob report needed"
-            else
-              echo "❌ Real test failure detected in shard ${{ matrix.shardIndex }}"
-              exit $EXIT_CODE
-            fi
-          else
-            echo "❌ Tests failed with unexpected exit code $EXIT_CODE"
-            exit $EXIT_CODE
-          fi
         env:
           CI: true
           SHARD_INDEX: ${{ matrix.shardIndex }}
           SHARD_TOTAL: ${{ matrix.shardTotal }}
-          VITEST_POOL_THREADS: "4"
 
       - name: Debug test failure details
         if: failure()
@@ -608,7 +582,7 @@ jobs:
           echo "Environment: CI=$CI"
           echo ""
           echo "Getting detailed error information..."
-          SHARD_INDEX=${{ matrix.shardIndex }} SHARD_TOTAL=${{ matrix.shardTotal }} node --max-old-space-size=8192 ./node_modules/.bin/vitest run --reporter=verbose --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }} || true
+          SHARD_INDEX=${{ matrix.shardIndex }} SHARD_TOTAL=${{ matrix.shardTotal }} node --max-old-space-size=8192 ./node_modules/.bin/vp test run --coverage.enabled=false --reporter=verbose --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }} || true
         env:
           CI: true
 
@@ -660,45 +634,17 @@ jobs:
         run: |
           cd frontend
 
-          # Check if we have any blob reports
-          if [ ! -d ".vitest-reports" ] || [ -z "$(find .vitest-reports -name 'blob-*.json' -type f 2>/dev/null)" ]; then
-            echo "No blob reports found, creating empty test results file"
-            mkdir -p .vitest-reports
-            echo '<?xml version="1.0" encoding="UTF-8"?><testsuite name="frontend" tests="0" failures="0" errors="0" skipped="0"></testsuite>' > .vitest-reports/vitest-results.xml
-            exit 0
+          # Every configured shard must contribute a report. Let Vite+ validate
+          # the blob format and version rather than deleting invalid reports.
+          REPORT_COUNT=$(find .vitest-reports -maxdepth 1 -name 'blob-*.json' -type f | wc -l | tr -d ' ')
+          if [ "$REPORT_COUNT" -ne 32 ]; then
+            echo "Expected 32 frontend shard reports, received $REPORT_COUNT"
+            exit 1
           fi
 
-          # Validate blob reports and remove invalid ones
-          echo "Validating blob reports..."
-          for file in .vitest-reports/blob-*.json; do
-            if [ -f "$file" ]; then
-              if ! node -pe "JSON.parse(require('fs').readFileSync('$file', 'utf8')); 'valid'" 2>/dev/null | grep -q "valid"; then
-                echo "Removing invalid blob report: $file"
-                rm "$file"
-              else
-                echo "Valid blob report: $file"
-              fi
-            fi
-          done
-
-          # Check again if we have valid reports
-          if [ -z "$(find .vitest-reports -name 'blob-*.json' -type f 2>/dev/null)" ]; then
-            echo "No valid blob reports found after validation, creating empty test results file"
-            echo '<?xml version="1.0" encoding="UTF-8"?><testsuite name="frontend" tests="0" failures="0" errors="0" skipped="0"></testsuite>' > .vitest-reports/vitest-results.xml
-            exit 0
-          fi
-
-          # Merge valid reports using the locally installed vitest so it
-          # stays in sync with @vitest/ui and @vitest/coverage-v8.
-          #
-          # Each shard's blob carries its coverage map. Merging them here is
-          # the only point in CI that sees coverage for the whole suite, so
-          # this is where the coverage thresholds from vite.config.ts are
-          # enforced (ENFORCE_COVERAGE_THRESHOLDS). Vitest exits non-zero and
-          # prints "ERROR: Coverage for <metric> ... does not meet global
-          # threshold" when coverage drops below a floor. See issue #4094.
-          echo "Merging valid blob reports..."
-          ENFORCE_COVERAGE_THRESHOLDS=true ./node_modules/.bin/vitest --merge-reports --reporter=junit --outputFile=.vitest-reports/vitest-results.xml
+          # Thresholds are enforced only here, against aggregate coverage.
+          # Keep JUnit outside the input directory so it cannot be read as a blob.
+          ENFORCE_COVERAGE_THRESHOLDS=true ./node_modules/.bin/vp test --merge-reports=.vitest-reports --reporter=junit --outputFile.junit=vitest-results.xml
 
       - name: Upload merged coverage report
         if: always()
@@ -713,7 +659,7 @@ jobs:
         uses: EnricoMi/publish-unit-test-result-action@v2.23.0
         if: always()
         with:
-          files: frontend/.vitest-reports/vitest-results.xml
+          files: frontend/vitest-results.xml
           github_token: ${{ secrets.GITHUB_TOKEN }}
           comment_title: "Frontend Test Results"
           check_name: "Frontend Test Results"

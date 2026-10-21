@@ -34,6 +34,9 @@ Navigate to the `frontend/` directory and use the following `npm` scripts:
 
 #### 1.1.2. Vitest Methodology (from original wiki)
 
+For controlled performance comparisons and the Vite+ test-report compatibility
+checks, see [Frontend test optimization compatibility with Vite+](Frontend-Test-VitePlus-Compatibility.md).
+
 *   **Unit Definition**: A unit is an isolated group of smaller items that interact (e.g., a React component with its internal logic and hooks).
 *   **Black Box Approach**: Test for expected output given specific input. Mock external dependencies (hooks, API calls via MSW) to isolate the component.
 *   **Coverage Goal**: Aim for high code coverage (statements, branches, functions, lines), ideally 100% for new code, as a general guideline.

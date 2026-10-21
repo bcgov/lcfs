@@ -103,7 +103,12 @@ export default defineConfig({
       'typescript/no-unused-expressions': 'off'
     },
     categories: { correctness: 'error' },
-    options: { typeAware: true, typeCheck: true, maxWarnings: 0 }
+    options: {
+      typeAware: true,
+      typeCheck: true,
+      maxWarnings: 0,
+      reportUnusedDisableDirectives: 'warn'
+    }
   },
   fmt: {
     singleQuote: true,
