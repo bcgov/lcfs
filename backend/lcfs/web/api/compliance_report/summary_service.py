@@ -21,6 +21,7 @@ from lcfs.web.api.compliance_report.constants import (
     LOW_CARBON_FUEL_TARGET_DESCRIPTIONS,
     NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS,
     FORMATS,
+    PREHISTORIC_REPORT_CUTOFF_YEAR,
     get_low_carbon_penalty_rate,
 )
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
@@ -183,6 +184,13 @@ class ComplianceReportSummaryService:
         if not isinstance(report_version, int) or report_version <= 0:
             return
         if not compliance_report.compliance_report_group_uuid:
+            return
+        # Prehistoric summaries store the assessed balance in Line 20 only;
+        # recomputing it from Lines 18/19 would zero it.
+        if (
+            int(compliance_report.compliance_period.description)
+            < PREHISTORIC_REPORT_CUTOFF_YEAR
+        ):
             return
 
         assessed_report = await self.cr_repo.get_prior_assessed_compliance_report_in_group(

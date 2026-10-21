@@ -111,6 +111,11 @@ NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS = {
 
 PRESCRIBED_PENALTY_RATE = {"gasoline": 0.3, "diesel": 0.45, "jet_fuel": 0.5}
 
+# Compliance years before this predate TFRS reporting. Those "prehistoric"
+# reports were loaded from historical records with the net assessed balance in
+# Line 20 only, so their locked summaries are final and are never recomputed.
+PREHISTORIC_REPORT_CUTOFF_YEAR = 2019
+
 # Low carbon fuel target non-compliance penalty rates ($ CAD per unit)
 # $200/unit for compliance periods 2022 and prior
 # $600/unit for compliance periods 2023 and onward

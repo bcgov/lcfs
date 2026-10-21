@@ -3432,6 +3432,60 @@ async def test_locked_supplemental_normalization_skips_flush_when_already_correc
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize(
+    "compliance_year, normalized",
+    [("2017", False), ("2018", False), ("2019", True)],
+)
+async def test_locked_supplemental_normalization_skips_prehistoric_reports(
+    compliance_report_summary_service,
+    mock_repo,
+    mock_trxn_repo,
+    compliance_year,
+    normalized,
+):
+    """
+    Pre-2019 (prehistoric) reports store the assessed balance in Line 20 only.
+    Viewing a locked supplemental whose original was never assessed must not
+    recompute Line 20 from Lines 18/19 and persist zero.
+    """
+    summary = make_summary(locked=True, line18=0, line19=0, line20=-500)
+    summary.summary_id = 1
+    summary.compliance_report_id = 101
+    summary.line_17_non_banked_units_used = 0
+    summary.line_22_compliance_units_issued = 0
+
+    report = make_report(1, ComplianceReportStatusEnum.Assessed, compliance_year)
+    report.summary = summary
+
+    mock_repo.get_compliance_report_by_id = AsyncMock(return_value=report)
+    mock_repo.get_prior_assessed_compliance_report_in_group = AsyncMock(
+        return_value=None
+    )
+    mock_trxn_repo.get_prior_group_adjustments_excluded_from_line_17 = AsyncMock(
+        return_value=0
+    )
+
+    result = (
+        await compliance_report_summary_service.calculate_compliance_report_summary(
+            report_id=101
+        )
+    )
+
+    line_values = _get_line_values(result.low_carbon_fuel_target_summary)
+    db = compliance_report_summary_service.repo.db
+    if normalized:
+        assert line_values[20] == 0
+        assert summary.line_20_surplus_deficit_units == 0
+        db.flush.assert_awaited()
+    else:
+        assert line_values[20] == -500
+        assert summary.line_20_surplus_deficit_units == -500
+        mock_repo.get_prior_assessed_compliance_report_in_group.assert_not_awaited()
+        db.add.assert_not_called()
+        db.flush.assert_not_awaited()
+
+
+@pytest.mark.anyio
 async def test_line_15_16_uses_assessed_report_values(
     compliance_report_summary_service,
     mock_repo,
