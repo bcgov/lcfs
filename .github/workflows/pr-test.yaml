@@ -442,46 +442,31 @@ jobs:
           sparse-checkout: |
             frontend
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v6.3.0
+      - name: Set up frontend toolchain and dependencies
+        uses: voidzero-dev/setup-vp@68f39c78aaf39be468cabd2afb09c162574c84af # v1.21.2
         with:
-          node-version-file: frontend/.nvmrc
-
-      - name: Cache node_modules
-        uses: actions/cache@v5.0.4
-        with:
-          path: frontend/node_modules
-          key: ${{ runner.os }}-node-modules-v2-${{ hashFiles('frontend/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-modules-v2-
-
-      - name: Install frontend dependencies
-        run: |
-          cd frontend
-          npm ci --prefer-offline --no-audit --no-fund
+          working-directory: frontend
+          version-file: package.json
+          node-version-file: .nvmrc
+          cache: true
+          run-install: |
+            args: ['--frozen-lockfile', '--prefer-offline']
+        env:
+          NPM_CONFIG_AUDIT: "false"
+          NPM_CONFIG_FUND: "false"
 
       - name: Check frontend
         run: |
           cd frontend
           npm run check
 
-      # - name: Type Check Frontend (parallel)
-      #   run: |
-      #     cd frontend
-      #     npm run type-check &
-      #     TYPE_CHECK_PID=$!
-      #     wait $TYPE_CHECK_PID
-
       - name: Cache node_modules for test shards
-        # Save-only on purpose. Restoring here (via restore-keys) could pull a
-        # cache built for a different lockfile and overwrite the node_modules we
-        # just installed with `npm ci`, making the shards run a mismatched
-        # dependency version (e.g. a stale Vitest). The `-v2-` salt bypasses
-        # previously poisoned caches.
+        # Save the checked dependencies for workers. Never restore a cache over
+        # the fresh frozen-lockfile install. Workers use the same exact key.
         uses: actions/cache/save@v5.0.4
         with:
           path: frontend/node_modules
-          key: ${{ runner.os }}-node-modules-shared-v2-${{ hashFiles('frontend/package-lock.json') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-node-modules-shared-v3-${{ hashFiles('frontend/package-lock.json', 'frontend/.nvmrc') }}
 
       - name: Mark setup as complete
         id: setup-complete
@@ -544,13 +529,12 @@ jobs:
 
       - name: Restore node_modules cache
         id: cache-restore
-        # Restore-only with an exact (salted) key: only reuse a cache built for
-        # this exact lockfile. No restore-keys, so a stale cache can never be
-        # partially restored; on a miss the fallback step below runs `npm ci`.
+        # Restore only the exact lockfile and Node version, with no fallback
+        # keys. A cache miss runs the frozen-lockfile npm ci fallback below.
         uses: actions/cache/restore@v5.0.4
         with:
           path: frontend/node_modules
-          key: ${{ runner.os }}-node-modules-shared-v2-${{ hashFiles('frontend/package-lock.json') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-node-modules-shared-v3-${{ hashFiles('frontend/package-lock.json', 'frontend/.nvmrc') }}
 
       - name: Install frontend dependencies (fallback)
         if: steps.cache-restore.outputs.cache-hit != 'true'
@@ -608,20 +592,18 @@ jobs:
           sparse-checkout: |
             frontend
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v6.3.0
+      - name: Set up frontend toolchain and dependencies
+        uses: voidzero-dev/setup-vp@68f39c78aaf39be468cabd2afb09c162574c84af # v1.21.2
         with:
-          node-version-file: frontend/.nvmrc
-
-      # NOTE: previously this step did `npm install vitest@$VITEST_VERSION --no-save`,
-      # which re-resolved vitest to the latest matching patch (e.g. 3.2.6) while
-      # @vitest/ui / @vitest/coverage-v8 stayed at 3.2.4, producing an ERESOLVE
-      # peer-dependency conflict and failing the publish job. Using `npm ci`
-      # installs the exact, mutually compatible versions from package-lock.json.
-      - name: Install frontend dependencies
-        run: |
-          cd frontend
-          npm ci --prefer-offline --no-audit --no-fund
+          working-directory: frontend
+          version-file: package.json
+          node-version-file: .nvmrc
+          cache: true
+          run-install: |
+            args: ['--frozen-lockfile', '--prefer-offline']
+        env:
+          NPM_CONFIG_AUDIT: "false"
+          NPM_CONFIG_FUND: "false"
 
       - name: Download blob reports from GitHub Actions Artifacts
         uses: actions/download-artifact@v8.0.1
@@ -685,9 +667,11 @@ jobs:
           fi
 
       - name: Send custom Teams notification
+        env:
+          PR_TITLE_RAW: ${{ github.event.pull_request.title }}
+          PR_BRANCH: ${{ github.head_ref }}
         run: |
           # Replace double quotes with single quotes in PR title to prevent JSON issues
-          PR_TITLE_RAW="${{ github.event.pull_request.title }}"
           PR_TITLE="${PR_TITLE_RAW//\"/\'}"
           PR_URL="${{ github.event.pull_request.html_url }}"
           REPO="${{ github.repository }}"
@@ -715,7 +699,7 @@ jobs:
                 "facts": [
                   { "name": "Repository", "value": "$REPO" },
                   { "name": "PR Title", "value": "$PR_TITLE" },
-                  { "name": "Branch", "value": "${{ github.head_ref }}" },
+                  { "name": "Branch", "value": "$PR_BRANCH" },
                   { "name": "Commit", "value": "$COMMIT_SHA" },
                 ],
                 "text": "$MESSAGE",

@@ -371,7 +371,46 @@ tradeoff depends on cache-hit frequency, and these three-sample medians remain
 subject to hosted-runner and network variation. Sample ranges overlap, so the
 measurements do not establish a consistent performance advantage across runs.
 
-Production setup was left unchanged. The benchmark ran on a temporary branch;
+Production setup was left unchanged during the comparison. The benchmark ran on a temporary branch;
 its workflow and raw measurements are retained locally under
 `.paseo/benchmarks/issue-5100/ci-setup/`. No ongoing benchmark tooling is included
 in the application PR.
+
+
+## Adopted CI setup
+
+After reviewing the hosted measurements, `setup-vp` was adopted on the #5100
+branch to simplify setup and maintenance. This decision does not claim a
+consistent performance improvement across cache states.
+
+The frontend setup jobs in `pr-test.yaml`, `test-ci.yaml`, and `prod-ci.yaml`, plus
+PR report publishing, use `voidzero-dev/setup-vp` v1.21.2 pinned to
+`68f39c78aaf39be468cabd2afb09c162574c84af`. The shared recipe is:
+
+```yaml
+- uses: voidzero-dev/setup-vp@68f39c78aaf39be468cabd2afb09c162574c84af # v1.21.2
+  with:
+    working-directory: frontend
+    version-file: package.json
+    node-version-file: .nvmrc
+    cache: true
+    run-install: |
+      args: ['--frozen-lockfile', '--prefer-offline']
+  env:
+    NPM_CONFIG_AUDIT: "false"
+    NPM_CONFIG_FUND: "false"
+```
+
+Vite+ remains pinned by the existing manifest and lockfile rather than duplicating
+its version across workflows. The action manages the package-manager data cache
+and uses the selected Node runtime's bundled npm for this unpinned npm project.
+`npm run check` remains the required zero-warning/error quality gate.
+
+The separate save-only `node_modules` cache is retained for the 32 test workers.
+Its `v3` key includes OS, architecture, `frontend/package-lock.json`, and
+`frontend/.nvmrc`. Workers keep their Node-only setup and exact restore, avoiding
+a global toolchain install and dependency install in every shard. If restoration
+misses, the existing `npm ci --prefer-offline --no-audit --no-fund` fallback
+installs the pinned dependencies. No fallback restore key can overwrite the
+fresh install in the setup job. Unrelated Node utility jobs and Cypress's own
+installation flow retain their existing setup.
