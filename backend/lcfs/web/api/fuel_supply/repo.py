@@ -1,7 +1,7 @@
 import structlog
 from datetime import datetime
 from fastapi import Depends
-from sqlalchemy import and_, or_, select, delete, func, cast, String
+from sqlalchemy import and_, or_, select, delete, func, cast, String, Date
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased, contains_eager, joinedload
 from typing import List, Optional, Sequence, Any
@@ -12,6 +12,9 @@ from lcfs.db.models.compliance import (
     CompliancePeriod,
     FuelSupply,
     ComplianceReport,
+)
+from lcfs.db.models.compliance.ComplianceReport import (
+    QuantityUnitsEnum as FuelSupplyUnitsEnum,
 )
 from lcfs.db.models.fuel import (
     CategoryCarbonIntensity,
@@ -29,6 +32,7 @@ from lcfs.db.models.fuel import (
     UnitOfMeasure,
     EndUseType,
 )
+from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 from lcfs.utils.constants import LCFS_Constants
 from lcfs.web.api.base import PaginationRequestSchema, camel_to_snake
 from lcfs.web.api.fuel_supply.schema import FuelSupplyCreateUpdateSchema, ModeEnum
@@ -36,6 +40,46 @@ from lcfs.web.api.versioning_query_helper import VersioningQueryHelper
 from lcfs.web.core.decorators import repo_handler
 
 logger = structlog.get_logger(__name__)
+
+LIQUID_TARGET_FUEL_CATEGORIES = ("Gasoline", "Diesel", "Jet fuel")
+RENEWABLE_LIQUID_FUEL_CATEGORY_LABELS = {
+    "Gasoline": "Renewable gasoline",
+    "Diesel": "Renewable diesel",
+    "Jet fuel": "Renewable jet fuel",
+}
+
+
+def _normalized_supply_history_fuel_type(fuel_type_name):
+    """
+    Petroleum and fossil-derived labels represent the same historical supply
+    type across the 2023 terminology transition.
+    """
+    return LCFS_Constants.LEGACY_FUEL_TYPE_EQUIVALENTS.get(
+        fuel_type_name, fuel_type_name
+    )
+
+
+def _supply_history_fossil_derived(fuel_type):
+    fuel_type_name = getattr(fuel_type, "fuel_type", None)
+    return bool(getattr(fuel_type, "fossil_derived", False)) or (
+        fuel_type_name in LCFS_Constants.LEGACY_FUEL_TYPE_EQUIVALENTS
+    )
+
+
+def _fuel_type_filter(filter_value: str):
+    # Match either side of a legacy/current pair so filtering by either
+    # terminology keeps the continuous history across the 2024 transition.
+    filter_text = filter_value.lower()
+    equivalent_names = {
+        name
+        for legacy, current in LCFS_Constants.LEGACY_FUEL_TYPE_EQUIVALENTS.items()
+        if filter_text in legacy.lower() or filter_text in current.lower()
+        for name in (legacy, current)
+    }
+    condition = FuelType.fuel_type.ilike(f"%{filter_value}%")
+    if equivalent_names:
+        condition = or_(condition, FuelType.fuel_type.in_(equivalent_names))
+    return condition
 
 
 def _get_filter_values(filter_item):
@@ -49,6 +93,61 @@ def _get_filter_values(filter_item):
     if filter_value not in (None, ""):
         return [str(filter_value)]
     return []
+
+
+def _is_litres_unit(unit):
+    if unit is None:
+        return False
+    unit_name = getattr(unit, "name", None)
+    unit_value = getattr(unit, "value", None)
+    return unit_name == "Litres" or unit_value == "L" or unit == "Litres"
+
+
+def _get_renewable_liquid_fuel_group(fuel_supply):
+    fuel_category = getattr(
+        getattr(fuel_supply, "fuel_category", None), "category", None
+    )
+    if fuel_category not in LIQUID_TARGET_FUEL_CATEGORIES:
+        return None
+
+    fuel_type = getattr(fuel_supply, "fuel_type", None)
+    if not _is_litres_unit(getattr(fuel_supply, "units", None)):
+        return None
+
+    if bool(getattr(fuel_type, "renewable", False)):
+        return "Renewable"
+    return "Non-renewable"
+
+
+def _get_renewable_liquid_fuel_category_label(fuel_supply):
+    fuel_category = getattr(
+        getattr(fuel_supply, "fuel_category", None), "category", None
+    )
+    if fuel_category not in LIQUID_TARGET_FUEL_CATEGORIES:
+        return None
+
+    fuel_type = getattr(fuel_supply, "fuel_type", None)
+    if not _is_litres_unit(getattr(fuel_supply, "units", None)):
+        return None
+
+    if bool(getattr(fuel_type, "renewable", False)):
+        return RENEWABLE_LIQUID_FUEL_CATEGORY_LABELS[fuel_category]
+    return f"Non-renewable {fuel_category.lower()}"
+
+
+def _vancouver_date_field(field):
+    return cast(func.timezone("America/Vancouver", field), Date)
+
+
+def _date_filter_values(filter_item):
+    values = []
+    date_from = getattr(filter_item, "date_from", None)
+    date_to = getattr(filter_item, "date_to", None)
+    if date_from:
+        values.append(str(date_from)[:10])
+    if date_to:
+        values.append(str(date_to)[:10])
+    return values
 
 
 def _scalar_reference_options(fuel_category_loader, fuel_type_loader):
@@ -694,17 +793,44 @@ class FuelSupplyRepository:
             delete(FuelSupply).where(FuelSupply.fuel_supply_id == fuel_supply_id)
         )
 
-    @repo_handler
-    async def get_organization_fuel_supply_paginated(
-        self, organization_id: int, pagination: PaginationRequestSchema
+    def _organization_effective_fuel_supply_query(
+        self, organization_id: int, include_fuel_code_prefix: bool = False
     ):
         """
-        Get paginated fuel supply records for an organization across all compliance reports.
-        Returns FuelSupply objects with relationships loaded.
+        Base select for an organization's Supply History across every one of
+        its compliance reports, with the row's reference data eager-loaded.
+
+        A supplemental report re-versions each schedule row it touches under
+        the same ``group_uuid``, so the naive "all CREATE/UPDATE rows for the
+        org" query returns the original report's row *and* the supplemental's
+        row and the Supply History tab double counts the volume (issue #5045).
+        Keep only the latest version of each ``group_uuid`` — scoped to the
+        organization's reports — and drop groups whose latest version is a
+        DELETE, mirroring ``get_effective_fuel_supplies`` for a single chain.
         """
-        # Build base query with eager loading of relationships
-        query = (
+        organization_report_ids = select(ComplianceReport.compliance_report_id).where(
+            ComplianceReport.organization_id == organization_id
+        )
+        latest_version_subq = VersioningQueryHelper.latest_version_subquery(
+            FuelSupply,
+            version_label="max_version",
+            where_clauses=[
+                FuelSupply.compliance_report_id.in_(organization_report_ids)
+            ],
+        )
+        fuel_code_loader = contains_eager(FuelSupply.fuel_code)
+        if include_fuel_code_prefix:
+            fuel_code_loader = fuel_code_loader.joinedload(FuelCode.fuel_code_prefix)
+
+        return (
             select(FuelSupply)
+            .join(
+                latest_version_subq,
+                and_(
+                    FuelSupply.group_uuid == latest_version_subq.c.group_uuid,
+                    FuelSupply.version == latest_version_subq.c.max_version,
+                ),
+            )
             .join(
                 ComplianceReport,
                 FuelSupply.compliance_report_id
@@ -735,7 +861,7 @@ class FuelSupplyRepository:
                     contains_eager(FuelSupply.fuel_type),
                 ),
                 contains_eager(FuelSupply.provision_of_the_act),
-                contains_eager(FuelSupply.fuel_code),
+                fuel_code_loader,
                 contains_eager(FuelSupply.compliance_report).contains_eager(
                     ComplianceReport.compliance_period
                 ),
@@ -748,14 +874,26 @@ class FuelSupplyRepository:
             )
         )
 
+    @repo_handler
+    async def get_organization_fuel_supply_paginated(
+        self, organization_id: int, pagination: PaginationRequestSchema
+    ):
+        """
+        Get paginated fuel supply records for an organization across all compliance reports.
+        Returns FuelSupply objects with relationships loaded.
+        """
+        # Effective (latest-version) rows only, with eager-loaded relationships
+        query = self._organization_effective_fuel_supply_query(organization_id)
+
         # Apply filters if provided
         if pagination.filters:
             for filter_item in pagination.filters:
                 field = camel_to_snake(getattr(filter_item, "field", "") or "")
                 filter_value = getattr(filter_item, "filter", None)
                 filter_values = _get_filter_values(filter_item)
+                date_values = _date_filter_values(filter_item)
 
-                if not filter_value and not filter_values:
+                if not filter_value and not filter_values and not date_values:
                     continue
 
                 if field == "compliance_period":
@@ -768,7 +906,14 @@ class FuelSupplyRepository:
                             CompliancePeriod.description.ilike(f"%{filter_value}%")
                         )
                 elif field == "fuel_type":
-                    query = query.where(FuelType.fuel_type.ilike(f"%{filter_value}%"))
+                    query = query.where(
+                        or_(
+                            *[
+                                _fuel_type_filter(value)
+                                for value in (filter_values or [filter_value])
+                            ]
+                        )
+                    )
                 elif field == "fuel_category":
                     # category is a Postgres enum; cast to text so ILIKE works
                     # (otherwise the pattern is cast to the enum type and fails).
@@ -779,6 +924,26 @@ class FuelSupplyRepository:
                     query = query.where(
                         ProvisionOfTheAct.name.ilike(f"%{filter_value}%")
                     )
+                elif field == "report_submission_date":
+                    submission_date = _vancouver_date_field(
+                        ComplianceReport.update_date
+                    )
+                    filter_type = getattr(filter_item, "type", None)
+                    if filter_type == "inRange" and len(date_values) == 2:
+                        query = query.where(
+                            and_(
+                                submission_date >= func.date(date_values[0]),
+                                submission_date <= func.date(date_values[1]),
+                            )
+                        )
+                    elif date_values:
+                        date_value = func.date(date_values[0])
+                        if filter_type == "lessThan":
+                            query = query.where(submission_date < date_value)
+                        elif filter_type == "greaterThan":
+                            query = query.where(submission_date > date_value)
+                        else:
+                            query = query.where(submission_date == date_value)
                 elif field == "fuel_code":
                     # FuelCode.fuel_code is a Python property (prefix + suffix),
                     # not a column, so it can't be used in SQL. Join the prefix
@@ -846,49 +1011,9 @@ class FuelSupplyRepository:
         Get analytics data for organization fuel supply.
         Calculates totals by fuel type, year, category, and provision.
         """
-        # Base query - get all fuel supplies with relationships
-        query = (
-            select(FuelSupply)
-            .join(
-                ComplianceReport,
-                FuelSupply.compliance_report_id
-                == ComplianceReport.compliance_report_id,
-            )
-            .join(
-                CompliancePeriod,
-                ComplianceReport.compliance_period_id
-                == CompliancePeriod.compliance_period_id,
-            )
-            .outerjoin(FuelType, FuelSupply.fuel_type_id == FuelType.fuel_type_id)
-            .outerjoin(
-                FuelCategory,
-                FuelSupply.fuel_category_id == FuelCategory.fuel_category_id,
-            )
-            .outerjoin(
-                ProvisionOfTheAct,
-                FuelSupply.provision_of_the_act_id
-                == ProvisionOfTheAct.provision_of_the_act_id,
-            )
-            .outerjoin(FuelCode, FuelSupply.fuel_code_id == FuelCode.fuel_code_id)
-            .options(
-                *_scalar_reference_options(
-                    contains_eager(FuelSupply.fuel_category),
-                    contains_eager(FuelSupply.fuel_type),
-                ),
-                contains_eager(FuelSupply.provision_of_the_act),
-                contains_eager(FuelSupply.fuel_code).joinedload(
-                    FuelCode.fuel_code_prefix
-                ),
-                contains_eager(FuelSupply.compliance_report).contains_eager(
-                    ComplianceReport.compliance_period
-                ),
-            )
-            .where(ComplianceReport.organization_id == organization_id)
-            .where(
-                FuelSupply.action_type.in_(
-                    [ActionTypeEnum.CREATE, ActionTypeEnum.UPDATE]
-                )
-            )
+        # Effective (latest-version) rows only, with eager-loaded relationships
+        query = self._organization_effective_fuel_supply_query(
+            organization_id, include_fuel_code_prefix=True
         )
 
         selected_year_filter = None
@@ -913,7 +1038,14 @@ class FuelSupplyRepository:
                 if field == "compliance_period":
                     selected_year_filter = set(filter_values)
                 elif field == "fuel_type":
-                    query = query.where(FuelType.fuel_type.ilike(f"%{filter_value}%"))
+                    query = query.where(
+                        or_(
+                            *[
+                                _fuel_type_filter(value)
+                                for value in (filter_values or [filter_value])
+                            ]
+                        )
+                    )
                 elif field == "fuel_category":
                     # category is a Postgres enum; cast to text so ILIKE works
                     # (otherwise the pattern is cast to the enum type and fails).
@@ -968,6 +1100,12 @@ class FuelSupplyRepository:
                 return None
             return round(float(value), digits)
 
+        def _is_renewable_liquid(fuel_supply):
+            fuel_type = fuel_supply.fuel_type
+            return bool(fuel_type.renewable) and (
+                fuel_type.units == QuantityUnitsEnum.Litres
+            )
+
         # Calculate analytics from FuelSupply objects
         total_volume = 0
         fuel_types_set = set()
@@ -979,6 +1117,9 @@ class FuelSupplyRepository:
         total_by_fuel_code = {}
         yearly = {}
         yearly_fuel_type = {}
+        yearly_fuel_category = {}
+        yearly_renewable_liquid_fuel = {}
+        renewable_liquid_fuel_types_by_category = {}
 
         for fs in all_fuel_supplies:
             quantity = _quantity(fs)
@@ -992,14 +1133,18 @@ class FuelSupplyRepository:
                 total_volume += quantity
 
                 # Track unique fuel types
-                fuel_types_set.add(fs.fuel_type.fuel_type)
+                fuel_types_set.add(
+                    _normalized_supply_history_fuel_type(fs.fuel_type.fuel_type)
+                )
 
                 # Track submission dates
                 if fs.compliance_report.update_date:
                     submission_dates_set.add(fs.compliance_report.update_date)
 
                 # Aggregate by fuel type
-                fuel_type_name = fs.fuel_type.fuel_type
+                fuel_type_name = _normalized_supply_history_fuel_type(
+                    fs.fuel_type.fuel_type
+                )
                 total_by_fuel_type[fuel_type_name] = (
                     total_by_fuel_type.get(fuel_type_name, 0) + quantity
                 )
@@ -1035,9 +1180,12 @@ class FuelSupplyRepository:
                     "zero_or_negative_compliance_units": 0,
                     "positive_cu_volume": 0,
                     "non_positive_cu_volume": 0,
+                    "renewable_volume": 0,
                 },
             )
             yearly[year]["total_volume"] += quantity
+            if _is_renewable_liquid(fs):
+                yearly[year]["renewable_volume"] += quantity
             yearly[year]["total_compliance_units"] += compliance_units
             if compliance_units > 0:
                 yearly[year]["positive_compliance_units"] += compliance_units
@@ -1046,7 +1194,24 @@ class FuelSupplyRepository:
                 yearly[year]["zero_or_negative_compliance_units"] += compliance_units
                 yearly[year]["non_positive_cu_volume"] += quantity
 
-            fuel_type_name = fs.fuel_type.fuel_type
+            renewable_liquid_group = _get_renewable_liquid_fuel_group(fs)
+            if renewable_liquid_group:
+                yearly_renewable_liquid_fuel.setdefault(year, {})
+                yearly_renewable_liquid_fuel[year][renewable_liquid_group] = (
+                    yearly_renewable_liquid_fuel[year].get(renewable_liquid_group, 0)
+                    + quantity
+                )
+
+                if include_in_filtered_totals:
+                    fuel_type_label = getattr(fs.fuel_type, "fuel_type", None)
+                    category_label = _get_renewable_liquid_fuel_category_label(fs)
+                    if fuel_type_label and category_label:
+                        renewable_liquid_fuel_types_by_category.setdefault(
+                            category_label, set()
+                        ).add(fuel_type_label)
+
+            raw_fuel_type_name = fs.fuel_type.fuel_type
+            fuel_type_name = _normalized_supply_history_fuel_type(raw_fuel_type_name)
             yearly_fuel_type.setdefault(year, {})
             yearly_fuel_type[year].setdefault(
                 fuel_type_name,
@@ -1057,9 +1222,7 @@ class FuelSupplyRepository:
                     "total_compliance_units": 0,
                     "positive_compliance_units": False,
                     "renewable": bool(getattr(fs.fuel_type, "renewable", False)),
-                    "fossil_derived": bool(
-                        getattr(fs.fuel_type, "fossil_derived", False)
-                    ),
+                    "fossil_derived": _supply_history_fossil_derived(fs.fuel_type),
                 },
             )
             yearly_fuel_type[year][fuel_type_name]["total_volume"] += quantity
@@ -1070,6 +1233,20 @@ class FuelSupplyRepository:
                 yearly_fuel_type[year][fuel_type_name][
                     "positive_compliance_units"
                 ] = True
+
+            # Quantities are in mixed units (L, kg, kWh, m³) within a category,
+            # so energy (MJ) is the comparable total and volume only counts
+            # litre-denominated rows. fs.units is the row's reported unit (it
+            # is user-selected for "Other" fuel types); its enum is not the
+            # same class as fuel_type.units', so compare against the alias.
+            category_totals = yearly_fuel_category.setdefault(year, {}).setdefault(
+                category,
+                {"total_energy": 0, "total_litres": 0, "total_compliance_units": 0},
+            )
+            category_totals["total_energy"] += float(fs.energy or 0)
+            if fs.units == FuelSupplyUnitsEnum.Litres:
+                category_totals["total_litres"] += quantity
+            category_totals["total_compliance_units"] += compliance_units
 
         # Calculate most recent submission
         most_recent_submission = (
@@ -1105,14 +1282,8 @@ class FuelSupplyRepository:
         prior_volume = prior_year_data.get("total_volume", 0)
         current_compliance_units = current_year_data.get("total_compliance_units", 0)
         prior_compliance_units = prior_year_data.get("total_compliance_units", 0)
-        current_compliance_units_per_unit = (
-            _round(current_compliance_units / current_volume, 6)
-            if current_volume
-            else None
-        )
-        prior_compliance_units_per_unit = (
-            _round(prior_compliance_units / prior_volume, 6) if prior_volume else None
-        )
+        current_renewable_volume = current_year_data.get("renewable_volume", 0)
+        prior_renewable_volume = prior_year_data.get("renewable_volume", 0)
 
         fuel_type_yoy = []
         current_fuel_types = yearly_fuel_type.get(selected_year, {})
@@ -1170,8 +1341,9 @@ class FuelSupplyRepository:
         )
 
         compliance_unit_credit_debit_trend = []
-        compliance_units_per_unit_trend = []
         fuel_type_volume_trend = []
+        fuel_category_trend = []
+        renewable_liquid_fuel_volume_trend = []
         top_fuel_codes = [
             {"fuelCode": fuel_code, "totalVolume": volume}
             for fuel_code, volume in sorted(
@@ -1180,7 +1352,6 @@ class FuelSupplyRepository:
         ]
         for year in filtered_sorted_years:
             year_data = yearly[year]
-            year_volume = year_data["total_volume"]
             compliance_unit_credit_debit_trend.extend(
                 [
                     {
@@ -1199,16 +1370,6 @@ class FuelSupplyRepository:
                     },
                 ]
             )
-            compliance_units_per_unit_trend.append(
-                {
-                    "reportingYear": year,
-                    "complianceUnitsPerUnitSupply": (
-                        _round(year_data["total_compliance_units"] / year_volume, 6)
-                        if year_volume
-                        else None
-                    ),
-                }
-            )
             for fuel_type_name, fuel_type_data in yearly_fuel_type.get(
                 year, {}
             ).items():
@@ -1219,6 +1380,30 @@ class FuelSupplyRepository:
                         "fuelCategory": fuel_type_data.get("fuel_category"),
                         "totalVolume": fuel_type_data.get("total_volume", 0),
                         "fossilDerived": fuel_type_data.get("fossil_derived", False),
+                    }
+                )
+            for category, category_data in sorted(
+                yearly_fuel_category.get(year, {}).items()
+            ):
+                fuel_category_trend.append(
+                    {
+                        "reportingYear": year,
+                        "fuelCategory": category,
+                        "totalEnergy": category_data.get("total_energy", 0),
+                        "totalLitres": category_data.get("total_litres", 0),
+                        "totalComplianceUnits": _round(
+                            category_data.get("total_compliance_units", 0)
+                        ),
+                    }
+                )
+            for renewable_liquid_group in ("Renewable", "Non-renewable"):
+                renewable_liquid_fuel_volume_trend.append(
+                    {
+                        "reportingYear": year,
+                        "renewableCategory": renewable_liquid_group,
+                        "totalVolume": yearly_renewable_liquid_fuel.get(year, {}).get(
+                            renewable_liquid_group, 0
+                        ),
                     }
                 )
 
@@ -1250,17 +1435,17 @@ class FuelSupplyRepository:
                 "complianceUnitsPctChangeYoy": _pct_change(
                     current_compliance_units, prior_compliance_units
                 ),
-                "complianceUnitsPerUnitSupply": current_compliance_units_per_unit,
-                "priorYearComplianceUnitsPerUnitSupply": prior_compliance_units_per_unit,
-                "complianceUnitsPerUnitSupplyChange": (
-                    _round(
-                        current_compliance_units_per_unit
-                        - prior_compliance_units_per_unit,
-                        6,
-                    )
-                    if current_compliance_units_per_unit is not None
-                    and prior_compliance_units_per_unit is not None
+                "totalRenewableVolume": current_renewable_volume,
+                "priorYearRenewableVolume": (
+                    prior_renewable_volume if prior_year else None
+                ),
+                "renewableVolumeChange": (
+                    current_renewable_volume - prior_renewable_volume
+                    if prior_year
                     else None
+                ),
+                "renewableVolumePctChangeYoy": _pct_change(
+                    current_renewable_volume, prior_renewable_volume
                 ),
                 "negativeYoyFuelTypeCount": negative_yoy_count,
                 "newFuelTypeCount": len(new_fuel_types),
@@ -1269,7 +1454,14 @@ class FuelSupplyRepository:
             },
             "fuel_type_yoy": fuel_type_yoy,
             "compliance_unit_credit_debit_trend": compliance_unit_credit_debit_trend,
-            "compliance_units_per_unit_trend": compliance_units_per_unit_trend,
             "fuel_type_volume_trend": fuel_type_volume_trend,
+            "fuel_category_trend": fuel_category_trend,
+            "renewable_liquid_fuel_volume_trend": renewable_liquid_fuel_volume_trend,
+            "renewable_liquid_fuel_types_by_category": {
+                category: sorted(fuel_types)
+                for category, fuel_types in sorted(
+                    renewable_liquid_fuel_types_by_category.items()
+                )
+            },
             "top_fuel_codes": top_fuel_codes,
         }

@@ -2,7 +2,7 @@ import { act, render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
-import { ThemeProvider } from '@mui/material'
+import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import theme from '@/themes'
 import { AutomaticPenaltyLogGrid, PenaltyHistoryGrid } from '../PenaltyGrids'
 
@@ -89,7 +89,9 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 
 // Mock Role component
 vi.mock('@/components/Role', () => ({
-  Role: ({ children, roles }) => (
+  Role: ({
+  children
+}) => (
     <div data-testid="role-wrapper">{children}</div>
   )
 }))

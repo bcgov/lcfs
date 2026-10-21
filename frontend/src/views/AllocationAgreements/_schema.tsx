@@ -1,13 +1,10 @@
-// @ts-nocheck
-import type { ColDef } from '@ag-grid-community/core'
+import type { ColDef } from 'ag-grid-community'
 import type { GridErrors, GridWarnings, OptionsData } from '@/types/schema'
 import { actions, validation } from '@/components/BCDataGrid/columns'
-import {
-  AsyncSuggestionEditor,
-  AutocompleteCellEditor,
-  NumberEditor,
-  RequiredHeader
-} from '@/components/BCDataGrid/components'
+import { AsyncSuggestionEditor } from '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor'
+import { AutocompleteCellEditor } from '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor'
+import { NumberEditor } from '@/components/BCDataGrid/components/Editors/NumberEditor'
+import { RequiredHeader } from '@/components/BCDataGrid/components/Renderers/RequiredHeader'
 import BCTypography from '@/components/BCTypography'
 import { apiRoutes } from '@/constants/routes'
 import { ACTION_STATUS_MAP } from '@/constants/schemaConstants'
@@ -95,7 +92,7 @@ export const allocationAgreementColDefs = (
       suppressKeyboardEvent,
       minWidth: 175,
       editable: true,
-      tooltipValueGetter: (p) =>
+      tooltipValueGetter: () =>
         'Select whether the fuel was purchased or sold under the allocation agreement'
     },
     {
@@ -150,7 +147,7 @@ export const allocationAgreementColDefs = (
 
         return true
       },
-      tooltipValueGetter: (p) =>
+      tooltipValueGetter: () =>
         'Enter or select the legal name of the trading partner'
     },
     {
@@ -227,7 +224,7 @@ export const allocationAgreementColDefs = (
         }
         return true
       },
-      tooltipValueGetter: (p) => 'Select the fuel type from the list'
+      tooltipValueGetter: () => 'Select the fuel type from the list'
     },
     {
       field: 'fuelTypeOther',
@@ -237,7 +234,9 @@ export const allocationAgreementColDefs = (
       cellEditor: AsyncSuggestionEditor,
       cellEditorParams: (params) => ({
         queryKey: 'fuel-type-others',
-        queryFn: async ({ queryKey, client }) => {
+        queryFn: async ({
+  client
+}) => {
           const path = apiRoutes.getFuelTypeOthers
 
           const response = await client.get(path)
@@ -344,7 +343,7 @@ export const allocationAgreementColDefs = (
         return true
       },
       editable: true,
-      tooltipValueGetter: (p) =>
+      tooltipValueGetter: () =>
         'Select the method for determining carbon intensity'
     },
     {
@@ -432,7 +431,7 @@ export const allocationAgreementColDefs = (
         }
         return true
       },
-      tooltipValueGetter: (p) => 'Select the approved fuel code'
+      tooltipValueGetter: () => 'Select the approved fuel code'
     },
     {
       field: 'ciOfFuel',

@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useState, useMemo } from 'react'
+import { useMemo } from 'react'
 import BCTypography from '@/components/BCTypography/index.jsx'
 import { StyledListItem } from '@/components/StyledListItem.jsx'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { useCurrentUser } from '@/hooks/useCurrentUser.js'
 import { timezoneFormatter, currencyFormatter } from '@/utils/formatters'
-import { ExpandMore } from '@mui/icons-material'
-import { List, ListItemText, styled } from '@mui/material'
+import ExpandMore from '@mui/icons-material/ExpandMore'
+import List from '@mui/material/List'
+import ListItemText from '@mui/material/ListItemText'
+import { styled } from '@mui/material/styles'
 import MuiAccordion from '@mui/material/Accordion'
 import MuiAccordionDetails from '@mui/material/AccordionDetails'
 import MuiAccordionSummary, {
@@ -49,9 +51,7 @@ const AccordionDetails = styled(MuiAccordionDetails)(() => ({
 export const HistoryCard = ({
   report,
   defaultExpanded = false,
-  assessedMessage = undefined,
-  reportVersion = 0,
-  currentStatus = null
+  assessedMessage = undefined
 }) => {
   const { data: currentUser, hasRoles } = useCurrentUser()
   const isGovernmentUser = currentUser?.isGovernmentUser
@@ -61,7 +61,6 @@ export const HistoryCard = ({
   const isCurrentAssessed =
     report.currentStatus?.status === COMPLIANCE_REPORT_STATUSES.ASSESSED ||
     report.currentStatus?.status === COMPLIANCE_REPORT_STATUSES.EXEMPTED
-  const isSupplementalReport = reportVersion > 0
 
   // User permission checks
   const canEditAssessmentStatement = useMemo(() => {
@@ -182,9 +181,7 @@ export const HistoryCard = ({
               {t('report:assessmentLn1', {
                 name: report.organization.name,
                 hasMet:
-                  renewablePenaltyAmountRaw <= 0
-                    ? 'has met'
-                    : 'has not met'
+                  renewablePenaltyAmountRaw <= 0 ? 'has met' : 'has not met'
               })}
             </ListItemText>
             {renewableTargetNotMet && (
@@ -210,10 +207,7 @@ export const HistoryCard = ({
             </strong>
             {t('report:assessmentLn2', {
               name: report.organization.name,
-              hasMet:
-                lowCarbonPenaltyAmountRaw <= 0
-                  ? 'has met'
-                  : 'has not met'
+              hasMet: lowCarbonPenaltyAmountRaw <= 0 ? 'has met' : 'has not met'
             })}
           </ListItemText>
           {lowCarbonTargetNotMet && (

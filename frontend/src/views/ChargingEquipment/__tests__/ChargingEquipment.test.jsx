@@ -2,8 +2,8 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ThemeProvider } from '@mui/material'
-import { forwardRef } from 'react'
+import ThemeProvider from '@mui/material/styles/ThemeProvider'
+import 'react'
 import theme from '@/themes'
 import { ChargingEquipment } from '../ChargingEquipment'
 
@@ -79,23 +79,23 @@ vi.mock('@/components/ClearFiltersButton', () => ({
 }))
 
 vi.mock('@/components/Role', () => ({
-  Role: ({ children, roles }) => (
+  Role: ({
+  children
+}) => (
     <div data-test="role-component">{children}</div>
   )
 }))
 
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: ({
-    rowData,
-    queryData,
-    onRowClicked,
-    onSelectionChanged,
-    gridRef,
-    highlightedRowId,
-    onPaginationChange,
-    onSortChanged,
-    onFilterChanged
-  }) => {
+  rowData,
+  queryData,
+  onRowClicked,
+  onSelectionChanged,
+  gridRef,
+  highlightedRowId,
+  onPaginationChange
+}) => {
     const items = rowData ?? queryData?.data?.items ?? []
 
     if (gridRef) {
@@ -105,7 +105,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
           setFilterModel: vi.fn(),
           getFilterModel: vi.fn(() => ({})),
           forEachNode: (callback) =>
-            items.forEach((row, index) =>
+            items.forEach((row) =>
               callback({
                 data: row,
                 setSelected: vi.fn(),

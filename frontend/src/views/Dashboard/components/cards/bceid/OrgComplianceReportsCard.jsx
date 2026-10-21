@@ -1,7 +1,9 @@
-import React from 'react'
+import 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { Stack, List, ListItemButton } from '@mui/material'
+import Stack from '@mui/material/Stack'
+import List from '@mui/material/List'
+import ListItemButton from '@mui/material/ListItemButton'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
@@ -29,7 +31,9 @@ const CountDisplay = ({ count }) => (
 const OrgComplianceReportsCard = () => {
   const { t } = useTranslation(['dashboard'])
   const navigate = useNavigate()
-  const { data: orgData, isLoading: orgLoading } = useOrganization()
+  const {
+  data: orgData
+} = useOrganization()
   const { data: counts, isLoading } = useOrgComplianceReportCounts()
 
   const handleNavigation = (route, status) => {

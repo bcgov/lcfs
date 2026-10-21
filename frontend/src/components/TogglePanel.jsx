@@ -1,4 +1,5 @@
-import { Box, FormControlLabel } from '@mui/material'
+import Box from '@mui/material/Box'
+import FormControlLabel from '@mui/material/FormControlLabel'
 import { useEffect, useState } from 'react'
 import Switch from '@mui/material/Switch'
 

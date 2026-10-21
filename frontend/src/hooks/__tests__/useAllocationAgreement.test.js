@@ -1,5 +1,5 @@
-import { renderHook, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { waitFor } from '@testing-library/react'
+import { beforeEach, describe, expect, vi } from 'vitest'
 import {
   useAllocationAgreementOptions,
   useGetAllocationAgreements,
@@ -12,7 +12,7 @@ import {
   useGetAllocationAgreementImportJobStatus
 } from '@/hooks/useAllocationAgreement'
 import { useApiService } from '@/services/useApiService'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('@/services/useApiService')
 
@@ -24,13 +24,16 @@ describe('useAllocationAgreementOptions', () => {
     vi.mocked(useApiService).mockReturnValue({ get: mockGet })
   })
 
-  it('should fetch allocation agreement options successfully', async () => {
+  test('should fetch allocation agreement options successfully', async ({
+    renderHook,
+    query
+  }) => {
     const mockData = { options: ['option1', 'option2'] }
     mockGet.mockResolvedValueOnce({ data: mockData })
 
     const { result } = renderHook(
       () => useAllocationAgreementOptions({ compliancePeriod: '2024' }),
-      { wrapper }
+      [query]
     )
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -41,21 +44,10 @@ describe('useAllocationAgreementOptions', () => {
     )
   })
 
-  it('should handle missing compliance period', () => {
-    const { result } = renderHook(() => useAllocationAgreementOptions({}), {
-      wrapper
-    })
-
-    expect(result.current.isLoading).toBe(false)
-    expect(result.current.isError).toBe(false)
-    expect(result.current.data).toBeUndefined()
-    expect(mockGet).not.toHaveBeenCalled()
-  })
-
-  it('should not fetch when compliance period is missing', () => {
+  test('should handle missing compliance period', ({ renderHook, query }) => {
     const { result } = renderHook(
-      () => useAllocationAgreementOptions({ compliancePeriod: null }),
-      { wrapper }
+      () => useAllocationAgreementOptions({}),
+      [query]
     )
 
     expect(result.current.isLoading).toBe(false)
@@ -64,7 +56,25 @@ describe('useAllocationAgreementOptions', () => {
     expect(mockGet).not.toHaveBeenCalled()
   })
 
-  it('should handle fetch errors when compliance period is provided', async () => {
+  test('should not fetch when compliance period is missing', ({
+    renderHook,
+    query
+  }) => {
+    const { result } = renderHook(
+      () => useAllocationAgreementOptions({ compliancePeriod: null }),
+      [query]
+    )
+
+    expect(result.current.isLoading).toBe(false)
+    expect(result.current.isError).toBe(false)
+    expect(result.current.data).toBeUndefined()
+    expect(mockGet).not.toHaveBeenCalled()
+  })
+
+  test('should handle fetch errors when compliance period is provided', async ({
+    renderHook,
+    query
+  }) => {
     const mockError = new Error('API Error')
     mockGet.mockRejectedValue(mockError)
 
@@ -74,7 +84,7 @@ describe('useAllocationAgreementOptions', () => {
           { compliancePeriod: '2024' },
           { retry: false }
         ),
-      { wrapper }
+      [query]
     )
 
     await waitFor(() => expect(result.current.isError).toBe(true), {
@@ -83,14 +93,14 @@ describe('useAllocationAgreementOptions', () => {
     expect(result.current.error).toEqual(mockError)
   })
 
-  it('should be disabled when enabled is false', () => {
+  test('should be disabled when enabled is false', ({ renderHook, query }) => {
     const { result } = renderHook(
       () =>
         useAllocationAgreementOptions(
           { compliancePeriod: '2024' },
           { enabled: false }
         ),
-      { wrapper }
+      [query]
     )
 
     expect(result.current.isLoading).toBe(false)
@@ -106,13 +116,16 @@ describe('useGetAllocationAgreements', () => {
     vi.mocked(useApiService).mockReturnValue({ post: mockPost })
   })
 
-  it('should fetch allocation agreements successfully', async () => {
+  test('should fetch allocation agreements successfully', async ({
+    renderHook,
+    query
+  }) => {
     const mockData = { agreements: [], totalCount: 0 }
     mockPost.mockResolvedValueOnce({ data: mockData })
 
     const { result } = renderHook(
       () => useGetAllocationAgreements('123', { page: 1, size: 10 }),
-      { wrapper }
+      [query]
     )
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -128,10 +141,13 @@ describe('useGetAllocationAgreements', () => {
     )
   })
 
-  it('should handle missing compliance report ID', () => {
+  test('should handle missing compliance report ID', ({
+    renderHook,
+    query
+  }) => {
     const { result } = renderHook(
       () => useGetAllocationAgreements(null, { page: 1, size: 10 }),
-      { wrapper }
+      [query]
     )
 
     expect(result.current.isLoading).toBe(false)
@@ -140,10 +156,13 @@ describe('useGetAllocationAgreements', () => {
     expect(mockPost).not.toHaveBeenCalled()
   })
 
-  it('should not fetch when compliance report ID is missing', () => {
+  test('should not fetch when compliance report ID is missing', ({
+    renderHook,
+    query
+  }) => {
     const { result } = renderHook(
       () => useGetAllocationAgreements(null, { page: 1, size: 10 }),
-      { wrapper }
+      [query]
     )
 
     expect(result.current.isLoading).toBe(false)
@@ -152,7 +171,10 @@ describe('useGetAllocationAgreements', () => {
     expect(mockPost).not.toHaveBeenCalled()
   })
 
-  it('should handle fetch errors when compliance report ID is provided', async () => {
+  test('should handle fetch errors when compliance report ID is provided', async ({
+    renderHook,
+    query
+  }) => {
     const mockError = new Error('API Error')
     mockPost.mockRejectedValue(mockError)
 
@@ -163,7 +185,7 @@ describe('useGetAllocationAgreements', () => {
           { page: 1, size: 10 },
           { retry: false }
         ),
-      { wrapper }
+      [query]
     )
 
     await waitFor(() => expect(result.current.isError).toBe(true), {
@@ -181,13 +203,16 @@ describe('useGetAllAllocationAgreements', () => {
     vi.mocked(useApiService).mockReturnValue({ post: mockPost })
   })
 
-  it('should fetch all allocation agreements successfully', async () => {
+  test('should fetch all allocation agreements successfully', async ({
+    renderHook,
+    query
+  }) => {
     const mockData = { agreements: [], totalCount: 0 }
     mockPost.mockResolvedValueOnce({ data: mockData })
 
     const { result } = renderHook(
       () => useGetAllAllocationAgreements('123', { page: 1, size: 10 }),
-      { wrapper }
+      [query]
     )
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -203,10 +228,13 @@ describe('useGetAllAllocationAgreements', () => {
     )
   })
 
-  it('should handle missing compliance report ID', () => {
+  test('should handle missing compliance report ID', ({
+    renderHook,
+    query
+  }) => {
     const { result } = renderHook(
       () => useGetAllAllocationAgreements(null, { page: 1, size: 10 }),
-      { wrapper }
+      [query]
     )
 
     expect(result.current.isLoading).toBe(false)
@@ -215,10 +243,13 @@ describe('useGetAllAllocationAgreements', () => {
     expect(mockPost).not.toHaveBeenCalled()
   })
 
-  it('should not fetch when compliance report ID is missing', () => {
+  test('should not fetch when compliance report ID is missing', ({
+    renderHook,
+    query
+  }) => {
     const { result } = renderHook(
       () => useGetAllAllocationAgreements(null, { page: 1, size: 10 }),
-      { wrapper }
+      [query]
     )
 
     expect(result.current.isLoading).toBe(false)
@@ -236,7 +267,10 @@ describe('useGetAllocationAgreementsList', () => {
     vi.mocked(useApiService).mockReturnValue({ post: mockPost })
   })
 
-  it('should fetch allocation agreements list successfully', async () => {
+  test('should fetch allocation agreements list successfully', async ({
+    renderHook,
+    query
+  }) => {
     const mockData = { agreements: [], totalCount: 0 }
     mockPost.mockResolvedValueOnce({ data: mockData })
 
@@ -246,7 +280,7 @@ describe('useGetAllocationAgreementsList', () => {
           { complianceReportId: '123' },
           { page: 1, size: 10 }
         ),
-      { wrapper }
+      [query]
     )
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -263,7 +297,7 @@ describe('useGetAllocationAgreementsList', () => {
     )
   })
 
-  it('should handle changelog parameter', async () => {
+  test('should handle changelog parameter', async ({ renderHook, query }) => {
     const mockData = { agreements: [], totalCount: 0 }
     mockPost.mockResolvedValueOnce({ data: mockData })
 
@@ -273,7 +307,7 @@ describe('useGetAllocationAgreementsList', () => {
           { complianceReportId: '123', changelog: true },
           { page: 1, size: 10 }
         ),
-      { wrapper }
+      [query]
     )
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -299,13 +333,16 @@ describe('useSaveAllocationAgreement', () => {
     vi.mocked(useApiService).mockReturnValue({ post: mockPost })
   })
 
-  it('should save allocation agreement successfully', async () => {
+  test('should save allocation agreement successfully', async ({
+    renderHook,
+    query
+  }) => {
     const mockData = { id: 1, success: true }
     mockPost.mockResolvedValueOnce({ data: mockData })
 
     const { result } = renderHook(
       () => useSaveAllocationAgreement({ complianceReportId: '123' }),
-      { wrapper }
+      [query]
     )
 
     const testData = { name: 'Test Agreement' }
@@ -322,10 +359,11 @@ describe('useSaveAllocationAgreement', () => {
     )
   })
 
-  it('should handle missing compliance report ID', async () => {
-    const { result } = renderHook(() => useSaveAllocationAgreement({}), {
-      wrapper
-    })
+  test('should handle missing compliance report ID', async ({
+    renderHook,
+    query
+  }) => {
+    const { result } = renderHook(() => useSaveAllocationAgreement({}), [query])
 
     const testData = { name: 'Test Agreement' }
     result.current.mutate(testData)
@@ -336,10 +374,10 @@ describe('useSaveAllocationAgreement', () => {
     )
   })
 
-  it('should handle missing data', async () => {
+  test('should handle missing data', async ({ renderHook, query }) => {
     const { result } = renderHook(
       () => useSaveAllocationAgreement({ complianceReportId: '123' }),
-      { wrapper }
+      [query]
     )
 
     result.current.mutate(null)
@@ -359,10 +397,13 @@ describe('useUpdateAllocationAgreement', () => {
     vi.mocked(useApiService).mockReturnValue({ put: mockPut })
   })
 
-  it('should provide mutation function for update operations', () => {
+  test('should provide mutation function for update operations', ({
+    renderHook,
+    query
+  }) => {
     const { result } = renderHook(
       () => useUpdateAllocationAgreement({ complianceReportId: '123' }),
-      { wrapper }
+      [query]
     )
 
     expect(result.current.mutate).toBeDefined()
@@ -370,13 +411,16 @@ describe('useUpdateAllocationAgreement', () => {
     expect(result.current.isIdle).toBe(true)
   })
 
-  it('should handle API errors in update operations', async () => {
+  test('should handle API errors in update operations', async ({
+    renderHook,
+    query
+  }) => {
     const mockError = new Error('Update failed')
     mockPut.mockRejectedValueOnce(mockError)
 
     const { result } = renderHook(
       () => useUpdateAllocationAgreement({ complianceReportId: '123' }),
-      { wrapper }
+      [query]
     )
 
     const testData = { id: '1', name: 'Updated Agreement' }
@@ -395,10 +439,13 @@ describe('useDeleteAllocationAgreement', () => {
     vi.mocked(useApiService).mockReturnValue({ delete: mockDelete })
   })
 
-  it('should provide mutation function for delete operations', () => {
+  test('should provide mutation function for delete operations', ({
+    renderHook,
+    query
+  }) => {
     const { result } = renderHook(
       () => useDeleteAllocationAgreement({ complianceReportId: '123' }),
-      { wrapper }
+      [query]
     )
 
     expect(result.current.mutate).toBeDefined()
@@ -406,13 +453,16 @@ describe('useDeleteAllocationAgreement', () => {
     expect(result.current.isIdle).toBe(true)
   })
 
-  it('should handle API errors in delete operations', async () => {
+  test('should handle API errors in delete operations', async ({
+    renderHook,
+    query
+  }) => {
     const mockError = new Error('Delete failed')
     mockDelete.mockRejectedValueOnce(mockError)
 
     const { result } = renderHook(
       () => useDeleteAllocationAgreement({ complianceReportId: '123' }),
-      { wrapper }
+      [query]
     )
 
     result.current.mutate('agreement-id-123')
@@ -430,23 +480,31 @@ describe('useImportAllocationAgreement', () => {
     vi.mocked(useApiService).mockReturnValue({ post: mockPost })
   })
 
-  it('should provide mutation function for import operations', () => {
-    const { result } = renderHook(() => useImportAllocationAgreement('123'), {
-      wrapper
-    })
+  test('should provide mutation function for import operations', ({
+    renderHook,
+    query
+  }) => {
+    const { result } = renderHook(
+      () => useImportAllocationAgreement('123'),
+      [query]
+    )
 
     expect(result.current.mutate).toBeDefined()
     expect(typeof result.current.mutate).toBe('function')
     expect(result.current.isIdle).toBe(true)
   })
 
-  it('should handle API errors in import operations', async () => {
+  test('should handle API errors in import operations', async ({
+    renderHook,
+    query
+  }) => {
     const mockError = new Error('Import failed')
     mockPost.mockRejectedValueOnce(mockError)
 
-    const { result } = renderHook(() => useImportAllocationAgreement('123'), {
-      wrapper
-    })
+    const { result } = renderHook(
+      () => useImportAllocationAgreement('123'),
+      [query]
+    )
 
     const file = new File(['test'], 'test.csv')
     result.current.mutate({ file, isOverwrite: false })
@@ -464,13 +522,16 @@ describe('useGetAllocationAgreementImportJobStatus', () => {
     vi.mocked(useApiService).mockReturnValue({ get: mockGet })
   })
 
-  it('should fetch job status successfully', async () => {
+  test('should fetch job status successfully', async ({
+    renderHook,
+    query
+  }) => {
     const mockData = { status: 'completed', progress: 100 }
     mockGet.mockResolvedValueOnce({ data: mockData })
 
     const { result } = renderHook(
       () => useGetAllocationAgreementImportJobStatus('job-123'),
-      { wrapper }
+      [query]
     )
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -479,24 +540,27 @@ describe('useGetAllocationAgreementImportJobStatus', () => {
     expect(mockGet).toHaveBeenCalledWith(expect.stringContaining('job-123'))
   })
 
-  it('should not fetch when job ID is missing', () => {
+  test('should not fetch when job ID is missing', ({ renderHook, query }) => {
     const { result } = renderHook(
       () => useGetAllocationAgreementImportJobStatus(null),
-      { wrapper }
+      [query]
     )
 
     expect(result.current.isLoading).toBe(false)
     expect(mockGet).not.toHaveBeenCalled()
   })
 
-  it('should handle fetch errors when job ID is provided', async () => {
+  test('should handle fetch errors when job ID is provided', async ({
+    renderHook,
+    query
+  }) => {
     const mockError = new Error('API Error')
     mockGet.mockRejectedValue(mockError)
 
     const { result } = renderHook(
       () =>
         useGetAllocationAgreementImportJobStatus('job-123', { retry: false }),
-      { wrapper }
+      [query]
     )
 
     await waitFor(() => expect(result.current.isError).toBe(true), {

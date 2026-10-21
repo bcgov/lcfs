@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, act } from '@testing-library/react'
-import { createPortal } from 'react-dom'
-import { useMap, Marker, Popup, TileLayer } from 'react-leaflet'
+import 'react-dom'
+import { useMap, Marker, TileLayer } from 'react-leaflet'
 import { Control, DomEvent, DomUtil } from 'leaflet'
-import { Paper, CircularProgress } from '@mui/material'
-import BCTypography from '@/components/BCTypography'
+import '@mui/material/Paper'
+import '@mui/material/CircularProgress'
+import '@/components/BCTypography'
 import {
   MapControl,
   MapBoundsHandler,
@@ -37,9 +38,12 @@ vi.mock('leaflet', () => ({
   }
 }))
 
-vi.mock('@mui/material', () => ({
-  Paper: ({ children }) => <div data-test="paper">{children}</div>,
-  CircularProgress: () => <div data-test="circular-progress" />
+vi.mock('@mui/material/Paper', () => ({
+    default: ({ children }) => <div data-test="paper">{children}</div>
+}))
+
+vi.mock('@mui/material/CircularProgress', () => ({
+    default: () => <div data-test="circular-progress" />
 }))
 
 vi.mock('@/components/BCTypography', () => ({
@@ -424,7 +428,7 @@ describe('MapComponents', () => {
         />
       )
 
-      expect(mockGeneratePopupContent).toHaveBeenCalledWith('coord1', mockGroupedLocations['coord1'])
+      expect(mockGeneratePopupContent).toHaveBeenCalledWith('coord1', mockGroupedLocations.coord1)
     })
 
     it('handles empty groupedLocations', () => {

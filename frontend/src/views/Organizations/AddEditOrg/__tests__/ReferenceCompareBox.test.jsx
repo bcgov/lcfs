@@ -1,6 +1,7 @@
-import { fireEvent, render, screen, waitFor, act } from '@testing-library/react'
-import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest'
-import { wrapper } from '@/tests/utils/wrapper'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { describe, expect, vi, beforeEach, afterAll } from 'vitest'
+import { test } from '@/tests/utils/fixtures'
 import ReferenceCompareBox from '../ReferenceCompareBox'
 
 // Mock clipboard API
@@ -19,9 +20,7 @@ const mockData = [
   { value: 'No label item' }
 ]
 
-const singleItemData = [
-  { label: 'Single Item', value: 'Single Value' }
-]
+const singleItemData = [{ label: 'Single Item', value: 'Single Value' }]
 
 describe('ReferenceCompareBox', () => {
   beforeEach(() => {
@@ -33,14 +32,13 @@ describe('ReferenceCompareBox', () => {
     mockConsoleError.mockRestore()
   })
 
-  it('renders with data items', () => {
+  test('renders with data items', ({ render }) => {
     render(
       <ReferenceCompareBox
         title="Reference Data"
         data={mockData}
         onDismiss={vi.fn()}
-      />,
-      { wrapper }
+      />
     )
 
     expect(screen.getByText('Test Company Ltd.')).toBeInTheDocument()
@@ -48,162 +46,198 @@ describe('ReferenceCompareBox', () => {
     expect(screen.getByText('No label item')).toBeInTheDocument()
   })
 
-  it('returns null when isDismissed is true', () => {
+  test('returns null when isDismissed is true', ({ render }) => {
     const { container } = render(
       <ReferenceCompareBox
         title="Reference Data"
         data={mockData}
         onDismiss={vi.fn()}
         isDismissed={true}
-      />,
-      { wrapper }
+      />
     )
 
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('calls onDismiss when close button is clicked', () => {
+  test('calls onDismiss when close button is clicked', ({ render }) => {
     const onDismiss = vi.fn()
     render(
       <ReferenceCompareBox
         title="Reference Data"
         data={mockData}
         onDismiss={onDismiss}
-      />,
-      { wrapper }
+      />
     )
 
     fireEvent.click(screen.getByLabelText('Dismiss reference'))
     expect(onDismiss).toHaveBeenCalled()
   })
 
-  it('copies text to clipboard when item is clicked', async () => {
+  test('copies text to clipboard when item is clicked', async ({ render }) => {
     render(
       <ReferenceCompareBox
         title="Reference Data"
         data={mockData}
         onDismiss={vi.fn()}
-      />,
-      { wrapper }
+      />
     )
 
     fireEvent.click(screen.getByText('Test Company Ltd.'))
-    
+
     await waitFor(() => {
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('Test Company Ltd.')
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+        'Test Company Ltd.'
+      )
     })
   })
 
-  it('shows copy button on hover and hides on mouse leave', () => {
+  test('supports keyboard focus and copies a row value with Enter and Space', async ({
+    render
+  }) => {
+    render(
+      <ReferenceCompareBox
+        title="Reference Data"
+        data={singleItemData}
+        onDismiss={vi.fn()}
+      />
+    )
+
+    const rowButton = screen.getByRole('button', {
+      name: 'Single Item: Single Value'
+    })
+
+    await userEvent.tab()
+    expect(rowButton).toHaveFocus()
+
+    await userEvent.keyboard('{Enter}')
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenNthCalledWith(
+        1,
+        'Single Value'
+      )
+    })
+
+    await userEvent.keyboard(' ')
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenNthCalledWith(
+        2,
+        'Single Value'
+      )
+    })
+  })
+
+  test('shows copy button on hover and hides on mouse leave', ({ render }) => {
     render(
       <ReferenceCompareBox
         title="Reference Data"
         data={mockData}
         onDismiss={vi.fn()}
-      />,
-      { wrapper }
+      />
     )
 
     const firstItem = screen.getByText('Test Company Ltd.').closest('div')
-    
+
     // Before hover, buttons should be hidden
-    let copyButtons = screen.queryAllByLabelText('Copy to clipboard')
+    const copyButtons = screen.queryAllByLabelText('Copy to clipboard')
     expect(copyButtons.length).toBeGreaterThanOrEqual(0)
-    
+
     fireEvent.mouseEnter(firstItem)
     fireEvent.mouseLeave(firstItem)
-    
+
     // Test passes if no error occurs
     expect(firstItem).toBeInTheDocument()
   })
 
-  it('handles clipboard write error gracefully', async () => {
-    navigator.clipboard.writeText.mockRejectedValueOnce(new Error('Clipboard failed'))
-    
+  test('handles clipboard write error gracefully', async ({ render }) => {
+    navigator.clipboard.writeText.mockRejectedValueOnce(
+      new Error('Clipboard failed')
+    )
+
     render(
       <ReferenceCompareBox
         title="Reference Data"
         data={mockData}
         onDismiss={vi.fn()}
-      />,
-      { wrapper }
+      />
     )
 
     fireEvent.click(screen.getByText('Test Company Ltd.'))
-    
+
     await waitFor(() => {
-      expect(mockConsoleError).toHaveBeenCalledWith('Failed to copy text: ', expect.any(Error))
+      expect(mockConsoleError).toHaveBeenCalledWith(
+        'Failed to copy text: ',
+        expect.any(Error)
+      )
     })
   })
 
-  it('shows copied state and resets after timeout', async () => {
+  test('shows copied state and resets after timeout', async ({ render }) => {
     render(
       <ReferenceCompareBox
         title="Reference Data"
         data={mockData}
         onDismiss={vi.fn()}
-      />,
-      { wrapper }
+      />
     )
 
     fireEvent.click(screen.getByText('Test Company Ltd.'))
-    
+
     // Just verify the clipboard was called - the visual feedback is tested elsewhere
     await waitFor(() => {
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('Test Company Ltd.')
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+        'Test Company Ltd.'
+      )
     })
   })
 
-  it('renders items without labels correctly', () => {
+  test('renders items without labels correctly', ({ render }) => {
     render(
       <ReferenceCompareBox
         title="Reference Data"
         data={mockData}
         onDismiss={vi.fn()}
-      />,
-      { wrapper }
+      />
     )
 
     expect(screen.getByText('No label item')).toBeInTheDocument()
     expect(screen.queryByText('No label item:')).not.toBeInTheDocument()
   })
 
-  it('shows close button only on first item', () => {
+  test('shows close button only on first item', ({ render }) => {
     render(
       <ReferenceCompareBox
         title="Reference Data"
         data={mockData}
         onDismiss={vi.fn()}
-      />,
-      { wrapper }
+      />
     )
 
     expect(screen.getByLabelText('Dismiss reference')).toBeInTheDocument()
     expect(screen.getAllByLabelText('Dismiss reference')).toHaveLength(1)
   })
 
-  it('renders single item correctly', () => {
+  test('renders single item correctly', ({ render }) => {
     render(
       <ReferenceCompareBox
         title="Reference Data"
         data={singleItemData}
         onDismiss={vi.fn()}
-      />,
-      { wrapper }
+      />
     )
 
     expect(screen.getByText('Single Value')).toBeInTheDocument()
     expect(screen.getByLabelText('Dismiss reference')).toBeInTheDocument()
   })
 
-  it('copies correct value when clicking different items', async () => {
+  test('copies correct value when clicking different items', async ({
+    render
+  }) => {
     render(
       <ReferenceCompareBox
         title="Reference Data"
         data={mockData}
         onDismiss={vi.fn()}
-      />,
-      { wrapper }
+      />
     )
 
     fireEvent.click(screen.getByText('123456789'))
@@ -213,15 +247,14 @@ describe('ReferenceCompareBox', () => {
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith('No label item')
   })
 
-  it('prevents event propagation on dismiss button click', () => {
+  test('prevents event propagation on dismiss button click', ({ render }) => {
     const onDismiss = vi.fn()
     render(
       <ReferenceCompareBox
         title="Reference Data"
         data={mockData}
         onDismiss={onDismiss}
-      />,
-      { wrapper }
+      />
     )
 
     fireEvent.click(screen.getByLabelText('Dismiss reference'))

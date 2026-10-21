@@ -1,5 +1,5 @@
 import BCBox from '@/components/BCBox'
-import { Box } from '@mui/material'
+import Box from '@mui/material/Box'
 import analystReviewRobot from '@/assets/images/analyst-review-methy.gif'
 import type { RobotVariant } from './types'
 

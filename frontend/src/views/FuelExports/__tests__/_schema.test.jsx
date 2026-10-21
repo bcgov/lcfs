@@ -1,7 +1,15 @@
-import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import { wrapper } from '@/tests/utils/wrapper'
-import { fuelExportColDefs, changelogCommonColDefs } from '../_schema'
+import { describe, it, expect, vi } from 'vitest'
+import { fuelExportColDefs } from '../_schema'
+
+vi.mock('@/components/BCDataGrid/components', () => ({
+  AsyncSuggestionEditor: () => null,
+  AutocompleteCellEditor: () => null,
+  DateEditor: () => null,
+  NumberEditor: () => null,
+  RequiredHeader: () => null,
+  ActionsRenderer: () => null,
+  ValidationRenderer2: () => null
+}))
 
 describe('FuelExports Schema', () => {
   describe('Column Definitions', () => {
@@ -84,6 +92,23 @@ describe('FuelExports Schema', () => {
       const colDef = columns.find((col) => col.field === 'energy')
       expect(colDef).toBeDefined()
       expect(colDef.cellStyle).toBeDefined()
+    })
+
+    it('should round CNG energy content for display and preserve other fuel decimals', () => {
+      const colDef = columns.find((col) => col.field === 'energy')
+
+      expect(
+        colDef.valueFormatter({
+          value: 1234.56,
+          data: { fuelType: 'CNG', fuelCategory: 'Gasoline' }
+        })
+      ).toBe('1,235')
+      expect(
+        colDef.valueFormatter({
+          value: 1234.56,
+          data: { fuelType: 'Test Fuel', fuelCategory: 'Diesel' }
+        })
+      ).toBe('1,234.56')
     })
 
     it('should format numbers with commas', () => {

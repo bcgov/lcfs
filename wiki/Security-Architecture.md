@@ -34,7 +34,7 @@ This document outlines the security architecture of the LCFS system, covering au
     *   Internal communication between services (e.g., backend to database, backend to Redis) within the Docker/OpenShift network might be unencrypted by default in development (`docker-compose.yml`) but should be secured in production environments where possible (e.g., using SSL for database connections, Redis AUTH).
 *   **Data at Rest**:
     *   **Database**: PostgreSQL offers various encryption options. It needs to be verified if features like Transparent Data Encryption (TDE) or column-level encryption are used. Passwords and other sensitive data within the database should be hashed (e.g., using `bcrypt` or `argon2`, though the specific library isn't yet identified).
-    *   **Object Storage (MinIO)**: MinIO supports server-side encryption. Configuration should be checked.
+    *   **Object Storage (S3)**: Server-side encryption depends on the object storage service. Configuration should be checked.
     *   **Secrets Management**: Sensitive information like API keys, database passwords, JWT secret keys should be managed securely:
         *   In `docker-compose.yml` for local development, these are often plain text (e.g., `POSTGRES_PASSWORD: development_only`). This is acceptable for local dev but **not for production**.
         *   In OpenShift, secrets should be managed using OpenShift Secrets or a dedicated secrets management tool (e.g., HashiCorp Vault).
@@ -44,7 +44,7 @@ This document outlines the security architecture of the LCFS system, covering au
 *   **`db` (PostgreSQL)**: Access is controlled by username/password. Network access might be restricted.
 *   **`redis`**: Access is controlled by a password (`REDIS_PASSWORD: development_only` in dev). Redis AUTH.
 *   **`rabbitmq`**: Access is controlled by username/password.
-*   **`minio`**: Access is controlled by root user/password (access key/secret key).
+*   **`rustfs`**: Access is controlled by an access key/secret key.
 
 ## 5. Input Validation
 

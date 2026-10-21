@@ -1,15 +1,12 @@
-// @ts-nocheck
-import type { ColDef } from '@ag-grid-community/core'
+import type { ColDef } from 'ag-grid-community'
 import type { GridErrors, OptionsData } from '@/types/schema'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
-import {
-  AsyncSuggestionEditor,
-  AutocompleteCellEditor,
-  DateEditor,
-  NumberEditor,
-  RequiredHeader,
-  TransportModeDistanceCellEditor
-} from '@/components/BCDataGrid/components'
+import { AsyncSuggestionEditor } from '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor'
+import { AutocompleteCellEditor } from '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor'
+import { DateEditor } from '@/components/BCDataGrid/components/Editors/DateEditor'
+import { NumberEditor } from '@/components/BCDataGrid/components/Editors/NumberEditor'
+import { RequiredHeader } from '@/components/BCDataGrid/components/Renderers/RequiredHeader'
+import { TransportModeDistanceCellEditor } from '@/components/BCDataGrid/components/Editors/TransportModeDistanceCellEditor'
 import { apiRoutes } from '@/constants/routes'
 import { CO_PROCESSED_OPTIONS } from '@/constants/statuses'
 import i18n from '@/i18n'
@@ -156,7 +153,7 @@ export const fuelCodeColDefs = (
       headerComponent: canEdit ? RequiredHeader : undefined,
       headerName: i18n.t('fuelCode:fuelCodeColLabels.prefix'),
       cellEditor: AutocompleteCellEditor,
-      cellEditorParams: (params) => ({
+      cellEditorParams: () => ({
         options:
           optionsData?.fuelCodePrefixes
             ?.filter((obj) => obj.prefix)
@@ -238,7 +235,7 @@ export const fuelCodeColDefs = (
         return params.data.fuelSuffix
       },
       minWidth: 90,
-      tooltipValueGetter: (p) => 'select the next fuel code version'
+      tooltipValueGetter: () => 'select the next fuel code version'
     },
     {
       field: 'carbonIntensity',
@@ -531,7 +528,7 @@ export const fuelCodeColDefs = (
       suppressKeyboardEvent,
       cellDataType: 'text',
       cellRenderer: createCellRenderer('fuelProductionFacilityCity'),
-      cellEditorParams: (params) => ({
+      cellEditorParams: () => ({
         queryKey: 'fuel-production-city-search',
         queryFn: async ({ queryKey, client }) => {
           let path = apiRoutes.fuelCodeSearch
@@ -574,7 +571,7 @@ export const fuelCodeColDefs = (
       suppressKeyboardEvent,
       cellDataType: 'text',
       cellRenderer: createCellRenderer('fuelProductionFacilityProvinceState'),
-      cellEditorParams: (params) => ({
+      cellEditorParams: () => ({
         queryKey: 'fuel-production-province-search',
         queryFn: async ({ queryKey, client }) => {
           let path = apiRoutes.fuelCodeSearch
@@ -617,7 +614,7 @@ export const fuelCodeColDefs = (
       suppressKeyboardEvent,
       cellDataType: 'text',
       cellRenderer: createCellRenderer('fuelProductionFacilityCountry'),
-      cellEditorParams: (params) => ({
+      cellEditorParams: () => ({
         queryKey: 'fuel-production-country-search',
         queryFn: async ({ queryKey, client }) => {
           let path = apiRoutes.fuelCodeSearch

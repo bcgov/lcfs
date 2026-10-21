@@ -1,8 +1,10 @@
-// @ts-nocheck
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
-import { Card, CardContent, Divider, Skeleton } from '@mui/material'
+import Card from '@mui/material/Card'
+import CardContent from '@mui/material/CardContent'
+import Divider from '@mui/material/Divider'
+import Skeleton from '@mui/material/Skeleton'
 import ReactECharts from 'echarts-for-react'
 
 import BCBox from '@/components/BCBox'
@@ -91,7 +93,9 @@ const DetailRow = ({ label, value, labelWidth = 210, sx = {} }) => (
   </BCBox>
 )
 
-const IterationCardContent = ({ data, t }) => {
+const IterationCardContent = ({
+  data
+}) => {
   if (!data) return null
 
   const facilityLocation = [
@@ -495,7 +499,7 @@ const FuelCodeDetailBase = () => {
       : undefined
 
   const latest = data?.latestIteration
-  const iterations = data?.iterations ?? []
+  const iterations = useMemo(() => data?.iterations ?? [], [data?.iterations])
   const volumeOverTime = data?.volumeOverTime ?? []
   const complianceUnitsOverTime = data?.complianceUnitsOverTime ?? []
 

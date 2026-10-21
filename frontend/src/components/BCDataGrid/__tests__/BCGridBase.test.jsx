@@ -1,9 +1,9 @@
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import { render, fireEvent, act } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createRef } from 'react'
 import { BrowserRouter } from 'react-router-dom'
 import { BCGridBase } from '../BCGridBase'
-import { AgGridReact } from '@ag-grid-community/react'
+import { AgGridReact } from 'ag-grid-react'
 
 // Mock AgGridReact
 const mockGridApi = {
@@ -15,7 +15,7 @@ const mockGridApi = {
 
 let shouldTriggerCallbacks = true
 
-vi.mock('@ag-grid-community/react', () => ({
+vi.mock('ag-grid-react', () => ({
   AgGridReact: vi.fn((props) => {
     const { onGridReady, onRowDataUpdated, getRowStyle } = props
 

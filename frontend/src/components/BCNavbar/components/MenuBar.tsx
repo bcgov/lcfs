@@ -1,11 +1,21 @@
 import BCBox from '@/components/BCBox'
 import DefaultNavbarLink from '@/components/BCNavbar/components/DefaultNavbarLink'
-import { Divider, Toolbar } from '@mui/material'
+import Divider from '@mui/material/Divider'
+import Toolbar from '@mui/material/Toolbar'
 import React from 'react'
 import type {
   NavbarRoute,
   NavbarContextData
 } from '@/components/BCNavbar/types'
+import type { Theme } from '@mui/material/styles'
+
+type NavbarTheme = Theme & {
+  functions: { rgba: (color: string, opacity: number) => string }
+  palette: Theme['palette'] & {
+    white: { main: string }
+    secondary: Theme['palette']['secondary'] & { nav: string }
+  }
+}
 
 interface MenuBarProps {
   routes: NavbarRoute[]
@@ -16,7 +26,7 @@ const MenuBar = ({ routes, data }: MenuBarProps) => {
   return (
     <Toolbar
       className="nav"
-      sx={(theme: any) => {
+      sx={(theme: NavbarTheme) => {
         const { secondary, white } = theme.palette
         const { rgba } = theme.functions
         return {

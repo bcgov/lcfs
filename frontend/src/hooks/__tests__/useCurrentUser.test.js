@@ -1,7 +1,7 @@
-import { renderHook, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { waitFor } from '@testing-library/react'
+import { describe, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useApiService } from '@/services/useApiService'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import { useCurrentUser } from '../useCurrentUser'
 
 vi.mock('@/services/useApiService')
@@ -37,7 +37,10 @@ describe('useCurrentUser', () => {
     vi.clearAllMocks()
   })
 
-  it('should fetch current user successfully', async () => {
+  test('should fetch current user successfully', async ({
+    renderHook,
+    query
+  }) => {
     const mockData = {
       userId: 123,
       email: 'test@example.com',
@@ -51,7 +54,7 @@ describe('useCurrentUser', () => {
     }
     mockGet.mockResolvedValue({ data: mockData })
 
-    const { result } = renderHook(() => useCurrentUser(), { wrapper })
+    const { result } = renderHook(() => useCurrentUser(), [query])
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true)
@@ -61,11 +64,11 @@ describe('useCurrentUser', () => {
     expect(mockGet).toHaveBeenCalledWith('/users/current')
   })
 
-  it('should handle API errors', async () => {
+  test('should handle API errors', async ({ renderHook, query }) => {
     const mockError = new Error('User not found')
     mockGet.mockRejectedValue(mockError)
 
-    const { result } = renderHook(() => useCurrentUser(), { wrapper })
+    const { result } = renderHook(() => useCurrentUser(), [query])
 
     await waitFor(() => {
       expect(result.current.isError).toBe(true)
@@ -74,14 +77,12 @@ describe('useCurrentUser', () => {
     expect(result.current.error).toEqual(mockError)
   })
 
-  it('should pass through custom options', async () => {
+  test('should pass through custom options', async ({ renderHook, query }) => {
     const mockData = { userId: 123 }
     mockGet.mockResolvedValue({ data: mockData })
     const customOptions = { staleTime: 10000 }
 
-    const { result } = renderHook(() => useCurrentUser(customOptions), {
-      wrapper
-    })
+    const { result } = renderHook(() => useCurrentUser(customOptions), [query])
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true)
@@ -90,7 +91,10 @@ describe('useCurrentUser', () => {
     expect(result.current.data).toEqual(mockData)
   })
 
-  it('should provide hasRoles utility function', async () => {
+  test('should provide hasRoles utility function', async ({
+    renderHook,
+    query
+  }) => {
     const mockData = {
       userId: 123,
       roles: [
@@ -100,7 +104,7 @@ describe('useCurrentUser', () => {
     }
     mockGet.mockResolvedValue({ data: mockData })
 
-    const { result } = renderHook(() => useCurrentUser(), { wrapper })
+    const { result } = renderHook(() => useCurrentUser(), [query])
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true)
@@ -116,14 +120,17 @@ describe('useCurrentUser', () => {
     expect(result.current.hasRoles('Admin', 'SuperAdmin')).toBe(false)
   })
 
-  it('should handle hasRoles when no roles exist', async () => {
+  test('should handle hasRoles when no roles exist', async ({
+    renderHook,
+    query
+  }) => {
     const mockData = {
       userId: 123,
       roles: []
     }
     mockGet.mockResolvedValue({ data: mockData })
 
-    const { result } = renderHook(() => useCurrentUser(), { wrapper })
+    const { result } = renderHook(() => useCurrentUser(), [query])
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true)
@@ -133,17 +140,20 @@ describe('useCurrentUser', () => {
     expect(result.current.hasRoles()).toBe(true) // No arguments should return true
   })
 
-  it('should handle hasRoles when user data is not loaded', () => {
-    const { result } = renderHook(() => useCurrentUser(), { wrapper })
+  test('should handle hasRoles when user data is not loaded', ({
+    renderHook,
+    query
+  }) => {
+    const { result } = renderHook(() => useCurrentUser(), [query])
 
     expect(result.current.hasRoles('Admin')).toBe(false)
   })
 
-  it('should cache user data', async () => {
+  test('should cache user data', async ({ renderHook, query }) => {
     const mockData = { userId: 123 }
     mockGet.mockResolvedValue({ data: mockData })
 
-    const { result } = renderHook(() => useCurrentUser(), { wrapper })
+    const { result } = renderHook(() => useCurrentUser(), [query])
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true)
@@ -153,11 +163,11 @@ describe('useCurrentUser', () => {
     expect(mockGet).toHaveBeenCalledTimes(1)
   })
 
-  it('should use correct query key', async () => {
+  test('should use correct query key', async ({ renderHook, query }) => {
     const mockData = { userId: 123 }
     mockGet.mockResolvedValue({ data: mockData })
 
-    const { result } = renderHook(() => useCurrentUser(), { wrapper })
+    const { result } = renderHook(() => useCurrentUser(), [query])
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true)

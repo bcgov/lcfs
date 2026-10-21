@@ -27,6 +27,8 @@
   "addPublicComment": "Add public comment",
   "log": {
     "title": "Comment log",
+    "compliancePeriod": "Compliance period: {{year}}",
+    "noCompliancePeriod": "N/A",
     "loading": "Loading comments\u2026",
     "empty": "No comments match the current filters.",
     "errorTitle": "Could not load comments",

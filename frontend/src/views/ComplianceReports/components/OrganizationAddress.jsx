@@ -1,23 +1,28 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import BCTypography from '@/components/BCTypography'
 import { useTranslation } from 'react-i18next'
 import { useUpdateOrganizationSnapshot } from '@/hooks/useOrganizationSnapshot.js'
 import { FormProvider, useForm } from 'react-hook-form'
-import {
-  BCFormText,
-  BCFormAddressAutocomplete
-} from '@/components/BCForm/index.js'
+import { BCFormText } from '@/components/BCForm/BCFormText'
+import { BCFormAddressAutocomplete } from '@/components/BCForm/BCFormAddressAutocomplete'
 import { yupResolver } from '@hookform/resolvers/yup'
 import { defaultValues } from '@/views/Users/AddEditUser/_schema.js'
-import { Box, Stack, List, ListItem } from '@mui/material'
+import Box from '@mui/material/Box'
+import Stack from '@mui/material/Stack'
+import List from '@mui/material/List'
+import ListItem from '@mui/material/ListItem'
 import BCButton from '@/components/BCButton/index.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
 import * as Yup from 'yup'
-import { PHONE_REGEX, POSTAL_CODE_REGEX } from '@/constants/common'
+import { PHONE_REGEX } from '@/constants/common'
 import BCModal from '@/components/BCModal.jsx'
 import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/routes/routes.js'
+import {
+  addressHasPostalCode,
+  addressWithPostalCode
+} from './organizationAddressUtils'
 
 // Required organization fields for compliance report submission
 const REQUIRED_ORG_FIELDS = [
@@ -29,24 +34,6 @@ const REQUIRED_ORG_FIELDS = [
   'recordsAddress',
   'headOfficeAddress'
 ]
-
-export const addressHasPostalCode = (value) =>
-  POSTAL_CODE_REGEX.test(value || '')
-
-export const addressWithPostalCode = (addressData) => {
-  if (typeof addressData === 'string') {
-    return addressData
-  }
-
-  const fullAddress = addressData?.fullAddress || ''
-  const postalCode = addressData?.postalCode || addressData?.postal_code || ''
-
-  if (!postalCode || addressHasPostalCode(fullAddress)) {
-    return fullAddress
-  }
-
-  return `${fullAddress}, ${postalCode}`
-}
 
 export const OrganizationAddress = ({
   snapshotData,

@@ -1,5 +1,5 @@
-import { renderHook, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { waitFor } from '@testing-library/react'
+import { beforeEach, describe, expect, vi } from 'vitest'
 import {
   useDirectorReviewCounts,
   useOrgComplianceReportCounts,
@@ -9,7 +9,7 @@ import {
   useCIApplicationCounts
 } from '@/hooks/useDashboard'
 import { useApiService } from '@/services/useApiService'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('@/services/useApiService')
 
@@ -21,14 +21,15 @@ describe('useDirectorReviewCounts', () => {
     vi.mocked(useApiService).mockReturnValue({ get: mockGet })
   })
 
-  it('fetches the director review counts successfully', async () => {
+  test('fetches the director review counts successfully', async ({
+    renderHook,
+    query
+  }) => {
     mockGet.mockResolvedValueOnce({
       data: { review_counts: 10 }
     })
 
-    const { result } = renderHook(() => useDirectorReviewCounts(), {
-      wrapper
-    })
+    const { result } = renderHook(() => useDirectorReviewCounts(), [query])
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
@@ -36,12 +37,10 @@ describe('useDirectorReviewCounts', () => {
     expect(mockGet).toHaveBeenCalledWith('/dashboard/director-review-counts')
   })
 
-  it('handles errors correctly', async () => {
+  test('handles errors correctly', async ({ renderHook, query }) => {
     mockGet.mockRejectedValueOnce(new Error('Failed to fetch'))
 
-    const { result } = renderHook(() => useDirectorReviewCounts(), {
-      wrapper
-    })
+    const { result } = renderHook(() => useDirectorReviewCounts(), [query])
 
     await waitFor(() => expect(result.current.isError).toBe(true))
 
@@ -57,14 +56,15 @@ describe('useTransactionCounts', () => {
     vi.mocked(useApiService).mockReturnValue({ get: mockGet })
   })
 
-  it('fetches the transaction counts successfully', async () => {
+  test('fetches the transaction counts successfully', async ({
+    renderHook,
+    query
+  }) => {
     mockGet.mockResolvedValueOnce({
       data: { transaction_counts: 20 }
     })
 
-    const { result } = renderHook(() => useTransactionCounts(), {
-      wrapper
-    })
+    const { result } = renderHook(() => useTransactionCounts(), [query])
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
@@ -72,12 +72,10 @@ describe('useTransactionCounts', () => {
     expect(mockGet).toHaveBeenCalledWith('/dashboard/transaction-counts')
   })
 
-  it('handles errors correctly', async () => {
+  test('handles errors correctly', async ({ renderHook, query }) => {
     mockGet.mockRejectedValueOnce(new Error('Failed to fetch'))
 
-    const { result } = renderHook(() => useTransactionCounts(), {
-      wrapper
-    })
+    const { result } = renderHook(() => useTransactionCounts(), [query])
 
     await waitFor(() => expect(result.current.isError).toBe(true))
 
@@ -93,14 +91,15 @@ describe('useOrgTransactionCounts', () => {
     vi.mocked(useApiService).mockReturnValue({ get: mockGet })
   })
 
-  it('fetches the org transaction counts successfully', async () => {
+  test('fetches the org transaction counts successfully', async ({
+    renderHook,
+    query
+  }) => {
     mockGet.mockResolvedValueOnce({
       data: { org_transaction_counts: 30 }
     })
 
-    const { result } = renderHook(() => useOrgTransactionCounts(), {
-      wrapper
-    })
+    const { result } = renderHook(() => useOrgTransactionCounts(), [query])
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
@@ -108,12 +107,10 @@ describe('useOrgTransactionCounts', () => {
     expect(mockGet).toHaveBeenCalledWith('/dashboard/org-transaction-counts')
   })
 
-  it('handles errors correctly', async () => {
+  test('handles errors correctly', async ({ renderHook, query }) => {
     mockGet.mockRejectedValueOnce(new Error('Failed to fetch'))
 
-    const { result } = renderHook(() => useOrgTransactionCounts(), {
-      wrapper
-    })
+    const { result } = renderHook(() => useOrgTransactionCounts(), [query])
 
     await waitFor(() => expect(result.current.isError).toBe(true))
 
@@ -129,14 +126,15 @@ describe('useOrgComplianceReportCounts', () => {
     vi.mocked(useApiService).mockReturnValue({ get: mockGet })
   })
 
-  it('fetches the org compliance report counts successfully', async () => {
+  test('fetches the org compliance report counts successfully', async ({
+    renderHook,
+    query
+  }) => {
     mockGet.mockResolvedValueOnce({
       data: { org_compliance_report_counts: 40 }
     })
 
-    const { result } = renderHook(() => useOrgComplianceReportCounts(), {
-      wrapper
-    })
+    const { result } = renderHook(() => useOrgComplianceReportCounts(), [query])
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
@@ -146,12 +144,10 @@ describe('useOrgComplianceReportCounts', () => {
     )
   })
 
-  it('handles errors correctly', async () => {
+  test('handles errors correctly', async ({ renderHook, query }) => {
     mockGet.mockRejectedValueOnce(new Error('Failed to fetch'))
 
-    const { result } = renderHook(() => useOrgComplianceReportCounts(), {
-      wrapper
-    })
+    const { result } = renderHook(() => useOrgComplianceReportCounts(), [query])
 
     await waitFor(() => expect(result.current.isError).toBe(true))
 
@@ -167,14 +163,15 @@ describe('useComplianceReportCounts', () => {
     vi.mocked(useApiService).mockReturnValue({ get: mockGet })
   })
 
-  it('fetches compliance report counts successfully', async () => {
+  test('fetches compliance report counts successfully', async ({
+    renderHook,
+    query
+  }) => {
     mockGet.mockResolvedValueOnce({
       data: { pendingReviews: 15 }
     })
 
-    const { result } = renderHook(() => useComplianceReportCounts(), {
-      wrapper
-    })
+    const { result } = renderHook(() => useComplianceReportCounts(), [query])
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
@@ -182,12 +179,10 @@ describe('useComplianceReportCounts', () => {
     expect(mockGet).toHaveBeenCalledWith('/dashboard/compliance-report-counts')
   })
 
-  it('handles errors correctly', async () => {
+  test('handles errors correctly', async ({ renderHook, query }) => {
     mockGet.mockRejectedValueOnce(new Error('Failed to fetch'))
 
-    const { result } = renderHook(() => useComplianceReportCounts(), {
-      wrapper
-    })
+    const { result } = renderHook(() => useComplianceReportCounts(), [query])
 
     await waitFor(() => expect(result.current.isError).toBe(true))
 
@@ -203,14 +198,15 @@ describe('useCIApplicationCounts', () => {
     vi.mocked(useApiService).mockReturnValue({ get: mockGet })
   })
 
-  it('fetches CI application counts successfully', async () => {
+  test('fetches CI application counts successfully', async ({
+    renderHook,
+    query
+  }) => {
     mockGet.mockResolvedValueOnce({
       data: { inProgress: 17 }
     })
 
-    const { result } = renderHook(() => useCIApplicationCounts(), {
-      wrapper
-    })
+    const { result } = renderHook(() => useCIApplicationCounts(), [query])
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
@@ -218,12 +214,10 @@ describe('useCIApplicationCounts', () => {
     expect(mockGet).toHaveBeenCalledWith('/dashboard/ci-application-counts')
   })
 
-  it('handles errors correctly', async () => {
+  test('handles errors correctly', async ({ renderHook, query }) => {
     mockGet.mockRejectedValueOnce(new Error('Failed to fetch'))
 
-    const { result } = renderHook(() => useCIApplicationCounts(), {
-      wrapper
-    })
+    const { result } = renderHook(() => useCIApplicationCounts(), [query])
 
     await waitFor(() => expect(result.current.isError).toBe(true))
 

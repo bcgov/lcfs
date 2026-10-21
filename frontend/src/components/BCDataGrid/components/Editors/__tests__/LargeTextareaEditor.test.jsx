@@ -8,16 +8,20 @@ import { LargeTextareaEditor } from '../LargeTextareaEditor'
 
 // Mock MUI components
 vi.mock('@mui/material/InputBase', () => ({
-  default: vi.fn(({ value, onChange, onKeyDown, inputRef, multiline, ...props }) => (
-    <textarea
+  default: vi.fn(({
+  value,
+  onChange,
+  onKeyDown,
+  inputRef,
+  ...props
+}) => { delete props.multiline; return <textarea
       data-test="input-base"
       value={value}
       onChange={onChange}
       onKeyDown={onKeyDown}
       ref={inputRef}
       {...props}
-    />
-  ))
+    />; })
 }))
 
 vi.mock('@mui/material/Popper', () => ({

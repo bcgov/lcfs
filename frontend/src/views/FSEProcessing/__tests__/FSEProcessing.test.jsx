@@ -1,8 +1,18 @@
 import React from 'react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { beforeEach, describe, expect, vi } from 'vitest'
+import { screen } from '@testing-library/react'
 import { FSEProcessing } from '../FSEProcessing'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { test } from '@/tests/utils/fixtures'
+
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useFSEProcessing } from '@/hooks/useFSEProcessing'
+
+let render
+const it = (name, fn) =>
+  test(name, ({ render: fixtureRender, theme }) => {
+    render = (ui, options) => fixtureRender(ui, [theme], options)
+    return fn()
+  })
 
 const mockNavigate = vi.fn()
 
@@ -40,7 +50,9 @@ vi.mock('@/components/BCButton', () => ({
 vi.mock('@/components/BCAlert', () => ({
   __esModule: true,
   default: ({ children }) => <div>{children}</div>,
-  BCAlert2: React.forwardRef((props, ref) => <div data-testid="alert-box" />)
+  BCAlert2: React.forwardRef(function BCAlert2Mock() {
+  return <div data-testid="alert-box" />;
+})
 }))
 
 vi.mock('@/components/Loading', () => ({
@@ -55,9 +67,6 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 vi.mock('../components/BulkProcessingModals', () => ({
   BulkProcessingModals: () => <div data-testid="bulk-processing-modals" />
 }))
-
-import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useFSEProcessing } from '@/hooks/useFSEProcessing'
 
 describe('FSEProcessing', () => {
   beforeEach(() => {
@@ -110,7 +119,7 @@ describe('FSEProcessing', () => {
       hasAnyRole: vi.fn(() => false)
     })
 
-    render(<FSEProcessing />, { wrapper })
+    render(<FSEProcessing />)
 
     expect(
       screen.queryByRole('button', { name: 'Return selected to draft' })
@@ -122,7 +131,7 @@ describe('FSEProcessing', () => {
       hasAnyRole: vi.fn(() => true)
     })
 
-    render(<FSEProcessing />, { wrapper })
+    render(<FSEProcessing />)
 
     expect(
       screen.getByRole('button', { name: 'Return selected to draft' })

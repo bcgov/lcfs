@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createRef } from 'react'
 import { BrowserRouter } from 'react-router-dom'
@@ -51,9 +51,12 @@ vi.mock('@/components/BCDataGrid/BCGridBase', () => ({
   })
 }))
 
-vi.mock('@/components/BCDataGrid/components', () => ({
-  AccessibleHeader: () => <div data-test="accessible-header">Header</div>,
-  BCPagination: vi.fn().mockImplementation((props) => (
+vi.mock('@/components/BCDataGrid/components/Renderers/AccessibleHeader', () => ({
+    AccessibleHeader: () => <div data-test="accessible-header">Header</div>
+}))
+
+vi.mock('@/components/BCDataGrid/components/StatusBar/BCPagination', () => ({
+    BCPagination: vi.fn().mockImplementation((props) => (
     <div 
       data-test="bc-pagination"
       onClick={() => {

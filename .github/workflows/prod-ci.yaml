@@ -547,6 +547,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0 # Full main history is needed to resolve release dates
 
       - name: Restore oc command from Cache
         uses: actions/cache@v5.0.4
@@ -558,6 +560,22 @@ jobs:
         run: |
           oc login --server="${{ secrets.OPENSHIFT_SERVER }}" --token="${{ secrets.OPENSHIFT_TOKEN }}" --insecure-skip-tls-verify=true
           oc project "${{ env.TOOLS_NAMESPACE }}"
+
+      # release-notes.json is generated on the release branch, so its dates are
+      # generation dates. The release date is when the release PR merged into
+      # main; resolve it here (the OpenShift build has no git history) and pass
+      # it into the frontend image build.
+      - name: Resolve release dates
+        id: release-dates
+        run: |
+          # Never block a prod build over a display date: fall back to the
+          # generated dates if this fails.
+          DATES=$(node frontend/scripts/releaseDates.mjs collect HEAD) || {
+            echo "::warning::Could not resolve release dates; keeping generated dates."
+            DATES=""
+          }
+          echo "Release dates: ${DATES:-<none>}"
+          echo "dates=${DATES}" >> "$GITHUB_OUTPUT"
 
       - name: Build LCFS Backend
         run: |
@@ -571,7 +589,8 @@ jobs:
           cd openshift/templates
           oc process -f ./frontend-bc.yaml VERSION=${{ env.VERSION }}-${{ env.PRE_RELEASE }} GIT_URL=${{ env.GIT_URL }} GIT_REF=main | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
           sleep 2s
-          oc -n ${{ env.TOOLS_NAMESPACE }} start-build lcfs-frontend-${{ env.VERSION }}-${{ env.PRE_RELEASE }} --wait=true
+          oc -n ${{ env.TOOLS_NAMESPACE }} start-build lcfs-frontend-${{ env.VERSION }}-${{ env.PRE_RELEASE }} --wait=true \
+            --build-arg=RELEASE_DATES="${{ steps.release-dates.outputs.dates }}"
 
       - name: Tag the source code
         run: |

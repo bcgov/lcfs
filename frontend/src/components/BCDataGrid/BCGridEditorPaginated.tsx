@@ -1,11 +1,10 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-// @ts-nocheck
 import BCBox from '@/components/BCBox'
 import { BCGridBase } from '@/components/BCDataGrid/BCGridBase'
 import { isEqual } from '@/utils/grid/eventHandlers'
-import '@ag-grid-community/styles/ag-grid.css'
-import '@ag-grid-community/styles/ag-theme-material.css'
-import '@ag-grid-community/styles/ag-theme-quartz.css'
+import 'ag-grid-community/styles/ag-grid.css'
+import 'ag-grid-community/styles/ag-theme-material.css'
+import 'ag-grid-community/styles/ag-theme-quartz.css'
 import Papa from 'papaparse'
 import PropTypes from 'prop-types'
 import {
@@ -19,21 +18,19 @@ import {
 import { v4 as uuid } from 'uuid'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
-import { Menu, MenuItem } from '@mui/material'
+import Menu from '@mui/material/Menu'
+import MenuItem from '@mui/material/MenuItem'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPlus, faCaretDown } from '@fortawesome/free-solid-svg-icons'
 import BCModal from '@/components/BCModal'
 import { useTranslation } from 'react-i18next'
 import { FloatingAlert } from '@/components/BCAlert'
-import {
-  RequiredHeader,
-  AccessibleHeader,
-  BCPagination
-} from '@/components/BCDataGrid/components'
+import { RequiredHeader } from '@/components/BCDataGrid/components/Renderers/RequiredHeader'
+import { AccessibleHeader } from '@/components/BCDataGrid/components/Renderers/AccessibleHeader'
+import { BCPagination } from '@/components/BCDataGrid/components/StatusBar/BCPagination'
 import {
   addFlexToColumns,
-  getColumnMinWidthSum,
-  relaxColumnMinWidths
+  getColumnMinWidthSum
 } from '@/components/BCDataGrid/columnSizingUtils'
 import {
   runOnNextFrame,
@@ -106,7 +103,7 @@ const isIntersectionObserverSupported = () => {
  * @property {boolean} enableFloatingPagination - Enable floating pagination
  */
 export const BCGridEditorPaginated = ({
-  gridRef = useRef(null),
+  gridRef: suppliedGridRef,
   alertRef,
   enablePaste = true,
   handlePaste,
@@ -120,7 +117,6 @@ export const BCGridEditorPaginated = ({
     enabled: false
   },
   showMandatoryColumns = true,
-  onAddRows,
 
   // Pagination props
   suppressPagination = false,
@@ -147,7 +143,10 @@ export const BCGridEditorPaginated = ({
   ...props
 }: BCGridEditorPaginatedProps) => {
   const localRef = useRef(null)
-  const ref = gridRef || localRef
+  const ref = suppliedGridRef || localRef
+  const gridProps = Object.fromEntries(
+    Object.entries(props).filter(([key]) => key !== 'onAddRows')
+  )
   const firstEditableColumnRef = useRef(null)
   const [anchorEl, setAnchorEl] = useState(null)
   const buttonRef = useRef(null)
@@ -165,14 +164,15 @@ export const BCGridEditorPaginated = ({
   const syncingFromGridRef = useRef(false)
   const syncingFromCustomRef = useRef(false)
   const [scrollContentWidth, setScrollContentWidth] = useState(null)
-  const minWidthRelaxedRef = useRef(false)
-  const [minWidthRelaxed, setMinWidthRelaxed] = useState(false)
 
   const hasInitializedFromCache = useRef(false)
   const previousGridKey = useRef(gridKey)
   const isRestoringFromCache = useRef(false)
 
-  const { data, error, isError, isLoading } = queryData || {}
+  const {
+  data,
+  isLoading
+} = queryData || {}
   const isPaginationFloating = !isPaginationVisible && isGridVisible
 
   // Cache pagination options to sessionStorage
@@ -221,9 +221,6 @@ export const BCGridEditorPaginated = ({
 
     if (shouldFitColumns) {
       const flexDefs = addFlexToColumns(columnDefs).columnDefs
-      if (!minWidthRelaxed) {
-        return flexDefs
-      }
       return flexDefs.map((col) => ({
         ...col,
         minWidth: 50
@@ -235,15 +232,13 @@ export const BCGridEditorPaginated = ({
       if (nextCol.flex != null) {
         delete nextCol.flex
       }
-      if (!minWidthRelaxed && nextCol.minWidth && !nextCol.width) {
+      if (nextCol.minWidth && !nextCol.width) {
         nextCol.width = nextCol.minWidth
       }
-      if (minWidthRelaxed) {
-        nextCol.minWidth = 50
-      }
+      nextCol.minWidth = 50
       return nextCol
     })
-  }, [columnDefs, shouldFitColumns, minWidthRelaxed])
+  }, [columnDefs, shouldFitColumns])
 
   // Compute defaultMinWidth from columnDefs so autoSizeStrategy uses proper initial widths
   // This prevents the "squished then expand" visual effect on page load
@@ -258,22 +253,13 @@ export const BCGridEditorPaginated = ({
       .map((col) => col.minWidth)
 
     // Use the minimum of all minWidths, or 100 as a fallback
-    const defaultMinWidth =
-      minWidths.length > 0 ? Math.min(...minWidths) : 100
+    const defaultMinWidth = minWidths.length > 0 ? Math.min(...minWidths) : 100
 
     return { type: 'fitGridWidth', defaultMinWidth }
   }, [columnDefs])
 
-  // Expand columns to fill grid and reduce minWidth to allow user drag down to 50px
   const handleFirstDataRendered = useCallback(
     (params) => {
-      // After initial sizing, reduce minWidth on all columns to allow user drag down to 50px
-      // Preserve current widths to avoid visual jumps.
-      if (minWidthRelaxedRef.current) return
-      relaxColumnMinWidths(params.api, params.columnApi, 50)
-      minWidthRelaxedRef.current = true
-      setMinWidthRelaxed(true)
-
       props.onFirstDataRendered?.(params)
     },
     [props.onFirstDataRendered]
@@ -285,8 +271,7 @@ export const BCGridEditorPaginated = ({
   )
 
   const syncGridScrollPositions = useCallback(
-    (scrollLeft) =>
-      syncGridScrollPositionsUtil(gridContainerRef, scrollLeft),
+    (scrollLeft) => syncGridScrollPositionsUtil(gridContainerRef, scrollLeft),
     [gridContainerRef]
   )
 
@@ -341,10 +326,7 @@ export const BCGridEditorPaginated = ({
     window.addEventListener('resize', handleResize)
 
     let resizeObserver
-    if (
-      typeof ResizeObserver !== 'undefined' &&
-      gridContainerRef.current
-    ) {
+    if (typeof ResizeObserver !== 'undefined' && gridContainerRef.current) {
       const target =
         gridContainerRef.current.querySelector('.ag-body-horizontal-scroll') ||
         gridContainerRef.current.querySelector('.ag-center-cols-container')
@@ -379,14 +361,14 @@ export const BCGridEditorPaginated = ({
         return
       }
 
-        const { centerViewport, horizontalViewport, headerViewport } = info
+      const { centerViewport, horizontalViewport, headerViewport } = info
 
-        handleGridScroll = () => {
-          if (syncingFromCustomRef.current) return
+      handleGridScroll = () => {
+        if (syncingFromCustomRef.current) return
 
-          const latestInfo = getGridScrollInfo()
-          syncCustomScrollbarToGrid(latestInfo ?? info)
-        }
+        const latestInfo = getGridScrollInfo()
+        syncCustomScrollbarToGrid(latestInfo ?? info)
+      }
 
       listeners = [centerViewport, horizontalViewport, headerViewport]
         .filter(Boolean)
@@ -397,9 +379,9 @@ export const BCGridEditorPaginated = ({
           return element
         })
 
-        handleGridScroll()
-        updateScrollMetrics()
-      }
+      handleGridScroll()
+      updateScrollMetrics()
+    }
 
     tryAttach()
 
@@ -413,7 +395,12 @@ export const BCGridEditorPaginated = ({
         }
       })
     }
-  }, [showScrollbar, updateScrollMetrics, getGridScrollInfo, syncCustomScrollbarToGrid])
+  }, [
+    showScrollbar,
+    updateScrollMetrics,
+    getGridScrollInfo,
+    syncCustomScrollbarToGrid
+  ])
 
   useEffect(() => {
     if (!showScrollbar) return
@@ -575,13 +562,6 @@ export const BCGridEditorPaginated = ({
         })
       }
 
-      requestAnimationFrame(() => {
-        if (minWidthRelaxedRef.current) return
-        relaxColumnMinWidths(params.api, params.columnApi, 50)
-        minWidthRelaxedRef.current = true
-        setMinWidthRelaxed(true)
-      })
-
       props.onGridReady?.(params)
     },
     [
@@ -659,7 +639,7 @@ export const BCGridEditorPaginated = ({
           node,
           oldValue: '',
           newValue: node.data[findFirstEditableColumn()],
-          ...props
+          ...gridProps
         })
       })
     },
@@ -893,23 +873,34 @@ export const BCGridEditorPaginated = ({
     setShowCloseModal(true)
   }
 
-  const defaultColDefParams = {
-    headerComponentParams: {
-      innerHeaderComponent: AccessibleHeader
-    },
-    suppressHeaderFilterButton: true,
-    resizable: true,
-    sortable: true,
-    filter: true,
-    filterParams: {
-      maxNumConditions: 1
-    },
-    floatingFilter: true,
-    floatingFilterComponentParams: {
-      browserAutoComplete: false
-    },
-    minWidth: 50
-  }
+  const defaultColDefParams = useMemo(
+    () => ({
+      headerComponentParams: {
+        innerHeaderComponent: AccessibleHeader
+      },
+      suppressHeaderFilterButton: true,
+      resizable: true,
+      sortable: true,
+      filter: true,
+      filterParams: {
+        maxNumConditions: 1
+      },
+      floatingFilter: true,
+      floatingFilterComponentParams: {
+        browserAutoComplete: false
+      },
+      minWidth: 50
+    }),
+    []
+  )
+
+  const mergedDefaultColDef = useMemo(
+    () => ({
+      ...defaultColDefParams,
+      ...defaultColDef
+    }),
+    [defaultColDefParams, defaultColDef]
+  )
 
   return (
     <BCBox
@@ -951,13 +942,10 @@ export const BCGridEditorPaginated = ({
         autoSizeStrategy={shouldFitColumns ? computedAutoSizeStrategy : null}
         loading={isLoading || loading}
         rowData={!isLoading && ((data && data[dataKey]) || [])}
-        defaultColDef={{
-          ...defaultColDefParams,
-          ...defaultColDef
-        }}
+        defaultColDef={mergedDefaultColDef}
         enableCellTextSelection={true}
         columnDefs={transformedColumnDefs}
-        {...props}
+        {...gridProps}
       />
 
       {/* Pagination Controls */}
@@ -1012,7 +1000,7 @@ export const BCGridEditorPaginated = ({
                     className="custom-horizontal-scroll"
                     ref={customScrollbarRef}
                     style={{ ...floatingScrollStyles }}
-                    onScroll={(e) => {
+                    onScroll={() => {
                       if (syncingFromGridRef.current) return
                       if (!customScrollbarRef.current) return
 

@@ -7,8 +7,8 @@ import {
 } from '@/hooks/useComplianceReports'
 import { defaultInitialPagination } from '@/constants/schedules'
 import colors from '@/themes/base/colors'
-import { Box } from '@mui/material'
-import { useState } from 'react'
+import Box from '@mui/material/Box'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { changelogColDefs, changelogCommonColDefs } from './_schema'
@@ -16,7 +16,9 @@ import { useParams } from 'react-router-dom'
 
 export const FuelExportChangelog = () => {
   const { t } = useTranslation(['common', 'fuelExport', 'report'])
-  const { complianceReportId, compliancePeriod } = useParams()
+  const {
+  complianceReportId
+} = useParams()
   const { data: currentReport, isLoading: currentReportLoading } =
     useComplianceReportWithCache(complianceReportId)
 
@@ -33,6 +35,22 @@ export const FuelExportChangelog = () => {
   const getRowId = (params) => {
     return params.data.fuelExportId.toString()
   }
+
+  const currentOrOriginalColumnDefs = useMemo(
+    () => changelogCommonColDefs(false),
+    [t]
+  )
+
+  const changedColumnDefs = useMemo(() => changelogColDefs(), [t])
+
+  const defaultColDef = useMemo(
+    () => ({
+      floatingFilter: false,
+      filter: false,
+      sortable: false
+    }),
+    []
+  )
 
   const gridOptions = (highlight = true) => ({
     overlayNoRowsTemplate: t('fuelExport:noFuelExportsFound'),
@@ -164,8 +182,8 @@ export const FuelExportChangelog = () => {
                 gridKey={`fuel-exports-changelog-${i}`}
                 columnDefs={
                   isCurrentOrOriginalVersion
-                    ? changelogCommonColDefs(false)
-                    : changelogColDefs()
+                    ? currentOrOriginalColumnDefs
+                    : changedColumnDefs
                 }
                 queryData={queryData}
                 getRowId={getRowId}
@@ -175,11 +193,7 @@ export const FuelExportChangelog = () => {
                     ? gridOptions(false)
                     : gridOptions()
                 }
-                defaultColDef={{
-                  floatingFilter: false,
-                  filter: false,
-                  sortable: false
-                }}
+                defaultColDef={defaultColDef}
                 paginationOptions={
                   shouldPaginate ? paginationOptions : undefined
                 }

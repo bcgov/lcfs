@@ -1,14 +1,13 @@
-import {
-  FormControl,
-  FormControlLabel,
-  Radio,
-  RadioGroup
-} from '@mui/material'
+import FormControl from '@mui/material/FormControl'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Radio from '@mui/material/Radio'
+import RadioGroup from '@mui/material/RadioGroup'
 import BCTypography from '@/components/BCTypography'
 import { Controller } from 'react-hook-form'
+import type { Control, FieldValues } from 'react-hook-form'
 import PropTypes from 'prop-types'
 import { CustomLabel } from './CustomLabel'
-import type { SxProps, Theme } from '@mui/material'
+import type { SxProps , Theme } from '@mui/material/styles'
 import type { ReactNode } from 'react'
 
 export interface BCFormRadioOption {
@@ -20,7 +19,7 @@ export interface BCFormRadioOption {
 
 export interface BCFormRadioProps {
   name: string
-  control: any
+  control: Control<FieldValues>
   label?: ReactNode
   options?: BCFormRadioOption[]
   disabled?: boolean

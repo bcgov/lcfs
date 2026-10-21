@@ -1,6 +1,5 @@
-// @ts-nocheck
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
-import { TextField } from '@mui/material'
+import TextField from '@mui/material/TextField'
 import { styled } from '@mui/material/styles'
 
 const StyledTextField = styled(TextField)(({ theme }) => ({
@@ -26,15 +25,15 @@ export interface NumberEditorProps {
   onValueChange: (value: number) => void
   eventKey?: string
   rowIndex?: number
-  column?: any
+  column?: unknown
   min?: number
   max?: number
-  [key: string]: any
+  [key: string]: unknown
 }
 
 export const NumberEditor = forwardRef(
   (
-    { value, onValueChange, eventKey, rowIndex, column, ...props }: NumberEditorProps,
+    { value, onValueChange, ...props }: NumberEditorProps,
     ref
   ) => {
     const inputRef = useRef(null)

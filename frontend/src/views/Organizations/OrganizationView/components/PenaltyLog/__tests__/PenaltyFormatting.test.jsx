@@ -2,9 +2,11 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { MetricCardsSection, PenaltySummaryTable } from '../PenaltyComponents'
-import { buildAutomaticPenaltyRows } from '../PenaltyLog'
+import {
+  buildAutomaticPenaltyRows,
+  processSparklineData
+} from '../penaltyLogHelpers'
 import { penaltyLogColumnDefs, penaltyLogEditorColDefs } from '../_schema'
-import { processSparklineData } from '../PenaltyLog'
 import {
   usePenaltyMixOption,
   useSparklineOption,
@@ -24,10 +26,16 @@ vi.mock('@/components/BCDataGrid/columns', () => ({
   validation: {}
 }))
 
-vi.mock('@/components/BCDataGrid/components', () => ({
-  AutocompleteCellEditor: () => null,
-  BCSelectFloatingFilter: () => null,
-  RequiredHeader: () => null
+vi.mock('@/components/BCDataGrid/components/Editors/AutocompleteCellEditor', () => ({
+    AutocompleteCellEditor: () => null
+}))
+
+vi.mock('@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter', () => ({
+    BCSelectFloatingFilter: () => null
+}))
+
+vi.mock('@/components/BCDataGrid/components/Renderers/RequiredHeader', () => ({
+    RequiredHeader: () => null
 }))
 
 vi.mock('@/utils/grid/eventHandlers', () => ({

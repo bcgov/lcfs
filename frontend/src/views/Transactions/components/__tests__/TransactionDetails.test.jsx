@@ -1,8 +1,8 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { TransactionDetails } from '../TransactionDetails'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ThemeProvider } from '@mui/material'
+import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import { useOrganizationNames } from '@/hooks/useOrganizations'
 import { useOrganizationBalance } from '@/hooks/useOrganization'
 import theme from '@/themes'
@@ -12,7 +12,7 @@ import { MemoryRouter } from 'react-router-dom'
 vi.mock('@/hooks/useOrganizations')
 vi.mock('@/hooks/useOrganization')
 vi.mock('@/utils/formatters', () => ({
-  dateFormatter: vi.fn((date) => '2024-01-01'),
+  dateFormatter: vi.fn(() => '2024-01-01'),
   numberFormatter: vi.fn((value) => value ? value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '')
 }))
 

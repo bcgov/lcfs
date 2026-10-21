@@ -1,8 +1,8 @@
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import { HeaderComponent } from '../HeaderComponent'
-import { vi, describe, it, expect, beforeEach, type Mock } from 'vitest'
+import { vi, describe, expect, type Mock } from 'vitest'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { wrapper } from '@/tests/utils/wrapper'
+import { test } from '@/tests/utils/fixtures'
 import { ROUTES } from '@/routes/routes'
 
 // Mock all required hooks and components
@@ -20,7 +20,7 @@ vi.mock('react-i18next', () => ({
 const mockedUseCurrentUser = useCurrentUser as unknown as Mock
 
 describe('HeaderComponent', () => {
-  beforeEach(() => {
+  test.beforeEach(() => {
     // Default mock setup for non-government user with organization
     mockedUseCurrentUser.mockReturnValue({
       data: {
@@ -34,8 +34,13 @@ describe('HeaderComponent', () => {
     })
   })
 
-  it('renders organization name for non-government user', () => {
-    render(<HeaderComponent />, { wrapper })
+  test('renders organization name for non-government user', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<HeaderComponent />, [query, theme, router])
 
     const orgNameLink = screen.getByText('Test Organization')
     expect(orgNameLink).toBeInTheDocument()
@@ -46,7 +51,12 @@ describe('HeaderComponent', () => {
     expect(supplierBalance).toBeInTheDocument()
   })
 
-  it('renders government organization name for government user', () => {
+  test('renders government organization name for government user', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     mockedUseCurrentUser.mockReturnValue({
       data: {
         isGovernmentUser: true,
@@ -55,14 +65,19 @@ describe('HeaderComponent', () => {
       isFetched: true
     })
 
-    render(<HeaderComponent />, { wrapper })
+    render(<HeaderComponent />, [query, theme, router])
 
     const orgName = screen.getByText('Government of BC')
     expect(orgName).toBeInTheDocument()
     expect(screen.queryByText('Supplier Balance')).not.toBeInTheDocument()
   })
 
-  it('does not render supplier balance for users without an organization ID', () => {
+  test('does not render supplier balance for users without an organization ID', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     mockedUseCurrentUser.mockReturnValue({
       data: {
         isGovernmentUser: false,
@@ -73,18 +88,23 @@ describe('HeaderComponent', () => {
       isFetched: true
     })
 
-    render(<HeaderComponent />, { wrapper })
+    render(<HeaderComponent />, [query, theme, router])
 
     expect(screen.getByText('Test Organization Without ID')).toBeInTheDocument()
     expect(screen.queryByText('Supplier Balance')).not.toBeInTheDocument()
   })
 
-  it('does not render when data is not fetched', () => {
+  test('does not render when data is not fetched', ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
     mockedUseCurrentUser.mockReturnValue({
       isFetched: false
     })
 
-    const { container } = render(<HeaderComponent />, { wrapper })
+    const { container } = render(<HeaderComponent />, [query, theme, router])
 
     expect(container).toBeEmptyDOMElement()
   })

@@ -149,7 +149,7 @@ for write operations. Exact per-endpoint roles are declared in each module's
 | `/users` | User accounts & activity | Authenticated; management requires Administrator |
 | `/roles` | Role reference data | Authenticated (Government & Supplier) |
 | `/dashboard` | Role-specific dashboard cards/counts | Role-specific (Analyst, Compliance Manager, Director, Transfer, Compliance Reporting, Signing Authority) |
-| `/documents` | File attachments (MinIO-backed) | Supplier & Government (Analyst) |
+| `/documents` | File attachments (S3-backed) | Supplier & Government (Analyst) |
 | `/audit-log` | Audit trail | Government (Administrator) |
 | `/report-openings` | Compliance-period report openings | System Admin (suppliers may read) |
 | `/fuel-type` | Fuel-type reference data | Any authenticated |

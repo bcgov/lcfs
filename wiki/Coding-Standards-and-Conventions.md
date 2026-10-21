@@ -99,7 +99,7 @@ backend/
 │   │   │   └── versions/
 │   │   ├── models/             # SQLAlchemy ORM models (e.g., user_model.py, report_model.py)
 │   │   └── seeders/            # Alembic data seeding scripts
-│   ├── services/               # Integration with external services (Redis, RabbitMQ, MinIO clients/logic)
+│   ├── services/               # Integration with external services (Redis, RabbitMQ, S3 clients/logic)
 │   ├── tests/                  # Pytest tests, organized mirroring the app structure
 │   ├── utils/                  # Utility functions and classes
 │   └── web/                    # FastAPI web application components

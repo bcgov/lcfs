@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { ThemeProvider } from '@mui/material/styles'
-import { createTheme } from '@mui/material/styles'
+import '@testing-library/user-event';
+import { ThemeProvider , createTheme } from '@mui/material/styles'
 import { BCPaginationActions } from '../BCPaginationActions'
 
 const theme = createTheme()
@@ -12,42 +11,56 @@ const renderWithTheme = (component) => {
 }
 
 // Mock Material-UI components
-vi.mock('@mui/material', async () => {
-  const actual = await vi.importActual('@mui/material')
+vi.mock('@mui/material/Pagination', async (importOriginal) => {
+  const actual = await importOriginal()
   return {
     ...actual,
-    Pagination: vi.fn(
+    default: vi.fn(
       ({
-        onChange,
-        showFirstButton,
-        showLastButton,
-        component,
-        color,
-        ...props
-      }) => (
-        <div
+  onChange,
+  ...props
+}) => { delete props.showFirstButton; delete props.showLastButton; delete props.component; delete props.color; return <div
           data-test="pagination"
           onClick={() => onChange && onChange(null, 2)}
           {...props}
         >
           Mock Pagination
-        </div>
-      )
-    ),
-    IconButton: vi.fn(({ onClick, children, ...props }) => (
+        </div>; }
+    )
+  }
+})
+
+vi.mock('@mui/material/IconButton', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    default: vi.fn(({ onClick, children, ...props }) => (
       <button data-test={props.id} onClick={onClick} {...props}>
         {children}
       </button>
-    )),
-    Tooltip: vi.fn(({ children }) => <div>{children}</div>)
+    ))
+  }
+})
+
+vi.mock('@mui/material/Tooltip', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    default: vi.fn(({ children }) => <div>{children}</div>)
   }
 })
 
 // Mock Material-UI icons
-vi.mock('@mui/icons-material', () => ({
-  Replay: () => <span>Replay</span>,
-  ContentCopy: () => <span>ContentCopy</span>,
-  FileDownloadOutlined: () => <span>FileDownloadOutlined</span>
+vi.mock('@mui/icons-material/Replay', () => ({
+    default: () => <span>Replay</span>
+}))
+
+vi.mock('@mui/icons-material/ContentCopy', () => ({
+    default: () => <span>ContentCopy</span>
+}))
+
+vi.mock('@mui/icons-material/FileDownloadOutlined', () => ({
+    default: () => <span>FileDownloadOutlined</span>
 }))
 
 // Mock BCBox component
@@ -168,7 +181,7 @@ describe('BCPaginationActions', () => {
     })
 
     it('pagination component receives correct props', async () => {
-      const { Pagination } = await import('@mui/material')
+      const { default: Pagination } = await import('@mui/material/Pagination')
 
       renderWithTheme(<BCPaginationActions {...defaultProps} />)
 
@@ -313,8 +326,8 @@ describe('BCPaginationActions', () => {
       fireEvent.click(screen.getByTestId('downloadGridButton'))
 
       const transformedData = XLSX.utils.json_to_sheet.mock.calls[0][0]
-      expect(transformedData[0]['Date']).toBe('2023-01-01') // Date part only
-      expect(transformedData[1]['Date']).toBe('2023-01-02') // Date part only
+      expect(transformedData[0].Date).toBe('2023-01-01') // Date part only
+      expect(transformedData[1].Date).toBe('2023-01-02') // Date part only
     })
 
     it('preserves non-date values', async () => {
@@ -325,8 +338,8 @@ describe('BCPaginationActions', () => {
       fireEvent.click(screen.getByTestId('downloadGridButton'))
 
       const transformedData = XLSX.utils.json_to_sheet.mock.calls[0][0]
-      expect(transformedData[0]['ID']).toBe(1)
-      expect(transformedData[0]['Name']).toBe('Test')
+      expect(transformedData[0].ID).toBe(1)
+      expect(transformedData[0].Name).toBe('Test')
     })
 
     it('calculates column widths correctly', async () => {
@@ -352,7 +365,6 @@ describe('BCPaginationActions', () => {
       vi.spyOn(global, 'Date').mockImplementation(function () {
         return mockDate
       })
-      Date.prototype.toISOString = vi.fn(() => '2023-01-15T10:00:00.000Z')
 
       renderWithTheme(<BCPaginationActions {...defaultProps} />)
 

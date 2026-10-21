@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import React, { createRef } from 'react'
 import { BCGridEditor } from '../BCGridEditor'
@@ -11,7 +11,7 @@ vi.mock('papaparse', () => ({ default: { parse: vi.fn(() => ({ data: [{ field: '
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key) => key === 'asterisk' ? '* denotes required field' : key }) }))
 
 vi.mock('@/components/BCAlert', () => ({
-  BCAlert2: React.forwardRef((props, ref) => {
+  BCAlert2: React.forwardRef(function MockAlert(props, ref) {
     React.useImperativeHandle(ref, () => ({ clearAlert: vi.fn() }))
     return <div data-test="alert-box" />
   })
@@ -35,10 +35,16 @@ vi.mock('@/components/BCTypography', () => ({
   )
 }))
 
-vi.mock('@mui/material', () => ({
-  Menu: ({ children, open }) => open ? <div data-test="menu">{children}</div> : null,
-  MenuItem: ({ children, onClick }) => <div data-test="menu-item" onClick={onClick}>{children}</div>,
-  TextField: (props) => <input data-test="textfield" {...props} />
+vi.mock('@mui/material/Menu', () => ({
+    default: ({ children, open }) => open ? <div data-test="menu">{children}</div> : null
+}))
+
+vi.mock('@mui/material/MenuItem', () => ({
+    default: ({ children, onClick }) => <div data-test="menu-item" onClick={onClick}>{children}</div>
+}))
+
+vi.mock('@mui/material/TextField', () => ({
+    default: (props) => <input data-test="textfield" {...props} />
 }))
 
 vi.mock('@mui/material/styles', () => ({ styled: (component) => () => component }))
@@ -60,20 +66,20 @@ const mockGridApi = {
 }
 
 vi.mock('@/components/BCDataGrid/BCGridBase', () => ({
-  BCGridBase: React.forwardRef((props, ref) => {
+  BCGridBase: React.forwardRef(function MockGridBase(props, ref) {
     React.useImperativeHandle(ref, () => ({ api: mockGridApi, columnApi: {} }))
-    
+    const { onGridReady } = props
     // Prevent setTimeout errors by calling onGridReady properly
     React.useEffect(() => {
-      if (props.onGridReady) {
+      if (onGridReady) {
         setTimeout(() => {
           // Check if component is still mounted before calling onGridReady
           if (ref.current) {
-            props.onGridReady({ api: mockGridApi, columnApi: {} })
+            onGridReady({ api: mockGridApi, columnApi: {} })
           }
         }, 0)
       }
-    }, [props.onGridReady])
+    }, [onGridReady, ref])
     
     return <div data-test="bc-grid-base">Grid Base</div>
   })

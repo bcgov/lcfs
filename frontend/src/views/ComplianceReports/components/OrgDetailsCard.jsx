@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Stack } from '@mui/material'
+import Stack from '@mui/material/Stack'
 import BCTypography from '@/components/BCTypography'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import { constructAddress } from '@/utils/constructAddress'

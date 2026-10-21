@@ -1,10 +1,13 @@
 import BCModal from '@/components/BCModal'
-import { Box, Card, CardContent, IconButton } from '@mui/material'
+import Box from '@mui/material/Box'
+import Card from '@mui/material/Card'
+import CardContent from '@mui/material/CardContent'
+import IconButton from '@mui/material/IconButton'
 import LinearProgress from '@mui/material/LinearProgress'
 import { useTranslation } from 'react-i18next'
 import BCTypography from '@/components/BCTypography'
 import { styled } from '@mui/system'
-import { CloudUpload } from '@mui/icons-material'
+import CloudUpload from '@mui/icons-material/CloudUpload'
 import { useEffect, useRef, useState } from 'react'
 import {
   MAX_FILE_SIZE_BYTES,
@@ -29,7 +32,7 @@ function LinearProgressWithLabel(props) {
   )
 }
 
-const StyledCard = styled(Card)(({ theme }) => ({
+const StyledCard = styled(Card)(() => ({
   width: '100%',
   textAlign: 'center',
   border: '1px solid #ccc',
@@ -173,7 +176,7 @@ function ImportDialog({
               setJobID(null)
             }
           }
-        } catch (error) {
+        } catch {
           clearInterval(intervalId)
           setIntervalID(null)
         }

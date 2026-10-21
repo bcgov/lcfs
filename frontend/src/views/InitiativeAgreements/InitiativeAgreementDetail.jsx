@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
-import { Divider, Paper, Stack } from '@mui/material'
+import Divider from '@mui/material/Divider'
+import Paper from '@mui/material/Paper'
+import Stack from '@mui/material/Stack'
 import Grid2 from '@mui/material/Grid2'
 
 import BCAlert from '@/components/BCAlert'

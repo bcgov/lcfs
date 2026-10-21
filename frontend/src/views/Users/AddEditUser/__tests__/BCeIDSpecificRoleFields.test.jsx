@@ -1,6 +1,9 @@
 import { render, screen } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 
+import { BCeIDSpecificRoleFields } from '../components/BCeIDSpecificRoleFields'
+import { bceidRoleOptions, iaSignerOption } from '../_schema'
+
 // @/components/BCForm is globally mocked in testSetup.js:
 //   BCFormCheckbox → <div data-test="{name}-checkbox-group"> with child <input> per option
 // Our mock for CustomLabel and MUI components uses `data-test` (testIdAttribute config).
@@ -14,7 +17,10 @@ vi.mock('@/components/BCForm/CustomLabel', () => ({
 }))
 
 vi.mock('react-hook-form', () => ({
-  Controller: ({ name, control, render: renderFn }) =>
+  Controller: ({
+  control,
+  render: renderFn
+}) =>
     renderFn({
       field: {
         onChange: vi.fn(),
@@ -23,16 +29,25 @@ vi.mock('react-hook-form', () => ({
     })
 }))
 
-vi.mock('@mui/material', () => ({
-  Box: ({ children }) => <div data-test="box">{children}</div>,
-  FormControl: ({ children }) => <div data-test="form-control">{children}</div>,
-  FormControlLabel: ({ control: ctrl, label }) => (
+vi.mock('@mui/material/Box', () => ({
+    default: ({ children }) => <div data-test="box">{children}</div>
+}))
+
+vi.mock('@mui/material/FormControl', () => ({
+    default: ({ children }) => <div data-test="form-control">{children}</div>
+}))
+
+vi.mock('@mui/material/FormControlLabel', () => ({
+    default: ({ control: ctrl, label }) => (
     <div data-test="form-control-label">
       {ctrl}
       {label}
     </div>
-  ),
-  Checkbox: ({ id, checked, disabled }) => (
+  )
+}))
+
+vi.mock('@mui/material/Checkbox', () => ({
+    default: ({ id, checked, disabled }) => (
     <input
       data-test="ia-signer-checkbox"
       id={id}
@@ -72,9 +87,6 @@ vi.mock('@/constants/roles', () => ({
     ia_signer: 'IA Signer'
   }
 }))
-
-import { BCeIDSpecificRoleFields } from '../components/BCeIDSpecificRoleFields'
-import { bceidRoleOptions, iaSignerOption } from '../_schema'
 
 const t = vi.fn((key) => key)
 

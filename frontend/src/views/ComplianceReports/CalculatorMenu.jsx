@@ -1,7 +1,9 @@
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import { ROUTES } from '@/routes/routes'
-import { AppBar, Tab, Tabs } from '@mui/material'
+import AppBar from '@mui/material/AppBar'
+import Tab from '@mui/material/Tab'
+import Tabs from '@mui/material/Tabs'
 import { PropTypes } from 'prop-types'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -34,7 +36,7 @@ function TabPanel({ children, description, value, index }) {
               <BCTypography
                 key={paragraphIndex}
                 component="p"
-                variant="body1"
+                variant="body2"
                 sx={paragraphIndex > 0 ? { mt: 1 } : undefined}
               >
                 {paragraph}

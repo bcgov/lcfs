@@ -7,10 +7,17 @@ import {
 } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ThemeProvider } from '@mui/material'
+import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import theme from '@/themes'
 
 import { CreditLedgerPeriod } from '../CreditLedgerPeriod'
+
+import {
+  usePeriodCreditLedger,
+  useDownloadCreditLedger,
+  useCreditLedgerYears
+} from '@/hooks/useCreditLedger'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 
 // t returns the key, interpolating year/type so period + assessed labels are
 // assertable.
@@ -40,13 +47,6 @@ vi.mock('@/hooks/useCreditLedger', () => ({
 vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: vi.fn()
 }))
-
-import {
-  usePeriodCreditLedger,
-  useDownloadCreditLedger,
-  useCreditLedgerYears
-} from '@/hooks/useCreditLedger'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
 
 const mockPeriod = vi.mocked(usePeriodCreditLedger)
 const mockYears = vi.mocked(useCreditLedgerYears)

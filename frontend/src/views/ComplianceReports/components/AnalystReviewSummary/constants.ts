@@ -1,4 +1,4 @@
-import type { ChipProps } from '@mui/material'
+import type { ChipProps } from '@mui/material/Chip'
 import { CONFIG } from '@/constants/config'
 import type { ReviewSectionStatus, ReviewSeverity, RobotVariant } from './types'
 

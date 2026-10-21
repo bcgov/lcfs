@@ -1,4 +1,4 @@
-import { OpenInNew } from '@mui/icons-material'
+import OpenInNew from '@mui/icons-material/OpenInNew'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import BCBox from '@/components/BCBox'

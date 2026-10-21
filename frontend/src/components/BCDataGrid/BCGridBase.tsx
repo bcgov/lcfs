@@ -1,12 +1,13 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-// @ts-nocheck
 import DataGridLoading from '@/components/DataGridLoading'
-import { AgGridReact } from '@ag-grid-community/react'
-import '@ag-grid-community/styles/ag-grid.css'
-import '@ag-grid-community/styles/ag-theme-material.css'
-import { ModuleRegistry } from '@ag-grid-community/core'
-import { ClientSideRowModelModule } from '@ag-grid-community/client-side-row-model'
-import { CsvExportModule } from '@ag-grid-community/csv-export'
+import { AgGridReact } from 'ag-grid-react'
+import 'ag-grid-community/styles/ag-grid.css'
+import 'ag-grid-community/styles/ag-theme-material.css'
+import {
+  AllCommunityModule,
+  ModuleRegistry,
+  provideGlobalGridOptions
+} from 'ag-grid-community'
 import {
   forwardRef,
   useCallback,
@@ -22,6 +23,9 @@ import type { BCGridBaseProps } from './types'
 export type { BCGridBaseProps } from './types'
 
 const ROW_HEIGHT = 45
+ModuleRegistry.registerModules([AllCommunityModule])
+provideGlobalGridOptions({ theme: 'legacy' })
+
 const defaultNoRowsOverlayTemplate = `
   <div
     style="
@@ -47,17 +51,18 @@ export const BCGridBase = forwardRef<AgGridReact, BCGridBaseProps>(
       enableCellTextSelection,
       getRowId,
       overlayNoRowsTemplate,
-      queryData,
-      dataKey,
-      paginationOptions,
-      onPaginationChange,
       onRowClicked,
       suppressMovableColumns = true,
       ...props
     },
     forwardedRef
   ) => {
-    ModuleRegistry.registerModules([ClientSideRowModelModule, CsvExportModule])
+    const gridProps = Object.fromEntries(
+      Object.entries(props).filter(
+        ([key]) =>
+          !['queryData', 'dataKey', 'paginationOptions', 'onPaginationChange'].includes(key)
+      )
+    )
     const [searchParams] = useSearchParams()
     const highlightedId = searchParams.get('hid')
     const ref = useRef(null)
@@ -313,7 +318,8 @@ export const BCGridBase = forwardRef<AgGridReact, BCGridBaseProps>(
         }}
         rowHeight={ROW_HEIGHT}
         headerHeight={40}
-        {...props}
+        {...gridProps}
+        theme="legacy"
         onCellKeyDown={onCellKeyDown}
         onCellClicked={onCellClicked}
         onGridReady={onGridReady}

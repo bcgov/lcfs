@@ -1,12 +1,12 @@
-import { renderHook, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { waitFor } from '@testing-library/react'
+import { beforeEach, describe, expect, vi } from 'vitest'
 import { useApiService } from '@/services/useApiService'
-import { wrapper } from '@/tests/utils/wrapper'
 import {
   useGetInitiativeAgreement,
   useGetInitiativeAgreements,
   useInitiativeAgreementStatuses
 } from '../useInitiativeAgreements'
+import { test } from '@/tests/utils/fixtures'
 
 vi.mock('@/services/useApiService')
 
@@ -19,13 +19,14 @@ describe('useInitiativeAgreements hooks', () => {
     vi.mocked(useApiService).mockReturnValue({ get: mockGet, post: mockPost })
   })
 
-  it('list hook POSTs the default pagination body', async () => {
+  test('list hook POSTs the default pagination body', async ({
+    renderHook,
+    query
+  }) => {
     const data = { initiativeAgreements: [], pagination: { total: 0 } }
     mockPost.mockResolvedValue({ data })
 
-    const { result } = renderHook(() => useGetInitiativeAgreements(), {
-      wrapper
-    })
+    const { result } = renderHook(() => useGetInitiativeAgreements(), [query])
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(result.current.data).toEqual(data)
@@ -37,14 +38,17 @@ describe('useInitiativeAgreements hooks', () => {
     })
   })
 
-  it('list hook passes pagination options through', async () => {
+  test('list hook passes pagination options through', async ({
+    renderHook,
+    query
+  }) => {
     const data = { initiativeAgreements: [], pagination: { total: 0 } }
     mockPost.mockResolvedValue({ data })
     const sortOrders = [{ field: 'updateDate', direction: 'desc' }]
 
     const { result } = renderHook(
       () => useGetInitiativeAgreements({ page: 2, size: 25, sortOrders }),
-      { wrapper }
+      [query]
     )
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -56,35 +60,41 @@ describe('useInitiativeAgreements hooks', () => {
     })
   })
 
-  it('detail hook GETs the agreement profile by id', async () => {
+  test('detail hook GETs the agreement profile by id', async ({
+    renderHook,
+    query
+  }) => {
     const data = { initiativeAgreementId: 5, designatedActions: [] }
     mockGet.mockResolvedValue({ data })
 
-    const { result } = renderHook(() => useGetInitiativeAgreement(5), {
-      wrapper
-    })
+    const { result } = renderHook(() => useGetInitiativeAgreement(5), [query])
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(result.current.data).toEqual(data)
     expect(mockGet).toHaveBeenCalledWith('/initiative-agreements/5/profile')
   })
 
-  it('statuses hook GETs the lifecycle statuses', async () => {
+  test('statuses hook GETs the lifecycle statuses', async ({
+    renderHook,
+    query
+  }) => {
     const data = [{ status: 'Underway' }]
     mockGet.mockResolvedValue({ data })
 
-    const { result } = renderHook(() => useInitiativeAgreementStatuses(), {
-      wrapper
-    })
+    const { result } = renderHook(
+      () => useInitiativeAgreementStatuses(),
+      [query]
+    )
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(mockGet).toHaveBeenCalledWith('/initiative-agreements/statuses')
   })
 
-  it('detail hook does not fire without an id', () => {
-    const { result } = renderHook(() => useGetInitiativeAgreement(undefined), {
-      wrapper
-    })
+  test('detail hook does not fire without an id', ({ renderHook, query }) => {
+    const { result } = renderHook(
+      () => useGetInitiativeAgreement(undefined),
+      [query]
+    )
     expect(result.current.fetchStatus).toBe('idle')
     expect(mockGet).not.toHaveBeenCalled()
   })

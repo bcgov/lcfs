@@ -1,11 +1,10 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-// @ts-nocheck
 import BCBox from '@/components/BCBox'
 import { BCGridBase } from '@/components/BCDataGrid/BCGridBase'
 import { isEqual } from '@/utils/grid/eventHandlers'
-import '@ag-grid-community/styles/ag-grid.css'
-import '@ag-grid-community/styles/ag-theme-material.css'
-import '@ag-grid-community/styles/ag-theme-quartz.css'
+import 'ag-grid-community/styles/ag-grid.css'
+import 'ag-grid-community/styles/ag-theme-material.css'
+import 'ag-grid-community/styles/ag-theme-quartz.css'
 import Papa from 'papaparse'
 import PropTypes from 'prop-types'
 import {
@@ -19,17 +18,17 @@ import {
 import { v4 as uuid } from 'uuid'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
-import { Menu, MenuItem } from '@mui/material'
+import Menu from '@mui/material/Menu'
+import MenuItem from '@mui/material/MenuItem'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPlus, faCaretDown } from '@fortawesome/free-solid-svg-icons'
 import BCModal from '@/components/BCModal'
 import { useTranslation } from 'react-i18next'
 import { BCAlert2 } from '@/components/BCAlert'
-import { RequiredHeader } from '@/components/BCDataGrid/components'
+import { RequiredHeader } from '@/components/BCDataGrid/components/Renderers/RequiredHeader'
 import {
   addFlexToColumns,
-  getColumnMinWidthSum,
-  relaxColumnMinWidths
+  getColumnMinWidthSum
 } from '@/components/BCDataGrid/columnSizingUtils'
 import type { BCGridEditorProps } from './types'
 
@@ -49,7 +48,7 @@ export type { BCGridEditorProps } from './types'
  * @returns {JSX.Element}
  */
 export const BCGridEditor = ({
-  gridRef = useRef(null),
+  gridRef: suppliedGridRef,
   alertRef,
   enablePaste = true,
   handlePaste,
@@ -63,13 +62,15 @@ export const BCGridEditor = ({
     enabled: false
   },
   showMandatoryColumns = true,
-  onAddRows,
   defaultColDef,
   columnDefs,
   ...props
 }: BCGridEditorProps) => {
   const localRef = useRef(null)
-  const ref = gridRef || localRef
+  const ref = suppliedGridRef || localRef
+  const gridProps = Object.fromEntries(
+    Object.entries(props).filter(([key]) => key !== 'onAddRows')
+  )
   const gridContainerRef = useRef(null)
   const pendingSavePromiseRef = useRef(null)
   const firstEditableColumnRef = useRef(null)
@@ -78,8 +79,6 @@ export const BCGridEditor = ({
   const { t } = useTranslation(['common'])
   const [showRequiredIndicator, setShowRequiredIndicator] = useState(false)
   const [containerWidth, setContainerWidth] = useState(null)
-  const minWidthRelaxedRef = useRef(false)
-  const [minWidthRelaxed, setMinWidthRelaxed] = useState(false)
 
   useEffect(() => {
     if (!showRequiredIndicator && columnDefs?.length) {
@@ -107,9 +106,6 @@ export const BCGridEditor = ({
 
     if (shouldFitColumns) {
       const flexDefs = addFlexToColumns(columnDefs).columnDefs
-      if (!minWidthRelaxed) {
-        return flexDefs
-      }
       return flexDefs.map((col) => ({
         ...col,
         minWidth: 50
@@ -121,15 +117,13 @@ export const BCGridEditor = ({
       if (nextCol.flex != null) {
         delete nextCol.flex
       }
-      if (!minWidthRelaxed && nextCol.minWidth && !nextCol.width) {
+      if (nextCol.minWidth && !nextCol.width) {
         nextCol.width = nextCol.minWidth
       }
-      if (minWidthRelaxed) {
-        nextCol.minWidth = 50
-      }
+      nextCol.minWidth = 50
       return nextCol
     })
-  }, [columnDefs, shouldFitColumns, minWidthRelaxed])
+  }, [columnDefs, shouldFitColumns])
 
   // Compute defaultMinWidth from columnDefs so autoSizeStrategy uses proper initial widths
   // This prevents the "squished then expand" visual effect on page load
@@ -144,8 +138,7 @@ export const BCGridEditor = ({
       .map((col) => col.minWidth)
 
     // Use the minimum of all minWidths, or 100 as a fallback
-    const defaultMinWidth =
-      minWidths.length > 0 ? Math.min(...minWidths) : 100
+    const defaultMinWidth = minWidths.length > 0 ? Math.min(...minWidths) : 100
 
     return { type: 'fitGridWidth', defaultMinWidth }
   }, [columnDefs])
@@ -157,33 +150,18 @@ export const BCGridEditor = ({
         const foundRequired = actualCols.some(
           (colDef) => colDef.headerComponent === RequiredHeader
         )
-      if (foundRequired) {
-        setShowRequiredIndicator(true)
+        if (foundRequired) {
+          setShowRequiredIndicator(true)
+        }
       }
-    }
-
-      requestAnimationFrame(() => {
-        if (minWidthRelaxedRef.current) return
-        relaxColumnMinWidths(params.api, params.columnApi, 50)
-        minWidthRelaxedRef.current = true
-        setMinWidthRelaxed(true)
-      })
 
       props.onGridReady?.(params)
     },
     [showRequiredIndicator, props.onGridReady]
   )
 
-  // Expand columns to fill grid and reduce minWidth to allow user drag down to 50px
   const handleFirstDataRendered = useCallback(
     (params) => {
-      // After initial sizing, reduce minWidth on all columns to allow user drag down to 50px
-      // Preserve current widths to avoid visual jumps.
-      if (minWidthRelaxedRef.current) return
-      relaxColumnMinWidths(params.api, params.columnApi, 50)
-      minWidthRelaxedRef.current = true
-      setMinWidthRelaxed(true)
-
       props.onFirstDataRendered?.(params)
     },
     [props.onFirstDataRendered]
@@ -267,7 +245,9 @@ export const BCGridEditor = ({
       // Build a proper params-like object for each pasted row so downstream
       // handlers (which expect AG Grid CellEditingStopped params) don't crash.
       const firstEditableCol = findFirstEditableColumn()
-      const colDef = firstEditableCol?.colDef || { field: editableColumns[0]?.colDef?.field }
+      const colDef = firstEditableCol?.colDef || {
+        field: editableColumns[0]?.colDef?.field
+      }
       const column = firstEditableCol || editableColumns[0]
 
       // Save rows sequentially so each save completes before the next starts.
@@ -337,9 +317,7 @@ export const BCGridEditor = ({
     (params) => {
       if (params.data.modified && !params.data.deleted) {
         if (onCellEditingStopped) {
-          let trackedPromise
-          const promise = Promise.resolve(onCellEditingStopped(params))
-          trackedPromise = promise
+          const trackedPromise = Promise.resolve(onCellEditingStopped(params))
             .catch((error) => {
               console.error('Error saving row:', error)
               throw error
@@ -498,6 +476,14 @@ export const BCGridEditor = ({
     setShowCloseModal(true)
   }, [isGridValid, ref, saveButtonProps.onSave, waitForPendingSave])
 
+  const mergedDefaultColDef = useMemo(
+    () => ({
+      minWidth: 50,
+      ...defaultColDef
+    }),
+    [defaultColDef]
+  )
+
   return (
     <BCBox
       ref={gridContainerRef}
@@ -528,12 +514,9 @@ export const BCGridEditor = ({
         onFirstDataRendered={handleFirstDataRendered}
         autoHeight={true}
         autoSizeStrategy={shouldFitColumns ? computedAutoSizeStrategy : null}
-        defaultColDef={{
-          minWidth: 50,
-          ...defaultColDef
-        }}
+        defaultColDef={mergedDefaultColDef}
         columnDefs={transformedColumnDefs}
-        {...props}
+        {...gridProps}
       />
       <BCBox sx={{ height: '40px', margin: '15px 0', width: '100%' }}>
         <BCAlert2 dismissible={true} ref={alertRef} data-test="alert-box" />

@@ -1,6 +1,6 @@
-import { renderHook, waitFor } from '@testing-library/react'
-import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest'
-import { wrapper } from '@/tests/utils/wrapper'
+import { waitFor } from '@testing-library/react'
+import { describe, beforeEach, afterEach, expect, vi } from 'vitest'
+import { test } from '@/tests/utils/fixtures'
 import { useApiService } from '@/services/useApiService'
 import { useOrganizationFuelSupply } from '../useFuelSupply'
 
@@ -20,7 +20,10 @@ describe('useOrganizationFuelSupply', () => {
     vi.clearAllMocks()
   })
 
-  it('should fetch organization fuel supply successfully', async () => {
+  test('should fetch organization fuel supply successfully', async ({
+    renderHook,
+    query
+  }) => {
     const mockResponseData = {
       fuelSupplies: [
         {
@@ -54,7 +57,7 @@ describe('useOrganizationFuelSupply', () => {
         totalReports: 1,
         mostRecentSubmission: '2023-03-31',
         totalByFuelType: { Diesel: 50000, Gasoline: 75000 },
-        totalByYear: { '2023': 125000 },
+        totalByYear: { 2023: 125000 },
         totalByFuelCategory: { 'Petroleum-based': 125000 },
         totalByProvision: {
           'Default carbon intensity - section 19 (b) (ii)': 50000,
@@ -76,7 +79,7 @@ describe('useOrganizationFuelSupply', () => {
 
     const { result } = renderHook(
       () => useOrganizationFuelSupply(organizationId, pagination),
-      { wrapper }
+      [query]
     )
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -91,7 +94,10 @@ describe('useOrganizationFuelSupply', () => {
     expect(result.current.data.pagination.total).toBe(2)
   })
 
-  it('should handle year filter in pagination', async () => {
+  test('should handle year filter in pagination', async ({
+    renderHook,
+    query
+  }) => {
     const mockResponseData = {
       fuelSupplies: [
         {
@@ -113,7 +119,7 @@ describe('useOrganizationFuelSupply', () => {
         totalReports: 1,
         mostRecentSubmission: '2023-03-31',
         totalByFuelType: { Diesel: 30000 },
-        totalByYear: { '2023': 30000 },
+        totalByYear: { 2023: 30000 },
         totalByFuelCategory: { Renewable: 30000 },
         totalByProvision: { 'Test Provision': 30000 }
       },
@@ -131,14 +137,12 @@ describe('useOrganizationFuelSupply', () => {
     const pagination = {
       page: 1,
       size: 10,
-      filters: [
-        { field: 'compliancePeriod', filter: '2023', type: 'text' }
-      ]
+      filters: [{ field: 'compliancePeriod', filter: '2023', type: 'text' }]
     }
 
     const { result } = renderHook(
       () => useOrganizationFuelSupply(organizationId, pagination),
-      { wrapper }
+      [query]
     )
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -151,7 +155,7 @@ describe('useOrganizationFuelSupply', () => {
     expect(result.current.data.fuelSupplies[0].compliancePeriod).toBe('2023')
   })
 
-  it('should handle empty results', async () => {
+  test('should handle empty results', async ({ renderHook, query }) => {
     const mockResponseData = {
       fuelSupplies: [],
       analytics: {
@@ -179,7 +183,7 @@ describe('useOrganizationFuelSupply', () => {
 
     const { result } = renderHook(
       () => useOrganizationFuelSupply(organizationId, pagination),
-      { wrapper }
+      [query]
     )
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -189,7 +193,7 @@ describe('useOrganizationFuelSupply', () => {
     expect(result.current.data.pagination.total).toBe(0)
   })
 
-  it('should handle pagination correctly', async () => {
+  test('should handle pagination correctly', async ({ renderHook, query }) => {
     const mockResponseData = {
       fuelSupplies: Array.from({ length: 5 }, (_, i) => ({
         fuelSupplyId: i + 6,
@@ -209,7 +213,7 @@ describe('useOrganizationFuelSupply', () => {
         totalReports: 1,
         mostRecentSubmission: '2023-03-31',
         totalByFuelType: {},
-        totalByYear: { '2023': 40000 },
+        totalByYear: { 2023: 40000 },
         totalByFuelCategory: { Renewable: 40000 },
         totalByProvision: { 'Test Provision': 40000 }
       },
@@ -228,7 +232,7 @@ describe('useOrganizationFuelSupply', () => {
 
     const { result } = renderHook(
       () => useOrganizationFuelSupply(organizationId, pagination),
-      { wrapper }
+      [query]
     )
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -240,13 +244,16 @@ describe('useOrganizationFuelSupply', () => {
     expect(result.current.data.pagination.totalPages).toBe(3)
   })
 
-  it('should not fetch when organization ID is missing', async () => {
+  test('should not fetch when organization ID is missing', async ({
+    renderHook,
+    query
+  }) => {
     const organizationId = null
     const pagination = { page: 1, size: 10, filters: [] }
 
     const { result } = renderHook(
       () => useOrganizationFuelSupply(organizationId, pagination),
-      { wrapper }
+      [query]
     )
 
     // Should remain in idle state
@@ -255,7 +262,7 @@ describe('useOrganizationFuelSupply', () => {
     expect(mockPost).not.toHaveBeenCalled()
   })
 
-  it('should handle API errors gracefully', async () => {
+  test('should handle API errors gracefully', async ({ renderHook, query }) => {
     const errorMessage = 'Failed to fetch fuel supply data'
     mockPost.mockRejectedValue(new Error(errorMessage))
 
@@ -263,8 +270,9 @@ describe('useOrganizationFuelSupply', () => {
     const pagination = { page: 1, size: 10, filters: [] }
 
     const { result } = renderHook(
-      () => useOrganizationFuelSupply(organizationId, pagination, { retry: false }),
-      { wrapper }
+      () =>
+        useOrganizationFuelSupply(organizationId, pagination, { retry: false }),
+      [query]
     )
 
     await waitFor(() => expect(result.current.isError).toBe(true))
@@ -276,7 +284,10 @@ describe('useOrganizationFuelSupply', () => {
     )
   })
 
-  it('should cache results based on query key', async () => {
+  test('should cache results based on query key', async ({
+    renderHook,
+    query
+  }) => {
     const mockResponseData = {
       fuelSupplies: [],
       analytics: {
@@ -301,14 +312,14 @@ describe('useOrganizationFuelSupply', () => {
     // First call
     const { result: result1 } = renderHook(
       () => useOrganizationFuelSupply(organizationId, pagination1),
-      { wrapper }
+      [query]
     )
     await waitFor(() => expect(result1.current.isSuccess).toBe(true))
 
     // Second call with different pagination should trigger new fetch
     const { result: result2 } = renderHook(
       () => useOrganizationFuelSupply(organizationId, pagination2),
-      { wrapper }
+      [query]
     )
     await waitFor(() => expect(result2.current.isSuccess).toBe(true))
 
@@ -316,7 +327,10 @@ describe('useOrganizationFuelSupply', () => {
     expect(mockPost).toHaveBeenCalledTimes(2)
   })
 
-  it('should handle null submission dates in response', async () => {
+  test('should handle null submission dates in response', async ({
+    renderHook,
+    query
+  }) => {
     const mockResponseData = {
       fuelSupplies: [
         {
@@ -338,7 +352,7 @@ describe('useOrganizationFuelSupply', () => {
         totalReports: 0,
         mostRecentSubmission: null,
         totalByFuelType: { Diesel: 50000 },
-        totalByYear: { '2023': 50000 },
+        totalByYear: { 2023: 50000 },
         totalByFuelCategory: { 'Petroleum-based': 50000 },
         totalByProvision: { 'Test Provision': 50000 }
       },
@@ -349,7 +363,7 @@ describe('useOrganizationFuelSupply', () => {
 
     const { result } = renderHook(
       () => useOrganizationFuelSupply(1, { page: 1, size: 10, filters: [] }),
-      { wrapper }
+      [query]
     )
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))

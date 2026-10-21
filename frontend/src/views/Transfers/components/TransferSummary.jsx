@@ -1,13 +1,13 @@
 import PropTypes from 'prop-types'
-import { Stack } from '@mui/material'
+import Stack from '@mui/material/Stack'
 import BCTypography from '@/components/BCTypography'
 import { useTranslation } from 'react-i18next'
 import {
   decimalFormatter,
   calculateTotalValue,
-  dateFormatter,
   formatNumberWithCommas
 } from '@/utils/formatters'
+import { formatCalendarDate } from '@/utils/calendarDate'
 
 export const TransferSummary = ({
   transferData = {
@@ -49,7 +49,8 @@ export const TransferSummary = ({
       </BCTypography>
       <BCTypography variant="body5">
         {t('transfer:agreementDt')}
-        {`: ${dateFormatter(formData.agreementDate)}`}
+        {/* Same formatting as the saved value, so the user confirms that date */}
+        {`: ${formatCalendarDate(formData.agreementDate)}`}
       </BCTypography>
       <BCTypography mt={2} variant="body5">
         {t('transfer:sendConfirmText')}

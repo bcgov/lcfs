@@ -1,8 +1,11 @@
 import React from 'react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, expect, vi, beforeEach } from 'vitest'
+import { screen } from '@testing-library/react'
 import { ViewChargingSite } from '../ViewChargingSite'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { test } from '@/tests/utils/fixtures'
+
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useGetChargingSiteById } from '@/hooks/useChargingSite'
 
 const mockNavigate = vi.fn()
 
@@ -22,11 +25,13 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('@/components/BCAlert', () => ({
-  BCAlert2: React.forwardRef(({ severity, message }, ref) => (
-    <div data-testid="bc-alert" ref={ref}>
+  BCAlert2: React.forwardRef(function BCAlert2Mock({
+  message
+}, ref) {
+  return <div data-testid="bc-alert" ref={ref}>
       {message}
-    </div>
-  ))
+    </div>;
+})
 }))
 
 vi.mock('@/hooks/useCurrentUser')
@@ -48,9 +53,6 @@ vi.mock('../components/ChargingSiteFSEGrid', () => ({
 vi.mock('@/components/Loading', () => ({
   default: () => <div data-testid="loading">Loading...</div>
 }))
-
-import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useGetChargingSiteById } from '@/hooks/useChargingSite'
 
 describe('ViewChargingSite', () => {
   const mockChargingSiteData = {
@@ -75,7 +77,7 @@ describe('ViewChargingSite', () => {
     })
   })
 
-  it('renders loading state', () => {
+  test('renders loading state', ({ render, theme, router }) => {
     useGetChargingSiteById.mockReturnValue({
       data: null,
       isLoading: true,
@@ -83,11 +85,17 @@ describe('ViewChargingSite', () => {
       refetch: vi.fn()
     })
 
-    render(<ViewChargingSite />, { wrapper })
+    render(<ViewChargingSite />, [theme, router])
     expect(screen.getByText('Loading...')).toBeInTheDocument()
   })
 
-  it('renders error state', () => {
+  test('renders error state', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     useGetChargingSiteById.mockReturnValue({
       data: null,
       isLoading: false,
@@ -95,12 +103,18 @@ describe('ViewChargingSite', () => {
       refetch: vi.fn()
     })
 
-    render(<ViewChargingSite />, { wrapper })
+    render(<ViewChargingSite />, [query, theme, localization, router])
     expect(screen.getByText('error')).toBeInTheDocument()
   })
 
-  it('renders view charging site with all components for BCeID user', () => {
-    render(<ViewChargingSite />, { wrapper })
+  test('renders view charging site with all components for BCeID user', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<ViewChargingSite />, [query, theme, localization, router])
 
     expect(screen.getByText('viewTitle')).toBeInTheDocument()
     expect(screen.getByText('Card')).toBeInTheDocument()
@@ -108,7 +122,13 @@ describe('ViewChargingSite', () => {
     expect(screen.getByText('FSE Grid')).toBeInTheDocument()
   })
 
-  it('renders IDIR title for government users', () => {
+  test('renders IDIR title for government users', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
     useCurrentUser.mockReturnValue({
       data: { organization: { organizationId: 1 } },
       isLoading: false,
@@ -116,7 +136,7 @@ describe('ViewChargingSite', () => {
       hasAnyRole: vi.fn(() => true)
     })
 
-    render(<ViewChargingSite />, { wrapper })
+    render(<ViewChargingSite />, [query, theme, localization, router])
     expect(screen.getByText('idirSitetitle')).toBeInTheDocument()
   })
 })

@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { Stack, List, ListItemButton } from '@mui/material'
+import Stack from '@mui/material/Stack'
+import List from '@mui/material/List'
+import ListItemButton from '@mui/material/ListItemButton'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
@@ -12,7 +14,7 @@ import { useOrgTransactionCounts } from '@/hooks/useDashboard'
 import { FILTER_KEYS } from '@/constants/common'
 import { TRANSACTION_TYPES, TRANSFER_STATUSES } from '@/constants/statuses'
 
-const CountDisplay = ({ count }) => (
+export const CountDisplay = ({ count }) => (
   <BCTypography
     component="span"
     variant="h3"
@@ -26,7 +28,7 @@ const CountDisplay = ({ count }) => (
   </BCTypography>
 )
 
-const OrgTransactionsCard = () => {
+export const OrgTransactionsCard = () => {
   const { t } = useTranslation(['dashboard'])
   const navigate = useNavigate()
 
@@ -140,9 +142,9 @@ const OrgTransactionsCard = () => {
 }
 
 const AllowedRoles = [roles.transfers]
-const orgTransactionsWidgetWithRole = withRole(
+const OrgTransactionsCardWithRole = withRole(
   OrgTransactionsCard,
   AllowedRoles
 )
 
-export default orgTransactionsWidgetWithRole
+export default OrgTransactionsCardWithRole

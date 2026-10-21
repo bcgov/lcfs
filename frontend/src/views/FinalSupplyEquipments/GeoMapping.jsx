@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { MapContainer } from 'react-leaflet'
-import { Paper } from '@mui/material'
+import Paper from '@mui/material/Paper'
 import BCTypography from '@/components/BCTypography'
 import BCButton from '@/components/BCButton'
 import 'leaflet/dist/leaflet.css'
@@ -12,13 +12,7 @@ import {
   MapLegend,
   MapMarkers
 } from './components/MapComponents'
-import {
-  GeofencingStatus,
-  OverlapSummary,
-  LoadingState,
-  ErrorState,
-  NoDataState
-} from './components/StatusComponent'
+import { GeofencingStatus, ErrorState, NoDataState } from './components/StatusComponent'
 import { ExcelStyledTable } from './components/TableComponent'
 // Import utility functions and services
 import {
@@ -149,21 +143,15 @@ const formatNumber = (value, options = {}) => {
   }).format(value)
 }
 
-const GeoMapping = ({ complianceReportId, data }) => {
+const GeoMapping = ({
+  data
+}) => {
   const [locations, setLocations] = useState([])
   const [groupedLocations, setGroupedLocations] = useState({})
   const [error, setError] = useState(null)
   const [overlapMap, setOverlapMap] = useState({})
   const [geofencingResults, setGeofencingResults] = useState({})
   const [geofencingStatus, setGeofencingStatus] = useState('idle')
-  const [overlapStats, setOverlapStats] = useState({
-    total: 0,
-    overlapping: 0,
-    nonOverlapping: 0,
-    bcOverlapping: 0,
-    nonBcOverlapping: 0
-  })
-
   // Use the location service for geofencing
   const { batchProcessGeofencing } = useLocationService()
 
@@ -214,7 +202,7 @@ const GeoMapping = ({ complianceReportId, data }) => {
           setGeofencingStatus('error')
         })
     }
-  }, [locations, groupedLocations, geofencingStatus])
+  }, [locations, groupedLocations, geofencingStatus, batchProcessGeofencing])
 
   // Calculate overlaps when locations and geofencing are completed
   useEffect(() => {
@@ -248,7 +236,6 @@ const GeoMapping = ({ complianceReportId, data }) => {
       })
 
       setOverlapMap(overlaps)
-      setOverlapStats(stats)
       console.log('Period overlaps:', overlaps)
       console.log('Overlap statistics:', stats)
     }
@@ -410,9 +397,6 @@ const GeoMapping = ({ complianceReportId, data }) => {
       </BCButton>
 
       <GeofencingStatus status={geofencingStatus} />
-      {/* {geofencingStatus === 'completed' && (
-        <OverlapSummary overlapStats={overlapStats} />
-      )} */}
       <Paper
         elevation={3}
         sx={{ height: 600, width: '100%', overflow: 'hidden' }}

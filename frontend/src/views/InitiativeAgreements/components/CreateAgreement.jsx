@@ -1,13 +1,11 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import {
-  Autocomplete,
-  Box,
-  InputLabel,
-  MenuItem,
-  TextField
-} from '@mui/material'
+import Autocomplete from '@mui/material/Autocomplete'
+import Box from '@mui/material/Box'
+import InputLabel from '@mui/material/InputLabel'
+import MenuItem from '@mui/material/MenuItem'
+import TextField from '@mui/material/TextField'
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
@@ -21,7 +19,7 @@ import { useOrganizationNames } from '@/hooks/useOrganizations'
 import { useCreateAgreement } from '@/hooks/useInitiativeAgreements'
 import ModalField from './ModalField'
 
-export const AGREEMENT_TYPES = ['Initiative Agreement', 'P3A']
+const AGREEMENT_TYPES = ['Initiative Agreement', 'P3A']
 
 // Starting an agreement from the index page. Deliberately thin: an analyst
 // opening a file has the organization and the agreement code, and little

@@ -40,9 +40,11 @@ const createWrapper = () => {
       mutations: { retry: false }
     }
   })
-  return ({ children }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  )
+  return function QueryWrapper({ children }) {
+    return (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    )
+  }
 }
 
 describe('useComments', () => {
@@ -375,7 +377,7 @@ describe('useComments', () => {
       await act(async () => {
         try {
           await result.current.addComment()
-        } catch (error) {
+        } catch {
           // Expected to throw
         }
       })
@@ -400,7 +402,7 @@ describe('useComments', () => {
       await act(async () => {
         try {
           await result.current.addComment()
-        } catch (error) {
+        } catch {
           // Expected to throw
         }
       })

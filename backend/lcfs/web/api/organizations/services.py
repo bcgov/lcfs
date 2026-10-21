@@ -665,17 +665,6 @@ class OrganizationsService:
         return await self.transaction_repo.calculate_available_balance(organization_id)
 
     @service_handler
-    async def calculate_available_balance_for_period(
-        self, organization_id: int, compliance_period: int
-    ) -> int:
-        """
-        Calculates the available balance for a given organization that existed on or before the March 31 compliance deadline for a reporting year.
-        """
-        return await self.transaction_repo.calculate_available_balance_for_period(
-            organization_id, compliance_period
-        )
-
-    @service_handler
     async def adjust_balance(
         self,
         transaction_action: TransactionActionEnum,

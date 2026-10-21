@@ -13,6 +13,7 @@ export interface FeatureFlagsConfig {
   internalCommentSearch?: boolean
   deterministicReportSummary?: boolean
   creditMarketLoginPage?: boolean
+  publicMarketData?: boolean
   initiativeAgreements?: boolean
 }
 
@@ -95,6 +96,7 @@ export const FEATURE_FLAGS = {
   INTERNAL_COMMENT_SEARCH: 'internalCommentSearch',
   DETERMINISTIC_REPORT_SUMMARY: 'deterministicReportSummary',
   CREDIT_MARKET_LOGIN_PAGE: 'creditMarketLoginPage',
+  PUBLIC_MARKET_DATA: 'publicMarketData',
   INITIATIVE_AGREEMENTS: 'initiativeAgreements'
 } as const
 
@@ -181,6 +183,8 @@ export const CONFIG: AppConfig = {
       window.lcfs_config.feature_flags.deterministicReportSummary ??
       !isProductionEnvironment,
     creditMarketLoginPage:
-      window.lcfs_config.feature_flags.creditMarketLoginPage ?? false
+      window.lcfs_config.feature_flags.creditMarketLoginPage ?? false,
+    publicMarketData:
+      window.lcfs_config.feature_flags.publicMarketData ?? false
   }
 }

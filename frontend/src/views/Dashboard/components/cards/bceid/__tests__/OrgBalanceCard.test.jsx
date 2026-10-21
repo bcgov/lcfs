@@ -22,21 +22,33 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, variant, component, gutterBottom, sx, ...domProps }) => <div data-test="bc-typography" {...domProps}>{children}</div>
+  default: ({
+  children,
+  ...domProps
+}) => { delete domProps.variant; delete domProps.component; delete domProps.gutterBottom; delete domProps.sx; return <div data-test="bc-typography" {...domProps}>{children}</div>; }
 }))
 
 vi.mock('@/components/Loading', () => ({
   default: ({ message }) => <div data-test="loading">{message}</div>
 }))
 
-vi.mock('@mui/material', () => ({
-  Box: ({ children, paddingTop, paddingBottom, flexDirection, alignItems, justifyContent, ...domProps }) => <div data-test="box" {...domProps}>{children}</div>,
-  Tooltip: ({ children, title }) => <div data-test="tooltip" title={title}>{children}</div>,
-  Fade: () => <div data-test="fade" />
+vi.mock('@mui/material/Box', () => ({
+    default: ({
+  children,
+  ...domProps
+}) => { delete domProps.paddingTop; delete domProps.paddingBottom; delete domProps.flexDirection; delete domProps.alignItems; delete domProps.justifyContent; return <div data-test="box" {...domProps}>{children}</div>; }
 }))
 
-vi.mock('@mui/icons-material', () => ({
-  Info: () => <div data-test="info-icon" />
+vi.mock('@mui/material/Tooltip', () => ({
+    default: ({ children, title }) => <div data-test="tooltip" title={title}>{children}</div>
+}))
+
+vi.mock('@mui/material/Fade', () => ({
+    default: () => <div data-test="fade" />
+}))
+
+vi.mock('@mui/icons-material/Info', () => ({
+    default: () => <div data-test="info-icon" />
 }))
 
 describe('OrgBalanceCard', () => {

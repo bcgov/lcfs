@@ -1,34 +1,28 @@
-// @ts-nocheck
-import type { ColDef } from '@ag-grid-community/core'
-import type { GridErrors, GridWarnings } from '@/types/schema'
+import type { ColDef } from 'ag-grid-community'
+import type {} from '@/types/schema';
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import BCTypography from '@/components/BCTypography'
 import BCButton from '@/components/BCButton'
-import {
-  AsyncSuggestionEditor,
-  AutocompleteCellEditor,
-  BCSelectFloatingFilter,
-  RequiredHeader,
-  TextCellEditor
-} from '@/components/BCDataGrid/components'
+import { AsyncSuggestionEditor } from '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor'
+import '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor'
+import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
+import { RequiredHeader } from '@/components/BCDataGrid/components/Renderers/RequiredHeader'
+import { TextCellEditor } from '@/components/BCDataGrid/components/Editors/TextCellEditor'
 import i18n from '@/i18n'
 import { actions, validation } from '@/components/BCDataGrid/columns'
-import {
-  ChargingSiteStatusRenderer,
-  CommonArrayRenderer,
-  createStatusRenderer,
-  MultiSelectRenderer
-} from '@/utils/grid/cellRenderers'
+import { ChargingSiteStatusRenderer, CommonArrayRenderer } from '@/utils/grid/cellRenderers'
+import { createStatusRenderer } from '@/utils/grid/createStatusRenderer'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import { apiRoutes } from '@/constants/routes'
-import { dateFormatter, numberFormatter } from '@/utils/formatters'
+import { dateFormatter } from '@/utils/formatters'
 import {
   useChargingEquipmentStatuses,
   useChargingSiteStatuses
 } from '@/hooks/useChargingSite'
 import { StyledChip } from '@/components/StyledChip'
 import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
-import { ExpandLess, ExpandMore } from '@mui/icons-material'
+import ExpandLess from '@mui/icons-material/ExpandLess'
+import ExpandMore from '@mui/icons-material/ExpandMore'
 
 // Helper function for address autocomplete within grid
 const addressAutocompleteQuery = async ({ client, queryKey }) => {
@@ -68,9 +62,7 @@ const addressAutocompleteQuery = async ({ client, queryKey }) => {
 }
 
 export const chargingSiteColDefs = (
-  errors: GridErrors,
-  warnings: GridWarnings,
-  gridReady: boolean
+  errors, warnings
 ): ColDef[] => {
   return [
     validation,
@@ -104,14 +96,14 @@ export const chargingSiteColDefs = (
       valueGetter: (params) => {
         return params.data?.siteName || ''
       },
-      tooltipValueGetter: (p) => 'Enter a unique site identifier name'
+      tooltipValueGetter: () => 'Enter a unique site identifier name'
     },
     {
       field: 'streetAddress',
       headerComponent: RequiredHeader,
       headerName: i18n.t('chargingSite:columnLabels.streetAddress'),
       cellEditor: AsyncSuggestionEditor,
-      cellEditorParams: (params) => ({
+      cellEditorParams: () => ({
         queryKey: 'address-autocomplete',
         queryFn: addressAutocompleteQuery,
         optionLabel: 'label'
@@ -266,7 +258,7 @@ export const chargingSiteColDefs = (
 
         return true
       },
-      tooltipValueGetter: (p) =>
+      tooltipValueGetter: () =>
         'Enter or select the allocating organization name. Suggestions include organizations from your allocation agreements and previously entered values.'
     },
     {
@@ -279,24 +271,36 @@ export const chargingSiteColDefs = (
   ]
 }
 
+type ChargingEquipmentColumnOptions = {
+  enableSelection?: boolean
+  historyMode?: boolean
+  onToggleHistory?: ((registrationNumber: string | number) => void) | null
+  expandedRows?: Set<string | number>
+  showDateColumns?: boolean
+  showIntendedUsers?: boolean
+  showLocationFields?: boolean
+  showPorts?: boolean
+  showFuelMeasurement?: boolean
+  showNotes?: boolean
+  showOrganizationColumn?: boolean
+}
+
 export const chargingEquipmentColDefs = (
   t: (key: string) => string,
-  isIDIR: boolean = false,
-  options: Record<string, any> = {}
+  ...args: [isIDIR?: boolean, options?: ChargingEquipmentColumnOptions]
 ): ColDef[] => {
+  const options = args[1] || {}
   const {
-    enableSelection = false,
-    historyMode = false,
-    onToggleHistory = null,
-    expandedRows = new Set(),
-    showDateColumns = false,
-    showIntendedUsers = false,
-    showLocationFields = true,
-    showPorts = false,
-    showFuelMeasurement = false,
-    showNotes = false,
-    showOrganizationColumn = false
-  } = options
+  enableSelection = false,
+  historyMode = false,
+  onToggleHistory = null,
+  expandedRows = new Set(),
+  showDateColumns = false,
+  showIntendedUsers = false,
+  showLocationFields = true,
+  showNotes = false,
+  showOrganizationColumn = false
+} = options
 
   const cols = []
 

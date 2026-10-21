@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ThemeProvider } from '@mui/material/styles'
@@ -41,13 +41,11 @@ vi.mock('@/hooks/useCurrentUser')
 describe('AssignedAnalystCell', () => {
   let mockOnRefresh
   let mockAssignAnalyst
-  let mockGetAvailableAnalysts
 
   beforeEach(() => {
     vi.clearAllMocks()
     mockOnRefresh = vi.fn()
     mockAssignAnalyst = vi.fn()
-    mockGetAvailableAnalysts = vi.fn()
 
     // Default mock implementations
     useCurrentUserHook.useCurrentUser.mockReturnValue({
@@ -269,7 +267,7 @@ describe('AssignedAnalystCell', () => {
       // Setup mock to capture onSuccess from hook options
       let capturedOnSuccess
       useComplianceReportsHook.useAssignAnalyst.mockReturnValue({
-        mutate: vi.fn((params) => {
+        mutate: vi.fn(() => {
           // Call the onSuccess callback that was passed to the hook
           capturedOnSuccess?.()
         }),
@@ -280,7 +278,7 @@ describe('AssignedAnalystCell', () => {
       useComplianceReportsHook.useAssignAnalyst.mockImplementation((options) => {
         capturedOnSuccess = options?.onSuccess
         return {
-          mutate: vi.fn((params) => {
+          mutate: vi.fn(() => {
             capturedOnSuccess?.()
           }),
           isLoading: false

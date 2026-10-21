@@ -1,13 +1,11 @@
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Box,
-  CircularProgress
-} from '@mui/material'
+import Dialog from '@mui/material/Dialog'
+import DialogTitle from '@mui/material/DialogTitle'
+import DialogContent from '@mui/material/DialogContent'
+import DialogActions from '@mui/material/DialogActions'
+import Box from '@mui/material/Box'
+import CircularProgress from '@mui/material/CircularProgress'
 import { useTranslation } from 'react-i18next'
 
 export const BulkProcessingModals = ({
@@ -21,7 +19,7 @@ export const BulkProcessingModals = ({
   isValidating,
   isReturningToDraft
 }) => {
-  const { t } = useTranslation(['common', 'chargingEquipment'])
+  useTranslation(['common', 'chargingEquipment']);
 
   return (
     <>

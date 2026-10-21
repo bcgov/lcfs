@@ -1,11 +1,9 @@
-import {
-  ActionsRenderer,
-  AsyncSuggestionEditor,
-  AutocompleteCellEditor,
-  DateEditor,
-  RequiredHeader,
-  TransportModeDistanceCellEditor
-} from '@/components/BCDataGrid/components'
+import { ActionsRenderer } from '@/components/BCDataGrid/components/Renderers/ActionsRenderer'
+import { AsyncSuggestionEditor } from '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor'
+import { AutocompleteCellEditor } from '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor'
+import { DateEditor } from '@/components/BCDataGrid/components/Editors/DateEditor'
+import { RequiredHeader } from '@/components/BCDataGrid/components/Renderers/RequiredHeader'
+import { TransportModeDistanceCellEditor } from '@/components/BCDataGrid/components/Editors/TransportModeDistanceCellEditor'
 import { apiRoutes } from '@/constants/routes'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
@@ -204,7 +202,6 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
   const transportModes = optionsData?.transportModes || []
   const fuelCodes = optionsData?.fuelCodes || []
 
-  const fuelCodeById = new Map(fuelCodes.map((fc) => [fc.fuelCodeId, fc]))
 
   const isRenewal = (params) => isRenewalRow(params.data, applicationTypes)
   const lockedOnRenewal = (params) => canEdit && !isRenewal(params)

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Box } from '@mui/material'
+import Box from '@mui/material/Box'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 
 import BCButton from '@/components/BCButton'

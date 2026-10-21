@@ -1,23 +1,19 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import {
-  FormControl,
-  Select,
-  MenuItem,
-  IconButton,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
-  Box,
-  Skeleton
-} from '@mui/material'
-import {
-  ContentCopy,
-  Refresh,
-  AddCircleOutline,
-  Warning as WarningIcon
-} from '@mui/icons-material'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import FormControl from '@mui/material/FormControl'
+import Select from '@mui/material/Select'
+import MenuItem from '@mui/material/MenuItem'
+import IconButton from '@mui/material/IconButton'
+import Dialog from '@mui/material/Dialog'
+import DialogActions from '@mui/material/DialogActions'
+import DialogContent from '@mui/material/DialogContent'
+import DialogContentText from '@mui/material/DialogContentText'
+import DialogTitle from '@mui/material/DialogTitle'
+import Box from '@mui/material/Box'
+import Skeleton from '@mui/material/Skeleton'
+import ContentCopy from '@mui/icons-material/ContentCopy'
+import Refresh from '@mui/icons-material/Refresh'
+import AddCircleOutline from '@mui/icons-material/AddCircleOutline'
+import WarningIcon from '@mui/icons-material/Warning'
 
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
@@ -52,7 +48,9 @@ const ALERT_TYPES = {
   INFO: 'info'
 }
 
-export const LinkKeyManagement = ({ orgData, orgID }) => {
+export const LinkKeyManagement = ({
+  orgID
+}) => {
   const { t } = useTranslation(['common', 'org'])
 
   // State management
@@ -192,34 +190,9 @@ export const LinkKeyManagement = ({ orgData, orgID }) => {
   )
 
   // Event handlers
-  const handleCopyLink = useCallback(async () => {
-    const existingKey = getExistingKey(selectedFormId)
-
-    if (existingKey?.formSlug && existingKey?.linkKey) {
-      const link = generateFormLink(existingKey.formSlug, existingKey.linkKey)
-      await handleCopyToClipboard(link, selectedForm.name)
-    } else {
-      generateMutation.mutate({ formId: normalizeFormId(selectedFormId) })
-    }
-  }, [
-    selectedFormId,
-    selectedForm,
-    getExistingKey,
-    handleCopyToClipboard,
-    showAlert
-  ])
-
   const handleRegenerate = useCallback(() => {
     setShowRegenerateDialog(true)
-  }, [selectedFormId, hasExistingKey, showAlert])
-
-  const confirmRegenerate = useCallback(() => {
-    if (!selectedFormId) return
-
-    setIsRegenerating(true)
-    setShowRegenerateDialog(false)
-    regenerateMutation.mutate(normalizeFormId(selectedFormId))
-  }, [selectedFormId])
+  }, [])
 
   // Mutation success handlers
   const handleGenerateSuccess = useCallback(
@@ -334,6 +307,31 @@ export const LinkKeyManagement = ({ orgData, orgID }) => {
     onSuccess: handleRegenerateSuccess,
     onError: handleRegenerateError
   })
+
+  const handleCopyLink = useCallback(async () => {
+    const existingKey = getExistingKey(selectedFormId)
+
+    if (existingKey?.formSlug && existingKey?.linkKey) {
+      const link = generateFormLink(existingKey.formSlug, existingKey.linkKey)
+      await handleCopyToClipboard(link, selectedForm?.name)
+    } else {
+      generateMutation.mutate({ formId: normalizeFormId(selectedFormId) })
+    }
+  }, [
+    selectedFormId,
+    selectedForm,
+    getExistingKey,
+    handleCopyToClipboard,
+    generateMutation
+  ])
+
+  const confirmRegenerate = useCallback(() => {
+    if (!selectedFormId) return
+
+    setIsRegenerating(true)
+    setShowRegenerateDialog(false)
+    regenerateMutation.mutate(normalizeFormId(selectedFormId))
+  }, [selectedFormId, regenerateMutation])
 
   // Effects
   useEffect(() => {

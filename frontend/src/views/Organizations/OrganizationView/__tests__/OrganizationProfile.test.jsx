@@ -1,6 +1,21 @@
-import React from 'react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { omitProperties } from '@/utils/omitProperties'
+import { test } from '@/tests/utils/fixtures'
+import 'react';
+import { vi, describe, expect, beforeEach } from 'vitest';
+import { screen } from '@testing-library/react';
+
+// Now import the other modules
+import { OrganizationProfile } from '../OrganizationProfile.jsx'
+import * as formatters from '@/utils/formatters'
+import * as addressUtils from '@/utils/constructAddress.js'
+
+// Import the mocked functions to control their behavior
+import { isFeatureEnabled } from '@/constants/config'
+
+// ============ MOCKS MUST BE FIRST ============
+// Mock all dependencies before any imports
+
+// Mock Keycloak first - this is the root cause
 
 // ============ MOCKS MUST BE FIRST ============
 // Mock all dependencies before any imports
@@ -59,7 +74,9 @@ vi.mock('@/hooks/useOrganization', () => ({
 vi.mock(
   '@/views/Organizations/OrganizationView/components/LinkKeyManagement',
   () => ({
-    LinkKeyManagement: ({ orgData, orgID }) => (
+    LinkKeyManagement: ({
+  orgID
+}) => (
       <div data-test="link-key-management" data-org-id={orgID}>
         LinkKeyManagement Component
       </div>
@@ -69,18 +86,14 @@ vi.mock(
 
 // Also mock relative path
 vi.mock('./components/LinkKeyManagement', () => ({
-  LinkKeyManagement: ({ orgData, orgID }) => (
+  LinkKeyManagement: ({
+  orgID
+}) => (
     <div data-test="link-key-management" data-org-id={orgID}>
       LinkKeyManagement Component
     </div>
   )
 }))
-
-// Now import the other modules
-import { wrapper } from '@/tests/utils/wrapper.jsx'
-import { OrganizationProfile } from '../OrganizationProfile.jsx'
-import * as formatters from '@/utils/formatters'
-import * as addressUtils from '@/utils/constructAddress.js'
 
 // Component mocks
 vi.mock('react-i18next', () => ({
@@ -93,24 +106,8 @@ vi.mock('@/components/BCBox', () => ({
   default: ({ children, className, ...props }) => {
     // Filter out style-related props that shouldn't be passed to DOM
     const {
-      p,
-      m,
-      mt,
-      mb,
-      ml,
-      mr,
-      pt,
-      pb,
-      pl,
-      pr,
-      display,
-      flexDirection,
-      gap,
-      gridTemplateColumns,
-      columnGap,
-      rowGap,
-      ...domProps
-    } = props
+  ...domProps
+} = omitProperties(props, ["p","m","mt","mb","ml","mr","pt","pb","pl","pr","display","flexDirection","gap","gridTemplateColumns","columnGap","rowGap"])
 
     return (
       <div data-test="bc-box" className={className} {...domProps}>
@@ -123,7 +120,9 @@ vi.mock('@/components/BCBox', () => ({
 vi.mock('@/components/BCTypography', () => ({
   default: ({ children, variant, className, ...props }) => {
     // Filter out any non-standard DOM props
-    const { color, fontWeight, fontSize, ...domProps } = props
+    const {
+  ...domProps
+} = omitProperties(props, ["color","fontWeight","fontSize"])
 
     return (
       <div
@@ -184,9 +183,6 @@ vi.mock('@/constants/config', () => ({
 vi.mock('@/utils/formatters')
 vi.mock('@/utils/constructAddress')
 
-// Import the mocked functions to control their behavior
-import { isFeatureEnabled } from '@/constants/config'
-
 const mockOrgData = {
   name: 'Test Organization',
   operatingName: 'Test Org',
@@ -224,12 +220,7 @@ const mockUnregisteredOrgData = {
   }
 }
 
-const mockMinimalOrgData = {
-  name: 'Minimal Org',
-  orgStatus: {
-    status: 'unregistered'
-  }
-}
+
 
 describe('OrganizationProfile Component', () => {
   const mockHasRoles = vi.fn()
@@ -253,14 +244,14 @@ describe('OrganizationProfile Component', () => {
     })
 
     // Default hasRoles implementation
-    mockHasRoles.mockImplementation((role) => false)
+    mockHasRoles.mockImplementation(() => false)
 
     // Default feature flag behavior
     vi.mocked(isFeatureEnabled).mockReturnValue(false)
   })
 
   describe('Basic Rendering', () => {
-    it('renders organization basic information', () => {
+    test('renders organization basic information', ({ render }) => {
       render(
         <OrganizationProfile
           hasRoles={mockHasRoles}
@@ -269,7 +260,7 @@ describe('OrganizationProfile Component', () => {
           orgData={mockOrgData}
           orgBalanceInfo={mockOrgBalanceInfo}
         />,
-        { wrapper }
+        []
       )
 
       expect(screen.getByText('Test Organization')).toBeInTheDocument()
@@ -277,7 +268,7 @@ describe('OrganizationProfile Component', () => {
       expect(screen.getByText('test@example.com')).toBeInTheDocument()
     })
 
-    it('handles undefined orgData gracefully', () => {
+    test('handles undefined orgData gracefully', ({ render }) => {
       render(
         <OrganizationProfile
           hasRoles={mockHasRoles}
@@ -286,7 +277,7 @@ describe('OrganizationProfile Component', () => {
           orgData={undefined}
           orgBalanceInfo={null}
         />,
-        { wrapper }
+        []
       )
 
       // Should not crash and should render basic structure
@@ -295,7 +286,7 @@ describe('OrganizationProfile Component', () => {
   })
 
   describe('Phone Number Formatting', () => {
-    it('formats phone number correctly', () => {
+    test('formats phone number correctly', ({ render }) => {
       render(
         <OrganizationProfile
           hasRoles={mockHasRoles}
@@ -304,7 +295,7 @@ describe('OrganizationProfile Component', () => {
           orgData={mockOrgData}
           orgBalanceInfo={mockOrgBalanceInfo}
         />,
-        { wrapper }
+        []
       )
 
       expect(formatters.phoneNumberFormatter).toHaveBeenCalledWith({
@@ -313,7 +304,7 @@ describe('OrganizationProfile Component', () => {
       expect(screen.getByText('(604) 123-4567')).toBeInTheDocument()
     })
 
-    it('handles missing phone number', () => {
+    test('handles missing phone number', ({ render }) => {
       const orgDataWithoutPhone = { ...mockOrgData, phone: undefined }
 
       render(
@@ -324,7 +315,7 @@ describe('OrganizationProfile Component', () => {
           orgData={orgDataWithoutPhone}
           orgBalanceInfo={mockOrgBalanceInfo}
         />,
-        { wrapper }
+        []
       )
 
       expect(formatters.phoneNumberFormatter).toHaveBeenCalledWith({
@@ -334,7 +325,7 @@ describe('OrganizationProfile Component', () => {
   })
 
   describe('Address Construction', () => {
-    it('constructs service and attorney addresses', () => {
+    test('constructs service and attorney addresses', ({ render }) => {
       render(
         <OrganizationProfile
           hasRoles={mockHasRoles}
@@ -343,7 +334,7 @@ describe('OrganizationProfile Component', () => {
           orgData={mockOrgData}
           orgBalanceInfo={mockOrgBalanceInfo}
         />,
-        { wrapper }
+        []
       )
 
       expect(addressUtils.constructAddress).toHaveBeenCalledWith(
@@ -361,7 +352,7 @@ describe('OrganizationProfile Component', () => {
       ).toBeInTheDocument()
     })
 
-    it('handles missing addresses gracefully', () => {
+    test('handles missing addresses gracefully', ({ render }) => {
       const orgDataWithoutAddresses = {
         ...mockOrgData,
         orgAddress: undefined,
@@ -376,7 +367,7 @@ describe('OrganizationProfile Component', () => {
           orgData={orgDataWithoutAddresses}
           orgBalanceInfo={mockOrgBalanceInfo}
         />,
-        { wrapper }
+        []
       )
 
       expect(addressUtils.constructAddress).toHaveBeenCalledWith(undefined)
@@ -384,7 +375,7 @@ describe('OrganizationProfile Component', () => {
   })
 
   describe('Operating Name Fallback', () => {
-    it('uses legal name when operating name is missing', () => {
+    test('uses legal name when operating name is missing', ({ render }) => {
       const orgDataWithoutOperatingName = {
         ...mockOrgData,
         operatingName: undefined
@@ -398,7 +389,7 @@ describe('OrganizationProfile Component', () => {
           orgData={orgDataWithoutOperatingName}
           orgBalanceInfo={mockOrgBalanceInfo}
         />,
-        { wrapper }
+        []
       )
 
       // Should show legal name twice (once for legal name, once for operating name fallback)
@@ -406,7 +397,7 @@ describe('OrganizationProfile Component', () => {
       expect(legalNameElements.length).toBeGreaterThanOrEqual(2)
     })
 
-    it('uses operating name when available', () => {
+    test('uses operating name when available', ({ render }) => {
       render(
         <OrganizationProfile
           hasRoles={mockHasRoles}
@@ -415,7 +406,7 @@ describe('OrganizationProfile Component', () => {
           orgData={mockOrgData}
           orgBalanceInfo={mockOrgBalanceInfo}
         />,
-        { wrapper }
+        []
       )
 
       expect(screen.getByText('Test Org')).toBeInTheDocument()
@@ -423,7 +414,7 @@ describe('OrganizationProfile Component', () => {
   })
 
   describe('Role-Based Rendering', () => {
-    it('shows compliance unit balance for government users', () => {
+    test('shows compliance unit balance for government users', ({ render }) => {
       mockHasRoles.mockImplementation((role) => role === 'government')
 
       render(
@@ -434,24 +425,26 @@ describe('OrganizationProfile Component', () => {
           orgData={mockOrgData}
           orgBalanceInfo={mockOrgBalanceInfo}
         />,
-        { wrapper }
+        []
       )
 
       // Use more flexible text matching for numbers that might be separated by whitespace
       expect(
-        screen.getByText((content, element) => {
+        screen.getByText((content) => {
           return content.includes('15,000')
         })
       ).toBeInTheDocument()
 
       expect(
-        screen.getByText((content, element) => {
+        screen.getByText((content) => {
           return content.includes('2,500')
         })
       ).toBeInTheDocument()
     })
 
-    it('shows update message for non-government users when not loading', () => {
+    test('shows update message for non-government users when not loading', ({
+      render
+    }) => {
       mockHasRoles.mockImplementation(() => false)
 
       render(
@@ -462,7 +455,7 @@ describe('OrganizationProfile Component', () => {
           orgData={mockOrgData}
           orgBalanceInfo={mockOrgBalanceInfo}
         />,
-        { wrapper }
+        []
       )
 
       // Look for the email link within the update message
@@ -474,7 +467,7 @@ describe('OrganizationProfile Component', () => {
       ).toBeInTheDocument()
     })
 
-    it('hides update message for government users', () => {
+    test('hides update message for government users', ({ render }) => {
       mockHasRoles.mockImplementation((role) => role === 'government')
 
       render(
@@ -485,7 +478,7 @@ describe('OrganizationProfile Component', () => {
           orgData={mockOrgData}
           orgBalanceInfo={mockOrgBalanceInfo}
         />,
-        { wrapper }
+        []
       )
 
       expect(screen.queryByRole('link')).not.toBeInTheDocument()
@@ -496,7 +489,7 @@ describe('OrganizationProfile Component', () => {
       ).not.toBeInTheDocument()
     })
 
-    it('hides update message when user is loading', () => {
+    test('hides update message when user is loading', ({ render }) => {
       mockHasRoles.mockImplementation(() => false)
 
       render(
@@ -507,7 +500,7 @@ describe('OrganizationProfile Component', () => {
           orgData={mockOrgData}
           orgBalanceInfo={mockOrgBalanceInfo}
         />,
-        { wrapper }
+        []
       )
 
       expect(screen.queryByRole('link')).not.toBeInTheDocument()
@@ -520,7 +513,9 @@ describe('OrganizationProfile Component', () => {
   })
 
   describe('LinkKeyManagement Feature', () => {
-    it('shows LinkKeyManagement when feature flag is enabled and user has analyst role', () => {
+    test('shows LinkKeyManagement when feature flag is enabled and user has analyst role', ({
+      render
+    }) => {
       vi.mocked(isFeatureEnabled).mockReturnValue(true)
       mockHasRoles.mockImplementation((role) => role === 'analyst')
 
@@ -534,7 +529,7 @@ describe('OrganizationProfile Component', () => {
             orgData={mockOrgData}
             orgBalanceInfo={mockOrgBalanceInfo}
           />,
-          { wrapper }
+          []
         )
 
         expect(screen.getByTestId('link-key-management')).toBeInTheDocument()
@@ -555,7 +550,9 @@ describe('OrganizationProfile Component', () => {
       }
     })
 
-    it('hides LinkKeyManagement when feature flag is disabled', () => {
+    test('hides LinkKeyManagement when feature flag is disabled', ({
+      render
+    }) => {
       vi.mocked(isFeatureEnabled).mockReturnValue(false)
       mockHasRoles.mockImplementation((role) => role === 'analyst')
 
@@ -567,7 +564,7 @@ describe('OrganizationProfile Component', () => {
           orgData={mockOrgData}
           orgBalanceInfo={mockOrgBalanceInfo}
         />,
-        { wrapper }
+        []
       )
 
       expect(
@@ -578,7 +575,9 @@ describe('OrganizationProfile Component', () => {
       ).not.toBeInTheDocument()
     })
 
-    it('hides LinkKeyManagement when both feature flag is disabled and user does not have analyst role', () => {
+    test('hides LinkKeyManagement when both feature flag is disabled and user does not have analyst role', ({
+      render
+    }) => {
       vi.mocked(isFeatureEnabled).mockReturnValue(false)
       mockHasRoles.mockImplementation((role) => role === 'government') // Not analyst
 
@@ -590,7 +589,7 @@ describe('OrganizationProfile Component', () => {
           orgData={mockOrgData}
           orgBalanceInfo={mockOrgBalanceInfo}
         />,
-        { wrapper }
+        []
       )
 
       expect(
@@ -601,7 +600,9 @@ describe('OrganizationProfile Component', () => {
       ).not.toBeInTheDocument()
     })
 
-    it('verifies isFeatureEnabled is called with correct feature flag', () => {
+    test('verifies isFeatureEnabled is called with correct feature flag', ({
+      render
+    }) => {
       vi.mocked(isFeatureEnabled).mockReturnValue(true)
       mockHasRoles.mockImplementation((role) => role === 'analyst')
 
@@ -613,7 +614,7 @@ describe('OrganizationProfile Component', () => {
           orgData={mockOrgData}
           orgBalanceInfo={mockOrgBalanceInfo}
         />,
-        { wrapper }
+        []
       )
 
       expect(isFeatureEnabled).toHaveBeenCalledWith('OBFUSCATED_LINKS')
@@ -621,7 +622,9 @@ describe('OrganizationProfile Component', () => {
   })
 
   describe('Organization Status and Registration', () => {
-    it('shows registered transfer status for registered organizations', () => {
+    test('shows registered transfer status for registered organizations', ({
+      render
+    }) => {
       render(
         <OrganizationProfile
           hasRoles={mockHasRoles}
@@ -630,13 +633,15 @@ describe('OrganizationProfile Component', () => {
           orgData={mockOrgData}
           orgBalanceInfo={mockOrgBalanceInfo}
         />,
-        { wrapper }
+        []
       )
 
       expect(screen.getByText('org:registeredTransferYes')).toBeInTheDocument()
     })
 
-    it('shows unregistered transfer status for unregistered organizations', () => {
+    test('shows unregistered transfer status for unregistered organizations', ({
+      render
+    }) => {
       render(
         <OrganizationProfile
           hasRoles={mockHasRoles}
@@ -645,13 +650,15 @@ describe('OrganizationProfile Component', () => {
           orgData={mockUnregisteredOrgData}
           orgBalanceInfo={mockOrgBalanceInfo}
         />,
-        { wrapper }
+        []
       )
 
       expect(screen.getByText('org:registeredTransferNo')).toBeInTheDocument()
     })
 
-    it('hides credit trading for unregistered organizations', () => {
+    test('hides credit trading for unregistered organizations', ({
+      render
+    }) => {
       render(
         <OrganizationProfile
           hasRoles={mockHasRoles}
@@ -660,7 +667,7 @@ describe('OrganizationProfile Component', () => {
           orgData={mockUnregisteredOrgData}
           orgBalanceInfo={mockOrgBalanceInfo}
         />,
-        { wrapper }
+        []
       )
 
       // Should not show credit trading enabled section
@@ -671,7 +678,7 @@ describe('OrganizationProfile Component', () => {
   })
 
   describe('Conditional Fields', () => {
-    it('shows records address when available', () => {
+    test('shows records address when available', ({ render }) => {
       render(
         <OrganizationProfile
           hasRoles={mockHasRoles}
@@ -680,7 +687,7 @@ describe('OrganizationProfile Component', () => {
           orgData={mockOrgData}
           orgBalanceInfo={mockOrgBalanceInfo}
         />,
-        { wrapper }
+        []
       )
 
       expect(
@@ -688,7 +695,7 @@ describe('OrganizationProfile Component', () => {
       ).toBeInTheDocument()
     })
 
-    it('hides records address when not available', () => {
+    test('hides records address when not available', ({ render }) => {
       const orgDataWithoutRecords = {
         ...mockOrgData,
         recordsAddress: undefined
@@ -702,7 +709,7 @@ describe('OrganizationProfile Component', () => {
           orgData={orgDataWithoutRecords}
           orgBalanceInfo={mockOrgBalanceInfo}
         />,
-        { wrapper }
+        []
       )
 
       expect(
@@ -710,7 +717,7 @@ describe('OrganizationProfile Component', () => {
       ).not.toBeInTheDocument()
     })
 
-    it('shows early issuance for government users', () => {
+    test('shows early issuance for government users', ({ render }) => {
       mockHasRoles.mockImplementation((role) => role === 'government')
 
       render(
@@ -721,7 +728,7 @@ describe('OrganizationProfile Component', () => {
           orgData={mockOrgData}
           orgBalanceInfo={mockOrgBalanceInfo}
         />,
-        { wrapper }
+        []
       )
 
       expect(
@@ -734,7 +741,9 @@ describe('OrganizationProfile Component', () => {
       ).toBeInTheDocument()
     })
 
-    it('shows early issuance for organizations that have it enabled', () => {
+    test('shows early issuance for organizations that have it enabled', ({
+      render
+    }) => {
       mockHasRoles.mockImplementation(() => false)
 
       render(
@@ -745,7 +754,7 @@ describe('OrganizationProfile Component', () => {
           orgData={mockOrgData}
           orgBalanceInfo={mockOrgBalanceInfo}
         />,
-        { wrapper }
+        []
       )
 
       // Should show because orgData.hasEarlyIssuance is true
@@ -759,7 +768,9 @@ describe('OrganizationProfile Component', () => {
       ).toBeInTheDocument()
     })
 
-    it('hides early issuance when not government and org does not have it', () => {
+    test('hides early issuance when not government and org does not have it', ({
+      render
+    }) => {
       mockHasRoles.mockImplementation(() => false)
       const orgDataWithoutEarlyIssuance = {
         ...mockOrgData,
@@ -774,7 +785,7 @@ describe('OrganizationProfile Component', () => {
           orgData={orgDataWithoutEarlyIssuance}
           orgBalanceInfo={mockOrgBalanceInfo}
         />,
-        { wrapper }
+        []
       )
 
       expect(
@@ -789,7 +800,9 @@ describe('OrganizationProfile Component', () => {
   })
 
   describe('Organization Type Rendering', () => {
-    it('shows the legacy single organization type without a BCeID suffix', () => {
+    test('shows the legacy single organization type without a BCeID suffix', ({
+      render
+    }) => {
       const orgDataWithType = {
         ...mockOrgData,
         orgType: { description: 'Fuel Supplier', isBceidUser: true }
@@ -803,7 +816,7 @@ describe('OrganizationProfile Component', () => {
           orgData={orgDataWithType}
           orgBalanceInfo={mockOrgBalanceInfo}
         />,
-        { wrapper }
+        []
       )
 
       expect(screen.getByText('Fuel Supplier')).toBeInTheDocument()
@@ -812,7 +825,9 @@ describe('OrganizationProfile Component', () => {
       ).not.toBeInTheDocument()
     })
 
-    it('lists all organization types for multi-type orgs (#4565)', () => {
+    test('lists all organization types for multi-type orgs (#4565)', ({
+      render
+    }) => {
       const orgDataWithTypes = {
         ...mockOrgData,
         orgTypes: [
@@ -829,7 +844,7 @@ describe('OrganizationProfile Component', () => {
           orgData={orgDataWithTypes}
           orgBalanceInfo={mockOrgBalanceInfo}
         />,
-        { wrapper }
+        []
       )
 
       expect(
@@ -837,7 +852,9 @@ describe('OrganizationProfile Component', () => {
       ).toBeInTheDocument()
     })
 
-    it('shows the roles available to the organization (#4565)', () => {
+    test('shows the roles available to the organization (#4565)', ({
+      render
+    }) => {
       const orgDataWithRoles = {
         ...mockOrgData,
         availableRoles: ['Transfer', 'Compliance Reporting']
@@ -851,7 +868,7 @@ describe('OrganizationProfile Component', () => {
           orgData={orgDataWithRoles}
           orgBalanceInfo={mockOrgBalanceInfo}
         />,
-        { wrapper }
+        []
       )
 
       // Backend role names are rendered with the form's wording, in the
@@ -863,7 +880,7 @@ describe('OrganizationProfile Component', () => {
   })
 
   describe('Balance Information', () => {
-    it('displays balance with correct format', () => {
+    test('displays balance with correct format', ({ render }) => {
       mockHasRoles.mockImplementation((role) => role === 'government')
 
       render(
@@ -874,7 +891,7 @@ describe('OrganizationProfile Component', () => {
           orgData={mockOrgData}
           orgBalanceInfo={mockOrgBalanceInfo}
         />,
-        { wrapper }
+        []
       )
 
       // The balance should be displayed as: "15,000 (2,500)"
@@ -891,7 +908,7 @@ describe('OrganizationProfile Component', () => {
       ).toBeInTheDocument()
     })
 
-    it('handles missing balance info gracefully', () => {
+    test('handles missing balance info gracefully', ({ render }) => {
       mockHasRoles.mockImplementation((role) => role === 'government')
 
       render(
@@ -902,14 +919,14 @@ describe('OrganizationProfile Component', () => {
           orgData={mockOrgData}
           orgBalanceInfo={null}
         />,
-        { wrapper }
+        []
       )
 
       // Should not crash, and balance section should be rendered
       expect(screen.getByTestId('role')).toBeInTheDocument()
     })
 
-    it('handles negative reserved balance correctly', () => {
+    test('handles negative reserved balance correctly', ({ render }) => {
       mockHasRoles.mockImplementation((role) => role === 'government')
       const balanceWithNegative = {
         totalBalance: 10000,
@@ -924,7 +941,7 @@ describe('OrganizationProfile Component', () => {
           orgData={mockOrgData}
           orgBalanceInfo={balanceWithNegative}
         />,
-        { wrapper }
+        []
       )
 
       expect(
@@ -937,7 +954,7 @@ describe('OrganizationProfile Component', () => {
   })
 
   describe('Translation Integration', () => {
-    it('uses translation keys for all labels', () => {
+    test('uses translation keys for all labels', ({ render }) => {
       render(
         <OrganizationProfile
           hasRoles={mockHasRoles}
@@ -946,7 +963,7 @@ describe('OrganizationProfile Component', () => {
           orgData={mockOrgData}
           orgBalanceInfo={mockOrgBalanceInfo}
         />,
-        { wrapper }
+        []
       )
 
       // Check for translation key patterns in strong elements (labels)
@@ -987,7 +1004,7 @@ describe('OrganizationProfile Component', () => {
       ).toBeInTheDocument()
     })
 
-    it('uses correct translation for registration status', () => {
+    test('uses correct translation for registration status', ({ render }) => {
       render(
         <OrganizationProfile
           hasRoles={mockHasRoles}
@@ -996,14 +1013,14 @@ describe('OrganizationProfile Component', () => {
           orgData={mockOrgData}
           orgBalanceInfo={mockOrgBalanceInfo}
         />,
-        { wrapper }
+        []
       )
 
       // Should show the "Yes" translation for registered organizations
       expect(screen.getByText('org:registeredTransferYes')).toBeInTheDocument()
     })
 
-    it('uses correct translation for unregistered status', () => {
+    test('uses correct translation for unregistered status', ({ render }) => {
       render(
         <OrganizationProfile
           hasRoles={mockHasRoles}
@@ -1012,7 +1029,7 @@ describe('OrganizationProfile Component', () => {
           orgData={mockUnregisteredOrgData}
           orgBalanceInfo={mockOrgBalanceInfo}
         />,
-        { wrapper }
+        []
       )
 
       // Should show the "No" translation for unregistered organizations
@@ -1021,7 +1038,7 @@ describe('OrganizationProfile Component', () => {
   })
 
   describe('Component Structure', () => {
-    it('renders correct grid layout structure', () => {
+    test('renders correct grid layout structure', ({ render }) => {
       render(
         <OrganizationProfile
           hasRoles={mockHasRoles}
@@ -1030,14 +1047,14 @@ describe('OrganizationProfile Component', () => {
           orgData={mockOrgData}
           orgBalanceInfo={mockOrgBalanceInfo}
         />,
-        { wrapper }
+        []
       )
 
       const boxes = screen.getAllByTestId('bc-box')
       expect(boxes.length).toBeGreaterThanOrEqual(3) // Main container + grid + columns
     })
 
-    it('renders typography elements with correct variants', () => {
+    test('renders typography elements with correct variants', ({ render }) => {
       render(
         <OrganizationProfile
           hasRoles={mockHasRoles}
@@ -1046,7 +1063,7 @@ describe('OrganizationProfile Component', () => {
           orgData={mockOrgData}
           orgBalanceInfo={mockOrgBalanceInfo}
         />,
-        { wrapper }
+        []
       )
 
       const typographyElements = screen.getAllByTestId('bc-typography')

@@ -15,21 +15,17 @@
  */
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  Box,
-  IconButton,
-  InputLabel,
-  Link,
-  MenuItem,
-  Select,
-  Stack,
-  TextField,
-  Tooltip
-} from '@mui/material'
-import {
-  CloudUpload as CloudUploadIcon,
-  Delete as DeleteIcon
-} from '@mui/icons-material'
+import Box from '@mui/material/Box'
+import IconButton from '@mui/material/IconButton'
+import InputLabel from '@mui/material/InputLabel'
+import Link from '@mui/material/Link'
+import MenuItem from '@mui/material/MenuItem'
+import Select from '@mui/material/Select'
+import Stack from '@mui/material/Stack'
+import TextField from '@mui/material/TextField'
+import Tooltip from '@mui/material/Tooltip'
+import CloudUploadIcon from '@mui/icons-material/CloudUpload'
+import DeleteIcon from '@mui/icons-material/Delete'
 
 import BCAlert from '@/components/BCAlert'
 import BCButton from '@/components/BCButton'

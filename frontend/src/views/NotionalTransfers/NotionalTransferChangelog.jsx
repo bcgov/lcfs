@@ -7,8 +7,8 @@ import {
 } from '@/hooks/useComplianceReports'
 import { defaultInitialPagination } from '@/constants/schedules'
 import colors from '@/themes/base/colors'
-import { Box } from '@mui/material'
-import { useState } from 'react'
+import Box from '@mui/material/Box'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { changelogColDefs, changelogCommonColDefs } from './_schema'
 import { useParams } from 'react-router-dom'
@@ -35,6 +35,30 @@ export const NotionalTransferChangelog = () => {
   const getRowId = (params) => {
     return params.data.notionalTransferId.toString()
   }
+
+  const currentOrOriginalColumnDefs = useMemo(
+    () =>
+      changelogCommonColDefs(
+        false,
+        parseInt(compliancePeriod),
+        isEarlyIssuance
+      ),
+    [compliancePeriod, isEarlyIssuance, t]
+  )
+
+  const changedColumnDefs = useMemo(
+    () => changelogColDefs(true, parseInt(compliancePeriod), isEarlyIssuance),
+    [compliancePeriod, isEarlyIssuance, t]
+  )
+
+  const defaultColDef = useMemo(
+    () => ({
+      floatingFilter: false,
+      filter: false,
+      sortable: false
+    }),
+    []
+  )
 
   const gridOptions = (highlight = true) => ({
     overlayNoRowsTemplate: t('notionalTransfer:noNotionalTransfersFound'),
@@ -126,7 +150,7 @@ export const NotionalTransferChangelog = () => {
         pagination: {
           page: paginationOptions.page,
           size: paginationOptions.size,
-          total: total
+          total
         }
       },
       error: null,
@@ -173,8 +197,8 @@ export const NotionalTransferChangelog = () => {
                 gridKey={`notional-transfers-changelog-${i}`}
                 columnDefs={
                   isCurrentOrOriginalVersion
-                    ? changelogCommonColDefs(false, parseInt(compliancePeriod), isEarlyIssuance)
-                    : changelogColDefs(true, parseInt(compliancePeriod), isEarlyIssuance)
+                    ? currentOrOriginalColumnDefs
+                    : changedColumnDefs
                 }
                 queryData={queryData}
                 getRowId={getRowId}
@@ -184,11 +208,7 @@ export const NotionalTransferChangelog = () => {
                     ? gridOptions(false)
                     : gridOptions()
                 }
-                defaultColDef={{
-                  floatingFilter: false,
-                  filter: false,
-                  sortable: false
-                }}
+                defaultColDef={defaultColDef}
                 paginationOptions={
                   shouldPaginate ? paginationOptions : undefined
                 }

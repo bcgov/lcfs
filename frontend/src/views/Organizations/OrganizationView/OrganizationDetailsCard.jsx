@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react';
 import BCBox from '@/components/BCBox'
-import BCTypography from '@/components/BCTypography'
+import '@/components/BCTypography';
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import Loading from '@/components/Loading'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { buildPath, ROUTES } from '@/routes/routes'
+import { ROUTES } from '@/routes/routes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   useOrganization,
@@ -13,12 +13,12 @@ import {
 } from '@/hooks/useOrganization'
 
 import { roles } from '@/constants/roles'
-import { ORGANIZATION_STATUSES } from '@/constants/statuses'
-import { Role } from '@/components/Role'
+import '@/constants/statuses';
+import '@/components/Role';
 import { AddEditOrgForm } from '../AddEditOrg/AddEditOrgForm'
 import { OrganizationProfile } from './OrganizationProfile'
 import { CompanyOverviewComments } from './components/CompanyOverviewComments'
-import BCAlert, { FloatingAlert } from '@/components/BCAlert'
+import { FloatingAlert } from '@/components/BCAlert';
 
 export const OrganizationDetailsCard = ({ addMode = false }) => {
   const alertRef = useRef(null)
@@ -51,12 +51,6 @@ export const OrganizationDetailsCard = ({ addMode = false }) => {
   const canEdit = hasRoles(roles.administrator)
   const isGovernment = hasRoles(roles.government)
   const resolvedOrgId = orgID ?? currentUser?.organization?.organizationId
-  const editButtonRoute = canEdit
-    ? buildPath(ROUTES.ORGANIZATIONS.EDIT, {
-        orgID: orgID || currentUser?.organization?.organizationId
-      })
-    : null
-
   const handleEditClick = useCallback(() => {
     setIsEditMode(true)
   }, [])
@@ -68,7 +62,7 @@ export const OrganizationDetailsCard = ({ addMode = false }) => {
       setIsEditMode(false)
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
-  }, [])
+  }, [addMode, navigate])
 
   const handleSaveSuccess = useCallback((organizationId) => {
     if (addMode) {
@@ -79,12 +73,14 @@ export const OrganizationDetailsCard = ({ addMode = false }) => {
         }
       }
       setIsEditMode(false)
-      organizationId
-        ? navigate(
-            ROUTES.ORGANIZATIONS.VIEW.replace(':orgID', organizationId),
-            successMessage
-          )
-        : navigate(ROUTES.ORGANIZATIONS.LIST, successMessage)
+      if (organizationId) {
+        navigate(
+          ROUTES.ORGANIZATIONS.VIEW.replace(':orgID', organizationId),
+          successMessage
+        )
+      } else {
+        navigate(ROUTES.ORGANIZATIONS.LIST, successMessage)
+      }
     } else {
       alertRef.current?.triggerAlert({
         message: t('org:editSuccessMessage'),
@@ -94,7 +90,7 @@ export const OrganizationDetailsCard = ({ addMode = false }) => {
       refetch()
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
-  }, [])
+  }, [addMode, navigate, refetch, t])
 
   if (isLoading) {
     return <Loading />

@@ -1,15 +1,14 @@
 import { useTranslation } from 'react-i18next'
 import BCTypography from '@/components/BCTypography'
-import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
-  IconButton,
-  List
-} from '@mui/material'
-import { useCallback, useMemo, useState } from 'react'
+import Accordion from '@mui/material/Accordion'
+import AccordionDetails from '@mui/material/AccordionDetails'
+import AccordionSummary from '@mui/material/AccordionSummary'
+import IconButton from '@mui/material/IconButton'
+import List from '@mui/material/List'
+import { useCallback, useState } from 'react'
 import colors from '@/themes/base/colors'
-import { Edit, ExpandMore } from '@mui/icons-material'
+import Edit from '@mui/icons-material/Edit'
+import ExpandMore from '@mui/icons-material/ExpandMore'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
 import BCBox from '@/components/BCBox'
@@ -41,11 +40,6 @@ export const ChargingSiteDocument = ({ attachments }) => {
   const handleChange = (panel) => (event, isExpanded) => {
     setExpanded(isExpanded ? panel : false)
   }
-  // Handle attachments accordion toggle
-  const handleAttachmentsAccordionChange = useCallback((event, isExpanded) => {
-    setIsAttachmentsExpanded(isExpanded)
-  }, [])
-
   const handleFileDialogOpen = useCallback(() => {
     setFileDialogOpen(true)
   }, [])

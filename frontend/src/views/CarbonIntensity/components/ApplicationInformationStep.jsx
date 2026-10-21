@@ -1,6 +1,5 @@
 import {
   forwardRef,
-  useCallback,
   useEffect,
   useImperativeHandle,
   useMemo,
@@ -9,15 +8,13 @@ import {
 } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
-import {
-  Autocomplete,
-  Box,
-  InputLabel,
-  MenuItem,
-  Stack,
-  TextField
-} from '@mui/material'
-import { DatePicker } from '@mui/x-date-pickers'
+import Autocomplete from '@mui/material/Autocomplete'
+import Box from '@mui/material/Box'
+import InputLabel from '@mui/material/InputLabel'
+import MenuItem from '@mui/material/MenuItem'
+import Stack from '@mui/material/Stack'
+import TextField from '@mui/material/TextField'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { format as formatDate, isValid as isValidDate, parseISO } from 'date-fns'
 import { debounce } from 'lodash'
 import * as Yup from 'yup'
@@ -57,8 +54,8 @@ const FacilityLocationAutocomplete = ({
   const [debouncedSearch, setDebouncedSearch] = useState(value || '')
   const autofillToken = `lcfs-no-autofill-${id}`
 
-  const debouncedSetSearch = useCallback(
-    debounce((v) => setDebouncedSearch(v), 500),
+  const debouncedSetSearch = useMemo(
+    () => debounce((v) => setDebouncedSearch(v), 500),
     []
   )
 

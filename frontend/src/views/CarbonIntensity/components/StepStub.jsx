@@ -1,4 +1,5 @@
-import { Alert, Box } from '@mui/material'
+import Alert from '@mui/material/Alert'
+import Box from '@mui/material/Box'
 import { useTranslation } from 'react-i18next'
 import BCTypography from '@/components/BCTypography'
 
