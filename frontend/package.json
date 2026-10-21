@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "vp dev",
     "build": "vp build",
+    "check": "vp check",
     "lint": "vp lint --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "vp lint --fix --report-unused-disable-directives --max-warnings 0",
     "format": "vp fmt . --check",

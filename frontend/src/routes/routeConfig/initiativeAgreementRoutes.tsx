@@ -1,3 +1,4 @@
+import { createElement, type ComponentType } from 'react'
 import {
   DesignatedActionDetail,
   DesignatedActions,
@@ -9,31 +10,19 @@ import withFeatureFlag from '@/utils/withFeatureFlag'
 import ROUTES from '../routes'
 import { AppRouteObject } from '../types'
 
-const InitiativeAgreementsGated = withFeatureFlag(
-  InitiativeAgreements,
-  FEATURE_FLAGS.INITIATIVE_AGREEMENTS,
-  ROUTES.DASHBOARD
-)
-const InitiativeAgreementDetailGated = withFeatureFlag(
-  InitiativeAgreementDetail,
-  FEATURE_FLAGS.INITIATIVE_AGREEMENTS,
-  ROUTES.DASHBOARD
-)
-const DesignatedActionDetailGated = withFeatureFlag(
-  DesignatedActionDetail,
-  FEATURE_FLAGS.INITIATIVE_AGREEMENTS,
-  ROUTES.DASHBOARD
-)
-const DesignatedActionsGated = withFeatureFlag(
-  DesignatedActions,
-  FEATURE_FLAGS.INITIATIVE_AGREEMENTS,
-  ROUTES.DASHBOARD
-)
+const createGatedElement = (Component: ComponentType) =>
+  createElement(
+    withFeatureFlag(
+      Component,
+      FEATURE_FLAGS.INITIATIVE_AGREEMENTS,
+      ROUTES.DASHBOARD
+    )
+  )
 
 export const initiativeAgreementRoutes: AppRouteObject[] = [
   {
     path: ROUTES.INITIATIVE_AGREEMENTS.LIST,
-    element: <InitiativeAgreementsGated />,
+    element: createGatedElement(InitiativeAgreements),
     handle: {
       title: 'Initiative agreements',
       crumb: () => 'Initiative agreements'
@@ -41,7 +30,7 @@ export const initiativeAgreementRoutes: AppRouteObject[] = [
   },
   {
     path: ROUTES.INITIATIVE_AGREEMENTS.ACTIONS_LIST,
-    element: <DesignatedActionsGated />,
+    element: createGatedElement(DesignatedActions),
     handle: {
       title: 'Designated actions',
       crumb: () => 'Designated actions'
@@ -49,7 +38,7 @@ export const initiativeAgreementRoutes: AppRouteObject[] = [
   },
   {
     path: ROUTES.INITIATIVE_AGREEMENTS.VIEW,
-    element: <InitiativeAgreementDetailGated />,
+    element: createGatedElement(InitiativeAgreementDetail),
     handle: {
       title: 'Initiative agreement',
       crumb: () => 'Initiative agreement'
@@ -57,7 +46,7 @@ export const initiativeAgreementRoutes: AppRouteObject[] = [
   },
   {
     path: ROUTES.INITIATIVE_AGREEMENTS.ACTION_VIEW,
-    element: <DesignatedActionDetailGated />,
+    element: createGatedElement(DesignatedActionDetail),
     handle: {
       title: 'Designated action',
       crumb: () => 'Designated action'

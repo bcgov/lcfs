@@ -173,8 +173,15 @@ describe('BCeID organization self-service pages (#4092)', () => {
     it('redirects an IDIR org route back to the supplier’s own org', () => {
       stubOrg()
       // A supplier hitting another org's IDIR route is bounced to /organization.
-      cy.visit('/organizations/9999')
-      cy.url({ timeout: 15000 }).should('match', /\/organization$/)
+      // Dispatch popstate so React Router handles this SPA navigation without
+      // asking the dev ingress to serve the IDIR path directly.
+      cy.visit('/organization')
+      cy.get('[role=tab]').should('have.length', 3)
+      cy.window().then((window) => {
+        window.history.pushState({}, '', '/organizations/9999')
+        window.dispatchEvent(new PopStateEvent('popstate'))
+      })
+      cy.location('pathname', { timeout: 15000 }).should('eq', '/organization')
     })
   })
 
@@ -212,6 +219,7 @@ describe('BCeID organization self-service pages (#4092)', () => {
       cy.get('#keycloakEmail').type('new.user@testfuel.example.com')
 
       cy.getByDataTest('saveUser').click()
+      cy.getByDataTest('impact-modal-confirm-btn').click()
       cy.wait('@createUser')
       // On success the form redirects back to the org dashboard.
       cy.url({ timeout: 15000 }).should('match', /\/organization$/)

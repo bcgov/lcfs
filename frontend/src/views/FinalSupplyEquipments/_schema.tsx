@@ -68,7 +68,7 @@ type AddressSuggestion = {
 }
 
 // Custom status renderer for FSE that handles flat status field
-const FSEStatusRenderer = createStatusRenderer(
+const fseStatusRenderer = createStatusRenderer(
   {
     Draft: 'info', // Grey
     Submitted: 'warning', // Blue
@@ -562,7 +562,7 @@ export const finalSupplyEquipmentSummaryColDefs = (
           ),
           minWidth: 150,
           field: 'status',
-          cellRenderer: FSEStatusRenderer,
+          cellRenderer: fseStatusRenderer,
           filter: 'agTextColumnFilter',
           sortable: false
         }
