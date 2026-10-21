@@ -524,6 +524,8 @@ class UserServices:
             if actor_name
             else actor.keycloak_username
         )
+        if actor.is_government and not before.is_government_user:
+            changed_by = "Government of British Columbia"
         context = build_account_change_context(
             before, after, before_subscriptions, after_subscriptions, changed_by
         )

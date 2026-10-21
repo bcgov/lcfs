@@ -340,7 +340,16 @@ async def test_restored_disabled_preference_is_explained_in_email(account_servic
 
 
 @pytest.mark.anyio
-async def test_organization_manager_change_notifies_the_affected_user(account_service):
+@pytest.mark.parametrize(
+    "is_government,changed_by",
+    [
+        (True, "Government of British Columbia"),
+        (False, "Account Administrator (admin_user)"),
+    ],
+)
+async def test_organization_user_change_notifies_the_affected_user(
+    account_service, is_government, changed_by
+):
     from lcfs.db.models.organization.Organization import Organization
 
     service, user = account_service
@@ -349,13 +358,18 @@ async def test_organization_manager_change_notifies_the_affected_user(account_se
     user.user_roles = user_roles(RoleEnum.SUPPLIER, RoleEnum.CI_APPLICANT)
     for assignment in user.user_roles:
         assignment.role.is_government_role = False
-    service.request.user.is_government = False
-    service.request.user.role_names = [RoleEnum.SUPPLIER, RoleEnum.MANAGE_USERS]
+    service.request.user.is_government = is_government
+    service.request.user.role_names = (
+        [RoleEnum.GOVERNMENT]
+        if is_government
+        else [RoleEnum.SUPPLIER, RoleEnum.MANAGE_USERS]
+    )
     service.request.user.organization = user.organization
     service.repo.get_organization_available_roles.return_value = {RoleEnum.CI_APPLICANT}
     await service.update_user_and_notify(payload(user, roles=["Supplier"]), 42)
     context = service.email_service.send_account_change_email.call_args.args[1]
     assert context["roles_removed"] == ["CI Applicant"]
+    assert context["changed_by"] == changed_by
     service.email_service.send_account_change_email.assert_awaited_once()
     service.repo.get_user_assigned_work.assert_not_awaited()
 
