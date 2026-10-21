@@ -1,10 +1,9 @@
 import { FuelCodeStatusBadge } from './components/FuelCodeStatusBadge'
 import type { ColDef, ICellRendererParams } from 'ag-grid-community'
 import type { TFunction } from 'i18next'
-import { Link } from 'react-router-dom'
 import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
 import { fuelCodeColDefs as idirFuelCodeColDefs } from '@/views/FuelCodes/_schema'
-import { ROUTES, buildPath } from '@/routes/routes'
+import { FuelCodeLinkCellRenderer } from './components/FuelCodeLinkCellRenderer'
 
 const dateFormatter = new Intl.DateTimeFormat('en-CA', {
   year: 'numeric',
@@ -90,12 +89,6 @@ const idirDateFields = new Set([
   'expirationDate'
 ])
 
-const fuelCodeDetailPath = (fuelCodeId: unknown): string | null => {
-  const id = Number(fuelCodeId)
-  if (!Number.isInteger(id) || id <= 0) return null
-  return buildPath(ROUTES.FUEL_CODES.VIEW, { fuelCodeID: id })
-}
-
 export interface FuelCodeRow {
   id: string
   fuelCodeId?: number | string
@@ -117,32 +110,14 @@ type FuelCodeGridRow = FuelCodeRow & {
 export type FuelCodeCellParams = ICellRendererParams<FuelCodeGridRow>
 type FuelCodeValueParams = { value?: number | string | null }
 
-const linkCellRenderer = (
-  originalRenderer?: ColDef<FuelCodeGridRow>['cellRenderer']
-) => {
-  return function FuelCodeLinkCellRenderer(params: FuelCodeCellParams) {
-    const path = fuelCodeDetailPath(params.data?.fuelCodeId)
-    const content =
-      typeof originalRenderer === 'function'
-        ? originalRenderer(params)
-        : params.valueFormatted || params.value || ''
-    if (!path) return content
-    return (
-      <Link
-        to={path}
-        style={{
-          color: 'inherit',
-          display: 'block',
-          height: '100%',
-          textDecoration: 'none',
-          width: '100%'
-        }}
-      >
-        {content}
-      </Link>
-    )
-  }
-}
+const linkCellRenderer =
+  (originalRenderer?: ColDef<FuelCodeGridRow>['cellRenderer']) =>
+  (params: FuelCodeCellParams) => (
+    <FuelCodeLinkCellRenderer
+      params={params}
+      originalRenderer={originalRenderer}
+    />
+  )
 
 const clickableFuelCodeColDefs = (colDefs: ColDef[]): ColDef[] =>
   colDefs.map((colDef) => ({

@@ -379,6 +379,11 @@ jobs:
           cd frontend
           npm ci --prefer-offline --no-audit --no-fund
 
+      - name: Check frontend
+        run: |
+          cd frontend
+          npm run check
+
       # - name: Type Check Frontend (parallel)
       #   run: |
       #     cd frontend
