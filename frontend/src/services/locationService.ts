@@ -59,9 +59,7 @@ export interface UseLocationServiceReturn {
  * caching, error handling, and consistency across the application.
  */
 export const useLocationService = (): UseLocationServiceReturn => {
-  // oxlint-disable-next-line typescript/no-explicit-any
-  const { checkBCBoundary, reverseGeocode, validateAddress } =
-    useGeocoder() as any
+  const { checkBCBoundary, reverseGeocode, validateAddress } = useGeocoder()
 
   /**
    * Check if a location is within BC boundaries using the geocoder service.

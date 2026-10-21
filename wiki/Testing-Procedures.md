@@ -10,6 +10,8 @@ When feasible, a TDD approach is encouraged. Tests should be written to define t
 
 The frontend utilizes a combination of Vitest for unit/integration testing and Cypress with Cucumber for end-to-end (E2E) testing.
 
+Before frontend tests, run `npm run check` from `frontend/`. This Vite+ command runs Oxfmt, Oxlint, and TypeScript type checks through tsgolint; CI requires zero warnings and errors.
+
 ### 1.1. Unit & Integration Testing (Vitest, React Testing Library, MSW)
 
 *   **Vitest**: A fast Jest-compatible testing framework, primarily used for unit and integration tests.
@@ -20,11 +22,7 @@ The frontend utilizes a combination of Vitest for unit/integration testing and C
 
 Navigate to the `frontend/` directory and use the following `npm` scripts:
 
-*   **Run tests with UI (interactive watch mode)**:
-    ```bash
-    npm run test:ui
-    ```
-*   **Run tests once**: 
+*   **Run tests once**:
     ```bash
     npm run test:run
     ```
@@ -201,4 +199,4 @@ The floors are deliberately a few points under the baseline so ordinary churn do
 Lowest-coverage areas at the baseline, in rough priority order for new tests (statement coverage): `views/OtherUses` (17%), `views/FuelExports` (35%), `views/AllocationAgreements` (43%), `views/FinalSupplyEquipments` (44%), `views/FuelSupplies` (46%), `views/ChargingEquipment` (47%), `views/NotionalTransfers` (49%), `views/ChargingSite` (55%), `components/BCDataGrid` (59%), `views/FuelCodes` (60%). Small files with 0% (`components/BCBox`, `views/ComplianceReporting`, `layouts/PublicPageLayout`, `views/CreditMarket`) are quick wins.
 
 ---
-*Refer to the official documentation for Vitest, React Testing Library, MSW, Cypress, Cucumber, and Pytest for more in-depth information. Consistent and thorough testing is crucial for maintaining the quality and reliability of the LCFS application.* 
+*Refer to the official documentation for Vitest, React Testing Library, MSW, Cypress, Cucumber, and Pytest for more in-depth information. Consistent and thorough testing is crucial for maintaining the quality and reliability of the LCFS application.*
