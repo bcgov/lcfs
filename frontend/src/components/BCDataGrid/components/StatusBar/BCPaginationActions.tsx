@@ -1,4 +1,3 @@
-/* oxlint-disable react/exhaustive-deps */
 import PropTypes from 'prop-types'
 import {
   useCallback,
