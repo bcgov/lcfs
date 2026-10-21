@@ -176,7 +176,9 @@ try {
             def fossilGas   = line1Gas
             def fossilDiesel = line1Diesel
             def fossilJet    = 0.0
-            def fossilTotal  = fossilGas.add(fossilDiesel)
+            // LCFS reads line_11_fossil_derived_base_fuel_total as the Line 11
+            // renewable penalty total, not a fuel volume (#5257)
+            def line11PenaltyTotal = line11Gas.add(line11Diesel)
 
             // ------------------------------
             // Non-compliance Penalty Fields
@@ -238,7 +240,7 @@ try {
             updateStmt.setBigDecimal(idx++, fossilGas)        // line_11_fossil_derived_base_fuel_gasoline (repeat)
             updateStmt.setBigDecimal(idx++, fossilDiesel)     // line_11_fossil_derived_base_fuel_diesel (repeat)
             updateStmt.setDouble(idx++, fossilJet)            // line_11_fossil_derived_base_fuel_jet_fuel (repeat)
-            updateStmt.setBigDecimal(idx++, fossilTotal)      // line_11_fossil_derived_base_fuel_total (repeat)
+            updateStmt.setBigDecimal(idx++, line11PenaltyTotal) // line_11_fossil_derived_base_fuel_total (repeat)
             // Non-compliance Penalty Fields
             updateStmt.setBigDecimal(idx++, line28NonCompliance) // line_21_non_compliance_penalty_payable
             updateStmt.setBigDecimal(idx++, totalPayable) // total_non_compliance_penalty_payable (from snapshot total_payable)
