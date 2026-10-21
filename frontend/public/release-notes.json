@@ -2,10 +2,10 @@
   {
     "version": "1.3.10",
     "tag": "v1.3.10",
-    "date": "2026-10-15",
+    "date": "2026-10-21",
     "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/v1.3.10",
     "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/v1.3.9...v1.3.10",
-    "summary": "This release includes 5 new features, 13 bug fixes, 1 security update, 4 dependency updates and 32 other changes. Highlights: Improve Company Overview Comment UI - 5043, 4909; Credit Market Snapshot Alignment with Metabase Credit Market Report; Maintain Supply History Continuity for Petroleum and Fossil Derived Fuel Labels; Persist IA table preferences per session.",
+    "summary": "This release includes 5 new features, 13 bug fixes, 1 security update, 4 dependency updates and 36 other changes. Highlights: Improve Company Overview Comment UI - 5043, 4909; Credit Market Snapshot Alignment with Metabase Credit Market Report; Maintain Supply History Continuity for Petroleum and Fossil Derived Fuel Labels; Persist IA table preferences per session.",
     "sections": {
       "features": [
         "Improve Company Overview Comment UI - 5043, 4909",
@@ -71,7 +71,11 @@
         "Round CNG Energy Content display values",
         "Stabilize calculator End Use ordering",
         "Show the production release date on the Release Notes page",
-        "Improve accessibility of reference compare box and checkbox controls"
+        "Improve accessibility of reference compare box and checkbox controls",
+        "Test Release v1.3.10+1",
+        "Hotfix release v1.3.9+1: keep TFRS-era (2019-2023) penalties intact in report summaries and the Penalty log (#5257)",
+        "Hotfix release v1.3.9+2: replace the withdrawn Bitnami nginx image in the frontend build",
+        "Merge back Main -> Release (v1.3.9+1 and v1.3.9+2 hotfixes)"
       ]
     },
     "contributors": []
