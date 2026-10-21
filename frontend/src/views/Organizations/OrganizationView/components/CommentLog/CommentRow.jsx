@@ -15,6 +15,7 @@ import BCTypography from '@/components/BCTypography'
 import CommentForm from '@/components/Comments/CommentForm'
 
 import { sanitizeAndHighlightCommentHtml } from '@/utils/sanitizeCommentHtml'
+import { MENTION_CHIP_STYLE } from '@/components/Comments/mentionUtils'
 import { formatCommentDateTime, isCommentEdited } from './dateUtils'
 
 const metadataChipSx = {
@@ -84,11 +85,15 @@ export const CommentRow = forwardRef(function CommentRow(
     index,
     showInternalBadge,
     isGovernmentUser,
+    showOrganizationName = true,
     allowPublicVisibility = true,
     useLatestAttribution = false,
     searchQuery = '',
     onEdit,
-    isEditPending
+    isEditPending,
+    enableMentions = false,
+    mentionResults,
+    onMentionQueryChange
   },
   ref
 ) {
@@ -237,7 +242,7 @@ export const CommentRow = forwardRef(function CommentRow(
                   </time>
                 </>
               )}
-              {comment.organizationName && (
+              {showOrganizationName && comment.organizationName && (
                 <>
                   {' - '}
                   {isGovernmentUser && comment.organizationId ? (
@@ -366,7 +371,8 @@ export const CommentRow = forwardRef(function CommentRow(
             '& li': {
               lineHeight: 1.6,
               fontSize: '1rem'
-            }
+            },
+            '& .mention': MENTION_CHIP_STYLE
           }}
           dangerouslySetInnerHTML={{ __html: renderedHtml }}
         />
@@ -442,6 +448,10 @@ export const CommentRow = forwardRef(function CommentRow(
               showAddCommentBtn
               showTitle={false}
               showVisibilityToggle={false}
+              // Public comments can't carry mentions of internal staff.
+              enableMentions={enableMentions && editVisibility === 'Internal'}
+              mentionResults={mentionResults}
+              onMentionQueryChange={onMentionQueryChange}
             />
           </>
         )}

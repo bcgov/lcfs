@@ -116,6 +116,11 @@ class EvidenceRequirement(BaseModel, Auditable):
         nullable=True,
         comment="Optional analyst notes accompanying the assessment",
     )
+    missing_information = Column(
+        Text,
+        nullable=True,
+        comment="Information requested from the proponent for this evidence requirement",
+    )
     reviewed_by_user_id = Column(
         Integer,
         ForeignKey("user_profile.user_profile_id"),

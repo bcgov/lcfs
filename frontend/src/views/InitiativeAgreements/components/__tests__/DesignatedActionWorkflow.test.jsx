@@ -1,5 +1,5 @@
-import 'react';
-import { cleanup, fireEvent, screen } from '@testing-library/react'
+import 'react'
+import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 
 import { describe, expect, vi, beforeEach } from 'vitest'
 
@@ -38,8 +38,6 @@ describe('DesignatedActionWorkflow', () => {
     render,
     app
   }) => {
-    // The API offers everything an analyst may do; each placement shows
-    // only its share (#5080), and together they show all of it.
     render(
       <DesignatedActionWorkflow
         designatedActionId="9"
@@ -49,7 +47,9 @@ describe('DesignatedActionWorkflow', () => {
       />,
       app
     )
-    expect(screen.getByTestId('workflow-accept_evidence')).toBeInTheDocument()
+    expect(
+      screen.queryByTestId('workflow-accept_evidence')
+    ).not.toBeInTheDocument()
     expect(
       screen.getByTestId('workflow-request_information')
     ).toBeInTheDocument()
@@ -69,7 +69,9 @@ describe('DesignatedActionWorkflow', () => {
     )
     expect(
       screen.getByTestId('workflow-recommend_to_manager')
-    ).toBeInTheDocument()
+    ).toHaveTextContent(
+      'initiativeAgreement:workflow.acceptAndRecommendToManager'
+    )
     // The wireframe's negative recommendation sits beside it (#5118).
     expect(screen.getByTestId('workflow-not_recommend')).toBeInTheDocument()
     expect(
@@ -116,7 +118,7 @@ describe('DesignatedActionWorkflow', () => {
     ).not.toBeInTheDocument()
   })
 
-  test('disables accept and recommend until every requirement is satisfactory', ({
+  test('disables acceptance and recommendation until every requirement is satisfactory', ({
     render,
     app
   }) => {
@@ -130,7 +132,9 @@ describe('DesignatedActionWorkflow', () => {
       app
     )
 
-    expect(screen.getByTestId('workflow-accept_evidence')).toBeDisabled()
+    expect(
+      screen.queryByTestId('workflow-accept_evidence')
+    ).not.toBeInTheDocument()
     expect(screen.getByTestId('workflow-recommend_to_manager')).toBeDisabled()
     // Requesting information, or not recommending, is exactly what you do
     // when it is not.
@@ -140,7 +144,7 @@ describe('DesignatedActionWorkflow', () => {
     expect(screen.getByTestId('workflow-not_recommend')).not.toBeDisabled()
   })
 
-  test('accepts the evidence without asking for anything else', ({
+  test('accepts and recommends in a single request without a separate acceptance call', ({
     render,
     app
   }) => {
@@ -149,19 +153,21 @@ describe('DesignatedActionWorkflow', () => {
         designatedActionId="9"
         availableActions={analystActions}
         allEvidenceSatisfactory
+        recommendedCredits={1200}
       />,
       app
     )
 
-    fireEvent.click(screen.getByTestId('workflow-accept_evidence'))
+    fireEvent.click(screen.getByTestId('workflow-recommend_to_manager'))
 
+    expect(mockPerform).toHaveBeenCalledTimes(1)
     expect(mockPerform).toHaveBeenCalledWith(
-      { action: 'accept_evidence' },
+      { action: 'recommend_to_manager', recommendedCredits: 1200 },
       expect.anything()
     )
   })
 
-  test('sends the Missing information box when requesting information', ({
+  test('sends the Missing information box when requesting information', async ({
     render,
     app
   }) => {
@@ -179,10 +185,75 @@ describe('DesignatedActionWorkflow', () => {
     fireEvent.click(screen.getByTestId('workflow-request_information'))
 
     expect(screen.queryByTestId('workflow-comment')).not.toBeInTheDocument()
+    await waitFor(() =>
+      expect(mockPerform).toHaveBeenCalledWith(
+        { action: 'request_information', comment: 'Send the signed permit.' },
+        expect.anything()
+      )
+    )
+  })
+
+  test('waits for the Missing information save before requesting it', async ({
+    render,
+    app
+  }) => {
+    let finishSave
+    const beforeAction = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          finishSave = resolve
+        })
+    )
+    render(
+      <DesignatedActionWorkflow
+        designatedActionId="9"
+        availableActions={analystActions}
+        allEvidenceSatisfactory
+        missingInformation="Updated request."
+        beforeAction={beforeAction}
+      />,
+      app
+    )
+
+    const button = screen.getByTestId('workflow-request_information')
+    fireEvent.click(button)
+
+    expect(beforeAction).toHaveBeenCalledOnce()
+    expect(button).toBeDisabled()
+    expect(mockPerform).not.toHaveBeenCalled()
+
+    finishSave()
+    await waitFor(() => expect(mockPerform).toHaveBeenCalledOnce())
     expect(mockPerform).toHaveBeenCalledWith(
-      { action: 'request_information', comment: 'Send the signed permit.' },
+      { action: 'request_information', comment: 'Updated request.' },
       expect.anything()
     )
+  })
+
+  test('does not request information when its save fails', async ({
+    render,
+    app
+  }) => {
+    const beforeAction = vi.fn().mockRejectedValue(new Error('Save failed'))
+    render(
+      <DesignatedActionWorkflow
+        designatedActionId="9"
+        availableActions={analystActions}
+        allEvidenceSatisfactory
+        missingInformation="Updated request."
+        beforeAction={beforeAction}
+      />,
+      app
+    )
+
+    fireEvent.click(screen.getByTestId('workflow-request_information'))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('workflow-error')).toHaveTextContent(
+        'Save failed'
+      )
+    )
+    expect(mockPerform).not.toHaveBeenCalled()
   })
 
   test('cannot request information until the box says what is missing', ({
@@ -287,7 +358,9 @@ describe('DesignatedActionWorkflow', () => {
       app
     )
 
-    expect(screen.getByTestId('workflow-tip-accept_evidence')).toHaveAttribute(
+    expect(
+      screen.getByTestId('workflow-tip-recommend_to_manager')
+    ).toHaveAttribute(
       'aria-label',
       expect.stringContaining('blockedByEvidence')
     )
@@ -307,7 +380,9 @@ describe('DesignatedActionWorkflow', () => {
       app
     )
 
-    expect(screen.getByTestId('workflow-tip-accept_evidence')).toHaveAttribute(
+    expect(
+      screen.getByTestId('workflow-tip-recommend_to_manager')
+    ).toHaveAttribute(
       'aria-label',
       expect.stringContaining('blockedNoRequirements')
     )
@@ -330,7 +405,7 @@ describe('DesignatedActionWorkflow', () => {
       app
     )
 
-    fireEvent.click(screen.getByTestId('workflow-accept_evidence'))
+    fireEvent.click(screen.getByTestId('workflow-recommend_to_manager'))
 
     expect(screen.getByTestId('workflow-error')).toHaveTextContent(
       'A recommended credit amount is required.'
@@ -350,7 +425,7 @@ describe('DesignatedActionWorkflow', () => {
       app
     )
 
-    fireEvent.click(screen.getByTestId('workflow-accept_evidence'))
+    fireEvent.click(screen.getByTestId('workflow-recommend_to_manager'))
 
     expect(onChanged).toHaveBeenCalled()
   })

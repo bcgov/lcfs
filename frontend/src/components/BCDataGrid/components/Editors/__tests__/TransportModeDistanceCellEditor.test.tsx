@@ -29,4 +29,30 @@ describe('TransportModeDistanceCellEditor', () => {
       { transportMode: 'Truck', distance: null }
     ])
   })
+
+  test('defaults Adjacent distance to zero when selected', ({ render, i18n }) => {
+    const ref = createRef<ElementRef<typeof TransportModeDistanceCellEditor>>()
+
+    render(
+      <TransportModeDistanceCellEditor
+        ref={ref}
+        value={[]}
+        options={['Adjacent', 'Truck']}
+        api={{ stopEditing: vi.fn() }}
+      />,
+      [i18n]
+    )
+
+    fireEvent.click(screen.getByLabelText('Select Adjacent'))
+
+    expect(ref.current?.getValue()).toEqual([
+      { transportMode: 'Adjacent', distance: 0 }
+    ])
+    expect(screen.getByLabelText('Adjacent distance in kilometers')).toHaveValue(
+      0
+    )
+    expect(
+      screen.getByLabelText('Adjacent distance in kilometers')
+    ).toBeDisabled()
+  })
 })
