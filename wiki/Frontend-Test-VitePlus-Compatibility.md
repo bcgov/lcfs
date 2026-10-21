@@ -302,3 +302,76 @@ probes are retained in `.paseo/benchmarks/issue-5100/quality-equivalent/`.
 An intentional `TS2322` assignment error was also verified to fail
 `npm run check -- --no-fmt`; the temporary probe file was removed immediately.
 The standalone `npm run lint` passed after the suppression repair.
+
+
+## GitHub Actions setup method comparison
+
+A separate hosted comparison on 2026-10-21 measured the existing Node/npm setup
+against the recommended `voidzero-dev/setup-vp` action. Both methods ran the
+same Vite+ implementation; this comparison measures CI setup and cache policies.
+
+Evidence: [completed GitHub Actions run](https://github.com/bcgov/lcfs/actions/runs/39660289298).
+The [temporary benchmark workflow](https://github.com/bcgov/lcfs/actions/runs/39660289298/workflow) is available in that run's workflow view.
+It was not added to the application PR or production workflows.
+
+### Conditions
+
+- Twelve fresh `ubuntu-latest` jobs: three cache misses and three cache hits per
+  method, using four-logical-CPU GitHub-hosted runners. The image revisions were
+  `20261012.334.1` and `20261018.339.1`; these were the same runner class, not an
+  identical physical machine or image revision.
+- Identical frontend source and lockfile: benchmark commit `dff349ce7`, containing
+  application revision `3586e039b` plus only the temporary workflow. The lockfile
+  SHA-256 was `2a9a5d0303228fe26baa788c5250a3b865af1bfbdf8c3cc738c81c403e1660f8`.
+- Every job verified Node `24.21.0`, npm `11.19.0`, Vite+ `1.3.0`, and an unchanged
+  package manifest and lockfile. All twelve `npm run check` executions passed
+  with zero warning/error diagnostics in their captured output.
+- Current method: `actions/setup-node@v6.3.0`, `actions/cache@v5.0.4` for
+  `frontend/node_modules`, then `npm ci --prefer-offline --no-audit --no-fund`.
+- Alternative: `voidzero-dev/setup-vp` `v1.21.2`, pinned to commit
+  `68f39c78aaf39be468cabd2afb09c162574c84af`, with Vite+ `1.3.0`,
+  `working-directory: frontend`, `node-version-file: .nvmrc`, `cache: true`, and
+  install arguments `--frozen-lockfile --prefer-offline`. Shared environment
+  settings disabled npm audit/fund on both methods. The action caches npm package
+  data; this configuration installs the global Vite+/Node toolchain on each fresh runner.
+- Cold jobs verified cache misses; warm jobs verified actual cache hits. Only
+  caches belonging to the temporary benchmark branch were reset. Cold means a
+  GitHub dependency-cache miss, not an empty preinstalled runner tool cache.
+- Both methods saved the same `node_modules` output for downstream test shards.
+  Warm jobs reused those existing shared outputs rather than uploading duplicates.
+
+### Hosted results
+
+| Cache state | Current setup only | setup-vp setup only | Current setup + check + caches | setup-vp setup + check + caches |
+| --- | ---: | ---: | ---: | ---: |
+| Cold / miss median | 32.970 s | 43.591 s | 48.668 s | 60.290 s |
+| Warm / hit median | 46.659 s | 40.136 s | 53.924 s | 48.084 s |
+
+End-to-end cache-inclusive sample timings, in sample order:
+
+| Cache state | Current samples (s) | setup-vp samples (s) |
+| --- | --- | --- |
+| Cold / miss | 44.532, 48.668, 58.521 | 60.290, 60.752, 54.213 |
+| Warm / hit | 57.513, 53.924, 38.848 | 51.073, 48.084, 47.836 |
+
+Setup-only time spans Node/toolchain setup, cache restoration, and dependency
+installation. The cache-inclusive metric spans setup, version/integrity checks,
+`npm run check`, and shared shard-cache saves, plus observed post-action cache
+save durations from the GitHub Jobs API. Checkout, queue time, benchmark artifact
+uploads, and runner teardown are excluded. Post-action timestamps have one-second
+resolution. Medians are taken over complete per-job measurements, not sums of
+standalone medians.
+
+In this sample, setup-vp added 11.622 s (23.88%) on cache misses and saved 5.840 s
+(10.83%) on cache hits for the complete measured workload. The existing cache
+strategy restores `node_modules` before `npm ci` rebuilds it, which adds overhead
+on hits. setup-vp restores npm package data instead, but installs its global
+Vite+/Node environment on fresh runners. It is not a universal speedup; the
+tradeoff depends on cache-hit frequency, and these three-sample medians remain
+subject to hosted-runner and network variation. Sample ranges overlap, so the
+measurements do not establish a consistent performance advantage across runs.
+
+Production setup was left unchanged. The benchmark ran on a temporary branch;
+its workflow and raw measurements are retained locally under
+`.paseo/benchmarks/issue-5100/ci-setup/`. No ongoing benchmark tooling is included
+in the application PR.
