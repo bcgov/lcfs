@@ -185,17 +185,24 @@ class ComplianceReportSummaryService:
         if not compliance_report.compliance_report_group_uuid:
             return
 
+        compliance_year = int(compliance_report.compliance_period.description)
+        # Pre-2024 summaries are TFRS-era records. Their Line 21 is the penalty
+        # TFRS assessed after the supplier applied banked credits (TFRS Line 26),
+        # and Line 17 is often unknown for those snapshots, so the 2024+ formula
+        # below would invent penalties TFRS never charged or erase real ones.
+        if compliance_year < 2024:
+            return
+
         assessed_report = await self.cr_repo.get_prior_assessed_compliance_report_in_group(
             compliance_report.compliance_report_group_uuid,
             compliance_report.organization_id,
-            int(compliance_report.compliance_period.description),
+            compliance_year,
             report_version,
             compliance_report.compliance_report_id,
         )
         if assessed_report:
             return
 
-        compliance_year = int(compliance_report.compliance_period.description)
         deferred_prior_issuance = int(
             await self.trxn_repo.get_prior_group_adjustments_excluded_from_line_17(
                 compliance_report.compliance_report_group_uuid,
