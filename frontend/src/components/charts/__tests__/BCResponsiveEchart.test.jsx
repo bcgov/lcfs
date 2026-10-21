@@ -33,7 +33,10 @@ describe('BCResponsiveEChart', () => {
   })
 
   describe('rendering', () => {
-    it('registers the ECharts ARIA component', () => {
+    it('registers the ECharts ARIA component', async () => {
+      vi.resetModules()
+      await import('../BCResponsiveEchart')
+
       expect(mockUse).toHaveBeenCalledWith([mockAriaComponent])
     })
 

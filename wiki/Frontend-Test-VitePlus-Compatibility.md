@@ -95,8 +95,46 @@ After timing runs, verify both projects, fixture laziness and cleanup, the full
 coverage-enabled suite, and the CI blob/JUnit path. Run coverage jobs sequentially
 to avoid competing for the same coverage directory. Check aggregate thresholds
 with `ENFORCE_COVERAGE_THRESHOLDS=true` only after all shards are merged.
-Keep `clearMocks: false` and `sharedViteServer: false` until their removal is
-independently verified; removing them is not required for this issue.
+### Vitest 5 compatibility cleanup
+
+Following the [Vite+ cleanup checklist](https://viteplus.dev/guide/vitest-v5#remove-unneeded-compatibility-settings),
+reviewed the two settings added by migration commit `26c111401` in
+`frontend/vite.config.ts`. No other generated compatibility settings were found.
+
+| Setting | Decision | Required change |
+| --- | --- | --- |
+| `clearMocks: false` | Remove; use automatic mock-history clearing before each test | The ECharts ARIA registration test resets the module cache and imports the component during the test, so its existing assertion observes registration within that test. |
+| `sharedViteServer: false` | Remove; use shared server initialization for eligible inline projects | No plugin, setup, or application changes required. Both existing projects retain `extends: true` and their existing setup files. |
+
+Validated the original configuration first, then removed `clearMocks: false`.
+The first trial exposed only the import-time ECharts assertion; after the localized
+test fix, the full suite passed. Then removed `sharedViteServer: false` and ran
+the full suite again. Both accepted stages matched the baseline's exact test names
+and statuses: 425 files, 6,738 passed tests, 11 existing skips, and no failures.
+No assertions, snapshots, or coverage thresholds were removed or relaxed.
+
+Commands run from `frontend/` (JSON reports were written to ignored local files):
+
+```sh
+mkdir -p ../.paseo/compat-validation
+
+# Baseline, then each accepted removal
+npm run test:run -- --coverage.enabled=false --maxWorkers=8 --reporter=json --outputFile=../.paseo/compat-validation/results.json
+
+# Both removals together, with aggregate coverage thresholds enforced
+npm run test:coverage -- --maxWorkers=8 --reporter=json --outputFile=../.paseo/compat-validation/results.json
+
+# Formatting, lint, and TypeScript
+npm run check
+```
+
+The combined coverage run also passed with the identical test set and statuses.
+Coverage thresholds remained enforced: statements 67.18%, branches 58.31%,
+functions 59.87%, and lines 67.90%. `npm run check` passed with zero formatting,
+lint, or TypeScript diagnostics.
+
+The suite uses Node and jsdom projects, with no Vitest browser project or browser
+locator compatibility setting. There are no deferred compatibility removals.
 
 The existing CI matrix still has 32 shards. Its merge step expects one blob per
 configured shard and lets the installed Vite+ validate blob contents and version.
