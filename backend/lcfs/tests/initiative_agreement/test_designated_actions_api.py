@@ -1608,3 +1608,106 @@ async def test_a_comment_on_a_draft_cannot_be_edited(
     assert response.status_code == status.HTTP_404_NOT_FOUND
     await dbsession.refresh(comment)
     assert comment.comment == "Original"
+
+
+async def _attached_comment(dbsession, lifecycle_status, ia_code, entity):
+    """A comment by the mock user, with one attached file, on an agreement
+    in this lifecycle status or on its designated action."""
+    from lcfs.db.models.comment.InternalComment import (
+        internal_comment_document_association,
+    )
+    from lcfs.db.models.document import Document
+
+    _, entity_id, link_model, link_column = await _comment_thread_for(
+        dbsession, lifecycle_status, ia_code, entity
+    )
+    comment = InternalComment(
+        comment="See the attached permit", visibility="Public", create_user="mockuser"
+    )
+    document = Document(
+        file_key="comments/signed-permit.pdf",
+        file_name="signed-permit.pdf",
+        file_size=4096,
+        mime_type="application/pdf",
+    )
+    dbsession.add_all([comment, document])
+    await dbsession.flush()
+    dbsession.add(
+        link_model(
+            internal_comment_id=comment.internal_comment_id,
+            **{link_column.key: entity_id},
+        )
+    )
+    await dbsession.execute(
+        internal_comment_document_association.insert().values(
+            internal_comment_id=comment.internal_comment_id,
+            document_id=document.document_id,
+        )
+    )
+    await dbsession.flush()
+    return comment, document
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("entity", ["initiativeAgreement", "designatedAction"])
+async def test_attachments_on_a_drafts_comments_read_as_missing(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession, entity
+):
+    """Attachments are served by the documents API, not the comments API,
+    so it applies the same rule: files on a draft's comments, and its
+    actions', can't be listed, downloaded or removed by IDIR users (#5186),
+    even by the comment's author."""
+    from lcfs.db.models.comment.InternalComment import (
+        internal_comment_document_association,
+    )
+
+    comment, document = await _attached_comment(dbsession, "Draft", "IA-26ATTD", entity)
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+    address = {
+        "parent_type": "internal_comment",
+        "parent_id": comment.internal_comment_id,
+    }
+
+    listed = await client.get(fastapi_app.url_path_for("get_all_documents", **address))
+    downloaded = await client.get(
+        fastapi_app.url_path_for(
+            "stream_document", document_id=document.document_id, **address
+        )
+    )
+    removed = await client.delete(
+        fastapi_app.url_path_for(
+            "delete_file", document_id=document.document_id, **address
+        )
+    )
+
+    assert listed.status_code == status.HTTP_404_NOT_FOUND
+    assert "signed-permit.pdf" not in listed.text
+    assert downloaded.status_code == status.HTTP_404_NOT_FOUND
+    assert removed.status_code == status.HTTP_404_NOT_FOUND
+    attached = await dbsession.execute(
+        select(internal_comment_document_association.c.document_id).where(
+            internal_comment_document_association.c.internal_comment_id
+            == comment.internal_comment_id
+        )
+    )
+    assert attached.scalars().all() == [document.document_id]
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("entity", ["initiativeAgreement", "designatedAction"])
+async def test_attachments_on_an_underway_agreements_comments_stay_listed(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession, entity
+):
+    comment, _ = await _attached_comment(dbsession, "Underway", "IA-26ATTU", entity)
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    listed = await client.get(
+        fastapi_app.url_path_for(
+            "get_all_documents",
+            parent_type="internal_comment",
+            parent_id=comment.internal_comment_id,
+        )
+    )
+
+    assert listed.status_code == status.HTTP_200_OK, listed.text
+    assert [f["fileName"] for f in listed.json()] == ["signed-permit.pdf"]
