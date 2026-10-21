@@ -15,6 +15,7 @@ from .schema import (
     InternalCommentCreateSchema,
     InternalCommentUpdateSchema,
     InternalCommentResponseSchema,
+    MentionableUserSchema,
     OrganizationCommentsFilterSchema,
     OrganizationCommentsResponseSchema,
 )
@@ -102,6 +103,21 @@ async def get_comment_categories(
 ):
     """Return all comment category display names ordered by display_order."""
     return await service.get_all_categories()
+
+
+@router.get(
+    "/mentionable-users",
+    response_model=List[MentionableUserSchema],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def get_mentionable_users(
+    request: Request,
+    q: Optional[str] = Query(None, max_length=100),
+    service: InternalCommentService = Depends(),
+):
+    """Active IDIR users matching ``q``, for the comment @mention lookup."""
+    return await service.get_mentionable_users(q)
 
 
 @router.post(

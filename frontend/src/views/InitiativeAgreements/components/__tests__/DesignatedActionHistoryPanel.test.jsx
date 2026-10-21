@@ -1,5 +1,6 @@
-import 'react';
+import 'react'
 import { fireEvent, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 
 import { describe, expect, vi, beforeEach } from 'vitest'
 
@@ -46,6 +47,16 @@ describe('DesignatedActionHistoryPanel', () => {
     expect(row).toHaveTextContent('2026-08-26 10:14')
     expect(row).toHaveTextContent('history.events.statusChange')
     expect(row).toHaveTextContent('Approved')
+  })
+
+  test('uses a text label inside the accordion heading without a nested heading', ({
+    render,
+    app
+  }) => {
+    render(<DesignatedActionHistoryPanel designatedActionId="1" />, app)
+    const toggle = screen.getByTestId('history-toggle')
+    expect(toggle).toHaveAccessibleName('initiativeAgreement:history.title')
+    expect(toggle.querySelector('h1, h2, h3, h4, h5, h6')).toBeNull()
   })
 
   test('names the analyst on an assignment rather than showing an id', ({
@@ -113,6 +124,41 @@ describe('DesignatedActionHistoryPanel', () => {
     render(<DesignatedActionHistoryPanel designatedActionId="1" />, app)
 
     expect(screen.getByTestId('history-entry-4')).toHaveTextContent('1,200')
+  })
+
+  test('renders rich-text Evaluation changes as visible text', ({
+    render,
+    app
+  }) => {
+    mockHistory.mockReturnValue({
+      data: [
+        entry({
+          designatedActionHistoryId: 41,
+          event: 'DETAILS_EDITED',
+          status: null,
+          snapshot: {
+            changed: {
+              evaluation: {
+                from: '<p><strong>Permit missing</strong></p>',
+                to: '<p>Permit <em>verified</em>.</p>'
+              }
+            }
+          }
+        })
+      ],
+      isLoading: false
+    })
+    render(<DesignatedActionHistoryPanel designatedActionId="1" />, app)
+
+    expect(screen.getByTestId('history-entry-summary-41')).toHaveTextContent(
+      'Permit missing'
+    )
+    expect(screen.getByTestId('history-entry-summary-41')).toHaveTextContent(
+      'Permit verified.'
+    )
+    expect(screen.getByTestId('history-entry-summary-41')).not.toHaveTextContent(
+      '<p>'
+    )
   })
 
   test('shows a recommendation of nought rather than treating it as absent', ({
@@ -227,13 +273,14 @@ describe('DesignatedActionHistoryPanel', () => {
       .map((node) => node.getAttribute('data-test'))
     expect(groups).toEqual([
       'history-group-evidenceReview',
+      'history-group-informationRequests',
       'history-group-workflow',
       'history-group-assignment',
       'history-group-recordChanges'
     ])
     expect(
       screen.getByTestId('history-group-count-evidenceReview')
-    ).toHaveTextContent('2')
+    ).toHaveTextContent('1')
     expect(
       screen.getByTestId('history-group-count-assignment')
     ).toHaveTextContent('1')
@@ -244,7 +291,10 @@ describe('DesignatedActionHistoryPanel', () => {
     )
       .map((node) => node.getAttribute('data-test'))
       .filter((id) => /^history-entry-\d+$/.test(id))
-    expect(ids).toEqual(['history-entry-11', 'history-entry-14'])
+    expect(ids).toEqual(['history-entry-11'])
+    expect(
+      screen.getByTestId('history-group-informationRequests')
+    ).toContainElement(screen.getByTestId('history-entry-14'))
   })
 
   test('shows only the groups that have entries', ({ render, app }) => {
@@ -258,6 +308,69 @@ describe('DesignatedActionHistoryPanel', () => {
     expect(screen.queryByTestId('history-group-evidenceReview')).toBeNull()
     expect(screen.queryByTestId('history-group-assignment')).toBeNull()
     expect(screen.queryByTestId('history-group-recordChanges')).toBeNull()
+  })
+
+  test('groups similar events together and preserves independent toggles when the panel is reopened', ({
+    render,
+    app
+  }) => {
+    mockHistory.mockReturnValue({
+      data: [
+        entry({ designatedActionHistoryId: 21, event: 'EVIDENCE_REVIEWED' }),
+        entry({
+          designatedActionHistoryId: 22,
+          event: 'INFORMATION_REQUESTED'
+        }),
+        entry({ designatedActionHistoryId: 23, event: 'EVIDENCE_REVIEWED' }),
+        entry({ designatedActionHistoryId: 24, event: 'CREDITS_RECOMMENDED' })
+      ],
+      isLoading: false
+    })
+    render(<DesignatedActionHistoryPanel designatedActionId="1" />, app)
+    const evaluations = screen.getByTestId('history-group-evidenceReview')
+    expect(evaluations).toContainElement(screen.getByTestId('history-entry-21'))
+    expect(evaluations).toContainElement(screen.getByTestId('history-entry-23'))
+    expect(evaluations).not.toContainElement(
+      screen.getByTestId('history-entry-22')
+    )
+    expect(
+      screen.getByTestId('history-group-recommendations')
+    ).toContainElement(screen.getByTestId('history-entry-24'))
+    const evaluationToggle = screen.getByTestId(
+      'history-group-toggle-evidenceReview'
+    )
+    const requestToggle = screen.getByTestId(
+      'history-group-toggle-informationRequests'
+    )
+    fireEvent.click(evaluationToggle)
+    expect(evaluationToggle).toHaveAttribute('aria-expanded', 'false')
+    expect(requestToggle).toHaveAttribute('aria-expanded', 'true')
+    fireEvent.click(screen.getByTestId('history-toggle'))
+    fireEvent.click(screen.getByTestId('history-toggle'))
+    expect(evaluationToggle).toHaveAttribute('aria-expanded', 'false')
+    expect(requestToggle).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  test('supports keyboard expansion of the Activity accordion and its groups', async ({
+    render,
+    app
+  }) => {
+    const user = userEvent.setup()
+    render(<DesignatedActionHistoryPanel designatedActionId="1" />, app)
+    const panel = screen.getByTestId('history-toggle')
+    const content = document.getElementById(panel.getAttribute('aria-controls'))
+    expect(content).toContainElement(
+      screen.getByTestId('history-group-workflow')
+    )
+    panel.focus()
+    await user.keyboard('{Enter}')
+    expect(panel).toHaveAttribute('aria-expanded', 'false')
+    await user.keyboard(' ')
+    expect(panel).toHaveAttribute('aria-expanded', 'true')
+    const group = screen.getByTestId('history-group-toggle-workflow')
+    group.focus()
+    await user.keyboard('{Enter}')
+    expect(group).toHaveAttribute('aria-expanded', 'false')
   })
 
   test('puts an event it does not recognise under Other rather than dropping it', ({
