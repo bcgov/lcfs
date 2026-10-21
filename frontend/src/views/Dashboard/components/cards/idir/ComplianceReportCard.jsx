@@ -10,19 +10,8 @@ import ListItemButton from '@mui/material/ListItemButton'
 import Stack from '@mui/material/Stack'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-
-const CountDisplay = ({ count }) => (
-  <BCTypography
-    component="span"
-    variant="h3"
-    sx={{
-      color: 'success.main',
-      marginX: 3
-    }}
-  >
-    {count}
-  </BCTypography>
-)
+import { CountDisplay } from '../../CountDisplay'
+import { countDigits } from '../../countDigits'
 
 export const ComplianceReportCard = () => {
   const { t } = useTranslation(['dashboard'])
@@ -46,10 +35,13 @@ export const ComplianceReportCard = () => {
     navigate(ROUTES.REPORTS.LIST)
   }
 
+  const pendingReviews = counts?.pendingReviews || 0
+  const digits = countDigits(pendingReviews)
+
   const renderLinkWithCount = (text, count, onClick) => {
     return (
       <>
-        {count != null && <CountDisplay count={count} />}
+        <CountDisplay count={count} digits={digits} hidden={count == null} />
         <BCTypography
           variant="body2"
           color="link"
@@ -92,15 +84,15 @@ export const ComplianceReportCard = () => {
               <ListItemButton component="a" onClick={handleNavigation}>
                 {renderLinkWithCount(
                   t('dashboard:complianceReports.crInProgress'),
-                  counts?.pendingReviews || 0,
+                  pendingReviews,
                   handleNavigation
                 )}
               </ListItemButton>
               <ListItemButton
                 component="a"
-                sx={{ ml: '4.2rem' }}
                 onClick={() => navigate(ROUTES.CREDIT_CALCULATOR)}
               >
+                <CountDisplay digits={digits} hidden />
                 <BCTypography
                   variant="body2"
                   color="link"
