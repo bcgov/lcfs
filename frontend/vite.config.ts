@@ -107,7 +107,7 @@ export default defineConfig({
       typeAware: true,
       typeCheck: true,
       maxWarnings: 0,
-      reportUnusedDisableDirectives: 'warn'
+      reportUnusedDisableDirectives: 'error'
     }
   },
   fmt: {
