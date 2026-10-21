@@ -4,8 +4,6 @@ import Button from '@mui/material/Button'
 import CalculateOutlinedIcon from '@mui/icons-material/CalculateOutlined'
 import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined'
 import VerifiedOutlinedIcon from '@mui/icons-material/VerifiedOutlined'
-import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined'
-import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import ReactECharts from 'echarts-for-react'
 import { useKeycloak } from '@react-keycloak/web'
 import { Link, useNavigate } from 'react-router-dom'
@@ -34,10 +32,6 @@ const PRICE_LINE = '#003366'
 const BAND_FILL = 'rgba(56,89,138,0.12)'
 const VOLUME_FILL = 'rgba(252,186,25,0.7)'
 
-const LEGISLATION_URL =
-  'https://www2.gov.bc.ca/gov/content/industry/electricity-alternative-energy/transportation-energies/renewable-low-carbon-fuels'
-const REQUIREMENTS_URL =
-  'https://www2.gov.bc.ca/gov/content/industry/electricity-alternative-energy/transportation-energies/renewable-low-carbon-fuels/requirements'
 const TROUBLE_LOGGING_IN_URL =
   'https://www2.gov.bc.ca/gov/content/industry/electricity-alternative-energy/transportation-energies/renewable-low-carbon-fuels/reporting-system'
 
@@ -305,15 +299,6 @@ export const PublicDashboard = () => {
       title: t('publicDashboard.links.approvedCarbonIntensities'),
       description: t('publicDashboard.tools.approvedCarbonIntensitiesDesc'),
       route: ROUTES.APPROVED_CARBON_INTENSITIES
-    },
-    {
-      key: 'releaseNotes',
-      icon: <DescriptionOutlinedIcon sx={{ fontSize: 30, color: NAVY }} />,
-      title: t('publicDashboard.links.releaseNotes'),
-      description: t('publicDashboard.tools.releaseNotesDesc', {
-        defaultValue: 'Recent updates and change history.'
-      }),
-      route: ROUTES.RELEASE_NOTES
     }
   ]
 
@@ -402,30 +387,6 @@ export const PublicDashboard = () => {
           }}
         >
           <BCBox>
-            <BCTypography
-              sx={{
-                fontSize: 12,
-                fontWeight: 700,
-                letterSpacing: '.14em',
-                color: GOLD,
-                textTransform: 'uppercase',
-                mb: 1.75
-              }}
-            >
-              {t('publicDashboard.cardTitle')}
-            </BCTypography>
-            <BCTypography
-              variant="h1"
-              sx={{
-                fontSize: { xs: 32, md: 44 },
-                lineHeight: 1.12,
-                color: '#fff',
-                fontWeight: 700,
-                mb: 2
-              }}
-            >
-              {t('publicDashboard.hero.title')}
-            </BCTypography>
             <BCTypography
               sx={{
                 fontSize: 17,
@@ -696,7 +657,7 @@ export const PublicDashboard = () => {
         )}
       </BCBox>
 
-      {/* Intro + public tools + legislation */}
+      {/* Public tools */}
       <BCBox
         sx={{
           ...fullBleed,
@@ -705,79 +666,11 @@ export const PublicDashboard = () => {
         }}
       >
         <BCBox sx={{ ...innerContainer, py: { xs: 4, md: 4.5 } }}>
-          {/* About the program + using this site */}
-          <BCBox
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
-              gap: { xs: 3, md: 5 },
-              mb: 4
-            }}
-          >
-            <BCBox
-              sx={{
-                background: '#fff',
-                border: '1px solid #D8D8D8',
-                borderRadius: '8px',
-                p: { xs: 2.5, md: 3 },
-                boxShadow: '0 8px 24px rgba(0,51,102,0.08)',
-                height: '100%'
-              }}
-            >
-              <BCTypography
-                variant="h2"
-                sx={{ fontSize: 22, fontWeight: 700, color: DARK, mb: 1 }}
-              >
-                {t('publicDashboard.intro.programTitle', {
-                  defaultValue: 'About the Low Carbon Fuel Standard'
-                })}
-              </BCTypography>
-              <BCTypography
-                sx={{ fontSize: 16, color: MUTED, lineHeight: 1.6 }}
-              >
-                {t('publicDashboard.intro.programBody', {
-                  defaultValue:
-                    "The Low Carbon Fuels Act and its two regulations form British Columbia's Low Carbon Fuel Standard (LCFS), which sets requirements that encourage the use of renewable and low carbon fuels. The LCFS offers incentives to organizations based on the amounts of greenhouse gas emissions avoided in comparison to conventional fossil-derived fuels."
-                })}
-              </BCTypography>
-            </BCBox>
-            <BCBox
-              sx={{
-                background: '#fff',
-                border: '1px solid #D8D8D8',
-                borderRadius: '8px',
-                p: { xs: 2.5, md: 3 },
-                boxShadow: '0 8px 24px rgba(0,51,102,0.08)',
-                height: '100%'
-              }}
-            >
-              <BCTypography
-                variant="h2"
-                sx={{ fontSize: 22, fontWeight: 700, color: DARK, mb: 1 }}
-              >
-                {t('publicDashboard.intro.siteTitle', {
-                  defaultValue: 'Using this site'
-                })}
-              </BCTypography>
-              <BCTypography
-                sx={{ fontSize: 16, color: MUTED, lineHeight: 1.6 }}
-              >
-                {t('publicDashboard.intro.siteBody', {
-                  defaultValue:
-                    'This site provides public access to program tools and data — including the compliance unit calculator, approved carbon intensities, and credit market information. Registered fuel suppliers and government staff can log in to file and review compliance reports.'
-                })}
-              </BCTypography>
-            </BCBox>
-          </BCBox>
-
           <BCTypography
             variant="h2"
             sx={{ fontSize: 22, fontWeight: 700, color: DARK, mb: 0.75 }}
           >
             {t('publicDashboard.toolsTitle')}
-          </BCTypography>
-          <BCTypography sx={{ fontSize: 14.5, color: MUTED, mb: 2.25 }}>
-            {t('publicDashboard.toolsSubtitle')}
           </BCTypography>
           <BCBox sx={{ borderTop: '1px solid #D8D8D8' }}>
             {tools.map((tool) => (
@@ -831,64 +724,6 @@ export const PublicDashboard = () => {
                 >
                   ›
                 </BCTypography>
-              </Box>
-            ))}
-          </BCBox>
-
-          {/* Legislation and requirements */}
-          <BCTypography
-            variant="h2"
-            sx={{ fontSize: 22, fontWeight: 700, color: DARK, mt: 5, mb: 2 }}
-          >
-            {t('publicDashboard.legislation.title')}
-          </BCTypography>
-          <BCBox
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
-              gap: 2
-            }}
-          >
-            {[
-              {
-                href: LEGISLATION_URL,
-                label: t('publicDashboard.legislation.renewable')
-              },
-              {
-                href: REQUIREMENTS_URL,
-                label: t('publicDashboard.legislation.requirements')
-              }
-            ].map((l) => (
-              <Box
-                key={l.href}
-                component="a"
-                href={l.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                data-test="legislation-link"
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 1.5,
-                  border: '1px solid #D8D8D8',
-                  borderRadius: '6px',
-                  p: '16px 20px',
-                  textDecoration: 'none',
-                  color: LINK,
-                  fontWeight: 700,
-                  fontSize: 15.5,
-                  background: '#fff',
-                  '&:hover': { background: '#F2F7FC', borderColor: '#B7CCE0' },
-                  '&:focus-visible': {
-                    outline: `3px solid ${GOLD}`,
-                    outlineOffset: '3px',
-                    borderColor: NAVY
-                  }
-                }}
-              >
-                {l.label}
-                <OpenInNewIcon sx={{ fontSize: 18 }} />
               </Box>
             ))}
           </BCBox>
