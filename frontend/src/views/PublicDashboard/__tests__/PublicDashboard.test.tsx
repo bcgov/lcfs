@@ -2,6 +2,7 @@ import { test } from '@/tests/utils/fixtures'
 import { screen, fireEvent } from '@testing-library/react'
 import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import { ROUTES } from '@/routes/routes'
+import common from '@/assets/locales/en/common.json'
 import { PublicDashboard } from '../PublicDashboard'
 
 const loginMock = vi.fn()
@@ -49,7 +50,12 @@ vi.mock('@/hooks/useLoginBgImage', () => ({
 }))
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key })
+  useTranslation: () => ({
+    t: (key: string) =>
+      key === 'publicDashboard.hero.subtitle'
+        ? common.publicDashboard.hero.subtitle
+        : key
+  })
 }))
 
 describe('PublicDashboard', () => {
@@ -112,10 +118,23 @@ describe('PublicDashboard', () => {
     expect(navigateMock).not.toHaveBeenCalled()
   })
 
-  test('renders the hero and program title', ({ render, theme, router }) => {
+  test('renders the hero description without the removed headings', ({
+    render,
+    theme,
+    router
+  }) => {
     render(<PublicDashboard />, [theme, router])
-    expect(screen.getByText('publicDashboard.hero.title')).toBeInTheDocument()
-    expect(screen.getByText('publicDashboard.cardTitle')).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "British Columbia's Low Carbon Fuel Standard (LCFS) promotes the use of renewable and low-carbon fuels. It also provides incentives to organizations that supply them."
+      )
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText('publicDashboard.hero.title')
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('publicDashboard.cardTitle')
+    ).not.toBeInTheDocument()
   })
 
   test('shows all-time generated credits in the hero stats', ({
@@ -153,22 +172,26 @@ describe('PublicDashboard', () => {
     )
   })
 
-  test('links to the BC Gov legislation and requirements pages', ({
+  test('omits the marked introductory and supporting content', ({
     render,
     theme,
     router
   }) => {
     render(<PublicDashboard />, [theme, router])
-    const links = screen.getAllByTestId('legislation-link')
-    expect(links).toHaveLength(2)
-    expect(links[0]).toHaveAttribute(
-      'href',
-      expect.stringContaining('renewable-low-carbon-fuels')
-    )
-    expect(links[1]).toHaveAttribute(
-      'href',
-      expect.stringContaining('/requirements')
-    )
+    expect(
+      screen.queryByText('publicDashboard.intro.programTitle')
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('publicDashboard.intro.siteTitle')
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('publicDashboard.toolsSubtitle')
+    ).not.toBeInTheDocument()
+    expect(screen.queryByTestId('tool-releaseNotes')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('publicDashboard.legislation.title')
+    ).not.toBeInTheDocument()
+    expect(screen.queryByTestId('legislation-link')).not.toBeInTheDocument()
   })
 
   test('triggers keycloak login from the login buttons', ({
