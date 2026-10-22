@@ -61,7 +61,13 @@ export default defineConfig({
       'typescript/no-redundant-type-constituents': 'off',
       'typescript/require-array-sort-compare': 'off',
       'typescript/no-implied-eval': 'off',
-      'react/only-export-components': ['warn', { allowConstantExport: true }],
+      'react/only-export-components': [
+        'warn',
+        {
+          allowConstantExport: true,
+          customHOCs: ['withRole', 'withFeatureFlag', 'createStatusRenderer']
+        }
+      ],
       'react/rules-of-hooks': 'error',
       'react/exhaustive-deps': 'warn',
       'react/react-in-jsx-scope': 'off',
@@ -97,7 +103,12 @@ export default defineConfig({
       'typescript/no-unused-expressions': 'off'
     },
     categories: { correctness: 'error' },
-    options: { typeAware: true, typeCheck: true, maxWarnings: 0 }
+    options: {
+      typeAware: true,
+      typeCheck: true,
+      maxWarnings: 0,
+      reportUnusedDisableDirectives: 'error'
+    }
   },
   fmt: {
     singleQuote: true,
@@ -121,7 +132,7 @@ export default defineConfig({
     port: 3000,
     hmr: {
       overlay: false,
-      clientPort: 3000
+      clientPort: Number(process.env.VITE_HMR_CLIENT_PORT) || 3000
     }
   },
   test: {
