@@ -6,8 +6,8 @@ Keeping it here rather than scattered through the service means the rules
 can be read — and reviewed — in one place, and the tests assert against
 the same table the API enforces.
 
-Credit issuance is deliberately absent. Approving a designated action
-concludes its review; moving credits is a separate step, per #4898.
+Final director approval also issues the recommended credits through the
+existing initiative agreement credit transaction flow.
 """
 
 from lcfs.db.models.initiative_agreement.DesignatedActionHistory import (

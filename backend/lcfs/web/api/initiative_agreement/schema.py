@@ -104,6 +104,13 @@ class InitiativeAgreementSchema(InitiativeAgreementBaseSchema):
     returned: Optional[bool] = False
     create_date: datetime
 
+    @field_validator("compliance_units")
+    def validate_compliance_units(cls, v):
+        # Responses allow zero-credit approvals; manual writes require positive units.
+        if v < 0:
+            raise ValueError("compliance_units cannot be negative")
+        return v
+
 
 class InitiativeAgreementCreateSchema(InitiativeAgreementBaseSchema):
     current_status: str
