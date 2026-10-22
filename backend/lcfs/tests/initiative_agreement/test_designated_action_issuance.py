@@ -44,6 +44,7 @@ from lcfs.tests.initiative_agreement.test_initiative_agreement_api import (
     _two_org_ids,
 )
 from lcfs.web.api.initiative_agreement.repo import InitiativeAgreementRepository
+from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
 from lcfs.web.api.transaction.repo import TransactionRepository
 
 
@@ -355,7 +356,7 @@ async def test_failure_after_ledger_creation_rolls_back_the_entire_approval(
     awards_before = await _count(dbsession, InitiativeAgreement)
     monkeypatch.setattr(
         InitiativeAgreementRepository,
-        "add_issued_credits",
+        "add_initiative_agreement_history",
         AsyncMock(side_effect=RuntimeError("Issuance failed")),
     )
     set_mock_user(fastapi_app, IDIR_DIRECTOR)
@@ -435,15 +436,18 @@ async def test_issued_recommendation_cannot_be_changed(
 
 @pytest.mark.anyio
 @pytest.mark.parametrize(
-    "different_actions", [False, True], ids=["same-action", "same-agreement"]
+    "different_actions, edit_agreement",
+    [(False, False), (True, False), (False, True)],
+    ids=["same-action", "same-agreement", "agreement-edit"],
 )
-async def test_simultaneous_approvals_issue_once_per_action(
+async def test_concurrent_requests_issue_once_per_action(
     client,
     fastapi_app,
     set_mock_user,
     dbsession_factory,
     monkeypatch,
     different_actions,
+    edit_agreement,
 ):
     # Use separate transactions to exercise PostgreSQL row locks.
     async with dbsession_factory() as setup:
@@ -483,12 +487,12 @@ async def test_simultaneous_approvals_issue_once_per_action(
         repo, designated_action_id, *, for_update=False
     ):
         nonlocal attempts
-        if for_update:
+        if for_update and not edit_agreement:
             attempts += 1
             if attempts == 2:
                 both_started.set()
         result = await get_action(repo, designated_action_id, for_update=for_update)
-        if for_update:
+        if for_update and not edit_agreement:
             await asyncio.wait_for(both_started.wait(), timeout=10)
         return result
 
@@ -497,22 +501,63 @@ async def test_simultaneous_approvals_issue_once_per_action(
         "get_designated_action_by_id",
         wait_for_competing_approval,
     )
-    set_mock_user(fastapi_app, IDIR_DIRECTOR)
+    if edit_agreement:
+        approval_ready = asyncio.Event()
+        edit_locked = asyncio.Event()
+        add_issued_credits = InitiativeAgreementRepository.add_issued_credits
+        update_agreement = InitiativeAgreementServices.update_agreement
+
+        async def wait_for_edit_lock(repo, initiative_agreement_id, credits):
+            approval_ready.set()
+            await asyncio.wait_for(edit_locked.wait(), timeout=10)
+            await add_issued_credits(repo, initiative_agreement_id, credits)
+
+        async def edit_with_parent_locked(service, initiative_agreement_id, data, user):
+            await asyncio.wait_for(approval_ready.wait(), timeout=10)
+            # Hold the edit's parent-row lock before its flush refreshes views.
+            await service.repo.db.execute(
+                select(InitiativeAgreement.initiative_agreement_id)
+                .where(
+                    InitiativeAgreement.initiative_agreement_id
+                    == initiative_agreement_id
+                )
+                .with_for_update(key_share=True)
+            )
+            edit_locked.set()
+            return await update_agreement(service, initiative_agreement_id, data, user)
+
+        monkeypatch.setattr(
+            InitiativeAgreementRepository, "add_issued_credits", wait_for_edit_lock
+        )
+        monkeypatch.setattr(
+            InitiativeAgreementServices, "update_agreement", edit_with_parent_locked
+        )
+
+    set_mock_user(
+        fastapi_app,
+        IDIR_DIRECTOR + ([RoleEnum.IA_ANALYST] if edit_agreement else []),
+    )
     urls = [
         fastapi_app.url_path_for(
             "perform_designated_action_workflow", designated_action_id=value
         )
         for value in (action_ids if different_actions else [action_id, action_id])
     ]
+    payloads = [{"action": "approve"} for _ in urls]
+    if edit_agreement:
+        urls[1] = fastapi_app.url_path_for(
+            "update_agreement", initiative_agreement_id=parent_id
+        )
+        payloads[1] = {"title": "Edited during approval"}
     try:
         responses = await asyncio.wait_for(
             asyncio.gather(
-                *(client.put(url, json={"action": "approve"}) for url in urls)
+                *(client.put(url, json=payload) for url, payload in zip(urls, payloads))
             ),
             timeout=30,
         )
         assert sorted(r.status_code for r in responses) == (
-            [200, 200] if different_actions else [200, 400]
+            [200, 200] if different_actions or edit_agreement else [200, 400]
         ), [r.text for r in responses]
         async with dbsession_factory() as session:
             for saved_id, amount in zip(action_ids, amounts):
@@ -524,6 +569,8 @@ async def test_simultaneous_approvals_issue_once_per_action(
                 ) == 1
             parent = await session.get(InitiativeAgreement, parent_id)
             assert parent.total_credits_issued == sum(amounts)
+            if edit_agreement:
+                assert parent.title == "Edited during approval"
     finally:
         fastapi_app.dependency_overrides[get_async_db_session] = previous
         async with dbsession_factory() as session:

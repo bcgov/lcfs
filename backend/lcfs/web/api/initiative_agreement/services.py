@@ -948,6 +948,8 @@ class InitiativeAgreementServices:
         approved = await self.repo.get_initiative_agreement_status_by_name(
             InitiativeAgreementStatusEnum.Approved
         )
+        # Match agreement edits: lock the parent before refreshing transaction views.
+        await self.repo.add_issued_credits(agreement.initiative_agreement_id, credits)
         # Zero-credit approvals still need an auditable transaction.
         transaction = await self.transaction_repo.create_transaction(
             transaction_action=TransactionActionEnum.Adjustment,
@@ -986,7 +988,6 @@ class InitiativeAgreementServices:
                 display_name=display_name,
             )
         )
-        await self.repo.add_issued_credits(agreement.initiative_agreement_id, credits)
         await self.repo.add_designated_action_history(
             DesignatedActionHistory(
                 designated_action_id=action.designated_action_id,
