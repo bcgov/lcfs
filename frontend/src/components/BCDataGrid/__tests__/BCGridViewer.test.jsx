@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { createRef } from 'react'
+import { createRef, useEffect } from 'react'
 import { BrowserRouter } from 'react-router-dom'
 import { BCGridViewer } from '../BCGridViewer'
 import { BCGridBase } from '@/components/BCDataGrid/BCGridBase'
@@ -9,14 +9,10 @@ import { createAgGridFilterPills } from '@/components/FilterToolbar/filterUtils'
 // Unmock the components we're testing (overrides global mocks)
 vi.unmock('@/components/BCDataGrid/BCGridViewer')
 
-// Mock components and dependencies (BCAlert uses global mock)
+// Mock components and dependencies (BCAlert and BCBox use global mocks)
 
-vi.mock('@/components/BCBox', () => ({
-  default: vi.fn().mockImplementation(({ children, ...props }) => (
-    <div data-test="bc-box" {...props}>
-      {children}
-    </div>
-  ))
+vi.mock('@/components/FilterToolbar', () => ({
+  FilterToolbar: () => null
 }))
 
 // Mock AgGridReact and related components
@@ -30,14 +26,14 @@ const mockGridApi = {
 }
 
 vi.mock('@/components/BCDataGrid/BCGridBase', () => ({
-  BCGridBase: vi.fn().mockImplementation((props) => {
+  BCGridBase: vi.fn().mockImplementation(function MockBCGridBase(props) {
     const { onGridReady, onFirstDataRendered, onFilterChanged, onSortChanged } =
       props
 
     // Simulate grid ready
-    if (onGridReady) {
-      setTimeout(() => onGridReady({ api: mockGridApi }), 0)
-    }
+    useEffect(() => {
+      onGridReady?.({ api: mockGridApi })
+    }, [onGridReady])
 
     return (
       <div
@@ -259,7 +255,7 @@ describe('BCGridViewer Component', () => {
     it('should handle missing IntersectionObserver gracefully', async () => {
       // Temporarily remove IntersectionObserver
       const originalIntersectionObserver = window.IntersectionObserver
-      window.IntersectionObserver = undefined
+      delete window.IntersectionObserver
 
       const props = {
         ...defaultProps,
@@ -275,7 +271,9 @@ describe('BCGridViewer Component', () => {
       }).not.toThrow()
 
       // Restore IntersectionObserver
-      window.IntersectionObserver = originalIntersectionObserver
+      if (originalIntersectionObserver) {
+        window.IntersectionObserver = originalIntersectionObserver
+      }
     })
   })
 
@@ -526,6 +524,117 @@ describe('BCGridViewer Component', () => {
   })
 
   describe('Session preference persistence', () => {
+    it('fits columns when an empty controlled state overrides a cached layout', async () => {
+      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+        width: 1000
+      })
+      mockSessionStorage.getItem.mockImplementation((key) =>
+        key === 'test-grid-column'
+          ? JSON.stringify([{ colId: 'iaCode', width: 400 }])
+          : null
+      )
+
+      render(
+        <TestWrapper>
+          <BCGridViewer
+            {...defaultProps}
+            columnDefs={[{ field: 'iaCode', minWidth: 100 }]}
+            columnState={[]}
+          />
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(mockGridApi.applyColumnState).toHaveBeenCalledWith({
+          state: [],
+          applyOrder: true
+        })
+      })
+      const gridProps = BCGridBase.mock.calls.at(-1)[0]
+      expect(gridProps.autoSizeStrategy).toEqual(
+        expect.objectContaining({ type: 'fitGridWidth' })
+      )
+      expect(gridProps.columnDefs[0].flex).toBe(1)
+    })
+
+    it.each([
+      [false, false],
+      [false, true],
+      [true, false],
+      [true, true]
+    ])(
+      'restores sorting on remount without cached pagination (page caching: %s, cached filters: %s)',
+      async (enablePageCaching, restoreFilters) => {
+        const onPaginationChange = vi.fn()
+        const onColumnStateChange = vi.fn()
+        const columnState = [
+          { colId: 'fuelType', sort: 'asc', sortIndex: 1 },
+          { colId: 'complianceUnits', sort: 'desc', sortIndex: 0 },
+          { colId: 'quantity', sort: null }
+        ]
+        mockSessionStorage.getItem.mockImplementation((key) =>
+          key === 'test-grid-filter' && restoreFilters
+            ? JSON.stringify({
+                fuelType: {
+                  filterType: 'text',
+                  type: 'contains',
+                  filter: 'diesel'
+                }
+              })
+            : null
+        )
+        const renderGrid = () =>
+          render(
+            <TestWrapper>
+              <BCGridViewer
+                {...defaultProps}
+                paginationOptions={{
+                  ...defaultProps.paginationOptions,
+                  page: 3,
+                  size: 25
+                }}
+                enablePageCaching={enablePageCaching}
+                columnState={columnState}
+                onPaginationChange={onPaginationChange}
+                onColumnStateChange={onColumnStateChange}
+              />
+            </TestWrapper>
+          )
+        const expectedPagination = {
+          page: restoreFilters ? 1 : 3,
+          size: 25,
+          sortOrders: [
+            { field: 'complianceUnits', direction: 'desc' },
+            { field: 'fuelType', direction: 'asc' }
+          ],
+          filters: restoreFilters
+            ? [
+                {
+                  field: 'fuelType',
+                  filterType: 'text',
+                  type: 'contains',
+                  filter: 'diesel'
+                }
+              ]
+            : []
+        }
+
+        const { unmount } = renderGrid()
+        await waitFor(() => {
+          expect(onPaginationChange).toHaveBeenCalledWith(expectedPagination)
+        })
+        unmount()
+        onPaginationChange.mockClear()
+
+        renderGrid()
+        await waitFor(() => {
+          expect(onPaginationChange).toHaveBeenCalledWith(expectedPagination)
+        })
+        expect(mockSessionStorage.setItem).not.toHaveBeenCalled()
+        expect(onColumnStateChange).not.toHaveBeenCalled()
+      }
+    )
+
     it('restores saved column layout without resetting cached pagination', async () => {
       const onPaginationChange = vi.fn()
       const columnState = [{ colId: 'iaCode', width: 320, hide: false }]

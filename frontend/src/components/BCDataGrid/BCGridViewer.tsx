@@ -170,7 +170,7 @@ export const BCGridViewer = forwardRef<
       ? 'login'
       : 'session'
     const savedColumnState = useMemo(() => {
-      if (controlledColumnState?.length) return controlledColumnState
+      if (controlledColumnState != null) return controlledColumnState
       return getSessionColumnState(gridKey, cacheMode)
     }, [controlledColumnState, gridKey, cacheMode])
 
@@ -600,6 +600,7 @@ export const BCGridViewer = forwardRef<
             )
           : null
         const shouldRestore = Boolean(filterState || restoredColumnState)
+        let restoredOptions = paginationOptionsRef.current
 
         if (shouldRestore) {
           isRestoringFromCache.current = true
@@ -615,14 +616,10 @@ export const BCGridViewer = forwardRef<
           // Cached pagination already has page, size, sort and filters.
           // Rewriting it here used to reset those prefs on remount.
           if (!cachedPagination) {
-            const updatedOptions = {
-              ...paginationOptionsRef.current,
+            restoredOptions = {
+              ...restoredOptions,
               page: 1,
               filters: filterArr as unknown as BCPaginationFilter[]
-            }
-            onPaginationChange!(updatedOptions)
-            if (enablePageCaching) {
-              cachePaginationOptions(updatedOptions)
             }
           }
         }
@@ -633,6 +630,18 @@ export const BCGridViewer = forwardRef<
             state: restoredColumnState,
             applyOrder: true
           })
+          if (!cachedPagination) {
+            restoredOptions = {
+              ...restoredOptions,
+              sortOrders: restoredColumnState
+                .filter((col) => col.sort)
+                .sort((a, b) => (a.sortIndex ?? 0) - (b.sortIndex ?? 0))
+                .map((col) => ({
+                  field: col.colId,
+                  direction: col.sort as BCSortOrder['direction']
+                }))
+            }
+          }
         } else if (paginationOptionsRef.current.sortOrders?.length) {
           params.api.applyColumnState({
             state: paginationOptionsRef.current.sortOrders.map(
@@ -646,6 +655,9 @@ export const BCGridViewer = forwardRef<
         }
 
         if (shouldRestore) {
+          if (!cachedPagination) {
+            onPaginationChange?.(restoredOptions)
+          }
           setTimeout(() => {
             isRestoringFromCache.current = false
           }, 100)
@@ -656,7 +668,6 @@ export const BCGridViewer = forwardRef<
         cacheMode,
         enablePageCaching,
         onPaginationChange,
-        cachePaginationOptions,
         convertFilterModelToArray,
         controlledColumnState
       ]

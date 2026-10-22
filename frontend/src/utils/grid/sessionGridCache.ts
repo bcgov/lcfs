@@ -14,7 +14,7 @@ const readStorageJson = <T>(storage: Storage, key: string): T | null => {
     if (!raw) return null
     return JSON.parse(raw) as T
   } catch (error) {
-    console.warn(`Failed to parse grid cache for ${key}:`, error)
+    console.warn('Failed to parse grid cache for key:', key, error)
     return null
   }
 }
@@ -23,7 +23,7 @@ const writeStorageJson = (storage: Storage, key: string, value: unknown) => {
   try {
     storage.setItem(key, JSON.stringify(value))
   } catch (error) {
-    console.warn(`Failed to write grid cache for ${key}:`, error)
+    console.warn('Failed to write grid cache for key:', key, error)
   }
 }
 
@@ -86,7 +86,7 @@ export const removeGridCache = (key: string, mode: GridCacheMode = 'login') => {
     try {
       storage.removeItem(key)
     } catch (error) {
-      console.warn(`Failed to clear grid cache for ${key}:`, error)
+      console.warn('Failed to clear grid cache for key:', key, error)
     }
   }
 }
