@@ -225,7 +225,7 @@ export const CommentLog = ({ organizationId }) => {
                             comment={c}
                             index={groupIdx}
                             showInternalBadge={isGovernment}
-                            isGovernmentUser={isGovernment}
+                            showOrganizationName={false}
                             searchQuery={filters.search}
                             onEdit={(commentId, comment, visibility) =>
                               editMutation.mutate({
