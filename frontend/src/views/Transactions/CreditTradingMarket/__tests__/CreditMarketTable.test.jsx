@@ -1,6 +1,6 @@
 import React from 'react'
 import { screen, waitFor, act } from '@testing-library/react'
-import { vi, describe, expect, beforeEach } from 'vitest'
+import { vi, describe, expect, beforeEach } from 'vite-plus/test'
 import { CreditMarketTable } from '../CreditMarketTable'
 import { test } from '@/tests/utils/fixtures'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -36,12 +36,12 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: (props) => {
     mockBCGridViewer(props)
     const {
-  queryData,
-  overlayNoRowsTemplate,
-  columnDefs,
-  getRowId,
-  onPaginationChange
-} = props
+      queryData,
+      overlayNoRowsTemplate,
+      columnDefs,
+      getRowId,
+      onPaginationChange
+    } = props
     const { data, isLoading, error } = queryData
 
     if (isLoading) return <div data-test="grid-loading">Loading...</div>
@@ -77,12 +77,15 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 
 // Mock Material-UI Box
 vi.mock('@mui/material/Box', () => ({
-  default: ({
-  children,
-  ...props
-}) => { delete props.component; delete props.sx; return <div data-test="mui-box" {...props}>
-      {children}
-    </div>; }
+  default: ({ children, ...props }) => {
+    delete props.component
+    delete props.sx
+    return (
+      <div data-test="mui-box" {...props}>
+        {children}
+      </div>
+    )
+  }
 }))
 
 // Sample test data

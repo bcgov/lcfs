@@ -28,7 +28,7 @@ export const AssessmentRecommendation = ({
 }) => {
   const { t } = useTranslation(['report', 'org'])
   const navigate = useNavigate()
-  useRef(null);
+  useRef(null)
   const { hasRoles, data: currentUser } = useCurrentUser()
 
   const [isAdjustmentDialogOpen, setIsAdjustmentDialogOpen] = useState(false)
@@ -56,9 +56,8 @@ export const AssessmentRecommendation = ({
       }
     })
 
-  const { mutate: updateComplianceReport } = useUpdateComplianceReport(
-    complianceReportId
-  )
+  const { mutate: updateComplianceReport } =
+    useUpdateComplianceReport(complianceReportId)
 
   const isGovernmentUser = currentUser?.isGovernmentUser
   const isAnalyst = hasRoles(roles.analyst)
@@ -72,7 +71,7 @@ export const AssessmentRecommendation = ({
       !reportData?.report?.supplementalInitiator &&
       reportData?.report?.reportingFrequency !== 'Quarterly'
     )
-  }, [reportData]);
+  }, [reportData])
 
   // Allow editing non-assessment checkbox when user is analyst or director and report is submitted
   const canEditNonAssessmentStatus = useMemo(() => {
@@ -99,7 +98,13 @@ export const AssessmentRecommendation = ({
       )
     }
     return false
-  }, [isGovernmentUser, isAnalyst, isDirector, isComplianceManager, currentStatus])
+  }, [
+    isGovernmentUser,
+    isAnalyst,
+    isDirector,
+    isComplianceManager,
+    currentStatus
+  ])
   const governmentAdjustmentDialog = (
     <>
       This will put the report into edit mode to update schedule information, do
@@ -287,9 +292,7 @@ export const AssessmentRecommendation = ({
     !isDirector
 
   const hasContentToShow =
-    isDirector || isComplianceManager
-      ? shouldShowNonAssessmentSection
-      : true
+    isDirector || isComplianceManager ? shouldShowNonAssessmentSection : true
 
   if (
     !hasContentToShow &&
@@ -389,8 +392,9 @@ export const AssessmentRecommendation = ({
           {/* Analyst adjustment section - Show above non-assessment */}
           {shouldShowAnalystAdjustment && (
             <BCTypography variant="body2" sx={{ mb: 2 }}>
-              The analyst can make changes to the reported activity information if
-              it is known to be incorrect, click to put the report in edit mode:
+              The analyst can make changes to the reported activity information
+              if it is known to be incorrect, click to put the report in edit
+              mode:
               <br />
               <Tooltip
                 title={

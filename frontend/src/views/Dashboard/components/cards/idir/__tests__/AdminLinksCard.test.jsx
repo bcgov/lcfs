@@ -1,5 +1,5 @@
 import { screen, fireEvent } from '@testing-library/react'
-import { vi, describe, expect, beforeEach } from 'vitest'
+import { vi, describe, expect, beforeEach } from 'vite-plus/test'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ROUTES } from '@/routes/routes'
@@ -356,7 +356,9 @@ describe('AdminLinksCard Component', () => {
       render(<AdminLinksCard />, [query])
 
       expect(screen.getByText('Credit market data')).toBeInTheDocument()
-      const linkButton = screen.getByText('Credit market data').closest('button')
+      const linkButton = screen
+        .getByText('Credit market data')
+        .closest('button')
       fireEvent.click(linkButton)
       expect(mockNavigate).toHaveBeenCalledWith(ROUTES.PUBLIC_MARKET_DATA)
     })

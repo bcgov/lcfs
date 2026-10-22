@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi } from 'vite-plus/test'
 import {
   organizationsColDefs,
   getUserColumnDefs,
@@ -95,12 +95,10 @@ describe('ViewOrganization Schema', () => {
       expect(orgTypeCol.cellRenderer).toBe(OrgTypeRenderer)
       expect(orgTypeCol.filter).toBe(true)
       expect(orgTypeCol.sortable).toBe(true)
-      expect(
-        orgTypeCol.floatingFilterComponentParams.valueKey
-      ).toBe('orgType')
-      expect(
-        orgTypeCol.floatingFilterComponentParams.labelKey
-      ).toBe('shortLabel')
+      expect(orgTypeCol.floatingFilterComponentParams.valueKey).toBe('orgType')
+      expect(orgTypeCol.floatingFilterComponentParams.labelKey).toBe(
+        'shortLabel'
+      )
     })
 
     it('formats organization type values to shorter labels', () => {

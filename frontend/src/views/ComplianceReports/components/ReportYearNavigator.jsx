@@ -90,7 +90,12 @@ export const ReportYearNavigator = ({
         variant="h5"
         component="span"
         data-test="report-year-navigator-current"
-        sx={{ minWidth: '3.5rem', textAlign: 'center', color: '#003366', fontWeight: 'bold' }}
+        sx={{
+          minWidth: '3.5rem',
+          textAlign: 'center',
+          color: '#003366',
+          fontWeight: 'bold'
+        }}
       >
         {currentCompliancePeriod}
       </BCTypography>
@@ -118,11 +123,17 @@ ReportYearNavigator.propTypes = {
     PropTypes.number
   ]).isRequired,
   previous: PropTypes.shape({
-    complianceReportId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    complianceReportId: PropTypes.oneOfType([
+      PropTypes.string,
+      PropTypes.number
+    ]),
     compliancePeriod: PropTypes.string
   }),
   next: PropTypes.shape({
-    complianceReportId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    complianceReportId: PropTypes.oneOfType([
+      PropTypes.string,
+      PropTypes.number
+    ]),
     compliancePeriod: PropTypes.string
   }),
   isLoading: PropTypes.bool

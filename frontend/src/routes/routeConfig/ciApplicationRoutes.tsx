@@ -1,7 +1,4 @@
-import {
-  CIApplications,
-  EditViewCIApplication
-} from '@/views/CarbonIntensity'
+import { CIApplications, EditViewCIApplication } from '@/views/CarbonIntensity'
 import { FEATURE_FLAGS } from '@/constants/config'
 import { withFeatureFlag } from '@/utils/withFeatureFlag'
 import ROUTES from '../routes'

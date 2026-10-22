@@ -1,5 +1,5 @@
 import React from 'react'
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import { screen } from '@testing-library/react'
 import { ViewChargingSite } from '../ViewChargingSite'
 import { test } from '@/tests/utils/fixtures'
@@ -25,13 +25,13 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('@/components/BCAlert', () => ({
-  BCAlert2: React.forwardRef(function BCAlert2Mock({
-  message
-}, ref) {
-  return <div data-testid="bc-alert" ref={ref}>
-      {message}
-    </div>;
-})
+  BCAlert2: React.forwardRef(function BCAlert2Mock({ message }, ref) {
+    return (
+      <div data-testid="bc-alert" ref={ref}>
+        {message}
+      </div>
+    )
+  })
 }))
 
 vi.mock('@/hooks/useCurrentUser')

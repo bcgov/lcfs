@@ -1,5 +1,5 @@
 import { screen, act } from '@testing-library/react'
-import { describe, expect, beforeEach, vi } from 'vitest'
+import { describe, expect, beforeEach, vi } from 'vite-plus/test'
 import { AllocationAgreementSummary } from '../AllocationAgreementSummary'
 import { test } from '@/tests/utils/fixtures'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
@@ -19,15 +19,15 @@ vi.mock('react-i18next', () => ({
 // Mock BCGridViewer
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: ({
-  gridKey,
-  queryData,
-  dataKey,
-  suppressPagination,
-  paginationOptions,
-  getRowId,
-  enableCopyButton,
-  onPaginationChange
-}) => (
+    gridKey,
+    queryData,
+    dataKey,
+    suppressPagination,
+    paginationOptions,
+    getRowId,
+    enableCopyButton,
+    onPaginationChange
+  }) => (
     <div data-test="bc-grid-viewer">
       <div data-test="grid-key">{gridKey}</div>
       <div data-test="data-key">{dataKey}</div>

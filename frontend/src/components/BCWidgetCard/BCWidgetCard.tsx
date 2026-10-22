@@ -27,8 +27,10 @@ type EditButtonConfig = {
   onClick?: () => void
 }
 
-export interface BCWidgetCardProps
-  extends Omit<CardProps, 'title' | 'content'> {
+export interface BCWidgetCardProps extends Omit<
+  CardProps,
+  'title' | 'content'
+> {
   color?: WidgetColor
   title?: ReactNode
   content: ReactNode

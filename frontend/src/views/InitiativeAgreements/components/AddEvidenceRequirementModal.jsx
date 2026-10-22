@@ -25,9 +25,7 @@ export const AddEvidenceRequirementModal = ({
     onClose()
   }
   const canCreate =
-    title.trim().length > 0 &&
-    !!evidencePlainText(description) &&
-    !isUploading
+    title.trim().length > 0 && !!evidencePlainText(description) && !isUploading
   const submit = () => {
     if (!canCreate || isUploading) return
     onCreate({ title: title.trim(), description: description.trim() })

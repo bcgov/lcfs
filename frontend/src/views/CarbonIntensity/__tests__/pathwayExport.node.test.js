@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import * as XLSX from 'xlsx'
 
 import { exportRowsToXlsx } from '@/views/CarbonIntensity/components/pathwayExport'

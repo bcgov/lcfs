@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vite-plus/test'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { createRef } from 'react'
-import { ThemeProvider , createTheme } from '@mui/material/styles'
+import { ThemeProvider, createTheme } from '@mui/material/styles'
 import { AsyncValidationEditor } from '../AsyncValidationEditor'
 
 // Mock the useDebounce hook
@@ -12,11 +12,7 @@ vi.mock('@/utils/debounce', () => ({
 const theme = createTheme()
 
 const renderWithTheme = (component) => {
-  return render(
-    <ThemeProvider theme={theme}>
-      {component}
-    </ThemeProvider>
-  )
+  return render(<ThemeProvider theme={theme}>{component}</ThemeProvider>)
 }
 
 describe('AsyncValidationEditor', () => {
@@ -27,10 +23,10 @@ describe('AsyncValidationEditor', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.clearAllMocks()
-    
+
     mockOnValueChange = vi.fn()
     mockCondition = vi.fn().mockResolvedValue(true)
-    
+
     defaultProps = {
       value: '',
       onValueChange: mockOnValueChange,
@@ -51,7 +47,7 @@ describe('AsyncValidationEditor', () => {
       act(() => {
         renderWithTheme(<AsyncValidationEditor {...defaultProps} />)
       })
-      
+
       const input = screen.getByRole('textbox')
       expect(input).toBeInTheDocument()
       expect(input).toHaveValue('')
@@ -63,7 +59,7 @@ describe('AsyncValidationEditor', () => {
       act(() => {
         renderWithTheme(<AsyncValidationEditor {...props} />)
       })
-      
+
       const input = screen.getByRole('textbox')
       expect(input).toHaveValue('test value')
     })
@@ -73,7 +69,7 @@ describe('AsyncValidationEditor', () => {
       act(() => {
         renderWithTheme(<AsyncValidationEditor {...props} />)
       })
-      
+
       const input = screen.getByRole('textbox')
       expect(input).toHaveAttribute('placeholder', 'Enter customField')
     })
@@ -84,12 +80,12 @@ describe('AsyncValidationEditor', () => {
       act(() => {
         renderWithTheme(<AsyncValidationEditor {...defaultProps} />)
       })
-      
+
       const input = screen.getByRole('textbox')
       act(() => {
         fireEvent.change(input, { target: { value: 'new value' } })
       })
-      
+
       expect(input).toHaveValue('new value')
     })
 
@@ -97,12 +93,12 @@ describe('AsyncValidationEditor', () => {
       act(() => {
         renderWithTheme(<AsyncValidationEditor {...defaultProps} />)
       })
-      
+
       const input = screen.getByRole('textbox')
       act(() => {
         fireEvent.change(input, { target: { value: 'new value' } })
       })
-      
+
       expect(mockOnValueChange).toHaveBeenCalledWith('new value')
     })
 
@@ -111,17 +107,17 @@ describe('AsyncValidationEditor', () => {
       act(() => {
         rendered = renderWithTheme(<AsyncValidationEditor {...defaultProps} />)
       })
-      
+
       const input = screen.getByRole('textbox')
-      
+
       // Initially untouched - should have no validation indicator
       expect(screen.queryByText('✔')).not.toBeInTheDocument()
       expect(screen.queryByText('✘')).not.toBeInTheDocument()
-      
+
       act(() => {
         fireEvent.change(input, { target: { value: 'test' } })
       })
-      
+
       // After touch, should show loading state
       const loadingElement = rendered.container.querySelector('.loading')
       expect(loadingElement).toBeInTheDocument()
@@ -132,12 +128,12 @@ describe('AsyncValidationEditor', () => {
       act(() => {
         rendered = renderWithTheme(<AsyncValidationEditor {...defaultProps} />)
       })
-      
+
       const input = screen.getByRole('textbox')
       act(() => {
         fireEvent.change(input, { target: { value: 'test' } })
       })
-      
+
       // Should show gray color and loading indicator
       expect(input).toHaveStyle({ color: 'rgb(128, 128, 128)' })
       const loadingElement = rendered.container.querySelector('.loading')
@@ -151,12 +147,12 @@ describe('AsyncValidationEditor', () => {
       act(() => {
         renderWithTheme(<AsyncValidationEditor {...defaultProps} ref={ref} />)
       })
-      
+
       const input = screen.getByRole('textbox')
       act(() => {
         fireEvent.change(input, { target: { value: 'test value' } })
       })
-      
+
       expect(ref.current.getValue()).toBe('test value')
     })
 
@@ -166,19 +162,19 @@ describe('AsyncValidationEditor', () => {
       act(() => {
         renderWithTheme(<AsyncValidationEditor {...props} ref={ref} />)
       })
-      
+
       // Change the input value
       const input = screen.getByRole('textbox')
       act(() => {
         fireEvent.change(input, { target: { value: 'changed value' } })
       })
       expect(input).toHaveValue('changed value')
-      
+
       // Call afterGuiAttached should reset to initial value
       act(() => {
         ref.current.afterGuiAttached()
       })
-      
+
       expect(input).toHaveValue('initial value')
     })
 
@@ -188,17 +184,17 @@ describe('AsyncValidationEditor', () => {
       act(() => {
         renderWithTheme(<AsyncValidationEditor {...defaultProps} ref={ref} />)
       })
-      
+
       const input = screen.getByRole('textbox')
       act(() => {
         fireEvent.change(input, { target: { value: 'invalid' } })
       })
-      
+
       await act(async () => {
         vi.advanceTimersByTime(300)
         await vi.runAllTimersAsync()
       })
-      
+
       expect(ref.current.isCancelAfterEnd()).toBe(true)
     })
 
@@ -207,12 +203,12 @@ describe('AsyncValidationEditor', () => {
       act(() => {
         renderWithTheme(<AsyncValidationEditor {...defaultProps} ref={ref} />)
       })
-      
+
       const input = screen.getByRole('textbox')
       act(() => {
         fireEvent.change(input, { target: { value: 'test' } })
       })
-      
+
       // While validating, should return true
       expect(ref.current.isCancelAfterEnd()).toBe(true)
     })
@@ -223,17 +219,17 @@ describe('AsyncValidationEditor', () => {
       act(() => {
         renderWithTheme(<AsyncValidationEditor {...defaultProps} ref={ref} />)
       })
-      
+
       const input = screen.getByRole('textbox')
       act(() => {
         fireEvent.change(input, { target: { value: 'valid' } })
       })
-      
+
       await act(async () => {
         vi.advanceTimersByTime(300)
         await vi.runAllTimersAsync()
       })
-      
+
       expect(ref.current.isCancelAfterEnd()).toBe(false)
     })
   })
@@ -244,17 +240,17 @@ describe('AsyncValidationEditor', () => {
       act(() => {
         renderWithTheme(<AsyncValidationEditor {...defaultProps} />)
       })
-      
+
       const input = screen.getByRole('textbox')
       act(() => {
         fireEvent.change(input, { target: { value: 'valid input' } })
       })
-      
+
       await act(async () => {
         vi.advanceTimersByTime(300)
         await vi.runAllTimersAsync()
       })
-      
+
       expect(screen.getByText('✔')).toBeInTheDocument()
       expect(input).toHaveStyle({ color: 'rgb(0, 0, 0)' })
     })
@@ -264,17 +260,17 @@ describe('AsyncValidationEditor', () => {
       act(() => {
         renderWithTheme(<AsyncValidationEditor {...defaultProps} />)
       })
-      
+
       const input = screen.getByRole('textbox')
       act(() => {
         fireEvent.change(input, { target: { value: 'invalid input' } })
       })
-      
+
       await act(async () => {
         vi.advanceTimersByTime(300)
         await vi.runAllTimersAsync()
       })
-      
+
       expect(screen.getByText('✘')).toBeInTheDocument()
       expect(input).toHaveStyle({ color: 'rgb(233, 30, 99)' })
     })
@@ -284,12 +280,12 @@ describe('AsyncValidationEditor', () => {
       act(() => {
         rendered = renderWithTheme(<AsyncValidationEditor {...defaultProps} />)
       })
-      
+
       const input = screen.getByRole('textbox')
       act(() => {
         fireEvent.change(input, { target: { value: 'test' } })
       })
-      
+
       const loadingElement = rendered.container.querySelector('.loading')
       expect(loadingElement).toBeInTheDocument()
       expect(input).toHaveStyle({ color: 'rgb(128, 128, 128)' })
@@ -300,12 +296,14 @@ describe('AsyncValidationEditor', () => {
       act(() => {
         rendered = renderWithTheme(<AsyncValidationEditor {...defaultProps} />)
       })
-      
+
       const input = screen.getByRole('textbox')
       expect(input).toHaveStyle({ color: 'rgb(0, 0, 0)' })
       expect(screen.queryByText('✔')).not.toBeInTheDocument()
       expect(screen.queryByText('✘')).not.toBeInTheDocument()
-      expect(rendered.container.querySelector('.loading')).not.toBeInTheDocument()
+      expect(
+        rendered.container.querySelector('.loading')
+      ).not.toBeInTheDocument()
     })
   })
 
@@ -314,33 +312,33 @@ describe('AsyncValidationEditor', () => {
       act(() => {
         renderWithTheme(<AsyncValidationEditor {...defaultProps} />)
       })
-      
+
       const input = screen.getByRole('textbox')
-      
+
       // First make it non-empty to trigger touched state
       act(() => {
         fireEvent.change(input, { target: { value: 'temp' } })
       })
-      
+
       // Wait for first validation to complete
       await act(async () => {
         vi.advanceTimersByTime(300)
         await vi.runAllTimersAsync()
       })
-      
+
       // Clear mock calls from the temp input
       mockCondition.mockClear()
-      
+
       // Then clear it
       act(() => {
         fireEvent.change(input, { target: { value: '' } })
       })
-      
+
       await act(async () => {
         vi.advanceTimersByTime(300)
         await vi.runAllTimersAsync()
       })
-      
+
       expect(mockCondition).not.toHaveBeenCalled()
       expect(screen.getByText('✘')).toBeInTheDocument()
     })
@@ -349,17 +347,17 @@ describe('AsyncValidationEditor', () => {
       act(() => {
         renderWithTheme(<AsyncValidationEditor {...defaultProps} />)
       })
-      
+
       const input = screen.getByRole('textbox')
       act(() => {
         fireEvent.change(input, { target: { value: 'test input' } })
       })
-      
+
       await act(async () => {
         vi.advanceTimersByTime(300)
         await vi.runAllTimersAsync()
       })
-      
+
       expect(mockCondition).toHaveBeenCalledWith('test input')
     })
 
@@ -368,17 +366,17 @@ describe('AsyncValidationEditor', () => {
       act(() => {
         renderWithTheme(<AsyncValidationEditor {...defaultProps} />)
       })
-      
+
       const input = screen.getByRole('textbox')
       act(() => {
         fireEvent.change(input, { target: { value: 'valid input' } })
       })
-      
+
       await act(async () => {
         vi.advanceTimersByTime(300)
         await vi.runAllTimersAsync()
       })
-      
+
       expect(screen.getByText('✔')).toBeInTheDocument()
     })
 
@@ -387,17 +385,17 @@ describe('AsyncValidationEditor', () => {
       act(() => {
         renderWithTheme(<AsyncValidationEditor {...defaultProps} />)
       })
-      
+
       const input = screen.getByRole('textbox')
       act(() => {
         fireEvent.change(input, { target: { value: 'invalid input' } })
       })
-      
+
       await act(async () => {
         vi.advanceTimersByTime(300)
         await vi.runAllTimersAsync()
       })
-      
+
       expect(screen.getByText('✘')).toBeInTheDocument()
     })
 
@@ -405,21 +403,21 @@ describe('AsyncValidationEditor', () => {
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
       const testError = new Error('Validation error')
       mockCondition.mockRejectedValue(testError)
-      
+
       act(() => {
         renderWithTheme(<AsyncValidationEditor {...defaultProps} />)
       })
-      
+
       const input = screen.getByRole('textbox')
       act(() => {
         fireEvent.change(input, { target: { value: 'test input' } })
       })
-      
+
       await act(async () => {
         vi.advanceTimersByTime(300)
         await vi.runAllTimersAsync()
       })
-      
+
       expect(consoleSpy).toHaveBeenCalledWith(testError)
       consoleSpy.mockRestore()
     })
@@ -429,20 +427,20 @@ describe('AsyncValidationEditor', () => {
       act(() => {
         renderWithTheme(<AsyncValidationEditor {...defaultProps} />)
       })
-      
+
       const input = screen.getByRole('textbox')
       act(() => {
         fireEvent.change(input, { target: { value: 'test input' } })
       })
-      
+
       // Initially validating
       expect(input).toHaveStyle({ color: 'rgb(128, 128, 128)' })
-      
+
       await act(async () => {
         vi.advanceTimersByTime(300)
         await vi.runAllTimersAsync()
       })
-      
+
       // After validation, not validating
       expect(input).toHaveStyle({ color: 'rgb(0, 0, 0)' })
       expect(screen.getByText('✔')).toBeInTheDocument()

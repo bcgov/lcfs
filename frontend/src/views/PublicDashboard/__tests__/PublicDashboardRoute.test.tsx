@@ -1,12 +1,13 @@
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi, beforeEach, type Mock } from 'vitest'
+import { describe, expect, it, vi, beforeEach, type Mock } from 'vite-plus/test'
 import { PublicDashboardRoute } from '../PublicDashboardRoute'
 import { isFeatureEnabled } from '@/constants/config'
 
 vi.mock('@/constants/config', async () => {
-  const actual = await vi.importActual<typeof import('@/constants/config')>(
-    '@/constants/config'
-  )
+  const actual =
+    await vi.importActual<typeof import('@/constants/config')>(
+      '@/constants/config'
+    )
   return {
     ...actual,
     isFeatureEnabled: vi.fn()
@@ -45,8 +46,6 @@ describe('PublicDashboardRoute', () => {
     render(<PublicDashboardRoute />)
 
     expect(screen.getByTestId('legacy-public-dashboard')).toBeInTheDocument()
-    expect(
-      screen.queryByTestId('new-public-dashboard')
-    ).not.toBeInTheDocument()
+    expect(screen.queryByTestId('new-public-dashboard')).not.toBeInTheDocument()
   })
 })

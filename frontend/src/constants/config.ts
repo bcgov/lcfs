@@ -184,7 +184,6 @@ export const CONFIG: AppConfig = {
       !isProductionEnvironment,
     creditMarketLoginPage:
       window.lcfs_config.feature_flags.creditMarketLoginPage ?? false,
-    publicMarketData:
-      window.lcfs_config.feature_flags.publicMarketData ?? false
+    publicMarketData: window.lcfs_config.feature_flags.publicMarketData ?? false
   }
 }

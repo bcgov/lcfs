@@ -1,12 +1,12 @@
 import React from 'react'
 import { render, screen } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach } from 'vite-plus/test'
 import { AddEditOrg } from '../AddEditOrg'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useOrganization, useOrganizationTypes } from '@/hooks/useOrganization'
 import { useApiService } from '@/services/useApiService'
-import '@tanstack/react-query';
+import '@tanstack/react-query'
 
 // Mock react-i18next
 
@@ -23,32 +23,24 @@ vi.mock('react-router-dom', () => ({
 
 // Mock AddressAutocomplete to prevent network requests
 vi.mock('@/components/BCForm/AddressAutocomplete', () => ({
-  AddressAutocomplete: React.forwardRef(
-    function AddressAutocompleteMock(
-      {
-  name,
-  placeholder = 'Start typing address...',
-  value,
-  onChange,
-  onBlur
-},
-      ref
-      ) {
-        return (
-          <input
-            ref={ref}
-            id={name}
-            name={name}
-            placeholder={placeholder}
-            value={value || ''}
-            onChange={(e) => onChange && onChange(e.target.value)}
-            onBlur={onBlur}
-            data-testid={`address-autocomplete-${name}`}
-            aria-label={name?.includes('street') ? 'org:streetAddrLabel' : name}
-          />
-        )
-      }
-  )
+  AddressAutocomplete: React.forwardRef(function AddressAutocompleteMock(
+    { name, placeholder = 'Start typing address...', value, onChange, onBlur },
+    ref
+  ) {
+    return (
+      <input
+        ref={ref}
+        id={name}
+        name={name}
+        placeholder={placeholder}
+        value={value || ''}
+        onChange={(e) => onChange && onChange(e.target.value)}
+        onBlur={onBlur}
+        data-testid={`address-autocomplete-${name}`}
+        aria-label={name?.includes('street') ? 'org:streetAddrLabel' : name}
+      />
+    )
+  })
 }))
 
 // Mock the useMutation hook to properly handle onSuccess callback

@@ -1,6 +1,13 @@
 import { test } from '@/tests/utils/fixtures'
 import React from 'react'
-import { afterEach, beforeAll, beforeEach, describe, expect, vi } from 'vitest'
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  vi
+} from 'vite-plus/test'
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 
 import { roles } from '@/constants/roles'

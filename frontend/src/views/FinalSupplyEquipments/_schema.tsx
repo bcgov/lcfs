@@ -1,4 +1,8 @@
-import type { ColDef, ValueSetterFunc, ValueSetterParams } from 'ag-grid-community'
+import type {
+  ColDef,
+  ValueSetterFunc,
+  ValueSetterParams
+} from 'ag-grid-community'
 import type { GridErrors, GridWarnings, OptionsData } from '@/types/schema'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import BCTypography from '@/components/BCTypography'
@@ -182,8 +186,7 @@ export const finalSupplyEquipmentColDefs = (
         }
         return false
       },
-      tooltipValueGetter: () =>
-        'Select the organization name from the list'
+      tooltipValueGetter: () => 'Select the organization name from the list'
     },
     {
       field: 'supplyFromDate',

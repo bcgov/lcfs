@@ -1,5 +1,5 @@
 import { screen } from '@testing-library/react'
-import { vi, describe, expect, type Mock } from 'vitest'
+import { vi, describe, expect, type Mock } from 'vite-plus/test'
 import { useMatches, Outlet } from 'react-router-dom'
 import PublicLayout from '../PublicLayout'
 import { test } from '@/tests/utils/fixtures'

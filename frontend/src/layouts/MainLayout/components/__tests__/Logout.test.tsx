@@ -1,6 +1,6 @@
 import { test } from '@/tests/utils/fixtures'
 import { screen, fireEvent } from '@testing-library/react'
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import { UserProfileActions } from '@/layouts/MainLayout/components/UserProfileActions'
 import * as keycloakUtils from '@/utils/keycloak'
 import * as currentUserHooks from '@/hooks/useCurrentUser'

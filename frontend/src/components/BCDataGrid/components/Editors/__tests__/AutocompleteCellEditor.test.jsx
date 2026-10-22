@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { render, screen, fireEvent, act } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vite-plus/test'
 import { createRef } from 'react'
 import Autocomplete from '@mui/material/Autocomplete'
 import { AutocompleteCellEditor } from '../AutocompleteCellEditor'
@@ -11,22 +11,23 @@ import { AutocompleteCellEditor } from '../AutocompleteCellEditor'
 vi.mock('@mui/material/Autocomplete', () => ({
   default: vi.fn(
     ({
-  onChange,
-  onOpen,
-  onKeyDown,
-  onHighlightChange,
-  getOptionLabel,
-  renderOption,
-  renderInput,
-  renderTags,
-  isOptionEqualToValue,
-  multiple,
-  options: autocompleteOptions = [],
-  inputValue,
-  onInputChange,
-  ...props
-}) => {
-delete props.children; delete props.onClose;
+      onChange,
+      onOpen,
+      onKeyDown,
+      onHighlightChange,
+      getOptionLabel,
+      renderOption,
+      renderInput,
+      renderTags,
+      isOptionEqualToValue,
+      multiple,
+      options: autocompleteOptions = [],
+      inputValue,
+      onInputChange,
+      ...props
+    }) => {
+      delete props.children
+      delete props.onClose
 
       // Test getOptionLabel if provided
       if (getOptionLabel) {

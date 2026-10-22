@@ -1,5 +1,5 @@
 import { screen } from '@testing-library/react'
-import { describe, expect } from 'vitest'
+import { describe, expect } from 'vite-plus/test'
 import { test } from '@/tests/utils/fixtures'
 import { LegacyPublicDashboard } from '../LegacyPublicDashboard'
 

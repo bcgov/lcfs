@@ -169,12 +169,15 @@ export const useFuelCodeBulletins = (
 }
 
 export const useDownloadFuelCodeBulletins = (
-  options: ExtMutationOptions<unknown, {
-    bulletinType: string
-    format?: string
-    body?: Record<string, unknown>
-    idir?: boolean
-  }>
+  options: ExtMutationOptions<
+    unknown,
+    {
+      bulletinType: string
+      format?: string
+      body?: Record<string, unknown>
+      idir?: boolean
+    }
+  >
 ) => {
   const client = useApiService()
   return useMutation({
@@ -183,12 +186,12 @@ export const useDownloadFuelCodeBulletins = (
       format = 'xlsx',
       body,
       idir
-      }: {
-        bulletinType: string
-        format?: string
-        body?: Record<string, unknown>
-        idir?: boolean
-      }) => {
+    }: {
+      bulletinType: string
+      format?: string
+      body?: Record<string, unknown>
+      idir?: boolean
+    }) => {
       if (!bulletinType) {
         throw new Error('bulletinType is required for bulletin download')
       }
@@ -220,15 +223,18 @@ export const useTransportModes = (options: QueryOptions<unknown>) => {
 
 // Single unified mutation hook for all fuel code operations
 export const useFuelCodeMutation = (
-  options: ExtMutationOptions<unknown, {
-    action: 'create' | 'save' | 'update' | 'approve' | 'delete' | 'download'
-    data?: Record<string, unknown> & {
-      format?: string
-      excludeArchived?: boolean
-      body?: Record<string, unknown>
+  options: ExtMutationOptions<
+    unknown,
+    {
+      action: 'create' | 'save' | 'update' | 'approve' | 'delete' | 'download'
+      data?: Record<string, unknown> & {
+        format?: string
+        excludeArchived?: boolean
+        body?: Record<string, unknown>
+      }
+      fuelCodeId?: number | string
     }
-    fuelCodeId?: number | string
-  }> = {}
+  > = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()

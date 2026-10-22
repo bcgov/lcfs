@@ -1,5 +1,5 @@
 import { render, screen, cleanup } from '@testing-library/react'
-import { describe, it, vi, afterEach, beforeEach } from 'vitest'
+import { describe, it, vi, afterEach, beforeEach } from 'vite-plus/test'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import theme from '@/themes'
@@ -60,9 +60,7 @@ vi.mock('@/hooks/useOrganization', () => ({
 
 // Mock Role component to always render children for government role
 vi.mock('@/components/Role', () => ({
-  Role: ({
-  children
-}) => {
+  Role: ({ children }) => {
     // Always show children for this test (we're mocking appropriate user roles)
     return <div data-test="role-component">{children}</div>
   }
@@ -109,7 +107,9 @@ const Wrapper = ({ children }) => (
 describe('OrganizationDetailsCard Comprehensive Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    CurrentUserHook.useCurrentUser.mockImplementation(() => makeUserHook(govUser))
+    CurrentUserHook.useCurrentUser.mockImplementation(() =>
+      makeUserHook(govUser)
+    )
     useOrganization.mockReturnValue({ data: baseOrg, isLoading: false })
   })
 
@@ -159,7 +159,7 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
     expect(screen.queryByTestId('loading')).not.toBeInTheDocument()
   })
 
-  // Role-based Access Control Tests  
+  // Role-based Access Control Tests
   it('shows edit button for administrator users', () => {
     CurrentUserHook.useCurrentUser.mockImplementation(() =>
       makeUserHook(adminUser)
@@ -185,7 +185,9 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
         </ThemeProvider>
       </Wrapper>
     )
-    expect(screen.queryByRole('button', { name: /edit/i })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /edit/i })
+    ).not.toBeInTheDocument()
   })
 
   // Records Address Conditional Tests (Lines 130-133)
@@ -222,8 +224,8 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
   // Credit Trading Tests (Line 149)
   it('shows credit trading enabled for registered organization', () => {
     useOrganization.mockReturnValue({
-      data: { 
-        ...baseOrg, 
+      data: {
+        ...baseOrg,
         orgStatus: { status: 'Registered' },
         creditTradingEnabled: true
       },
@@ -241,8 +243,8 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
 
   it('shows credit trading disabled for registered organization', () => {
     useOrganization.mockReturnValue({
-      data: { 
-        ...baseOrg, 
+      data: {
+        ...baseOrg,
         orgStatus: { status: 'Registered' },
         creditTradingEnabled: false
       },
@@ -261,8 +263,8 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
 
   it('does not show credit trading for non-registered organization', () => {
     useOrganization.mockReturnValue({
-      data: { 
-        ...baseOrg, 
+      data: {
+        ...baseOrg,
         orgStatus: { status: 'Unregistered' },
         creditTradingEnabled: true
       },
@@ -275,7 +277,9 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
         </ThemeProvider>
       </Wrapper>
     )
-    expect(screen.queryByText(/creditTradingEnabledLabel/)).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(/creditTradingEnabledLabel/)
+    ).not.toBeInTheDocument()
   })
 
   // Early Issuance Tests
@@ -294,7 +298,9 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
         </ThemeProvider>
       </Wrapper>
     )
-    expect(screen.getByText(/Early issuance reporting enabled/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Early issuance reporting enabled/)
+    ).toBeInTheDocument()
     expect(screen.getAllByText('No')[0]).toBeInTheDocument()
   })
 
@@ -313,7 +319,9 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
         </ThemeProvider>
       </Wrapper>
     )
-    expect(screen.getByText(/Early issuance reporting enabled/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Early issuance reporting enabled/)
+    ).toBeInTheDocument()
     expect(screen.getByText('Yes')).toBeInTheDocument() // Early issuance should be Yes
   })
 
@@ -332,7 +340,9 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
         </ThemeProvider>
       </Wrapper>
     )
-    expect(screen.getByText(/Early issuance reporting enabled/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Early issuance reporting enabled/)
+    ).toBeInTheDocument()
     expect(screen.getByText('Yes')).toBeInTheDocument() // Early issuance should be Yes
   })
 
@@ -351,7 +361,9 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
         </ThemeProvider>
       </Wrapper>
     )
-    expect(screen.queryByText(/Early issuance reporting enabled/)).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(/Early issuance reporting enabled/)
+    ).not.toBeInTheDocument()
   })
 
   // User-specific Message Tests
@@ -412,7 +424,7 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
     expect(screen.getAllByText('Legal Inc')).toHaveLength(2)
   })
 
-  // Balance Information Tests  
+  // Balance Information Tests
   it('shows compliance unit balance for government users', () => {
     CurrentUserHook.useCurrentUser.mockImplementation(() =>
       makeUserHook(govUser)
@@ -438,13 +450,15 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
       </Wrapper>
     )
     expect(screen.getByText(/Registered for transfer/)).toBeInTheDocument()
-    expect(screen.getByText(/Yes — A registered organization/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Yes — A registered organization/)
+    ).toBeInTheDocument()
   })
 
   it('shows unregistered transfer status for unregistered organization', () => {
     useOrganization.mockReturnValue({
-      data: { 
-        ...baseOrg, 
+      data: {
+        ...baseOrg,
         orgStatus: { status: 'Unregistered' }
       },
       isLoading: false

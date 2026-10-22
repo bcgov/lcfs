@@ -10,7 +10,10 @@ import {
 } from '@/hooks/useInitiativeAgreements'
 import { DAAssignedAnalystCell } from './components/DAAssignedAnalystCell'
 import { dateFormatter } from '@/utils/formatters'
-import { InitiativeAgreementStatusRenderer, LastCommentRenderer } from './components/AgreementGridRenderers'
+import {
+  InitiativeAgreementStatusRenderer,
+  LastCommentRenderer
+} from './components/AgreementGridRenderers'
 
 type InitiativeAgreementGridRow = {
   lifecycleStatus?: { status?: string }
@@ -134,8 +137,7 @@ export const defaultSortModel = [{ field: 'updateDate', direction: 'desc' }]
 // apply, since the endpoint serves the same row shape across agreements.
 export const allDesignatedActionColDefs = (
   t: TFunction
-): ColDef<InitiativeAgreementGridRow>[] =>
-  designatedActionColDefs(t, null)
+): ColDef<InitiativeAgreementGridRow>[] => designatedActionColDefs(t, null)
 
 export const designatedActionColDefs = (
   t: TFunction,

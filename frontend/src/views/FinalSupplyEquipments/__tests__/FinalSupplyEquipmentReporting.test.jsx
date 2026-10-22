@@ -13,7 +13,7 @@ import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 import { handleScheduleSave } from '@/utils/schedules'
 import { useFseReportingSavedRowsStore } from '@/stores/useFseReportingSavedRowsStore'
 
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import { FinalSupplyEquipmentReporting } from '../FinalSupplyEquipmentReporting'
 import { test } from '@/tests/utils/fixtures'
 
