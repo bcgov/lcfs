@@ -20,6 +20,8 @@ from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.admin_adjustment.services import AdminAdjustmentServices
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.initiative_agreement.repo import InitiativeAgreementRepository
+from lcfs.web.api.initiative_agreement.workflow import is_hidden_from
+from lcfs.web.api.internal_comment.repo import InternalCommentRepository
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from sqlalchemy import select, delete, and_
 from sqlalchemy.engine import Row
@@ -512,9 +514,18 @@ class DocumentService:
         * read (list/download): government staff see everything; everyone else
           only Public comments, on a compliance report or CI application
           belonging to their own organization.
+
+        A comment on a draft agreement, or on one of its designated actions,
+        reads as missing to government (#5186), like its thread, and so do
+        its attachments.
         """
         comment = await self.db.get(InternalComment, parent_id)
         if not comment:
+            raise HTTPException(status_code=404, detail="Internal comment not found")
+        agreement = await InternalCommentRepository(
+            db=self.db
+        ).get_parent_initiative_agreement_of_comment(parent_id)
+        if agreement is not None and is_hidden_from(agreement, user):
             raise HTTPException(status_code=404, detail="Internal comment not found")
 
         is_government = RoleEnum.GOVERNMENT in user.role_names

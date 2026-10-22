@@ -4,7 +4,7 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 from fastapi import Depends
 from sqlalchemy import Date as SADate
-from sqlalchemy import String, and_, asc, cast, desc, func, select
+from sqlalchemy import String, and_, asc, cast, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -31,6 +31,9 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
 )
 from lcfs.db.models.initiative_agreement.InitiativeAgreementHistory import (
     InitiativeAgreementHistory,
+)
+from lcfs.db.models.initiative_agreement.InitiativeAgreementLifecycleHistory import (
+    InitiativeAgreementLifecycleHistory,
 )
 from lcfs.db.models.initiative_agreement.InitiativeAgreementLifecycleStatus import (
     InitiativeAgreementLifecycleStatus,
@@ -83,6 +86,13 @@ DA_LIST_FIELD_COLUMNS = {
     "name": DesignatedAction.name,
     "credit_allocation": DesignatedAction.credit_allocation,
     "update_date": DesignatedAction.update_date,
+    # The date for completion (#5203).
+    "specified_date": DesignatedAction.specified_date,
+    # The parent agreement's organization and code, for the module-wide
+    # tab's columns (#5203).
+    "organization": Organization.name,
+    "organization.name": Organization.name,
+    "ia_code": InitiativeAgreement.ia_code,
     # The floating select filter sends the analyst's user_profile_id.
     "assigned_analyst": DesignatedAction.assigned_analyst_id,
     # Sorted by workflow progression, not alphabet: 'Not started' before
@@ -91,7 +101,13 @@ DA_LIST_FIELD_COLUMNS = {
     "current_status": DesignatedActionStatus.display_order,
 }
 
-DA_DATE_FIELDS = {"update_date"}
+DA_DATE_FIELDS = {"update_date", "specified_date"}
+
+
+def _not_in_statuses(status_column, hidden_statuses):
+    """Rows whose lifecycle status is not hidden. A row with no status at
+    all is kept: NOT IN would drop it as NULL."""
+    return or_(status_column.is_(None), status_column.notin_(hidden_statuses))
 
 
 def _parse_date(value: str) -> "date_type | None":
@@ -298,19 +314,22 @@ class InitiativeAgreementRepository:
         self,
         pagination: PaginationRequestSchema,
         organization_id: Optional[int] = None,
+        hidden_statuses: Sequence[str] = (),
     ) -> Tuple[List[InitiativeAgreement], int]:
         """
         Paginated, filterable agreements query for the agreement-management
         grid. When organization_id is provided the result is scoped to that
-        organization (non-government callers).
+        organization (non-government callers). Agreements in any of
+        hidden_statuses are left out.
         """
         query = (
             select(InitiativeAgreement)
             # Outer join: agreement records carry a lifecycle status, not the
             # credit-award status, and it is nullable until one is set.
-            .outerjoin(InitiativeAgreement.lifecycle_status).join(
-                InitiativeAgreement.to_organization
-            )
+            .outerjoin(InitiativeAgreement.lifecycle_status)
+            # Outer join: an agreement can be saved before its organization
+            # is known (#5186).
+            .outerjoin(InitiativeAgreement.to_organization)
             # Excludes the legacy one-row-per-credit-award records that share
             # this table until the transaction-flow cutover.
             .where(InitiativeAgreement.record_kind == RECORD_KIND_AGREEMENT)
@@ -318,6 +337,12 @@ class InitiativeAgreementRepository:
         if organization_id is not None:
             query = query.where(
                 InitiativeAgreement.to_organization_id == organization_id
+            )
+        if hidden_statuses:
+            query = query.where(
+                _not_in_statuses(
+                    InitiativeAgreementLifecycleStatus.status, hidden_statuses
+                )
             )
         for filter_model in pagination.filters:
             condition = _build_list_filter(filter_model)
@@ -509,13 +534,15 @@ class InitiativeAgreementRepository:
         self,
         initiative_agreement_id: Optional[int],
         pagination: PaginationRequestSchema,
+        hidden_statuses: Sequence[str] = (),
     ) -> Tuple[List[DesignatedAction], int]:
         """
         Paginated current-version designated actions. Scoped to one
         agreement for its detail-page grid, or across every agreement
         when *initiative_agreement_id* is None for the module's Designated
         actions tab (#5078). Change orders append rows sharing group_uuid,
-        so the base set is the highest version per group.
+        so the base set is the highest version per group. Actions of
+        agreements in any of hidden_statuses are left out.
         """
         latest = select(
             DesignatedAction.group_uuid,
@@ -540,11 +567,34 @@ class InitiativeAgreementRepository:
                 DesignatedAction.current_status_id
                 == DesignatedActionStatus.designated_action_status_id,
             )
+            # The parent agreement, its organization and its lifecycle
+            # status, for the organization and IA name columns (#5203) and
+            # the hidden-status rule. Each is at most one row per action.
+            .join(
+                InitiativeAgreement,
+                DesignatedAction.initiative_agreement_id
+                == InitiativeAgreement.initiative_agreement_id,
+            )
+            .outerjoin(
+                Organization,
+                InitiativeAgreement.to_organization_id == Organization.organization_id,
+            )
+            .outerjoin(
+                InitiativeAgreementLifecycleStatus,
+                InitiativeAgreement.lifecycle_status_id
+                == InitiativeAgreementLifecycleStatus.initiative_agreement_lifecycle_status_id,
+            )
             .where(DesignatedAction.action_type != ActionTypeEnum.DELETE)
         )
         if initiative_agreement_id is not None:
             query = query.where(
                 DesignatedAction.initiative_agreement_id == initiative_agreement_id
+            )
+        if hidden_statuses:
+            query = query.where(
+                _not_in_statuses(
+                    InitiativeAgreementLifecycleStatus.status, hidden_statuses
+                )
             )
         for filter_model in pagination.filters:
             # The analyst floating filter's value crosses the wire as a
@@ -583,8 +633,11 @@ class InitiativeAgreementRepository:
                 selectinload(DesignatedAction.current_status),
                 selectinload(DesignatedAction.assigned_analyst),
                 # The module-wide grid shows which agreement each row
-                # belongs to; loaded here so the schema never lazy-loads.
-                selectinload(DesignatedAction.initiative_agreement),
+                # belongs to and its organization; loaded here so the
+                # schema never lazy-loads.
+                selectinload(DesignatedAction.initiative_agreement).selectinload(
+                    InitiativeAgreement.to_organization
+                ),
             )
             .order_by(*order_by_clauses)
             .offset(offset)
@@ -601,7 +654,10 @@ class InitiativeAgreementRepository:
             .options(
                 selectinload(DesignatedAction.current_status),
                 selectinload(DesignatedAction.assigned_analyst),
-                selectinload(DesignatedAction.initiative_agreement),
+                # The agreement's lifecycle decides who may see the action.
+                selectinload(DesignatedAction.initiative_agreement).selectinload(
+                    InitiativeAgreement.lifecycle_status
+                ),
             )
             .where(DesignatedAction.designated_action_id == designated_action_id)
             # Refresh relationships even when the row is already in the
@@ -877,6 +933,14 @@ class InitiativeAgreementRepository:
         await self.db.flush()
         await self.db.refresh(agreement)
         return agreement
+
+    @repo_handler
+    async def add_lifecycle_history(
+        self, history: InitiativeAgreementLifecycleHistory
+    ) -> InitiativeAgreementLifecycleHistory:
+        self.db.add(history)
+        await self.db.flush()
+        return history
 
     @repo_handler
     async def get_lifecycle_status_by_name(
