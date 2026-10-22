@@ -32,10 +32,16 @@ Example requests:
 - “Open http://localhost:3000/organizations in a fresh browser session. Report the final URL and whether the login form is visible. Do not sign in.”
 - “Inspect the public login screen and suggest a Gherkin scenario using only user-visible behavior. Do not change the feature file.”
 
-For AI-assisted test authoring, Playwright can also initialize agent
-instructions for a supported coding client:
+For AI-assisted test authoring, Playwright Test includes planner, generator,
+and healer agent definitions. They can explore an application to propose a
+test plan, turn a plan into candidate Playwright tests, and investigate failing
+tests. Initialize the instructions for a supported coding client with:
 
     node ./node_modules/playwright/cli.js init-agents --loop=codex
+
+Review generated plans, test code, and repairs before accepting them. Agent
+workflows complement the deterministic suite; they do not replace its review
+or repeatable pass/fail checks.
 
 The browser server and browser remain local. A remote AI model can still receive
 page snapshots, screenshots, and user-provided prompts. Use a locally hosted

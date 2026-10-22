@@ -5,21 +5,24 @@ for the same public-login Gherkin scenarios used by the Playwright pilot. A
 larger local benchmark also selects nine public calculator/reference-data cases
 and two authenticated admin cases from both runners.
 
-| Area                  | Cypress                                                                                                                      | Playwright                                                                                   |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| Gherkin               | Existing Cucumber preprocessor generates Cypress tests from `.feature` files; `PublicLogin.feature` is shared scenario text. | Playwright-BDD generates native Playwright tests from the pilot feature.                     |
-| Browser selection     | One browser per `cypress run`; the comparison feature has separate Chrome, Firefox, and WebKit commands.                     | Projects run Chrome, Firefox, and WebKit in one Playwright invocation.                       |
-| WebKit                | Cypress's `experimentalWebKitSupport` is enabled. Its WebKit browser package is installed locally; support is experimental.  | WebKit is a standard Playwright project.                                                     |
-| Parallel execution    | Cypress's built-in `--parallel` scheduler requires recorded Cypress Cloud runs; separate local browser runs are available.   | `fullyParallel: true` runs independent tests across local workers.                           |
-| Interactive runner    | `cypress:open` offers the local app, browser selector, Command Log, and time-travel debugging.                               | `playwright:ui` offers a local UI runner.                                                    |
-| Retries               | One retry in CI run mode; no retries in local run or open mode.                                                              | One retry in CI; none in local runs.                                                         |
-| Isolation             | Legacy flows retain `testIsolation: false`; the calculator/admin benchmark suites explicitly use `testIsolation: true`.      | A fresh browser context is used per test.                                                    |
-| Timeouts and viewport | 20-second command timeout, 60-second page-load timeout, 1280×720 viewport.                                                   | 20-second action/expect timeout, 60-second navigation timeout, 1280×720 viewport.            |
-| Failure artifacts     | Screenshots on failure and video; comparison outputs are separated by browser under `cypress/`.                              | Screenshots on failure, videos, and traces under `playwright/`.                              |
-| Reports               | Existing Mochawesome JSON plus local Cucumber HTML report. Comparison reports use a separate folder per browser.             | Local list, HTML, JSON, JUnit, and Cucumber HTML reports.                                    |
-| Base URL              | `CYPRESS_BASE_URL`, defaulting to `http://localhost:3000`.                                                                   | `PLAYWRIGHT_BASE_URL`, defaulting to a local Vite server at `http://localhost:3000`.         |
-| Node tasks            | `log`, `table`, and the explicit `clearComplianceReports` task remain available. The pilot does not clear database data.     | Matching local task helpers exist; `clearComplianceReports` is never called by the pilot.    |
-| Shared support        | Existing exception filters, accessibility helpers, and Cypress custom commands remain configured.                            | The pilot has matching exception filters, `axe-core` helpers, and data-test locator support. |
+| Area                  | Cypress                                                                                                                         | Playwright                                                                                                  |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Gherkin               | Existing Cucumber preprocessor generates Cypress tests from `.feature` files; `PublicLogin.feature` is shared scenario text.    | Playwright-BDD generates native Playwright tests from the pilot feature.                                    |
+| Browser selection     | One browser per `cypress run`; the comparison feature has separate Chrome, Firefox, and WebKit commands.                        | Projects run Chrome, Firefox, and WebKit in one Playwright invocation.                                      |
+| WebKit                | Cypress's `experimentalWebKitSupport` is enabled. Its WebKit browser package is installed locally; support is experimental.     | WebKit is a standard Playwright project.                                                                    |
+| Parallel execution    | Cypress's built-in `--parallel` scheduler requires recorded Cypress Cloud runs; separate local browser runs are available.      | `fullyParallel: true` runs independent tests across local workers.                                          |
+| Interactive runner    | `cypress:open` offers the local app, browser selector, Command Log, and time-travel debugging.                                  | `playwright:ui` offers a local UI runner.                                                                   |
+| Retries               | One retry in CI run mode; no retries in local run or open mode.                                                                 | One retry in CI; none in local runs.                                                                        |
+| Isolation             | Legacy flows retain `testIsolation: false`; the calculator/admin benchmark suites explicitly use `testIsolation: true`.         | A fresh browser context is used per test.                                                                   |
+| Timeouts and viewport | 20-second command timeout, 60-second page-load timeout, 1280×720 viewport.                                                      | 20-second action/expect timeout, 60-second navigation timeout, 1280×720 viewport.                           |
+| Failure artifacts     | Screenshots on failure and video; comparison outputs are separated by browser under `cypress/`.                                 | Screenshots on failure, videos, and traces under `playwright/`.                                             |
+| Reports               | Existing Mochawesome JSON plus local Cucumber HTML report. Comparison reports use a separate folder per browser.                | Local list, HTML, JSON, JUnit, and Cucumber HTML reports.                                                   |
+| Base URL              | `CYPRESS_BASE_URL`, defaulting to `http://localhost:3000`.                                                                      | `PLAYWRIGHT_BASE_URL`, defaulting to a local Vite server at `http://localhost:3000`.                        |
+| Node tasks            | `log`, `table`, and the explicit `clearComplianceReports` task remain available. The pilot does not clear database data.        | Matching local task helpers exist; `clearComplianceReports` is never called by the pilot.                   |
+| Shared support        | Existing exception filters, accessibility helpers, and Cypress custom commands remain configured.                               | The pilot has matching exception filters, `axe-core` helpers, and data-test locator support.                |
+| Accessibility checks  | `axe-core` checks selected public calculator content against WCAG-tagged rules and verifies responsive reflow at narrow widths. | The same checks run in native and Gherkin specs and can be selected with each browser project.              |
+| Multiple tabs         | Cypress is designed around one browser tab; its guidance uses Puppeteer when a second tab must be controlled.                   | Browser contexts support multiple pages, tabs, and popups through Playwright's page APIs.                   |
+| Device profiles       | The pilot sets viewport dimensions; Cypress also has built-in viewport resizing.                                                | Projects can use built-in desktop, tablet, and mobile device descriptors; this pilot uses desktop profiles. |
 
 ## Local comparison commands
 
@@ -63,6 +66,15 @@ experiment, including `cy.origin()` support. See the
 [Cypress browser support guide](https://docs.cypress.io/app/references/launching-browsers)
 and [Cypress parallelization guide](https://docs.cypress.io/cloud/features/smart-orchestration/parallelization)
 for current details.
+
+Both runners use `axe-core`; Playwright does not provide an exclusive
+accessibility auditor. The pilot audits the calculator and reference-data
+description regions for WCAG 2.0/2.1 A and AA plus WCAG 2.2 AA tagged rules, and
+checks that the descriptions reflow at 640 px and 320 px widths. These targeted
+automated checks are available in native and Gherkin Playwright projects,
+including WebKit. They do not establish full-page or full-site accessibility
+conformance. Playwright's standard WebKit project makes local WebKit coverage a
+regular part of its browser matrix; Cypress's equivalent remains experimental.
 
 ## Configuration notes
 
