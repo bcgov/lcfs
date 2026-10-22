@@ -1,17 +1,17 @@
 # Python version is generated from .python-version; run scripts/sync-python-version.py --write.
 # Base stage for common setup
-FROM python:3.11-slim-bookworm as base
+FROM python:3.13-slim-trixie as base
 
 RUN apt-get update && apt-get install -y \
   gcc \
   libpango-1.0-0 \
   libpangocairo-1.0-0 \
   libcairo2 \
-  libgdk-pixbuf2.0-0 \
+  libgdk-pixbuf-2.0-0 \
   tzdata \
   && rm -rf /var/lib/apt/lists/*
 
-RUN pip install poetry==1.6.1
+RUN pip install poetry==2.5.1
 
 # Configuring poetry
 RUN poetry config virtualenvs.create false
@@ -24,7 +24,7 @@ WORKDIR /app
 RUN python -c 'import pathlib, sys; expected = pathlib.Path(".python-version").read_text().strip(); actual = ".".join(map(str, sys.version_info[:2])); assert actual == expected, f"Python {actual} does not match .python-version ({expected})"'
 
 # Installing requirements
-RUN poetry install --only main
+RUN poetry install --only main --no-root
 
 # Removing gcc
 RUN apt-get purge -y \

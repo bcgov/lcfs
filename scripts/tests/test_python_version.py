@@ -46,18 +46,18 @@ class PythonVersionTests(unittest.TestCase):
         version_file = self.root / "backend/.python-version"
         major, minor = map(int, version_file.read_text().strip().split("."))
         version = f"{major}.{minor + 1}"
-        constraint = f">={version},<{major}.{minor + 2}"
+        constraint = f"^{version}"
         version_file.write_text(f"{version}\n")
         original = (self.root / "backend/Dockerfile").read_text()
         self.assertEqual(self.run_sync(), 1)
         self.assertEqual((self.root / "backend/Dockerfile").read_text(), original)
         self.assertEqual(self.run_sync(write=True), 0)
         self.assertIn(
-            f"python:{version}-slim-bookworm",
+            f"python:{version}-slim-trixie",
             (self.root / "backend/Dockerfile").read_text(),
         )
         self.assertIn(
-            f"python:{version}-bookworm",
+            f"python:{version}-slim-trixie",
             (self.root / "backend/Dockerfile.openshift").read_text(),
         )
         self.assertIn(

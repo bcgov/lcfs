@@ -15,16 +15,15 @@ def synchronize(root: Path, write: bool = False) -> int:
         print("backend/.python-version must contain a major.minor version (3.x).")
         return 1
 
-    major, minor = map(int, version.split("."))
-    constraint = f">={version},<{major}.{minor + 1}"
+    constraint = f"^{version}"
     declarations = {
         "backend/Dockerfile": (
             r"(?m)^FROM python:[^ ]+ as base$",
-            f"FROM python:{version}-slim-bookworm as base",
+            f"FROM python:{version}-slim-trixie as base",
         ),
         "backend/Dockerfile.openshift": (
             r"(?m)^FROM artifacts\.developer\.gov\.bc\.ca/docker-remote/python:[^ ]+ as base$",
-            f"FROM artifacts.developer.gov.bc.ca/docker-remote/python:{version}-bookworm as base",
+            f"FROM artifacts.developer.gov.bc.ca/docker-remote/python:{version}-slim-trixie as base",
         ),
         "backend/pyproject.toml": (
             r'(?m)^python = "[^"]+"$',

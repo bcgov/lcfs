@@ -92,7 +92,7 @@ jobs:
             ${{ runner.os }}-poetry-${{ hashFiles('backend/.python-version') }}-
 
       - name: Install Poetry
-        run: pip install poetry==1.6.1
+        run: pip install poetry==2.5.1
 
       - name: Install backend dependencies
         run: |
@@ -248,7 +248,7 @@ jobs:
             ${{ runner.os }}-poetry-${{ hashFiles('backend/.python-version') }}-
 
       - name: Install Poetry
-        run: pip install poetry==1.6.1
+        run: pip install poetry==2.5.1
 
       - name: Install backend dependencies
         run: |

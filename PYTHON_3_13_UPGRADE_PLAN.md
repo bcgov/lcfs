@@ -4,9 +4,11 @@ Branch: `experimental/python3.13`
 Ticket: [LCFS #5294 — Backend Python 3.13 on Debian Trixie](https://github.com/bcgov/lcfs/issues/5294)
 
 Status: the Python 3.11 baseline and initial hardening checkpoint are validated.
-An additional focused hardening increment is implemented, but phase 2 coverage
-remains incomplete. The application still targets Python 3.11, and Python 3.13
-dependency upgrades have not started.
+The backend Python 3.13 runtime, Docker/CI declarations, Poetry 2.5.1 lockfile,
+and required wiki updates are implemented in the current working tree. Local
+Python 3.13 checks passed for the Docker Hub image, Compose startup, Alembic
+migrations, and the full backend suite. Exact Artifactory image validation, CI,
+Cypress, and Dev deployment acceptance gates remain open.
 
 ## Objective and boundaries
 
@@ -25,28 +27,58 @@ Ticket #5294 is the scope authority for this work. The standalone
 
 ### Ticket acceptance criteria
 
-- [ ] `backend/Dockerfile.openshift` uses
+- [x] `backend/Dockerfile.openshift` uses
   `artifacts.developer.gov.bc.ca/docker-remote/python:3.13-slim-trixie` and keeps
   a minor-version image tag.
-- [ ] `backend/Dockerfile` uses `python:3.13-slim-trixie`, and local Compose still
-  starts the backend.
-- [ ] `backend/.python-version` is the backend version source; every
+- [x] `backend/Dockerfile` uses `python:3.13-slim-trixie`, and local Compose
+  builds and starts the backend; `/api/health` returned `200 "healthy"`.
+- [x] `backend/.python-version` is the backend version source; every
   `actions/setup-python` step reads it through `python-version-file`, and
   `backend/pyproject.toml` declares `python = "^3.13"`.
-- [ ] Dockerfiles and CI install the same selected Poetry 2.x release that writes
+- [x] Dockerfiles and CI install the same selected Poetry 2.x release that writes
   the regenerated lockfile.
-- [ ] NumPy is upgraded to 2.x; other dependencies change only where Python 3.13
+- [x] NumPy is upgraded to 2.x; other dependencies change only where Python 3.13
   support or a demonstrated compatibility issue requires it.
-- [ ] `POST /forms/{form_slug}/export` renders PDFs in the OpenShift image, with
-  pango and cairo installed explicitly there for WeasyPrint.
+- [ ] `POST /forms/{form_slug}/export` renders PDFs in the OpenShift image. The
+  OpenShift Dockerfile explicitly installs Pango, Cairo, and GDK Pixbuf; its
+  Dockerfile built and rendered a PDF with the Docker Hub Trixie base substituted
+  for the private mirror. Pulling the exact Artifactory base and exercising the
+  API endpoint remain open.
 - [ ] Spreadsheet output matches the pre-upgrade output, and the tzdata build
-  check passes in both images.
+  check passes in both images. Tzdata checks passed with the Docker Hub base and
+  the OpenShift Dockerfile using the public Trixie base.
 - [ ] The full backend pytest suite, `alembic upgrade heads`, and Cypress pass in
   CI on Python 3.13.
 - [ ] A PR deployment to Dev starts the new image; login, compliance report
   views, and Excel downloads work.
-- [ ] `Development-Environment-Setup.md` and
+- [x] `Development-Environment-Setup.md` and
   `System-Requirements-and-Dependencies.md` in the wiki describe Python 3.13.
+
+### Local implementation validation (2026-10-22)
+
+- `python3 scripts/sync-python-version.py` and its helper tests: passed (5 tests).
+- `poetry check --lock`: passed; Poetry reports deprecation warnings for the
+  existing `[tool.poetry]` project metadata.
+- Python 3.13.15 Poetry environment installed all locked main and dev packages;
+  critical native-package imports passed. WeasyPrint's required Linux libraries
+  were verified inside the container instead of on macOS.
+- Beyond NumPy, the only package changes are marker-driven: LibCST 1.8.2
+  requires `pyyaml-ft` on Python 3.13+, and Redis 4.6.0 no longer needs
+  `async-timeout` above Python 3.11.2.
+- Docker Hub `python:3.13-slim-trixie` base image built successfully. Its tzdata
+  check passed, and WeasyPrint rendered a PDF.
+- The OpenShift Dockerfile also built after substituting only its private base
+  image reference with the public Trixie image. Its tzdata check and WeasyPrint
+  PDF render passed while running as UID 1001 / group 0. The exact Artifactory
+  image could not be pulled because this environment lacks registry credentials.
+- Isolated local Compose project built the development image, applied migrations
+  and seeds, started the backend, and returned `200 "healthy"` from
+  `/api/health`.
+- `alembic upgrade heads` passed against an isolated PostgreSQL 17 container.
+- Full backend suite: **3,394 passed, no skips or failures** in 344.86 seconds.
+- Pulling the exact private Artifactory base image failed because this
+  environment lacks registry authentication. CI, Cypress, and PR deployment to
+  Dev have not run here.
 
 ## 1. Establish a reproducible baseline
 
@@ -170,24 +202,27 @@ and accepted. Passing these tests supplements Docker and staging validation.
 
 ## 3. Resolve the Python 3.13 dependency set
 
-Work in an isolated environment. Change `backend/.python-version` to `3.13`, run
-`python3 scripts/sync-python-version.py --write`, select a 3.13 Poetry environment,
-and resolve dependencies with the selected Poetry 2.x version. Update the version
-sync helper to generate the ticket's `^3.13` constraint and Debian Trixie image tags.
+`backend/.python-version` is set to `3.13`, the version sync helper generates the
+ticket's `^3.13` constraint and Debian Trixie image tags, and the lockfile has
+been resolved with Poetry 2.5.1 in a Python 3.13 environment. Local package
+installation, critical native imports, container build, and behavior checks are
+recorded above. Validate the target architecture and private Artifactory access
+in CI.
 
-The versions below are known support milestones, not a final selection. Select
-maintained compatible releases, inspect their release notes, and record the exact
-chosen versions in the lockfile. Avoid an indiscriminate dependency update.
+The selected constraints and lock versions below reflect the Python 3.13
+dependency set. The upgrade keeps unrelated package versions pinned and changes
+only NumPy plus marker-driven dependencies needed by the resolved Python 3.13
+environment.
 
 | Area | Current declaration or lock | Required work |
 | --- | --- | --- |
-| NumPy | `^1.26.4`; locked 1.26.4 | Allow NumPy 2.x; NumPy 2.1.0 added Python 3.13 support. Select a maintained compatible 2.x version and review the NumPy 2 migration guide. |
+| NumPy | `^2.3.2`; locked 2.5.4 | NumPy 2.x is enabled for Python 3.13; exercise spreadsheet and numeric behavior against the baseline. |
 | pandas | Locked 2.3.1 | pandas 2.2.3 added Python 3.13 support, so the locked 2.3.1 is past that milestone. Validate it with the selected NumPy 2.x version; keep pandas on 2.x. |
 | PostgreSQL driver | `asyncpg ^0.30.0`; locked 0.30.0 | asyncpg 0.30.0 already supports Python 3.13. Confirm the selected platform artifacts install and test the configured PostgreSQL behavior; upgrade only if another issue requires it. |
 | API validation | FastAPI 0.115.14; Pydantic 2.11.7; pydantic-core 2.33.2 | FastAPI 0.115.8 and Pydantic 2.8 added Python 3.13 support, so the locked versions already clear those milestones. Keep FastAPI/Starlette and Pydantic/core/settings constraints lock-consistent; update only for a demonstrated compatibility or maintenance need. |
 | Native dependencies | uvloop 0.21.0, httptools 0.6.4, hiredis 3.2.1, and other compiled packages | Audit all locked wheels for the actual Linux production architecture and macOS development architectures. Refresh unsupported packages; test imports. |
 | Development tools | Flake8 4.0.1, wemake-python-styleguide 0.17, mypy 1.17, coverage 7.9.2 | Select a mutually compatible toolchain; review lint rule changes separately from functional fixes. Check pytest and all its plugins together. |
-| Build tooling | Poetry 1.6.1 in Docker and CI; current committed lock is format 2.0 | Upgrade Docker and all CI jobs to the same Poetry 2.x release, then regenerate and validate the lockfile with that release. |
+| Build tooling | Poetry 2.5.1 in Docker and CI; lock regenerated in format 2.1 | Keep Docker and all CI jobs on this Poetry release and validate the lockfile and installations. |
 
 Check native packages including NumPy, pandas, asyncpg, greenlet, pydantic-core,
 uvloop, httptools, hiredis, multidict, yarl, PyYAML, cryptography, cffi, Pillow,
@@ -274,7 +309,7 @@ memory, error-rate, and database-connection limits from the baseline before roll
   agreed regression limits are exceeded. The interpreter upgrade should require
   no database schema change; if one becomes necessary, define and validate its
   compatibility and rollback separately before promotion.
-- Update the two wiki pages listed in ticket #5294 to use Python 3.13.
+- [x] Updated the two wiki pages listed in ticket #5294 to use Python 3.13.
 
 ## Deliverables
 
