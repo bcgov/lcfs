@@ -1,0 +1,501 @@
+{
+  "realm": "lcfs-local",
+  "enabled": true,
+  "sslRequired": "none",
+  "defaultSignatureAlgorithm": "RS256",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "clients": [
+    {
+      "clientId": "low-carbon-fuel-standard-5147",
+      "name": "LCFS Local Development",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "*"
+      ],
+      "webOrigins": [
+        "*"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "+"
+      },
+      "protocolMappers": [
+        {
+          "name": "LCFS API audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "low-carbon-fuel-standard-5147",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        },
+        {
+          "name": "LCFS identity provider claim",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "user.attribute": "identity_provider",
+            "claim.name": "identity_provider",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "multivalued": "false"
+          }
+        },
+        {
+          "name": "LCFS IDIR username claim",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "user.attribute": "idir_username",
+            "claim.name": "idir_username",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "multivalued": "false"
+          }
+        },
+        {
+          "name": "LCFS BCeID username claim",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "user.attribute": "bceid_username",
+            "claim.name": "bceid_username",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "multivalued": "false"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "lcfstest",
+      "enabled": true,
+      "email": "lcfstest@gov.bc.ca",
+      "emailVerified": true,
+      "firstName": "LCFS_IDIR",
+      "lastName": "TESTER",
+      "attributes": {
+        "identity_provider": [
+          "idir"
+        ],
+        "idir_username": [
+          "lcfstest"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "development_only",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "idir-government",
+      "enabled": true,
+      "email": "idir-government@example.com",
+      "emailVerified": true,
+      "firstName": "Local",
+      "lastName": "Government",
+      "attributes": {
+        "identity_provider": [
+          "idir"
+        ],
+        "idir_username": [
+          "idir-government"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "development_only",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "idir-administrator",
+      "enabled": true,
+      "email": "idir-administrator@example.com",
+      "emailVerified": true,
+      "firstName": "Local",
+      "lastName": "Administrator",
+      "attributes": {
+        "identity_provider": [
+          "idir"
+        ],
+        "idir_username": [
+          "idir-administrator"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "development_only",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "idir-system-admin",
+      "enabled": true,
+      "email": "idir-system-admin@example.com",
+      "emailVerified": true,
+      "firstName": "Local",
+      "lastName": "System Admin",
+      "attributes": {
+        "identity_provider": [
+          "idir"
+        ],
+        "idir_username": [
+          "idir-system-admin"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "development_only",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "idir-analyst",
+      "enabled": true,
+      "email": "idir-analyst@example.com",
+      "emailVerified": true,
+      "firstName": "Local",
+      "lastName": "Analyst",
+      "attributes": {
+        "identity_provider": [
+          "idir"
+        ],
+        "idir_username": [
+          "idir-analyst"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "development_only",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "idir-compliance-manager",
+      "enabled": true,
+      "email": "idir-compliance-manager@example.com",
+      "emailVerified": true,
+      "firstName": "Local",
+      "lastName": "Compliance Manager",
+      "attributes": {
+        "identity_provider": [
+          "idir"
+        ],
+        "idir_username": [
+          "idir-compliance-manager"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "development_only",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "idir-director",
+      "enabled": true,
+      "email": "idir-director@example.com",
+      "emailVerified": true,
+      "firstName": "Local",
+      "lastName": "Director",
+      "attributes": {
+        "identity_provider": [
+          "idir"
+        ],
+        "idir_username": [
+          "idir-director"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "development_only",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "idir-ia-analyst",
+      "enabled": true,
+      "email": "idir-ia-analyst@example.com",
+      "emailVerified": true,
+      "firstName": "Local",
+      "lastName": "IA Analyst",
+      "attributes": {
+        "identity_provider": [
+          "idir"
+        ],
+        "idir_username": [
+          "idir-ia-analyst"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "development_only",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "idir-ia-manager",
+      "enabled": true,
+      "email": "idir-ia-manager@example.com",
+      "emailVerified": true,
+      "firstName": "Local",
+      "lastName": "IA Manager",
+      "attributes": {
+        "identity_provider": [
+          "idir"
+        ],
+        "idir_username": [
+          "idir-ia-manager"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "development_only",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "bceid-supplier",
+      "enabled": true,
+      "email": "bceid-supplier@example.com",
+      "emailVerified": true,
+      "firstName": "Local",
+      "lastName": "Supplier",
+      "attributes": {
+        "identity_provider": [
+          "bceidbusiness"
+        ],
+        "bceid_username": [
+          "bceid-supplier"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "development_only",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "bceid-manage-users",
+      "enabled": true,
+      "email": "bceid-manage-users@example.com",
+      "emailVerified": true,
+      "firstName": "Local",
+      "lastName": "Manage Users",
+      "attributes": {
+        "identity_provider": [
+          "bceidbusiness"
+        ],
+        "bceid_username": [
+          "bceid-manage-users"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "development_only",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "bceid-transfer",
+      "enabled": true,
+      "email": "bceid-transfer@example.com",
+      "emailVerified": true,
+      "firstName": "Local",
+      "lastName": "Transfer",
+      "attributes": {
+        "identity_provider": [
+          "bceidbusiness"
+        ],
+        "bceid_username": [
+          "bceid-transfer"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "development_only",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "bceid-compliance-reporting",
+      "enabled": true,
+      "email": "bceid-compliance-reporting@example.com",
+      "emailVerified": true,
+      "firstName": "Local",
+      "lastName": "Compliance Reporting",
+      "attributes": {
+        "identity_provider": [
+          "bceidbusiness"
+        ],
+        "bceid_username": [
+          "bceid-compliance-reporting"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "development_only",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "bceid-signing-authority",
+      "enabled": true,
+      "email": "bceid-signing-authority@example.com",
+      "emailVerified": true,
+      "firstName": "Local",
+      "lastName": "Signing Authority",
+      "attributes": {
+        "identity_provider": [
+          "bceidbusiness"
+        ],
+        "bceid_username": [
+          "bceid-signing-authority"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "development_only",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "bceid-read-only",
+      "enabled": true,
+      "email": "bceid-read-only@example.com",
+      "emailVerified": true,
+      "firstName": "Local",
+      "lastName": "Read Only",
+      "attributes": {
+        "identity_provider": [
+          "bceidbusiness"
+        ],
+        "bceid_username": [
+          "bceid-read-only"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "development_only",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "bceid-ci-applicant",
+      "enabled": true,
+      "email": "bceid-ci-applicant@example.com",
+      "emailVerified": true,
+      "firstName": "Local",
+      "lastName": "CI Applicant",
+      "attributes": {
+        "identity_provider": [
+          "bceidbusiness"
+        ],
+        "bceid_username": [
+          "bceid-ci-applicant"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "development_only",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "bceid-ia-proponent",
+      "enabled": true,
+      "email": "bceid-ia-proponent@example.com",
+      "emailVerified": true,
+      "firstName": "Local",
+      "lastName": "IA Proponent",
+      "attributes": {
+        "identity_provider": [
+          "bceidbusiness"
+        ],
+        "bceid_username": [
+          "bceid-ia-proponent"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "development_only",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "bceid-ia-signer",
+      "enabled": true,
+      "email": "bceid-ia-signer@example.com",
+      "emailVerified": true,
+      "firstName": "Local",
+      "lastName": "IA Signer",
+      "attributes": {
+        "identity_provider": [
+          "bceidbusiness"
+        ],
+        "bceid_username": [
+          "bceid-ia-signer"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "development_only",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}

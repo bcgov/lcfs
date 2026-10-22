@@ -104,8 +104,11 @@ export const PublicDashboard = () => {
     ? [activeBg.displayName, activeBg.caption].filter(Boolean).join(' — ')
     : null
 
-  const login = (idpHint) =>
-    keycloak.login({ idpHint, redirectUri: window.location.origin })
+  const login = (idpHint?: string) =>
+    keycloak.login({
+      ...(!CONFIG.KEYCLOAK.LOCAL_AUTH && idpHint ? { idpHint } : {}),
+      redirectUri: window.location.origin
+    })
 
   // Latest VWAP and quarter-over-quarter change for the snapshot card.
   const { latestVwap, latestPeriod, deltaPct } = useMemo(() => {
@@ -285,46 +288,69 @@ export const PublicDashboard = () => {
 
   const renderLoginButtons = () => (
     <BCBox sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-      <Button
-        disableElevation
-        data-test="public-login-bceid"
-        onClick={() => login(IDENTITY_PROVIDERS.BCEID_BUSINESS)}
-        sx={{
-          backgroundColor: GOLD,
-          color: DARK,
-          fontWeight: 700,
-          fontSize: 15,
-          textTransform: 'none',
-          px: 3.5,
-          py: 1.25,
-          borderRadius: '4px',
-          '&:hover': { backgroundColor: '#e0a512' }
-        }}
-      >
-        {t('publicDashboard.login.bceid')}
-      </Button>
-      <Button
-        disableElevation
-        data-test="public-login-idir"
-        onClick={() => login(IDENTITY_PROVIDERS.IDIR)}
-        sx={{
-          backgroundColor: 'transparent',
-          color: '#fff',
-          fontWeight: 700,
-          fontSize: 15,
-          textTransform: 'none',
-          px: 3.5,
-          py: 1.25,
-          borderRadius: '4px',
-          border: '1px solid rgba(255,255,255,.75)',
-          '&:hover': {
-            backgroundColor: 'rgba(255,255,255,.12)',
-            border: '1px solid rgba(255,255,255,.75)'
-          }
-        }}
-      >
-        {t('publicDashboard.login.idir')}
-      </Button>
+      {CONFIG.KEYCLOAK.LOCAL_AUTH ? (
+        <Button
+          disableElevation
+          data-test="public-login-local"
+          onClick={() => login()}
+          sx={{
+            backgroundColor: GOLD,
+            color: DARK,
+            fontWeight: 700,
+            fontSize: 15,
+            textTransform: 'none',
+            px: 3.5,
+            py: 1.25,
+            borderRadius: '4px',
+            '&:hover': { backgroundColor: '#e0a512' }
+          }}
+        >
+          {t('login.loginMessage')} Keycloak
+        </Button>
+      ) : (
+        <>
+          <Button
+            disableElevation
+            data-test="public-login-bceid"
+            onClick={() => login(IDENTITY_PROVIDERS.BCEID_BUSINESS)}
+            sx={{
+              backgroundColor: GOLD,
+              color: DARK,
+              fontWeight: 700,
+              fontSize: 15,
+              textTransform: 'none',
+              px: 3.5,
+              py: 1.25,
+              borderRadius: '4px',
+              '&:hover': { backgroundColor: '#e0a512' }
+            }}
+          >
+            {t('publicDashboard.login.bceid')}
+          </Button>
+          <Button
+            disableElevation
+            data-test="public-login-idir"
+            onClick={() => login(IDENTITY_PROVIDERS.IDIR)}
+            sx={{
+              backgroundColor: 'transparent',
+              color: '#fff',
+              fontWeight: 700,
+              fontSize: 15,
+              textTransform: 'none',
+              px: 3.5,
+              py: 1.25,
+              borderRadius: '4px',
+              border: '1px solid rgba(255,255,255,.75)',
+              '&:hover': {
+                backgroundColor: 'rgba(255,255,255,.12)',
+                border: '1px solid rgba(255,255,255,.75)'
+              }
+            }}
+          >
+            {t('publicDashboard.login.idir')}
+          </Button>
+        </>
+      )}
     </BCBox>
   )
 

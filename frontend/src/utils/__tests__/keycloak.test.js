@@ -1,5 +1,6 @@
 // utils/__tests__/keycloak.test.js
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { CONFIG } from '@/constants/config'
 
 // Mock Keycloak class first
 vi.mock('keycloak-js', () => {
@@ -18,6 +19,7 @@ vi.mock('keycloak-js', () => {
           idToken: 'mock-id-token'
         },
         updateToken: mockUpdateToken,
+        logout: vi.fn().mockResolvedValue(undefined),
         endpoints: {
           logout: () => 'mock-logout-endpoint'
         }
@@ -38,6 +40,7 @@ describe('Keycloak Utils', () => {
     // Reset mocks before each test
     vi.resetAllMocks()
     vi.restoreAllMocks()
+    getKeycloak().logout.mockResolvedValue(undefined)
 
     // Mock console methods
     vi.spyOn(console, 'log').mockImplementation(() => {})
@@ -112,7 +115,7 @@ describe('Keycloak Utils', () => {
       expect(localStorage.clear).toHaveBeenCalled()
     })
 
-    it('should handle missing idToken', () => {
+    it('should use the local logout callback or handle a missing idToken', () => {
       // Mock the case where idToken is missing
       const tempKeycloak = getKeycloak()
       Object.defineProperty(tempKeycloak, 'idToken', { value: null })
@@ -124,8 +127,13 @@ describe('Keycloak Utils', () => {
       vi.spyOn(console, 'error')
       logout()
 
-      // Verify that console.error was called
-      expect(console.error).toHaveBeenCalled()
+      if (CONFIG.KEYCLOAK.LOCAL_AUTH) {
+        expect(tempKeycloak.logout).toHaveBeenCalledWith({
+          redirectUri: CONFIG.KEYCLOAK.POST_LOGOUT_URL
+        })
+      } else {
+        expect(console.error).toHaveBeenCalled()
+      }
     })
   })
 })

@@ -26,9 +26,16 @@ export const logout = (): void => {
       console.error('Failed to clear query cache:', error)
     })
 
-  const tokenParsed = keycloak.tokenParsed as
-    | { idToken?: string }
-    | undefined
+  if (CONFIG.KEYCLOAK.LOCAL_AUTH) {
+    keycloak
+      .logout({ redirectUri: CONFIG.KEYCLOAK.POST_LOGOUT_URL })
+      .catch((error) => {
+        console.error('Failed to log out from local Keycloak:', error)
+      })
+    return
+  }
+
+  const tokenParsed = keycloak.tokenParsed as { idToken?: string } | undefined
   const idToken = keycloak.idToken || tokenParsed?.idToken
 
   if (!idToken) {
@@ -36,7 +43,9 @@ export const logout = (): void => {
     return
   }
   const keycloakLogoutUrl =
-    (keycloak as unknown as { endpoints: { logout: () => string } }).endpoints.logout() +
+    (
+      keycloak as unknown as { endpoints: { logout: () => string } }
+    ).endpoints.logout() +
     '?post_logout_redirect_uri=' +
     CONFIG.KEYCLOAK.POST_LOGOUT_URL +
     '&client_id=' +
