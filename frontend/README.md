@@ -1,5 +1,85 @@
 # Getting Started with Create React App
 
+## Playwright pilot
+
+The local pilot keeps the Cypress suite available. Playwright includes duplicate native and
+Gherkin versions of the public login checks, nine public calculator and
+calculation data checks, and two authenticated admin checks. The browser
+projects cover Google Chrome, Firefox, and WebKit with parallel workers.
+
+    npm run playwright:install
+    npm run playwright:run
+
+`playwright:install` downloads Playwright's Chromium, Firefox, and WebKit
+binaries locally. The Chrome project uses the locally installed Google Chrome.
+Open the interactive runner with npm run playwright:ui. The HTML, JSON, JUnit,
+Cucumber HTML, videos, screenshots, and traces are written under
+playwright/reports/ and playwright/artifacts/.
+
+The runner starts Vite on localhost:3000 automatically. Set
+PLAYWRIGHT_BASE_URL explicitly to target an already-running app. The existing
+Cypress URL setting is not inherited, so the Playwright pilot stays local by
+default.
+
+The authenticated admin checks use the configured IDIR test account and the
+application's existing Gov BC test identity service. Playwright reads the
+existing Cypress credential keys from the ignored `cypress.env.json`, or you
+can copy `.env.playwright.example` to `.env` and set
+`PLAYWRIGHT_IDIR_TEST_USER` and `PLAYWRIGHT_IDIR_TEST_PASS`. They are skipped
+when neither source has credentials. The browser runner and app remain local;
+this sign-in path uses the same external test identity integration as the
+Cypress login helper.
+
+See [the Cypress config map](playwright/CYPRESS_CONFIG_MAP.md) for how the
+existing Cypress settings correspond to Playwright, and
+[AI browser examples](playwright/AI_BROWSER.md) for local MCP usage.
+
+On macOS, Firefox gets an isolated local home directory for its browser data.
+This works around a Firefox startup issue on macOS 27 without changing the
+user's regular Firefox profile.
+
+## Cypress local comparison
+
+Install Cypress and its local WebKit binary with `npm run cypress:install`.
+Chrome and Firefox must be installed locally on the machine.
+
+`npm run cypress:run:comparison:chrome`,
+`npm run cypress:run:comparison:firefox`, and
+`npm run cypress:run:comparison:webkit` run the same public-login Gherkin
+scenarios in the selected browser. Cypress runs one browser per invocation;
+reports, screenshots, and videos use separate local folders for each browser.
+`npm run cypress:open` starts Cypress's interactive runner, where you can
+select an installed browser.
+
+The matched benchmark covers the same 11 unique cases in both runners: nine
+public calculator/reference-data cases and two authenticated admin cases. Run
+the browser pair sequentially with `npm run cypress:run:benchmark:sequential`
+and `PLAYWRIGHT_BASE_URL=http://localhost:3000 npm run playwright:run:benchmark:sequential`.
+Playwright also has two-, three-, four-, and six-worker commands; WebKit has its own
+documentation-only run. The Playwright benchmark selects native tests so the
+duplicate Gherkin definitions are not counted twice. See the
+[benchmark results and environment](playwright/BENCHMARK_RESULTS.md) for the
+measured timings and worker scaling.
+
+Run the complete normalized benchmark with `npm run benchmark:e2e`. It runs
+three trials of each configuration in a rotating order, validates the full
+test counts, and saves the raw logs, JSON reports, and timings locally under
+`playwright/reports/benchmark-*/`. Use `-- --repetitions=1` for a single trial.
+Both runners use the same selected admin credential pair and app URL, fresh
+sessions, readiness checks, videos, failure screenshots, and JSON reporting.
+The benchmark disables retries and Playwright tracing/additional reporters.
+
+Configure the Cypress and Playwright IDIR credentials before benchmarking
+authenticated cases. Cypress does not start the app server, so start the app
+at `localhost:3000` before running Cypress. Playwright can use that same
+already-running app by setting `PLAYWRIGHT_BASE_URL` as shown above.
+
+Cypress WebKit support is experimental and uses the locally installed
+`playwright-webkit` browser package. Cypress can run each browser locally, but
+its built-in parallel scheduler requires Cypress Cloud recording. This pilot
+does not enable recording or use hosted services. See
+[the Cypress config map](playwright/CYPRESS_CONFIG_MAP.md) for details.
+
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
 ## Available Scripts

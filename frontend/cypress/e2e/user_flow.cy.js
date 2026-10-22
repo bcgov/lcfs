@@ -21,31 +21,19 @@ describe('User Login Test Suite', () => {
 
   describe('IDIR Login Flow', () => {
     it('completes login with IDIR user credentials', () => {
-      cy.loginWith(
-        'idir',
-        Cypress.env('ADMIN_IDIR_USERNAME'),
-        Cypress.env('ADMIN_IDIR_PASSWORD')
-      )
+      cy.loginWithEnv('idir')
       cy.get('.main-layout-navbar', { timeout: 30000 }).should('be.visible')
     })
 
     it('executes logout functionality for IDIR user', () => {
-      cy.loginWith(
-        'idir',
-        Cypress.env('ADMIN_IDIR_USERNAME'),
-        Cypress.env('ADMIN_IDIR_PASSWORD')
-      )
+      cy.loginWithEnv('idir')
       cy.logout()
     })
   })
 
   describe('BCeID Login Flow', () => {
     it('completes login with BCeID user credentials', () => {
-      cy.loginWith(
-        'bceid',
-        Cypress.env('BCEID_TEST_USER'),
-        Cypress.env('BCEID_TEST_PASS')
-      )
+      cy.loginWithEnv('bceid')
     })
   })
 })

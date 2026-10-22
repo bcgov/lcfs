@@ -13,7 +13,15 @@ module.exports = {
     'plugin:chai-friendly/recommended',
     'prettier'
   ],
-  ignorePatterns: ['dist', '.eslintrc.cjs'],
+  ignorePatterns: [
+    'dist',
+    '.eslintrc.cjs',
+    'playwright/artifacts/',
+    'playwright/reports/',
+    'playwright/.features-gen/',
+    'playwright/.firefox-home/',
+    '.playwright-mcp/'
+  ],
   parser: '@typescript-eslint/parser',
   parserOptions: {
     ecmaVersion: 'latest',

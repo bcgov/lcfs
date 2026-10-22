@@ -1,4 +1,6 @@
 /* eslint-disable cypress/unsafe-to-chain-command */
+import axeCore from 'axe-core'
+
 /**
  * Command to select elements using 'data-test' attribute.
  *
@@ -10,6 +12,60 @@ Cypress.Commands.add('getByDataTest', (selector, ...args) => {
   return cy.get(`[data-test=${selector}]`, ...args)
 })
 
+Cypress.Commands.add('injectAxe', () => {
+  cy.window({ log: false }).then((window) => {
+    if (!window.axe) window.eval(axeCore.source)
+  })
+})
+
+Cypress.Commands.add(
+  'checkA11y',
+  (context, options, violationCallback, skipFailures = false) => {
+    cy.window({ log: false })
+      .then((window) => {
+        const { includedImpacts, ...axeOptions } = options || {}
+        return window.axe
+          .run(context || window.document, axeOptions)
+          .then(({ violations }) => {
+            const filteredViolations = includedImpacts?.length
+              ? violations.filter(
+                  (violation) =>
+                    violation.impact &&
+                    includedImpacts.includes(violation.impact)
+                )
+              : violations
+
+            return filteredViolations
+          })
+      })
+      .then((violations) => {
+        if (violations.length && violationCallback) {
+          violationCallback(violations)
+        }
+
+        violations.forEach((violation) => {
+          const selectors = violation.nodes
+            .flatMap((node) => node.target)
+            .join(', ')
+
+          Cypress.log({
+            $el: Cypress.$(selectors),
+            name: 'a11y error!',
+            consoleProps: () => violation,
+            message: `${violation.id} on ${violation.nodes.length} Node${violation.nodes.length === 1 ? '' : 's'}`
+          })
+        })
+
+        if (!skipFailures) {
+          expect(
+            violations,
+            `${violations.length} accessibility violation${violations.length === 1 ? '' : 's'} detected`
+          ).to.be.empty
+        }
+      })
+  }
+)
+
 /**
  * Logs in a user (IDIR or BCeID) with provided credentials.
  *
@@ -18,9 +74,11 @@ Cypress.Commands.add('getByDataTest', (selector, ...args) => {
  * @param {string} password - Password
  */
 Cypress.Commands.add('loginWith', (userType, username, password) => {
-  cy.clearAllCookies()
-  cy.clearAllLocalStorage()
-  cy.clearAllSessionStorage()
+  if (!Cypress.config('testIsolation')) {
+    cy.clearAllCookies()
+    cy.clearAllLocalStorage()
+    cy.clearAllSessionStorage()
+  }
   cy.visit('/', { timeout: 60000 })
   // Determine which login link to click based on user type
   cy.intercept(
@@ -31,17 +89,16 @@ Cypress.Commands.add('loginWith', (userType, username, password) => {
   const loginProcess = (args) => {
     const [username, password] = args
 
-    cy.on('uncaught:exception', () => {
-      // Return false to ignore exceptions in case wrong credentials or account lock issues.
-      return false
+    cy.get('input[name=user]', { timeout: 60000 }).type(username, {
+      log: false,
+      delay: 0
     })
-
-    console.log('username', username)
-    cy.get('input[name=user]').type(username, { log: false })
-    cy.get('input[name=password]').type(password, { log: false })
+    cy.get('input[name=password]').type(password, { log: false, delay: 0 })
     cy.get('form').submit()
-    cy.wait('@loginRequest', { timeout: 30000 }).then(({ response }) => {
+    cy.wait('@loginRequest', { timeout: 20000 }).then(({ response }) => {
+      expect(response.statusCode).to.equal(200)
       const token = response.body.access_token
+      expect(token).to.be.a('string').and.not.be.empty
       cy.wrap(token).as('authToken')
     })
   }
@@ -52,7 +109,73 @@ Cypress.Commands.add('loginWith', (userType, username, password) => {
     { args: [username, password] },
     loginProcess
   )
-  cy.wait(5000)
+  cy.get('.main-layout-navbar', { timeout: 60000 }).should('be.visible')
+})
+
+const credentialKeysFor = (userType) => {
+  const normalizedUserType = userType.toLowerCase()
+
+  if (normalizedUserType === 'idir') {
+    return {
+      authType: 'idir',
+      usernameKeys: ['ADMIN_IDIR_USERNAME', 'IDIR_TEST_USER'],
+      passwordKeys: ['ADMIN_IDIR_PASSWORD', 'IDIR_TEST_PASS']
+    }
+  }
+
+  if (normalizedUserType === 'bceid') {
+    return {
+      authType: 'bceid',
+      usernameKeys: [
+        'ORG1_BCEID_USERNAME',
+        'BCEID_TEST_USER',
+        'ORG2_BCEID_USERNAME'
+      ],
+      passwordKeys: [
+        'ORG1_BCEID_PASSWORD',
+        'BCEID_TEST_PASS',
+        'ORG2_BCEID_PASSWORD'
+      ]
+    }
+  }
+
+  const envPrefix = normalizedUserType.toUpperCase()
+  return {
+    authType: normalizedUserType.includes('bceid') ? 'bceid' : 'idir',
+    usernameKeys: [`${envPrefix}_USERNAME`],
+    passwordKeys: [`${envPrefix}_PASSWORD`]
+  }
+}
+
+Cypress.Commands.add(
+  'getCredentialsFromEnv',
+  (userType, usernameKeys, passwordKeys) => {
+    const defaults = credentialKeysFor(userType)
+    const keys = {
+      usernameKeys: usernameKeys || defaults.usernameKeys,
+      passwordKeys: passwordKeys || defaults.passwordKeys
+    }
+    const envKeys = [...new Set([...keys.usernameKeys, ...keys.passwordKeys])]
+
+    return cy.env(envKeys, { log: false }).then((env) => ({
+      username: keys.usernameKeys.map((key) => env[key]).find(Boolean),
+      password: keys.passwordKeys.map((key) => env[key]).find(Boolean)
+    }))
+  }
+)
+
+Cypress.Commands.add('loginWithEnv', (userType, usernameKeys, passwordKeys) => {
+  const { authType } = credentialKeysFor(userType)
+
+  return cy
+    .getCredentialsFromEnv(userType, usernameKeys, passwordKeys)
+    .then(({ username, password }) => {
+      expect(username, `${userType} username is set`).to.be.a('string').and.not
+        .be.empty
+      expect(password, `${userType} password is set`).to.be.a('string').and.not
+        .be.empty
+      return cy.loginWith(authType, username, password)
+    })
 })
 
 /**
@@ -75,21 +198,18 @@ Cypress.Commands.add('setBCeIDRoles', (userType, roles, id = 'idirLogin') => {
     cy.visit('/')
     cy.getByDataTest('login-container').should('exist')
     // Login as an IDIR user with Admin privileges.
-    expect(Cypress.env('ADMIN_IDIR_USERNAME'), 'IDIR username is set').to.be.a(
-      'string'
-    ).and.not.be.empty
-    cy.loginWith(
-      'idir',
-      Cypress.env('ADMIN_IDIR_USERNAME'),
-      Cypress.env('ADMIN_IDIR_PASSWORD')
-    )
+    cy.loginWithEnv('idir')
     // If BCeID user then update the roles using the IDIR user
     cy.get('a.NavLink[href="/organizations"]').should('be.visible').click()
-    const bceidUsername = Cypress.env(
-      `${userType}_username`.toLocaleUpperCase()
-    )
-    const orgID = parseInt(bceidUsername.match(/\d+/)[0])
-    cy.contains('a', `LCFS Org ${orgID}`).should('be.visible').click()
+    cy.getCredentialsFromEnv(userType).then(({ username }) => {
+      const orgIdMatch = username && username.match(/\d+/)
+      expect(
+        orgIdMatch,
+        `${userType} username includes an organization id`
+      ).to.be.an('array')
+      const orgID = parseInt(orgIdMatch[0])
+      cy.contains('a', `LCFS Org ${orgID}`).should('be.visible').click()
+    })
     cy.contains('a', 'tfrs@gov.bc.ca').should('be.visible').click()
     cy.get('#edit-user-button').click()
     cy.url().should('include', '/edit-user')
@@ -131,7 +251,9 @@ Cypress.Commands.add('setIDIRRoles', (role) => {
   cy.visit('/admin/users', { timeout: 30000 })
 
   // Find the row with the specified name and click it
-  cy.contains('a', Cypress.env('ADMIN_IDIR_EMAIL')).should('be.visible').click()
+  cy.env(['ADMIN_IDIR_EMAIL'], { log: false }).then(({ ADMIN_IDIR_EMAIL }) => {
+    cy.contains('a', ADMIN_IDIR_EMAIL).should('be.visible').click()
+  })
 
   cy.url().should('match', /\/admin\/users\/\d+/)
 
