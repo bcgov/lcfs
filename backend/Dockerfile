@@ -1,3 +1,4 @@
+# Python version is generated from .python-version; run scripts/sync-python-version.py --write.
 # Base stage for common setup
 FROM python:3.11-slim-bookworm as base
 
@@ -16,8 +17,11 @@ RUN pip install poetry==1.6.1
 RUN poetry config virtualenvs.create false
 
 # Copying requirements of a project
-COPY pyproject.toml poetry.lock /app/
+COPY pyproject.toml poetry.lock .python-version /app/
 WORKDIR /app
+
+# Catch version drift even when building outside CI.
+RUN python -c 'import pathlib, sys; expected = pathlib.Path(".python-version").read_text().strip(); actual = ".".join(map(str, sys.version_info[:2])); assert actual == expected, f"Python {actual} does not match .python-version ({expected})"'
 
 # Installing requirements
 RUN poetry install --only main

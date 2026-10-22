@@ -4,7 +4,7 @@ from pathlib import Path
 from tempfile import gettempdir
 from typing import Optional
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from yarl import URL
 
 TEMP_DIR = Path(gettempdir())
@@ -176,10 +176,9 @@ class Settings(BaseSettings):
             path=path,
         )
 
-    class Config:
-        env_file = ".env"
-        env_prefix = "LCFS_"
-        env_file_encoding = "utf-8"
+    model_config = SettingsConfigDict(
+        env_file=".env", env_prefix="LCFS_", env_file_encoding="utf-8"
+    )
 
 
 settings = Settings()

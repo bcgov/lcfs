@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from pydantic import Field
+from pydantic import Field, ConfigDict
 from typing import ClassVar, Optional, Union, Literal, Any
 from typing import List, NamedTuple
 
@@ -58,8 +58,7 @@ class SummarySchema(BaseSchema):
     total_renewable_fuel_supplied: Optional[float] = 0
     has_renewable_fuel_requirement: Optional[bool] = True
 
-    class Config:
-        extra = "ignore"
+    model_config = ConfigDict(extra="ignore")
 
 
 class ComplianceReportStatusSchema(BaseSchema):

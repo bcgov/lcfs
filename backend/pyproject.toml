@@ -11,7 +11,8 @@ maintainers = [
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.10"
+# Generated from .python-version by scripts/sync-python-version.py.
+python = ">=3.11,<3.12"
 fastapi = "^0.115.4"
 uvicorn = { version = "^0.24.0", extras = ["standard"] }
 pydantic = { extras = ["email"], version = "^2.4.2" }
@@ -54,6 +55,7 @@ pillow = ">=11.3,<13.0"
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.0.3"
 flake8 = "~4.0.1"
+setuptools = "<82"
 mypy = "^1.1.1"
 isort = "^5.11.4"
 pre-commit = "^3.0.1"
@@ -98,13 +100,17 @@ filterwarnings = [
     "error",
     "ignore::DeprecationWarning",
     "ignore:.*unclosed.*:ResourceWarning",
+    # Keep schema declarations ready for the Pydantic/Python upgrade.
+    "error:Support for class-based.*config.*:pydantic.warnings.PydanticDeprecatedSince20",
+    "error:Using extra keyword arguments on.*Field.*:pydantic.warnings.PydanticDeprecatedSince20",
+    "error:.*min_items.*is deprecated:pydantic.warnings.PydanticDeprecatedSince20",
 ]
 env = [
     "APP_ENVIRONMENT=pytest",
     "LCFS_DB_BASE=lcfs_test",
 ]
 # Test discovery patterns
-testpaths = ["lcfs/tests"]
+testpaths = ["lcfs/tests", "lcfs/scripts/tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]

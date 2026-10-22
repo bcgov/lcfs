@@ -1,12 +1,14 @@
+from io import BytesIO
+from typing import Any, Dict, List, Literal, Optional, TypedDict
+
+import numpy as np
 import pandas as pd
 import structlog
 import xlwt
-from io import BytesIO
 from openpyxl import styles
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.worksheet.worksheet import Worksheet
-from typing import Literal, TypedDict, List, Dict, Any, Optional
 
 logger = structlog.get_logger(__name__)
 MAX_XLS_WIDTH = 65535
@@ -255,6 +257,11 @@ class SpreadsheetBuilder:
         # Write rows with appropriate styles.
         for row_index, row in enumerate(sheet_data["rows"], start=1):
             for col_index, value in enumerate(row):
+                # xlwt only accepts Python numeric primitives. NumPy scalars can
+                # reach this writer through pandas-backed export calculations.
+                if isinstance(value, np.generic):
+                    value = value.item()
+
                 column_type = sheet_data["columns"][col_index].column_type
                 if column_type == "date":
                     cell_style = date_style

@@ -9,7 +9,7 @@ description: Use this skill when working in the LCFS repository to understand th
 
 LCFS is the BC Low Carbon Fuel Standard web application. It is a monorepo with:
 
-- `backend/`: Python 3.9 FastAPI service using SQLAlchemy async ORM, Alembic, Redis, S3 object storage (RustFS locally), Keycloak auth, Poetry, pytest, Black, Isort, Flake8, and MyPy.
+- `backend/`: Python (version in `backend/.python-version`) FastAPI service using SQLAlchemy async ORM, Alembic, Redis, S3 object storage (RustFS locally), Keycloak auth, Poetry, pytest, Black, Isort, Flake8, and MyPy.
 - `frontend/`: React 18 + Vite app using MUI 6, React Query, React Hook Form, Yup, Zustand, AG Grid, Vitest, Testing Library, Cypress, ESLint, and Prettier.
 - `etl/`: Apache NiFi, Groovy scripts, PostgreSQL migration/import tooling, anonymization scripts, and a Python migration subsystem.
 - `openshift/`: deployment templates and maintenance/cleanup resources.

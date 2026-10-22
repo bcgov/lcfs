@@ -1,3 +1,4 @@
+from pydantic import ConfigDict
 from lcfs.web.api.base import BaseSchema
 from datetime import datetime
 
@@ -15,8 +16,7 @@ class FileResponseSchema(BaseSchema):
     # (IDIR) uploads. Populated by the document list endpoint only.
     uploading_organization_code: str | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DocumentRenameSchema(BaseSchema):
