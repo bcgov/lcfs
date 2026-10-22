@@ -57,8 +57,20 @@ async def test_load_jwk_from_redis(auth_backend):
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize(
+    ("keycloak_jwks_endpoint", "expected_jwks_uri"),
+    [
+        (None, "https://example.com/jwks"),
+        (
+            "http://keycloak:8080/realms/lcfs-local/protocol/openid-connect/certs",
+            "http://keycloak:8080/realms/lcfs-local/protocol/openid-connect/certs",
+        ),
+    ],
+)
 @patch("httpx.AsyncClient.get")
-async def test_refresh_jwk_sets_new_keys_in_redis(mock_httpx_get, redis_client):
+async def test_refresh_jwk_sets_new_keys_in_redis(
+    mock_httpx_get, redis_client, keycloak_jwks_endpoint, expected_jwks_uri
+):
     # Mock responses for the well-known endpoint and JWKS URI
     mock_oidc_response = MagicMock()
     mock_oidc_response.json.return_value = {"jwks_uri": "https://example.com/jwks"}
@@ -82,7 +94,8 @@ async def test_refresh_jwk_sets_new_keys_in_redis(mock_httpx_get, redis_client):
         redis_client=redis_client,
         session_factory=AsyncMock(),
         settings=MagicMock(
-            well_known_endpoint="https://example.com/.well-known/openid-configuration"
+            well_known_endpoint="https://example.com/.well-known/openid-configuration",
+            keycloak_jwks_endpoint=keycloak_jwks_endpoint,
         ),
     )
 
@@ -94,7 +107,7 @@ async def test_refresh_jwk_sets_new_keys_in_redis(mock_httpx_get, redis_client):
         "keys": [{"kty": "RSA", "kid": "key2", "use": "sig", "n": "def", "e": "AQAB"}]
     }
     assert auth_backend.jwks == expected_jwks
-    assert auth_backend.jwks_uri == "https://example.com/jwks"
+    assert auth_backend.jwks_uri == expected_jwks_uri
 
     # Verify that Redis `get` was called with "jwks_data"
     redis_client.get.assert_awaited_once_with("jwks_data")
@@ -104,12 +117,12 @@ async def test_refresh_jwk_sets_new_keys_in_redis(mock_httpx_get, redis_client):
     mock_httpx_get.assert_any_call(
         "https://example.com/.well-known/openid-configuration"
     )
-    mock_httpx_get.assert_any_call("https://example.com/jwks")
+    mock_httpx_get.assert_any_call(expected_jwks_uri)
 
     # Verify that Redis `set` was called with the correct parameters
     expected_jwks_data = {
         "jwks": expected_jwks,
-        "jwks_uri": "https://example.com/jwks",
+        "jwks_uri": expected_jwks_uri,
     }
     redis_client.set.assert_awaited_once_with(
         "jwks_data", json.dumps(expected_jwks_data), ex=86400
