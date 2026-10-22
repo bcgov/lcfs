@@ -396,7 +396,6 @@ class ComplianceSummaryUpdater:
             # Calculate fossil fuel totals
             fossil_gas = line1_gas
             fossil_diesel = line1_diesel
-            fossil_total = fossil_gas + fossil_diesel
 
             # FIXED: Get Line 20 (balance change from assessment) from TFRS snapshot
             # Line 25 = Net compliance unit balance = Line 20 in LCFS
@@ -519,7 +518,9 @@ class ComplianceSummaryUpdater:
                 "line_11_fossil_derived_base_fuel_gasoline": fossil_gas,
                 "line_11_fossil_derived_base_fuel_diesel": fossil_diesel,
                 "line_11_fossil_derived_base_fuel_jet_fuel": Decimal("0.0"),
-                "line_11_fossil_derived_base_fuel_total": fossil_total,
+                # LCFS reads this column as the Line 11 renewable penalty total
+                # (penalty log, Metabase), not a fuel volume (#5257)
+                "line_11_fossil_derived_base_fuel_total": line11_gas + line11_diesel,
                 # Non-compliance penalty fields - calculated with correct rate based on year
                 # ($200/unit for <=2022, $600/unit for >=2023)
                 "line_21_non_compliance_penalty_payable": line_21_non_compliance_penalty,

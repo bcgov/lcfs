@@ -45,7 +45,8 @@ const mockHook = vi.fn(() => baseHookState())
 vi.mock('@/hooks/useOrganizationComments', () => ({
   useOrganizationComments: (...args) => mockHook(...args),
   useCommentCategories: () => ({ data: [] }),
-  useEditOrganizationComment: () => ({ mutate: vi.fn(), isPending: false })
+  useEditOrganizationComment: () => ({ mutate: vi.fn(), isPending: false }),
+  COMPANY_OVERVIEW_ENTITY_TYPE: 'Organization'
 }))
 
 const mockUser = vi.fn(() => ({
@@ -54,6 +55,11 @@ const mockUser = vi.fn(() => ({
 }))
 vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: () => mockUser()
+}))
+
+// The @mention lookup needs the API service; it's covered by its own tests.
+vi.mock('@/hooks/useMentionableUsers', () => ({
+  useMentionableUsers: () => ({ data: [], isFetching: false })
 }))
 
 // Stub the filter bar to a single visible category select to keep
@@ -294,6 +300,16 @@ describe('CommentLog', () => {
     })
     renderCommentLog()
     expect(screen.getByTestId('comment-internal-badge')).toBeInTheDocument()
+    const row = screen.getByTestId('comment-log-row')
+    expect(row).not.toHaveTextContent('LCFS Org 1')
+    expect(within(row).getByRole('link', { name: 'CR #10' })).toHaveAttribute(
+      'href',
+      '/compliance-reporting/2024/10'
+    )
+    expect(row.querySelector('time').parentElement).toHaveTextContent(
+      /^Guy Analyst, .+ - CR #10$/
+    )
+    expect(within(row).getByTestId('comment-body')).toHaveTextContent('Hello world')
   })
 
   it('hides the Internal badge for BCeID callers', () => {
@@ -312,6 +328,16 @@ describe('CommentLog', () => {
     expect(
       screen.queryByTestId('comment-internal-badge')
     ).not.toBeInTheDocument()
+    const row = screen.getByTestId('comment-log-row')
+    expect(row).not.toHaveTextContent('LCFS Org 1')
+    expect(within(row).getByRole('link', { name: 'CR #10' })).toHaveAttribute(
+      'href',
+      '/compliance-reporting/2024/10'
+    )
+    expect(row.querySelector('time').parentElement).toHaveTextContent(
+      /^Guy Analyst, .+ - CR #10$/
+    )
+    expect(within(row).getByTestId('comment-body')).toHaveTextContent('Hello world')
   })
 
   it('renders an edited indicator when update_date differs from create_date', () => {
