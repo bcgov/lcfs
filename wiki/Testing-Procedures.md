@@ -12,6 +12,13 @@ The frontend utilizes a combination of Vitest for unit/integration testing and C
 
 Before frontend tests, run `npm run check` from `frontend/`. This Vite+ command runs Oxfmt, Oxlint, and TypeScript type checks through tsgolint; CI requires zero warnings and errors.
 
+The PR, test, and production frontend setup jobs use SHA-pinned
+`voidzero-dev/setup-vp` to resolve Vite+ from `frontend/package.json`, select Node
+from `frontend/.nvmrc`, install the frozen lockfile, and cache npm package data.
+They run `npm run check` before sharing dependencies with test workers. Workers
+restore `node_modules` with an exact OS, architecture, lockfile, and Node-version
+key; a cache miss falls back to `npm ci`.
+
 ### 1.1. Unit & Integration Testing (Vitest, React Testing Library, MSW)
 
 *   **Vitest**: A fast Jest-compatible testing framework, primarily used for unit and integration tests.
@@ -33,6 +40,9 @@ Navigate to the `frontend/` directory and use the following `npm` scripts:
     (Runs the whole suite once with coverage thresholds enforced; the HTML report is written to `frontend/coverage/`. See section 3.1.)
 
 #### 1.1.2. Vitest Methodology (from original wiki)
+
+For controlled performance comparisons and the Vite+ test-report compatibility
+checks, see [Frontend test optimization compatibility with Vite+](Frontend-Test-VitePlus-Compatibility.md).
 
 *   **Unit Definition**: A unit is an isolated group of smaller items that interact (e.g., a React component with its internal logic and hooks).
 *   **Black Box Approach**: Test for expected output given specific input. Mock external dependencies (hooks, API calls via MSW) to isolate the component.

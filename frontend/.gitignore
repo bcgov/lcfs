@@ -32,3 +32,5 @@ cypress/reports/
 # Vistest coverage folder
 /coverage
 .vitest/
+.vitest-reports/
+vitest-results.xml
