@@ -1,4 +1,4 @@
-import 'react';
+import 'react'
 import { describe, expect, vi, beforeEach } from 'vitest'
 import { fireEvent, screen } from '@testing-library/react'
 import { roles } from '@/constants/roles'
@@ -35,6 +35,13 @@ vi.mock('react-router-dom', async (importOriginal) => {
 const mockAgreement = vi.fn()
 vi.mock('@/hooks/useInitiativeAgreements', () => ({
   useGetInitiativeAgreement: () => mockAgreement(),
+  useInitiativeAgreementDocumentRestoreTargets: () => ({
+    data: [
+      { designatedActionId: 17, actionNumber: 3 },
+      { designatedActionId: 18, actionNumber: 4 }
+    ],
+    isError: false
+  }),
   useUpdateAgreement: () => ({ mutate: vi.fn(), isPending: false })
 }))
 
@@ -57,6 +64,14 @@ vi.mock('@/components/Comments', () => ({
 vi.mock('../components/AddDesignatedAction', () => ({
   AddDesignatedAction: ({ isDraft }) =>
     isDraft ? <div data-test="add-designated-action" /> : null
+}))
+
+vi.mock('../components/DeletedItems', () => ({
+  DeletedItems: ({ parentID, heading }) => (
+    <div data-test="deleted-items-for-action" data-parent-id={parentID}>
+      {heading}
+    </div>
+  )
 }))
 
 const daGridProps = vi.fn()
@@ -137,6 +152,30 @@ describe('InitiativeAgreementDetail', () => {
   test('offers document upload to an IA analyst', ({ render, app }) => {
     render(<InitiativeAgreementDetail />, app)
     expect(screen.getByTestId('upload-documents-button')).toBeInTheDocument()
+  })
+
+  test('shows designated-action restore bins to the agreement proponent', ({
+    render,
+    app
+  }) => {
+    mockRoles = [{ name: roles.ia_proponent }]
+    mockAgreement.mockReturnValue({
+      data: {
+        ...agreement
+      },
+      isLoading: false,
+      isError: false,
+      error: null
+    })
+
+    render(<InitiativeAgreementDetail />, app)
+
+    const bins = screen.getAllByTestId('deleted-items-for-action')
+    expect(bins).toHaveLength(2)
+    expect(bins[0]).toHaveAttribute('data-parent-id', '17')
+    expect(bins[0]).toHaveTextContent(
+      'initiativeAgreement:detail.actionDeletedItems'
+    )
   })
 
   test('offers Edit in the card header to analysts, not proponents', ({

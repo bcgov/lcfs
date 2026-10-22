@@ -631,7 +631,13 @@ class DocumentService:
         return presigned_url
 
     @repo_handler
-    async def delete_file(self, document_id: int, parent_id: int, parent_type: str):
+    async def delete_file(
+        self,
+        document_id: int,
+        parent_id: int,
+        parent_type: str,
+        require_physical_delete: bool = False,
+    ) -> bool:
         document = await self.db.get_one(Document, document_id)
 
         if not document:
@@ -644,24 +650,33 @@ class DocumentService:
 
         association_table, parent_column = association_info
 
-        # Check how many links this document has across all instances of this parent type
-        links = (
-            await self.db.execute(
-                select(association_table).where(
-                    document_id == association_table.c.document_id
+        has_other_links = False
+        for linked_table, linked_parent_column in DOCUMENT_PARENT_ASSOCIATIONS.values():
+            links = (
+                await self.db.execute(
+                    select(getattr(linked_table.c, linked_parent_column)).where(
+                        document_id == linked_table.c.document_id
+                    )
                 )
-            )
-        ).all()
+            ).all()
+            if any(
+                linked_table is not association_table or row[0] != parent_id
+                for row in links
+            ):
+                has_other_links = True
+                break
 
-        # If last link, delete the whole document
-        if len(links) == 1:
+        if has_other_links and require_physical_delete:
+            return False
+
+        if not has_other_links:
             # Delete the file from S3
             self.s3_client.delete_object(Bucket=BUCKET_NAME, Key=document.file_key)
 
             # Delete the entry from the database
             await self.db.delete(document)
             await self.db.flush()
-        else:  # Delete the association
+        else:
             await self.db.execute(
                 delete(association_table).where(
                     and_(
@@ -670,6 +685,7 @@ class DocumentService:
                     )
                 )
             )
+        return not has_other_links
 
     @repo_handler
     async def get_by_id_and_type(self, parent_id: int, parent_type="compliance_report"):

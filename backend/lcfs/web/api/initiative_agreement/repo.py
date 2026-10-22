@@ -425,6 +425,24 @@ class InitiativeAgreementRepository:
         return result.scalars().all()
 
     @repo_handler
+    async def get_designated_action_document_targets(
+        self, initiative_agreement_id: int
+    ) -> List[Tuple[int, int]]:
+        """Return every action version that may own a restorable document."""
+        result = await self.db.execute(
+            select(
+                DesignatedAction.designated_action_id,
+                DesignatedAction.action_number,
+            )
+            .where(DesignatedAction.initiative_agreement_id == initiative_agreement_id)
+            .order_by(
+                DesignatedAction.action_number,
+                DesignatedAction.version,
+            )
+        )
+        return [(row[0], row[1]) for row in result.all()]
+
+    @repo_handler
     async def get_latest_comments_by_agreement_ids(
         self,
         initiative_agreement_ids: Sequence[int],

@@ -184,6 +184,11 @@ class DesignatedActionSchema(BaseSchema):
         from_attributes = True
 
 
+class DesignatedActionDocumentTargetSchema(BaseSchema):
+    designated_action_id: int
+    action_number: int
+
+
 class EvidenceRequirementSchema(BaseSchema):
     evidence_requirement_id: int
     designated_action_id: int
