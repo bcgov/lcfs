@@ -116,7 +116,7 @@ const LEDGER = {
 // Org details + balances are read on several pages; match any numeric org id.
 const stubOrg = () => {
   cy.intercept(
-    { method: 'GET', pathname: /\/organizations\/\d+$/ },
+    { method: 'GET', pathname: /\/api\/organizations\/\d+$/ },
     { body: ORG }
   ).as('org')
   cy.intercept(
