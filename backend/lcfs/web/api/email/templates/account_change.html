@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Your LCFS account has changed</h2>
+<p>Hello {{ user_name }},</p>
+<p>An important change was made to your Low Carbon Fuel Standard (LCFS) account.</p>
+<p><strong>Changed by:</strong> {{ changed_by }}<br>
+  <strong>Date and time:</strong> {{ changed_at }}</p>
+
+<h3>What changed</h3>
+<ul>
+  {% if status_changed %}
+  <li>Account status: {{ old_status }} → {{ new_status }}.</li>
+  {% endif %}
+  {% if roles_added %}
+  <li>Roles added: {{ roles_added | join(', ') }}.</li>
+  {% endif %}
+  {% if roles_removed %}
+  <li>Roles removed: {{ roles_removed | join(', ') }}.</li>
+  {% endif %}
+  {% if preferences_changed %}
+  <li>Notification preferences were updated. See the notification changes below.</li>
+  {% endif %}
+</ul>
+
+<h3>Access affected</h3>
+{% if new_status == 'Inactive' %}
+<p>Your account is inactive. You can no longer sign in to LCFS or access its records.</p>
+{% else %}
+<p>Your account is active. Your current roles are: {{ new_roles | join(', ') or 'None' }}.</p>
+{% endif %}
+{% if roles_added %}
+<p>Access added:</p>
+<ul>{% for role in roles_added %}<li>{{ role }}{% if role_descriptions.get(role) %}: {{ role_descriptions[role] }}{% endif %}</li>{% endfor %}</ul>
+{% endif %}
+{% if roles_removed %}
+<p>Access associated with the following roles has been removed. Access provided by your remaining roles is retained.</p>
+<ul>{% for role in roles_removed %}<li>{{ role }}{% if role_descriptions.get(role) %}: {{ role_descriptions[role] }}{% endif %}</li>{% endfor %}</ul>
+{% endif %}
+
+<h3>Notifications and preferences</h3>
+{% if new_status == 'Inactive' %}
+<p>You will no longer receive role-based notifications while your account is inactive.</p>
+{% endif %}
+{% if notifications_removed %}
+<p>You will stop receiving these notifications:</p>
+<ul>{% for notification in notifications_removed %}<li>{{ notification }}</li>{% endfor %}</ul>
+{% endif %}
+{% if notifications_added %}
+<p>The following notifications are now enabled{% if new_status == 'Inactive' %}, but will not be received while your account is inactive{% endif %}:</p>
+<ul>{% for notification in notifications_added %}<li>{{ notification }}</li>{% endfor %}</ul>
+{% endif %}
+{% if preferences_removed %}
+<p>These notification preferences were removed, including any disabled settings:</p>
+<ul>{% for preference in preferences_removed %}<li>{{ preference }}</li>{% endfor %}</ul>
+<p>Previous preferences are not automatically restored when a role is added again. Review and configure your notification settings after access is restored.</p>
+{% else %}
+<p>No stored notification preferences were removed.</p>
+{% endif %}
+{% if preferences_added %}
+<p>Notification preferences added:</p>
+<ul>{% for preference in preferences_added %}<li>{{ preference }}</li>{% endfor %}</ul>
+{% endif %}
+{% if not notifications_removed and not notifications_added %}
+<p>No notification subscriptions were enabled or disabled by this change.</p>
+{% endif %}
+
+<h3>Assigned work</h3>
+{% if assigned_work %}
+<ul>{% for record_type, count in assigned_work.items() %}<li>{{ record_type }}: {{ count }}</li>{% endfor %}</ul>
+<p>This work remains assigned to you. Record details are available securely inside LCFS.</p>
+{% if loses_assigned_work_access %}
+<p>Your access to assigned work is affected. Contact your administrator to review and reassign it. Reassignment is not automatic.</p>
+{% endif %}
+{% else %}
+<p>No assigned compliance reports or CI applications require reassignment because of this change.</p>
+{% endif %}
+
+<h3>Next steps</h3>
+{% if new_status == 'Inactive' %}
+<p>Contact your administrator if you need access restored or have assigned work to hand over.</p>
+{% else %}
+<p><a href="{{ base_url }}">Sign in to LCFS</a> to review your access and assigned work.
+  Review your <a href="{{ base_url }}/notifications/configure">notification settings</a>;
+  additional role-based notifications may need to be enabled manually.</p>
+{% endif %}
+<p>If you did not expect this change, contact your administrator or report it to
+  <a href="mailto:lcfs@gov.bc.ca">lcfs@gov.bc.ca</a>.</p>
+<p>This mandatory account-change email is sent independently of your notification preferences.</p>
+{% endblock %}
