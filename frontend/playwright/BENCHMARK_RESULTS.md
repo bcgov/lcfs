@@ -84,13 +84,18 @@ per trial; its timing is documentation only.
 
 ## Worker scaling
 
-| Playwright workers |  Median | Speedup versus one worker | Parallel efficiency |
-| -----------------: | ------: | ------------------------: | ------------------: |
-|                  1 | 64.04 s |                     1.00× |              100.0% |
-|                  2 | 41.88 s |                     1.53× |               76.5% |
-|                  3 | 35.51 s |                     1.80× |               60.1% |
-|                  4 | 36.40 s |                     1.76× |               44.0% |
-|                  6 | 38.12 s |                     1.68× |               28.0% |
+| Playwright workers |  Median | Speedup versus Cypress sequential | Speedup versus one worker | Parallel efficiency |
+| -----------------: | ------: | --------------------------------: | ------------------------: | ------------------: |
+|                  1 | 64.04 s |                             1.32× |                     1.00× |              100.0% |
+|                  2 | 41.88 s |                             2.02× |                     1.53× |               76.5% |
+|                  3 | 35.51 s |                             2.38× |                     1.80× |               60.1% |
+|                  4 | 36.40 s |                             2.32× |                     1.76× |               44.0% |
+|                  6 | 38.12 s |                             2.22× |                     1.68× |               28.0% |
+
+Speedup is the Cypress sequential median (84.58 s) or Playwright one-worker
+median (64.04 s) divided by the row's median. For example, the three-worker
+run was 2.38× the Cypress sequential speed and 1.80× the Playwright one-worker
+speed on this matched subset.
 
 The lowest observed median was 3 workers at 35.51 s. The three-
 and four-worker ranges overlap, so their small difference should be interpreted
