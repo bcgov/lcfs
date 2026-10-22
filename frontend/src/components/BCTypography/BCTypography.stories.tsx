@@ -13,7 +13,7 @@ type Story = StoryObj<typeof BCTypography>
 const baseArgs = {
   children: 'Default Text',
   color: 'primary'
-}
+} satisfies Story['args']
 
 export const Default: Story = {
   args: baseArgs
@@ -39,7 +39,7 @@ export const SecondaryColor: Story = {
   args: {
     ...baseArgs,
     color: 'secondary',
-    backgroundColor: 'primary',
+    sx: { backgroundColor: 'primary.main' },
     children: 'Secondary Color Text'
   }
 }

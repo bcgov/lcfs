@@ -9,15 +9,13 @@ import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { defaultInitialPagination } from '@/constants/schedules'
 import { REPORT_SCHEDULES } from '@/constants/common'
 import useComplianceReportStore from '@/stores/useComplianceReportStore'
-import { useTranslation } from 'react-i18next'
 
 export const NotionalTransferSummary = ({ data, status }) => {
   const [paginationOptions, setPaginationOptions] = useState(
     defaultInitialPagination
   )
   const gridRef = useRef()
-  const { t } = useTranslation(['notionalTransfer'])
-  const { complianceReportId, compliancePeriod } = useParams()
+  const { compliancePeriod } = useParams()
 
   // Client-side pagination logic
   const paginatedData = useMemo(() => {
@@ -109,7 +107,7 @@ export const NotionalTransferSummary = ({ data, status }) => {
         isEarlyIssuance,
         parseInt(compliancePeriod)
       ),
-    [isEarlyIssuance, compliancePeriod, t]
+    [isEarlyIssuance, compliancePeriod]
   )
 
   const defaultColDef = useMemo(

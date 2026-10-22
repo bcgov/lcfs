@@ -124,8 +124,8 @@ export const useGetFuelSuppliesList = (
 }
 
 export const useSaveFuelSupply = (
-  params: Record<string, unknown>,
-  options: ExtMutationOptions<unknown, unknown> = {}
+  params: { complianceReportId: number | string },
+  options: ExtMutationOptions<unknown, Record<string, unknown>> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -140,7 +140,7 @@ export const useSaveFuelSupply = (
   } = options
 
   return useMutation({
-    mutationFn: async (data: unknown) => {
+    mutationFn: async (data: Record<string, unknown>) => {
       if (!params?.complianceReportId) {
         throw new Error('Compliance report ID is required')
       }
@@ -153,11 +153,11 @@ export const useSaveFuelSupply = (
       return await client.post(apiRoutes.saveFuelSupplies, modifiedData)
     },
     onSuccess: (data, variables, context) => {
-      const matchesReport = (query: unknown) =>
+      const matchesReport = (query: { queryKey: readonly unknown[] }) =>
         query.queryKey.includes(params.complianceReportId) ||
         query.queryKey.some((key: unknown) => key === params.complianceReportId)
 
-      const queryKeyMatches = (query: unknown) => {
+      const queryKeyMatches = (query: { queryKey: readonly unknown[] }) => {
         const key = query.queryKey[0]
         if (key === 'fuel-supplies') return true
         if (key === 'fuel-supplies-list') return invalidateListQuery
@@ -166,12 +166,12 @@ export const useSaveFuelSupply = (
 
       if (clearCache) {
         queryClient.removeQueries({
-          predicate: (query: unknown) =>
+          predicate: (query) =>
             queryKeyMatches(query) && matchesReport(query)
         })
       } else {
         queryClient.invalidateQueries({
-          predicate: (query: unknown) =>
+          predicate: (query) =>
             queryKeyMatches(query) && matchesReport(query)
         })
       }
@@ -201,8 +201,8 @@ export const useSaveFuelSupply = (
 }
 
 export const useUpdateFuelSupply = (
-  params: Record<string, unknown>,
-  options: ExtMutationOptions<unknown, unknown> = {}
+  params: { complianceReportId: number | string },
+  options: ExtMutationOptions<unknown, Record<string, unknown> & { id?: number | string }> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -216,7 +216,7 @@ export const useUpdateFuelSupply = (
   } = options
 
   return useMutation({
-    mutationFn: async (data: unknown) => {
+    mutationFn: async (data: Record<string, unknown> & { id?: number | string }) => {
       if (!params?.complianceReportId) {
         throw new Error('Compliance report ID is required')
       }
@@ -245,7 +245,7 @@ export const useUpdateFuelSupply = (
       } else {
         // Invalidate all fuel supply queries for this report (same method as FuelExports)
         queryClient.invalidateQueries({
-          predicate: (query: unknown) => {
+          predicate: (query) => {
             return (
               (query.queryKey[0] === 'fuel-supplies' ||
                 query.queryKey[0] === 'fuel-supplies-list') &&
@@ -282,8 +282,8 @@ export const useUpdateFuelSupply = (
 }
 
 export const useDeleteFuelSupply = (
-  params: Record<string, unknown>,
-  options: ExtMutationOptions<unknown, unknown> = {}
+  params: { complianceReportId: number | string },
+  options: ExtMutationOptions<unknown, number | string> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -296,7 +296,7 @@ export const useDeleteFuelSupply = (
   } = options
 
   return useMutation({
-    mutationFn: async (fuelSupplyId: unknown) => {
+    mutationFn: async (fuelSupplyId: number | string) => {
       if (!params?.complianceReportId) {
         throw new Error('Compliance report ID is required')
       }

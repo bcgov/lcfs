@@ -195,12 +195,33 @@ export const useUpdateUser = ({
   onError,
   isSupplier = false,
   organizationId = null
-}: Record<string, unknown> = {}) => {
+}: {
+  onSuccess?: (
+    data: unknown,
+    variables: {
+      userID: number | string
+      meta?: { admin?: boolean; role?: string }
+    }
+  ) => void
+  onError?: (
+    error: Error,
+    variables: {
+      userID: number | string
+      meta?: { admin?: boolean; role?: string }
+    }
+  ) => void
+  isSupplier?: boolean
+  organizationId?: number | string | null
+} = {}) => {
   const apiService = useApiService()
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ userID, payload }: Record<string, unknown>) => {
+    mutationFn: async ({ userID, payload }: {
+      userID: number | string
+      payload: Record<string, unknown>
+      meta?: { admin?: boolean; role?: string }
+    }) => {
       if (isSupplier) {
         return await apiService.put(
           `/organization/${organizationId}/users/${userID}`,
@@ -262,7 +283,12 @@ export const useCreateUser = ({
   onError,
   isSupplier = false,
   organizationId = null
-}: Record<string, unknown> = {}) => {
+}: {
+  onSuccess?: (data: unknown, variables: unknown) => void
+  onError?: (error: Error, variables: unknown) => void
+  isSupplier?: boolean
+  organizationId?: number | string | null
+} = {}) => {
   const apiService = useApiService()
   const queryClient = useQueryClient()
 

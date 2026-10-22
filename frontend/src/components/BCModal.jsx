@@ -9,11 +9,29 @@ import DialogTitle from '@mui/material/DialogTitle'
 import Divider from '@mui/material/Divider'
 import IconButton from '@mui/material/IconButton'
 import PropTypes from 'prop-types'
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import BCButton from './BCButton'
 
+/**
+ * @typedef {object} ModalData
+ * @property {import('react').ReactNode} [title]
+ * @property {import('react').ReactNode} [content]
+ * @property {import('react').ReactNode} [primaryButtonText]
+ * @property {() => unknown | Promise<unknown>} [primaryButtonAction]
+ * @property {string} [primaryButtonColor]
+ * @property {boolean} [primaryButtonDisabled]
+ * @property {import('react').ReactNode} [warningText]
+ * @property {import('react').ReactNode} [secondaryButtonText]
+ * @property {() => unknown} [secondaryButtonAction]
+ * @property {string} [secondaryButtonColor]
+ * @property {import('react').ReactNode} [customButtons]
+ */
+/** @param {{open: boolean, onClose: () => void, data?: ModalData | null}} props */
 const BCModal = ({ open, onClose, data = null }) => {
   const [isLoading, setIsLoading] = useState(false)
+  const baseId = useId()
+  const titleId = `${baseId}-title`
+  const contentId = `${baseId}-content`
 
   useEffect(() => {
     setIsLoading(false)
@@ -72,9 +90,11 @@ const BCModal = ({ open, onClose, data = null }) => {
       onClose={handleClose}
       maxWidth="md"
       fullWidth
+      aria-labelledby={titleId}
+      aria-describedby={contentId}
       data-test="modal"
     >
-      <DialogTitle>{title}</DialogTitle>
+      <DialogTitle id={titleId}>{title}</DialogTitle>
       <IconButton
         aria-label="close"
         onClick={handleClose}
@@ -106,7 +126,7 @@ const BCModal = ({ open, onClose, data = null }) => {
           </Box>
         </DialogContent>
       )}
-      <DialogContent>{content}</DialogContent>
+      <DialogContent id={contentId}>{content}</DialogContent>
       <Divider />
       <DialogActions>
         {secondaryButtonText && (

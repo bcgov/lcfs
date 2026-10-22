@@ -24,7 +24,7 @@ export const useGetFuelTypeList = (params: Record<string, unknown>) => {
       client.get(
         apiRoutes.getCalculatorFuelTypes.replace(
           ':complianceYear',
-          params.complianceYear
+          params.complianceYear as string
         ),
         {
           params: {
@@ -46,7 +46,7 @@ export const useGetFuelTypeOptions = (params: Record<string, unknown>) => {
       client.get(
         apiRoutes.getCalculatorFuelTypeOptions.replace(
           ':complianceYear',
-          params.complianceYear
+          params.complianceYear as string
         ),
         {
           params: {
@@ -71,7 +71,17 @@ export const useCalculateComplianceUnits = ({
   useCustomCi = false,
   customCiValue,
   enabled = true
-}: Record<string, unknown>) => {
+}: {
+  compliancePeriod: string | number
+  fuelCategoryId: string | number
+  fuelTypeId: string | number
+  endUseId?: string | number | null
+  quantity: number
+  fuelCodeId?: string | number | null
+  useCustomCi?: boolean
+  customCiValue?: number | null
+  enabled?: boolean
+}) => {
   const client = useApiService()
   return useQuery({
     queryKey: [
@@ -89,7 +99,7 @@ export const useCalculateComplianceUnits = ({
       client.get(
         apiRoutes.getCalculatedComplianceUnits.replace(
           ':complianceYear',
-          compliancePeriod
+          compliancePeriod as string
         ),
         {
           params: {
@@ -110,7 +120,7 @@ export const useCalculateComplianceUnits = ({
       !!fuelCategoryId &&
       !!fuelTypeId &&
       !!(
-        endUseId || parseInt(compliancePeriod) >= LEGISLATION_TRANSITION_YEAR
+        endUseId || parseInt(compliancePeriod as string) >= LEGISLATION_TRANSITION_YEAR
       ) &&
       !!quantity
   })
@@ -126,7 +136,17 @@ export const useCalculateQuantityFromComplianceUnits = ({
   useCustomCi = false,
   customCiValue,
   enabled = true
-}: Record<string, unknown>) => {
+}: {
+  compliancePeriod: string | number
+  fuelCategoryId: string | number
+  fuelTypeId: string | number
+  endUseId?: string | number | null
+  complianceUnits: number
+  fuelCodeId?: string | number | null
+  useCustomCi?: boolean
+  customCiValue?: number | null
+  enabled?: boolean
+}) => {
   const client = useApiService()
   return useQuery({
     queryKey: [
@@ -144,7 +164,7 @@ export const useCalculateQuantityFromComplianceUnits = ({
       client.get(
         apiRoutes.getCalculatorQuantityFromComplianceUnits.replace(
           ':complianceYear',
-          compliancePeriod
+          compliancePeriod as string
         ),
         {
           params: {
@@ -165,7 +185,7 @@ export const useCalculateQuantityFromComplianceUnits = ({
       !!fuelCategoryId &&
       !!fuelTypeId &&
       !!(
-        endUseId || parseInt(compliancePeriod) >= LEGISLATION_TRANSITION_YEAR
+        endUseId || parseInt(compliancePeriod as string) >= LEGISLATION_TRANSITION_YEAR
       ) &&
       !!complianceUnits
   })

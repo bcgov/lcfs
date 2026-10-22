@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import List, Optional
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 
 from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
     AGREEMENT_TYPE_INITIATIVE_AGREEMENT,
@@ -198,6 +198,7 @@ class EvidenceRequirementSchema(BaseSchema):
     analyst_review: Optional[str] = None
     review_outcome: Optional[str] = None
     review_notes: Optional[str] = None
+    missing_information: Optional[str] = None
     reviewed_by: Optional[AssignedAnalystSchema] = None
     reviewed_date: Optional[datetime] = None
 
@@ -219,6 +220,7 @@ class EvidenceRequirementUpdateSchema(BaseSchema):
     requirement_number: Optional[int] = None
     analyst_review: Optional[str] = None
     review_notes: Optional[str] = None
+    missing_information: Optional[str] = None
     # Absent leaves the outcome untouched; explicit null clears it back to
     # unreviewed, which is how the UI unchecks both boxes.
     review_outcome: Optional[str] = None
@@ -396,5 +398,20 @@ class AgreementCreateSchema(BaseSchema):
     contact_name: Optional[str] = None
     contact_email: Optional[str] = None
     contact_phone: Optional[str] = None
+    agreement_start_date: Optional[date] = None
+    agreement_end_date: Optional[date] = None
+
+
+class AgreementUpdateSchema(BaseSchema):
+    """Partial update: only fields present in the request are applied."""
+
+    ia_code: Optional[str] = Field(None, max_length=50)
+    agreement_type: Optional[str] = None
+    title: Optional[str] = Field(None, max_length=500)
+    project_description: Optional[str] = None
+    project_location: Optional[str] = None
+    contact_name: Optional[str] = Field(None, max_length=500)
+    contact_email: Optional[str] = Field(None, max_length=255)
+    contact_phone: Optional[str] = Field(None, max_length=50)
     agreement_start_date: Optional[date] = None
     agreement_end_date: Optional[date] = None

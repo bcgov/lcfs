@@ -15,8 +15,8 @@ export const FuelCodeStatusBadge = (
   props: ICellRendererParams<FuelCodeStatusRow>
 ) => {
   const statusArr = getAllFuelCodeStatuses()
-  const statusIndex = statusArr.indexOf(props.data?.status)
-  const statusColors = ['info', 'info', 'success', 'error']
+  const statusIndex = statusArr.indexOf(props.data?.status as (typeof statusArr)[number])
+  const statusColors = ['info', 'info', 'success', 'error'] as const
 
   return (
     <BCBox sx={{ width: '100%', height: '100%' }}>

@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState, useRef, useCallback } from 'react'
+import React, { useMemo, useEffect, useState, useRef } from 'react'
 import { useForm, FormProvider, Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import Grid from '@mui/material/Grid2'
@@ -30,8 +30,7 @@ import {
   LEGISLATION_TRANSITION_YEAR
 } from '@/constants/common'
 import {
-  formatEnergyContentWithCommas,
-  numberFormatter
+  formatEnergyContentWithCommas
 } from '@/utils/formatters'
 import { copyToClipboard } from '@/utils/clipboard'
 
@@ -107,8 +106,7 @@ export const CreditCalculator = () => {
     watch,
     setValue,
     formState: { errors },
-    reset,
-    handleSubmit
+    reset
   } = methods
 
   const watchedValues = watch()
@@ -221,13 +219,6 @@ export const CreditCalculator = () => {
       (option) => option.value !== CUSTOM_CI_OPTION_VALUE
     )
   }, [provisionOptions])
-
-  const selectedProvision = useMemo(() => {
-    if (!provisionOfTheAct) return null
-    return fuelTypeOptions?.data?.provisions?.find(
-      (provision) => provision.name === provisionOfTheAct
-    )
-  }, [fuelTypeOptions, provisionOfTheAct])
 
   // Get unit based on selected fuel
   const unit = useMemo(() => {
@@ -713,7 +704,7 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
                       width: '100%',
                       maxWidth: '100%',
                       maxHeight: { xs: 240, md: 360 },
-                      overflowX: 'auto',
+                      overflowX: 'hidden',
                       overflowY: 'auto',
                       pr: 1,
                       scrollbarGutter: 'stable'
@@ -722,15 +713,17 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
                       mr: 0,
                       mb: 0,
                       alignItems: 'flex-start',
-                      width: 'max-content',
-                      maxWidth: 'none',
-                      whiteSpace: 'nowrap'
+                      width: '100%',
+                      maxWidth: '100%',
+                      minWidth: 0,
+                      flexShrink: 0
                     },
                     '& .MuiRadio-root': {
                       flexShrink: 0
                     },
                     '& .MuiFormControlLabel-label': {
-                      whiteSpace: 'nowrap',
+                      whiteSpace: 'normal',
+                      overflowWrap: 'anywhere',
                       lineHeight: 1.35
                     }
                   }}
