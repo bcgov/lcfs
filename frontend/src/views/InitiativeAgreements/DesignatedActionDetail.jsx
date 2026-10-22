@@ -231,20 +231,6 @@ const DesignatedActionDetailBase = () => {
     )
   }
 
-  const evidenceActions = requirements.length ? null : (
-    <DesignatedActionWorkflow
-      designatedActionId={designatedActionId}
-      availableActions={action.availableActions}
-      onlyAction={ACTION_REQUEST_INFORMATION}
-      recommendedCredits={action.recommendedCredits}
-      allEvidenceSatisfactory={allEvidenceSatisfactory}
-      hasRequirements={requirements.length > 0}
-      missingInformation={action.missingInformation ?? ''}
-      placement={PLACEMENT_EVIDENCE}
-      onChanged={refreshAction}
-    />
-  )
-
   return (
     <BCBox>
       <InitiativeAgreementTabs />
@@ -467,7 +453,6 @@ const DesignatedActionDetailBase = () => {
                 // would be refused.
                 canEdit={canRecommend}
                 missingInformationReadOnly={!canRecommend}
-                actions={evidenceActions}
                 renderRequestAction={renderRequestAction}
               />
               <DesignatedActionWorkflow

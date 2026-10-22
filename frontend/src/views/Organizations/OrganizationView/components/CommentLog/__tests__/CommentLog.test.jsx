@@ -300,6 +300,16 @@ describe('CommentLog', () => {
     })
     renderCommentLog()
     expect(screen.getByTestId('comment-internal-badge')).toBeInTheDocument()
+    const row = screen.getByTestId('comment-log-row')
+    expect(row).not.toHaveTextContent('LCFS Org 1')
+    expect(within(row).getByRole('link', { name: 'CR #10' })).toHaveAttribute(
+      'href',
+      '/compliance-reporting/2024/10'
+    )
+    expect(row.querySelector('time').parentElement).toHaveTextContent(
+      /^Guy Analyst, .+ - CR #10$/
+    )
+    expect(within(row).getByTestId('comment-body')).toHaveTextContent('Hello world')
   })
 
   it('hides the Internal badge for BCeID callers', () => {
@@ -318,6 +328,16 @@ describe('CommentLog', () => {
     expect(
       screen.queryByTestId('comment-internal-badge')
     ).not.toBeInTheDocument()
+    const row = screen.getByTestId('comment-log-row')
+    expect(row).not.toHaveTextContent('LCFS Org 1')
+    expect(within(row).getByRole('link', { name: 'CR #10' })).toHaveAttribute(
+      'href',
+      '/compliance-reporting/2024/10'
+    )
+    expect(row.querySelector('time').parentElement).toHaveTextContent(
+      /^Guy Analyst, .+ - CR #10$/
+    )
+    expect(within(row).getByTestId('comment-body')).toHaveTextContent('Hello world')
   })
 
   it('renders an edited indicator when update_date differs from create_date', () => {
