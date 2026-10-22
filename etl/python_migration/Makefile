@@ -3,7 +3,7 @@
 # Prerequisites:
 # - Docker and Docker Compose installed
 # - OpenShift CLI (oc) installed
-# - Python version from ../../backend/.python-version with requirements installed
+# - Python version from .python-version with requirements installed
 # - User must be logged into OpenShift: oc login
 #
 # SECURITY NOTE: This Makefile only supports IMPORT operations.

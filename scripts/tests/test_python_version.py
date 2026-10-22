@@ -31,7 +31,7 @@ class PythonVersionTests(unittest.TestCase):
         (self.root / ".python-version").symlink_to("backend/.python-version")
         etl = self.root / "etl/python_migration"
         etl.mkdir(parents=True)
-        (etl / ".python-version").symlink_to("../../backend/.python-version")
+        (etl / ".python-version").write_text("3.11.10\n")
 
     def run_sync(self, write=False):
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(
@@ -68,6 +68,10 @@ class PythonVersionTests(unittest.TestCase):
             self.run_sync(), 1
         )  # Lockfile still targets the previous version.
         self.assertEqual((self.root / ".python-version").read_text(), f"{version}\n")
+        self.assertEqual(
+            (self.root / "etl/python_migration/.python-version").read_text(),
+            "3.11.10\n",
+        )
 
     def test_patch_pin_is_rejected(self):
         (self.root / "backend/.python-version").write_text("3.11.10\n")
@@ -77,9 +81,8 @@ class PythonVersionTests(unittest.TestCase):
         (self.root / "backend/Dockerfile").write_text("FROM scratch\n")
         self.assertEqual(self.run_sync(write=True), 1)
 
-    def test_independent_version_file_is_rejected(self):
+    def test_standalone_etl_version_file_is_not_managed(self):
         path = self.root / "etl/python_migration/.python-version"
-        version = path.read_text()
-        path.unlink()
-        path.write_text(version)
-        self.assertEqual(self.run_sync(), 1)
+        path.write_text("3.11.10\n")
+        self.assertEqual(self.run_sync(), 0)
+        self.assertEqual(path.read_text(), "3.11.10\n")

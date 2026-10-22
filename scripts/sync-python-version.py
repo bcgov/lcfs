@@ -32,9 +32,10 @@ def synchronize(root: Path, write: bool = False) -> int:
         ),
     }
     errors = []
-    for name in (".python-version", "etl/python_migration/.python-version"):
-        if (root / name).resolve() != (root / "backend/.python-version").resolve():
-            errors.append(f"{name}: must link to backend/.python-version")
+    if (root / ".python-version").resolve() != (
+        root / "backend/.python-version"
+    ).resolve():
+        errors.append(".python-version: must link to backend/.python-version")
     for name, (pattern, replacement) in declarations.items():
         path = root / name
         source = path.read_text()
@@ -51,7 +52,7 @@ def synchronize(root: Path, write: bool = False) -> int:
     # Poetry owns lockfile resolution and the content hash; never edit it here.
     lock = (root / "backend/poetry.lock").read_text().split("[metadata]\n")[-1]
     if f'python-versions = "{constraint}"' not in lock:
-        message = "backend/poetry.lock: run poetry lock (Poetry 1.x: poetry lock --no-update) in backend"
+        message = "backend/poetry.lock: run poetry lock with the selected Poetry 2.x release in backend"
         if write:
             print(message)
         else:

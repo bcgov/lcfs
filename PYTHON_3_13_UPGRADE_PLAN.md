@@ -1,6 +1,7 @@
 # Python 3.13 upgrade plan
 
 Branch: `experimental/python3.13`
+Ticket: [LCFS #5294 — Backend Python 3.13 on Debian Trixie](https://github.com/bcgov/lcfs/issues/5294)
 
 Status: the Python 3.11 baseline and initial hardening checkpoint are validated.
 An additional focused hardening increment is implemented, but phase 2 coverage
@@ -9,14 +10,43 @@ dependency upgrades have not started.
 
 ## Objective and boundaries
 
-Run the backend, database migrations, scheduled tasks, ETL tooling, and development
-checks on standard CPython 3.13. Keep current API contracts and business behavior.
+Upgrade the backend image, CI, and local development runtime to standard CPython
+3.13 on Debian 13 (Trixie). Keep current API contracts and business behavior.
 Use the normal GIL-enabled build; free threading and JIT tuning are separate work.
 
 Target 3.13 directly on this branch. Python 3.12 may be used to investigate
 compatibility failures, but is not a required production release. Treat a later
 3.14 upgrade as a separate plan with its own dependency and validation gates. Do
 not combine this upgrade with test database or sharding redesigns.
+
+Ticket #5294 is the scope authority for this work. The standalone
+`etl/python_migration` runtime is out of scope; its `.python-version` remains
+`3.11.10` and can be upgraded separately.
+
+### Ticket acceptance criteria
+
+- [ ] `backend/Dockerfile.openshift` uses
+  `artifacts.developer.gov.bc.ca/docker-remote/python:3.13-slim-trixie` and keeps
+  a minor-version image tag.
+- [ ] `backend/Dockerfile` uses `python:3.13-slim-trixie`, and local Compose still
+  starts the backend.
+- [ ] `backend/.python-version` is the backend version source; every
+  `actions/setup-python` step reads it through `python-version-file`, and
+  `backend/pyproject.toml` declares `python = "^3.13"`.
+- [ ] Dockerfiles and CI install the same selected Poetry 2.x release that writes
+  the regenerated lockfile.
+- [ ] NumPy is upgraded to 2.x; other dependencies change only where Python 3.13
+  support or a demonstrated compatibility issue requires it.
+- [ ] `POST /forms/{form_slug}/export` renders PDFs in the OpenShift image, with
+  pango and cairo installed explicitly there for WeasyPrint.
+- [ ] Spreadsheet output matches the pre-upgrade output, and the tzdata build
+  check passes in both images.
+- [ ] The full backend pytest suite, `alembic upgrade heads`, and Cypress pass in
+  CI on Python 3.13.
+- [ ] A PR deployment to Dev starts the new image; login, compliance report
+  views, and Excel downloads work.
+- [ ] `Development-Environment-Setup.md` and
+  `System-Requirements-and-Dependencies.md` in the wiki describe Python 3.13.
 
 ## 1. Establish a reproducible baseline
 
@@ -84,15 +114,14 @@ Keep a separate baseline commit for the centralization changes when committing.
 - Added an API cache-hit test with decoded Redis string responses. Added a cache
   coder that supports the application's `decode_responses=True` Redis setting,
   which otherwise returned strings to a coder that expects bytes.
-- Added service-free ETL tests for safe value conversions, query retries, and
-  legacy ID mapping. These also passed on the shell's Python 3.14.8; that run
-  does not replace planned Python 3.13 validation.
+- Added service-free tests for standalone ETL helpers as separate test hardening.
+  They also passed on the shell's Python 3.14.8; this work does not change the
+  ETL tool's 3.11.10 interpreter target.
 - Validation: 22 focused spreadsheet, Redis, and rate-limit tests passed on the
   backend Python 3.11.10 environment; all 6 ETL helper tests passed under Python
   3.14.8. The new cache coder passes its focused mypy check.
-- The broader phase 2 gate remains open: ETL migration transformations and
-  rollback still need disposable-database coverage, and Redis coverage still
-  uses fakeredis rather than a live Redis integration.
+- The broader phase 2 gate remains open: Redis coverage still uses fakeredis
+  rather than a live Redis integration.
 
 ## 2. Harden regression tests on Python 3.11
 
@@ -114,8 +143,8 @@ rather than duplicating implementation details or chasing a coverage percentage.
   exact binary comparisons that depend on timestamps or generated metadata.
 - **Integrations and jobs:** complement mocked unit tests with real PostgreSQL
   and Redis integration tests for database behavior, caching, and rate limiting.
-  Cover scheduled sync/async jobs, exception paths, and ETL transformations and
-  rollback using disposable databases.
+  Cover scheduled sync/async jobs and exception paths. The standalone ETL
+  migration tool is outside ticket #5294.
 - **Execution integrity:** explicitly include relevant scheduler tests outside
   default discovery. Compare the expected collected test IDs with the union of
   shard results, checking for missing or duplicate execution and unexpected skips.
@@ -134,8 +163,8 @@ Commit test hardening separately from the interpreter and dependency upgrade.
 After dependency resolution, run the same behavioral assertions on 3.11 and 3.13.
 Where supported, also run the upgraded dependency set on 3.11 to distinguish
 dependency regressions from interpreter regressions. Use separate environments
-and documented lockfiles or dependency snapshots: the generated project range
-targets one minor version and should not be widened just to enable comparisons.
+and documented lockfiles or dependency snapshots; retain the ticket's `^3.13`
+project constraint and do not change it just to enable comparisons.
 Keep expected behavior consistent across versions unless a difference is reviewed
 and accepted. Passing these tests supplements Docker and staging validation.
 
@@ -143,7 +172,8 @@ and accepted. Passing these tests supplements Docker and staging validation.
 
 Work in an isolated environment. Change `backend/.python-version` to `3.13`, run
 `python3 scripts/sync-python-version.py --write`, select a 3.13 Poetry environment,
-and regenerate the lockfile after adjusting incompatible constraints.
+and resolve dependencies with the selected Poetry 2.x version. Update the version
+sync helper to generate the ticket's `^3.13` constraint and Debian Trixie image tags.
 
 The versions below are known support milestones, not a final selection. Select
 maintained compatible releases, inspect their release notes, and record the exact
@@ -157,8 +187,7 @@ chosen versions in the lockfile. Avoid an indiscriminate dependency update.
 | API validation | FastAPI 0.115.14; Pydantic 2.11.7; pydantic-core 2.33.2 | FastAPI 0.115.8 and Pydantic 2.8 added Python 3.13 support, so the locked versions already clear those milestones. Keep FastAPI/Starlette and Pydantic/core/settings constraints lock-consistent; update only for a demonstrated compatibility or maintenance need. |
 | Native dependencies | uvloop 0.21.0, httptools 0.6.4, hiredis 3.2.1, and other compiled packages | Audit all locked wheels for the actual Linux production architecture and macOS development architectures. Refresh unsupported packages; test imports. |
 | Development tools | Flake8 4.0.1, wemake-python-styleguide 0.17, mypy 1.17, coverage 7.9.2 | Select a mutually compatible toolchain; review lint rule changes separately from functional fixes. Check pytest and all its plugins together. |
-| Build tooling | Poetry 1.6.1 in Docker and CI | Test bootstrap, lockfile reading, and installation on 3.13. If replacement is needed, update Docker and CI together and verify the chosen lock format. |
-| ETL | `psycopg2-binary==2.9.7` | Update the exact requirements pin to a maintained release with Python 3.13 support; psycopg2 2.9.10 added that support. Validate the ETL's other requirements. |
+| Build tooling | Poetry 1.6.1 in Docker and CI; current committed lock is format 2.0 | Upgrade Docker and all CI jobs to the same Poetry 2.x release, then regenerate and validate the lockfile with that release. |
 
 Check native packages including NumPy, pandas, asyncpg, greenlet, pydantic-core,
 uvloop, httptools, hiredis, multidict, yarl, PyYAML, cryptography, cffi, Pillow,
@@ -167,8 +196,8 @@ that a source build cannot work; document any intentional source builds and
 their compiler/system-library requirements.
 
 Gate: reproducible main and development installations on 3.13, reviewed lockfile
-diff, and successful imports of all critical native modules. Confirm private
-Artifactory mirrors provide the required Python image and package artifacts.
+diff, and successful imports of all critical native modules. Confirm the private
+Artifactory mirror provides the Trixie Python image and required package artifacts.
 
 ## 4. Preserve application behavior
 
@@ -192,6 +221,9 @@ adding targeted tests for any newly discovered incompatibilities.
   missing values, dates, numeric dtypes, and representative XLSX/PDF output after
   the NumPy/pandas updates. Compare data and document structure rather than
   timestamps or other unstable binary metadata.
+- **Image-specific exports:** verify forms PDF rendering in the OpenShift image
+  after explicitly installing pango and cairo, and compare XLS/XLSX data and
+  numeric types with baseline fixtures.
 - **Background work:** explicitly run scheduler tests and representative sync and
   async jobs, including exceptions and thread-executor paths. Python 3.13 emits a
   `DeprecationWarning` when the default `get_event_loop()` policy creates a loop
@@ -201,10 +233,6 @@ adding targeted tests for any newly discovered incompatibilities.
 - **External integrations:** exercise Redis caching/rate limiting, mocked
   Keycloak authentication, object storage, and email through existing test seams.
   Validate staging integrations using their normal non-production configuration.
-- **ETL:** run against disposable source and destination databases. Confirm row
-  counts, transformations, and transaction rollback; do not use production data
-  mutation as an upgrade test.
-
 Gate: functional changes have focused regression coverage and reviewed API and
 export differences. Distinguish intended dependency changes from regressions.
 
@@ -216,7 +244,12 @@ export differences. Distinguish intended dependency changes from regressions.
 - Build both `backend/Dockerfile` and `backend/Dockerfile.openshift` using the
   actual deployment architecture. Verify native libraries for PDF generation,
   timezone checks, Alembic startup, health checks, and application startup.
+- Verify the production image uses the Artifactory Trixie tag and includes its
+  explicit PDF system libraries; verify the local image uses the matching Docker
+  Hub Trixie tag.
 - Exercise the Compose environment and frontend/backend Cypress flows.
+- Run `alembic upgrade heads`, the full pytest suite, and Cypress in the Python
+  3.13 CI runtime; complete a PR deployment smoke test in Dev.
 - Confirm every CI Python setup reads `backend/.python-version`; keep caches
   isolated by Python version and reinstall virtual environments for 3.13.
 - Verify shard collection still covers the complete suite: do not count shards
@@ -241,11 +274,12 @@ memory, error-rate, and database-connection limits from the baseline before roll
   agreed regression limits are exceeded. The interpreter upgrade should require
   no database schema change; if one becomes necessary, define and validate its
   compatibility and rollback separately before promotion.
+- Update the two wiki pages listed in ticket #5294 to use Python 3.13.
 
 ## Deliverables
 
 - Shared Python version set to 3.13 with synchronized Docker/Poetry declarations.
-- Reviewed dependency constraints, lockfile, ETL requirements, and tool versions.
+- Reviewed dependency constraints, lockfile, and tool versions.
 - Hardened regression suite with a passing 3.11 baseline, demonstrated failure
   detection, complete execution accounting, and comparison results on 3.13.
 - Focused fixes and regression tests for discovered incompatibilities.
