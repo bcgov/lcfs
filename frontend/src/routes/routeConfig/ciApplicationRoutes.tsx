@@ -10,6 +10,9 @@ const createGatedElement = (Component: ComponentType) =>
     withFeatureFlag(Component, FEATURE_FLAGS.CI_APPLICATIONS, ROUTES.DASHBOARD)
   )
 
+// Keep the wizard mounted when saving a new draft redirects Add to Edit.
+const editViewCIApplicationElement = createGatedElement(EditViewCIApplication)
+
 export const ciApplicationRoutes: AppRouteObject[] = [
   {
     path: ROUTES.CI_APPLICATIONS.LIST,
@@ -18,12 +21,12 @@ export const ciApplicationRoutes: AppRouteObject[] = [
   },
   {
     path: ROUTES.CI_APPLICATIONS.ADD,
-    element: createGatedElement(EditViewCIApplication),
+    element: editViewCIApplicationElement,
     handle: { title: 'Carbon intensity application', mode: 'add' }
   },
   {
     path: ROUTES.CI_APPLICATIONS.EDIT,
-    element: createGatedElement(EditViewCIApplication),
+    element: editViewCIApplicationElement,
     handle: { title: 'Carbon intensity application', mode: 'edit' }
   }
 ]
