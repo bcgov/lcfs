@@ -16,6 +16,7 @@ from lcfs.web.api.user.schema import (
     UsersSchema,
     UserActivitiesResponseSchema,
     UpdateEmailSchema,
+    UserUpdateResponseSchema,
     ResolveOrgNameRequestSchema,
     ResolveOrgNameResponseSchema,
 )
@@ -187,7 +188,11 @@ async def create_user(
     return await service.create_user(user_create)
 
 
-@router.put("/{user_id}", response_model=UserBaseSchema, status_code=status.HTTP_200_OK)
+@router.put(
+    "/{user_id}",
+    response_model=UserUpdateResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
 @view_handler([RoleEnum.ADMINISTRATOR])
 async def update_user(
     request: Request,
@@ -195,13 +200,12 @@ async def update_user(
     user_id: int = None,
     user_create: UserCreateSchema = ...,
     service: UserServices = Depends(),
-) -> UserBaseSchema:
+) -> UserUpdateResponseSchema:
     """
     Endpoint to update a user
     This endpoint updates a user and returns the information of the updated user.
     """
-    await service.update_user(user_create, user_id)
-    return await service.get_user_by_id(user_id)
+    return await service.update_user_and_notify(user_create, user_id)
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_200_OK)
