@@ -74,13 +74,7 @@ This document provides an overview of common development tools and utility scrip
 *   **Setup**: Typically installed via `npm install` if listed as a dev dependency.
 *   **Reference**: [Husky Documentation](https://typicode.github.io/husky/)
 
-### 2.6. Storybook
-*   **Purpose**: UI component development environment and documentation tool. Allows developing and testing components in isolation.
-*   **Configuration**: `frontend/.storybook/` directory.
-*   **Run**: `npm run storybook` (from `frontend/` directory).
-*   **Reference**: [Storybook Documentation](https://storybook.js.org/)
-
-### 2.7. Cypress Utilities
+### 2.6. Cypress Utilities
 *   **`cypress.env.json`**: Stores environment variables for Cypress tests (e.g., user credentials). Create from `cypress.env.example.json`. **Do not commit `cypress.env.json`**.
 *   **Chrome Recorder**: Potentially used for generating Cypress test skeletons (see `frontend/cypress/chrome-recorder` if present).
 
