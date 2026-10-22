@@ -14,7 +14,9 @@ import { useWatch } from 'react-hook-form'
 import '@hookform/resolvers/yup'
 import '../_schema'
 
-const { mockEnqueueSnackbar } = vi.hoisted(() => ({ mockEnqueueSnackbar: vi.fn() }))
+const { mockEnqueueSnackbar } = vi.hoisted(() => ({
+  mockEnqueueSnackbar: vi.fn()
+}))
 vi.mock('notistack', () => ({
   useSnackbar: () => ({ enqueueSnackbar: mockEnqueueSnackbar })
 }))
@@ -395,10 +397,15 @@ describe('AddEditUser', () => {
     expect(screen.getByText('Updating user...')).toBeInTheDocument()
   })
 
-  test('warns about email failure while completing a successful account update', ({ render, theme }) => {
+  test('warns about email failure while completing a successful account update', ({
+    render,
+    theme
+  }) => {
     const handleSaveSuccess = vi.fn()
     render(<AddEditUser handleSaveSuccess={handleSaveSuccess} />, [theme])
-    const { onSuccess } = vi.mocked(userHooks.useUpdateUser).mock.calls.at(-1)[0]
+    const { onSuccess } = vi
+      .mocked(userHooks.useUpdateUser)
+      .mock.calls.at(-1)[0]
     const result = { data: { accountChangeEmailSent: false } }
     const variables = { userID: 'user123' }
 
