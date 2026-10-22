@@ -75,7 +75,7 @@ class CreditMarketPublicOverviewSchema(BaseSchema):
 
 
 class MarketReportPeriodSchema(BaseSchema):
-    """One published (non-suppressed) period of aggregate market activity."""
+    """One period of aggregate market activity, regardless of participant counts."""
 
     period: str
     transfers: int
@@ -126,9 +126,9 @@ class MarketReportAllTimeSchema(BaseSchema):
 
 class PublicMarketReportSchema(BaseSchema):
     """
-    Public, aggregate-only market report. Periods with fewer than the
-    published thresholds of transfers/participants are withheld; no individual
-    transaction detail or low-count category detail is exposed.
+    Public, aggregate-only market report. All qualifying aggregate periods
+    are included regardless of transfer or participant counts. No transaction
+    records or organization identities are returned.
     """
 
     monthly: List[MarketReportPeriodSchema]
@@ -139,5 +139,6 @@ class PublicMarketReportSchema(BaseSchema):
     kpis: MarketReportKpiSchema
     ytd_kpis: MarketReportKpiSchema
     a1_kpis: Optional[MarketReportKpiSchema] = None
+    # Retained for API compatibility; zero means no count-based suppression.
     min_transfers: int
     min_participants: int
