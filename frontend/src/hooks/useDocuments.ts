@@ -178,6 +178,54 @@ export const useDeleteDocument = (
   })
 }
 
+// An IDIR Administrator approves or rejects a macro-enabled workbook
+export const useReviewDocumentScan = (
+  parentType: string,
+  parentID: number | string | undefined | null,
+  options: ExtMutationOptions<
+    unknown,
+    { documentID: number | string; decision: 'approve' | 'reject' }
+  > = {}
+) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+
+  const { onSuccess, onError, ...restOptions } = options
+
+  return useMutation({
+    mutationFn: async ({
+      documentID,
+      decision
+    }: {
+      documentID: number | string
+      decision: 'approve' | 'reject'
+    }) => {
+      const path = apiRoutes.reviewDocumentScan
+        .replace(':parentID', String(parentID ?? ''))
+        .replace(':parentType', String(parentType ?? ''))
+        .replace(':documentID', String(documentID ?? ''))
+
+      return await client.put(path, { decision })
+    },
+    onSuccess: (data, variables, context) => {
+      queryClient.invalidateQueries({
+        queryKey: ['documents', parentType, parentID]
+      })
+      // The CI application summary lists documents from its detail query
+      if (parentType === 'ci_application') {
+        queryClient.invalidateQueries({
+          queryKey: ['ci-application', String(parentID)]
+        })
+      }
+      onSuccess?.(data, variables, context)
+    },
+    onError: (error, variables, context) => {
+      onError?.(error, variables, context)
+    },
+    ...restOptions
+  })
+}
+
 export const useDownloadDocument = (
   parentType: string,
   parentID: number | string | undefined | null,

@@ -3,6 +3,7 @@ import pytest
 from fastapi import UploadFile
 from starlette import status
 
+from lcfs.db.models.document.Document import DocumentScanStatusEnum
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.services.clamav.client import (
     FileTooLargeToScanException,
@@ -24,6 +25,7 @@ class DummyDocument:
         self.display_name = None
         self.create_date = "2024-01-01T00:00:00Z"
         self.create_user = "tester"
+        self.scan_status = DocumentScanStatusEnum.clean
 
 
 class FakeDocumentService:

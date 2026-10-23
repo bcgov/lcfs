@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from fastapi import Depends, HTTPException
 from starlette.concurrency import run_in_threadpool
 from io import UnsupportedOperation
@@ -5,7 +7,13 @@ import os
 import re
 import uuid
 
-from lcfs.utils.constants import ALLOWED_MIME_TYPES, ALLOWED_FILE_TYPES
+from lcfs.utils.constants import (
+    ALLOWED_MIME_TYPES,
+    ALLOWED_FILE_TYPES,
+    MACRO_ENABLED_FILE_TYPES,
+    MACRO_ENABLED_MIME_TYPES,
+    MACRO_UPLOAD_PARENT_TYPES,
+)
 from lcfs.db.models.admin_adjustment.AdminAdjustment import (
     admin_adjustment_document_association,
 )
@@ -38,6 +46,7 @@ from lcfs.db.models.ci_application.CIApplication import (
     ci_application_document_association,
 )
 from lcfs.db.models.document import Document
+from lcfs.db.models.document.Document import DocumentScanStatusEnum
 from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.comment.InternalComment import (
@@ -51,7 +60,11 @@ from lcfs.db.models.comment.ComplianceReportInternalComment import (
     ComplianceReportInternalComment,
 )
 from lcfs.services.clamav.client import ClamAVService
-from lcfs.services.file_inspection import inspect_upload
+from lcfs.services.file_inspection import (
+    FileRejectedException,
+    analyze_workbook_macros,
+    inspect_upload,
+)
 from lcfs.settings import settings
 from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
 from lcfs.web.api.charging_site.repo import ChargingSiteRepository
@@ -128,6 +141,17 @@ def _normalize_display_name(requested_name: str, original_file_name: str) -> str
     return requested_name
 
 
+def _upload_types(parent_type: str) -> tuple[list[str], str, list[str]]:
+    """Allowed MIME types, their description, and the types that may carry macros."""
+    if settings.feature_macro_uploads and parent_type in MACRO_UPLOAD_PARENT_TYPES:
+        return (
+            ALLOWED_MIME_TYPES + MACRO_ENABLED_MIME_TYPES,
+            f"{ALLOWED_FILE_TYPES}, {MACRO_ENABLED_FILE_TYPES}",
+            MACRO_ENABLED_MIME_TYPES,
+        )
+    return ALLOWED_MIME_TYPES, ALLOWED_FILE_TYPES, []
+
+
 class DocumentService:
     def __init__(
         self,
@@ -187,11 +211,15 @@ class DocumentService:
         file_id = uuid.uuid4()
         file_key = f"{settings.s3_docs_path}/{parent_type}/{parent_id}/{file_id}"
 
-        # Validate MIME type
-        if file.content_type not in ALLOWED_MIME_TYPES:
+        allowed_types, allowed_description, macro_types = _upload_types(parent_type)
+
+        # Validate MIME type. Browsers send it lower-cased
+        # (application/vnd.ms-excel.sheet.macroenabled.12).
+        claimed_type = (file.content_type or "").lower()
+        if claimed_type not in {t.lower() for t in allowed_types}:
             raise HTTPException(
                 status_code=400,
-                detail=f"File type '{file.content_type or 'unknown'}' is not allowed. Please upload files of the following types: {ALLOWED_FILE_TYPES}",
+                detail=f"File type '{file.content_type or 'unknown'}' is not allowed. Please upload files of the following types: {allowed_description}",
             )
 
         # Scan file size
@@ -205,16 +233,34 @@ class DocumentService:
 
         # Check what the file really is; the browser's Content-Type is only a claim
         file.file.seek(0)
+        data = file.file.read()
         detected = await run_in_threadpool(
             inspect_upload,
-            file.file.read(),
+            data,
             file.filename,
-            ALLOWED_MIME_TYPES,
-            ALLOWED_FILE_TYPES,
+            allowed_types,
+            allowed_description,
+            macro_types,
         )
 
         if settings.clamav_enabled:
             await self.clamav_service.scan_file_async(file)
+
+        scan_status = DocumentScanStatusEnum.clean
+        scan_findings = None
+        reviewed_by = reviewed_date = None
+        if detected.has_macros:
+            report = await run_in_threadpool(analyze_workbook_macros, data, detected)
+            if report.block_reason:
+                raise FileRejectedException(report.block_reason)
+            scan_findings = report.findings
+            if user is not None and RoleEnum.GOVERNMENT in user.role_names:
+                # IDIR staff are trusted with their own uploads
+                scan_status = DocumentScanStatusEnum.approved
+                reviewed_by = user.keycloak_username
+                reviewed_date = datetime.now(timezone.utc)
+            else:
+                scan_status = DocumentScanStatusEnum.pending_approval
 
         # Upload file to S3
         file.file.seek(0)
@@ -252,6 +298,10 @@ class DocumentService:
             file_name=file.filename,
             file_size=file_size,
             mime_type=detected.mime_type,
+            scan_status=scan_status,
+            scan_findings=scan_findings,
+            scan_reviewed_by=reviewed_by,
+            scan_reviewed_date=reviewed_date,
         )
 
         if parent_type == "compliance_report":
@@ -624,6 +674,47 @@ class DocumentService:
                 )
 
         document.display_name = new_display_name
+        await self.db.flush()
+        await self.db.refresh(document)
+        return document
+
+    @repo_handler
+    async def review_scan(
+        self,
+        document_id: int,
+        parent_id: int,
+        parent_type: str,
+        approve: bool,
+        user,
+    ) -> Document:
+        """Approve or reject a macro-enabled workbook that is waiting for review."""
+        document = next(
+            (
+                doc
+                for doc in (
+                    row[0] if isinstance(row, (tuple, Row)) else row
+                    for row in await self.get_by_id_and_type(parent_id, parent_type)
+                )
+                if doc.document_id == document_id
+            ),
+            None,
+        )
+        if document is None:
+            raise DataNotFoundException(
+                f"Document {document_id} does not belong to {parent_type} {parent_id}"
+            )
+        if document.scan_status != DocumentScanStatusEnum.pending_approval:
+            raise HTTPException(
+                status_code=400, detail="This file isn't waiting for approval."
+            )
+
+        document.scan_status = (
+            DocumentScanStatusEnum.approved
+            if approve
+            else DocumentScanStatusEnum.rejected
+        )
+        document.scan_reviewed_by = user.keycloak_username
+        document.scan_reviewed_date = datetime.now(timezone.utc)
         await self.db.flush()
         await self.db.refresh(document)
         return document

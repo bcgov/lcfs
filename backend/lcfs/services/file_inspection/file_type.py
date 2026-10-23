@@ -52,14 +52,16 @@ def inspect_upload(
     filename: str | None,
     allowed_types: Collection[str],
     allowed_description: str,
+    macro_types: Collection[str] = (),
 ) -> DetectedFile:
     """
     Detect the file's real type and reject it unless it is an allowed type,
-    has a matching extension and carries no macros.
+    has a matching extension and carries no macros. Files of `macro_types`
+    may carry macros; the caller analyzes them.
     """
     try:
         detected = detect_file_type(data, filename)
-        if detected.has_macros:
+        if detected.has_macros and detected.mime_type not in macro_types:
             raise FileRejectedException(MACROS_MESSAGE)
         if detected.mime_type not in allowed_types:
             raise FileRejectedException(
