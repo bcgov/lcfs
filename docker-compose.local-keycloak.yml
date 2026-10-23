@@ -1,0 +1,93 @@
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.0
+    restart: "no"
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: "${LCFS_KEYCLOAK_ADMIN_USERNAME:-admin}"
+      KC_BOOTSTRAP_ADMIN_PASSWORD: "${LCFS_KEYCLOAK_ADMIN_PASSWORD:-development_only}"
+      KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
+      KC_HOSTNAME: "http://${LCFS_LOCAL_KEYCLOAK_HOSTNAME:-lcfs-keycloak.localhost}:${LCFS_KEYCLOAK_PUBLISHED_PORT:-8180}"
+    ports:
+      - "127.0.0.1:${LCFS_KEYCLOAK_PUBLISHED_PORT:-8180}:8080"
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+      - ./keycloak/import:/opt/keycloak/data/import:ro
+    networks:
+      - shared_network
+    healthcheck:
+      # The official Keycloak image omits curl; its Bash image supports
+      # /dev/tcp for probing the built-in management health endpoint.
+      test:
+        - CMD
+        - bash
+        - -c
+        - "{ printf 'HEAD /health/ready HTTP/1.0\\r\\n\\r\\n' >&0; grep 'HTTP/1.0 200'; } 0<>/dev/tcp/localhost/9000"
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 35s
+
+  backend:
+    environment:
+      LCFS_LOCAL_KEYCLOAK_ENABLED: "true"
+      LCFS_WELL_KNOWN_ENDPOINT: http://keycloak:8080/realms/lcfs-local/.well-known/openid-configuration
+      LCFS_KEYCLOAK_JWKS_ENDPOINT: http://keycloak:8080/realms/lcfs-local/protocol/openid-connect/certs
+      LCFS_KEYCLOAK_AUDIENCE: low-carbon-fuel-standard-5147
+      LCFS_KEYCLOAK_ISSUER: "http://${LCFS_LOCAL_KEYCLOAK_HOSTNAME:-lcfs-keycloak.localhost}:${LCFS_KEYCLOAK_PUBLISHED_PORT:-8180}/realms/lcfs-local"
+      # Use a separate Redis DB so the local realm never reuses cached keys
+      # from the external development Keycloak when switching auth modes.
+      LCFS_REDIS_BASE: 1
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/api/health', timeout=2)"
+      interval: 5s
+      timeout: 3s
+      retries: 36
+      start_period: 60s
+
+  # Keep local-Keycloak-only test profiles and cache data separate from a
+  # normal Compose run, even when both use the same project name.
+  db:
+    volumes:
+      - postgres_local_keycloak_data:/var/lib/postgresql/data
+
+  redis:
+    volumes:
+      - redis_local_keycloak_data:/data
+
+  rustfs:
+    volumes:
+      - rustfs_local_keycloak_data:/data
+
+  frontend:
+    environment:
+      VITE_LOCAL_KEYCLOAK: "true"
+      VITE_KEYCLOAK_REALM: lcfs-local
+      VITE_KEYCLOAK_CLIENT_ID: low-carbon-fuel-standard-5147
+      VITE_KEYCLOAK_AUTH_URL: "http://${LCFS_LOCAL_KEYCLOAK_HOSTNAME:-lcfs-keycloak.localhost}:${LCFS_KEYCLOAK_PUBLISHED_PORT:-8180}"
+    depends_on:
+      backend:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+
+volumes:
+  keycloak_data: {}
+  postgres_local_keycloak_data: {}
+  redis_local_keycloak_data: {}
+  rustfs_local_keycloak_data: {}
