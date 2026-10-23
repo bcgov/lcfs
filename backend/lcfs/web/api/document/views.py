@@ -243,6 +243,10 @@ async def stream_document(
     headers = {
         "Content-Disposition": _content_disposition(download_name),
         "content-length": str(file["ContentLength"]),
+        # Older uploads carry the type the browser claimed, so never let a
+        # browser sniff or run the content
+        "X-Content-Type-Options": "nosniff",
+        "Content-Security-Policy": "sandbox",
     }
 
     return StreamingResponse(

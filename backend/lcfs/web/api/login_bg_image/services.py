@@ -8,6 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.login_bg_image.LoginBgImage import LoginBgImage
+from lcfs.services.clamav.client import ClamAVService
+from lcfs.services.file_inspection import inspect_upload
 from lcfs.services.s3.dependency import get_s3_client
 from lcfs.settings import settings
 from lcfs.web.api.login_bg_image.repo import LoginBgImageRepository
@@ -27,9 +29,11 @@ class LoginBgImageService:
         self,
         repo: LoginBgImageRepository = Depends(),
         s3_client=Depends(get_s3_client),
+        clamav_service: ClamAVService = Depends(),
     ):
         self.repo = repo
         self.s3_client = s3_client
+        self.clamav_service = clamav_service
 
     @service_handler
     async def get_all(self) -> List[LoginBgImageSchema]:
@@ -63,6 +67,17 @@ class LoginBgImageService:
                 detail=f"File size exceeds the 20 MB limit.",
             )
 
+        # These images are served without sign-in, so check the real contents
+        file.file.seek(0)
+        detected = inspect_upload(
+            file.file.read(),
+            file.filename,
+            ALLOWED_IMAGE_TYPES,
+            "JPEG, PNG, or WebP images",
+        )
+        if settings.clamav_enabled:
+            await self.clamav_service.scan_file_async(file)
+
         file_id = uuid.uuid4()
         image_key = f"{S3_PREFIX}/{file_id}"
 
@@ -71,7 +86,7 @@ class LoginBgImageService:
             Fileobj=file.file,
             Bucket=BUCKET_NAME,
             Key=image_key,
-            ExtraArgs={"ContentType": file.content_type},
+            ExtraArgs={"ContentType": detected.mime_type},
         )
 
         image = LoginBgImage(
