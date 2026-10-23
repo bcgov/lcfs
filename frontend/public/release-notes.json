@@ -1,5 +1,47 @@
 [
   {
+    "version": "1.3.11",
+    "tag": "v1.3.11",
+    "date": "2026-10-23",
+    "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/v1.3.11",
+    "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/v1.3.10...v1.3.11",
+    "summary": "This release includes 7 new features, 7 bug fixes and 8 other changes. Highlights: Allow editing existing initiative agreements; Add pathway delete confirmation; Add assigned analyst to designated actions; Add IDIR comment mentions and notifications.",
+    "sections": {
+      "features": [
+        "Allow editing existing initiative agreements - 5169",
+        "Add pathway delete confirmation - 5227",
+        "Add assigned analyst to designated actions - 5197",
+        "Add IDIR comment mentions and notifications - 5150",
+        "Replace Public Portal Content - 5167",
+        "Add account change email notifications - 4890",
+        "move missing information to EOCs (#5241)"
+      ],
+      "fixes": [
+        "LCFS - Calculator end use sort order",
+        "Recommend Assessment with Exemption Workflow Unavailable After Analyst Adjustment",
+        "LCFS - Default Transport Distance to Zero for Adjacent Feedstock and Finished Fuel Transport Modes",
+        "LCFS - DA page updates",
+        "Remove redundant organization name from comment log - 5209",
+        "keep TFRS-era penalties intact in report summaries and the penalty log (#5257)",
+        "stop the fuel code grid squeezing its columns on view and edit (#5288)"
+      ],
+      "security": [],
+      "breaking": [],
+      "dependencies": [],
+      "other": [
+        "Hide compliance period pill when year is missing (#5116)",
+        "Make User Settings Help links accessible (#4910)",
+        "Improve screen-reader access to comparison charts",
+        "Establish zero-diagnostic frontend TypeScript baseline",
+        "Add domain model relationship diagrams - 4111",
+        "Add effective date notice to CI application information step (#5225)",
+        "Keep drafts out of IDIR global search and its links (#5231)",
+        "Keep dashboard links in line whatever their counts (#4911)"
+      ]
+    },
+    "contributors": []
+  },
+  {
     "version": "1.3.10",
     "tag": "v1.3.10",
     "date": "2026-10-15",
