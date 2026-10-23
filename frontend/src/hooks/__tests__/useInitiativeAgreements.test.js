@@ -4,7 +4,8 @@ import { useApiService } from '@/services/useApiService'
 import {
   useGetInitiativeAgreement,
   useGetInitiativeAgreements,
-  useInitiativeAgreementStatuses
+  useInitiativeAgreementStatuses,
+  useUpdateAgreement
 } from '../useInitiativeAgreements'
 import { test } from '@/tests/utils/fixtures'
 
@@ -13,10 +14,15 @@ vi.mock('@/services/useApiService')
 describe('useInitiativeAgreements hooks', () => {
   const mockGet = vi.fn()
   const mockPost = vi.fn()
+  const mockPut = vi.fn()
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(useApiService).mockReturnValue({ get: mockGet, post: mockPost })
+    vi.mocked(useApiService).mockReturnValue({
+      get: mockGet,
+      post: mockPost,
+      put: mockPut
+    })
   })
 
   test('list hook POSTs the default pagination body', async ({
@@ -97,5 +103,24 @@ describe('useInitiativeAgreements hooks', () => {
     )
     expect(result.current.fetchStatus).toBe('idle')
     expect(mockGet).not.toHaveBeenCalled()
+  })
+
+  test('update hook PUTs the edit to the agreement and refreshes the lists', async ({
+    renderHook,
+    query
+  }) => {
+    const data = { initiativeAgreementId: 5, title: 'Corrected' }
+    mockPut.mockResolvedValue({ data })
+
+    const { result } = renderHook(() => useUpdateAgreement(5), [query])
+    const returned = await result.current.mutateAsync({ title: 'Corrected' })
+
+    expect(mockPut).toHaveBeenCalledWith(
+      '/initiative-agreements/agreements/5',
+      {
+        title: 'Corrected'
+      }
+    )
+    expect(returned).toEqual(data)
   })
 })

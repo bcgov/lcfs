@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import type { ComponentProps, MouseEvent } from 'react'
 import FormControl from '@mui/material/FormControl'
 import IconButton from '@mui/material/IconButton'
 import InputAdornment from '@mui/material/InputAdornment'
@@ -7,9 +8,25 @@ import CalendarIcon from '@mui/icons-material/CalendarToday'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { format, isValid } from 'date-fns'
 
+const legacyDatePickerProps = {
+  id: 'date-picker'
+} as unknown as ComponentProps<typeof DatePicker>
+
 export interface BCDateFloatingFilterProps {
-  model?: { type?: string; filter?: string } | null
-  onModelChange: (model: { type: string; filter: string } | null) => void
+  model?: {
+    type?: string
+    filter?: string
+    filterType?: string
+    dateFrom?: string
+    dateTo?: string
+  } | null
+  onModelChange: (model: {
+    type?: string
+    filter?: string
+    filterType?: string
+    dateFrom?: string
+    dateTo?: string
+  } | null | undefined) => void
   disabled?: boolean
   minDate?: string
   maxDate?: string
@@ -17,7 +34,7 @@ export interface BCDateFloatingFilterProps {
   label?: string
 }
 
-const parseDateOnly = (value) => {
+const parseDateOnly = (value: unknown): Date | null => {
   if (value instanceof Date) return value
   if (typeof value !== 'string') return null
 
@@ -40,11 +57,11 @@ export const BCDateFloatingFilter = ({
   initialFilterType = 'equals',
   label = 'Select date'
 }: BCDateFloatingFilterProps) => {
-  const [selectedDate, setSelectedDate] = useState(null)
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [open, setOpen] = useState(false)
 
   const handleChange = useCallback(
-    (newDate) => {
+    (newDate: Date | null) => {
       setSelectedDate(newDate)
 
       if (newDate && isValid(newDate)) {
@@ -65,7 +82,7 @@ export const BCDateFloatingFilter = ({
     [onModelChange, initialFilterType]
   )
 
-  const handleClear = (event) => {
+  const handleClear = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation()
     setSelectedDate(null)
     onModelChange(undefined)
@@ -108,16 +125,16 @@ export const BCDateFloatingFilter = ({
       }}
     >
       <DatePicker
-        id="date-picker"
         aria-label="Date picker"
         aria-describedby="date-picker-description"
+        {...legacyDatePickerProps}
         sx={{
           border: 'none',
           borderBottom: '4px solid #495057'
         }}
         value={selectedDate}
-        minDate={parseDateOnly(minDate)}
-        maxDate={parseDateOnly(maxDate)}
+        minDate={parseDateOnly(minDate) as unknown as Date}
+        maxDate={parseDateOnly(maxDate) as unknown as Date}
         onChange={handleChange}
         open={open}
         onOpen={handleOpen}

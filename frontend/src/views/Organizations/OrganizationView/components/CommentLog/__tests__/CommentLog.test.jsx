@@ -45,7 +45,8 @@ const mockHook = vi.fn(() => baseHookState())
 vi.mock('@/hooks/useOrganizationComments', () => ({
   useOrganizationComments: (...args) => mockHook(...args),
   useCommentCategories: () => ({ data: [] }),
-  useEditOrganizationComment: () => ({ mutate: vi.fn(), isPending: false })
+  useEditOrganizationComment: () => ({ mutate: vi.fn(), isPending: false }),
+  COMPANY_OVERVIEW_ENTITY_TYPE: 'Organization'
 }))
 
 const mockUser = vi.fn(() => ({
@@ -54,6 +55,11 @@ const mockUser = vi.fn(() => ({
 }))
 vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: () => mockUser()
+}))
+
+// The @mention lookup needs the API service; it's covered by its own tests.
+vi.mock('@/hooks/useMentionableUsers', () => ({
+  useMentionableUsers: () => ({ data: [], isFetching: false })
 }))
 
 // Stub the filter bar to a single visible category select to keep
@@ -163,21 +169,34 @@ describe('CommentLog', () => {
     }
   )
 
-  it('shows N/A for a comment without a compliance period', () => {
-    mockHook.mockReturnValue({
-      ...baseHookState(),
-      data: {
-        comments: [
-          sampleComment({ entityType: 'Transfer', complianceYear: null })
-        ],
-        pagination: { page: 1, size: 25, total: 1, totalPages: 1 }
-      }
-    })
-    renderCommentLog()
-    expect(
-      screen.getByTestId('comment-compliance-period-chip')
-    ).toHaveTextContent('N/A')
-  })
+  it.each([null, undefined])(
+    'omits the compliance period pill when the year is %s',
+    (complianceYear) => {
+      mockHook.mockReturnValue({
+        ...baseHookState(),
+        data: {
+          comments: [
+            sampleComment({
+              entityType: 'ciApplication',
+              category: 'CI application notes',
+              complianceYear
+            })
+          ],
+          pagination: { page: 1, size: 25, total: 1, totalPages: 1 }
+        }
+      })
+      renderCommentLog()
+
+      const row = screen.getByTestId('comment-log-row')
+      expect(
+        within(row).queryByTestId('comment-compliance-period-chip')
+      ).not.toBeInTheDocument()
+      expect(
+        within(row).getByTestId('comment-category-chip')
+      ).toHaveTextContent('CI application notes')
+      expect(row).not.toHaveTextContent('N/A')
+    }
+  )
 
   it('shows a loading skeleton while fetching', () => {
     mockHook.mockReturnValue({ ...baseHookState(), isLoading: true })
@@ -281,6 +300,16 @@ describe('CommentLog', () => {
     })
     renderCommentLog()
     expect(screen.getByTestId('comment-internal-badge')).toBeInTheDocument()
+    const row = screen.getByTestId('comment-log-row')
+    expect(row).not.toHaveTextContent('LCFS Org 1')
+    expect(within(row).getByRole('link', { name: 'CR #10' })).toHaveAttribute(
+      'href',
+      '/compliance-reporting/2024/10'
+    )
+    expect(row.querySelector('time').parentElement).toHaveTextContent(
+      /^Guy Analyst, .+ - CR #10$/
+    )
+    expect(within(row).getByTestId('comment-body')).toHaveTextContent('Hello world')
   })
 
   it('hides the Internal badge for BCeID callers', () => {
@@ -299,6 +328,16 @@ describe('CommentLog', () => {
     expect(
       screen.queryByTestId('comment-internal-badge')
     ).not.toBeInTheDocument()
+    const row = screen.getByTestId('comment-log-row')
+    expect(row).not.toHaveTextContent('LCFS Org 1')
+    expect(within(row).getByRole('link', { name: 'CR #10' })).toHaveAttribute(
+      'href',
+      '/compliance-reporting/2024/10'
+    )
+    expect(row.querySelector('time').parentElement).toHaveTextContent(
+      /^Guy Analyst, .+ - CR #10$/
+    )
+    expect(within(row).getByTestId('comment-body')).toHaveTextContent('Hello world')
   })
 
   it('renders an edited indicator when update_date differs from create_date', () => {

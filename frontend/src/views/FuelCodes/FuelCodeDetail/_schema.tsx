@@ -72,7 +72,10 @@ export const iterationColDefs = (t: (key: string) => string): ColDef[] => [
     suppressFloatingFilterButton: true,
     filterParams: {
       suppressAndOrCondition: true,
-      comparator: (filterLocalDateAtMidnight, cellValue) => {
+      comparator: (
+        filterLocalDateAtMidnight: Date,
+        cellValue: string | null | undefined
+      ) => {
         if (!cellValue) return -1
         const cellDate = new Date(cellValue)
         if (Number.isNaN(cellDate.getTime())) return -1
@@ -102,7 +105,10 @@ export const iterationColDefs = (t: (key: string) => string): ColDef[] => [
     suppressFloatingFilterButton: true,
     filterParams: {
       suppressAndOrCondition: true,
-      comparator: (filterLocalDateAtMidnight, cellValue) => {
+      comparator: (
+        filterLocalDateAtMidnight: Date,
+        cellValue: string | null | undefined
+      ) => {
         if (!cellValue) return -1
         const cellDate = new Date(cellValue)
         if (Number.isNaN(cellDate.getTime())) return -1
@@ -132,7 +138,10 @@ export const iterationColDefs = (t: (key: string) => string): ColDef[] => [
     suppressFloatingFilterButton: true,
     filterParams: {
       suppressAndOrCondition: true,
-      comparator: (filterLocalDateAtMidnight, cellValue) => {
+      comparator: (
+        filterLocalDateAtMidnight: Date,
+        cellValue: string | null | undefined
+      ) => {
         if (!cellValue) return -1
         const cellDate = new Date(cellValue)
         if (Number.isNaN(cellDate.getTime())) return -1
@@ -162,7 +171,10 @@ export const iterationColDefs = (t: (key: string) => string): ColDef[] => [
     suppressFloatingFilterButton: true,
     filterParams: {
       suppressAndOrCondition: true,
-      comparator: (filterLocalDateAtMidnight, cellValue) => {
+      comparator: (
+        filterLocalDateAtMidnight: Date,
+        cellValue: string | null | undefined
+      ) => {
         if (!cellValue) return -1
         const cellDate = new Date(cellValue)
         if (Number.isNaN(cellDate.getTime())) return -1

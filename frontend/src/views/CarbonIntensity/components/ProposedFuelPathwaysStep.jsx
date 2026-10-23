@@ -6,6 +6,7 @@ import TextField from '@mui/material/TextField'
 import { v4 as uuid } from 'uuid'
 
 import BCButton from '@/components/BCButton'
+import BCModal from '@/components/BCModal'
 import BCTypography from '@/components/BCTypography'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 
@@ -60,6 +61,7 @@ export const ProposedFuelPathwaysStep = ({
     ciApplication?.pathwayDescription || ''
   )
   const [errors, setErrors] = useState({})
+  const [rowPendingDelete, setRowPendingDelete] = useState(null)
 
   // Re-seed local state when the parent reloads the application (e.g. after save)
   useEffect(() => {
@@ -111,19 +113,46 @@ export const ProposedFuelPathwaysStep = ({
       case 'duplicate':
         return { add: [{ ...params.data, id: uuid(), pathwayId: null }] }
       case 'delete': {
-        // Remove via the controlled rowData prop (read the live grid rows, then
-        // drop the deleted one) rather than a bare transaction. This keeps the
-        // grid, the rowData prop, and the autoHeight calc in sync — a
-        // transaction-only remove leaves the grid sized for the old row count.
-        const rows = []
-        params.api.forEachNode((node) => rows.push(node.data))
-        setRowData(rows.filter((r) => r.id !== params.data.id))
+        setRowPendingDelete({
+          id: params.data.id,
+          rowIndex: params.node?.rowIndex ?? null
+        })
         return null
       }
       default:
         return null
     }
   }, [])
+
+  const handleCancelDelete = () => setRowPendingDelete(null)
+
+  const handleConfirmDelete = () => {
+    if (!rowPendingDelete) return
+    const { id, rowIndex } = rowPendingDelete
+
+    // Remove via rowData (not a transaction) so autoHeight stays in sync.
+    const remaining = collectGridRows().filter((r) => r.id !== id)
+    setRowData(remaining)
+    setErrors((prev) => {
+      if (!prev[id]) return prev
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
+    setRowPendingDelete(null)
+
+    // The trash button is gone, so restore focus manually.
+    setTimeout(() => {
+      const gridApi = gridRef.current?.api
+      if (remaining.length && gridApi?.setFocusedCell) {
+        const target = Math.min(rowIndex ?? 0, remaining.length - 1)
+        gridApi.ensureIndexVisible?.(target)
+        gridApi.setFocusedCell(target, 'action')
+      } else {
+        document.querySelector('[data-test="add-row-btn"]')?.focus()
+      }
+    }, 0)
+  }
 
   const collectGridRows = () => {
     const rows = []
@@ -291,6 +320,26 @@ export const ProposedFuelPathwaysStep = ({
           </BCButton>
         )}
       </Stack>
+
+      {rowPendingDelete && (
+        <BCModal
+          open={!!rowPendingDelete}
+          onClose={handleCancelDelete}
+          data={{
+            title: t('carbonIntensity:step2.deleteRowConfirmTitle'),
+            content: (
+              <BCTypography variant="body2">
+                {t('carbonIntensity:step2.deleteRowConfirmText')}
+              </BCTypography>
+            ),
+            primaryButtonText: t('common:deleteBtn'),
+            primaryButtonAction: handleConfirmDelete,
+            primaryButtonColor: 'error',
+            secondaryButtonText: t('common:cancelBtn'),
+            secondaryButtonAction: handleCancelDelete
+          }}
+        />
+      )}
     </Box>
   )
 }

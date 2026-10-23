@@ -1,4 +1,4 @@
-import type { ColDef } from 'ag-grid-community'
+import type { ICellRendererParams, ColDef } from 'ag-grid-community'
 import type { SummaryColumn } from '@/types/schema'
 import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
 import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
@@ -71,8 +71,13 @@ export const reportsColDefs = (
     minWidth: 220,
     valueGetter: ({ data }) => data.reportStatus || '',
     filterParams: {
-      textFormatter: (value) => value.replace(/\s+/g, '_').toLowerCase(),
-      textCustomComparator: (filter, value, filterText) => {
+      textFormatter: (value: string) =>
+        value.replace(/\s+/g, '_').toLowerCase(),
+      textCustomComparator: (
+        _filter: string,
+        value: string,
+        filterText: string
+      ) => {
         // Split the filter text by comma and trim each value
         const filterValues = filterText
           .split(',')
@@ -89,7 +94,8 @@ export const reportsColDefs = (
     },
     cellRenderer: ReportsStatusRenderer,
     cellRendererParams: {
-      url: ({ data }) => `${data.compliancePeriod}/${data.complianceReportId}`
+      url: ({ data }: ICellRendererParams) =>
+        `${data.compliancePeriod}/${data.complianceReportId}`
     },
     floatingFilterComponent: BCSelectFloatingFilter,
     floatingFilterComponentParams: {
@@ -111,8 +117,12 @@ export const reportsColDefs = (
     },
     filter: 'agTextColumnFilter',
     filterParams: {
-      textFormatter: (value) => value || '',
-      textCustomComparator: (filter, value, filterText) => {
+      textFormatter: (value: string) => value || '',
+      textCustomComparator: (
+        _filter: string,
+        value: string,
+        filterText: string
+      ) => {
         // Handle filtering by initials
         const cleanValue = (value || '').toLowerCase()
         const cleanFilter = filterText.toLowerCase()
@@ -245,9 +255,9 @@ export const renewableFuelColumns = (
    * - From 2028 onward, Jet Fuel follows the same logic as Gasoline and Diesel.
    */
 
-  let gasolineEditableCells = []
-  let dieselEditableCells = []
-  let jetFuelEditableCells = []
+  let gasolineEditableCells: number[] = []
+  let dieselEditableCells: number[] = []
+  let jetFuelEditableCells: number[] = []
 
   const safeRound = (value: number = 0) => Math.round(value || 0)
 
@@ -304,11 +314,13 @@ export const renewableFuelColumns = (
     )
   }
 
-  const unlockedLineSevenConstraint = (constraint) =>
-    lines7And9Locked ? (constraint ?? { min: 0 }) : { min: 0 }
+  const unlockedLineSevenConstraint = (
+    constraint: { min: number; max?: number } | undefined
+  ) => (lines7And9Locked ? (constraint ?? { min: 0 }) : { min: 0 })
 
-  const unlockedLineNineConstraint = (constraint) =>
-    lines7And9Locked ? (constraint ?? { min: 0 }) : { min: 0 }
+  const unlockedLineNineConstraint = (
+    constraint: { min: number; max?: number } | undefined
+  ) => (lines7And9Locked ? (constraint ?? { min: 0 }) : { min: 0 })
 
   // Line 6 (Retention) caps - LCFA s.10(2): Lesser of excess and 5% of Line 4
   const line6Caps = {
@@ -412,13 +424,13 @@ export const renewableFuelColumns = (
     jetFuelEditableCells = [SUMMARY.LINE_6]
   } else if (
     data[SUMMARY.LINE_2].jetFuel < data[SUMMARY.LINE_4].jetFuel &&
-    parseInt(compliancePeriodYear) >= 2028
+    parseInt(compliancePeriodYear as string) >= 2028
   ) {
     // Deficiency: Line 8 editable (only from 2028 onward), Line 6 not editable
     jetFuelEditableCells = [SUMMARY.LINE_8]
   }
 
-  if (parseInt(compliancePeriodYear) === 2024) {
+  if (parseInt(compliancePeriodYear as string) === 2024) {
     // by default enable in editing mode for compliance period 2024, but respect locks for Lines 7 & 9
     if (!lines7And9Locked) {
       // Line 7 and Line 9 are editable when not locked
@@ -435,7 +447,7 @@ export const renewableFuelColumns = (
         SUMMARY.LINE_9
       ]
     }
-  } else if (parseInt(compliancePeriodYear) >= 2025) {
+  } else if (parseInt(compliancePeriodYear as string) >= 2025) {
     // For 2025+ reports, only allow editing Lines 7 & 9 if not locked
     if (!lines7And9Locked) {
       // Line 7 and Line 9 are editable when not locked
@@ -451,20 +463,20 @@ export const renewableFuelColumns = (
       ]
     }
   }
-  if (parseInt(compliancePeriodYear) < 2029) {
+  if (parseInt(compliancePeriodYear as string) < 2029) {
     // The Jet Fuel cells for lines 7 and 9 should remain unavailable until 2029 (one year after the first renewable requirements come into effect for 2028).
     jetFuelEditableCells = []
   }
 
   if (lines6And8Locked) {
-    const stripLocked = (cells) =>
+    const stripLocked = (cells: number[]) =>
       cells.filter((cell) => cell !== SUMMARY.LINE_6 && cell !== SUMMARY.LINE_8)
     gasolineEditableCells = stripLocked(gasolineEditableCells)
     dieselEditableCells = stripLocked(dieselEditableCells)
     jetFuelEditableCells = stripLocked(jetFuelEditableCells)
   }
 
-  return [
+  const allColumns: SummaryColumn[] = [
     {
       id: 'line',
       label: t('report:summaryLabels.line'),
@@ -523,15 +535,7 @@ export const renewableFuelColumns = (
     }
   ]
 
-  // Filter out the jetFuel column if the compliance period year is less than 2024
-  const filteredColumns = allColumns.filter((col) => {
-    if (col.id === 'jetFuel' && parseInt(compliancePeriodYear) < 2024) {
-      return false // Exclude jet fuel column for years before 2024
-    }
-    return true // Include all other columns
-  })
-
-  return filteredColumns
+  return allColumns
 }
 
 export const lowCarbonColumns = (
@@ -558,12 +562,12 @@ export const lowCarbonColumns = (
 ]
 
 export const nonComplianceColumns = (
-  t: (key: string) => string,
+  t: (key: string, options?: { defaultValue: string }) => string,
   editable: boolean = false,
   statusEditable: boolean = editable,
   showStatusColumns: boolean = true,
   statusEditableCells: number[] = [0, 1]
-): SummaryColumn[] => [
+): Array<SummaryColumn & { type?: string }> => [
   {
     id: 'description',
     label: t('report:nonCompliancePenaltySummary'),

@@ -45,7 +45,7 @@ export const FuelSupplyChangelog = ({ isEarlyIssuance = false }) => {
         parseInt(compliancePeriod),
         optionsData
       ),
-    [isEarlyIssuance, compliancePeriod, optionsData, t]
+    [isEarlyIssuance, compliancePeriod, optionsData]
   )
 
   const changedColumnDefs = useMemo(
@@ -56,7 +56,7 @@ export const FuelSupplyChangelog = ({ isEarlyIssuance = false }) => {
         parseInt(compliancePeriod),
         optionsData
       ),
-    [isEarlyIssuance, compliancePeriod, optionsData, t]
+    [isEarlyIssuance, compliancePeriod, optionsData]
   )
 
   const defaultColDef = useMemo(

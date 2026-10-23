@@ -59,22 +59,22 @@ const BCButtonRoot = styled(Button, {
   const containedStyles = () => {
     // background color value
     const backgroundValue = getColor(color)
-      ? getColor(color).main
+      ? getColor(color)!.main
       : white.main
 
     // backgroundColor value when button is focused
     const focusedBackgroundValue = getColor(color)
-      ? getColor(color).focus
+      ? getColor(color)!.focus
       : white.focus
 
     // boxShadow value
     const boxShadowValue = colored[color]
-      ? `${boxShadow([0, 3], [3, 0], getColor(color).main, 0.15)}, ${boxShadow(
+      ? `${boxShadow([0, 3], [3, 0], getColor(color)!.main, 0.15)}, ${boxShadow(
           [0, 3],
           [1, -2],
-          getColor(color).main,
+          getColor(color)!.main,
           0.2
-        )}, ${boxShadow([0, 1], [5, 0], getColor(color).main, 0.15)}`
+        )}, ${boxShadow([0, 1], [5, 0], getColor(color)!.main, 0.15)}`
       : 'none'
 
     // boxShadow value when button is hovered
@@ -82,14 +82,14 @@ const BCButtonRoot = styled(Button, {
       ? `${boxShadow(
           [0, -10],
           [26, -32],
-          getColor(color).main,
+          getColor(color)!.main,
           0.4
         )}, ${boxShadow(
           [0, 4],
           [23, 0],
-          getColor(color).main,
+          getColor(color)!.main,
           0.15
-        )}, ${boxShadow([0, 8], [10, -5], getColor(color).main, 0.2)}`
+        )}, ${boxShadow([0, 8], [10, -5], getColor(color)!.main, 0.2)}`
       : 'none'
 
     // color value
@@ -127,7 +127,7 @@ const BCButtonRoot = styled(Button, {
       '&:focus:not(:hover)': {
         backgroundColor: focusedBackgroundValue,
         boxShadow: getColor(color)
-          ? boxShadow([0, 0], [0, 3.2], getColor(color).main, 0.5)
+          ? boxShadow([0, 0], [0, 3.2], getColor(color)!.main, 0.5)
           : boxShadow([0, 0], [0, 3.2], white.main, 0.5)
       },
 
@@ -150,21 +150,21 @@ const BCButtonRoot = styled(Button, {
     } else if (color === 'light') {
       focusedBackgroundValue = 'transparent'
     } else if (getColor(color)) {
-      focusedBackgroundValue = getColor(color).focus
+      focusedBackgroundValue = getColor(color)!.focus
     }
     // color value
     const colorValue = getColor(color)
-      ? getColor(color).main
+      ? getColor(color)!.main
       : white.main
 
     // boxShadow value
     const boxShadowValue = getColor(color)
-      ? boxShadow([0, 0], [0, 3.2], getColor(color).main, 0.5)
+      ? boxShadow([0, 0], [0, 3.2], getColor(color)!.main, 0.5)
       : boxShadow([0, 0], [0, 3.2], white.main, 0.5)
 
     // border color value
     let borderColorValue = getColor(color)
-      ? getColor(color).main
+      ? getColor(color)!.main
       : rgba(white.main, 0.75)
 
     if (color === 'white') {
@@ -217,12 +217,12 @@ const BCButtonRoot = styled(Button, {
 
     // boxShadow value
     const boxShadowValue = colored[color]
-      ? `${boxShadow([0, 3], [3, 0], getColor(color).main, 0.15)}, ${boxShadow(
+      ? `${boxShadow([0, 3], [3, 0], getColor(color)!.main, 0.15)}, ${boxShadow(
           [0, 3],
           [1, -2],
-          getColor(color).main,
+          getColor(color)!.main,
           0.2
-        )}, ${boxShadow([0, 1], [5, 0], getColor(color).main, 0.15)}`
+        )}, ${boxShadow([0, 1], [5, 0], getColor(color)!.main, 0.15)}`
       : 'none'
 
     // boxShadow value when button is hovered
@@ -230,14 +230,14 @@ const BCButtonRoot = styled(Button, {
       ? `${boxShadow(
           [0, 14],
           [26, -12],
-          getColor(color).main,
+          getColor(color)!.main,
           0.4
         )}, ${boxShadow(
           [0, 4],
           [23, 0],
-          getColor(color).main,
+          getColor(color)!.main,
           0.15
-        )}, ${boxShadow([0, 8], [10, -5], getColor(color).main, 0.2)}`
+        )}, ${boxShadow([0, 8], [10, -5], getColor(color)!.main, 0.2)}`
       : 'none'
 
     // color value
@@ -276,12 +276,12 @@ const BCButtonRoot = styled(Button, {
   const textStyles = () => {
     // color value
     const colorValue = getColor(color)
-      ? getColor(color).main
+      ? getColor(color)!.main
       : white.main
 
     // color value when button is focused
     const focusedColorValue = getColor(color)
-      ? getColor(color).focus
+      ? getColor(color)!.focus
       : white.focus
 
     return {

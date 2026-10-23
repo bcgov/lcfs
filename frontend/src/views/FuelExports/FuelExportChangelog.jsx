@@ -38,10 +38,10 @@ export const FuelExportChangelog = () => {
 
   const currentOrOriginalColumnDefs = useMemo(
     () => changelogCommonColDefs(false),
-    [t]
+    []
   )
 
-  const changedColumnDefs = useMemo(() => changelogColDefs(), [t])
+  const changedColumnDefs = useMemo(() => changelogColDefs(), [])
 
   const defaultColDef = useMemo(
     () => ({

@@ -67,9 +67,10 @@ function Footer({
         key={link.name}
         component="li"
         px={2}
-        sx={(theme: FooterTheme) => {
-          const { pxToRem } = theme.functions
-          const { borderDivider } = theme.palette
+        sx={(theme) => {
+          const footerTheme = theme as FooterTheme
+          const { pxToRem } = footerTheme.functions
+          const { borderDivider } = footerTheme.palette
           return {
             lineHeight: 1,
             borderRight: `2px solid ${borderDivider.main}`,
@@ -103,9 +104,10 @@ function Footer({
       component="footer"
       width="100%"
       px={1.5}
-      sx={(theme: FooterTheme) => {
-        const { pxToRem } = theme.functions
-        const { primary, secondary, white } = theme.palette
+      sx={(theme) => {
+        const footerTheme = theme as FooterTheme
+        const { pxToRem } = footerTheme.functions
+        const { primary, secondary, white } = footerTheme.palette
         return {
           display: 'flex',
           flexDirection: { xs: 'column', lg: 'row' },

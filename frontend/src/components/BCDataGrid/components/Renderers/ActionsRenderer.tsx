@@ -56,9 +56,12 @@ export const ActionsRenderer = (props: ActionsRendererProps) => {
             data-testid="edit-button"
             color="primary"
             onClick={() => {
+              const column = props.api.getDisplayedCenterColumns()[2] as unknown as {
+                colId: string
+              }
               return props.api.startEditingCell({
-                rowIndex: props.node.rowIndex,
-                colKey: props.api.getDisplayedCenterColumns()[2].colId
+                rowIndex: props.node.rowIndex as number,
+                colKey: column.colId
               })
             }}
           >

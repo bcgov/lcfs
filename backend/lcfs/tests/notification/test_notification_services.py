@@ -528,3 +528,50 @@ async def test_remove_subscriptions_for_user():
     await service.remove_subscriptions_for_user(user_profile_id)
 
     fake_repo.delete_subscriptions_for_user.assert_awaited_once_with(user_profile_id)
+
+
+@pytest.mark.anyio
+async def test_send_mention_notification_creates_message_and_sends_email(
+    notification_service,
+):
+    service, mock_repo, mock_email_service = notification_service
+    mock_email_service.send_mention_notification_email = AsyncMock()
+    mock_repo.get_notification_type_by_name = AsyncMock(return_value=42)
+    mock_repo.create_notification_messages = AsyncMock()
+    email_context = {"subject": "You were mentioned"}
+
+    await service.send_mention_notification(
+        recipient_user_profile_id=5,
+        recipient_email="jane.doe@gov.bc.ca",
+        notification_data=NotificationMessageSchema(
+            type="Mention", message="{}", origin_user_profile_id=99
+        ),
+        email_context=email_context,
+    )
+
+    (message,) = mock_repo.create_notification_messages.await_args.args[0]
+    assert message.notification_type_id == 42
+    assert message.related_user_profile_id == 5
+    mock_email_service.send_mention_notification_email.assert_awaited_once_with(
+        "jane.doe@gov.bc.ca", email_context
+    )
+
+
+@pytest.mark.anyio
+async def test_send_mention_notification_without_email_only_creates_message(
+    notification_service,
+):
+    service, mock_repo, mock_email_service = notification_service
+    mock_email_service.send_mention_notification_email = AsyncMock()
+    mock_repo.get_notification_type_by_name = AsyncMock(return_value=42)
+    mock_repo.create_notification_messages = AsyncMock()
+
+    await service.send_mention_notification(
+        recipient_user_profile_id=5,
+        recipient_email=None,
+        notification_data=NotificationMessageSchema(type="Mention", message="{}"),
+        email_context={},
+    )
+
+    mock_repo.create_notification_messages.assert_awaited_once()
+    mock_email_service.send_mention_notification_email.assert_not_awaited()

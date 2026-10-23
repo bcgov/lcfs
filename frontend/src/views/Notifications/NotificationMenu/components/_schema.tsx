@@ -7,12 +7,12 @@ export { routesMapping } from './routeMapping'
 
 export const columnDefs = (
   t: (key: string) => string,
-  currentUser: Record<string, unknown>
+  currentUser: { organization?: { organizationId?: number | string } }
 ): ColDef[] => [
   {
     ...actions({ enableDelete: true }),
     headerName: 'Delete',
-    pinned: ''
+    pinned: '' as unknown as boolean
   },
   {
     colId: 'type',

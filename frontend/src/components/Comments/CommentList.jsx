@@ -18,6 +18,7 @@ import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import BCModal from '@/components/BCModal'
 import { sanitizeCommentHtml } from '@/utils/sanitizeCommentHtml'
+import { MENTION_CHIP_STYLE } from './mentionUtils'
 
 const CommentList = ({
   comments,
@@ -37,7 +38,9 @@ const CommentList = ({
   onAttachmentsChange,
   onDownloadAttachment,
   sortOrder = 'desc',
-  onSortOrderChange
+  onSortOrderChange,
+  mentionResults = { data: [], isFetching: false },
+  onMentionQueryChange = () => {}
 }) => {
   const { t } = useTranslation(['internalComment'])
   const { data: currentUser, hasAnyRole } = useCurrentUser()
@@ -253,7 +256,8 @@ const CommentList = ({
           },
           '.comment-content li': {
             lineHeight: '1.6'
-          }
+          },
+          '.comment-content .mention': MENTION_CHIP_STYLE
         }}
       />
       <BCBox variant="bordered" borderRadius="sm" mt={1} mb={1}>
@@ -460,6 +464,12 @@ const CommentList = ({
                     isEditing={true}
                     isSubmitting={isEditingComment}
                     showAddCommentBtn={true}
+                    enableMentions={
+                      isGov &&
+                      (!showVisibilityToggle || editVisibility === 'Internal')
+                    }
+                    mentionResults={mentionResults}
+                    onMentionQueryChange={onMentionQueryChange}
                     showVisibilityToggle={showVisibilityToggle}
                     visibility={editVisibility}
                     onVisibilityChange={setEditVisibility}
@@ -654,6 +664,11 @@ const CommentList = ({
               onCommentChange={onCommentInputChange}
               isSubmitting={isAddingComment}
               isEditing={false}
+              enableMentions={
+                isGov && (!showVisibilityToggle || visibility === 'Internal')
+              }
+              mentionResults={mentionResults}
+              onMentionQueryChange={onMentionQueryChange}
               showVisibilityToggle={showVisibilityToggle}
               visibility={visibility}
               onVisibilityChange={onVisibilityChange}
@@ -721,7 +736,12 @@ CommentList.propTypes = {
   onAttachmentsChange: PropTypes.func,
   onDownloadAttachment: PropTypes.func,
   sortOrder: PropTypes.oneOf(['asc', 'desc']),
-  onSortOrderChange: PropTypes.func
+  onSortOrderChange: PropTypes.func,
+  mentionResults: PropTypes.shape({
+    data: PropTypes.array,
+    isFetching: PropTypes.bool
+  }),
+  onMentionQueryChange: PropTypes.func
 }
 
 export default CommentList

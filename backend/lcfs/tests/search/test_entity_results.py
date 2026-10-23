@@ -144,7 +144,7 @@ async def test_bceid_without_an_organization_only_sees_approved_records():
 
 
 @pytest.mark.anyio
-async def test_idir_fuel_code_search_remains_unscoped():
+async def test_idir_fuel_code_search_is_unscoped_but_leaves_out_drafts():
     db = _db_returning()
     context = SearchContext(
         query=parse_query("fuel_code"),
@@ -157,6 +157,8 @@ async def test_idir_fuel_code_search_remains_unscoped():
     sql = _executed_sql(db)
     assert "CAST(vw_fuel_code_base.status AS VARCHAR) = 'Approved'" not in sql
     assert "fuel_code.organization_id" not in sql
+    # Drafts stay on the Fuel codes page (#5231).
+    assert "CAST(vw_fuel_code_base.status AS VARCHAR) != 'Draft'" in sql
 
 
 @pytest.mark.anyio

@@ -80,20 +80,29 @@ export const createStatusRenderer = (
     const location = useLocation()
 
     let statusValue: unknown = statusField.includes('.')
-      ? statusField.split('.').reduce<unknown>((obj, key) => obj?.[key], data)
-      : data[statusField]
+      ? statusField
+          .split('.')
+          .reduce<unknown>(
+            (obj, key) =>
+              (obj as Record<string, unknown> | null | undefined)?.[key],
+            data
+          )
+      : (data as Record<string, unknown>)[statusField]
     if (
       statusValue &&
       typeof statusValue === 'object' &&
       statusValue !== null &&
       !Array.isArray(statusValue)
     ) {
-      statusValue = statusValue.status || statusValue
+      statusValue =
+        (statusValue as Record<string, unknown>).status || statusValue
     }
     if (value !== undefined) {
       statusValue = value
     }
-    const badgeNode = buildBadge(statusValue)
+    const badgeNode = buildBadge(
+      statusValue as string
+    )
     const component = (
       <BCBox
         m={margin}

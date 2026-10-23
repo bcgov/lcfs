@@ -30,9 +30,10 @@ const HeaderBar = ({
 }: HeaderBarProps) => {
   return (
     <Toolbar
-      sx={(theme: NavbarTheme) => {
-        const { white, primary } = theme.palette
-        const { rgba } = theme.functions
+      sx={(theme) => {
+        const navbarTheme = theme as NavbarTheme
+        const { white, primary } = navbarTheme.palette
+        const { rgba } = navbarTheme.functions
         return {
           backgroundColor: rgba(primary.nav, 1),
           backdropFilter: `saturate(200%) blur(30px)`,

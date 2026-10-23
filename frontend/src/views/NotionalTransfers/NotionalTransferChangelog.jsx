@@ -43,12 +43,12 @@ export const NotionalTransferChangelog = () => {
         parseInt(compliancePeriod),
         isEarlyIssuance
       ),
-    [compliancePeriod, isEarlyIssuance, t]
+    [compliancePeriod, isEarlyIssuance]
   )
 
   const changedColumnDefs = useMemo(
     () => changelogColDefs(true, parseInt(compliancePeriod), isEarlyIssuance),
-    [compliancePeriod, isEarlyIssuance, t]
+    [compliancePeriod, isEarlyIssuance]
   )
 
   const defaultColDef = useMemo(
