@@ -128,7 +128,7 @@ async def test_concentration_empty_market(service):
 
 @pytest.mark.anyio
 async def test_public_overview_is_aggregated_and_headline(service, mock_repo):
-    # Snapshot reuses the suppressed, effective-date report aggregation.
+    # Snapshot reuses the effective-date report aggregation.
     mock_repo.get_report_periods.return_value = [
         _report_row(datetime(2024, 1, 1), 10, 500, 180000, 360.0, 4, 3),
         _report_row(datetime(2024, 4, 1), 8, 620, 244000, 395.0, 4, 3),
@@ -154,16 +154,22 @@ async def test_public_overview_is_aggregated_and_headline(service, mock_repo):
 
 
 @pytest.mark.anyio
-async def test_public_overview_suppresses_low_count_periods(service, mock_repo):
+@pytest.mark.parametrize("interval", ["month", "quarter", "year"])
+@pytest.mark.parametrize("participants", [0, 1, 2, None])
+async def test_public_overview_keeps_low_count_historical_periods(
+    service, mock_repo, interval, participants
+):
     mock_repo.get_report_periods.return_value = [
+        _report_row(datetime(2015, 1, 1), 1, 50, 10000, 200.0, participants, 1),
+        _report_row(datetime(2016, 1, 1), 2, 100, 25000, 250.0, 1, participants),
         _report_row(datetime(2024, 1, 1), 10, 500, 180000, 360.0, 4, 3),
-        # withheld: too few transfers / sellers
-        _report_row(datetime(2024, 4, 1), 2, 50, 20000, 395.0, 2, 1),
-        # withheld: enough transfers and sellers, but too few buyers
-        _report_row(datetime(2024, 7, 1), 7, 250, 87500, 350.0, 3, 2),
     ]
-    result = await service.get_public_overview("quarter")
-    assert [p.period for p in result.price_index] == ["2024-Q1"]
+    result = await service.get_public_overview(interval)
+    mock_repo.get_report_periods.assert_awaited_once_with(interval)
+    assert [p.period[:4] for p in result.price_index] == ["2015", "2016", "2024"]
+    assert [p.vwap for p in result.price_index] == [200.0, 250.0, 360.0]
+    assert result.total_volume_traded == 650
+    assert result.latest_vwap == 360.0
 
 
 @pytest.mark.anyio
@@ -173,32 +179,65 @@ async def test_public_overview_invalid_interval_raises(service):
 
 
 @pytest.mark.anyio
-async def test_public_report_tables_and_kpis_suppress_low_counts(
+async def test_public_report_tables_and_kpis_keep_low_count_historical_periods(
     service, mock_repo
 ):
     rows = [
-        # publishable: >= 5 transfers and >= 3 distinct sellers
-        _report_row(datetime(2025, 1, 1), 10, 1000, 200000, 200.0, 4, 3),
-        # withheld: only 3 transfers and 2 sellers
-        _report_row(datetime(2026, 1, 1), 3, 300, 60000, 250.0, 2, 2),
+        _report_row(datetime(2015, 1, 1), 10, 1000, 200000, 200.0, 4, 3),
+        _report_row(datetime(2016, 1, 1), 3, 300, 75000, 250.0, 0, None),
     ]
     mock_repo.get_report_periods.return_value = rows
+    mock_repo.get_report_a1_periods.return_value = [
+        _report_row(datetime(2015, 12, 1), 2, 200, 40000, 200.0, 1, 1),
+        rows[-1],
+    ]
     mock_repo.get_report_all_time.return_value = _report_row(
-        None, 13, 1300, 260000, 210.0, 5, 4
+        None, 13, 1300, 275000, 211.54, 5, 4
     )
 
     result = await service.get_public_report()
 
-    # Public report tables only include publishable aggregate periods.
-    assert [p.period for p in result.monthly] == ["2025-01"]
+    assert [p.period for p in result.monthly] == ["2015-01", "2016-01"]
+    assert [p.period for p in result.quarterly] == ["2015-Q1", "2016-Q1"]
+    assert [p.period for p in result.annual] == ["2015", "2016"]
+    assert [p.period for p in result.a1_monthly] == ["2015-12", "2016-01"]
+    assert [p.transfers for p in result.monthly] == [10, 3]
     assert result.monthly[0].transfer_value == 200000.0
+    assert result.monthly[1].transfer_value == 75000.0
     assert result.all_time.transfers == 13
-    assert result.min_transfers == 5
-    assert result.min_participants == 3
-    assert result.kpis.label_period == "2025-01"
-    assert result.kpis.transfers.current == 10
-    assert result.kpis.transfers.delta_pct is None
-    assert result.ytd_kpis.transfers.current == 10
+    assert result.min_transfers == 0
+    assert result.min_participants == 0
+    assert result.kpis.label_period == "2016-01"
+    assert result.kpis.transfers.current == 3
+    assert result.kpis.transfers.prior == 10
+    assert result.kpis.transfers.delta_pct == -70
+    assert result.ytd_kpis.transfers.current == 3
+    assert result.ytd_kpis.transfers.prior == 10
+    assert result.ytd_kpis.weighted_avg_price.current == 250.0
+    assert result.a1_kpis.label_period == "2016-01"
+    assert result.a1_kpis.transfers.current == 3
+    assert result.a1_kpis.transfers.prior == 2
+    assert result.a1_kpis.transfers.delta_pct == 50
+
+
+@pytest.mark.anyio
+async def test_empty_public_data(service):
+    overview = await service.get_public_overview("year")
+    assert overview.price_index == []
+    assert overview.latest_vwap is None
+    assert overview.total_volume_traded == 0
+
+    report = await service.get_public_report()
+    assert report.monthly == []
+    assert report.quarterly == []
+    assert report.annual == []
+    assert report.a1_monthly == []
+    assert report.all_time.transfers == 0
+    for kpis in (report.kpis, report.ytd_kpis, report.a1_kpis):
+        assert kpis.label_period is None
+        assert kpis.transfers.current is None
+        assert kpis.transfers.prior is None
+        assert kpis.transfers.delta_pct is None
 
 
 @pytest.mark.anyio
