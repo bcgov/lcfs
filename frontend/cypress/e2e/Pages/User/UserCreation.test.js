@@ -5,13 +5,8 @@ import {
   After
 } from '@badeball/cypress-cucumber-preprocessor'
 
-
 Given('the IDIR user logs in with valid credentials', () => {
-  cy.loginWith(
-    'idir',
-    Cypress.env('ADMIN_IDIR_USERNAME'),
-    Cypress.env('ADMIN_IDIR_PASSWORD')
-  )
+  cy.loginWithEnv('idir')
   cy.setIDIRRoles('analyst')
   cy.visit('/')
 })
@@ -19,9 +14,7 @@ Given('the IDIR user logs in with valid credentials', () => {
 When('the IDIR user navigates to the user creation page', () => {
   cy.get('a.NavLink[href="/admin"]').click()
   cy.url().should('include', '/admin/users')
-  cy.getByDataTest('add-user-btn', { timeout: 30000 })
-    .should('exist')
-    .click()
+  cy.getByDataTest('add-user-btn', { timeout: 30000 }).should('exist').click()
   cy.url().should('include', '/admin/users/add-user', { timeout: 30000 })
 })
 
@@ -69,7 +62,7 @@ Then('a success message is displayed for user creation', () => {
 
 Then('the new user appears in the user list', () => {
   cy.visit('/admin/users')
-  cy.contains('a', Cypress.env('john.doe@example.com')).should('be.visible')
+  cy.contains('a', 'john.doe@example.com').should('be.visible')
 })
 
 // Test for validation error

@@ -12,11 +12,6 @@
  * real session, so the `pathname` matchers below accept any numeric org id.
  */
 
-const BCEID_USER =
-  Cypress.env('ORG1_BCEID_USERNAME') || Cypress.env('BCEID_TEST_USER')
-const BCEID_PASS =
-  Cypress.env('ORG1_BCEID_PASSWORD') || Cypress.env('BCEID_TEST_PASS')
-
 // --- Stubbed responses -------------------------------------------------------
 
 const ORG = {
@@ -115,7 +110,10 @@ const LEDGER = {
 
 // Org details + balances are read on several pages; match any numeric org id.
 const stubOrg = () => {
-  cy.intercept({ method: 'GET', pathname: /\/organizations\/\d+$/ }, { body: ORG }).as('org')
+  cy.intercept(
+    { method: 'GET', pathname: /\/organizations\/\d+$/ },
+    { body: ORG }
+  ).as('org')
   cy.intercept(
     { method: 'GET', pathname: /\/organizations\/current\/balances$/ },
     { body: ORG_BALANCE }
@@ -128,7 +126,7 @@ const stubOrg = () => {
 
 describe('BCeID organization self-service pages (#4092)', () => {
   before(() => {
-    cy.loginWith('bceid', BCEID_USER, BCEID_PASS)
+    cy.loginWithEnv('bceid')
     cy.get('.main-layout-navbar', { timeout: 30000 }).should('be.visible')
   })
 
@@ -185,7 +183,9 @@ describe('BCeID organization self-service pages (#4092)', () => {
 
       cy.visit('/organization/users')
       cy.wait('@usersList')
-      cy.getByDataTest('bc-grid-container', { timeout: 15000 }).should('be.visible')
+      cy.getByDataTest('bc-grid-container', { timeout: 15000 }).should(
+        'be.visible'
+      )
       cy.contains('.ag-cell', 'Jane Doe').should('be.visible')
     })
   })
@@ -217,7 +217,10 @@ describe('BCeID organization self-service pages (#4092)', () => {
     it('loads the credit ledger with transaction data', () => {
       stubOrg()
       cy.intercept(
-        { method: 'GET', pathname: /\/credit-ledger\/organization\/\d+\/years$/ },
+        {
+          method: 'GET',
+          pathname: /\/credit-ledger\/organization\/\d+\/years$/
+        },
         { body: LEDGER_YEARS }
       ).as('ledgerYears')
       cy.intercept(
@@ -227,8 +230,12 @@ describe('BCeID organization self-service pages (#4092)', () => {
 
       cy.visit('/organization/credit-ledger')
       cy.wait('@ledgerList')
-      cy.getByDataTest('bc-grid-container', { timeout: 15000 }).should('be.visible')
-      cy.contains('.ag-header-cell-text', 'Compliance year').should('be.visible')
+      cy.getByDataTest('bc-grid-container', { timeout: 15000 }).should(
+        'be.visible'
+      )
+      cy.contains('.ag-header-cell-text', 'Compliance year').should(
+        'be.visible'
+      )
       cy.contains('.ag-cell', 'Transfer').should('exist')
       cy.contains('Available credit balance').should('be.visible')
     })

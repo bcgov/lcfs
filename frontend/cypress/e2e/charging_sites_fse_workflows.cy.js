@@ -1,19 +1,3 @@
-const supplierCreds = () => ({
-  username:
-    Cypress.env('ORG1_BCEID_USERNAME') ||
-    Cypress.env('BCEID_TEST_USER') ||
-    Cypress.env('ORG2_BCEID_USERNAME'),
-  password:
-    Cypress.env('ORG1_BCEID_PASSWORD') ||
-    Cypress.env('BCEID_TEST_PASS') ||
-    Cypress.env('ORG2_BCEID_PASSWORD')
-})
-
-const idirCreds = () => ({
-  username: Cypress.env('IDIR_TEST_USER') || Cypress.env('ADMIN_IDIR_USERNAME'),
-  password: Cypress.env('IDIR_TEST_PASS') || Cypress.env('ADMIN_IDIR_PASSWORD')
-})
-
 const supplierSite = {
   chargingSiteId: 101,
   siteName: 'Cypress Charging Site',
@@ -154,15 +138,8 @@ const setAgTextCell = (colId, value, rowIndex = 0) => {
 }
 
 describe('Charging Site and FSE supplier workflows', () => {
-  const creds = supplierCreds()
-
   before(() => {
-    expect(creds.username, 'BCeID username is configured').to.be.a('string').and
-      .not.be.empty
-    expect(creds.password, 'BCeID password is configured').to.be.a('string').and
-      .not.be.empty
-
-    cy.loginWith('bceid', creds.username, creds.password)
+    cy.loginWithEnv('bceid')
     cy.get('.main-layout-navbar', { timeout: 30000 }).should('be.visible')
   })
 
@@ -436,15 +413,8 @@ describe('Charging Site and FSE supplier workflows', () => {
 })
 
 describe('FSE processing and map workflows (IDIR)', () => {
-  const creds = idirCreds()
-
   before(() => {
-    expect(creds.username, 'IDIR username is configured').to.be.a('string').and
-      .not.be.empty
-    expect(creds.password, 'IDIR password is configured').to.be.a('string').and
-      .not.be.empty
-
-    cy.loginWith('idir', creds.username, creds.password)
+    cy.loginWithEnv('idir')
     cy.get('.main-layout-navbar', { timeout: 30000 }).should('be.visible')
   })
 
