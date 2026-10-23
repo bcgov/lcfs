@@ -1,3 +1,4 @@
+from pydantic import ConfigDict
 from lcfs.web.api.base import BaseSchema
 from typing import Optional, List
 from datetime import date, datetime
@@ -7,24 +8,21 @@ class AdminAdjustmentStatusSchema(BaseSchema):
     admin_adjustment_status_id: int
     status: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class HistoryUserSchema(BaseSchema):
     first_name: str
     last_name: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class OrganizationSchema(BaseSchema):
     organization_id: int
     name: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AdminAdjustmentHistorySchema(BaseSchema):
@@ -33,8 +31,7 @@ class AdminAdjustmentHistorySchema(BaseSchema):
     user_profile: HistoryUserSchema
     display_name: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AdminAdjustmentBaseSchema(BaseSchema):
@@ -45,8 +42,7 @@ class AdminAdjustmentBaseSchema(BaseSchema):
     gov_comment: Optional[str] = None
     internal_comment: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AdminAdjustmentSchema(AdminAdjustmentBaseSchema):

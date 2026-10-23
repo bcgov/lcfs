@@ -2,6 +2,31 @@
 
 This project was generated using fastapi_template.
 
+## Python version
+
+[`backend/.python-version`](.python-version) is the source of truth for the
+application's Python major/minor version. CI reads it directly; the repository
+root and ETL `.python-version` files are symlinks to it. We follow production's
+minor-version policy, allowing patch updates within that minor release.
+
+Docker must select its base image before it can read files from the build
+context, and Poetry requires a literal compatibility range. These declarations
+are generated and checked in CI. To change the Python version, from the repo root:
+
+```bash
+# Edit backend/.python-version first.
+python3 scripts/sync-python-version.py --write
+cd backend
+poetry env use "$(cat .python-version)"
+poetry lock  # Poetry 1.x: poetry lock --no-update
+cd ..
+python3 scripts/sync-python-version.py
+```
+
+Commit the version file, generated declarations, and updated lockfile together.
+Existing Docker Compose and OpenShift builds use the generated Dockerfiles
+without additional arguments.
+
 ## Poetry
 
 This project uses poetry. It's a modern dependency management
@@ -53,7 +78,7 @@ All environment variables should start with "LCFS\_" prefix.
 For example if you see in your "lcfs/settings.py" a variable named like
 `random_parameter`, you should provide the "LCFS_RANDOM_PARAMETER"
 variable to configure the value. This behaviour can be changed by overriding `env_prefix` property
-in `lcfs.settings.Settings.Config`.
+in `lcfs.settings.Settings.model_config`.
 
 You can read more about BaseSettings class here: https://pydantic-docs.helpmanual.io/usage/settings/
 
@@ -200,12 +225,25 @@ Omit `[revision]` to revert to the base state.
 
 ### Notes
 
-- Ensure Python 3.9+ and Poetry are installed on your system.
+- Use the Python version specified in `.python-version` and install Poetry.
 - The script assumes that it is located in the same directory as `alembic.ini`.
 - Always test migrations in a development environment before applying them to production.
 - The script automatically activates and deactivates the virtual environment as needed.
 
 ## Running Tests
+
+Default discovery includes both `lcfs/tests` and `lcfs/scripts/tests`, so the
+scheduler and scheduled-task tests run locally and in the existing CI shards.
+
+`lcfs/tests/db/test_session_transactions.py` exercises the actual database session
+dependency against PostgreSQL, including commit failures and streaming cleanup.
+It does not use the usual client fixture that replaces this dependency. These
+tests preserve the current contract: transactions finish before response headers,
+and later stream failures or disconnects cannot undo an already committed write.
+
+Schema declaration deprecations are errors even inside tests that otherwise
+suppress legacy deprecation warnings. Remaining runtime Pydantic API migrations
+are separate upgrade work.
 
 To ensure the quality and correctness of the code, it's important to run tests regularly. This project uses `pytest` for testing. Follow these steps to run tests on your local machine:
 

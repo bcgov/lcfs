@@ -1,0 +1,22 @@
+name: Python version consistency
+
+on:
+  pull_request:
+  push:
+    branches: [develop, release, main]
+
+permissions:
+  contents: read
+
+jobs:
+  python-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.2
+      - uses: actions/setup-python@v6.2.0
+        with:
+          python-version-file: backend/.python-version
+      - name: Check generated Python declarations
+        run: python scripts/sync-python-version.py
+      - name: Test version synchronization
+        run: python -m unittest discover -s scripts/tests -v

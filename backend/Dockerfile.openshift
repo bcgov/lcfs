@@ -1,19 +1,27 @@
+# Python version is generated from .python-version; run scripts/sync-python-version.py --write.
 # Base stage for common setup
-FROM artifacts.developer.gov.bc.ca/docker-remote/python:3.11-bookworm as base
+FROM artifacts.developer.gov.bc.ca/docker-remote/python:3.13-slim-trixie as base
 
 RUN apt-get update && apt-get install -y --no-install-recommends procps \
   gcc \
+  libpango-1.0-0 \
+  libpangocairo-1.0-0 \
+  libcairo2 \
+  libgdk-pixbuf-2.0-0 \
   tzdata \
   && rm -rf /var/lib/apt/lists/*
 
-RUN pip install poetry==1.6.1
+RUN pip install poetry==2.5.1
 
 # Configuring poetry
 RUN poetry config virtualenvs.create true
 
 # Copying requirements of a project
-COPY pyproject.toml poetry.lock /app/
+COPY pyproject.toml poetry.lock .python-version /app/
 WORKDIR /app
+
+# Catch version drift even when building outside CI.
+RUN python -c 'import pathlib, sys; expected = pathlib.Path(".python-version").read_text().strip(); actual = ".".join(map(str, sys.version_info[:2])); assert actual == expected, f"Python {actual} does not match .python-version ({expected})"'
 
 # Set PYTHONPATH to include the lcfs directory
 ENV PYTHONPATH="${PYTHONPATH}:/app/lcfs"
@@ -21,7 +29,7 @@ ENV PYTHONPATH="${PYTHONPATH}:/app/lcfs"
 ENV POETRY_CACHE_DIR=/.cache/pypoetry
 
 # Installing requirements
-RUN poetry install --only main
+RUN poetry install --only main --no-root
 
 # Removing gcc
 RUN apt-get purge -y \

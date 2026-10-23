@@ -7,7 +7,7 @@ This document lists the key software, services, frameworks, and libraries that t
 - **Operating System**: Linux, macOS, or Windows (with WSL2 recommended for Docker performance).
 - **Containerization**: Docker and Docker Compose.
 - **Frontend**: Node.js (check `frontend/.nvmrc` or `package.json` for specific version, e.g., LTS) and npm (comes with Node.js).
-- **Backend**: Python (version specified in `backend/.python-version`, e.g., 3.9+) and Poetry (for dependency management).
+- **Backend**: CPython 3.13 (version specified in `backend/.python-version`) and Poetry 2.5.1 (for dependency management).
 - **Version Control**: Git.
 - **OpenShift CLI**: `oc` CLI tool for interacting with OpenShift environments (for data transfer, deployment tasks).
 
@@ -19,7 +19,7 @@ This document lists the key software, services, frameworks, and libraries that t
 
 ## III. Backend (`backend` service)
 
-- **Programming Language**: Python (`^3.9` as per `pyproject.toml`).
+- **Programming Language**: Python 3.13 (`^3.13` as per `backend/pyproject.toml`); container images use Debian 13 (Trixie).
 - **Web Framework**: FastAPI (`^0.115.4`).
 - **ASGI Server**: Uvicorn.
 - **Database/ORM**: PostgreSQL (`postgres:17` locally; Crunchy PostgreSQL HA cluster in OpenShift).
@@ -39,9 +39,10 @@ This document lists the key software, services, frameworks, and libraries that t
 - **Authentication/Security**: `pyjwt` (`^2.8.0`), `cryptography` (`^43.0.1`).
 - **HTTP Client**: `httpx` (`^0.23.3`).
 - **Data Handling/Excel**: `pandas`, `openpyxl`, `xlwt`, `xlrd`, `numpy`.
+- **PDF Rendering**: WeasyPrint with Pango, Cairo, and GDK Pixbuf system libraries in the backend image.
 - **Logging**: Structlog (`^24.4.0`). See [Backend Logging Guide](Backend-Logging-Guide.md).
 - **Templating**: Jinja2 (`^3.1.6`).
-- **Dependency Management**: Poetry.
+- **Dependency Management**: Poetry 2.5.1.
 
 ## IV. Frontend (`frontend` service)
 

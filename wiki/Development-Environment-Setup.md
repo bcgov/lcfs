@@ -11,8 +11,8 @@ Before you begin, ensure you have the following installed on your system:
 *   **Node.js 24.21.0 and npm**: Required for frontend development. Use `frontend/.nvmrc` with a Node version manager such as `nvm`; `frontend/package.json` enforces Node.js 24 or newer.
     *   npm (Node Package Manager) is included with Node.js.
 *   **Python and Poetry**: For backend development.
-    *   Python version is specified in `backend/.python-version` (e.g., 3.9+).
-    *   Poetry is used for Python dependency management. ([Install Poetry](https://python-poetry.org/docs/#installation)).
+    *   Use CPython 3.13 for the backend; `backend/.python-version` is the version source used by the tooling.
+    *   Use Poetry 2.5.1 to install the backend dependencies from `backend/poetry.lock`. ([Install Poetry](https://python-poetry.org/docs/#installation)).
 *   **OpenShift CLI (`oc`)**: Optional, but required for certain tasks like data transfer to/from OpenShift environments using scripts in the `etl/` directory. ([Install OpenShift CLI](https://docs.openshift.com/container-platform/latest/cli_reference/openshift_cli/getting-started-cli.html)).
 
 ## 2. Cloning the Repository

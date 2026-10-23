@@ -1,3 +1,4 @@
+from pydantic import ConfigDict
 from typing import Optional, List
 from datetime import datetime
 from enum import Enum
@@ -26,8 +27,7 @@ class AuditLogSchema(BaseSchema):
     update_date: Optional[datetime] = None
     update_user: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Simplified AuditLog Schema for list items
@@ -40,8 +40,7 @@ class AuditLogListItemSchema(BaseSchema):
     create_date: Optional[datetime] = None
     create_user: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # AuditLog List Schema

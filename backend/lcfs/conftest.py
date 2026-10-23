@@ -1,5 +1,6 @@
-import warnings
 import os
+import warnings
+
 import structlog
 
 # Suppress the PendingDeprecationWarning for multipart
@@ -11,7 +12,7 @@ warnings.filterwarnings(
 import subprocess
 import sys
 import warnings
-from typing import Any, AsyncGenerator, List, Callable
+from typing import Any, AsyncGenerator, Callable, List
 
 import pytest
 from fakeredis import FakeServer, aioredis
@@ -20,6 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
 from httpx import ASGITransport, AsyncClient
+from pydantic.warnings import PydanticDeprecatedSince20
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -31,16 +33,15 @@ from starlette.middleware.authentication import AuthenticationMiddleware
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.organization.Organization import Organization
-from lcfs.db.models.user.Role import Role
-from lcfs.db.models.user.Role import RoleEnum
+from lcfs.db.models.user.Role import Role, RoleEnum
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.user.UserRole import UserRole
 from lcfs.db.seeders.seed_database import seed_database
 from lcfs.db.utils import create_test_database, drop_test_database
+from lcfs.services.redis.coder import RedisJsonCoder
 from lcfs.services.redis.dependency import get_redis_client
 from lcfs.settings import settings
 from lcfs.web.application import get_app
-
 
 logger = structlog.get_logger(__name__)
 
@@ -187,7 +188,9 @@ def fastapi_app(
     set_mock_user(application, user_roles)
 
     # Initialize the cache with fake Redis backend
-    FastAPICache.init(RedisBackend(fake_redis_client), prefix="lcfs")
+    FastAPICache.init(
+        RedisBackend(fake_redis_client), prefix="lcfs", coder=RedisJsonCoder
+    )
 
     # Note: do not mount duplicate routes or override dependencies here.
 
@@ -432,5 +435,15 @@ def ignore_specific_warnings():
             "ignore", message="This endpoint is accessible by all roles"
         )
         warnings.filterwarnings("ignore", category=DeprecationWarning)
+        # Do not let the broad legacy filter hide new schema declaration debt.
+        warnings.filterwarnings(
+            "error",
+            message=(
+                "Support for class-based.*config.*|"
+                "Using extra keyword arguments on.*Field.*|"
+                ".*min_items.*is deprecated"
+            ),
+            category=PydanticDeprecatedSince20,
+        )
         # Add more specific warnings to ignore as needed
         yield

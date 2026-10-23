@@ -1,11 +1,25 @@
+import asyncio
+
 import structlog
 from fastapi import FastAPI
 from redis.asyncio import Redis
 from redis.exceptions import RedisError, TimeoutError
-import asyncio
+
 from lcfs.settings import settings
 
 logger = structlog.get_logger(__name__)
+
+
+async def _close_redis_client(client: Redis) -> bool:
+    """Close a Redis client without masking the error that triggered cleanup."""
+    try:
+        await client.close()
+        return True
+    except RedisError as e:
+        logger.error(f"Redis error while closing client: {e}")
+    except Exception as e:
+        logger.error(f"Unexpected error while closing Redis client: {e}")
+    return False
 
 
 async def init_redis(app: FastAPI) -> None:
@@ -16,9 +30,10 @@ async def init_redis(app: FastAPI) -> None:
     """
     retries = 5  # Retry logic in case Redis is unavailable initially
     for i in range(retries):
+        redis_client = None
         try:
             # Initialize Redis client
-            app.state.redis_client = Redis(
+            redis_client = Redis(
                 host=settings.redis_host,
                 port=settings.redis_port,
                 password=settings.redis_pass,
@@ -28,24 +43,29 @@ async def init_redis(app: FastAPI) -> None:
                 socket_timeout=5,
                 socket_connect_timeout=5,
             )
+            app.state.redis_client = redis_client
 
             # Test the connection
-            await app.state.redis_client.ping()
+            await redis_client.ping()
             logger.info("Redis client initialized and connection successful.")
             break
         except TimeoutError as e:
-            logger.error(
-                f"Redis timeout during initialization attempt {i + 1}: {e}")
+            if redis_client is not None:
+                await _close_redis_client(redis_client)
+            logger.error(f"Redis timeout during initialization attempt {i + 1}: {e}")
             if i == retries - 1:
                 raise
             await asyncio.sleep(2**i)  # Exponential backoff
         except RedisError as e:
-            logger.error(
-                f"Redis error during initialization attempt {i + 1}: {e}")
+            if redis_client is not None:
+                await _close_redis_client(redis_client)
+            logger.error(f"Redis error during initialization attempt {i + 1}: {e}")
             if i == retries - 1:
                 raise
             await asyncio.sleep(2**i)  # Exponential backoff
         except Exception as e:
+            if redis_client is not None:
+                await _close_redis_client(redis_client)
             logger.error(f"Unexpected error during Redis initialization: {e}")
             raise
 
@@ -58,9 +78,7 @@ async def shutdown_redis(app: FastAPI) -> None:
     """
     try:
         if hasattr(app.state, "redis_client") and app.state.redis_client:
-            await app.state.redis_client.close()
-            logger.info("Redis client closed successfully.")
-    except RedisError as e:
-        logger.error(f"Redis error during shutdown: {e}")
+            if await _close_redis_client(app.state.redis_client):
+                logger.info("Redis client closed successfully.")
     except Exception as e:
         logger.error(f"Unexpected error during Redis shutdown: {e}")

@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Optional, List
 from lcfs.web.api.base import BaseSchema, PaginationResponseSchema
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, ConfigDict
 from enum import Enum
 
 
@@ -56,8 +56,7 @@ class ChargingEquipmentBaseSchema(BaseSchema):
     longitude: float
     version: Optional[int] = 1
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ChargingEquipmentCreateSchema(BaseSchema):
@@ -142,8 +141,7 @@ class ChargingEquipmentListItemSchema(BaseSchema):
     created_date: datetime
     updated_date: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ChargingEquipmentListSchema(BaseSchema):
@@ -160,7 +158,7 @@ class ChargingEquipmentFilterSchema(BaseSchema):
 
 
 class BulkActionRequestSchema(BaseSchema):
-    charging_equipment_ids: List[int] = Field(..., min_items=1)
+    charging_equipment_ids: List[int] = Field(..., min_length=1)
 
 
 class BulkSubmitRequestSchema(BulkActionRequestSchema):
