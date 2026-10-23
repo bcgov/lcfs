@@ -17,6 +17,8 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import BCModal from '@/components/BCModal'
+import CommentActionButton from './CommentActionButton'
+import CommentAttachments from './CommentAttachments'
 import { sanitizeCommentHtml } from '@/utils/sanitizeCommentHtml'
 import { MENTION_CHIP_STYLE } from './mentionUtils'
 
@@ -24,6 +26,12 @@ const CommentList = ({
   comments,
   onAddComment,
   onEditComment,
+  onCancelEdit,
+  onDeleteComment,
+  isDeletingComment = false,
+  showTitle = true,
+  placeholder,
+  canCreateComment,
   showAddCommentBtn = true,
   isAddingComment,
   isEditingComment,
@@ -34,10 +42,12 @@ const CommentList = ({
   onVisibilityChange,
   allowInternalVisibility = true,
   enableAttachments = false,
+  showUploadDropzone = false,
   attachments = [],
   onAttachmentsChange,
   onDownloadAttachment,
   sortOrder = 'desc',
+  enableSorting = true,
   onSortOrderChange,
   mentionResults = { data: [], isFetching: false },
   onMentionQueryChange = () => {}
@@ -53,6 +63,7 @@ const CommentList = ({
   // Attachment changes staged while editing a comment.
   const [editNewFiles, setEditNewFiles] = useState([])
   const [editRemovedDocIds, setEditRemovedDocIds] = useState([])
+  const [deleteCommentId, setDeleteCommentId] = useState(null)
 
   const isGov = hasAnyRole(
     roles.analyst,
@@ -65,6 +76,7 @@ const CommentList = ({
   const isDualMode = commentMode === 'dual'
 
   const startEditing = (id, text, visibilityValue = 'Internal') => {
+    if (editCommentId !== null) onCancelEdit?.(editCommentId)
     setEditCommentId(id)
     setEditCommentText(text)
     setEditVisibility(visibilityValue)
@@ -74,6 +86,7 @@ const CommentList = ({
   }
 
   const stopEditing = () => {
+    if (editCommentId !== null) onCancelEdit?.(editCommentId)
     setEditCommentId(null)
     setEditCommentText('')
     setEditVisibility('Internal')
@@ -82,13 +95,17 @@ const CommentList = ({
     setEditRemovedDocIds([])
   }
 
-  const submitEdit = () => {
-    const performEdit = () => {
-      onEditComment(editCommentId, editCommentText, editVisibility, {
-        newFiles: editNewFiles,
-        removedDocumentIds: editRemovedDocIds
-      })
-      stopEditing()
+  const submitEdit = async () => {
+    const performEdit = async () => {
+      try {
+        await onEditComment(editCommentId, editCommentText, editVisibility, {
+          newFiles: editNewFiles,
+          removedDocumentIds: editRemovedDocIds
+        })
+        stopEditing()
+      } catch {
+        // Keep the editor and staged files available for retry.
+      }
     }
 
     if (
@@ -100,7 +117,7 @@ const CommentList = ({
       setPendingPublicAction(() => performEdit)
       return
     }
-    performEdit()
+    await performEdit()
   }
   const handleEditCommentChange = (value) => {
     setEditCommentText(value)
@@ -194,14 +211,15 @@ const CommentList = ({
   }
 
   // Determine if the current user can add comments
-  const canAddComment = isDualMode
-    ? true // Both gov and BCeID can comment in dual mode
-    : hasAnyRole(roles.analyst, roles.director, roles.compliance_manager)
+  const canAddComment =
+    canCreateComment ??
+    (isDualMode ||
+      hasAnyRole(roles.analyst, roles.director, roles.compliance_manager))
 
   // Show visibility toggle only for gov users in dual mode
   const showVisibilityToggle = isDualMode && isGov && allowInternalVisibility
   const showCommentTabs = isDualMode && isGov
-  const showSortTabs = isDualMode
+  const showSortTabs = enableSorting && (isDualMode || !!onDeleteComment)
 
   const filteredComments = useMemo(() => {
     if (!showCommentTabs || commentFilter === 'all') {
@@ -232,13 +250,21 @@ const CommentList = ({
       setPendingPublicAction(() => () => performAddComment(...args))
       return
     }
-    await performAddComment(...args)
+    try {
+      await performAddComment(...args)
+    } catch {
+      // Mutation errors are displayed by the parent; preserve the draft.
+    }
   }
 
   const confirmPendingPublicAction = async () => {
     const action = pendingPublicAction
     setPendingPublicAction(null)
-    await action?.()
+    try {
+      await action?.()
+    } catch {
+      // Mutation errors are displayed by the parent; preserve the draft.
+    }
   }
 
   const cancelPendingPublicAction = () => setPendingPublicAction(null)
@@ -261,7 +287,7 @@ const CommentList = ({
         }}
       />
       <BCBox variant="bordered" borderRadius="sm" mt={1} mb={1}>
-        {showSortTabs && (
+        {(showSortTabs || showCommentTabs) && (
           <BCBox
             sx={{
               backgroundColor: '#fff',
@@ -322,42 +348,44 @@ const CommentList = ({
                 </Tabs>
               </AppBar>
             )}
-            <AppBar
-              position="static"
-              sx={{
-                boxShadow: 'none',
-                border: 'none',
-                mb: 0,
-                minWidth: 0,
-                width: { xs: '100%', md: 'auto' }
-              }}
-            >
-              <Tabs
-                value={sortOrder}
-                onChange={(_, value) => value && onSortOrderChange?.(value)}
-                aria-label={t('internalComment:sortCommentsLabel')}
-                data-test="comment-sort-toggle"
+            {showSortTabs && (
+              <AppBar
+                position="static"
                 sx={{
-                  background: 'rgb(0, 0, 0, 0.08)',
-                  width: { xs: '100%', md: 'auto' },
-                  '& .MuiTab-root': {
-                    minWidth: { xs: 0, md: 145 },
-                    px: { xs: 1, md: 2 }
-                  }
+                  boxShadow: 'none',
+                  border: 'none',
+                  mb: 0,
+                  minWidth: 0,
+                  width: { xs: '100%', md: 'auto' }
                 }}
               >
-                <Tab
-                  value="desc"
-                  label={t('internalComment:sortNewestFirst')}
-                  data-test="comment-sort-newest"
-                />
-                <Tab
-                  value="asc"
-                  label={t('internalComment:sortOldestFirst')}
-                  data-test="comment-sort-oldest"
-                />
-              </Tabs>
-            </AppBar>
+                <Tabs
+                  value={sortOrder}
+                  onChange={(_, value) => value && onSortOrderChange?.(value)}
+                  aria-label={t('internalComment:sortCommentsLabel')}
+                  data-test="comment-sort-toggle"
+                  sx={{
+                    background: 'rgb(0, 0, 0, 0.08)',
+                    width: { xs: '100%', md: 'auto' },
+                    '& .MuiTab-root': {
+                      minWidth: { xs: 0, md: 145 },
+                      px: { xs: 1, md: 2 }
+                    }
+                  }}
+                >
+                  <Tab
+                    value="desc"
+                    label={t('internalComment:sortNewestFirst')}
+                    data-test="comment-sort-newest"
+                  />
+                  <Tab
+                    value="asc"
+                    label={t('internalComment:sortOldestFirst')}
+                    data-test="comment-sort-oldest"
+                  />
+                </Tabs>
+              </AppBar>
+            )}
           </BCBox>
         )}
         {filteredComments.map((comment, index) => (
@@ -416,6 +444,8 @@ const CommentList = ({
             </BCBox>
             <BCBox
               data-test="comment-card"
+              component="article"
+              aria-label={`Comment by ${comment.fullName || comment.createUser}`}
               data-visibility={comment.visibility || 'Internal'}
               sx={{
                 marginRight: 1,
@@ -475,6 +505,7 @@ const CommentList = ({
                     onVisibilityChange={setEditVisibility}
                     visibilityAlign="right"
                     enableAttachments={enableAttachments}
+                    showUploadDropzone={showUploadDropzone}
                     attachments={editNewFiles}
                     onAttachmentsChange={setEditNewFiles}
                     existingAttachments={(comment.documents || []).filter(
@@ -498,17 +529,27 @@ const CommentList = ({
                     sx={{
                       display: 'flex',
                       justifyContent: 'space-between',
-                      alignItems: 'center'
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      gap: 1
                     }}
                   >
                     <BCBox
-                      sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: 1
+                      }}
                     >
                       <BCTypography
                         variant="body2"
                         color="text"
                         component="span"
                       >
+                        <strong>
+                          {comment.fullName || comment.createUser}
+                        </strong>{' '}
                         <CommentTimestamp
                           createDate={comment.createDate}
                           updateDate={comment.updateDate}
@@ -519,11 +560,12 @@ const CommentList = ({
                       </BCTypography>
                       {(currentUser?.keycloakUsername === comment.createUser ||
                         isAdmin) && (
-                        <BCTypography
-                          variant="body2"
-                          component="a"
-                          role="button"
-                          tabIndex={0}
+                        <CommentActionButton
+                          disabled={
+                            isEditingComment ||
+                            isDeletingComment ||
+                            comment.isOptimistic
+                          }
                           onClick={() =>
                             startEditing(
                               comment.internalCommentId,
@@ -531,27 +573,30 @@ const CommentList = ({
                               comment.visibility || 'Internal'
                             )
                           }
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault()
-                              startEditing(
-                                comment.internalCommentId,
-                                comment.comment,
-                                comment.visibility || 'Internal'
-                              )
-                            }
-                          }}
-                          sx={{
-                            color: '#003366',
-                            cursor: 'pointer',
-                            textDecoration: 'underline'
-                          }}
                           aria-label={t('internalComment:edit')}
                           data-test="comment-edit-link"
                         >
-                          [{t('internalComment:edit')}]
-                        </BCTypography>
+                          {t('internalComment:edit')}
+                        </CommentActionButton>
                       )}
+                      {onDeleteComment &&
+                        isGov &&
+                        (currentUser?.keycloakUsername === comment.createUser ||
+                          isAdmin) && (
+                          <CommentActionButton
+                            color="error"
+                            onClick={() =>
+                              setDeleteCommentId(comment.internalCommentId)
+                            }
+                            disabled={
+                              isDeletingComment ||
+                              isEditingComment ||
+                              comment.isOptimistic
+                            }
+                          >
+                            {t('internalComment:deleteComment')}
+                          </CommentActionButton>
+                        )}
                     </BCBox>
                     <BCBox
                       sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
@@ -602,52 +647,20 @@ const CommentList = ({
                     }}
                   />
                   {(comment.documents || []).length > 0 && (
-                    <BCBox
-                      sx={{
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        gap: 2,
-                        mt: 0.5
-                      }}
-                      data-test="comment-attachments"
-                    >
-                      {comment.documents.map((doc) => (
-                        <BCTypography
-                          key={doc.documentId}
-                          variant="body2"
-                          component="a"
-                          role="button"
-                          tabIndex={0}
-                          onClick={() =>
-                            onDownloadAttachment?.(
-                              comment.internalCommentId,
-                              doc.documentId,
-                              doc.fileName
-                            )
-                          }
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault()
-                              onDownloadAttachment?.(
+                    <CommentAttachments
+                      commentId={comment.internalCommentId}
+                      documents={comment.documents}
+                      onDownload={
+                        onDownloadAttachment
+                          ? (documentId, fileName) =>
+                              onDownloadAttachment(
                                 comment.internalCommentId,
-                                doc.documentId,
-                                doc.fileName
+                                documentId,
+                                fileName
                               )
-                            }
-                          }}
-                          sx={{
-                            color: '#003366',
-                            cursor: 'pointer',
-                            textDecoration: 'underline'
-                          }}
-                          aria-label={`${t('internalComment:downloadAttachment')}: ${
-                            doc.fileName
-                          }`}
-                        >
-                          {doc.fileName}
-                        </BCTypography>
-                      ))}
-                    </BCBox>
+                          : undefined
+                      }
+                    />
                   )}
                 </BCBox>
               )}
@@ -658,6 +671,8 @@ const CommentList = ({
           <BCBox sx={{ backgroundColor: '#fff' }} p={2}>
             <CommentForm
               title={getFormTitle()}
+              showTitle={showTitle}
+              placeholder={placeholder}
               onSubmit={handleAddComment}
               showAddCommentBtn={showAddCommentBtn}
               commentText={commentInput || ''}
@@ -674,12 +689,37 @@ const CommentList = ({
               onVisibilityChange={onVisibilityChange}
               visibilityAlign="right"
               enableAttachments={enableAttachments}
+              showUploadDropzone={showUploadDropzone}
               attachments={attachments}
               onAttachmentsChange={onAttachmentsChange}
             />
           </BCBox>
         )}
       </BCBox>
+      {deleteCommentId !== null && (
+        <BCModal
+          open
+          onClose={() => !isDeletingComment && setDeleteCommentId(null)}
+          data={{
+            title: t('internalComment:deleteComment'),
+            content: t('internalComment:deleteCommentConfirm'),
+            primaryButtonText: t('internalComment:deleteComment'),
+            primaryButtonAction: async () => {
+              if (isDeletingComment) return
+              try {
+                await onDeleteComment(deleteCommentId)
+              } catch {
+                // The parent displays the mutation error after the dialog closes.
+              } finally {
+                setDeleteCommentId(null)
+              }
+            },
+            secondaryButtonText: t('internalComment:cancel'),
+            secondaryButtonAction: () =>
+              !isDeletingComment && setDeleteCommentId(null)
+          }}
+        />
+      )}
       {pendingPublicAction && (
         <BCModal
           open={!!pendingPublicAction}
@@ -722,6 +762,12 @@ CommentList.propTypes = {
   ).isRequired,
   onAddComment: PropTypes.func.isRequired,
   onEditComment: PropTypes.func.isRequired,
+  onCancelEdit: PropTypes.func,
+  onDeleteComment: PropTypes.func,
+  isDeletingComment: PropTypes.bool,
+  showTitle: PropTypes.bool,
+  placeholder: PropTypes.string,
+  canCreateComment: PropTypes.bool,
   showAddCommentBtn: PropTypes.bool,
   isAddingComment: PropTypes.bool,
   isEditingComment: PropTypes.bool,
@@ -732,10 +778,12 @@ CommentList.propTypes = {
   onVisibilityChange: PropTypes.func,
   allowInternalVisibility: PropTypes.bool,
   enableAttachments: PropTypes.bool,
+  showUploadDropzone: PropTypes.bool,
   attachments: PropTypes.array,
   onAttachmentsChange: PropTypes.func,
   onDownloadAttachment: PropTypes.func,
   sortOrder: PropTypes.oneOf(['asc', 'desc']),
+  enableSorting: PropTypes.bool,
   onSortOrderChange: PropTypes.func,
   mentionResults: PropTypes.shape({
     data: PropTypes.array,

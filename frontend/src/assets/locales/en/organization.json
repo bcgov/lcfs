@@ -167,6 +167,9 @@
   },
   "snapshotTitle": "Organization information from compliance report",
   "penaltyLog": {
+    "commentsTitle": "Internal comments",
+    "commentsDescription": "Internal notes about this organization’s penalty log. Comments are searchable in the Comment log under Penalty notes.",
+    "addComment": "Add a penalty log comment",
     "history": "Penalty history",
     "autoPenalties": "Automatic penalties",
     "discretionaryPenalties": "Discretionary penalties",

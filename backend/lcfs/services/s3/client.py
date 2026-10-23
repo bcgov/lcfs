@@ -43,6 +43,8 @@ from lcfs.db.models.comment.InternalComment import (
     InternalComment,
     internal_comment_document_association,
 )
+from lcfs.db.models.comment.PenaltyLogInternalComment import PenaltyLogInternalComment
+from lcfs.services.comment_permissions import can_manage_penalty_comment
 from lcfs.db.models.comment.CIApplicationInternalComment import (
     CIApplicationInternalComment,
 )
@@ -342,6 +344,7 @@ class DocumentService:
             if not internal_comment:
                 raise Exception("Internal comment not found")
 
+            document.create_user = user.keycloak_username
             self.db.add(document)
             await self.db.flush()
 
@@ -507,8 +510,8 @@ class DocumentService:
         Attachment visibility follows the comment itself ("match comment
         permissions"):
 
-        * write (add/remove attachment): only the comment's author, mirroring
-          internal comment edit permissions.
+        * write (add/remove attachment): the comment's author; government
+          administrators may also manage penalty log comment attachments.
         * read (list/download): government staff see everything; everyone else
           only Public comments, on a compliance report or CI application
           belonging to their own organization.
@@ -520,10 +523,22 @@ class DocumentService:
         is_government = RoleEnum.GOVERNMENT in user.role_names
 
         if write:
-            if comment.create_user != user.keycloak_username:
+            is_penalty_log = (
+                await self.db.execute(
+                    select(PenaltyLogInternalComment.internal_comment_id).where(
+                        PenaltyLogInternalComment.internal_comment_id == parent_id
+                    )
+                )
+            ).scalar_one_or_none() is not None
+            can_write = (
+                can_manage_penalty_comment(user, comment)
+                if is_penalty_log
+                else comment.create_user == user.keycloak_username
+            )
+            if not can_write:
                 raise HTTPException(
                     status_code=403,
-                    detail="Only the comment author can modify its attachments.",
+                    detail="You do not have permission to modify this comment's attachments.",
                 )
         elif not is_government:
             visibility = (

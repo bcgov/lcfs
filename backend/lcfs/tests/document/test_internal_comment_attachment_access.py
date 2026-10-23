@@ -27,7 +27,11 @@ def _service_with_comment(comment, owner_organization_ids=()):
     service = DocumentService.__new__(DocumentService)
     service.db = SimpleNamespace(
         get=AsyncMock(return_value=comment),
-        execute=AsyncMock(return_value=SimpleNamespace(all=lambda: rows)),
+        execute=AsyncMock(
+            return_value=SimpleNamespace(
+                all=lambda: rows, scalar_one_or_none=lambda: None
+            )
+        ),
     )
     return service
 
@@ -152,3 +156,31 @@ async def test_non_government_cannot_read_internal():
             write=False,
         )
     assert exc.value.status_code == 403
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "username,roles,allowed",
+    [
+        ("author", [RoleEnum.GOVERNMENT], True),
+        ("other", [RoleEnum.GOVERNMENT], False),
+        ("admin", [RoleEnum.GOVERNMENT, RoleEnum.ADMINISTRATOR], True),
+        ("author", [RoleEnum.SUPPLIER], False),
+        ("author", [RoleEnum.ADMINISTRATOR], False),
+    ],
+)
+async def test_penalty_log_attachment_modification_matches_comment_permissions(
+    username, roles, allowed
+):
+    service = _service_with_comment(_comment())
+    service.db.execute.return_value = SimpleNamespace(scalar_one_or_none=lambda: 1)
+    if allowed:
+        await service.verify_internal_comment_access(
+            1, _user(username, roles), write=True
+        )
+    else:
+        with pytest.raises(HTTPException) as exc:
+            await service.verify_internal_comment_access(
+                1, _user(username, roles), write=True
+            )
+        assert exc.value.status_code == 403

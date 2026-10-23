@@ -1,9 +1,12 @@
 import { test } from '@/tests/utils/fixtures'
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, vi } from 'vitest'
 import { roles } from '@/constants/roles'
 import CommentList from '../CommentList'
+import axe from 'axe-core'
+
+vi.unmock('@/components/BCBox')
 
 const mockUserState = vi.hoisted(() => ({
   roles: ['Government'],
@@ -312,6 +315,30 @@ describe('CommentList comment filters', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Post comment' }))
 
     await waitFor(() => expect(onAddComment).toHaveBeenCalled())
+  })
+
+  test('preserves the public comment draft when the confirmed request fails', async ({
+    render,
+    theme
+  }) => {
+    const onAddComment = vi.fn().mockRejectedValue(new Error('Request failed'))
+    render(
+      <CommentList
+        {...baseProps}
+        onAddComment={onAddComment}
+        commentInput="Public comment draft"
+        visibility="Public"
+      />,
+      [theme]
+    )
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Add public comment' })
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Post comment' }))
+    await waitFor(() => expect(onAddComment).toHaveBeenCalledTimes(1))
+    expect(screen.getByRole('textbox', { name: 'Comment editor' })).toHaveValue(
+      'Public comment draft'
+    )
   })
 
   test('confirms before changing an internal comment to public', async ({
@@ -717,6 +744,167 @@ describe('CommentList timestamps', () => {
     expect(editedInfo).toHaveFocus()
     expect(await screen.findByRole('tooltip')).toHaveTextContent(
       expectedDate('2026-06-15T12:00:00Z')
+    )
+  })
+})
+
+describe('penalty log comment management', () => {
+  const ownComment = {
+    internalCommentId: 42,
+    comment: 'Penalty discussion',
+    fullName: 'Author Name',
+    createDate: '2026-10-22T12:00:00Z',
+    createUser: 'idir-user',
+    visibility: 'Internal',
+    documents: [
+      {
+        documentId: 81,
+        fileName: 'evidence.pdf',
+        createUser: 'idir-user',
+        createDate: '2026-10-22T12:01:00Z'
+      }
+    ]
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockUserState.roles = [roles.government]
+    mockUserState.username = 'idir-user'
+  })
+
+  test('supports keyboard deletion with confirmation, author attribution and attachment actions', async ({
+    render,
+    theme
+  }) => {
+    const onDeleteComment = vi.fn().mockResolvedValue()
+    render(
+      <CommentList
+        {...baseProps}
+        commentMode="internal-only"
+        comments={[ownComment]}
+        onDeleteComment={onDeleteComment}
+        showTitle={false}
+        placeholder="Add a penalty log comment"
+        canCreateComment
+      />,
+      [theme]
+    )
+    expect(screen.getByText('Author Name')).toBeVisible()
+    expect(
+      screen.getByRole('article', { name: 'Comment by Author Name' })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Preview evidence.pdf' })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByPlaceholderText('Add a penalty log comment')
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText('Add a penalty log comment')
+    ).not.toBeInTheDocument()
+    const remove = screen.getByRole('button', {
+      name: 'internalComment:deleteComment'
+    })
+    remove.focus()
+    await userEvent.keyboard('{Enter}')
+    expect(onDeleteComment).not.toHaveBeenCalled()
+    const dialog = screen.getByRole('dialog')
+    await userEvent.click(
+      within(dialog).getByRole('button', {
+        name: 'internalComment:deleteComment'
+      })
+    )
+    await waitFor(() => expect(onDeleteComment).toHaveBeenCalledWith(42))
+  })
+
+  test('hides modification controls for comments created by another government user', ({
+    render,
+    theme
+  }) => {
+    mockUserState.username = 'reader'
+    render(
+      <CommentList
+        {...baseProps}
+        commentMode="internal-only"
+        comments={[ownComment]}
+        onDeleteComment={vi.fn()}
+      />,
+      [theme]
+    )
+    expect(
+      screen.queryByRole('button', { name: 'internalComment:deleteComment' })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Edit' })
+    ).not.toBeInTheDocument()
+  })
+
+  test('offers the optional upload dropzone in the add and edit forms when enabled', ({
+    render,
+    theme
+  }) => {
+    render(
+      <CommentList
+        {...baseProps}
+        commentMode="internal-only"
+        comments={[ownComment]}
+        canCreateComment
+        enableAttachments
+        showUploadDropzone
+        onAttachmentsChange={vi.fn()}
+      />,
+      [theme]
+    )
+    expect(screen.getAllByTestId('comment-upload-dropzone')).toHaveLength(1)
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    expect(screen.getAllByTestId('comment-upload-dropzone')).toHaveLength(2)
+  })
+
+  test('has no automated WCAG 2.2 A/AA accessibility violations', async ({
+    render,
+    theme
+  }) => {
+    const { container } = render(
+      <CommentList
+        {...baseProps}
+        commentMode="internal-only"
+        comments={[ownComment]}
+        onDeleteComment={vi.fn()}
+        showTitle={false}
+        placeholder="Add a penalty log comment"
+        canCreateComment
+      />,
+      [theme]
+    )
+    const results = await axe.run(container, {
+      runOnly: {
+        type: 'tag',
+        values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']
+      },
+      // Color and physical target sizes require browser layout; jsdom has none.
+      rules: { 'color-contrast': { enabled: false } }
+    })
+    expect(results.violations).toEqual([])
+  })
+
+  test('keeps the edit form open when saving fails', async ({
+    render,
+    theme
+  }) => {
+    render(
+      <CommentList
+        {...baseProps}
+        comments={[ownComment]}
+        onEditComment={vi.fn().mockRejectedValue(new Error('failed'))}
+      />,
+      [theme]
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save Changes' }))
+    await waitFor(() =>
+      expect(
+        screen.getAllByRole('textbox', { name: 'Comment editor' })
+      ).toHaveLength(2)
     )
   })
 })
