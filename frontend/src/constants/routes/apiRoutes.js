@@ -74,6 +74,7 @@ export const apiRoutes = {
   // consumed by hooks/useInitiativeAgreements.ts
   getInitiativeAgreementsList: '/initiative-agreements/list',
   createAgreement: '/initiative-agreements/agreements',
+  updateAgreement: '/initiative-agreements/agreements/:initiativeAgreementId',
   getInitiativeAgreementStatuses: '/initiative-agreements/statuses',
   getInitiativeAgreement:
     '/initiative-agreements/:initiativeAgreementId/profile',
@@ -97,8 +98,6 @@ export const apiRoutes = {
     '/initiative-agreements/designated-actions/:designatedActionId/workflow',
   designatedActionRecommendedCredits:
     '/initiative-agreements/designated-actions/:designatedActionId/recommended-credits',
-  designatedActionMissingInformation:
-    '/initiative-agreements/designated-actions/:designatedActionId/missing-information',
   designatedActionHistory:
     '/initiative-agreements/designated-actions/:designatedActionId/history',
   documentFolderTree: '/document-folders/:parentType/:parentID',

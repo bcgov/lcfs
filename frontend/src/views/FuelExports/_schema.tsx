@@ -1,5 +1,6 @@
-import type { ColDef } from 'ag-grid-community'
+import type { ICellEditorParams, ICellRendererParams, RowClassParams, ValueGetterParams, ColDef } from 'ag-grid-community'
 import type { GridErrors, GridWarnings, OptionsData } from '@/types/schema'
+import type { ApiServiceInstance } from '@/services/useApiService'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { AsyncSuggestionEditor } from '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor'
 import { AutocompleteCellEditor } from '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor'
@@ -13,7 +14,7 @@ import i18n from '@/i18n'
 import colors from '@/themes/base/colors'
 import {
   formatEnergyContentWithCommas,
-  formatNumberWithCommas as valueFormatter,
+  formatNumberWithCommas,
   formatNumberWithDecimals
 } from '@/utils/formatters'
 import {
@@ -28,13 +29,31 @@ import {
 } from '@/utils/grid/errorRenderers'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 
+type NumberCellFormatter = NonNullable<ColDef['valueFormatter']>
+
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 export const PROVISION_APPROVED_FUEL_CODE_LEGACY =
   'Approved fuel code - Section 6 (5) (c)'
 
-export const isFuelCodeProvision = (provision) =>
+export const isFuelCodeProvision = (provision: string | null | undefined) =>
   provision === PROVISION_APPROVED_FUEL_CODE ||
   provision === PROVISION_APPROVED_FUEL_CODE_LEGACY
+
+const endUseOptions = (
+  params: { data: { fuelType?: string; fuelCategory?: string } },
+  optionsData: OptionsData
+) =>
+  [
+    ...new Set(
+      optionsData?.fuelTypes
+        ?.find((obj) => params.data!.fuelType === obj.fuelType)
+        ?.eerRatios.filter(
+          (item) => item.fuelCategory.fuelCategory === params.data.fuelCategory
+        )
+        ?.map((item) => item.endUseType?.type)
+        .sort()
+    )
+  ].filter((item) => item != null)
 
 export const fuelExportColDefs = (
   optionsData: OptionsData,
@@ -44,7 +63,7 @@ export const fuelExportColDefs = (
   isSupplemental: boolean,
 ): ColDef[] => [
   validation,
-  actions((params) => {
+  actions((params: ICellRendererParams) => {
     return {
       enableDuplicate: false,
       enableDelete: !params.data.isNewSupplementalEntry,
@@ -52,7 +71,9 @@ export const fuelExportColDefs = (
       enableStatus:
         isSupplemental &&
         params.data.isNewSupplementalEntry &&
-        ACTION_STATUS_MAP[params.data.actionType]
+        ACTION_STATUS_MAP[
+          params.data.actionType as keyof typeof ACTION_STATUS_MAP
+        ]
     }
   }),
   {
@@ -91,10 +112,10 @@ export const fuelExportColDefs = (
     field: 'complianceUnits',
     headerName: i18n.t('fuelExport:fuelExportColLabels.complianceUnits'),
     minWidth: 100,
-    valueFormatter,
+    valueFormatter: formatNumberWithCommas as NumberCellFormatter,
     editable: false,
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental)
+      StandardCellWarningAndErrors(params, errors, warnings)
   },
   {
     field: 'fuelTypeId',
@@ -110,7 +131,7 @@ export const fuelExportColDefs = (
       openOnFocus: true
     },
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+      StandardCellWarningAndErrors(params, errors, warnings),
 
     suppressKeyboardEvent,
     minWidth: 260,
@@ -142,9 +163,9 @@ export const fuelExportColDefs = (
     field: 'fuelTypeOther',
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelTypeOther'),
     cellEditor: AsyncSuggestionEditor,
-    cellEditorParams: (params) => ({
+    cellEditorParams: (params: ICellEditorParams) => ({
       queryKey: 'fuel-type-others',
-      queryFn: async ({ client }) => {
+      queryFn: async ({ client }: { client: ApiServiceInstance }) => {
         const path = apiRoutes.getFuelTypeOthers
 
         const response = await client.get(path)
@@ -184,9 +205,9 @@ export const fuelExportColDefs = (
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategory'),
     cellEditor: AutocompleteCellEditor,
     cellRenderer: SelectRenderer,
-    cellEditorParams: (params) => ({
+    cellEditorParams: (params: ICellEditorParams) => ({
       options: optionsData?.fuelTypes
-        ?.find((obj) => params.data.fuelType === obj.fuelType)
+        ?.find((obj) => params.data!.fuelType === obj.fuelType)
         ?.fuelCategories.map((item) => item.fuelCategory)
         .sort(),
       multiple: false,
@@ -195,13 +216,13 @@ export const fuelExportColDefs = (
       openOnFocus: true
     }),
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+      StandardCellWarningAndErrors(params, errors, warnings),
 
     valueSetter: (params) => {
       if (params.newValue) {
         params.data.fuelCategory = params.newValue
         params.data.fuelCategoryId = optionsData?.fuelTypes
-          ?.find((obj) => params.data.fuelType === obj.fuelType)
+          ?.find((obj) => params.data!.fuelType === obj.fuelType)
           ?.fuelCategories?.find(
             (obj) => params.newValue === obj.fuelCategory
           )?.fuelCategoryId
@@ -218,31 +239,20 @@ export const fuelExportColDefs = (
     valueGetter: (params) => {
       return params.data.fuelCategory
     },
-    editable: (params) =>
-      optionsData?.fuelTypes
-        ?.find((obj) => params.data.fuelType === obj.fuelType)
-        ?.fuelCategories.map((item) => item.fuelCategory).length > 1,
+    editable: (params) => {
+      const fuelType = optionsData?.fuelTypes?.find(
+        (obj) => params.data!.fuelType === obj.fuelType
+      )
+      return (fuelType?.fuelCategories.map((item) => item.fuelCategory).length as number) > 1
+    },
     tooltipValueGetter: () => 'Select the fuel category from the list'
   },
   {
     field: 'endUseType',
     headerComponent: RequiredHeader,
     headerName: i18n.t('fuelExport:fuelExportColLabels.endUseId'),
-    options: (params) =>
-      [
-        ...new Set(
-          optionsData?.fuelTypes
-            ?.find((obj) => params.data.fuelType === obj.fuelType)
-            ?.eerRatios.filter(
-              (item) =>
-                item.fuelCategory.fuelCategory === params.data.fuelCategory
-            )
-            ?.map((item) => item.endUseType?.type)
-            .sort()
-        )
-      ].filter((item) => item != null),
-    cellEditorParams: (params) => ({
-      options: params.colDef.options(params),
+    cellEditorParams: (params: ICellEditorParams) => ({
+      options: endUseOptions(params, optionsData),
       multiple: false,
       disableCloseOnSelect: false,
       freeSolo: false,
@@ -251,14 +261,13 @@ export const fuelExportColDefs = (
     cellEditor: AutocompleteCellEditor,
     cellRenderer: SelectRenderer,
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+      StandardCellWarningAndErrors(params, errors, warnings),
     suppressKeyboardEvent,
     valueGetter: (params) => {
       return params.data.endUseType?.type
     },
     editable: (params) => {
-      const cellParams = params.colDef?.cellEditorParams(params)
-      return cellParams.options.length > 1
+      return endUseOptions(params, optionsData).length > 1
     },
     valueSetter: (params) => {
       if (params.newValue) {
@@ -268,12 +277,15 @@ export const fuelExportColDefs = (
         const eerOptions = selectedFuel?.eerRatios.filter(
           (item) => item.fuelCategory.fuelCategory === params.data.fuelCategory
         )
-        const selectedRatio = eerOptions.find(
-          (eerRatio) => eerRatio.endUseType.type === params.newValue
+        const selectedRatio = eerOptions!.find(
+          (eerRatio) =>
+            (eerRatio.endUseType as { type: string }).type === params.newValue
         )
         if (selectedRatio) {
           params.data.endUseType = selectedRatio.endUseType
-          params.data.endUseId = selectedRatio.endUseType.endUseTypeId
+          params.data.endUseId = (
+            selectedRatio.endUseType as { endUseTypeId: number }
+          ).endUseTypeId
         }
       }
       return true
@@ -286,7 +298,7 @@ export const fuelExportColDefs = (
     headerName: i18n.t('fuelExport:fuelExportColLabels.provisionOfTheActId'),
     cellEditor: AutocompleteCellEditor,
     cellRenderer: SelectRenderer,
-    cellEditorParams: (params) => ({
+    cellEditorParams: (params: ICellEditorParams) => ({
       options: optionsData?.fuelTypes
         ?.find((obj) => params.data.fuelType === obj.fuelType)
         ?.provisions.map((item) => item.name)
@@ -297,7 +309,7 @@ export const fuelExportColDefs = (
       openOnFocus: true
     }),
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+      StandardCellWarningAndErrors(params, errors, warnings),
 
     suppressKeyboardEvent,
     minWidth: 370,
@@ -333,7 +345,7 @@ export const fuelExportColDefs = (
     cellEditor: AutocompleteCellEditor,
     suppressKeyboardEvent,
     minWidth: 175,
-    cellEditorParams: (params) => {
+    cellEditorParams: (params: ICellEditorParams) => {
       const fuelTypeObj = optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
       )
@@ -349,7 +361,7 @@ export const fuelExportColDefs = (
       }
     },
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+      StandardCellWarningAndErrors(params, errors, warnings),
 
     editable: (params) => {
       if (params.data.provisionOfTheAct === 'Unknown') return false
@@ -421,11 +433,13 @@ export const fuelExportColDefs = (
     headerName: i18n.t('fuelExport:fuelExportColLabels.exportDate'),
     maxWidth: 220,
     minWidth: 200,
-    cellRenderer: (params) => {
+    cellRenderer: (params: ICellRendererParams) => {
       const isEditable =
-        params.colDef.editable &&
-        (typeof params.colDef.editable === 'function'
-          ? params.colDef.editable(params)
+        params.colDef!.editable &&
+        (typeof params.colDef!.editable === 'function'
+          ? (params.colDef!.editable as (params: ICellRendererParams) => boolean)(
+              params
+            )
           : true)
 
       return (
@@ -435,7 +449,7 @@ export const fuelExportColDefs = (
       )
     },
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+      StandardCellWarningAndErrors(params, errors, warnings),
 
     suppressKeyboardEvent,
     cellEditor: DateEditor,
@@ -453,7 +467,7 @@ export const fuelExportColDefs = (
     headerComponent: RequiredHeader,
     headerName: i18n.t('fuelExport:fuelExportColLabels.quantity'),
     minWidth: 200,
-    valueFormatter,
+    valueFormatter: formatNumberWithCommas as NumberCellFormatter,
     cellEditor: NumberEditor,
     cellEditorParams: {
       precision: 0,
@@ -461,7 +475,7 @@ export const fuelExportColDefs = (
       showStepperButtons: false
     },
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental)
+      StandardCellWarningAndErrors(params, errors, warnings)
   },
   {
     field: 'units',
@@ -499,12 +513,12 @@ export const fuelExportColDefs = (
     editable: false,
     minWidth: 100,
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+      StandardCellWarningAndErrors(params, errors, warnings),
 
     valueGetter: (params) =>
       optionsData?.fuelTypes
         ?.find((obj) => params.data.fuelType === obj.fuelType)
-        ?.targetCarbonIntensities.find(
+        ?.targetCarbonIntensities!.find(
           (item) => item.fuelCategory.fuelCategory === params.data.fuelCategory
         )?.targetCarbonIntensity || 0
   },
@@ -514,7 +528,7 @@ export const fuelExportColDefs = (
     editable: false,
     minWidth: 100,
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+      StandardCellWarningAndErrors(params, errors, warnings),
 
     valueGetter: (params) => {
       // Show the value we received from the API if it exists
@@ -547,12 +561,14 @@ export const fuelExportColDefs = (
         if (!fuelTypeObj) return 0
 
         // We only consider codes effective in last 12 months
-        const twelveMonthsAgo = new Date(exportDateObj)
+        const twelveMonthsAgo = new Date(exportDateObj as unknown as string)
         twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12)
 
         // Filter codes by effective/expiration range
         const validCodes = (fuelTypeObj.fuelCodes || []).filter((fc) => {
-          const fcEffective = new Date(fc.fuelCodeEffectiveDate)
+          const fcEffective = new Date(
+            fc.fuelCodeEffectiveDate as unknown as string
+          )
           const fcExpiration = fc.fuelCodeExpirationDate
             ? new Date(fc.fuelCodeExpirationDate)
             : null
@@ -570,7 +586,9 @@ export const fuelExportColDefs = (
         }
         // Otherwise pick the minimum carbon intensity
         const minCI = Math.min(
-          ...validCodes.map((fc) => fc.fuelCodeCarbonIntensity)
+          ...validCodes.map(
+            (fc) => fc.fuelCodeCarbonIntensity as number
+          )
         )
         return minCI
       }
@@ -597,7 +615,7 @@ export const fuelExportColDefs = (
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.uci'),
     editable: false,
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+      StandardCellWarningAndErrors(params, errors, warnings),
 
     minWidth: 100
   },
@@ -639,7 +657,7 @@ export const fuelExportColDefs = (
     editable: false,
     minWidth: 100,
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+      StandardCellWarningAndErrors(params, errors, warnings),
 
     valueGetter: (params) => {
       const eerOptions = optionsData?.fuelTypes?.find(
@@ -665,14 +683,14 @@ export const fuelExportColDefs = (
   {
     field: 'energy',
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+      StandardCellWarningAndErrors(params, errors, warnings),
 
     headerName: i18n.t('fuelExport:fuelExportColLabels.energy'),
     valueFormatter: (params) =>
       formatEnergyContentWithCommas({
         value: params.value,
         fuelType: params.data?.fuelType
-      }),
+      }) as string,
     minWidth: 100,
     editable: false
   }
@@ -685,7 +703,7 @@ export const fuelExportSummaryColDefs = (
     headerName: i18n.t('fuelExport:fuelExportColLabels.complianceUnits'),
     field: 'complianceUnits',
     minWidth: 180,
-    valueFormatter
+    valueFormatter: formatNumberWithCommas as NumberCellFormatter,
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelTypeId'),
@@ -734,7 +752,7 @@ export const fuelExportSummaryColDefs = (
     headerName: i18n.t('fuelExport:fuelExportColLabels.quantity'),
     field: 'quantity',
     minWidth: 185,
-    valueFormatter
+    valueFormatter: formatNumberWithCommas as NumberCellFormatter,
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.units'),
@@ -804,28 +822,30 @@ export const changelogCommonColDefs = (highlight: boolean = true): ColDef[] => [
     headerName: i18n.t('fuelExport:fuelExportColLabels.complianceUnits'),
     field: 'complianceUnits',
     minWidth: 180,
-    valueFormatter,
+    valueFormatter: formatNumberWithCommas as NumberCellFormatter,
     cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'complianceUnits')
+      (highlight && changelogCellStyle(params, 'complianceUnits')) as unknown as ReturnType<typeof changelogCellStyle>
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelTypeId'),
     field: 'fuelType.fuelType',
     minWidth: 200,
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelType')
+    cellStyle: (params) =>
+      (highlight && changelogCellStyle(params, 'fuelType')) as unknown as ReturnType<typeof changelogCellStyle>
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategory'),
     field: 'fuelCategory.category',
     minWidth: 150,
     cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'fuelCategory')
+      (highlight && changelogCellStyle(params, 'fuelCategory')) as unknown as ReturnType<typeof changelogCellStyle>
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.endUseId'),
     field: 'endUseType.type',
     minWidth: 200,
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'endUseType')
+    cellStyle: (params) =>
+      (highlight && changelogCellStyle(params, 'endUseType')) as unknown as ReturnType<typeof changelogCellStyle>
   },
   {
     headerName: i18n.t(
@@ -834,72 +854,81 @@ export const changelogCommonColDefs = (highlight: boolean = true): ColDef[] => [
     field: 'provisionOfTheAct.name',
     minWidth: 370,
     cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'provisionOfTheAct')
+      (highlight && changelogCellStyle(params, 'provisionOfTheAct')) as unknown as ReturnType<typeof changelogCellStyle>
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCode'),
     field: 'fuelCode.fuelCode',
     minWidth: 175,
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
+    cellStyle: (params) =>
+      (highlight && changelogCellStyle(params, 'fuelCode')) as unknown as ReturnType<typeof changelogCellStyle>
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.exportDate'),
     field: 'exportDate',
     minWidth: 160,
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'exportDate')
+    cellStyle: (params) =>
+      (highlight && changelogCellStyle(params, 'exportDate')) as unknown as ReturnType<typeof changelogCellStyle>
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.quantity'),
     field: 'quantity',
     minWidth: 185,
-    valueFormatter,
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'quantity')
+    valueFormatter: formatNumberWithCommas as NumberCellFormatter,
+    cellStyle: (params) =>
+      (highlight && changelogCellStyle(params, 'quantity')) as unknown as ReturnType<typeof changelogCellStyle>
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.units'),
     field: 'units',
     minWidth: 200,
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'units')
+    cellStyle: (params) =>
+      (highlight && changelogCellStyle(params, 'units')) as unknown as ReturnType<typeof changelogCellStyle>
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.targetCI'),
     field: 'targetCi',
     minWidth: 135,
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'targetCi')
+    cellStyle: (params) =>
+      (highlight && changelogCellStyle(params, 'targetCi')) as unknown as ReturnType<typeof changelogCellStyle>
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.ciOfFuel'),
     field: 'ciOfFuel',
     minWidth: 90,
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'ciOfFuel')
+    cellStyle: (params) =>
+      (highlight && changelogCellStyle(params, 'ciOfFuel')) as unknown as ReturnType<typeof changelogCellStyle>
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.uci'),
     field: 'uci',
     minWidth: 90,
 
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'uci')
+    cellStyle: (params) =>
+      (highlight && changelogCellStyle(params, 'uci')) as unknown as ReturnType<typeof changelogCellStyle>
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.energyDensity'),
     field: 'energyDensity',
     minWidth: 160,
     cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'energyDensity')
+      (highlight && changelogCellStyle(params, 'energyDensity')) as unknown as ReturnType<typeof changelogCellStyle>
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.eer'),
     field: 'eer',
     minWidth: 80,
     valueFormatter: (params) => formatNumberWithDecimals(params, 2),
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'eer')
+    cellStyle: (params) =>
+      (highlight && changelogCellStyle(params, 'eer')) as unknown as ReturnType<typeof changelogCellStyle>
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.energy'),
     field: 'energy',
     minWidth: 170,
-    valueFormatter,
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'energy')
+    valueFormatter: formatNumberWithCommas as NumberCellFormatter,
+    cellStyle: (params) =>
+      (highlight && changelogCellStyle(params, 'energy')) as unknown as ReturnType<typeof changelogCellStyle>
   }
 ]
 
@@ -957,7 +986,7 @@ export const changelogCommonGridOptions = {
 
 export const changelogGridOptions = {
   ...changelogCommonGridOptions,
-  getRowStyle: (params) => {
+  getRowStyle: (params: RowClassParams) => {
     if (params.data.actionType === 'DELETE') {
       return {
         backgroundColor: colors.alerts.error.background
@@ -975,7 +1004,7 @@ export const changelogGridOptions = {
  * Helper that picks either the category-level CI (if the fuel type is "Other")
  * or else uses the fuel type's defaultCarbonIntensity.
  */
-function getDefaultCI(params, optionsData) {
+function getDefaultCI(params: ValueGetterParams, optionsData: OptionsData) {
   // If it's "Other," use the category's default
   if (isFuelTypeOther(params) && params.data.fuelCategory) {
     const fuelTypeObj = optionsData?.fuelTypes?.find(

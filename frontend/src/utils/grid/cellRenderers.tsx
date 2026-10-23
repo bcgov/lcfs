@@ -25,21 +25,17 @@ import {
 import colors from '@/themes/base/colors'
 import ArrowDropDown from '@mui/icons-material/ArrowDropDown'
 import { getCode } from 'country-list'
+import type { ColumnResizedEvent, ICellRendererParams } from 'ag-grid-community'
 
 // Loose typing because these renderers are consumed by AG Grid and many
 // consumers across the codebase pass through additional ad-hoc props.
-export type RendererProps = {
-  value?: unknown
-  valueFormatted?: unknown
-  data?: unknown
-  node?: unknown
-  colDef?: unknown
-  api?: unknown
+export type RendererProps = Partial<ICellRendererParams> & {
+  [key: string]: unknown
   url?: (params: { data: unknown }) => string
   isAbsolute?: boolean
   isView?: boolean
+  disableLink?: boolean
   state?: (data: unknown) => unknown
-  [key: string]: unknown
 }
 
 interface ChipConfig {
@@ -92,10 +88,11 @@ export const SelectRenderer = (params: RendererProps): ReactElement => {
 
   const hasOptions = options?.length > 1
 
+  const editable = params.colDef?.editable
   const isEditable =
-    typeof params.colDef.editable === 'function'
-      ? params.colDef.editable(params)
-      : params.colDef.editable
+    typeof editable === 'function'
+      ? editable(params as Parameters<typeof editable>[0])
+      : editable
 
   const displayValue =
     params.value ?? (hasOptions && isEditable ? 'Select' : '')
@@ -125,10 +122,11 @@ export const MultiSelectRenderer = (params: RendererProps): ReactElement => {
 
   const hasOptions = options?.length > 1
 
+  const editable = params.colDef?.editable
   const isEditable =
-    typeof params.colDef.editable === 'function'
-      ? params.colDef.editable(params)
-      : params.colDef.editable
+    typeof editable === 'function'
+      ? editable(params as Parameters<typeof editable>[0])
+      : editable
   if (params.value && params.value !== '') {
     const value = Array.isArray(params.value)
       ? params.value?.map(
@@ -251,7 +249,7 @@ export const OrgStatusRenderer: RendererWithFilterPill = (
   const statusIndex = statusArr.indexOf(props.data.orgStatus.status)
   return (
     <Link
-      to={props.node?.id && location.pathname + '/' + props?.node?.id}
+      to={(props.node?.id && location.pathname + '/' + props?.node?.id) as string}
       style={{ color: '#000' }}
     >
       <BCBox sx={{ width: '100%', height: '100%' }}>
@@ -373,7 +371,8 @@ export const OrgTypeRenderer: RendererWithFilterPill = (
   const colorByLabel: Record<string, BCBadgeColor> = {}
   const labels = orgTypes.map((type) => {
     const label = getOrgTypeDisplayLabel(type) || '—'
-    colorByLabel[label] = ORG_TYPE_COLOR_MAP[type?.orgType] || 'dark'
+    const orgType = (type as { orgType?: string } | null)?.orgType
+    colorByLabel[label] = ORG_TYPE_COLOR_MAP[orgType as string] || 'dark'
     return label
   })
   const value = labels.length > 0 ? labels : [props.value || '—']
@@ -414,7 +413,7 @@ export const FuelCodeStatusRenderer = (props: RendererProps): ReactElement => {
   const statusIndex = statusArr.indexOf(props.data?.status)
   return (
     <Link
-      to={props.node?.id && location.pathname + '/' + props?.node?.id}
+      to={(props.node?.id && location.pathname + '/' + props?.node?.id) as string}
       style={{ color: '#000' }}
     >
       <BCBox sx={{ width: '100%', height: '100%' }}>
@@ -458,7 +457,7 @@ export const FuelCodePrefixRenderer = (
 
   return (
     <Link
-      to={params.node?.id && location.pathname + '/' + params?.node?.id}
+      to={(params.node?.id && location.pathname + '/' + params?.node?.id) as string}
       style={{ color: '#000' }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -693,12 +692,14 @@ const GenericChipRenderer = ({
   const options = useMemo<string[]>(() => {
     if (Array.isArray(value)) {
       return value
-        .map((item: unknown) => item?.label || item)
+        .map((item: unknown) =>
+          (item as { label?: string } | null)?.label || (item as string)
+        )
         .filter((item: unknown) => item && item !== '')
     }
 
-    if (value?.label) {
-      return [value.label]
+    if ((value as { label?: string } | null)?.label) {
+      return [(value as { label: string }).label]
     }
 
     if (typeof value === 'string' && value) {
@@ -773,9 +774,9 @@ const GenericChipRenderer = ({
       resizeObserver.observe(containerRef.current)
     }
 
-    const resizeListener = (event: { column?: { getColId: () => string } }) => {
+    const resizeListener = (event: ColumnResizedEvent) => {
       const resizedColumn = event.column
-      if (resizedColumn && resizedColumn.getColId() === colDef.field) {
+      if (resizedColumn && resizedColumn.getColId() === colDef!.field) {
         const { visibleChips, hiddenChipsCount } = calculateChipWidths()
         setVisibleChips(visibleChips)
         setHiddenChipsCount(hiddenChipsCount)

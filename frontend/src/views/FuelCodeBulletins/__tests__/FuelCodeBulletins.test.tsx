@@ -242,10 +242,10 @@ describe('FuelCodeBulletins UI', () => {
 
     const gridProps = mockBCGridViewer.mock.calls[0][0]
     const effectiveDate = gridProps.columnDefs.find(
-      (col) => col.field === 'effectiveDate'
+      (col: BulletinColumnDef) => col.field === 'effectiveDate'
     )
     const expiryDate = gridProps.columnDefs.find(
-      (col) => col.field === 'expiryDate'
+      (col: BulletinColumnDef) => col.field === 'expiryDate'
     )
 
     expect(effectiveDate.filter).toBe('agDateColumnFilter')
@@ -284,7 +284,7 @@ describe('FuelCodeBulletins UI', () => {
 
     dateFields.forEach((field) => {
       const colDef = gridProps.columnDefs.find(
-        (col) => col.field === field
+        (col: BulletinColumnDef) => col.field === field
       )
       expect(colDef.filter).toBe('agDateColumnFilter')
       expect(colDef.floatingFilterComponent).toBeDefined()

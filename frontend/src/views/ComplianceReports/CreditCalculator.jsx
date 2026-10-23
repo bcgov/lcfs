@@ -8,7 +8,6 @@ import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import FormControl from '@mui/material/FormControl'
 import InputAdornment from '@mui/material/InputAdornment'
-import Tooltip from '@mui/material/Tooltip'
 import Check from '@mui/icons-material/Check'
 import ContentCopy from '@mui/icons-material/ContentCopy'
 import colors from '@/themes/base/colors'
@@ -30,7 +29,9 @@ import {
   FUEL_CATEGORIES,
   LEGISLATION_TRANSITION_YEAR
 } from '@/constants/common'
-import { formatEnergyContentWithCommas } from '@/utils/formatters'
+import {
+  formatEnergyContentWithCommas
+} from '@/utils/formatters'
 import { copyToClipboard } from '@/utils/clipboard'
 
 const CUSTOM_CI_OPTION_VALUE = 'customCi'
@@ -101,14 +102,12 @@ export const CreditCalculator = () => {
   })
 
   const {
-  control,
-  watch,
-  setValue,
-  formState: {
-    errors
-  },
-  reset
-} = methods
+    control,
+    watch,
+    setValue,
+    formState: { errors },
+    reset
+  } = methods
 
   const watchedValues = watch()
   const {
@@ -184,11 +183,7 @@ export const CreditCalculator = () => {
         uniqueEndUses.set(endUse.type, {
           value: endUse.type,
           sortLabel: endUse.type,
-          label: (
-            <Tooltip title={endUse.type} placement="top" arrow>
-              <span>{endUse.type}</span>
-            </Tooltip>
-          )
+          label: <span>{endUse.type}</span>
         })
       }
     })
@@ -224,13 +219,6 @@ export const CreditCalculator = () => {
       (option) => option.value !== CUSTOM_CI_OPTION_VALUE
     )
   }, [provisionOptions])
-
-  useMemo(() => {
-    if (!provisionOfTheAct) return null
-    return fuelTypeOptions?.data?.provisions?.find(
-      (provision) => provision.name === provisionOfTheAct
-    )
-  }, [fuelTypeOptions, provisionOfTheAct]);
 
   // Get unit based on selected fuel
   const unit = useMemo(() => {
@@ -716,7 +704,7 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
                       width: '100%',
                       maxWidth: '100%',
                       maxHeight: { xs: 240, md: 360 },
-                      overflowX: 'auto',
+                      overflowX: 'hidden',
                       overflowY: 'auto',
                       pr: 1,
                       scrollbarGutter: 'stable'
@@ -725,15 +713,17 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
                       mr: 0,
                       mb: 0,
                       alignItems: 'flex-start',
-                      width: 'max-content',
-                      maxWidth: 'none',
-                      whiteSpace: 'nowrap'
+                      width: '100%',
+                      maxWidth: '100%',
+                      minWidth: 0,
+                      flexShrink: 0
                     },
                     '& .MuiRadio-root': {
                       flexShrink: 0
                     },
                     '& .MuiFormControlLabel-label': {
-                      whiteSpace: 'nowrap',
+                      whiteSpace: 'normal',
+                      overflowWrap: 'anywhere',
                       lineHeight: 1.35
                     }
                   }}

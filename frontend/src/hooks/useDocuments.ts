@@ -1,6 +1,7 @@
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { AxiosRequestConfig, AxiosResponse } from 'axios'
 import { invalidateComplianceReportRelatedQueries } from './reportQueryInvalidation'
 import type { QueryOptions, ExtMutationOptions } from './types'
 
@@ -48,7 +49,7 @@ export const useDocuments = (
 export const useUploadDocument = (
   parentType: string,
   parentID: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, unknown> = {}
+  options: ExtMutationOptions<unknown, File | Blob | { file: File | Blob; documentCategory?: string }> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -63,7 +64,7 @@ export const useUploadDocument = (
   } = options
 
   return useMutation({
-    mutationFn: async (input: unknown) => {
+    mutationFn: async (input: File | Blob | { file: File | Blob; documentCategory?: string }) => {
       // Backwards compatible: callers can either pass a File directly
       // (legacy signature) or a { file, documentCategory } object so
       // CI applications can route uploads to a specific category bucket
@@ -86,7 +87,7 @@ export const useUploadDocument = (
 
       const formData = new FormData()
       formData.append('file', file)
-      formData.append('filename', file.name)
+      formData.append('filename', (file as File).name)
 
       return await client.post(path, formData, {
         headers: {
@@ -180,13 +181,16 @@ export const useDeleteDocument = (
 export const useDownloadDocument = (
   parentType: string,
   parentID: number | string | undefined | null,
-  options: Record<string, unknown> = {}
+  options: AxiosRequestConfig & {
+    onSuccess?: (data: Blob, filename: string) => void
+    onError?: (error: unknown) => void
+  } = {}
 ) => {
   const client = useApiService()
 
   const { onSuccess, onError, ...requestOptions } = options
 
-  return async (documentID: unknown, customFilename: unknown) => {
+  return async (documentID: number | string, customFilename?: string) => {
     try {
       if (!documentID) {
         throw new Error('Document ID is required for download')
@@ -211,7 +215,7 @@ export const useDownloadDocument = (
       link.href = fileURL
 
       // Extract filename from headers or use custom filename
-      let filename = customFilename
+      let filename = customFilename as string
       if (!filename) {
         const contentDisposition = response.headers['content-disposition'] || ''
         const filenameMatch = contentDisposition.match(
@@ -235,7 +239,7 @@ export const useDownloadDocument = (
       // Clean up the object URL after a short delay
       setTimeout(() => URL.revokeObjectURL(fileURL), 100)
 
-      onSuccess?.(response.data, filename)
+      onSuccess?.(response.data as Blob, filename)
       return response.data
     } catch (error) {
       onError?.(error)
@@ -247,13 +251,16 @@ export const useDownloadDocument = (
 export const useFetchDocument = (
   parentType: string,
   parentID: number | string | undefined | null,
-  options: Record<string, unknown> = {}
+  options: AxiosRequestConfig & {
+    onSuccess?: (data: Blob, response: AxiosResponse<Blob>) => void
+    onError?: (error: unknown) => void
+  } = {}
 ) => {
   const client = useApiService()
 
   const { onSuccess, onError, ...requestOptions } = options
 
-  return async (documentID: unknown) => {
+  return async (documentID: number | string) => {
     try {
       if (!documentID) {
         throw new Error('Document ID is required for preview')
@@ -272,7 +279,7 @@ export const useFetchDocument = (
         responseType: 'blob'
       })
 
-      onSuccess?.(response.data, response)
+      onSuccess?.(response.data as Blob, response as AxiosResponse<Blob>)
       return response
     } catch (error) {
       onError?.(error)
@@ -323,7 +330,7 @@ export const useGetDocumentInfo = (
 export const useUpdateDocument = (
   parentType: string,
   parentID: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, unknown> = {}
+  options: ExtMutationOptions<unknown, { documentID: number | string; data: Record<string, unknown> }> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -337,7 +344,7 @@ export const useUpdateDocument = (
   } = options
 
   return useMutation({
-    mutationFn: async ({ documentID, data }: Record<string, unknown>) => {
+    mutationFn: async ({ documentID, data }: { documentID: number | string; data: Record<string, unknown> }) => {
       if (!documentID) {
         throw new Error('Document ID is required for update')
       }

@@ -41,7 +41,7 @@ export const useUpdateGovernmentNotification = ({
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (notificationData: unknown) => {
+    mutationFn: async (notificationData: Record<string, unknown>) => {
       const response = await apiService.put(
         apiRoutes.updateGovernmentNotification,
         notificationData

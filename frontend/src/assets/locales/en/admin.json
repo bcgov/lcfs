@@ -1,6 +1,7 @@
 {
   "OrgId": "Organization ID",
   "Users": "Users",
+  "accountChangeEmailFailed": "The account change was saved, but the change email could not be sent. Please contact the affected user and LCFS support.",
   "SeededUserAssociation": "Seeded user association",
   "UserActivity": "User activity",
   "UserLoginHistory": "User login history",

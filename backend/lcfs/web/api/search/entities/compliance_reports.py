@@ -1,10 +1,17 @@
 """Compliance-report search definition."""
 
-from sqlalchemy import case, select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lcfs.db.models.compliance.ComplianceReport import (
+    ComplianceReport,
+    SupplementalInitiatorType,
+)
 from lcfs.db.models.compliance.ComplianceReportListView import ComplianceReportListView
-from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
+from lcfs.db.models.compliance.ComplianceReportStatus import (
+    ComplianceReportStatus,
+    ComplianceReportStatusEnum,
+)
 from lcfs.web.api.search.entities.base import (
     RESULT_LIMIT,
     EntitySearch,
@@ -84,6 +91,55 @@ def _effective_status_values_for_supplier(
     return tuple(safe)
 
 
+def _hidden_statuses(context: SearchContext) -> list[ComplianceReportStatusEnum]:
+    """
+    Statuses the caller's compliance report list leaves out, so search shows
+    the same reports (mirrors ComplianceReportRepository.get_reports_paginated).
+
+    A Draft is the supplier's own until it is submitted, so government never
+    sees one (#5231); an Analyst adjustment is the analyst's until it is
+    recommended.
+    """
+    hidden = []
+    if not context.is_analyst:
+        hidden.append(ComplianceReportStatusEnum.Analyst_adjustment)
+    if context.is_government:
+        hidden.append(ComplianceReportStatusEnum.Draft)
+    return hidden
+
+
+def _latest_visible_version(view, context: SearchContext, hidden_status_ids):
+    """
+    The newest version of each report the caller may see, picked as the
+    compliance report list picks it (mirrors ComplianceReportRepository.
+    get_latest_visible_reports_query): when the newest version is hidden from
+    the caller, the version before it stands in, rather than the report
+    vanishing or the hidden version showing.
+    """
+    versions = select(func.max(ComplianceReport.version)).where(
+        ComplianceReport.compliance_report_group_uuid
+        == view.compliance_report_group_uuid,
+        ComplianceReport.current_status_id.notin_(hidden_status_ids),
+    )
+    if not context.is_government:
+        # A government reassessment stays out of the supplier's sight until
+        # it is assessed.
+        assessed_id = (
+            select(ComplianceReportStatus.compliance_report_status_id)
+            .where(ComplianceReportStatus.status == ComplianceReportStatusEnum.Assessed)
+            .scalar_subquery()
+        )
+        versions = versions.where(
+            or_(
+                ComplianceReport.current_status_id == assessed_id,
+                ComplianceReport.supplemental_initiator
+                != SupplementalInitiatorType.GOVERNMENT_REASSESSMENT,
+                ComplianceReport.supplemental_initiator.is_(None),
+            )
+        )
+    return versions.scalar_subquery()
+
+
 async def search_compliance_reports(
     db: AsyncSession, context: SearchContext
 ) -> list[SearchResultItem]:
@@ -151,7 +207,13 @@ async def search_compliance_reports(
             # would otherwise be treated as "no status restriction".
             return []
 
-    statement = select(view, match_context).where(view.is_latest.is_(True))
+    hidden_status_ids = select(
+        ComplianceReportStatus.compliance_report_status_id
+    ).where(ComplianceReportStatus.status.in_(_hidden_statuses(context)))
+    statement = select(view, match_context).where(
+        view.report_status_id.notin_(hidden_status_ids),
+        view.version == _latest_visible_version(view, context, hidden_status_ids),
+    )
     statement = where_present(
         statement,
         clause,

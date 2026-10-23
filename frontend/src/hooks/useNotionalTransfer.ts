@@ -163,7 +163,7 @@ export const useGetNotionalTransfers = (
 
 export const useSaveNotionalTransfer = (
   complianceReportId: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, unknown> = {}
+  options: ExtMutationOptions<unknown, Record<string, unknown>> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -177,7 +177,7 @@ export const useSaveNotionalTransfer = (
   } = options
 
   return useMutation({
-    mutationFn: async (data: unknown) => {
+    mutationFn: async (data: Record<string, unknown>) => {
       if (!data) {
         throw new Error('Transfer data is required')
       }
@@ -201,7 +201,8 @@ export const useSaveNotionalTransfer = (
                 query.queryKey.some(
                   (key) =>
                     typeof key === 'object' &&
-                    (key as unknown)?.complianceReportId === complianceReportId
+                    (key as { complianceReportId?: number | string } | null)
+                      ?.complianceReportId === complianceReportId
                 ))
             )
           }
@@ -217,7 +218,8 @@ export const useSaveNotionalTransfer = (
                 query.queryKey.some(
                   (key) =>
                     typeof key === 'object' &&
-                    (key as unknown)?.complianceReportId === complianceReportId
+                    (key as { complianceReportId?: number | string } | null)
+                      ?.complianceReportId === complianceReportId
                 ))
             )
           }
@@ -244,7 +246,8 @@ export const useSaveNotionalTransfer = (
               query.queryKey.some(
                 (key) =>
                   typeof key === 'object' &&
-                  (key as unknown)?.complianceReportId === complianceReportId
+                  (key as { complianceReportId?: number | string } | null)
+                    ?.complianceReportId === complianceReportId
               ))
           )
         }
@@ -258,7 +261,7 @@ export const useSaveNotionalTransfer = (
 
 export const useUpdateNotionalTransfer = (
   complianceReportId: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, unknown> = {}
+  options: ExtMutationOptions<unknown, Record<string, unknown>> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -272,7 +275,7 @@ export const useUpdateNotionalTransfer = (
   } = options
 
   return useMutation({
-    mutationFn: async (data: unknown) => {
+    mutationFn: async (data: Record<string, unknown> & { id?: number | string }) => {
       if (!data?.id) {
         throw new Error('Transfer ID is required for update')
       }
@@ -301,7 +304,8 @@ export const useUpdateNotionalTransfer = (
                 query.queryKey.some(
                   (key) =>
                     typeof key === 'object' &&
-                    (key as unknown)?.complianceReportId === complianceReportId
+                    (key as { complianceReportId?: number | string } | null)
+                      ?.complianceReportId === complianceReportId
                 ))
             )
           }
@@ -316,7 +320,8 @@ export const useUpdateNotionalTransfer = (
                 query.queryKey.some(
                   (key) =>
                     typeof key === 'object' &&
-                    (key as unknown)?.complianceReportId === complianceReportId
+                    (key as { complianceReportId?: number | string } | null)
+                      ?.complianceReportId === complianceReportId
                 ))
             )
           }
@@ -342,7 +347,8 @@ export const useUpdateNotionalTransfer = (
               query.queryKey.some(
                 (key) =>
                   typeof key === 'object' &&
-                  (key as unknown)?.complianceReportId === complianceReportId
+                  (key as { complianceReportId?: number | string } | null)
+                    ?.complianceReportId === complianceReportId
               ))
           )
         }
@@ -356,7 +362,7 @@ export const useUpdateNotionalTransfer = (
 
 export const useDeleteNotionalTransfer = (
   complianceReportId: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, unknown> = {}
+  options: ExtMutationOptions<unknown, number | string> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -369,7 +375,7 @@ export const useDeleteNotionalTransfer = (
   } = options
 
   return useMutation({
-    mutationFn: async (transferId: unknown) => {
+    mutationFn: async (transferId: number | string) => {
       if (!transferId) {
         throw new Error('Transfer ID is required for deletion')
       }
@@ -392,7 +398,8 @@ export const useDeleteNotionalTransfer = (
               query.queryKey.some(
                 (key) =>
                   typeof key === 'object' &&
-                  (key as unknown)?.complianceReportId === complianceReportId
+                  (key as { complianceReportId?: number | string } | null)
+                    ?.complianceReportId === complianceReportId
               ))
           )
         }
@@ -417,7 +424,8 @@ export const useDeleteNotionalTransfer = (
               query.queryKey.some(
                 (key) =>
                   typeof key === 'object' &&
-                  (key as unknown)?.complianceReportId === complianceReportId
+                  (key as { complianceReportId?: number | string } | null)
+                    ?.complianceReportId === complianceReportId
               ))
           )
         }
@@ -431,7 +439,7 @@ export const useDeleteNotionalTransfer = (
 
 export const useImportNotionalTransfers = (
   complianceReportId: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, unknown> = {}
+  options: ExtMutationOptions<unknown, { file: File; isOverwrite: boolean }> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -444,7 +452,7 @@ export const useImportNotionalTransfers = (
   } = options
 
   return useMutation({
-    mutationFn: async ({ file, isOverwrite }: Record<string, unknown>) => {
+    mutationFn: async ({ file, isOverwrite }: { file: File; isOverwrite: boolean }) => {
       if (!complianceReportId) {
         throw new Error('Compliance report ID is required')
       }
@@ -457,7 +465,7 @@ export const useImportNotionalTransfers = (
       const formData = new FormData()
       formData.append('file', file)
       formData.append('filename', file.name)
-      formData.append('overwrite', isOverwrite)
+      formData.append('overwrite', isOverwrite as unknown as string)
 
       return await client.post(path, formData, {
         headers: {
@@ -476,7 +484,8 @@ export const useImportNotionalTransfers = (
               query.queryKey.some(
                 (key) =>
                   typeof key === 'object' &&
-                  (key as unknown)?.complianceReportId === complianceReportId
+                  (key as { complianceReportId?: number | string } | null)
+                    ?.complianceReportId === complianceReportId
               ))
           )
         }

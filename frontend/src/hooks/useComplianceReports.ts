@@ -5,7 +5,18 @@ import { useApiService } from '@/services/useApiService'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCurrentUser } from './useCurrentUser'
 import useComplianceReportStore from '@/stores/useComplianceReportStore'
+import type { ReportId } from '@/stores/useComplianceReportStore'
 import type { QueryOptions, ExtMutationOptions } from './types'
+
+interface PenaltySummaryRow {
+  line?: number | string | null
+  invoiceSent?: boolean | null
+  paymentReceived?: boolean | null
+}
+
+interface CachedComplianceReportSummary {
+  nonCompliancePenaltySummary?: PenaltySummaryRow[]
+}
 
 // Default cache configuration
 const DEFAULT_STALE_TIME = 5 * 60 * 1000 // 5 minutes
@@ -93,7 +104,7 @@ export const useCreateComplianceReport = (
   } = options
 
   return useMutation({
-    mutationFn: async (data: unknown) => {
+    mutationFn: async (data: Record<string, unknown>) => {
       if (!orgID) {
         throw new Error('Organization ID is required')
       }
@@ -308,7 +319,7 @@ export const useUpdateComplianceReportSummary = (
   ])
 
   return useMutation({
-    mutationFn: async (data: unknown) => {
+    mutationFn: async (data: Record<string, unknown>) => {
       if (!reportID) {
         throw new Error('Report ID is required')
       }
@@ -321,7 +332,7 @@ export const useUpdateComplianceReportSummary = (
     onSuccess: (data, variables, context) => {
       queryClient.setQueryData(
         ['compliance-report-summary', reportID],
-        data?.data
+        (data as { data?: unknown } | undefined)?.data
       )
       queryClient.invalidateQueries({
         queryKey: ['compliance-report-summary', reportID],
@@ -349,7 +360,7 @@ export const useUpdateComplianceReportPenaltyStatus = (
   const { onSuccess, onError, ...restOptions } = options
 
   return useMutation({
-    mutationFn: async (data: unknown) => {
+    mutationFn: async (data: Record<string, unknown>) => {
       if (!reportID) {
         throw new Error('Report ID is required')
       }
@@ -360,7 +371,7 @@ export const useUpdateComplianceReportPenaltyStatus = (
       return await client.put(path, data)
     },
     onSuccess: (data, variables, context) => {
-      queryClient.setQueryData(
+      queryClient.setQueryData<CachedComplianceReportSummary>(
         ['compliance-report-summary', reportID],
         (old) => {
           if (!old) return old
@@ -370,7 +381,7 @@ export const useUpdateComplianceReportPenaltyStatus = (
           return {
             ...old,
             nonCompliancePenaltySummary: old.nonCompliancePenaltySummary?.map(
-              (row: unknown) =>
+              (row: PenaltySummaryRow) =>
                 Number(row.line) === Number(updatedStatus?.line)
                   ? {
                       ...row,
@@ -441,10 +452,10 @@ export const useUpdateComplianceReport = (
         queryClient.setQueryData(['compliance-report', reportID], data.data)
       }
 
-      removeReport(reportID as unknown)
+      removeReport(reportID as ReportId)
       if (data?.data) {
         setCurrentReport(data.data)
-        cacheReport(reportID as unknown, data.data)
+        cacheReport(reportID as ReportId, data.data)
       }
 
       if (invalidateRelatedQueries) {
@@ -495,9 +506,9 @@ export const useDeleteComplianceReport = (
     },
     onSuccess: (data, variables, context) => {
       // Remove from Zustand store first
-      removeReport(reportID as unknown)
+      removeReport(reportID as ReportId)
 
-      const queriesToInvalidate = [
+      const queriesToInvalidate: readonly (readonly unknown[])[] = [
         ['compliance-reports'],
         ['compliance-reports-list'],
         ['allocation-agreements', reportID],
@@ -507,7 +518,7 @@ export const useDeleteComplianceReport = (
         ['other-uses', reportID]
       ]
 
-      queriesToInvalidate.forEach((query: unknown) =>
+      queriesToInvalidate.forEach((query) =>
         queryClient.invalidateQueries({ queryKey: query })
       )
 

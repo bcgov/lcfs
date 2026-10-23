@@ -196,9 +196,13 @@ describe('TransactionsCard', () => {
     it('should not render count for viewAll item', () => {
       render(<TransactionsCard />)
 
-      // Check that "View all transactions" doesn't have a count before it
+      // "View all transactions" has no number, only an empty counter that
+      // screen readers skip, so its link lines up with the counted ones
+      // (#4911).
       const viewAllText = screen.getByText('View all transactions')
-      expect(viewAllText.previousSibling).toBe(null)
+      const spacer = viewAllText.previousSibling
+      expect(spacer).toHaveAttribute('aria-hidden', 'true')
+      expect(spacer.textContent).not.toMatch(/\d/)
     })
   })
 
@@ -216,11 +220,14 @@ describe('TransactionsCard', () => {
       render(<TransactionsCard />)
 
       const typographyElements = screen.getAllByTestId('bc-typography')
-      const countElements = typographyElements.filter(el => 
-        el.getAttribute('data-variant') === 'h3'
+      const countElements = typographyElements.filter(
+        (el) =>
+          el.getAttribute('data-variant') === 'h3' &&
+          !el.hasAttribute('aria-hidden')
       )
 
-      // Only the item with count 0 should have a count displayed
+      // Only the item with count 0 should have a count displayed; the rest
+      // keep empty counters so their links stay in line.
       expect(countElements).toHaveLength(1)
       expect(countElements[0]).toHaveTextContent('0')
     })

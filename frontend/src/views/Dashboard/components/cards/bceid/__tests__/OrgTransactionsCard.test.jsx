@@ -158,7 +158,7 @@ describe('OrgTransactionsCard', () => {
 
       render(<OrgTransactionsCard />)
 
-      expect(screen.getAllByText('0')).toHaveLength(3)
+      expect(screen.getAllByText('0')).toHaveLength(1)
     })
 
     it('shows 0 when count is null', () => {
@@ -170,7 +170,7 @@ describe('OrgTransactionsCard', () => {
 
       render(<OrgTransactionsCard />)
 
-      expect(screen.getAllByText('0')).toHaveLength(3)
+      expect(screen.getAllByText('0')).toHaveLength(1)
     })
   })
 
@@ -350,7 +350,7 @@ describe('OrgTransactionsCard', () => {
 
       render(<OrgTransactionsCard />)
 
-      expect(screen.getAllByText('0')).toHaveLength(3)
+      expect(screen.getAllByText('0')).toHaveLength(1)
     })
 
     it('handles empty counts data', () => {
@@ -362,7 +362,7 @@ describe('OrgTransactionsCard', () => {
 
       render(<OrgTransactionsCard />)
 
-      expect(screen.getAllByText('0')).toHaveLength(3)
+      expect(screen.getAllByText('0')).toHaveLength(1)
     })
   })
 

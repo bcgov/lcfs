@@ -8,16 +8,17 @@ The primary database for the LCFS application is **PostgreSQL**.
 
 Database schema migrations (changes over time) are managed using **Alembic**, a database migration tool for SQLAlchemy.
 
-*   **Alembic Configuration**: `backend/alembic.ini`.
-*   **Migration Scripts**: Individual migration scripts are located in `backend/lcfs/db/migrations/versions/`.
-    *   These scripts define the changes to be applied to the database schema (e.g., creating tables, adding columns, modifying constraints).
-*   **Seeder Scripts**: Data seeding operations (populating initial or test data) can also be managed via Alembic migrations, typically found in `backend/lcfs/db/seeders/` if this convention is followed, or as part of regular migration scripts.
+- **Alembic Configuration**: `backend/alembic.ini`.
+- **Migration Scripts**: Individual migration scripts are located in `backend/lcfs/db/migrations/versions/`.
+  - These scripts define the changes to be applied to the database schema (e.g., creating tables, adding columns, modifying constraints).
+- **Seeder Scripts**: Data seeding operations (populating initial or test data) can also be managed via Alembic migrations, typically found in `backend/lcfs/db/seeders/` if this convention is followed, or as part of regular migration scripts.
 
 ### Managing Migrations (`backend/migrate.sh`)
 
 The `backend/migrate.sh` script is a utility to simplify common Alembic operations:
 
 1.  **Make the script executable** (if not already):
+
     ```bash
     cd backend
     chmod +x migrate.sh
@@ -25,26 +26,32 @@ The `backend/migrate.sh` script is a utility to simplify common Alembic operatio
 
 2.  **Generating a New Migration**:
     When you make changes to SQLAlchemy models in `backend/lcfs/db/models/`, you need to generate a new migration script.
+
     ```bash
     ./migrate.sh -g "Your descriptive message about the changes"
     ```
+
     This will create a new file in `backend/lcfs/db/migrations/versions/`. You should then review and edit this script to ensure it accurately reflects the intended changes.
 
 3.  **Upgrading the Database (Applying Migrations)**:
     To apply pending migrations to your database (e.g., to upgrade to the latest version or a specific revision):
+
     ```bash
     ./migrate.sh -u [revision_id]
     ```
-    *   Omit `[revision_id]` to upgrade to the `head` (latest version).
-    *   The `docker-compose up` command for the main application may also automatically apply migrations on startup if its entrypoint script is configured to do so.
+
+    - Omit `[revision_id]` to upgrade to the `head` (latest version).
+    - The `docker-compose up` command for the main application may also automatically apply migrations on startup if its entrypoint script is configured to do so.
 
 4.  **Downgrading the Database (Reverting Migrations)**:
     To revert migrations:
+
     ```bash
     ./migrate.sh -d [revision_id]
     ```
-    *   Omit `[revision_id]` to revert all migrations back to the base state (an empty database from Alembic's perspective).
-    *   Use with caution, especially in environments with data.
+
+    - Omit `[revision_id]` to revert all migrations back to the base state (an empty database from Alembic's perspective).
+    - Use with caution, especially in environments with data.
 
 5.  **Displaying Help**:
     For more options and help with the script:
@@ -56,17 +63,27 @@ The `backend/migrate.sh` script is a utility to simplify common Alembic operatio
 
 The database schema is defined programmatically using SQLAlchemy ORM models.
 
-*   **Model Location**: `backend/lcfs/db/models/` (organized by domain, such as `organization/`, `compliance/`, `fuel/`, `transaction/`, and `transfer/`).
-*   These Python classes define the tables, columns, relationships, and constraints of the database.
-*   Alembic uses these model definitions (often by comparing them to the current database state) to auto-generate migration scripts.
+- **Model Location**: `backend/lcfs/db/models/` (organized by domain, such as `organization/`, `compliance/`, `fuel/`, `transaction/`, and `transfer/`).
+- These Python classes define the tables, columns, relationships, and constraints of the database.
+- Alembic uses these model definitions (often by comparing them to the current database state) to auto-generate migration scripts.
 
 ## 3. Entity Relationship Diagram (ERD)
 
-*   The current Entity Relationship Diagram is available: `LCFS_ERD_v0.3.0.drawio` (located in the project root).
-*   This diagram was regenerated from the current SQLAlchemy metadata and covers 112 database tables and 178 foreign key relationships.
-*   The v0.3.0 diagram is organized into 12 domain pages: Organization, User & Access, Compliance Reports, Final Supply Equipment, Charging Assets, Fuel, Transactions, Transfers, CI Applications, Documents & Comments, Notifications, and Administration & Audit.
-*   This diagram provides a visual representation of the database schema, including tables, columns, primary keys, foreign keys, and relationships. Gray tables are external one-hop references included to show cross-domain relationships.
-*   It is recommended to keep this diagram updated as the schema evolves. You can use [draw.io](https://app.diagrams.net/) (or a compatible desktop version) to view and edit this file.
+- The current Entity Relationship Diagram is available: `LCFS_ERD_v0.3.0.drawio` (located in the project root).
+- This diagram was regenerated from the current SQLAlchemy metadata and covers 112 database tables and 178 foreign key relationships.
+- The v0.3.0 diagram is organized into 12 domain pages: Organization, User & Access, Compliance Reports, Final Supply Equipment, Charging Assets, Fuel, Transactions, Transfers, CI Applications, Documents & Comments, Notifications, and Administration & Audit.
+- This diagram provides a visual representation of the database schema, including tables, columns, primary keys, foreign keys, and relationships. Gray tables are external one-hop references included to show cross-domain relationships.
+- It is recommended to keep this diagram updated as the schema evolves. You can use [draw.io](https://app.diagrams.net/) (or a compatible desktop version) to view and edit this file.
+
+### Focused domain diagrams (Mermaid)
+
+With 150+ models, the full ERD is overwhelming for day-to-day work. These Mermaid-based pages zoom into the three largest/most interconnected domains so you don't have to load the whole `.drawio` file to understand the relationships in the area you're working on:
+
+- **[ERD: Compliance Domain](ERD-Compliance-Domain.md)** — `ComplianceReport` and its schedules (`FuelSupply`, `FuelExport`, `NotionalTransfer`, `OtherUses`, `AllocationAgreement`, `FinalSupplyEquipment`), charging infrastructure (`ChargingSite`, `ChargingEquipment`), and report status/history/summary tables. 29 model files — the most complex domain in the app.
+- **[ERD: Fuel Domain](ERD-Fuel-Domain.md)** — `FuelType`, `FuelCategory`, `FuelCode` and the carbon-intensity/energy-density/transport-mode reference tables consumed by compliance reporting. 22 model files.
+- **[ERD: Organization Domain](ERD-Organization-Domain.md)** — `Organization` and its sub-tables (address, type, status, roles, early issuance, link keys, penalty log), plus a map of which other domains reference it. 10 model files.
+
+These pages are plain Markdown with embedded Mermaid `erDiagram` blocks, so they render directly on GitHub/the wiki and are easy to update alongside model changes — no drawio editor required.
 
 ## 4. Key Tables and Relationships (High-Level - To Be Expanded)
 
@@ -74,24 +91,25 @@ This section summarizes the major domains represented in `LCFS_ERD_v0.3.0.drawio
 
 Examples of potential key entities (based on typical LCFS requirements):
 
-*   **Users & Organizations**: User accounts, roles, permissions, and their association with organizations/companies.
-*   **Fuel Suppliers/Producers**: Information about entities involved in fuel production and supply.
-*   **Fuel Types and Fuel Codes**: Fuel categories, fuel instances, fuel codes, carbon intensity values, energy densities, energy effectiveness ratios, and transport modes.
-*   **Compliance Reports**: Reports submitted for compliance periods, including fuel supplies, fuel exports, allocation agreements, notional transfers, other uses, summaries, report history, and organization snapshots.
-*   **Charging and Final Supply Equipment**: Charging sites, charging equipment, charging statuses, charging power outputs, final supply equipment, and registration numbers.
-*   **Transactions and Transfers**: Credit transactions, transfer records, transfer categories, transfer statuses, transfer comments, and transfer history.
-*   **Credit/Deficit Tracking**: Ledger for LCFS credits and deficits.
-*   **Notifications**: Government notifications, notification messages, types, channels, and channel subscriptions.
-*   **Administration and Audit**: Administrative adjustments, initiative agreements, aggregator issuance, scheduled tasks, task executions, penalty logs, and audit logs.
+- **Users & Organizations**: User accounts, roles, permissions, and their association with organizations/companies.
+- **Fuel Suppliers/Producers**: Information about entities involved in fuel production and supply.
+- **Fuel Types and Fuel Codes**: Fuel categories, fuel instances, fuel codes, carbon intensity values, energy densities, energy effectiveness ratios, and transport modes.
+- **Compliance Reports**: Reports submitted for compliance periods, including fuel supplies, fuel exports, allocation agreements, notional transfers, other uses, summaries, report history, and organization snapshots.
+- **Charging and Final Supply Equipment**: Charging sites, charging equipment, charging statuses, charging power outputs, final supply equipment, and registration numbers.
+- **Transactions and Transfers**: Credit transactions, transfer records, transfer categories, transfer statuses, transfer comments, and transfer history.
+- **Credit/Deficit Tracking**: Ledger for LCFS credits and deficits.
+- **Notifications**: Government notifications, notification messages, types, channels, and channel subscriptions.
+- **Administration and Audit**: Administrative adjustments, initiative agreements, aggregator issuance, scheduled tasks, task executions, penalty logs, and audit logs.
 
 ## 5. Data Integrity
 
-*   **Primary Keys**: Each table should have a primary key to uniquely identify records.
-*   **Foreign Keys**: Relationships between tables are enforced using foreign key constraints.
-*   **NOT NULL Constraints**: Applied to columns that must have a value.
-*   **UNIQUE Constraints**: Ensure values in a column or set of columns are unique.
-*   **CHECK Constraints**: Enforce specific conditions on data values.
-*   **Enum Types**: PostgreSQL ENUM types (managed via `alembic-postgresql-enum`) are used for columns with a fixed set of possible values.
+- **Primary Keys**: Each table should have a primary key to uniquely identify records.
+- **Foreign Keys**: Relationships between tables are enforced using foreign key constraints.
+- **NOT NULL Constraints**: Applied to columns that must have a value.
+- **UNIQUE Constraints**: Ensure values in a column or set of columns are unique.
+- **CHECK Constraints**: Enforce specific conditions on data values.
+- **Enum Types**: PostgreSQL ENUM types (managed via `alembic-postgresql-enum`) are used for columns with a fixed set of possible values.
 
 ---
-*For the most accurate and detailed schema information, always refer to the SQLAlchemy models in `backend/lcfs/db/models/` and the Alembic migration scripts. The ERD should be used as a visual guide and kept synchronized with the codebase.* 
+
+_For the most accurate and detailed schema information, always refer to the SQLAlchemy models in `backend/lcfs/db/models/` and the Alembic migration scripts. The ERD should be used as a visual guide and kept synchronized with the codebase._

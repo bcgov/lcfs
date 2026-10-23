@@ -1,5 +1,5 @@
 import json
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from lcfs.db.models.notification import (
     NotificationChannelSubscription,
     NotificationMessage,
@@ -392,6 +392,35 @@ class NotificationService:
                 notification.notification_context,
                 notification.notification_data.related_organization_id,
                 audience_type,
+            )
+
+    @service_handler
+    async def send_mention_notification(
+        self,
+        recipient_user_profile_id: int,
+        recipient_email: Optional[str],
+        notification_data: NotificationMessageSchema,
+        email_context: Dict[str, Any],
+    ) -> None:
+        """
+        Directly notify one user that they were @mentioned: always creates the
+        in-app message and sends the email, regardless of the recipient's
+        notification channel subscriptions.
+        """
+        notification_type_id = await self.get_notification_type_id_by_name(
+            NotificationTypeEnum.IDIR_ANY__INTERNAL_COMMENT__MENTION.value
+        )
+
+        message = NotificationMessage(
+            **notification_data.model_dump(exclude_unset=True, exclude={"deleted"}),
+            notification_type_id=notification_type_id,
+            related_user_profile_id=recipient_user_profile_id,
+        )
+        await self.repo.create_notification_messages([message])
+
+        if recipient_email:
+            await self.email_service.send_mention_notification_email(
+                recipient_email, email_context
             )
 
     @service_handler

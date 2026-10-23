@@ -15,13 +15,13 @@ export const useOrganizationStatuses = (options: QueryOptions<unknown>) => {
 export const useOrganizationListStatuses = (options: QueryOptions<unknown>) => {
   const { data, isLoading, ...rest } = useOrganizationStatuses(options)
 
-  const validStatuses = [
+  const validStatuses: string[] = [
     ORGANIZATION_STATUSES.REGISTERED,
     ORGANIZATION_STATUSES.UNREGISTERED
   ]
 
-  const filteredData = (data as unknown)?.filter((status: string) =>
-    validStatuses.includes(status.status)
+  const filteredData = (data as { status: string }[] | undefined)?.filter(
+    (status) => validStatuses.includes(status.status)
   )
 
   return {
@@ -56,8 +56,11 @@ export const useOrganizationListStatuses = (options: QueryOptions<unknown>) => {
  * )
  */
 export const useOrganizationNames = (
-  statuses: unknown = null,
-  queryParamsOrOptions: unknown = {},
+  statuses: string[] | null = null,
+  queryParamsOrOptions: QueryOptions<unknown> & {
+    orgFilter?: string
+    filters?: Record<string, unknown>
+  } = {},
   options: QueryOptions<unknown> = {}
 ) => {
   const client = useApiService()
@@ -67,7 +70,7 @@ export const useOrganizationNames = (
     (Object.prototype.hasOwnProperty.call(queryParamsOrOptions, 'orgFilter') ||
       Object.prototype.hasOwnProperty.call(queryParamsOrOptions, 'filters'))
 
-  const queryParams = {
+  const queryParams: { orgFilter: string; filters: Record<string, unknown> } = {
     orgFilter: 'fuel_supplier',
     filters: {}
   }
@@ -111,7 +114,7 @@ export const useOrganizationNames = (
         )
         .forEach((value: unknown) => {
           filterEntries.push(
-            `${encodeURIComponent(key)}=${encodeURIComponent(value)}`
+            `${encodeURIComponent(key)}=${encodeURIComponent(value as string)}`
           )
         })
     })

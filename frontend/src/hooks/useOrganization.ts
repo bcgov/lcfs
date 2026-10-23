@@ -152,14 +152,20 @@ export const useOrganizationPenaltyLogs = (
 
 export const useSaveOrganizationPenaltyLog = (
   orgID: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, unknown> = {}
+  options: ExtMutationOptions<unknown, Record<string, unknown> & {
+    deleted?: boolean
+    penaltyLogId?: number | string
+  }> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
   const { onSuccess, onError, ...restOptions } = options
 
   return useMutation({
-    mutationFn: async (data: unknown) => {
+    mutationFn: async (data: Record<string, unknown> & {
+      deleted?: boolean
+      penaltyLogId?: number | string
+    }) => {
       if (!orgID) {
         throw new Error('Organization ID is required')
       }
