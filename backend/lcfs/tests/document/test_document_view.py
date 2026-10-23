@@ -4,6 +4,12 @@ from fastapi import UploadFile
 from starlette import status
 
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.services.clamav.client import (
+    FileTooLargeToScanException,
+    ScanUnavailableException,
+    VirusScanException,
+)
+from lcfs.services.file_inspection import FileRejectedException
 from lcfs.services.s3.client import DocumentService
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
 from lcfs.web.api.initiative_agreement.validation import InitiativeAgreementValidation
@@ -186,6 +192,38 @@ async def test_upload_file_success(fastapi_app, client):
     assert data["createUser"] == "tester"
 
 
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "exception, expected_status, expected_detail",
+    [
+        (
+            VirusScanException(),
+            422,
+            "Viruses detected in file, please upload another",
+        ),
+        (FileTooLargeToScanException(), 422, FileTooLargeToScanException.detail),
+        (ScanUnavailableException(), 503, ScanUnavailableException.detail),
+        (FileRejectedException("Contents don't match"), 400, "Contents don't match"),
+    ],
+)
+async def test_upload_file_scan_outcomes(
+    fastapi_app, client, monkeypatch, exception, expected_status, expected_detail
+):
+    async def refuse(self, *args, **kwargs):
+        raise exception
+
+    monkeypatch.setattr(FakeDocumentService, "upload_file", refuse)
+    url = fastapi_app.url_path_for(
+        "upload_file", parent_type="compliance_report", parent_id=1
+    )
+    files = {"file": ("test.txt", io.BytesIO(b"file content"), "text/plain")}
+
+    response = await client.post(url, files=files)
+
+    assert response.status_code == expected_status
+    assert response.json()["detail"] == expected_detail
+
 @pytest.mark.anyio
 async def test_upload_file_missing_file(fastapi_app, client):
     url = fastapi_app.url_path_for(
@@ -208,6 +246,8 @@ async def test_stream_document_compliance_report(fastapi_app, client):
     assert cd == "attachment; filename=\"document.pdf\"; filename*=UTF-8''document.pdf"
     cl = response.headers.get("content-length")
     assert cl == "789"
+    assert response.headers.get("X-Content-Type-Options") == "nosniff"
+    assert response.headers.get("Content-Security-Policy") == "sandbox"
 
     body = await response.aread()
     assert body == b"streamed content"

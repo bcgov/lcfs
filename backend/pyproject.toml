@@ -50,6 +50,8 @@ apscheduler = "^3.11.0"
 python-docx = ">=1.1.2,<2.0.0"
 weasyprint = ">=60.0"
 pillow = ">=11.3,<13.0"
+olefile = "^0.47"
+defusedxml = "^0.7.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.0.3"

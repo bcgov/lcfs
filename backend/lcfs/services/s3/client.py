@@ -1,4 +1,5 @@
 from fastapi import Depends, HTTPException
+from starlette.concurrency import run_in_threadpool
 from io import UnsupportedOperation
 import os
 import re
@@ -50,6 +51,7 @@ from lcfs.db.models.comment.ComplianceReportInternalComment import (
     ComplianceReportInternalComment,
 )
 from lcfs.services.clamav.client import ClamAVService
+from lcfs.services.file_inspection import inspect_upload
 from lcfs.settings import settings
 from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
 from lcfs.web.api.charging_site.repo import ChargingSiteRepository
@@ -201,8 +203,18 @@ class DocumentService:
                 detail=f"File size exceeds the maximum limit of {MAX_FILE_SIZE_MB} MB.",
             )
 
+        # Check what the file really is; the browser's Content-Type is only a claim
+        file.file.seek(0)
+        detected = await run_in_threadpool(
+            inspect_upload,
+            file.file.read(),
+            file.filename,
+            ALLOWED_MIME_TYPES,
+            ALLOWED_FILE_TYPES,
+        )
+
         if settings.clamav_enabled:
-            self.clamav_service.scan_file(file)
+            await self.clamav_service.scan_file_async(file)
 
         # Upload file to S3
         file.file.seek(0)
@@ -211,7 +223,7 @@ class DocumentService:
                 Fileobj=file.file,
                 Bucket=BUCKET_NAME,
                 Key=file_key,
-                ExtraArgs={"ContentType": file.content_type},
+                ExtraArgs={"ContentType": detected.mime_type},
             )
         except ClientError as exc:
             error_code = exc.response.get("Error", {}).get("Code")
@@ -224,7 +236,7 @@ class DocumentService:
                 Body=file_bytes,
                 Bucket=BUCKET_NAME,
                 Key=file_key,
-                ContentType=file.content_type,
+                ContentType=detected.mime_type,
             )
         except Exception as exc:
             raise ServiceException(f"Error uploading file to S3: {exc}")
@@ -239,7 +251,7 @@ class DocumentService:
             file_key=file_key,
             file_name=file.filename,
             file_size=file_size,
-            mime_type=file.content_type,
+            mime_type=detected.mime_type,
         )
 
         if parent_type == "compliance_report":
@@ -615,20 +627,6 @@ class DocumentService:
         await self.db.flush()
         await self.db.refresh(document)
         return document
-
-    @repo_handler
-    async def generate_presigned_url(self, document_id: int):
-        document = await self.db.get_one(Document, document_id)
-
-        if not document:
-            raise Exception("Document not found")
-
-        presigned_url = self.s3_client.generate_presigned_url(
-            "get_object",
-            Params={"Bucket": BUCKET_NAME, "Key": document.file_key},
-            ExpiresIn=60,  # URL expiration in seconds
-        )
-        return presigned_url
 
     @repo_handler
     async def delete_file(self, document_id: int, parent_id: int, parent_type: str):

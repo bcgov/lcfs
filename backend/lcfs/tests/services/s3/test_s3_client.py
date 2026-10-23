@@ -25,7 +25,11 @@ from lcfs.db.models.compliance.ComplianceReport import (
     compliance_report_document_association,
 )
 from lcfs.services.s3.client import DocumentService, MAX_FILE_SIZE_BYTES, BUCKET_NAME
-from lcfs.services.clamav.client import ClamAVService
+from lcfs.services.clamav.client import ClamAVService, ScanUnavailableException
+from lcfs.services.file_inspection import FileRejectedException
+from lcfs.tests.services.file_inspection.builders import xlsx_bytes
+
+PDF_BYTES = b"%PDF-1.7\nfile-bytes"
 
 
 @pytest.fixture
@@ -45,7 +49,6 @@ def db_mock():
 def s3_client_mock():
     client = MagicMock()
     client.upload_fileobj = MagicMock()
-    client.generate_presigned_url = MagicMock(return_value="https://example.com/file")
     client.delete_object = MagicMock()
     client.get_object = MagicMock(return_value={"Body": BytesIO(b"test content")})
     client.put_object = MagicMock()
@@ -132,7 +135,7 @@ def mock_file():
     file.file = MagicMock()
     file.file.fileno = MagicMock(return_value=0)
     file.file.seek = MagicMock()
-    file.file.read = MagicMock(return_value=b"file-bytes")
+    file.file.read = MagicMock(return_value=PDF_BYTES)
     return file
 
 
@@ -258,14 +261,15 @@ async def test_upload_file_closed_seek_is_ignored(
     db_mock.get.return_value = compliance_report_mock
     db_mock.refresh = AsyncMock(side_effect=lambda x: x)
 
-    mock_file.file.seek.side_effect = [None, ValueError("seek of closed file")]
+    # Inspection and upload seek first; the final seek finds the file closed
+    mock_file.file.seek.side_effect = [None, None, ValueError("seek of closed file")]
 
     result = await document_service.upload_file(
         mock_file, 1, "compliance_report", user_supplier
     )
 
     assert result.file_name == mock_file.filename
-    assert mock_file.file.seek.call_count == 2
+    assert mock_file.file.seek.call_count == 3
 
 
 @pytest.mark.anyio
@@ -305,12 +309,98 @@ async def test_upload_file_sha256_mismatch_fallback(
     assert result.file_name == mock_file.filename
     document_service.s3_client.put_object.assert_called_once()
     kwargs = document_service.s3_client.put_object.call_args.kwargs
-    assert kwargs["Body"] == b"file-bytes"
+    assert kwargs["Body"] == PDF_BYTES
     assert kwargs["Bucket"] == BUCKET_NAME
     assert kwargs["ContentType"] == mock_file.content_type
     document_service.s3_client.upload_fileobj.assert_called_once()
     assert mock_file.file.seek.call_count >= 2
 
+
+
+@pytest.mark.anyio
+@patch("os.fstat")
+@patch("uuid.uuid4")
+async def test_upload_file_stores_detected_type(
+    mock_uuid,
+    mock_fstat,
+    document_service,
+    mock_file,
+    user_supplier,
+    compliance_report_mock,
+    db_mock,
+):
+    """Windows browsers send .csv as application/vnd.ms-excel; store what it really is."""
+    mock_uuid.return_value = "test-uuid"
+    mock_fstat.return_value = MagicMock(st_size=12)
+    document_service.compliance_report_repo.get_compliance_report_by_id.return_value = (
+        compliance_report_mock
+    )
+    db_mock.get.return_value = compliance_report_mock
+    db_mock.refresh = AsyncMock(side_effect=lambda x: x)
+    mock_file.filename = "volumes.csv"
+    mock_file.content_type = "application/vnd.ms-excel"
+    mock_file.file.read.return_value = b"fuel,volume\ndiesel,10\n"
+
+    result = await document_service.upload_file(
+        mock_file, 1, "compliance_report", user_supplier
+    )
+
+    assert result.mime_type == "text/csv"
+    kwargs = document_service.s3_client.upload_fileobj.call_args.kwargs
+    assert kwargs["ExtraArgs"] == {"ContentType": "text/csv"}
+
+
+@pytest.mark.anyio
+@patch("os.fstat")
+async def test_upload_file_rejects_contents_that_do_not_match(
+    mock_fstat,
+    document_service,
+    mock_file,
+    user_supplier,
+    compliance_report_mock,
+):
+    """A spreadsheet renamed to .pdf is rejected before it reaches S3."""
+    mock_fstat.return_value = MagicMock(st_size=1024)
+    document_service.compliance_report_repo.get_compliance_report_by_id.return_value = (
+        compliance_report_mock
+    )
+    mock_file.file.read.return_value = xlsx_bytes()
+
+    with pytest.raises(FileRejectedException) as exc_info:
+        await document_service.upload_file(
+            mock_file, 1, "compliance_report", user_supplier
+        )
+
+    assert exc_info.value.status_code == 400
+    assert "don't match" in exc_info.value.detail
+    document_service.s3_client.upload_fileobj.assert_not_called()
+
+
+@pytest.mark.anyio
+@patch("os.fstat")
+async def test_upload_file_scan_failure_stops_upload(
+    mock_fstat,
+    document_service,
+    mock_file,
+    user_supplier,
+    compliance_report_mock,
+):
+    mock_fstat.return_value = MagicMock(st_size=1024)
+    document_service.compliance_report_repo.get_compliance_report_by_id.return_value = (
+        compliance_report_mock
+    )
+    document_service.clamav_service.scan_file_async.side_effect = (
+        ScanUnavailableException()
+    )
+
+    with patch("lcfs.services.s3.client.settings.clamav_enabled", True):
+        with pytest.raises(ScanUnavailableException):
+            await document_service.upload_file(
+                mock_file, 1, "compliance_report", user_supplier
+            )
+
+    document_service.clamav_service.scan_file_async.assert_awaited_once()
+    document_service.s3_client.upload_fileobj.assert_not_called()
 
 @pytest.mark.anyio
 @patch("os.fstat")
@@ -444,32 +534,6 @@ async def test_verify_initiative_agreement_access_supplier_failure(
 
     assert exc_info.value.status_code == 400
     assert "Only Government Staff" in exc_info.value.detail
-
-
-@pytest.mark.anyio
-async def test_generate_presigned_url_success(document_service, document_mock, db_mock):
-    # Setup
-    db_mock.get_one.return_value = document_mock
-
-    # Execute
-    result = await document_service.generate_presigned_url(1)
-
-    # Assert
-    assert result == "https://example.com/file"
-    db_mock.get_one.assert_called_once_with(Document, 1)
-    document_service.s3_client.generate_presigned_url.assert_called_once()
-
-
-@pytest.mark.anyio
-async def test_generate_presigned_url_document_not_found(document_service, db_mock):
-    # Setup
-    db_mock.get_one.return_value = None
-
-    # Execute and Assert
-    with pytest.raises(Exception) as exc_info:
-        await document_service.generate_presigned_url(1)
-
-    assert "DatabaseException" in str(exc_info.typename)
 
 
 @pytest.mark.anyio

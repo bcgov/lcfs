@@ -41,6 +41,7 @@ async def stream_image(
         "Content-Disposition": f'inline; filename="{image.file_name}"',
         "content-length": str(s3_response["ContentLength"]),
         "Cache-Control": "public, max-age=3600",
+        "X-Content-Type-Options": "nosniff",
     }
     return StreamingResponse(
         content=s3_response["Body"],
