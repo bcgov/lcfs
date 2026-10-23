@@ -27,19 +27,6 @@ logger = structlog.get_logger(__name__)
 VALID_INTERVALS = {"month", "quarter", "year"}
 TOP_HOLDERS = 10
 
-# Aggregate-only publishing thresholds. Periods below these are withheld so
-# no near-individual transaction or price can be inferred from public data.
-MIN_TRANSFERS = 5
-MIN_PARTICIPANTS = 3
-
-
-def _publishable(row) -> bool:
-    return (
-        (row.transfers or 0) >= MIN_TRANSFERS
-        and (row.distinct_sellers or 0) >= MIN_PARTICIPANTS
-        and (row.distinct_buyers or 0) >= MIN_PARTICIPANTS
-    )
-
 
 def _period_label(period: datetime, interval: str) -> str:
     """Format a date_trunc bucket into a stable, human-readable label."""
@@ -105,10 +92,8 @@ class CreditMarketServices:
                 ]
             )
 
-        # Reuse the same effective-date, monthly-cutoff, suppressed aggregation
-        # as the market report so the public snapshot and the full report agree
-        # and only complete, publishable periods are shown. Individual min/max
-        # prices are never exposed publicly.
+        # Reuse the report's effective-date aggregation and monthly cutoff so
+        # the snapshot and full report agree. The snapshot omits min/max prices.
         rows = await self.repo.get_report_periods(interval)
         price_index = [
             PublicPricePointSchema(
@@ -119,7 +104,6 @@ class CreditMarketServices:
                 volume=_to_int(row.volume),
             )
             for row in rows
-            if _publishable(row)
         ]
 
         latest_vwap = next(
@@ -150,7 +134,7 @@ class CreditMarketServices:
         a1_monthly_rows = await self.repo.get_report_a1_periods("month")
         all_time_row = await self.repo.get_report_all_time()
 
-        def to_periods(rows, interval, suppress_low_counts: bool = False):
+        def to_periods(rows, interval):
             return [
                 MarketReportPeriodSchema(
                     period=_period_label(r.period, interval),
@@ -200,14 +184,11 @@ class CreditMarketServices:
                     transfer_value=_to_float(r.transfer_value) or 0.0,
                 )
                 for r in rows
-                if not suppress_low_counts or _publishable(r)
             ]
 
-        pub_monthly = [r for r in monthly_rows if _publishable(r)]
-        pub_a1_monthly = [r for r in a1_monthly_rows if _publishable(r)]
-        kpis = self._build_report_kpis(pub_monthly)
-        ytd_kpis = self._build_ytd_report_kpis(pub_monthly)
-        a1_kpis = self._build_report_kpis(pub_a1_monthly, compare_to="previous_month")
+        kpis = self._build_report_kpis(monthly_rows)
+        ytd_kpis = self._build_ytd_report_kpis(monthly_rows)
+        a1_kpis = self._build_report_kpis(a1_monthly_rows, compare_to="previous_month")
 
         all_time = MarketReportAllTimeSchema(
             transfers=_to_int(all_time_row.transfers) if all_time_row else 0,
@@ -230,16 +211,16 @@ class CreditMarketServices:
         )
 
         return PublicMarketReportSchema(
-            monthly=to_periods(monthly_rows, "month", suppress_low_counts=True),
-            a1_monthly=to_periods(a1_monthly_rows, "month", suppress_low_counts=True),
-            quarterly=to_periods(quarterly_rows, "quarter", suppress_low_counts=True),
-            annual=to_periods(annual_rows, "year", suppress_low_counts=True),
+            monthly=to_periods(monthly_rows, "month"),
+            a1_monthly=to_periods(a1_monthly_rows, "month"),
+            quarterly=to_periods(quarterly_rows, "quarter"),
+            annual=to_periods(annual_rows, "year"),
             all_time=all_time,
             kpis=kpis,
             ytd_kpis=ytd_kpis,
             a1_kpis=a1_kpis,
-            min_transfers=MIN_TRANSFERS,
-            min_participants=MIN_PARTICIPANTS,
+            min_transfers=0,
+            min_participants=0,
         )
 
     def _build_report_kpis(
