@@ -27,6 +27,7 @@ import {
   removeMentionMarkup
 } from './mentionUtils'
 import MentionDropdown from './MentionDropdown'
+import CommentUploadDropzone from './CommentUploadDropzone'
 import { useMentionEditor } from './useMentionEditor'
 import './quillExtensions'
 import { quillAttachIcon } from '@/utils/quillAttachIcon'
@@ -127,6 +128,7 @@ VisibilityToggle.propTypes = {
 
 const CommentForm = ({
   title,
+  placeholder: customPlaceholder,
   commentText = '',
   onSubmit,
   onCancel,
@@ -140,6 +142,7 @@ const CommentForm = ({
   visibilityAlign = 'right',
   showTitle = true,
   enableAttachments = false,
+  showUploadDropzone = false,
   attachments = [],
   onAttachmentsChange,
   existingAttachments = [],
@@ -164,8 +167,10 @@ const CommentForm = ({
   })
 
   const attachmentsEnabled = enableAttachments && !!onAttachmentsChange
-  const attachmentsEnabledRef = useRef(attachmentsEnabled)
-  attachmentsEnabledRef.current = attachmentsEnabled
+  const canAttachFiles =
+    attachmentsEnabled && !(showUploadDropzone && isSubmitting)
+  const canAttachFilesRef = useRef(canAttachFiles)
+  canAttachFilesRef.current = canAttachFiles
 
   // Public comments can't carry mentions of internal staff. Switching to
   // Public leaves the text untouched and asks the user to resolve it (the
@@ -184,15 +189,12 @@ const CommentForm = ({
   }
 
   const handleAttachClick = useCallback(() => {
-    if (!attachmentsEnabledRef.current) return
+    if (!canAttachFilesRef.current) return
     fileInputRef.current?.click()
   }, [])
 
-  const handleFilesSelected = (event) => {
-    const selected = Array.from(event.target.files || [])
-    // Reset the input so selecting the same file again still fires onChange.
-    event.target.value = ''
-    if (selected.length === 0) {
+  const appendAttachments = (selected) => {
+    if (!canAttachFiles || selected.length === 0) {
       return
     }
 
@@ -215,6 +217,13 @@ const CommentForm = ({
     if (valid.length) {
       onAttachmentsChange([...attachments, ...valid])
     }
+  }
+
+  const handleFilesSelected = (event) => {
+    const selected = Array.from(event.target.files || [])
+    // Reset the input so selecting the same file again still fires onChange.
+    event.target.value = ''
+    appendAttachments(selected)
   }
 
   const handleRemoveStaged = (index) => {
@@ -279,11 +288,13 @@ const CommentForm = ({
 
   const isCommentEmpty = !commentText || commentText.trim() === ''
 
-  const placeholder = showVisibilityToggle
-    ? visibility === 'Public'
-      ? t('internalComment:publicCommentPlaceholder')
-      : t('internalComment:internalCommentPlaceholder')
-    : undefined
+  const placeholder =
+    customPlaceholder ??
+    (showVisibilityToggle
+      ? visibility === 'Public'
+        ? t('internalComment:publicCommentPlaceholder')
+        : t('internalComment:internalCommentPlaceholder')
+      : undefined)
 
   // ReactQuill only applies the placeholder when mounting. Update it in place
   // so typing and visibility changes preserve focus, selection and whitespace.
@@ -341,7 +352,7 @@ const CommentForm = ({
       button.setAttribute('aria-label', label)
       button.setAttribute('title', label)
       button.removeAttribute('aria-pressed')
-      button.disabled = !attachmentsEnabled
+      button.disabled = !canAttachFiles
       button.hidden = !attachmentsEnabled
       // Quill's author stylesheet can override the browser's default [hidden]
       // styling, so set inline display as well to keep it out of view and the
@@ -402,12 +413,33 @@ const CommentForm = ({
   }, [
     t,
     attachmentsEnabled,
+    canAttachFiles,
     enableMentions,
     mentionsPausedByVisibility
   ])
 
   const showVisibilityUnderTitle =
     showVisibilityToggle && visibilityAlign === 'left'
+
+  const editor = (
+    <div
+      className="comment-editor"
+      data-mention-conflict={hasMentionConflict ? 'true' : 'false'}
+      style={showUploadDropzone ? { minWidth: 0 } : undefined}
+    >
+      <ReactQuill
+        ref={quillRef}
+        value={commentText}
+        readOnly={isSubmitting}
+        onChange={handleEditorChange}
+        onChangeSelection={mentionEditor.handleSelectionChange}
+        placeholder={placeholder}
+        theme="snow"
+        modules={quillModules}
+        formats={['bold', 'italic', 'list', 'bullet', 'mention']}
+      />
+    </div>
+  )
 
   return (
     <>
@@ -566,18 +598,48 @@ const CommentForm = ({
           </BCBox>
         </Alert>
       )}
-      <div data-mention-conflict={hasMentionConflict ? 'true' : 'false'}>
-        <ReactQuill
-          ref={quillRef}
-          value={commentText}
-          onChange={handleEditorChange}
-          onChangeSelection={mentionEditor.handleSelectionChange}
-          placeholder={placeholder}
-          theme="snow"
-          modules={quillModules}
-          formats={['bold', 'italic', 'list', 'bullet', 'mention']}
-        />
-      </div>
+      {showUploadDropzone ? (
+        <BCBox
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: {
+              xs: 'minmax(0, 1fr)',
+              md: attachmentsEnabled ? 'minmax(0, 1fr) 220px' : 'minmax(0, 1fr)'
+            },
+            gridTemplateAreas: {
+              xs: attachmentsEnabled
+                ? '"toolbar" "editor" "upload"'
+                : '"toolbar" "editor"',
+              md: attachmentsEnabled
+                ? '"toolbar ." "editor upload"'
+                : '"toolbar" "editor"'
+            },
+            alignItems: 'start',
+            columnGap: 2,
+            '& > .comment-editor, & > .comment-editor > .quill': {
+              display: 'contents'
+            },
+            '& .ql-toolbar': { gridArea: 'toolbar', minWidth: 0 },
+            '& .ql-container': { gridArea: 'editor', minWidth: 0 },
+            '& > .comment-upload-dropzone': {
+              gridArea: 'upload',
+              mt: { xs: 2, md: 0 }
+            },
+            '& .ql-editor': { minHeight: 120 }
+          }}
+        >
+          {editor}
+          {attachmentsEnabled && (
+            <CommentUploadDropzone
+              onClick={handleAttachClick}
+              onFilesSelected={appendAttachments}
+              disabled={isSubmitting}
+            />
+          )}
+        </BCBox>
+      ) : (
+        editor
+      )}
       {enableMentions && mentionEditor.mention && (
         <MentionDropdown
           getAnchorRect={mentionEditor.getAnchorRect}
@@ -593,6 +655,8 @@ const CommentForm = ({
         <BCBox sx={{ mt: 1 }}>
           <input
             type="file"
+            disabled={!canAttachFiles}
+            aria-label={t('internalComment:attachFile')}
             multiple
             ref={fileInputRef}
             style={{ display: 'none' }}
@@ -602,6 +666,7 @@ const CommentForm = ({
           />
           {attachmentError && (
             <BCAlert
+              role="alert"
               severity="error"
               dismissible
               sx={{ mb: 1 }}
@@ -699,6 +764,7 @@ const CommentForm = ({
             variant="outlined"
             color="primary"
             onClick={onCancel}
+            disabled={isSubmitting}
           >
             {t('internalComment:cancel')}
           </BCButton>
@@ -710,6 +776,7 @@ const CommentForm = ({
 
 CommentForm.propTypes = {
   title: PropTypes.string.isRequired,
+  placeholder: PropTypes.string,
   commentText: PropTypes.string,
   onSubmit: PropTypes.func.isRequired,
   onCancel: PropTypes.func,
@@ -723,6 +790,7 @@ CommentForm.propTypes = {
   visibilityAlign: PropTypes.oneOf(['left', 'right']),
   showTitle: PropTypes.bool,
   enableAttachments: PropTypes.bool,
+  showUploadDropzone: PropTypes.bool,
   attachments: PropTypes.array,
   onAttachmentsChange: PropTypes.func,
   existingAttachments: PropTypes.array,

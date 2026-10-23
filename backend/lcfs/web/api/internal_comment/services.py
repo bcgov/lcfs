@@ -1,9 +1,9 @@
 import json
 import re
-from html import escape
+from html import escape, unescape
 import structlog
 from math import ceil
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from fastapi import Depends, Request, HTTPException
 from sqlalchemy import func
@@ -11,6 +11,7 @@ from sqlalchemy import func
 from lcfs.web.core.decorators import service_handler
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.db.models.comment.InternalComment import InternalComment
+from lcfs.services.comment_permissions import can_manage_penalty_comment
 from lcfs.db.models.comment.ComplianceReportInternalComment import (
     ComplianceReportInternalComment,
 )
@@ -38,6 +39,10 @@ from lcfs.web.api.notification.services import NotificationService
 logger = structlog.get_logger(__name__)
 
 
+if TYPE_CHECKING:
+    from lcfs.services.s3.client import DocumentService
+
+
 DEFAULT_CATEGORY_BY_ENTITY: dict[EntityTypeEnum, str] = {
     EntityTypeEnum.COMPLIANCE_REPORT: "Compliance notes",
     EntityTypeEnum.TRANSFER: "Transfer notes",
@@ -46,6 +51,7 @@ DEFAULT_CATEGORY_BY_ENTITY: dict[EntityTypeEnum, str] = {
     EntityTypeEnum.ADMIN_ADJUSTMENT: "Penalty notes",
     EntityTypeEnum.CI_APPLICATION: "CI application notes",
     EntityTypeEnum.ORGANIZATION: "Company Overview",
+    EntityTypeEnum.PENALTY_LOG: "Penalty notes",
 }
 
 
@@ -61,6 +67,7 @@ _ENTITY_LABEL_BY_TYPE: dict[EntityTypeEnum, str] = {
     EntityTypeEnum.ADMIN_ADJUSTMENT: "an administrative adjustment",
     EntityTypeEnum.CI_APPLICATION: "a CI application",
     EntityTypeEnum.ORGANIZATION: "an organization's Company Overview",
+    EntityTypeEnum.PENALTY_LOG: "an organization's penalty log",
 }
 
 
@@ -182,6 +189,8 @@ def _build_entity_link_path(
         return f"/ci-applications/{entity_id}"
     if entity_type == EntityTypeEnum.ORGANIZATION:
         return f"/organizations/{entity_id}/comment-log"
+    if entity_type == EntityTypeEnum.PENALTY_LOG:
+        return f"/organizations/{entity_id}/penalty-log"
     return "/notifications"
 
 
@@ -483,6 +492,16 @@ class InternalCommentService:
         """
         is_government_user = self._is_government_user()
 
+        if data.entity_type == EntityTypeEnum.PENALTY_LOG:
+            if not is_government_user:
+                raise HTTPException(status_code=403, detail="Forbidden resource")
+            if not unescape(sanitize_comment_text(data.comment)).strip():
+                raise HTTPException(status_code=422, detail="Comment text is required.")
+            data.visibility = CommentVisibilityEnum.INTERNAL
+            data.comment_category = DEFAULT_CATEGORY_BY_ENTITY[
+                EntityTypeEnum.PENALTY_LOG
+            ]
+
         # Company Overview notes are internal working notes — the thread offers
         # no public commenting, so pin the visibility here rather than trusting
         # the client to send it (#4608).
@@ -689,6 +708,19 @@ class InternalCommentService:
             internal_comment_id
         )
 
+        is_penalty_log = await self.repo.is_penalty_log_comment(internal_comment_id)
+        if is_penalty_log:
+            self._require_penalty_comment_management(existing_comment)
+            if (
+                data.comment is not None
+                and not unescape(sanitize_comment_text(data.comment)).strip()
+            ):
+                raise HTTPException(status_code=422, detail="Comment text is required.")
+            data.visibility = CommentVisibilityEnum.INTERNAL
+            data.comment_category = DEFAULT_CATEGORY_BY_ENTITY[
+                EntityTypeEnum.PENALTY_LOG
+            ]
+
         current_visibility = existing_comment.visibility
         if not isinstance(current_visibility, CommentVisibilityEnum):
             current_visibility = CommentVisibilityEnum(str(current_visibility))
@@ -780,6 +812,27 @@ class InternalCommentService:
         schema = InternalCommentResponseSchema.model_validate(updated_comment)
         schema.comment = (await self._refresh_mention_names([schema.comment]))[0]
         return schema
+
+    @service_handler
+    async def delete_internal_comment(
+        self, internal_comment_id: int, document_service: "DocumentService"
+    ) -> None:
+        """Delete an authorized penalty comment through the shared document lifecycle."""
+        if not await self.repo.is_penalty_log_comment(internal_comment_id):
+            raise HTTPException(
+                status_code=404, detail="Penalty log comment not found."
+            )
+        comment = await self.repo.get_internal_comment_by_id(internal_comment_id)
+        self._require_penalty_comment_management(comment)
+        for document in list(comment.documents):
+            await document_service.delete_file(
+                document.document_id, internal_comment_id, "internal_comment"
+            )
+        await self.repo.delete_penalty_log_comment(internal_comment_id)
+
+    def _require_penalty_comment_management(self, comment: InternalComment) -> None:
+        if not can_manage_penalty_comment(self.request.user, comment):
+            raise HTTPException(status_code=403, detail="Forbidden resource")
 
     @service_handler
     async def copy_internal_comments(
@@ -891,10 +944,16 @@ class InternalCommentService:
                 update_date=row["update_date"],
                 update_user=row.get("update_user"),
                 update_full_name=row.get("update_full_name"),
+                documents=row.get("documents", []),
                 can_edit=bool(
                     username is not None
                     and (
                         row["create_user"] == username
+                        or (
+                            is_government_user
+                            and row["entity_type"] == EntityTypeEnum.PENALTY_LOG.value
+                            and RoleEnum.ADMINISTRATOR in current_user.role_names
+                        )
                         or (
                             is_government_user
                             and row["entity_type"] == EntityTypeEnum.ORGANIZATION.value

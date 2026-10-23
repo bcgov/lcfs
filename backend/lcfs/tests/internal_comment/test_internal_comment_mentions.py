@@ -522,6 +522,7 @@ async def test_update_comment_to_public_strips_existing_mentions_even_without_te
         )
     )
     mock_repo.is_organization_comment = AsyncMock(return_value=False)
+    mock_repo.is_penalty_log_comment = AsyncMock(return_value=False)
     mock_repo.get_category_id_by_name = AsyncMock(return_value=None)
     mock_repo.get_users_by_ids = AsyncMock(
         return_value=[
@@ -639,6 +640,7 @@ def _edit_service(existing_html, entity=(EntityTypeEnum.TRANSFER, 123)):
         )
     )
     mock_repo.is_organization_comment = AsyncMock(return_value=False)
+    mock_repo.is_penalty_log_comment = AsyncMock(return_value=False)
     mock_repo.get_category_id_by_name = AsyncMock(return_value=None)
     mock_repo.get_comment_entity = AsyncMock(return_value=entity)
     mock_repo.get_users_by_ids = AsyncMock(return_value=[JANE])
