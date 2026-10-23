@@ -1,7 +1,12 @@
 import { useRef } from 'react'
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient
+} from '@tanstack/react-query'
 import type { PaginationParams, QueryOptions } from './types'
 
 const QUERY_KEYS = {
@@ -15,20 +20,31 @@ const QUERY_KEYS = {
   }) => ['ci-facility-location-search', params]
 }
 
+type CIApplicationCacheRecord = Record<string, unknown> & {
+  ciApplicationId?: number | string
+  assignedAnalyst?: unknown
+  preliminaryRiskAssessment?: unknown
+  priorityScore?: number | null
+}
+
+type CIApplicationListCache = Record<string, unknown> & {
+  ciApplications?: CIApplicationCacheRecord[]
+}
+
 const updateCIApplicationListCaches = (
-  queryClient: unknown,
-  updatedCIApplication: unknown
+  queryClient: QueryClient,
+  updatedCIApplication: CIApplicationCacheRecord
 ) => {
   if (!updatedCIApplication?.ciApplicationId) return
 
-  queryClient.setQueriesData(
+  queryClient.setQueriesData<CIApplicationListCache>(
     { queryKey: ['ci-applications'] },
-    (current: unknown) => {
+    (current: CIApplicationListCache | undefined) => {
       if (!current?.ciApplications) return current
 
       return {
         ...current,
-        ciApplications: current.ciApplications.map((item: unknown) =>
+        ciApplications: current.ciApplications.map((item) =>
           item.ciApplicationId === updatedCIApplication.ciApplicationId
             ? {
                 ...item,
@@ -67,7 +83,7 @@ export const useCIApplicationStatuses = (
   const result = useCIApplicationOptions(options)
   return {
     ...result,
-    data: (result.data as unknown)?.statuses ?? []
+    data: (result.data as { statuses?: unknown[] } | undefined)?.statuses ?? []
   }
 }
 

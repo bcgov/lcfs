@@ -150,8 +150,11 @@ export const BCSelectFloatingFilter = ({
     }
 
     return options.map((option) => (
-      <option key={option[valueKey]} value={option[valueKey]}>
-        {option[labelKey]}
+      <option
+        key={option[valueKey] as string}
+        value={option[valueKey] as string}
+      >
+        {option[labelKey] as string}
       </option>
     ))
   }, [isLoading, isError, options, error, valueKey, labelKey])

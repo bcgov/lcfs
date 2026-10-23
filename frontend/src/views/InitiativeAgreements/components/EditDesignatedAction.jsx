@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Box from '@mui/material/Box'
-import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 
-import BCButton from '@/components/BCButton'
+import { FloatingAlert } from '@/components/BCAlert'
+import { WidgetEditButton } from '@/components/BCWidgetCard/WidgetEditButton'
 import BCModal from '@/components/BCModal'
 import BCTypography from '@/components/BCTypography'
 import ModalField from './ModalField'
@@ -22,6 +22,7 @@ export const EditDesignatedAction = ({ action, onChanged }) => {
   const [credits, setCredits] = useState('')
   const [completionDate, setCompletionDate] = useState('')
   const [error, setError] = useState('')
+  const alertRef = useRef()
 
   const { mutate: updateAction, isPending } = useUpdateDesignatedAction(
     action?.designatedActionId
@@ -61,6 +62,10 @@ export const EditDesignatedAction = ({ action, onChanged }) => {
         onSuccess: () => {
           setOpen(false)
           onChanged?.()
+          alertRef.current?.triggerAlert({
+            severity: 'success',
+            message: t('initiativeAgreement:actions.editSuccess')
+          })
         },
         onError: (err) =>
           setError(
@@ -74,17 +79,14 @@ export const EditDesignatedAction = ({ action, onChanged }) => {
 
   return (
     <Role roles={[roles.ia_analyst, roles.ia_manager]}>
-      <BCButton
+      <FloatingAlert ref={alertRef} data-test="edit-action-alert" />
+      <WidgetEditButton
         type="button"
-        variant="outlined"
-        color="primary"
-        size="small"
-        startIcon={<EditOutlinedIcon />}
         data-test="edit-designated-action"
         onClick={start}
       >
         {t('initiativeAgreement:actions.edit')}
-      </BCButton>
+      </WidgetEditButton>
 
       <BCModal
         open={open}

@@ -4,7 +4,6 @@ import { ComplianceUnitsTotal } from '@/views/ComplianceReports/components/Compl
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { LinkRenderer } from '@/utils/grid/cellRenderers'
 import { fuelSupplySummaryColDef } from '@/views/FuelSupplies/_schema'
-import { defaultInitialPagination } from '@/constants/schedules'
 import { useFuelSupplyOptions } from '@/hooks/useFuelSupply'
 import { useFuelSupplyColumnStore } from '@/stores/useFuelSupplyColumnStore'
 import Grid2 from '@mui/material/Grid2'
@@ -12,6 +11,10 @@ import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 import Loading from '@/components/Loading'
+import type { OptionsData } from '@/types/schema'
+import { defaultInitialPagination } from '@/constants/schedules'
+import type { ColumnState } from 'ag-grid-community'
+import type { BCPaginationOptions , BCGridRow } from '@/components/BCDataGrid/types'
 
 interface FuelSupply {
   fuelSupplyId: number | string
@@ -33,18 +36,21 @@ interface PaginationFilter {
   field: string
   type: string
   filter?: string
+  [key: string]: unknown
 }
 
 interface PaginationSort {
   field: string
   direction: 'asc' | 'desc'
+  [key: string]: unknown
 }
 
 interface PaginationOptions {
   page: number
   size: number
-  filters?: PaginationFilter[]
-  sortOrders?: PaginationSort[]
+  filters: PaginationFilter[]
+  sortOrders: PaginationSort[]
+  [key: string]: unknown
 }
 
 export const FuelSupplySummary = ({
@@ -53,7 +59,7 @@ export const FuelSupplySummary = ({
   isEarlyIssuance
 }: FuelSupplySummaryProps) => {
   const [paginationOptions, setPaginationOptions] = useState<PaginationOptions>(
-    defaultInitialPagination
+    defaultInitialPagination as unknown as PaginationOptions
   )
   const gridRef = useRef(null)
   const { t } = useTranslation(['common', 'fuelSupply'])
@@ -112,8 +118,8 @@ export const FuelSupplySummary = ({
     ) {
       paginationOptions.sortOrders.forEach((sort) => {
         filteredData.sort((a, b) => {
-          const aVal = a[sort.field]
-          const bVal = b[sort.field]
+          const aVal = a[sort.field] as string | number
+          const bVal = b[sort.field] as string | number
 
           let comparison = 0
           if (aVal > bVal) comparison = 1
@@ -152,7 +158,7 @@ export const FuelSupplySummary = ({
     () => ({
       overlayNoRowsTemplate: t('fuelSupply:noFuelSuppliesFound'),
       autoSizeStrategy: {
-        type: 'fitCellContents',
+        type: 'fitCellContents' as const,
         defaultMinWidth: 50,
         defaultMaxWidth: 600
       },
@@ -179,16 +185,16 @@ export const FuelSupplySummary = ({
   const columnDefs = useMemo(
     () =>
       fuelSupplySummaryColDef(
-        isEarlyIssuance,
+        isEarlyIssuance as boolean,
         showFuelTypeOther,
         parseInt(compliancePeriod ?? '0'),
-        optionsData
+        optionsData as OptionsData
       ),
-    [isEarlyIssuance, showFuelTypeOther, compliancePeriod, optionsData, t]
+    [isEarlyIssuance, showFuelTypeOther, compliancePeriod, optionsData]
   )
 
-  const getRowId = (params: { data: FuelSupply }) => {
-    return params.data.fuelSupplyId.toString()
+  const getRowId = (params: { data: BCGridRow }) => {
+    return (params.data.fuelSupplyId as string | number).toString()
   }
 
   if (optionsLoading) {
@@ -222,15 +228,15 @@ export const FuelSupplySummary = ({
           defaultColDef={defaultColDef}
           suppressPagination={(data?.fuelSupplies?.length || 0) <= 10}
           paginationOptions={paginationOptions}
-          onPaginationChange={(newPagination: Partial<PaginationOptions>) =>
+          onPaginationChange={(newPagination: BCPaginationOptions) =>
             setPaginationOptions((prev) => ({
               ...prev,
               ...newPagination
-            }))
+            }) as PaginationOptions)
           }
           enablePageCaching={false}
           suppressMovableColumns={false}
-          columnState={columnState}
+          columnState={columnState as ColumnState[] | undefined}
           onColumnStateChange={setColumnState}
         />
       </BCBox>

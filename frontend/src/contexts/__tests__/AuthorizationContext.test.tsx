@@ -115,10 +115,13 @@ describe('AuthorizationContext', () => {
 
     it('should not add null or undefined reference', () => {
       const { result } = renderHook(() => useAuthorization(), { wrapper })
+      const addUnknownErrorRef = result.current.addErrorRef as (
+        ref: unknown
+      ) => void
 
       act(() => {
-        result.current.addErrorRef(null as unknown)
-        result.current.addErrorRef(undefined as unknown)
+        addUnknownErrorRef(null)
+        addUnknownErrorRef(undefined)
       })
 
       expect(result.current.errorRefs).toEqual([])

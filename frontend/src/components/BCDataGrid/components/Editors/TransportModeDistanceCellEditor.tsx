@@ -51,6 +51,16 @@ type TransportModeDistanceCellEditorProps = {
   onValueChange?: (value: SelectedMode[]) => void
 }
 
+const ADJACENT_TRANSPORT_MODE = 'Adjacent'
+
+const isAdjacentTransportMode = (transportMode: string) =>
+  transportMode.trim().toLowerCase() === ADJACENT_TRANSPORT_MODE.toLowerCase()
+
+const normalizeDistanceForMode = (
+  transportMode: string,
+  distance: string | number | null
+) => (isAdjacentTransportMode(transportMode) ? 0 : distance)
+
 const getOptionLabel = (option: TransportModeOption) => {
   if (option == null) return ''
   if (typeof option === 'string') {
@@ -75,7 +85,7 @@ const getDistance = (value: TransportModeValue) => {
 const normalizeValue = (
   value: TransportModeValue | TransportModeValue[] | undefined
 ): SelectedMode[] => {
-  if (!value && value !== 0) return []
+  if (value == null || value === '') return []
   const values = Array.isArray(value)
     ? value
     : typeof value === 'string'
@@ -83,10 +93,13 @@ const normalizeValue = (
       : [value]
 
   return values
-    .map((item: TransportModeValue) => ({
-      transportMode: getModeName(item),
-      distance: getDistance(item)
-    }))
+    .map((item: TransportModeValue) => {
+      const transportMode = getModeName(item)
+      return {
+        transportMode,
+        distance: normalizeDistanceForMode(transportMode, getDistance(item))
+      }
+    })
     .filter((item) => item.transportMode)
 }
 
@@ -107,15 +120,25 @@ export const TransportModeDistanceCellEditor = forwardRef<
   const rootRef = useRef<HTMLDivElement>(null)
 
   const getCurrentValue = () =>
-    selectedModes.map((item) => ({
-      transportMode: item.transportMode,
-      distance:
+    selectedModes.map((item) => {
+      let distance: number | null
+      if (isAdjacentTransportMode(item.transportMode)) {
+        distance = 0
+      } else if (
         item.distance === '' ||
         item.distance === null ||
         item.distance === undefined
-          ? null
-          : Number(item.distance)
-    }))
+      ) {
+        distance = null
+      } else {
+        distance = Number(item.distance)
+      }
+
+      return {
+        transportMode: item.transportMode,
+        distance
+      }
+    })
 
   useImperativeHandle(ref, () => ({
     getValue: () => getCurrentValue(),
@@ -165,13 +188,24 @@ export const TransportModeDistanceCellEditor = forwardRef<
       updateValue(selectedModes.filter((item) => item.transportMode !== mode))
       return
     }
-    updateValue([...selectedModes, { transportMode: mode, distance: '' }])
+    updateValue([
+      ...selectedModes,
+      {
+        transportMode: mode,
+        distance: isAdjacentTransportMode(mode) ? 0 : ''
+      }
+    ])
   }
 
   const handleDistanceChange = (mode: string, nextDistance: string) => {
     updateValue(
       selectedModes.map((item) =>
-        item.transportMode === mode ? { ...item, distance: nextDistance } : item
+        item.transportMode === mode
+          ? {
+              ...item,
+              distance: normalizeDistanceForMode(mode, nextDistance)
+            }
+          : item
       )
     )
   }
@@ -291,7 +325,7 @@ export const TransportModeDistanceCellEditor = forwardRef<
                 onChange={(event) =>
                   handleDistanceChange(mode, event.target.value)
                 }
-                disabled={!checked}
+                disabled={!checked || isAdjacentTransportMode(mode)}
                 placeholder={t(
                   'carbonIntensity:transportModeDistance.placeholder'
                 )}

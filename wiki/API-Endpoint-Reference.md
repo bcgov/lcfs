@@ -139,6 +139,7 @@ for write operations. Exact per-endpoint roles are declared in each module's
 | `/ci-applications` | Carbon-intensity applications | Supplier (CI Applicant/Signing) & Government |
 | `/admin-adjustments` | Government-initiated credit adjustments | Government (Analyst/Director) |
 | `/initiative-agreements` | Initiative agreements | Government |
+| `/initiative-agreements/designated-actions/{id}/workflow` | Designated-action review transitions | IA Analyst / IA Manager / Director (transition-specific) |
 | `/organizations` | Organization management (IDIR view) | Government (Analyst/Administrator/Director) |
 | `/organization` | Organization self-service (BCeID view) | Supplier (Manage Users / Compliance Reporting / Signing) |
 | `/organizations/{id}/comments`, `/internal_comments` | Internal comments on records | Supplier & Government (visibility-scoped) |
@@ -158,6 +159,39 @@ for write operations. Exact per-endpoint roles are declared in each module's
 | `/forms` | Public/linkable form definitions & exports | Authenticated; public access via secret link key |
 | `/login-bg-images` | Login-page background image management | System Admin |
 | `/echo` | Diagnostic echo (development) | Authenticated |
+
+The designated-action **Accept & recommend to manager** button sends one
+`PUT` workflow request with `action: "recommend_to_manager"` and the saved
+`recommendedCredits` amount. All active evidence requirements must be
+satisfactory and the recommended amount must satisfy the existing credit
+validation. The transition moves the action to **Recommended to manager**
+and records both the credit amount and accepted evidence snapshot in the
+same recommendation history event. The legacy `accept_evidence` action
+remains available to API clients but is no longer a separate UI button.
+
+EOC rich-text editors can attach files using the paperclip toolbar control.
+Uploads use the existing designated-action document API and appear at the
+root of the action's Documents tree. The editor inserts a filename link
+(`"#eoc-document-{id}"`) into the field; opening it shows the existing document
+preview dialog with a download option. Evidence submissions also show preview
+buttons for root and folder documents. These additions are scoped to the
+designated-action evidence sections, not comment forms or comment lists.
+Preview loading and downloads use the authenticated document API.
+Field permissions, outcome locks, file type/size
+validation, and autosave still apply. Removing a link, or cancelling creation
+of a new EOC, does not delete an uploaded document; documents are managed in
+the Documents section.
+
+The EOC frontend separates list/data orchestration in
+[`EvidenceOfCompletion`](../frontend/src/views/InitiativeAgreements/components/EvidenceOfCompletion.jsx),
+per-requirement outcomes and field bindings in
+[`EvidenceRequirementCard`](../frontend/src/views/InitiativeAgreements/components/EvidenceRequirementCard.jsx),
+autosave, formatting, and attachments in
+[`EvidenceRichTextField`](../frontend/src/views/InitiativeAgreements/components/EvidenceRichTextField.jsx),
+and requirement creation in
+[`AddEvidenceRequirementModal`](../frontend/src/views/InitiativeAgreements/components/AddEvidenceRequirementModal.jsx).
+Outcome values are shared through `evidenceConstants.js`; field permissions
+and autosave behavior remain unchanged by this separation.
 
 ---
 

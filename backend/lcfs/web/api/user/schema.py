@@ -1,7 +1,7 @@
 from typing import Optional, List, Union
 from datetime import datetime
 
-from pydantic import EmailStr
+from pydantic import EmailStr, Field
 from lcfs.web.api.base import BaseSchema
 
 from lcfs.web.api.organizations.schema import OrganizationSummaryResponseSchema
@@ -69,6 +69,14 @@ class UsersSchema(BaseSchema):
     users: List[UserBaseSchema]
 
 
+class UserUpdateResponseSchema(UserBaseSchema):
+    account_change_email_sent: Optional[bool] = Field(
+        default=None,
+        description="Whether CHES accepted the mandatory account-change email. "
+        "Null when no email was required; does not confirm inbox delivery.",
+    )
+
+
 class UserActivitySchema(BaseSchema):
     transaction_id: int
     action_taken: str
@@ -97,10 +105,12 @@ class AssignedComplianceReportSchema(BaseSchema):
     period: str
     status: str
 
+
 class AssignedCIApplicationSchema(BaseSchema):
     ci_application_id: int
     organization: str
     status: str
+
 
 class UserAssignedWorkSchema(BaseSchema):
     compliance_reports: List[AssignedComplianceReportSchema] = []

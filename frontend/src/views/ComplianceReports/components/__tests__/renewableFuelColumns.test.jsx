@@ -37,6 +37,20 @@ const createBaseSummaryData = () => {
 }
 
 describe('renewableFuelColumns line 7 behaviour', () => {
+  it.each(['2023', '2024'])(
+    'preserves the Jet Fuel column for compliance period %s',
+    (year) => {
+      const columns = renewableFuelColumns(
+        t,
+        createBaseSummaryData(),
+        false,
+        year
+      )
+
+      expect(columns.map((column) => column.id)).toContain('jetFuel')
+    }
+  )
+
   it('omits max constraint for line 7 when no previous caps exist', () => {
     const summaryData = createBaseSummaryData()
 

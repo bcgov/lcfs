@@ -16,15 +16,17 @@ import {
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { roles } from '@/constants/roles'
 
-// Assignment cell for the designated actions grid (#4896). IA managers and
-// directors assign or reassign directly from the table; everyone else sees
-// the read-only initials chip. Mirrors CIAssignedAnalystCell.
+// Assignment cell for the designated actions grid (#4896, #5197). IDIR IA
+// users (analysts, managers, directors) assign or reassign directly from
+// the table, as with compliance reports; everyone else sees the read-only
+// initials chip. Mirrors CIAssignedAnalystCell.
 export const DAAssignedAnalystCell = ({ data }) => {
   const { t } = useTranslation(['initiativeAgreement'])
   const theme = useTheme()
   const [isOpen, setIsOpen] = useState(false)
   const { hasRoles } = useCurrentUser()
   const canAssign =
+    hasRoles?.(roles.government, roles.ia_analyst) ||
     hasRoles?.(roles.government, roles.ia_manager) ||
     hasRoles?.(roles.government, roles.director)
 
