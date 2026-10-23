@@ -4,9 +4,11 @@ import { vi, describe, expect, beforeEach } from 'vitest';
 import DocumentTable from '../DocumentTable'
 import { validateFile } from '@/utils/fileValidation'
 import {
+  CI_APPLICATION_FILE_TYPES,
   COMPLIANCE_REPORT_FILE_TYPES,
   MAX_FILE_SIZE_BYTES
 } from '@/constants/common'
+import { isFeatureEnabled } from '@/constants/config'
 
 // Import mocked hooks for use in tests
 import {
@@ -24,7 +26,13 @@ vi.mock('@/hooks/useDocuments', () => ({
   useUploadDocument: vi.fn(),
   useDeleteDocument: vi.fn(),
   useUpdateDocument: vi.fn(),
-  useDownloadDocument: vi.fn()
+  useDownloadDocument: vi.fn(),
+  useReviewDocumentScan: vi.fn(() => ({ mutateAsync: vi.fn() }))
+}))
+
+vi.mock('@/constants/config', async (importOriginal) => ({
+  ...(await importOriginal()),
+  isFeatureEnabled: vi.fn(() => false)
 }))
 
 vi.mock('@/components/Documents/DocumentPreviewButton', () => ({
@@ -415,6 +423,69 @@ describe('DocumentTable', () => {
     fireEvent.click(fileName)
 
     expect(mockDownloadDocument).toHaveBeenCalledWith(1, 'test.pdf')
+  })
+
+  test('a file waiting for macro approval cannot be downloaded', async ({
+    render,
+    theme,
+    router
+  }) => {
+    useDocuments.mockReturnValue({
+      data: [
+        {
+          documentId: 3,
+          fileName: 'ghg-model.xlsm',
+          fileSize: 2048,
+          createDate: '2024-01-01T10:00:00Z',
+          createUser: 'applicant',
+          scanStatus: 'pending_approval'
+        }
+      ],
+      isLoading: false
+    })
+
+    render(<DocumentTable parentType="ci_application" parentID="5" />, [
+      theme,
+      router
+    ])
+
+    fireEvent.click(await screen.findByText('ghg-model.xlsm'))
+
+    expect(mockDownloadDocument).not.toHaveBeenCalled()
+    expect(screen.getByTestId('document-scan-status')).toBeInTheDocument()
+  })
+
+  test('CI applications accept .xlsm only with the feature flag on', async ({
+    render,
+    theme,
+    router
+  }) => {
+    isFeatureEnabled.mockReturnValue(true)
+    const file = createMockFile(
+      'ghg-model.xlsm',
+      'application/vnd.ms-excel.sheet.macroEnabled.12'
+    )
+
+    render(<DocumentTable parentType="ci_application" parentID="5" />, [
+      theme,
+      router
+    ])
+    fireEvent.change(screen.getByTestId('file-input'), {
+      target: { files: [file] }
+    })
+
+    await waitFor(() =>
+      expect(validateFile).toHaveBeenCalledWith(
+        file,
+        MAX_FILE_SIZE_BYTES,
+        CI_APPLICATION_FILE_TYPES
+      )
+    )
+    expect(screen.getByTestId('file-input')).toHaveAttribute(
+      'accept',
+      CI_APPLICATION_FILE_TYPES.ACCEPT_STRING
+    )
+    isFeatureEnabled.mockReturnValue(false)
   })
 
   test('should download a renamed file using its display name', async ({
@@ -920,7 +991,7 @@ describe('DocumentTable', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText('error-file.pdf (Unsupported file type)')
+        screen.getByText('error-file.pdf (Upload failed)')
       ).toBeInTheDocument()
       expect(
         screen.getByText('oversize-file.pdf (File is over 50MB)')
@@ -942,7 +1013,9 @@ describe('DocumentTable', () => {
       onError({
         response: {
           status: 400,
-          data: { detail: 'This file contains macros, which can\'t be uploaded here.' }
+          data: {
+            detail: "This file contains macros, which can't be uploaded here."
+          }
         }
       })
     })

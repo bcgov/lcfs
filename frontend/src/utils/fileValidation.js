@@ -9,7 +9,11 @@ export const validateFileMimeType = (file, fileTypes) => {
     return { isValid: false, errorMessage: 'No file selected' }
   }
 
-  const isValid = fileTypes.MIME_TYPES.includes(file.type)
+  // Browsers lower-case File.type (e.g. ...sheet.macroenabled.12)
+  const fileType = (file.type || '').toLowerCase()
+  const isValid = fileTypes.MIME_TYPES.some(
+    (type) => type.toLowerCase() === fileType
+  )
 
   if (!isValid) {
     return {

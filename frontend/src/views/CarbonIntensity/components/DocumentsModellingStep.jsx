@@ -17,6 +17,7 @@ import BCTypography from '@/components/BCTypography'
 import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
 import DocumentPreviewButton from '@/components/Documents/DocumentPreviewButton'
 import RenameableFileName from '@/components/Documents/RenameableFileName'
+import DocumentScanStatus from '@/components/Documents/DocumentScanStatus'
 import {
   useDeleteDocument,
   useDocuments,
@@ -25,7 +26,7 @@ import {
 } from '@/hooks/useDocuments'
 import colors from '@/themes/base/colors'
 import { isDocumentRenameEnabled } from '@/constants/common'
-import { getDocumentDisplayName } from '@/utils/documents'
+import { getDocumentDisplayName, isDocumentLocked } from '@/utils/documents'
 import './documentCategories'
 
 
@@ -164,33 +165,47 @@ export const DocumentsModellingStep = ({
                   }}
                   data-test="ci-step3-uploaded-row"
                 >
-                  <RenameableFileName
-                    displayName={displayName}
-                    canRename={renameEnabled && !readOnly}
-                    onRename={(newName) =>
-                      handleRename(doc.documentId, newName)
-                    }
-                    renderName={(name) => (
-                      <Link
-                        component="button"
-                        type="button"
-                        underline="hover"
-                        onClick={() => downloadDocument(doc.documentId, name)}
-                        sx={{
-                          minWidth: 0,
-                          textAlign: 'left',
-                          cursor: 'pointer',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap'
-                        }}
-                        title={name}
-                        data-test="ci-step3-download-doc"
-                      >
-                        {name}
-                      </Link>
-                    )}
-                  />
+                  <Box sx={{ minWidth: 0 }}>
+                    <RenameableFileName
+                      displayName={displayName}
+                      canRename={renameEnabled && !readOnly}
+                      onRename={(newName) =>
+                        handleRename(doc.documentId, newName)
+                      }
+                      renderName={(name) => (
+                        <Link
+                          component="button"
+                          type="button"
+                          underline="hover"
+                          // Locked until an administrator approves the macros
+                          disabled={isDocumentLocked(doc)}
+                          onClick={() => downloadDocument(doc.documentId, name)}
+                          sx={{
+                            minWidth: 0,
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            '&:disabled': {
+                              cursor: 'default',
+                              color: 'text.primary',
+                              textDecoration: 'none'
+                            }
+                          }}
+                          title={name}
+                          data-test="ci-step3-download-doc"
+                        >
+                          {name}
+                        </Link>
+                      )}
+                    />
+                    <DocumentScanStatus
+                      document={doc}
+                      parentType={PARENT_TYPE}
+                      parentID={ciApplicationId}
+                    />
+                  </Box>
                   <BCTypography variant="body2">
                     {formatBytes(doc.fileSize)}
                   </BCTypography>

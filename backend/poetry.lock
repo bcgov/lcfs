@@ -772,6 +772,18 @@ files = [
 ]
 
 [[package]]
+name = "colorclass"
+version = "2.2.2"
+description = "Colorful worry-free console applications for Linux, Mac OS X, and Windows."
+optional = false
+python-versions = ">=2.6"
+groups = ["main"]
+files = [
+    {file = "colorclass-2.2.2-py2.py3-none-any.whl", hash = "sha256:6f10c273a0ef7a1150b1120b6095cbdd68e5cf36dfd5d0fc957a2500bbf99a55"},
+    {file = "colorclass-2.2.2.tar.gz", hash = "sha256:6d4fe287766166a98ca7bc6f6312daf04a0481b1eda43e7173484051c0ab4366"},
+]
+
+[[package]]
 name = "coverage"
 version = "7.9.2"
 description = "Code coverage measurement for Python"
@@ -1069,6 +1081,18 @@ groups = ["dev"]
 files = [
     {file = "docutils-0.21.2-py3-none-any.whl", hash = "sha256:dafca5b9e384f0e419294eb4d2ff9fa826435bf15f15b7bd45723e8ad76811b2"},
     {file = "docutils-0.21.2.tar.gz", hash = "sha256:3a6b18732edf182daa3cd12775bbb338cf5691468f91eeeb109deff6ebfa986f"},
+]
+
+[[package]]
+name = "easygui"
+version = "0.98.3"
+description = "EasyGUI is a module for very simple, very easy GUI programming in Python.  EasyGUI is different from other GUI generators in that EasyGUI is NOT event-driven.  Instead, all GUI interactions are invoked by simple function calls."
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "easygui-0.98.3-py2.py3-none-any.whl", hash = "sha256:33498710c68b5376b459cd3fc48d1d1f33822139eb3ed01defbc0528326da3ba"},
+    {file = "easygui-0.98.3.tar.gz", hash = "sha256:d653ff79ee1f42f63b5a090f2f98ce02335d86ad8963b3ce2661805cafe99a04"},
 ]
 
 [[package]]
@@ -2348,6 +2372,23 @@ files = [
 ]
 
 [[package]]
+name = "msoffcrypto-tool"
+version = "6.0.0"
+description = "Python tool and library for decrypting and encrypting MS Office files using a password or other keys"
+optional = false
+python-versions = "<4.0,>=3.10"
+groups = ["main"]
+markers = "platform_python_implementation != \"PyPy\" or platform_system != \"Windows\" and platform_system != \"Darwin\""
+files = [
+    {file = "msoffcrypto_tool-6.0.0-py3-none-any.whl", hash = "sha256:46c394ed5d9641e802fc79bf3fb0666a53748b23fa8c4aa634ae9d30d46fe397"},
+    {file = "msoffcrypto_tool-6.0.0.tar.gz", hash = "sha256:9a5ebc4c0096b42e5d7ebc2350afdc92dc511061e935ca188468094fdd032bbe"},
+]
+
+[package.dependencies]
+cryptography = ">=39.0"
+olefile = ">=0.46"
+
+[[package]]
 name = "multidict"
 version = "6.6.3"
 description = "multidict implementation"
@@ -2611,6 +2652,29 @@ files = [
 tests = ["pytest", "pytest-cov"]
 
 [[package]]
+name = "oletools"
+version = "0.60.2"
+description = "Python tools to analyze security characteristics of MS Office and OLE files (also called Structured Storage, Compound File Binary Format or Compound Document File Format), for Malware Analysis and Incident Response #DFIR"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "oletools-0.60.2-py2.py3-none-any.whl", hash = "sha256:72ad8bd748fd0c4e7b5b4733af770d11543ebb2bf2697455f99f975fcd50cc96"},
+    {file = "oletools-0.60.2.zip", hash = "sha256:ad452099f4695ffd8855113f453348200d195ee9fa341a09e197d66ee7e0b2c3"},
+]
+
+[package.dependencies]
+colorclass = "*"
+easygui = "*"
+msoffcrypto-tool = {version = "*", markers = "platform_python_implementation != \"PyPy\" or python_version >= \"3\" and platform_system != \"Windows\" and platform_system != \"Darwin\""}
+olefile = ">=0.46"
+pcodedmp = ">=1.2.5"
+pyparsing = ">=2.1.0,<4"
+
+[package.extras]
+full = ["XLMMacroDeobfuscator"]
+
+[[package]]
 name = "openpyxl"
 version = "3.1.5"
 description = "A Python library to read/write Excel 2010 xlsx/xlsm files"
@@ -2755,6 +2819,22 @@ files = [
 
 [package.dependencies]
 setuptools = "*"
+
+[[package]]
+name = "pcodedmp"
+version = "1.2.6"
+description = "A VBA p-code disassembler"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "pcodedmp-1.2.6-py2.py3-none-any.whl", hash = "sha256:4441f7c0ab4cbda27bd4668db3b14f36261d86e5059ce06c0828602cbe1c4278"},
+    {file = "pcodedmp-1.2.6.tar.gz", hash = "sha256:025f8c809a126f45a082ffa820893e6a8d990d9d7ddb68694b5a9f0a6dbcd955"},
+]
+
+[package.dependencies]
+oletools = ">=0.54"
+win-unicode-console = {version = "*", markers = "platform_system == \"Windows\" and platform_python_implementation != \"PyPy\""}
 
 [[package]]
 name = "pendulum"
@@ -3410,6 +3490,21 @@ typing_extensions = {version = ">=4.0", markers = "python_version < \"3.11\""}
 
 [package.extras]
 crypto = ["cryptography (>=3.4.0)"]
+
+[[package]]
+name = "pyparsing"
+version = "3.3.3"
+description = "pyparsing - Classes and methods to define and execute parsing grammars"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "pyparsing-3.3.3-py3-none-any.whl", hash = "sha256:ece8c00a69cf01b45d0b1dedabb469c90d8caf996d4fda40f147627a122849a4"},
+    {file = "pyparsing-3.3.3.tar.gz", hash = "sha256:928ae7e20211f3b6f3915a72f06a0cfd29ab9d24279dd6346b6b1a7146397d36"},
+]
+
+[package.extras]
+diagrams = ["jinja2", "railroad-diagrams"]
 
 [[package]]
 name = "pyphen"
@@ -4690,6 +4785,18 @@ pygments = ">=2.4,<3.0"
 typing_extensions = ">=4.0,<5.0"
 
 [[package]]
+name = "win-unicode-console"
+version = "0.5"
+description = "Enable Unicode input and display when running Python from Windows console."
+optional = false
+python-versions = "*"
+groups = ["main"]
+markers = "platform_system == \"Windows\" and platform_python_implementation != \"PyPy\""
+files = [
+    {file = "win_unicode_console-0.5.zip", hash = "sha256:d4142d4d56d46f449d6f00536a73625a871cba040f0bc1a2e305a04578f07d1e"},
+]
+
+[[package]]
 name = "xlrd"
 version = "2.0.2"
 description = "Library for developers to extract data from Microsoft Excel (tm) .xls spreadsheet files"
@@ -4865,4 +4972,4 @@ test = ["pytest"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "1dca3235d157f386fcefbdfeceecfe7f553d67d5e908543da8a95ceddee9c25d"
+content-hash = "2ecb5b2bf883eef4f09bbc48af863c1f0efbc5788044ff486daaa8025e36ff92"

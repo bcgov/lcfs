@@ -76,3 +76,7 @@ class DetectedFile:
     mime_type: str
     # VBA, Excel 4.0 macro sheets or ActiveX controls
     has_macros: bool = False
+    # Package part names, for macro analysis of .xlsm workbooks
+    vba_parts: tuple[str, ...] = ()
+    macro_sheet_parts: tuple[str, ...] = ()
+    has_activex: bool = False

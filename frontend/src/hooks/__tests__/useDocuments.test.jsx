@@ -9,6 +9,7 @@ import {
   useDownloadDocument,
   useFetchDocument,
   useGetDocumentInfo,
+  useReviewDocumentScan,
   useUpdateDocument
 } from '../useDocuments'
 
@@ -27,18 +28,22 @@ vi.mock('@/services/useApiService', () => ({
 vi.mock('@/constants/routes', () => ({
   apiRoutes: {
     getDocuments: '/documents/:parentType/:parentID',
-    getDocument: '/documents/:parentType/:parentID/:documentID'
+    getDocument: '/documents/:parentType/:parentID/:documentID',
+    reviewDocumentScan:
+      '/documents/:parentType/:parentID/:documentID/scan-review'
   }
 }))
 
 // Mock TanStack Query
+const mockQueryClient = vi.hoisted(() => ({
+  invalidateQueries: vi.fn(),
+  removeQueries: vi.fn()
+}))
+
 vi.mock('@tanstack/react-query', () => ({
   useQuery: vi.fn(),
   useMutation: vi.fn(),
-  useQueryClient: () => ({
-    invalidateQueries: vi.fn(),
-    removeQueries: vi.fn()
-  })
+  useQueryClient: () => mockQueryClient
 }))
 
 // Get the mocked functions
@@ -266,6 +271,32 @@ describe('useDocuments', () => {
         '/documents/compliance_report/123/456'
       )
       expect(result.data).toEqual({})
+    })
+  })
+
+  describe('useReviewDocumentScan', () => {
+    it('sends the decision and refreshes the CI application', async () => {
+      let options
+      mockUseMutation.mockImplementation((opts) => {
+        options = opts
+        return { mutateAsync: vi.fn() }
+      })
+      mockApiService.put.mockResolvedValue({ data: {} })
+
+      useReviewDocumentScan('ci_application', 5)
+      await options.mutationFn({ documentID: 9, decision: 'approve' })
+      options.onSuccess({}, {}, undefined)
+
+      expect(mockApiService.put).toHaveBeenCalledWith(
+        '/documents/ci_application/5/9/scan-review',
+        { decision: 'approve' }
+      )
+      expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith({
+        queryKey: ['documents', 'ci_application', 5]
+      })
+      expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith({
+        queryKey: ['ci-application', '5']
+      })
     })
   })
 
