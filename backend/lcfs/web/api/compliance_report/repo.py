@@ -457,43 +457,21 @@ class ComplianceReportRepository:
         self, report: ComplianceReport, user: UserProfile
     ):
         """
-        Add a new compliance report history record to the database
+        Add a new compliance report history record to the database.
+
+        History is append-only: a report that re-enters a status (e.g. returned
+        and recommended again) gets a new entry, so earlier actions and the
+        people who took them are never overwritten.
         """
-        history = await self._get_existing_history_for_status(
-            report.compliance_report_id, report.current_status_id
+        history = ComplianceReportHistory(
+            compliance_report_id=report.compliance_report_id,
+            status_id=report.current_status_id,
+            user_profile_id=user.user_profile_id,
+            display_name=f"{user.first_name} {user.last_name}",
         )
-        if history:
-            history.update_date = datetime.now(timezone.utc)
-            history.create_date = datetime.now(timezone.utc)
-            history.status_id = report.current_status_id
-            history.user_profile_id = user.user_profile_id
-            history.display_name = f"{user.first_name} {user.last_name}"
-        else:
-            history = ComplianceReportHistory(
-                compliance_report_id=report.compliance_report_id,
-                status_id=report.current_status_id,
-                user_profile_id=user.user_profile_id,
-                display_name=f"{user.first_name} {user.last_name}",
-            )
         self.db.add(history)
         await self.db.flush()
         return history
-
-    async def _get_existing_history_for_status(
-        self, compliance_report_id: int, current_status_id: int
-    ):
-        history = await self.db.execute(
-            select(ComplianceReportHistory)
-            .where(
-                and_(
-                    ComplianceReportHistory.compliance_report_id
-                    == compliance_report_id,
-                    ComplianceReportHistory.status_id == current_status_id,
-                )
-            )
-            .order_by(ComplianceReportHistory.create_date.desc())
-        )
-        return history.scalar_one_or_none()
 
     @repo_handler
     async def get_reports_paginated(
