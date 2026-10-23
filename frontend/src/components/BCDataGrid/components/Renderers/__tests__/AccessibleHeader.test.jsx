@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from 'vite-plus/test'
 import { AccessibleHeader } from '../AccessibleHeader'
 
 describe('AccessibleHeader', () => {
@@ -19,7 +19,7 @@ describe('AccessibleHeader', () => {
   it('renders correct accessibility attributes', () => {
     render(<AccessibleHeader {...mockProps} />)
     const headerDiv = screen.getByRole('columnheader')
-    
+
     expect(headerDiv).toHaveAttribute('role', 'columnheader')
     expect(headerDiv).toHaveAttribute('aria-label', 'Test Header Name')
     expect(headerDiv).toHaveAttribute('data-ref', 'columnWrapper')
@@ -28,7 +28,7 @@ describe('AccessibleHeader', () => {
   it('renders content with correct CSS class', () => {
     render(<AccessibleHeader {...mockProps} />)
     const spanElement = screen.getByText('Test Header Name')
-    
+
     expect(spanElement).toHaveClass('ag-header-cell-text')
     expect(spanElement.tagName).toBe('SPAN')
   })
@@ -41,11 +41,14 @@ describe('AccessibleHeader', () => {
         }
       }
     }
-    
+
     render(<AccessibleHeader {...customProps} />)
-    
+
     expect(screen.getByText('Custom Column Title')).toBeInTheDocument()
-    expect(screen.getByRole('columnheader')).toHaveAttribute('aria-label', 'Custom Column Title')
+    expect(screen.getByRole('columnheader')).toHaveAttribute(
+      'aria-label',
+      'Custom Column Title'
+    )
   })
 
   it('handles empty string headerName', () => {
@@ -56,10 +59,10 @@ describe('AccessibleHeader', () => {
         }
       }
     }
-    
+
     render(<AccessibleHeader {...emptyProps} />)
     const headerDiv = screen.getByRole('columnheader')
-    
+
     expect(headerDiv).toHaveAttribute('aria-label', '')
     expect(headerDiv.querySelector('.ag-header-cell-text')).toBeInTheDocument()
   })

@@ -1,5 +1,5 @@
-import 'react';
-import { describe, expect, vi } from 'vitest'
+import 'react'
+import { describe, expect, vi } from 'vite-plus/test'
 import { screen } from '@testing-library/react'
 import { roles } from '@/constants/roles'
 import { InitiativeAgreements } from '../InitiativeAgreements'
@@ -152,8 +152,14 @@ describe('InitiativeAgreements', () => {
     })
 
     // Seed session storage with pretend cached state.
-    sessionStorage.setItem('initiative-agreements-grid-filter', '{"status":"Draft"}')
-    sessionStorage.setItem('initiative-agreements-grid-pagination', '{"page":3,"size":25}')
+    sessionStorage.setItem(
+      'initiative-agreements-grid-filter',
+      '{"status":"Draft"}'
+    )
+    sessionStorage.setItem(
+      'initiative-agreements-grid-pagination',
+      '{"page":3,"size":25}'
+    )
 
     render(<InitiativeAgreements />, app)
 
@@ -162,7 +168,11 @@ describe('InitiativeAgreements', () => {
 
     // Invoke the callback and check sessionStorage is cleared.
     gridProps.onClearFilters()
-    expect(sessionStorage.getItem('initiative-agreements-grid-filter')).toBeNull()
-    expect(sessionStorage.getItem('initiative-agreements-grid-pagination')).toBeNull()
+    expect(
+      sessionStorage.getItem('initiative-agreements-grid-filter')
+    ).toBeNull()
+    expect(
+      sessionStorage.getItem('initiative-agreements-grid-pagination')
+    ).toBeNull()
   })
 })

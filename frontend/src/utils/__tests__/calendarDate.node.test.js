@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vite-plus/test'
 import { formatCalendarDate } from '../calendarDate'
 
 // CI runs in UTC, where local and UTC midnight coincide and toISOString()

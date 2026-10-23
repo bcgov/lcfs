@@ -89,44 +89,45 @@ const isIntersectionObserverSupported = () => {
   return typeof window !== 'undefined' && 'IntersectionObserver' in window
 }
 
-export const BCGridViewer = forwardRef<AgGridReact<BCGridRow>, BCGridViewerProps>(
-  (
-    {
-  gridRef: providedGridRef,
-  alertRef,
-  loading,
-  defaultColDef,
-  columnDefs,
-  gridOptions,
-  suppressPagination,
-  gridKey,
-  getRowId,
-  onRowClicked,
-  autoSizeStrategy = {},
-  paginationOptions = {
-    page: 1,
-    size: 10,
-    sortOrders: [],
-    filters: []
-  },
-  onPaginationChange,
-  queryData,
-  dataKey = 'items',
-  enableExportButton = false,
-  enableCopyButton = false,
-  enableResetButton = false,
-  enablePageCaching = true,
-  paginationPageSizeSelector = [5, 10, 20, 25, 50, 100],
-  exportName = 'ExportData',
-  enableFloatingPagination = true,
-  filterToolbarConfig = {},
-  onClearFilters,
-  suppressMovableColumns = false,
-  columnState: controlledColumnState,
-  onColumnStateChange,
-  ...props
-}
-  ) => {
+export const BCGridViewer = forwardRef<
+  AgGridReact<BCGridRow>,
+  BCGridViewerProps
+>(
+  ({
+    gridRef: providedGridRef,
+    alertRef,
+    loading,
+    defaultColDef,
+    columnDefs,
+    gridOptions,
+    suppressPagination,
+    gridKey,
+    getRowId,
+    onRowClicked,
+    autoSizeStrategy = {},
+    paginationOptions = {
+      page: 1,
+      size: 10,
+      sortOrders: [],
+      filters: []
+    },
+    onPaginationChange,
+    queryData,
+    dataKey = 'items',
+    enableExportButton = false,
+    enableCopyButton = false,
+    enableResetButton = false,
+    enablePageCaching = true,
+    paginationPageSizeSelector = [5, 10, 20, 25, 50, 100],
+    exportName = 'ExportData',
+    enableFloatingPagination = true,
+    filterToolbarConfig = {},
+    onClearFilters,
+    suppressMovableColumns = false,
+    columnState: controlledColumnState,
+    onColumnStateChange,
+    ...props
+  }) => {
     const gridRef = providedGridRef as BCGridRef
     const { data, error, isError, isLoading } = queryData || {}
     const hasInitializedFromCache = useRef(false)
@@ -287,9 +288,10 @@ export const BCGridViewer = forwardRef<AgGridReact<BCGridRow>, BCGridViewerProps
                 cleanConfig.dateFrom = sanitizeDateValue(
                   cleanConfig.dateFrom
                 ) as string | null | undefined
-                cleanConfig.dateTo = sanitizeDateValue(
-                  cleanConfig.dateTo
-                ) as string | null | undefined
+                cleanConfig.dateTo = sanitizeDateValue(cleanConfig.dateTo) as
+                  | string
+                  | null
+                  | undefined
               }
               return {
                 ...baseFilter,
@@ -339,7 +341,7 @@ export const BCGridViewer = forwardRef<AgGridReact<BCGridRow>, BCGridViewerProps
         }
       }
       return paginationOptions
-    }, [gridKey, paginationOptions, enablePageCaching]);
+    }, [gridKey, paginationOptions, enablePageCaching])
 
     const getGridScrollInfo = useCallback(
       () => getGridScrollInfoUtil(gridContainerRef),
@@ -834,7 +836,9 @@ export const BCGridViewer = forwardRef<AgGridReact<BCGridRow>, BCGridViewerProps
           Object.keys(currentModel).length > 0 ? currentModel : null
         api.setFilterModel(nextModel)
         setActiveFilters(
-          convertFilterModelToArray(nextModel || {}) as unknown as BCPaginationFilter[]
+          convertFilterModelToArray(
+            nextModel || {}
+          ) as unknown as BCPaginationFilter[]
         )
       },
       [gridRef, convertFilterModelToArray]
@@ -898,7 +902,9 @@ export const BCGridViewer = forwardRef<AgGridReact<BCGridRow>, BCGridViewerProps
 
     // Compute defaultMinWidth from columnDefs so autoSizeStrategy uses proper initial widths
     // This prevents the "squished then expand" visual effect on page load
-    const computedAutoSizeStrategy = useMemo<NonNullable<BCGridViewerProps['autoSizeStrategy']>>(() => {
+    const computedAutoSizeStrategy = useMemo<
+      NonNullable<BCGridViewerProps['autoSizeStrategy']>
+    >(() => {
       if (!columnDefs || columnDefs.length === 0) {
         return {
           type: 'fitGridWidth' as const,
@@ -916,7 +922,11 @@ export const BCGridViewer = forwardRef<AgGridReact<BCGridRow>, BCGridViewerProps
       const defaultMinWidth =
         minWidths.length > 0 ? Math.min(...minWidths) : 100
 
-      return { type: 'fitGridWidth' as const, defaultMinWidth, ...autoSizeStrategy }
+      return {
+        type: 'fitGridWidth' as const,
+        defaultMinWidth,
+        ...autoSizeStrategy
+      }
     }, [columnDefs, autoSizeStrategy])
 
     const { columnLabelLookup, columnPillRendererLookup } = useMemo(() => {
@@ -1064,7 +1074,8 @@ export const BCGridViewer = forwardRef<AgGridReact<BCGridRow>, BCGridViewerProps
           columnDefs={transformedColumnDefs}
           gridOptions={gridOptions}
           rowData={
-            (!isLoading && ((data && data[dataKey]) || [])) as unknown as BCGridRow[]
+            (!isLoading &&
+              ((data && data[dataKey]) || [])) as unknown as BCGridRow[]
           }
           onGridReady={onGridReady}
           onSortChanged={handleSortChanged}

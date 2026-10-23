@@ -1,5 +1,5 @@
 import React from 'react'
-import { beforeEach, describe, expect, vi } from 'vitest'
+import { beforeEach, describe, expect, vi } from 'vite-plus/test'
 import { screen } from '@testing-library/react'
 import { FSEProcessing } from '../FSEProcessing'
 import { test } from '@/tests/utils/fixtures'
@@ -51,8 +51,8 @@ vi.mock('@/components/BCAlert', () => ({
   __esModule: true,
   default: ({ children }) => <div>{children}</div>,
   BCAlert2: React.forwardRef(function BCAlert2Mock() {
-  return <div data-testid="alert-box" />;
-})
+    return <div data-testid="alert-box" />
+  })
 }))
 
 vi.mock('@/components/Loading', () => ({

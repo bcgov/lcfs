@@ -14,7 +14,10 @@ import Loading from '@/components/Loading'
 import type { OptionsData } from '@/types/schema'
 import { defaultInitialPagination } from '@/constants/schedules'
 import type { ColumnState } from 'ag-grid-community'
-import type { BCPaginationOptions , BCGridRow } from '@/components/BCDataGrid/types'
+import type {
+  BCPaginationOptions,
+  BCGridRow
+} from '@/components/BCDataGrid/types'
 
 interface FuelSupply {
   fuelSupplyId: number | string
@@ -229,10 +232,13 @@ export const FuelSupplySummary = ({
           suppressPagination={(data?.fuelSupplies?.length || 0) <= 10}
           paginationOptions={paginationOptions}
           onPaginationChange={(newPagination: BCPaginationOptions) =>
-            setPaginationOptions((prev) => ({
-              ...prev,
-              ...newPagination
-            }) as PaginationOptions)
+            setPaginationOptions(
+              (prev) =>
+                ({
+                  ...prev,
+                  ...newPagination
+                }) as PaginationOptions
+            )
           }
           enablePageCaching={false}
           suppressMovableColumns={false}

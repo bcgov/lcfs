@@ -10,7 +10,10 @@ import Loading from '@/components/Loading'
 import { useOtherUsesOptions } from '@/hooks/useOtherUses'
 import type { OptionsData } from '@/types/schema'
 import { defaultInitialPagination } from '@/constants/schedules'
-import type { BCPaginationOptions , BCGridRow } from '@/components/BCDataGrid/types'
+import type {
+  BCPaginationOptions,
+  BCGridRow
+} from '@/components/BCDataGrid/types'
 
 interface OtherUse {
   otherUsesId: number | string
@@ -178,10 +181,13 @@ export const OtherUsesSummary = ({ data, status }: OtherUsesSummaryProps) => {
           enableCellTextSelection
           paginationOptions={paginationOptions}
           onPaginationChange={(newPagination: BCPaginationOptions) =>
-            setPaginationOptions((prev) => ({
-              ...prev,
-              ...newPagination
-            }) as PaginationOptions)
+            setPaginationOptions(
+              (prev) =>
+                ({
+                  ...prev,
+                  ...newPagination
+                }) as PaginationOptions
+            )
           }
           enablePageCaching={false}
         />

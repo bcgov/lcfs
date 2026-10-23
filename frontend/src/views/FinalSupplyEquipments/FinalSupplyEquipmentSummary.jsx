@@ -16,10 +16,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { govRoles } from '@/constants/roles'
 import { ComplianceUnitsTotal } from '@/views/ComplianceReports/components/ComplianceUnitsTotal'
 
-export const FinalSupplyEquipmentSummary = ({
-  status,
-  organizationId
-}) => {
+export const FinalSupplyEquipmentSummary = ({ status, organizationId }) => {
   const [showMap, setShowMap] = useState(false)
   const { complianceReportId } = useParams()
   const { hasAnyRole } = useCurrentUser()
@@ -36,9 +33,7 @@ export const FinalSupplyEquipmentSummary = ({
     'summary',
     'vw_fse_base'
   )
-  const {
-  data: fseData
-} = queryData
+  const { data: fseData } = queryData
 
   const gridRef = useRef()
   const { t } = useTranslation(['common', 'finalSupplyEquipment'])

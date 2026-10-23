@@ -205,11 +205,11 @@ const Crumb = () => {
           const displayName =
             customCrumb.label ||
             name.charAt(0).toUpperCase() +
-            (
-              name.slice(1) as unknown as {
-                replaceAll(searchValue: string, replaceValue: string): string
-              }
-            ).replaceAll('-', ' ')
+              (
+                name.slice(1) as unknown as {
+                  replaceAll(searchValue: string, replaceValue: string): string
+                }
+              ).replaceAll('-', ' ')
 
           // Skip numeric ID crumb for FSE routes (e.g., /fse/:id/edit)
           if (isNumeric(name) && pathnames[index - 1] === 'fse') {

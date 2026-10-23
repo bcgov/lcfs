@@ -1,6 +1,6 @@
 import { screen, fireEvent, act } from '@testing-library/react'
 import { useCallback, useState } from 'react'
-import { describe, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, expect, vi, beforeEach, afterEach } from 'vite-plus/test'
 import { test } from '@/tests/utils/fixtures'
 import { CommentLogFilters } from '../CommentLogFilters'
 

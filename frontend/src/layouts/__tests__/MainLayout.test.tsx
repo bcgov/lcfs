@@ -1,6 +1,6 @@
 import { screen, waitFor } from '@testing-library/react'
 import { MainLayout } from '../MainLayout/MainLayout'
-import { vi, describe, expect, type Mock } from 'vitest'
+import { vi, describe, expect, type Mock } from 'vite-plus/test'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { test } from '@/tests/utils/fixtures'
 import { useAuthorization } from '@/contexts/AuthorizationContext'

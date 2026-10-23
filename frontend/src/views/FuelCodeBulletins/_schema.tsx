@@ -117,21 +117,31 @@ type FuelCodeGridRow = FuelCodeRow & {
 export type FuelCodeCellParams = ICellRendererParams<FuelCodeGridRow>
 type FuelCodeValueParams = { value?: number | string | null }
 
-const linkCellRenderer = (originalRenderer?: ColDef<FuelCodeGridRow>['cellRenderer']) => {
+const linkCellRenderer = (
+  originalRenderer?: ColDef<FuelCodeGridRow>['cellRenderer']
+) => {
   return function FuelCodeLinkCellRenderer(params: FuelCodeCellParams) {
-  const path = fuelCodeDetailPath(params.data?.fuelCodeId);
-  const content = typeof originalRenderer === 'function' ? originalRenderer(params) : params.valueFormatted || params.value || '';
-  if (!path) return content;
-  return <Link to={path} style={{
-    color: 'inherit',
-    display: 'block',
-    height: '100%',
-    textDecoration: 'none',
-    width: '100%'
-  }}>
+    const path = fuelCodeDetailPath(params.data?.fuelCodeId)
+    const content =
+      typeof originalRenderer === 'function'
+        ? originalRenderer(params)
+        : params.valueFormatted || params.value || ''
+    if (!path) return content
+    return (
+      <Link
+        to={path}
+        style={{
+          color: 'inherit',
+          display: 'block',
+          height: '100%',
+          textDecoration: 'none',
+          width: '100%'
+        }}
+      >
         {content}
-      </Link>;
-}
+      </Link>
+    )
+  }
 }
 
 const clickableFuelCodeColDefs = (colDefs: ColDef[]): ColDef[] =>
@@ -220,7 +230,6 @@ export const buildColumnDefs = (t: TFunction, isIdir = false): ColDef[] => {
     }
   ]
 }
-
 
 export const normalizeRows = (rows: unknown[] = []): FuelCodeRow[] =>
   rows.map((value, index) => {

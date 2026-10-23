@@ -1,4 +1,4 @@
-/* eslint-disable cypress/unsafe-to-chain-command */
+/* oxlint-disable cypress/unsafe-to-chain-command */
 /**
  * Command to select elements using 'data-test' attribute.
  *

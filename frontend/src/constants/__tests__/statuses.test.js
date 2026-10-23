@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 import { CO_PROCESSED_OPTIONS } from '../statuses'
 
 describe('CO_PROCESSED_OPTIONS', () => {

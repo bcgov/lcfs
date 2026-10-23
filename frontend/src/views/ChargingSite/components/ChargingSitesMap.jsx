@@ -178,7 +178,7 @@ const MapBoundsHandler = ({ sites }) => {
 
 // Legend component
 const ChargingSitesLegend = ({ sites, isFullscreen }) => {
-  useTranslation(['chargingSite']);
+  useTranslation(['chargingSite'])
   const validSites = sites.filter(
     (site) =>
       site.latitude != null &&
@@ -630,7 +630,7 @@ const ChargingSitesMap = ({
 }) => {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const theme = useTheme()
-  useMediaQuery(theme.breakpoints.down('sm'));
+  useMediaQuery(theme.breakpoints.down('sm'))
 
   // Ensure sites is always an array
   const sitesArray = Array.isArray(sites) ? sites : [sites]

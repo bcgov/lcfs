@@ -1,4 +1,4 @@
-/* eslint-disable react-hooks/exhaustive-deps */
+/* oxlint-disable react/exhaustive-deps */
 import PropTypes from 'prop-types'
 import {
   useCallback,

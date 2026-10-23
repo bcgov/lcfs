@@ -1,7 +1,7 @@
 import 'react'
 import { screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import { test } from '@/tests/utils/fixtures'
 
 // Create mock functions at the top level
@@ -112,11 +112,7 @@ vi.mock('@/constants/roles', () => ({
 
 // Mock other components to prevent rendering issues
 vi.mock('@/components/TogglePanel.jsx', () => ({
-  TogglePanel: ({
-  label,
-  offComponent,
-  disabled
-}) => (
+  TogglePanel: ({ label, offComponent, disabled }) => (
     <div data-testid="toggle-panel">
       <div>{label}</div>
       <div>{disabled ? 'disabled' : 'enabled'}</div>
@@ -126,9 +122,7 @@ vi.mock('@/components/TogglePanel.jsx', () => ({
 }))
 
 vi.mock('@/components/Documents/DocumentUploadDialog', () => ({
-  default: ({
-  open
-}) =>
+  default: ({ open }) =>
     open ? <div data-testid="document-upload-dialog">Upload Dialog</div> : null
 }))
 

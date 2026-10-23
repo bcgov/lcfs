@@ -249,7 +249,9 @@ export const OrgStatusRenderer: RendererWithFilterPill = (
   const statusIndex = statusArr.indexOf(props.data.orgStatus.status)
   return (
     <Link
-      to={(props.node?.id && location.pathname + '/' + props?.node?.id) as string}
+      to={
+        (props.node?.id && location.pathname + '/' + props?.node?.id) as string
+      }
       style={{ color: '#000' }}
     >
       <BCBox sx={{ width: '100%', height: '100%' }}>
@@ -413,7 +415,9 @@ export const FuelCodeStatusRenderer = (props: RendererProps): ReactElement => {
   const statusIndex = statusArr.indexOf(props.data?.status)
   return (
     <Link
-      to={(props.node?.id && location.pathname + '/' + props?.node?.id) as string}
+      to={
+        (props.node?.id && location.pathname + '/' + props?.node?.id) as string
+      }
       style={{ color: '#000' }}
     >
       <BCBox sx={{ width: '100%', height: '100%' }}>
@@ -457,7 +461,10 @@ export const FuelCodePrefixRenderer = (
 
   return (
     <Link
-      to={(params.node?.id && location.pathname + '/' + params?.node?.id) as string}
+      to={
+        (params.node?.id &&
+          location.pathname + '/' + params?.node?.id) as string
+      }
       style={{ color: '#000' }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -692,8 +699,9 @@ const GenericChipRenderer = ({
   const options = useMemo<string[]>(() => {
     if (Array.isArray(value)) {
       return value
-        .map((item: unknown) =>
-          (item as { label?: string } | null)?.label || (item as string)
+        .map(
+          (item: unknown) =>
+            (item as { label?: string } | null)?.label || (item as string)
         )
         .filter((item: unknown) => item && item !== '')
     }

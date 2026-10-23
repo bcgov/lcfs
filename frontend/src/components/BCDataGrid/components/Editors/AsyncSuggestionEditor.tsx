@@ -76,7 +76,11 @@ export const AsyncSuggestionEditor = ({
   })
 
   const debouncedSetInputValue = useMemo(
-    () => debounce((newInputValue: string) => setInputValue(newInputValue), debounceValue),
+    () =>
+      debounce(
+        (newInputValue: string) => setInputValue(newInputValue),
+        debounceValue
+      ),
     [debounceValue]
   )
 
@@ -86,7 +90,10 @@ export const AsyncSuggestionEditor = ({
     onValueChange(newInputValue)
   }
 
-  const handleChange = (_event: SyntheticEvent, newValue: AsyncSuggestion | null) => {
+  const handleChange = (
+    _event: SyntheticEvent,
+    newValue: AsyncSuggestion | null
+  ) => {
     if (typeof newValue === 'string') {
       debouncedSetInputValue(newValue)
       onValueChange(newValue)
@@ -148,7 +155,7 @@ export const AsyncSuggestionEditor = ({
         getOptionLabel={(option) =>
           typeof option === 'string'
             ? option
-            : (option as AsyncSuggestionOption)[optionLabel] as string
+            : ((option as AsyncSuggestionOption)[optionLabel] as string)
         }
         options={options || []}
         groupBy={groupBy}
@@ -167,7 +174,7 @@ export const AsyncSuggestionEditor = ({
           const label =
             typeof option === 'string'
               ? option
-              : (option as AsyncSuggestionOption)[optionLabel] as string
+              : ((option as AsyncSuggestionOption)[optionLabel] as string)
           const matches = match(label, inputValue, { insideWords: true })
           const parts = parse(label, matches)
 

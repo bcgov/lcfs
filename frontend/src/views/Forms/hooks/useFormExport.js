@@ -57,10 +57,13 @@ export function useFormExport({ formSlug, linkKey, organizationName }) {
           autoHideDuration: 4000
         })
       } catch {
-        enqueueSnackbar('Export failed — please check your input and try again.', {
-          variant: 'error',
-          autoHideDuration: 6000
-        })
+        enqueueSnackbar(
+          'Export failed — please check your input and try again.',
+          {
+            variant: 'error',
+            autoHideDuration: 6000
+          }
+        )
       } finally {
         setDownloading(null)
       }

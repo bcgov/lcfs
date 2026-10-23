@@ -16,7 +16,9 @@ const AdminLinksCard = () => {
   const { hasRoles } = useCurrentUser()
   const isAdmin = hasRoles(roles.administrator)
   const isSystemAdmin = hasRoles(roles.system_admin)
-  const publicMarketDataEnabled = isFeatureEnabled(FEATURE_FLAGS.PUBLIC_MARKET_DATA)
+  const publicMarketDataEnabled = isFeatureEnabled(
+    FEATURE_FLAGS.PUBLIC_MARKET_DATA
+  )
 
   const getLinkDataTest = (route) => {
     const sanitizedRoute = route?.replace(/^\//, '').replace(/\//g, '-') || ''

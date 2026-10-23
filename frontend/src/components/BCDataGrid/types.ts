@@ -63,8 +63,9 @@ export interface BCSaveButtonProps {
   [key: string]: unknown
 }
 
-export interface BCGridBaseProps<TData extends BCGridRow = BCGridRow>
-  extends Omit<GridOptions<TData>, 'autoSizeStrategy'> {
+export interface BCGridBaseProps<
+  TData extends BCGridRow = BCGridRow
+> extends Omit<GridOptions<TData>, 'autoSizeStrategy'> {
   autoSizeStrategy?: GridOptions<TData>['autoSizeStrategy'] | null
   autoHeight?: boolean
   className?: string
@@ -88,8 +89,9 @@ export type BCGridEditContext<TData extends BCGridRow = BCGridRow> = Pick<
 > &
   Partial<Omit<CellEditingStoppedEvent<TData>, 'api' | 'node' | 'data'>>
 
-export interface BCGridEditorProps<TData extends BCGridRow = BCGridRow>
-  extends Omit<GridOptions<TData>, 'autoSizeStrategy'> {
+export interface BCGridEditorProps<
+  TData extends BCGridRow = BCGridRow
+> extends Omit<GridOptions<TData>, 'autoSizeStrategy'> {
   autoSizeStrategy?: GridOptions<TData>['autoSizeStrategy'] | null
   addMultiRow?: boolean
   alertRef?:
@@ -105,17 +107,23 @@ export interface BCGridEditorProps<TData extends BCGridRow = BCGridRow>
   onAction?: (
     action: string,
     params?: unknown
-  ) => RowDataTransaction<TData> | void | Promise<RowDataTransaction<TData> | void>
+  ) =>
+    | RowDataTransaction<TData>
+    | void
+    | Promise<RowDataTransaction<TData> | void>
   onAddRows?: (rows: TData[]) => void
-  onCellEditingStopped?: (params: BCGridEditContext<TData>) => void | Promise<unknown>
+  onCellEditingStopped?: (
+    params: BCGridEditContext<TData>
+  ) => void | Promise<unknown>
   onCellValueChanged?: (params: CellValueChangedEvent<TData>) => void
   saveButtonProps?: BCSaveButtonProps
   showAddRowsButton?: boolean
   showMandatoryColumns?: boolean
 }
 
-export interface BCGridEditorPaginatedProps<TData extends BCGridRow = BCGridRow>
-  extends BCGridEditorProps<TData> {
+export interface BCGridEditorPaginatedProps<
+  TData extends BCGridRow = BCGridRow
+> extends BCGridEditorProps<TData> {
   dataKey?: string
   enableCopyButton?: boolean
   enableExportButton?: boolean
@@ -132,8 +140,9 @@ export interface BCGridEditorPaginatedProps<TData extends BCGridRow = BCGridRow>
   suppressPagination?: boolean
 }
 
-export interface BCGridViewerProps<TData extends BCGridRow = BCGridRow>
-  extends BCGridBaseProps<TData> {
+export interface BCGridViewerProps<
+  TData extends BCGridRow = BCGridRow
+> extends BCGridBaseProps<TData> {
   alertRef?:
     | MutableRefObject<FloatingAlertHandle | null>
     | ((instance: FloatingAlertHandle | null) => void)

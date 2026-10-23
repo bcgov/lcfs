@@ -10,7 +10,9 @@ import { AppRouteObject } from '../types'
 const creditMarketPageEnabled = isFeatureEnabled(
   FEATURE_FLAGS.CREDIT_MARKET_LOGIN_PAGE
 )
-const publicMarketDataEnabled = isFeatureEnabled(FEATURE_FLAGS.PUBLIC_MARKET_DATA)
+const publicMarketDataEnabled = isFeatureEnabled(
+  FEATURE_FLAGS.PUBLIC_MARKET_DATA
+)
 
 const publicMarketDataRoutes: AppRouteObject[] = publicMarketDataEnabled
   ? [
