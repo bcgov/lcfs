@@ -22,6 +22,7 @@ import { CommonArrayRenderer } from '@/utils/grid/cellRenderers'
 import BCTypography from '@/components/BCTypography'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { numberFormatter } from '@/utils/formatters'
+import { FuelCodeCellRenderer } from './FuelCodeCellRenderer'
 
 const getFieldOptions = (optionsData?: OptionsData) => ({
   feedstock: optionsData?.fieldOptions?.feedstock || [],
@@ -42,24 +43,18 @@ const cellErrorStyle = (params: CellClassParams) => {
   return { borderColor: 'unset' }
 }
 
-const createCellRenderer = (
-  field: string,
-  customRenderer: ((params: ICellRendererParams) => ReactNode) | null = null
-) => {
-  const CellRenderer = (params: ICellRendererParams) => {
-    const hasError =
-      params.data.id && params.context.errors[params.data.id]?.includes(field)
-    const content = customRenderer
-      ? customRenderer(params)
-      : params.value ||
-        (!params.value && <BCTypography variant="body4">Select</BCTypography>)
-    return <div style={{ color: hasError ? 'red' : 'inherit' }}>{content}</div>
-  }
-
-  CellRenderer.displayName = `CellRenderer_${field}`
-
-  return CellRenderer
-}
+const createCellRenderer =
+  (
+    field: string,
+    customRenderer: ((params: ICellRendererParams) => ReactNode) | null = null
+  ) =>
+  (params: ICellRendererParams) => (
+    <FuelCodeCellRenderer
+      params={params}
+      field={field}
+      customRenderer={customRenderer}
+    />
+  )
 
 const getTransportModeName = (value: unknown): string => {
   if (!value) return ''

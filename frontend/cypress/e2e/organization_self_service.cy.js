@@ -116,7 +116,7 @@ const LEDGER = {
 // Org details + balances are read on several pages; match any numeric org id.
 const stubOrg = () => {
   cy.intercept(
-    { method: 'GET', pathname: /\/organizations\/\d+$/ },
+    { method: 'GET', pathname: /\/api\/organizations\/\d+$/ },
     { body: ORG }
   ).as('org')
   cy.intercept(
@@ -174,7 +174,7 @@ describe('BCeID organization self-service pages (#4092)', () => {
       stubOrg()
       // A supplier hitting another org's IDIR route is bounced to /organization.
       cy.visit('/organizations/9999')
-      cy.url({ timeout: 15000 }).should('match', /\/organization$/)
+      cy.location('pathname', { timeout: 15000 }).should('eq', '/organization')
     })
   })
 
@@ -212,6 +212,7 @@ describe('BCeID organization self-service pages (#4092)', () => {
       cy.get('#keycloakEmail').type('new.user@testfuel.example.com')
 
       cy.getByDataTest('saveUser').click()
+      cy.getByDataTest('impact-modal-confirm-btn').click()
       cy.wait('@createUser')
       // On success the form redirects back to the org dashboard.
       cy.url({ timeout: 15000 }).should('match', /\/organization$/)

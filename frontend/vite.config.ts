@@ -61,7 +61,13 @@ export default defineConfig({
       'typescript/no-redundant-type-constituents': 'off',
       'typescript/require-array-sort-compare': 'off',
       'typescript/no-implied-eval': 'off',
-      'react/only-export-components': ['warn', { allowConstantExport: true }],
+      'react/only-export-components': [
+        'warn',
+        {
+          allowConstantExport: true,
+          customHOCs: ['withRole', 'withFeatureFlag', 'createStatusRenderer']
+        }
+      ],
       'react/rules-of-hooks': 'error',
       'react/exhaustive-deps': 'warn',
       'react/react-in-jsx-scope': 'off',
@@ -97,7 +103,12 @@ export default defineConfig({
       'typescript/no-unused-expressions': 'off'
     },
     categories: { correctness: 'error' },
-    options: { typeAware: true, typeCheck: true, maxWarnings: 0 }
+    options: {
+      typeAware: true,
+      typeCheck: true,
+      maxWarnings: 0,
+      reportUnusedDisableDirectives: 'error'
+    }
   },
   fmt: {
     singleQuote: true,

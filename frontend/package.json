@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "vp dev",
     "build": "vp build",
+    "check": "vp check",
     "lint": "vp lint --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "vp lint --fix --report-unused-disable-directives --max-warnings 0",
     "format": "vp fmt . --check",
@@ -21,7 +22,7 @@
     "test.coverage": "npm run test:coverage",
     "test:run": "vp test run",
     "test:ci": "vp test run --reporter=verbose --reporter=junit --outputFile.junit=vitest-results.xml",
-    "test:ci:memory": "node --max-old-space-size=8192 ./node_modules/.bin/vp test run --reporter=github-actions --reporter=blob --shard=$SHARD_INDEX/$SHARD_TOTAL",
+    "test:ci:memory": "node --max-old-space-size=8192 ./node_modules/.bin/vp test run --reporter=github-actions --reporter=blob --outputFile.blob=.vitest-reports/blob-$SHARD_INDEX.json --shard=$SHARD_INDEX/$SHARD_TOTAL",
     "test:components": "vp test run src/components",
     "test:hooks": "vp test run src/hooks",
     "test:layouts": "vp test run src/layouts",
