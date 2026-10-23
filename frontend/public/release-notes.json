@@ -5,7 +5,7 @@
     "date": "2026-10-23",
     "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/v1.3.11",
     "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/v1.3.10...v1.3.11",
-    "summary": "This release includes 7 new features, 7 bug fixes and 8 other changes. Highlights: Allow editing existing initiative agreements; Add pathway delete confirmation; Add assigned analyst to designated actions; Add IDIR comment mentions and notifications.",
+    "summary": "This release includes 7 new features, 7 bug fixes and 9 other changes. Highlights: Allow editing existing initiative agreements; Add pathway delete confirmation; Add assigned analyst to designated actions; Add IDIR comment mentions and notifications.",
     "sections": {
       "features": [
         "Allow editing existing initiative agreements - 5169",
@@ -36,7 +36,8 @@
         "Add domain model relationship diagrams - 4111",
         "Add effective date notice to CI application information step (#5225)",
         "Keep drafts out of IDIR global search and its links (#5231)",
-        "Keep dashboard links in line whatever their counts (#4911)"
+        "Keep dashboard links in line whatever their counts (#4911)",
+        "Hotfix: Remove low-count suppression from public Credit Market data"
       ]
     },
     "contributors": []
