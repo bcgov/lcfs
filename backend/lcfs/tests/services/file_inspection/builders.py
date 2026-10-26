@@ -2,10 +2,13 @@
 
 import io
 import zipfile
+from pathlib import Path
 
 import docx
 import xlwt
 from openpyxl import Workbook
+
+FIXTURES = Path(__file__).with_name("fixtures")
 
 
 def xlsx_bytes() -> bytes:
@@ -49,3 +52,30 @@ def rewrite_zip(data: bytes, edits: dict) -> bytes:
         for name, edit in edits.items():
             target.writestr(name, edit(b""))
     return out.getvalue()
+
+
+def sample_vba_project() -> bytes:
+    return (FIXTURES / "xlsxwriter_vbaProject.bin").read_bytes()
+
+
+def xlsm_bytes(vba_project: bytes | None = None, extra: dict | None = None) -> bytes:
+    """A macro-enabled workbook; with vba_project=None it carries no macros."""
+    edits = {
+        "[Content_Types].xml": lambda c: c.replace(
+            b"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml",
+            b"application/vnd.ms-excel.sheet.macroEnabled.main+xml",
+        ).replace(
+            b"</Types>",
+            b'<Default Extension="bin" '
+            b'ContentType="application/vnd.ms-office.vbaProject"/></Types>',
+        )
+    }
+    if vba_project is not None:
+        edits["xl/_rels/workbook.xml.rels"] = lambda c: c.replace(
+            b"</Relationships>",
+            b'<Relationship Id="rIdVba" Type="http://schemas.microsoft.com/office/'
+            b'2006/relationships/vbaProject" Target="vbaProject.bin"/></Relationships>',
+        )
+        edits["xl/vbaProject.bin"] = lambda _: vba_project
+    edits.update(extra or {})
+    return rewrite_zip(xlsx_bytes(), edits)

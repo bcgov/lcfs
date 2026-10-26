@@ -25,14 +25,21 @@ import {
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { timezoneFormatter } from '@/utils/formatters'
 import {
-  MAX_FILE_SIZE_BYTES,
+  CI_APPLICATION_FILE_TYPES,
   COMPLIANCE_REPORT_FILE_TYPES,
+  MAX_FILE_SIZE_BYTES,
   isDocumentRenameEnabled
 } from '@/constants/common'
+import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
 import { validateFile } from '@/utils/fileValidation'
-import { getDocumentDisplayName } from '@/utils/documents'
+import {
+  getDocumentDisplayName,
+  hasScanReview,
+  isDocumentLocked
+} from '@/utils/documents'
 import RenameableFileName from '@/components/Documents/RenameableFileName'
 import DocumentPreviewButton from '@/components/Documents/DocumentPreviewButton'
+import DocumentScanStatus from '@/components/Documents/DocumentScanStatus'
 
 const StyledCard = styled(Card)(({ theme, isDragActive = false }) => ({
   width: '100%',
@@ -90,6 +97,13 @@ function DocumentTable({ parentType, parentID }) {
   )
   const viewDocument = useDownloadDocument(parentType, parentID)
   const renameEnabled = isDocumentRenameEnabled(parentType)
+  // CI applications also take macro-enabled workbooks, held for approval
+  const acceptsXlsm =
+    parentType === 'ci_application' &&
+    isFeatureEnabled(FEATURE_FLAGS.MACRO_ENABLED_UPLOADS)
+  const fileTypes = acceptsXlsm
+    ? CI_APPLICATION_FILE_TYPES
+    : COMPLIANCE_REPORT_FILE_TYPES
 
   const handleDrag = (e) => {
     e.preventDefault()
@@ -161,11 +175,7 @@ function DocumentTable({ parentType, parentID }) {
     }
 
     // Validate file type and size
-    const validation = validateFile(
-      file,
-      MAX_FILE_SIZE_BYTES,
-      COMPLIANCE_REPORT_FILE_TYPES
-    )
+    const validation = validateFile(file, MAX_FILE_SIZE_BYTES, fileTypes)
     if (!validation.isValid) {
       // Show error alert with file name and allowed formats. Functional updates
       // keep every file's row when several are processed in the same batch.
@@ -297,7 +307,7 @@ function DocumentTable({ parentType, parentID }) {
         data-test="file-input"
         ref={fileInputRef}
         style={{ display: 'none' }}
-        accept={COMPLIANCE_REPORT_FILE_TYPES.ACCEPT_STRING}
+        accept={fileTypes.ACCEPT_STRING}
         onChange={handleFileChange}
       />
       <StyledCard
@@ -311,7 +321,11 @@ function DocumentTable({ parentType, parentID }) {
           <IconButton aria-label="upload" size="medium">
             <CloudUpload style={{ fontSize: '40px', color: '#999' }} />
           </IconButton>
-          <BCTypography variant="body2">{t('report:clickDrag')}</BCTypography>
+          <BCTypography variant="body2">
+            {acceptsXlsm
+              ? t('report:clickDragWithXlsm')
+              : t('report:clickDrag')}
+          </BCTypography>
         </CardContent>
       </StyledCard>
       <FileTable>
@@ -350,7 +364,14 @@ function DocumentTable({ parentType, parentID }) {
 
           return (
             <div style={{ display: 'contents' }} key={file.documentId}>
-              <TableCell>
+              <TableCell
+                // Stack the macro review chip under the file name
+                sx={
+                  hasScanReview(file)
+                    ? { flexDirection: 'column', alignItems: 'flex-start' }
+                    : undefined
+                }
+              >
                 {!file.oversize && !file.error && (
                   <RenameableFileName
                     displayName={displayName}
@@ -358,28 +379,49 @@ function DocumentTable({ parentType, parentID }) {
                     onRename={(newName) =>
                       handleRenameFile(file.documentId, newName)
                     }
-                    renderName={(name) => (
-                      <BCTypography
-                        variant="subtitle2"
-                        color="link"
-                        onClick={() => {
-                          viewDocument(file.documentId, name)
-                        }}
-                        sx={{
-                          '&:hover': { cursor: 'pointer' },
-                          textDecoration: 'underline',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          maxWidth: '100%'
-                        }}
-                        title={name}
-                      >
-                        {name}
-                      </BCTypography>
-                    )}
+                    renderName={(name) =>
+                      isDocumentLocked(file) ? (
+                        // Nobody downloads it until an administrator approves
+                        <BCTypography
+                          variant="subtitle2"
+                          sx={{
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            maxWidth: '100%'
+                          }}
+                          title={name}
+                        >
+                          {name}
+                        </BCTypography>
+                      ) : (
+                        <BCTypography
+                          variant="subtitle2"
+                          color="link"
+                          onClick={() => {
+                            viewDocument(file.documentId, name)
+                          }}
+                          sx={{
+                            '&:hover': { cursor: 'pointer' },
+                            textDecoration: 'underline',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            maxWidth: '100%'
+                          }}
+                          title={name}
+                        >
+                          {name}
+                        </BCTypography>
+                      )
+                    }
                   />
                 )}
+                <DocumentScanStatus
+                  document={file}
+                  parentType={parentType}
+                  parentID={parentID}
+                />
                 {file.oversize && (
                   <BCTypography
                     variant="subtitle2"
@@ -404,9 +446,9 @@ function DocumentTable({ parentType, parentID }) {
                       whiteSpace: 'nowrap',
                       maxWidth: '100%'
                     }}
-                    title={`${file.fileName} (Unsupported file type)`}
+                    title={`${file.fileName}: ${file.errorMessage}`}
                   >
-                    {file.fileName} (Unsupported file type)
+                    {file.fileName} (Upload failed)
                   </BCTypography>
                 )}
               </TableCell>

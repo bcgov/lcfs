@@ -15,6 +15,7 @@ export interface FeatureFlagsConfig {
   creditMarketLoginPage?: boolean
   publicMarketData?: boolean
   initiativeAgreements?: boolean
+  macroEnabledUploads?: boolean
 }
 
 export interface KeycloakConfig {
@@ -97,7 +98,8 @@ export const FEATURE_FLAGS = {
   DETERMINISTIC_REPORT_SUMMARY: 'deterministicReportSummary',
   CREDIT_MARKET_LOGIN_PAGE: 'creditMarketLoginPage',
   PUBLIC_MARKET_DATA: 'publicMarketData',
-  INITIATIVE_AGREEMENTS: 'initiativeAgreements'
+  INITIATIVE_AGREEMENTS: 'initiativeAgreements',
+  MACRO_ENABLED_UPLOADS: 'macroEnabledUploads'
 } as const
 
 export type FeatureFlagValue =
@@ -185,6 +187,10 @@ export const CONFIG: AppConfig = {
     creditMarketLoginPage:
       window.lcfs_config.feature_flags.creditMarketLoginPage ?? false,
     publicMarketData:
-      window.lcfs_config.feature_flags.publicMarketData ?? false
+      window.lcfs_config.feature_flags.publicMarketData ?? false,
+    // .xlsm uploads on CI applications; must match the backend's
+    // LCFS_FEATURE_MACRO_UPLOADS, so both default off
+    macroEnabledUploads:
+      window.lcfs_config.feature_flags.macroEnabledUploads ?? false
   }
 }

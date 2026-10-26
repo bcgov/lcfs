@@ -51,21 +51,24 @@ MAIN_PART_TYPES = {
     "application/vnd.ms-word.document.macroenabled.main+xml": DOCM,
 }
 
-# Parts that hold code or COM controls
+# Parts that hold code or COM controls, by content type and by relationship
+VBA = "vba"
+MACRO_SHEET = "macro_sheet"
+ACTIVEX = "activex"
 ACTIVE_CONTENT_TYPES = {
-    "application/vnd.ms-office.vbaproject",
-    "application/vnd.ms-excel.macrosheet+xml",
-    "application/vnd.ms-excel.intlmacrosheet+xml",
-    "application/vnd.ms-office.activex+xml",
-    "application/vnd.ms-office.activex",
+    "application/vnd.ms-office.vbaproject": VBA,
+    "application/vnd.ms-excel.macrosheet+xml": MACRO_SHEET,
+    "application/vnd.ms-excel.intlmacrosheet+xml": MACRO_SHEET,
+    "application/vnd.ms-office.activex+xml": ACTIVEX,
+    "application/vnd.ms-office.activex": ACTIVEX,
 }
-ACTIVE_REL_SUFFIXES = (
-    "/vbaproject",
-    "/xlmacrosheet",
-    "/xlintlmacrosheet",
-    "/control",
-    "/activexcontrolbinary",
-)
+ACTIVE_REL_SUFFIXES = {
+    "/vbaproject": VBA,
+    "/xlmacrosheet": MACRO_SHEET,
+    "/xlintlmacrosheet": MACRO_SHEET,
+    "/control": ACTIVEX,
+    "/activexcontrolbinary": ACTIVEX,
+}
 # Relationships that make Office fetch or open something outside the file
 BLOCKED_EXTERNAL_REL_SUFFIXES = (
     "/attachedtemplate",
@@ -121,7 +124,13 @@ def _inspect_package(package: zipfile.ZipFile) -> DetectedFile:
     if mime_type is None:
         raise FileRejectedException(MISMATCH_MESSAGE)
 
-    has_macros = any(content_types.of(name) in ACTIVE_CONTENT_TYPES for name in parts)
+    # Excel loads code from whatever part the relationship or content type
+    # names, so never go by file name
+    active: dict[str, set[str]] = {VBA: set(), MACRO_SHEET: set(), ACTIVEX: set()}
+    for name in parts:
+        kind = ACTIVE_CONTENT_TYPES.get(content_types.of(name))
+        if kind:
+            active[kind].add(name)
     for source, rels in relationships.items():
         for rel_type, target, external in rels:
             if external and rel_type.endswith(BLOCKED_EXTERNAL_REL_SUFFIXES):
@@ -129,8 +138,10 @@ def _inspect_package(package: zipfile.ZipFile) -> DetectedFile:
                     "Rejected external relationship", source=source, type=rel_type
                 )
                 raise FileRejectedException(EXTERNAL_CONTENT_MESSAGE)
-            if not external and rel_type.endswith(ACTIVE_REL_SUFFIXES):
-                has_macros = True
+            if not external:
+                kind = _active_kind(rel_type)
+                if kind:
+                    active[kind].add(target)
 
     for name, info in parts.items():
         part_type = content_types.of(name)
@@ -144,7 +155,25 @@ def _inspect_package(package: zipfile.ZipFile) -> DetectedFile:
         ):
             raise FileRejectedException(DDE_MESSAGE)
 
-    return DetectedFile(mime_type, has_macros=has_macros)
+    def present(kind):
+        return tuple(
+            sorted(parts[name].filename for name in active[kind] if name in parts)
+        )
+
+    return DetectedFile(
+        mime_type,
+        has_macros=any(active.values()),
+        vba_parts=present(VBA),
+        macro_sheet_parts=present(MACRO_SHEET),
+        has_activex=bool(active[ACTIVEX]),
+    )
+
+
+def _active_kind(rel_type: str) -> str | None:
+    for suffix, kind in ACTIVE_REL_SUFFIXES.items():
+        if rel_type.endswith(suffix):
+            return kind
+    return None
 
 
 def _check_entries(infos: list[zipfile.ZipInfo]) -> dict[str, zipfile.ZipInfo]:

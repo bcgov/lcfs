@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { validateFileMimeType, validateFile } from '../fileValidation'
 import {
+  CI_APPLICATION_FILE_TYPES,
   COMPLIANCE_REPORT_FILE_TYPES,
   SCHEDULE_IMPORT_FILE_TYPES
 } from '@/constants/common'
@@ -327,6 +328,30 @@ describe('fileValidation', () => {
         COMPLIANCE_REPORT_FILE_TYPES.MIME_TYPES.length
       )
       expect(scheduleAccept).not.toContain(',') // Only one type
+    })
+  })
+
+  describe('macro-enabled workbooks', () => {
+    // Browsers lower-case File.type, so the .xlsm type arrives as
+    // application/vnd.ms-excel.sheet.macroenabled.12
+    const xlsm = () =>
+      createMockFile(
+        'model.xlsm',
+        'application/vnd.ms-excel.sheet.macroEnabled.12'
+      )
+
+    it('accepts .xlsm for CI applications whatever the case', () => {
+      const file = xlsm()
+      expect(file.type).toBe('application/vnd.ms-excel.sheet.macroenabled.12')
+      expect(
+        validateFileMimeType(file, CI_APPLICATION_FILE_TYPES).isValid
+      ).toBe(true)
+    })
+
+    it('still refuses .xlsm everywhere else', () => {
+      expect(
+        validateFileMimeType(xlsm(), COMPLIANCE_REPORT_FILE_TYPES).isValid
+      ).toBe(false)
     })
   })
 })

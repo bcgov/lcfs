@@ -26,8 +26,14 @@ from lcfs.db.models.compliance.ComplianceReport import (
 )
 from lcfs.services.s3.client import DocumentService, MAX_FILE_SIZE_BYTES, BUCKET_NAME
 from lcfs.services.clamav.client import ClamAVService, ScanUnavailableException
-from lcfs.services.file_inspection import FileRejectedException
-from lcfs.tests.services.file_inspection.builders import xlsx_bytes
+from lcfs.db.models.document.Document import DocumentScanStatusEnum
+from lcfs.services.file_inspection import FileRejectedException, MacroReport
+from lcfs.tests.services.file_inspection.builders import (
+    sample_vba_project,
+    xlsm_bytes,
+    xlsx_bytes,
+)
+from lcfs.web.exception.exceptions import DataNotFoundException
 
 PDF_BYTES = b"%PDF-1.7\nfile-bytes"
 
@@ -794,3 +800,140 @@ async def test_rename_file_document_not_associated_with_parent(
         await document_service.rename_file(99, 5, "ci_application", "New Name")
 
     assert exc_info.value.status_code == 404
+
+
+# --- Macro-enabled workbooks (#5239) -------------------------------------------
+
+
+@pytest.fixture
+def xlsm_upload(mock_file, db_mock):
+    """A CI application upload of a real macro-enabled workbook."""
+    mock_file.filename = "ghg-model.xlsm"
+    # Browsers send the type lower-cased
+    mock_file.content_type = "application/vnd.ms-excel.sheet.macroenabled.12"
+    mock_file.file.read.return_value = xlsm_bytes(sample_vba_project())
+    db_mock.get.return_value = MagicMock(ci_application_id=5)
+    db_mock.refresh = AsyncMock(side_effect=lambda x: x)
+    return mock_file
+
+
+@pytest.mark.anyio
+@patch("os.fstat")
+@pytest.mark.parametrize(
+    "roles, expected_status",
+    [
+        ([RoleEnum.CI_APPLICANT], DocumentScanStatusEnum.pending_approval),
+        ([RoleEnum.GOVERNMENT, RoleEnum.ANALYST], DocumentScanStatusEnum.approved),
+    ],
+)
+async def test_macro_workbook_upload_waits_for_approval_unless_staff(
+    mock_fstat, document_service, xlsm_upload, roles, expected_status
+):
+    mock_fstat.return_value = MagicMock(st_size=1024)
+    user = MagicMock(role_names=roles, keycloak_username="uploader")
+
+    with patch("lcfs.services.s3.client.settings.feature_macro_uploads", True):
+        result = await document_service.upload_file(
+            xlsm_upload, 5, "ci_application", user
+        )
+
+    assert result.scan_status == expected_status
+    assert result.scan_findings[0] == "Contains macros (1 code module)"
+    assert result.mime_type == "application/vnd.ms-excel.sheet.macroEnabled.12"
+    if expected_status == DocumentScanStatusEnum.approved:
+        assert result.scan_reviewed_by == "uploader"
+    else:
+        assert result.scan_reviewed_by is None
+
+
+@pytest.mark.anyio
+@patch("os.fstat")
+@pytest.mark.parametrize(
+    "flag, parent_type",
+    [(False, "ci_application"), (True, "compliance_report")],
+)
+async def test_macro_workbook_refused_outside_ci_or_with_flag_off(
+    mock_fstat,
+    document_service,
+    xlsm_upload,
+    user_supplier,
+    compliance_report_mock,
+    flag,
+    parent_type,
+):
+    mock_fstat.return_value = MagicMock(st_size=1024)
+    document_service.compliance_report_repo.get_compliance_report_by_id.return_value = (
+        compliance_report_mock
+    )
+
+    with patch("lcfs.services.s3.client.settings.feature_macro_uploads", flag):
+        with pytest.raises(HTTPException) as exc_info:
+            await document_service.upload_file(
+                xlsm_upload, 5, parent_type, user_supplier
+            )
+
+    assert exc_info.value.status_code == 400
+    assert "not allowed" in exc_info.value.detail
+    document_service.s3_client.upload_fileobj.assert_not_called()
+
+
+@pytest.mark.anyio
+@patch("os.fstat")
+async def test_blocked_macro_workbook_is_not_stored(
+    mock_fstat, document_service, xlsm_upload, user_supplier
+):
+    mock_fstat.return_value = MagicMock(st_size=1024)
+    blocked = MacroReport(findings=[], block_reason="Altered macro code")
+
+    with patch("lcfs.services.s3.client.settings.feature_macro_uploads", True), patch(
+        "lcfs.services.s3.client.analyze_workbook_macros", return_value=blocked
+    ):
+        with pytest.raises(FileRejectedException) as exc_info:
+            await document_service.upload_file(
+                xlsm_upload, 5, "ci_application", user_supplier
+            )
+
+    assert exc_info.value.detail == "Altered macro code"
+    document_service.s3_client.upload_fileobj.assert_not_called()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("approve", [True, False])
+async def test_review_scan_records_the_decision(document_service, approve):
+    document = Document(
+        document_id=7, scan_status=DocumentScanStatusEnum.pending_approval
+    )
+    document_service.get_by_id_and_type = AsyncMock(return_value=[document])
+    document_service.db.refresh = AsyncMock(side_effect=lambda x: x)
+    admin = MagicMock(keycloak_username="admin1")
+
+    result = await document_service.review_scan(7, 5, "ci_application", approve, admin)
+
+    assert result.scan_status == (
+        DocumentScanStatusEnum.approved if approve else DocumentScanStatusEnum.rejected
+    )
+    assert result.scan_reviewed_by == "admin1"
+    assert result.scan_reviewed_date is not None
+
+
+@pytest.mark.anyio
+async def test_review_scan_only_for_files_waiting_for_approval(document_service):
+    document = Document(document_id=7, scan_status=DocumentScanStatusEnum.clean)
+    document_service.get_by_id_and_type = AsyncMock(return_value=[document])
+
+    with pytest.raises(HTTPException) as exc_info:
+        await document_service.review_scan(
+            7, 5, "ci_application", True, MagicMock(keycloak_username="admin1")
+        )
+
+    assert exc_info.value.status_code == 400
+
+
+@pytest.mark.anyio
+async def test_review_scan_scoped_to_the_parent(document_service):
+    document_service.get_by_id_and_type = AsyncMock(return_value=[])
+
+    with pytest.raises(DataNotFoundException):
+        await document_service.review_scan(
+            7, 5, "ci_application", True, MagicMock(keycloak_username="admin1")
+        )
