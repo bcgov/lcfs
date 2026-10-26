@@ -4,7 +4,7 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 from fastapi import Depends
 from sqlalchemy import Date as SADate
-from sqlalchemy import String, and_, asc, cast, desc, func, or_, select
+from sqlalchemy import String, and_, asc, cast, desc, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -647,9 +647,9 @@ class InitiativeAgreementRepository:
 
     @repo_handler
     async def get_designated_action_by_id(
-        self, designated_action_id: int
+        self, designated_action_id: int, *, for_update: bool = False
     ) -> Optional[DesignatedAction]:
-        result = await self.db.execute(
+        query = (
             select(DesignatedAction)
             .options(
                 selectinload(DesignatedAction.current_status),
@@ -664,7 +664,25 @@ class InitiativeAgreementRepository:
             # identity map — the assignment flow re-reads after mutating.
             .execution_options(populate_existing=True)
         )
+        if for_update:
+            query = query.with_for_update(of=DesignatedAction)
+        result = await self.db.execute(query)
         return result.scalars().first()
+
+    @repo_handler
+    async def add_issued_credits(
+        self, initiative_agreement_id: int, credits: int
+    ) -> None:
+        """Avoid lost totals when different actions issue concurrently."""
+        await self.db.execute(
+            update(InitiativeAgreement)
+            .where(
+                InitiativeAgreement.initiative_agreement_id == initiative_agreement_id
+            )
+            .values(
+                total_credits_issued=InitiativeAgreement.total_credits_issued + credits
+            )
+        )
 
     @repo_handler
     async def get_latest_comments_by_designated_action_ids(
