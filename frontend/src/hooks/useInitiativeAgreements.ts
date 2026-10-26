@@ -219,9 +219,11 @@ export const useEvidenceRequirements = (
   })
 }
 
-const useEvidenceMutation = <TVariables,>(
+const useEvidenceMutation = <TVariables>(
   designatedActionId: number | string,
-  mutationFn: (client: ApiServiceInstance) => (variables: TVariables) => Promise<unknown>
+  mutationFn: (
+    client: ApiServiceInstance
+  ) => (variables: TVariables) => Promise<unknown>
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -340,29 +342,6 @@ export const useSetRecommendedCredits = (
   })
 }
 
-// The Missing information box's working text (#5118). Requesting
-// additional information sends it; saving it records nothing.
-export const useSetMissingInformation = (
-  designatedActionId: number | string
-) => {
-  const client = useApiService()
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async (missingInformation: string | null) =>
-      (
-        await client.put(
-          actionPath(
-            apiRoutes.designatedActionMissingInformation,
-            designatedActionId
-          ),
-          { missingInformation }
-        )
-      ).data,
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ['designated-actions'] })
-  })
-}
-
 export const useDesignatedActionHistory = (
   designatedActionId: number | string,
   options: QueryOptions<unknown> = {}
@@ -381,7 +360,8 @@ export const useDesignatedActionHistory = (
   })
 }
 
-/** Add a designated action to a draft agreement (analysts and managers). */
+/** Add a designated action to a draft or underway agreement (analysts and
+ * managers). */
 export const useCreateDesignatedAction = (
   initiativeAgreementId: number | string
 ) => {
@@ -445,6 +425,7 @@ export const useUpdateAgreement = (initiativeAgreementId: number | string) => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (payload: {
+      organizationId?: number | null
       iaCode?: string
       agreementType?: string
       title?: string | null
@@ -471,13 +452,14 @@ export const useUpdateAgreement = (initiativeAgreementId: number | string) => {
   })
 }
 
-/** Start a new initiative agreement as a draft (analysts and managers). */
+/** Start a new initiative agreement (analysts and managers). It starts
+ * Underway, and the organization may be left unset (#5186). */
 export const useCreateAgreement = () => {
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (payload: {
-      organizationId: number
+      organizationId?: number | null
       iaCode: string
       agreementType?: string
       title?: string | null

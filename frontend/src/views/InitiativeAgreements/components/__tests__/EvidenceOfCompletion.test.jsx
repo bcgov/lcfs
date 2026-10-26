@@ -1080,10 +1080,18 @@ describe('EvidenceOfCompletion', () => {
 
   test('shows an empty state when no EOC has been added', ({ render, app }) => {
     mockList.mockReturnValue({ data: [], isLoading: false })
-    render(<EvidenceOfCompletion designatedActionId="9" />, app)
+    const renderRequestAction = vi.fn()
+    render(
+      <EvidenceOfCompletion
+        designatedActionId="9"
+        renderRequestAction={renderRequestAction}
+      />,
+      app
+    )
     expect(
       screen.getByText('initiativeAgreement:evidence.empty')
     ).toBeInTheDocument()
+    expect(renderRequestAction).not.toHaveBeenCalled()
   })
 
   test('renders requests per EOC and blocks empty rich-text requests', ({

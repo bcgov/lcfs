@@ -26,7 +26,6 @@ from lcfs.web.api.initiative_agreement.schema import (
     InitiativeAgreementSchema,
     InitiativeAgreementsListSchema,
     InitiativeAgreementUpdateSchema,
-    MissingInformationSchema,
     RecommendedCreditsSchema,
 )
 from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
@@ -94,7 +93,8 @@ async def create_agreement(
     data: AgreementCreateSchema = Body(...),
     service: InitiativeAgreementServices = Depends(),
 ):
-    """Start a new initiative agreement as a draft."""
+    """Start a new initiative agreement. One entered by government starts
+    Underway (#5186)."""
     return await service.create_agreement(data, request.user)
 
 
@@ -128,7 +128,7 @@ async def create_designated_action(
     data: DesignatedActionCreateSchema = Body(...),
     service: InitiativeAgreementServices = Depends(),
 ):
-    """Add a designated action while the agreement is still a draft."""
+    """Add a designated action while the agreement is a draft or underway."""
     return await service.create_designated_action(
         initiative_agreement_id, data, request.user
     )
@@ -206,24 +206,6 @@ async def set_designated_action_recommended_credits(
     """Save the recommended amount before recommending."""
     return await service.set_recommended_credits(
         designated_action_id, data.recommended_credits, request.user
-    )
-
-
-@router.put(
-    "/designated-actions/{designated_action_id}/missing-information",
-    response_model=DesignatedActionSchema,
-    status_code=status.HTTP_200_OK,
-)
-@view_handler(IA_REVIEW_ROLES)
-async def set_designated_action_missing_information(
-    request: Request,
-    designated_action_id: int,
-    data: MissingInformationSchema = Body(...),
-    service: InitiativeAgreementServices = Depends(),
-):
-    """Save the working text of the Missing information box (#5118)."""
-    return await service.set_missing_information(
-        designated_action_id, data.missing_information, request.user
     )
 
 
@@ -413,6 +395,10 @@ async def update_initiative_agreement(
     validate: InitiativeAgreementValidation = Depends(),
 ):
     """Endpoint to update an existing initiative agreement."""
+    # A draft is hidden from government (#5186), here as on every other route.
+    await validate.validate_organization_access(
+        initiative_agreement_data.initiative_agreement_id
+    )
     await validate.validate_initiative_agreement_update(
         request, initiative_agreement_data
     )
