@@ -1326,13 +1326,6 @@ _REQUIREMENT = "requirement"
             IDIR_IA_ANALYST,
         ),
         (
-            "set_designated_action_missing_information",
-            "PUT",
-            _ACTION,
-            {"missingInformation": "The signed permits."},
-            IDIR_IA_ANALYST,
-        ),
-        (
             "update_designated_action",
             "PUT",
             _ACTION,
@@ -1402,7 +1395,6 @@ async def test_every_route_to_a_drafts_action_reads_as_missing(
     await dbsession.refresh(requirement)
     assert action.name == "Proposed work"
     assert action.recommended_credits is None
-    assert action.missing_information is None
     assert action.assigned_analyst_id == analyst.user_profile_id
     assert (requirement.title, requirement.is_active) == ("Permits", True)
     requirement_ids = await dbsession.execute(

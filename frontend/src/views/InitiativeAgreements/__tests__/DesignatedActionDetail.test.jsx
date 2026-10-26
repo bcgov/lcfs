@@ -78,11 +78,8 @@ vi.mock('../components/DocumentTree', () => ({
 
 vi.mock('../components/EvidenceOfCompletion', () => ({
   OUTCOME_INFORMATION_REQUESTED: 'Information requested',
-  // The section takes the evidence decisions as a slot (#5080) and the
-  // Missing information box's text from the page (#5118); the stub
-  // renders both so the page's wiring is observable.
+  // The section renders a request action beside each requested EOC.
   EvidenceOfCompletion: ({
-    actions,
     canEdit,
     missingInformationReadOnly,
     renderRequestAction
@@ -92,7 +89,6 @@ vi.mock('../components/EvidenceOfCompletion', () => ({
       data-can-edit={String(canEdit)}
       data-missing-information-read-only={String(missingInformationReadOnly)}
     >
-      {actions}
       {renderRequestAction?.(
         {
           evidenceRequirementId: 1,

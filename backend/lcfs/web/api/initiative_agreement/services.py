@@ -859,26 +859,6 @@ class InitiativeAgreementServices:
         return DesignatedActionSchema.model_validate(refreshed)
 
     @service_handler
-    async def set_missing_information(
-        self, designated_action_id: int, text: Optional[str], user
-    ) -> DesignatedActionSchema:
-        """Persist legacy DA text while the action has no active EOC.
-
-        Once an EOC exists, its own update endpoint owns this value instead.
-        """
-        action = await self._get_action_or_404(designated_action_id, user)
-        if await self.repo.get_evidence_requirements(designated_action_id):
-            raise HTTPException(
-                status_code=409,
-                detail="Missing information must be saved on an evidence requirement.",
-            )
-        action.missing_information = (text or "").strip() or None
-        action.update_user = getattr(user, "keycloak_username", None)
-        await self.repo.db.flush()
-        refreshed = await self.repo.get_designated_action_by_id(designated_action_id)
-        return DesignatedActionSchema.model_validate(refreshed)
-
-    @service_handler
     async def perform_workflow_action(
         self, designated_action_id: int, data: DesignatedActionWorkflowSchema, user
     ) -> DesignatedActionSchema:
@@ -912,40 +892,32 @@ class InitiativeAgreementServices:
             requirements = await self.repo.get_evidence_requirements(
                 designated_action_id
             )
-            if requirements:
-                requested = [
-                    requirement
-                    for requirement in requirements
-                    if requirement.review_outcome
-                    == REVIEW_OUTCOME_INFORMATION_REQUESTED
-                ]
-                if not requested:
-                    raise HTTPException(
-                        status_code=400,
-                        detail="Mark at least one EOC as Request information first.",
-                    )
-                if any(
-                    not unescape(
-                        sanitize_comment_text(r.missing_information)
-                    ).strip()
-                    for r in requested
-                ):
-                    raise HTTPException(
-                        status_code=400,
-                        detail=(
-                            "Enter Missing information for every EOC marked "
-                            "Request information."
-                        ),
-                    )
-                comment = "\n\n".join(
-                    f"EOC {r.requirement_number} - {r.title or r.description}: "
-                    f"{r.missing_information.strip()}"
-                    for r in requested
+            requested = [
+                requirement
+                for requirement in requirements
+                if requirement.review_outcome == REVIEW_OUTCOME_INFORMATION_REQUESTED
+            ]
+            if not requested:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Mark at least one EOC as Request information first.",
                 )
-            else:
-                comment = comment or (action.missing_information or "").strip()
-                if comment:
-                    action.missing_information = comment
+            if any(
+                not unescape(sanitize_comment_text(r.missing_information)).strip()
+                for r in requested
+            ):
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "Enter Missing information for every EOC marked "
+                        "Request information."
+                    ),
+                )
+            comment = "\n\n".join(
+                f"EOC {r.requirement_number} - {r.title or r.description}: "
+                f"{r.missing_information.strip()}"
+                for r in requested
+            )
         if transition.requires_comment and not comment:
             raise HTTPException(
                 status_code=400,
@@ -1067,7 +1039,7 @@ class InitiativeAgreementServices:
         user,
     ) -> EvidenceRequirementSchema:
         """Add an evidence requirement to an action (the wireframe's Add EOC)."""
-        action = await self._get_action_or_404(designated_action_id, user)
+        await self._get_action_or_404(designated_action_id, user)
         title = (data.title or "").strip()
         if not title:
             raise HTTPException(
@@ -1082,16 +1054,6 @@ class InitiativeAgreementServices:
         if number is None:
             number = await self.repo.next_requirement_number(designated_action_id)
         username = getattr(user, "keycloak_username", None)
-        existing_requirements = await self.repo.get_evidence_requirements(
-            designated_action_id
-        )
-        legacy_missing_information = (
-            (action.missing_information or "").strip()
-            if not existing_requirements
-            else ""
-        )
-        if legacy_missing_information:
-            action.missing_information = None
         requirement = await self.repo.add_evidence_requirement(
             EvidenceRequirement(
                 designated_action_id=designated_action_id,
@@ -1099,7 +1061,6 @@ class InitiativeAgreementServices:
                 title=title,
                 description=description,
                 evidence_type=data.evidence_type,
-                missing_information=legacy_missing_information or None,
                 create_user=username,
                 update_user=username,
             )
@@ -1161,10 +1122,10 @@ class InitiativeAgreementServices:
                 }
             requirement.analyst_review = data.analyst_review
             review_touched = True
-        if data.missing_information is not None:
+        if "missing_information" in data.model_fields_set:
             requirement.missing_information = (
-                data.missing_information.strip() or None
-            )
+                data.missing_information or ""
+            ).strip() or None
         if data.review_notes is not None:
             requirement.review_notes = data.review_notes
             review_touched = True

@@ -14,6 +14,11 @@ import { useWatch } from 'react-hook-form';
 import '@hookform/resolvers/yup';
 import '../_schema';
 
+const { mockEnqueueSnackbar } = vi.hoisted(() => ({ mockEnqueueSnackbar: vi.fn() }))
+vi.mock('notistack', () => ({
+  useSnackbar: () => ({ enqueueSnackbar: mockEnqueueSnackbar })
+}))
+
 // Mocking react-router-dom
 
 // Mocking react-router-dom
@@ -396,6 +401,22 @@ describe('AddEditUser', () => {
     })
     render(<AddEditUser handleCancelEdit={mockHandleCancelEdit} />, [theme])
     expect(screen.getByText('Updating user...')).toBeInTheDocument()
+  })
+
+  test('warns about email failure while completing a successful account update', ({ render, theme }) => {
+    const handleSaveSuccess = vi.fn()
+    render(<AddEditUser handleSaveSuccess={handleSaveSuccess} />, [theme])
+    const { onSuccess } = vi.mocked(userHooks.useUpdateUser).mock.calls.at(-1)[0]
+    const result = { data: { accountChangeEmailSent: false } }
+    const variables = { userID: 'user123' }
+
+    onSuccess(result, variables)
+
+    expect(mockEnqueueSnackbar).toHaveBeenCalledWith(
+      'admin:accountChangeEmailFailed',
+      { variant: 'warning', autoHideDuration: 10000 }
+    )
+    expect(handleSaveSuccess).toHaveBeenCalledWith(result, variables)
   })
 
   test('renders loading state when creating user', ({ render, theme }) => {
