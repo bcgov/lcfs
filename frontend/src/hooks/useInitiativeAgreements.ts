@@ -360,7 +360,8 @@ export const useDesignatedActionHistory = (
   })
 }
 
-/** Add a designated action to a draft agreement (analysts and managers). */
+/** Add a designated action to a draft or underway agreement (analysts and
+ * managers). */
 export const useCreateDesignatedAction = (
   initiativeAgreementId: number | string
 ) => {
@@ -424,6 +425,7 @@ export const useUpdateAgreement = (initiativeAgreementId: number | string) => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (payload: {
+      organizationId?: number | null
       iaCode?: string
       agreementType?: string
       title?: string | null
@@ -450,13 +452,14 @@ export const useUpdateAgreement = (initiativeAgreementId: number | string) => {
   })
 }
 
-/** Start a new initiative agreement as a draft (analysts and managers). */
+/** Start a new initiative agreement (analysts and managers). It starts
+ * Underway, and the organization may be left unset (#5186). */
 export const useCreateAgreement = () => {
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (payload: {
-      organizationId: number
+      organizationId?: number | null
       iaCode: string
       agreementType?: string
       title?: string | null
