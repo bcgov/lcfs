@@ -740,7 +740,7 @@ class FuelCodeRepository:
         Queries fuel codes from the database with optional filters, pagination, and sorting.
 
         When ``organization_id`` is supplied the result is scoped to that
-        organisation (used by "My fuel codes").
+        organisation's Approved fuel codes (used by "My fuel codes").
 
         When exclude_archived is True, Approved fuel codes outside the current compliance
         period are omitted. Non-Approved codes (Draft, Recommended, Deleted) are unaffected.
@@ -767,6 +767,10 @@ class FuelCodeRepository:
         query = select(FuelCodeListView)
 
         if organization_id is not None:
+            conditions.append(
+                cast(FuelCodeListView.status, String)
+                == FuelCodeStatusEnum.Approved.value
+            )
             # The view doesn't expose organization_id; subquery against the
             # underlying table so we filter on the FK rather than on the
             # brittle company text column.

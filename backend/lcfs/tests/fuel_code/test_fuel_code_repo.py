@@ -600,9 +600,12 @@ async def test_get_fuel_codes_paginated_filters_by_organization_id(
     assert count == 1
     assert mock_db.execute.call_count == 3
 
-    # The organization_id filter appears inside the windowed subquery SQL
-    stmt_sql = str(mock_db.execute.call_args_list[0].args[0])
+    # The organization_id and Approved filters appear inside the windowed
+    # subquery SQL
+    stmt = mock_db.execute.call_args_list[0].args[0]
+    stmt_sql = str(stmt.compile(compile_kwargs={"literal_binds": True}))
     assert "fuel_code.organization_id = " in stmt_sql
+    assert "'Approved'" in stmt_sql
     assert "lower(vw_fuel_code_base.company)" not in stmt_sql
 
 
@@ -614,8 +617,10 @@ async def test_get_fuel_codes_paginated_skips_organization_filter_when_omitted(
     pagination = MagicMock(page=1, size=10, filters=[], sort_orders=[])
     await fuel_code_repo.get_fuel_codes_paginated(pagination)
 
-    stmt_sql = str(mock_db.execute.call_args_list[0].args[0])
+    stmt = mock_db.execute.call_args_list[0].args[0]
+    stmt_sql = str(stmt.compile(compile_kwargs={"literal_binds": True}))
     assert "fuel_code.organization_id = " not in stmt_sql
+    assert "'Approved'" not in stmt_sql
 
 
 @pytest.mark.anyio
