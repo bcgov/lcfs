@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { yupResolver } from '@hookform/resolvers/yup'
 import * as Yup from 'yup'
 import { format, isValid, parseISO } from 'date-fns'
+import Autocomplete from '@mui/material/Autocomplete'
 import Grid2 from '@mui/material/Grid2'
 import InputLabel from '@mui/material/InputLabel'
 import MenuItem from '@mui/material/MenuItem'
@@ -18,6 +19,7 @@ import BCButton from '@/components/BCButton'
 import { BCFormText } from '@/components/BCForm/BCFormText'
 import BCTypography from '@/components/BCTypography'
 import { useUpdateAgreement } from '@/hooks/useInitiativeAgreements'
+import { useOrganizationNames } from '@/hooks/useOrganizations'
 import { AGREEMENT_TYPES } from './agreementTypes'
 
 const DATE_FORMAT = 'yyyy-MM-dd'
@@ -44,6 +46,7 @@ const FieldLabel = ({ htmlFor, children, optional }) => (
 )
 
 const toFormValues = (agreement) => ({
+  organizationId: null,
   iaCode: agreement.iaCode ?? '',
   agreementType: agreement.agreementType ?? AGREEMENT_TYPES[0],
   title: agreement.title ?? '',
@@ -55,6 +58,58 @@ const toFormValues = (agreement) => ({
 
 const blankToNull = (value) => value.trim() || null
 
+// Rendered only while the agreement has no organization, so the list is
+// fetched only then.
+const OrganizationPicker = ({ control }) => {
+  const { t } = useTranslation(['initiativeAgreement'])
+  const { data: orgNames = [], isLoading } = useOrganizationNames(null, {
+    orgFilter: 'all'
+  })
+  const options = useMemo(
+    () =>
+      [...orgNames]
+        .map((org) => ({
+          id: org.organizationId,
+          label: org.name || org.operatingName || `#${org.organizationId}`
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
+    [orgNames]
+  )
+
+  return (
+    <Controller
+      name="organizationId"
+      control={control}
+      render={({ field }) => (
+        <>
+          <FieldLabel htmlFor="organizationId" optional>
+            {t('initiativeAgreement:create.organizationLabel')}
+          </FieldLabel>
+          <Autocomplete
+            id="organizationId"
+            options={options}
+            loading={isLoading}
+            value={options.find((option) => option.id === field.value) ?? null}
+            isOptionEqualToValue={(option, val) => option.id === val?.id}
+            onChange={(_event, value) => field.onChange(value?.id ?? null)}
+            onBlur={field.onBlur}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                helperText={t('initiativeAgreement:edit.organizationHint')}
+                inputProps={{
+                  ...params.inputProps,
+                  'data-test': 'agreement-organization-picker'
+                }}
+              />
+            )}
+          />
+        </>
+      )}
+    />
+  )
+}
+
 export const AgreementEditForm = ({ agreement, onCancel, onSaved }) => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const [error, setError] = useState('')
@@ -63,7 +118,13 @@ export const AgreementEditForm = ({ agreement, onCancel, onSaved }) => {
     agreement.initiativeAgreementId
   )
 
+  // An agreement can be saved before its organization is known (#5186).
+  // The organization can be filled in here, but once set it is read-only:
+  // credits the agreement issues go to it.
+  const needsOrganization = !agreement.organization
+
   const schema = Yup.object({
+    organizationId: Yup.number().nullable(),
     iaCode: Yup.string()
       .trim()
       .max(50, t('initiativeAgreement:edit.tooLong', { max: 50 }))
@@ -96,6 +157,9 @@ export const AgreementEditForm = ({ agreement, onCancel, onSaved }) => {
     setError('')
     updateAgreement(
       {
+        ...(values.organizationId != null && {
+          organizationId: values.organizationId
+        }),
         iaCode: values.iaCode.trim(),
         agreementType: values.agreementType,
         title: blankToNull(values.title),
@@ -163,12 +227,18 @@ export const AgreementEditForm = ({ agreement, onCancel, onSaved }) => {
 
       <Grid2 container spacing={3}>
         <Grid2 size={12}>
-          <FieldLabel>
-            {t('initiativeAgreement:create.organizationLabel')}
-          </FieldLabel>
-          <BCTypography variant="body4" data-test="agreement-organization">
-            {agreement.organization?.name}
-          </BCTypography>
+          {needsOrganization ? (
+            <OrganizationPicker control={control} />
+          ) : (
+            <>
+              <FieldLabel>
+                {t('initiativeAgreement:create.organizationLabel')}
+              </FieldLabel>
+              <BCTypography variant="body4" data-test="agreement-organization">
+                {agreement.organization.name}
+              </BCTypography>
+            </>
+          )}
         </Grid2>
 
         <Grid2 size={{ xs: 12, md: 6 }}>
