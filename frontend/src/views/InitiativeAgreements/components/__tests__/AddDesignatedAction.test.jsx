@@ -36,18 +36,18 @@ describe('AddDesignatedAction', () => {
     mockRoles = [roles.ia_analyst]
   })
 
-  test('offers the control on a draft agreement', ({ render, app }) => {
-    render(<AddDesignatedAction initiativeAgreementId="1" isDraft />, app)
+  test('offers the control on an open agreement', ({ render, app }) => {
+    render(<AddDesignatedAction initiativeAgreementId="1" canAdd />, app)
 
     expect(screen.getByTestId('add-designated-action')).toBeInTheDocument()
   })
 
-  test('stays visible but disabled once the agreement is no longer a draft', ({
+  test('stays visible but disabled once the agreement is closed', ({
     render,
     app
   }) => {
     render(
-      <AddDesignatedAction initiativeAgreementId="1" isDraft={false} />,
+      <AddDesignatedAction initiativeAgreementId="1" canAdd={false} />,
       app
     )
 
@@ -56,7 +56,7 @@ describe('AddDesignatedAction', () => {
     expect(screen.getByTestId('add-designated-action')).toBeDisabled()
     expect(screen.getByTestId('add-designated-action-tip')).toHaveAttribute(
       'aria-label',
-      expect.stringContaining('draftOnly')
+      expect.stringContaining('closedToNewActions')
     )
   })
 
@@ -65,7 +65,7 @@ describe('AddDesignatedAction', () => {
     app
   }) => {
     mockRoles = [roles.director]
-    render(<AddDesignatedAction initiativeAgreementId="1" isDraft />, app)
+    render(<AddDesignatedAction initiativeAgreementId="1" canAdd />, app)
 
     expect(
       screen.queryByTestId('add-designated-action')
@@ -73,7 +73,7 @@ describe('AddDesignatedAction', () => {
   })
 
   test('will not create an action without a name', ({ render, app }) => {
-    render(<AddDesignatedAction initiativeAgreementId="1" isDraft />, app)
+    render(<AddDesignatedAction initiativeAgreementId="1" canAdd />, app)
     open()
 
     // Asserting the behaviour rather than the button's disabled attribute:
@@ -85,7 +85,7 @@ describe('AddDesignatedAction', () => {
   })
 
   test('creates an action with the details given', ({ render, app }) => {
-    render(<AddDesignatedAction initiativeAgreementId="1" isDraft />, app)
+    render(<AddDesignatedAction initiativeAgreementId="1" canAdd />, app)
     open()
 
     fireEvent.change(screen.getByTestId('new-action-name'), {
@@ -113,7 +113,7 @@ describe('AddDesignatedAction', () => {
     render,
     app
   }) => {
-    render(<AddDesignatedAction initiativeAgreementId="1" isDraft />, app)
+    render(<AddDesignatedAction initiativeAgreementId="1" canAdd />, app)
     open()
 
     fireEvent.change(screen.getByTestId('new-action-name'), {
@@ -134,7 +134,7 @@ describe('AddDesignatedAction', () => {
     // A number input sanitises garbage to '' in a browser, so this cannot
     // happen from a keyboard; the guard is for the day something else
     // feeds the field, when NaN must not slip through as "no allocation".
-    render(<AddDesignatedAction initiativeAgreementId="1" isDraft />, app)
+    render(<AddDesignatedAction initiativeAgreementId="1" canAdd />, app)
     open()
 
     fireEvent.change(screen.getByTestId('new-action-name'), {
@@ -162,7 +162,7 @@ describe('AddDesignatedAction', () => {
         }
       })
     )
-    render(<AddDesignatedAction initiativeAgreementId="1" isDraft />, app)
+    render(<AddDesignatedAction initiativeAgreementId="1" canAdd />, app)
     open()
     fireEvent.change(screen.getByTestId('new-action-name'), {
       target: { value: 'Too late' }
