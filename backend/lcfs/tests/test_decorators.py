@@ -11,6 +11,8 @@ from lcfs.web.core.decorators import (
     session_var,
     user_var,
 )
+from lcfs.services.clamav.client import ScanUnavailableException
+from lcfs.services.file_inspection import FileRejectedException
 from lcfs.web.exception.exceptions import DatabaseException, ServiceException
 
 
@@ -85,3 +87,20 @@ async def test_repo_handler_wraps_error_for_unauthenticated_user():
 
     with pytest.raises(DatabaseException):
         await failing_repo()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("handler", [service_handler, repo_handler])
+@pytest.mark.parametrize(
+    "exception", [ScanUnavailableException(), FileRejectedException("nope")]
+)
+async def test_scan_results_reach_the_view_unwrapped(handler, exception):
+    """The view maps these to their own status codes, so nothing may wrap them."""
+    set_user(UnauthenticatedUser())
+
+    @handler
+    async def refusing():
+        raise exception
+
+    with pytest.raises(type(exception)):
+        await refusing()

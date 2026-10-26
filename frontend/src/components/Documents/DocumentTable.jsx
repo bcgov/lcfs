@@ -204,17 +204,28 @@ function DocumentTable({ parentType, parentID }) {
 
     uploadFile(file, {
       onError: (error) => {
-        if (error.response?.status === 422) {
-          // Transition this file's own row from scanning to virus-detected,
-          // matched by its placeholder id so sibling uploads are untouched.
-          setFiles((prev) =>
-            prev.map((f) =>
-              f.documentId === fileId
-                ? { ...f, scanning: false, virus: true }
-                : f
-            )
+        // Show the server's reason (virus, too large to scan, macros, contents
+        // not matching the type) on this file's own row, matched by its
+        // placeholder id so sibling uploads are untouched.
+        const status = error.response?.status
+        const detail = error.response?.data?.detail
+        const reason =
+          typeof detail === 'string' ? detail : t('report:uploadFailed')
+        setErrorMessage(`Upload failed for "${file.name}": ${reason}`)
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.documentId === fileId
+              ? {
+                  ...f,
+                  scanning: false,
+                  virus: status === 422,
+                  error: status !== 422,
+                  errorMessage: reason
+                }
+              : f
           )
-        } else {
+        )
+        if (status !== 422) {
           console.error('Error uploading file:', error)
         }
       }

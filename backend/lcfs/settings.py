@@ -100,6 +100,7 @@ class Settings(BaseSettings):
     clamav_enabled: bool = False
     clamav_host: str = "clamav"
     clamav_port: int = 3310
+    clamav_timeout_seconds: int = 60
 
     ches_enabled: bool = False
     ches_auth_url: str = ""

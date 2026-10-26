@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 
+from lcfs.services.clamav.client import ClamAVService
 from lcfs.db.models.login_bg_image.LoginBgImage import LoginBgImage
 from lcfs.web.api.login_bg_image.repo import LoginBgImageRepository
 from lcfs.web.api.login_bg_image.services import LoginBgImageService
@@ -45,4 +46,5 @@ def login_bg_image_service(mock_login_bg_image_repo):
     service = LoginBgImageService.__new__(LoginBgImageService)
     service.repo = mock_login_bg_image_repo
     service.s3_client = MagicMock()
+    service.clamav_service = MagicMock(spec=ClamAVService)
     return service

@@ -930,6 +930,37 @@ describe('DocumentTable', () => {
     expect(screen.queryByTestId('delete-button')).not.toBeInTheDocument()
   })
 
+  test('shows the server reason when an upload is refused', async ({
+    render,
+    theme,
+    router
+  }) => {
+    const file = createMockFile('model.xlsx', 'application/vnd.ms-excel', 1000)
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    mockUploadMutate.mockImplementation((file, { onError }) => {
+      onError({
+        response: {
+          status: 400,
+          data: { detail: 'This file contains macros, which can\'t be uploaded here.' }
+        }
+      })
+    })
+
+    render(<DocumentTable {...defaultProps} />, [theme, router])
+
+    fireEvent.change(screen.getByTestId('file-input'), {
+      target: { files: [file] }
+    })
+
+    expect(
+      await screen.findByText(
+        'Upload failed for "model.xlsx": This file contains macros, which can\'t be uploaded here.'
+      )
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
+  })
+
   test('should handle non-422 upload errors correctly', async ({
     render,
     theme,
