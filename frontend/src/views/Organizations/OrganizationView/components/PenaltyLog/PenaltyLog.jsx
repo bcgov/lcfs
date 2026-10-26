@@ -2,13 +2,18 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import Grid from '@mui/material/Grid'
 import Stack from '@mui/material/Stack'
+import Card from '@mui/material/Card'
+import CardContent from '@mui/material/CardContent'
+import Divider from '@mui/material/Divider'
 import { useTheme } from '@mui/material/styles'
 import { useParams } from 'react-router-dom'
 
 import BCBox from '@/components/BCBox'
-import '@/components/BCTypography';
 import Loading from '@/components/Loading'
 import BCAlert from '@/components/BCAlert'
+import BCTypography from '@/components/BCTypography'
+import Comments from '@/components/Comments'
+import { roles } from '@/constants/roles'
 
 import * as echarts from 'echarts/core'
 import { BarChart, LineChart, PieChart } from 'echarts/charts'
@@ -107,7 +112,11 @@ export const PenaltyLog = () => {
   const { t } = useTranslation(['org'])
   const theme = useTheme()
   const { orgID } = useParams()
-  const { data: currentUser, isLoading: currentUserLoading } = useCurrentUser()
+  const {
+    data: currentUser,
+    isLoading: currentUserLoading,
+    hasAnyRole
+  } = useCurrentUser()
 
   const organizationId = orgID ?? currentUser?.organization?.organizationId
 
@@ -220,6 +229,39 @@ export const PenaltyLog = () => {
           automaticPenaltyRows={automaticPenaltyRows}
           loading={analyticsLoading}
         />
+        {hasAnyRole(roles.government) && (
+          <Card
+            sx={{
+              height: '100%',
+              width: '100%',
+              border: '1px solid',
+              borderColor: 'divider'
+            }}
+          >
+            <CardContent>
+              <Stack spacing={2}>
+                <BCTypography variant="h6" component="h2">
+                  {t('org:penaltyLog.commentsTitle')}
+                </BCTypography>
+                <Divider light />
+                <BCTypography variant="body2">
+                  {t('org:penaltyLog.commentsDescription')}
+                </BCTypography>
+                <Comments
+                  key={organizationId}
+                  entityType="penaltyLog"
+                  entityId={organizationId}
+                  enableAttachments
+                  showUploadDropzone
+                  enableDeletion
+                  enableSorting={false}
+                  showTitle={false}
+                  placeholder={t('org:penaltyLog.addComment')}
+                />
+              </Stack>
+            </CardContent>
+          </Card>
+        )}
         <Grid container spacing={2}>
           <Grid item xs={12} md={4} ml={-2}>
             <MetricCardsSection

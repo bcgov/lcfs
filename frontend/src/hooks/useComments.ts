@@ -3,12 +3,19 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useApiService } from '@/services/useApiService'
 import { roles } from '@/constants/roles'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 
 interface CommentRecord extends Record<string, unknown> {
   internalCommentId: number
   comment: string
   isOptimistic?: boolean
+}
+interface CommentAttachment {
+  documentId: number
+}
+interface AttachmentChanges {
+  uploaded: Map<File, number>
+  removed: Set<number | string>
 }
 interface CommentOptions extends QueryOptions<CommentRecord[]> {
   autoFetch?: boolean
@@ -23,6 +30,11 @@ interface EditComment {
   newFiles?: File[]
   removedDocumentIds?: (number | string)[]
 }
+
+const createAttachmentChanges = (): AttachmentChanges => ({
+  uploaded: new Map(),
+  removed: new Set()
+})
 
 const DEFAULT_STALE_TIME = 5 * 60 * 1000
 const DEFAULT_CACHE_TIME = 15 * 60 * 1000
@@ -39,6 +51,16 @@ export const useComments = (
   // Files staged in the "add comment" form. They can only be uploaded once the
   // comment exists (and has an id), so they are held here until submit.
   const [attachments, setAttachments] = useState<File[]>([])
+  const [mutationError, setMutationError] = useState<Error | null>(null)
+  // Keep the saved comment when an upload fails, so retrying the draft does
+  // not create a second comment or re-upload files that already succeeded.
+  const pendingCreation = useRef<{
+    entityType: string
+    entityId: number | string
+    comment: CommentRecord
+    attachmentChanges: AttachmentChanges
+  } | null>(null)
+  const editAttachments = useRef(new Map<number | string, AttachmentChanges>())
 
   // Attachments live on the comment via parent_type "internal_comment" in the
   // shared document API; upload one staged file against a known comment id.
@@ -47,14 +69,55 @@ export const useComments = (
       const formData = new FormData()
       formData.append('file', file)
       formData.append('filename', file.name)
-      return apiService.post(
+      const response = await apiService.post<CommentAttachment>(
         `/documents/internal_comment/${commentId}`,
         formData,
         { headers: { 'Content-Type': 'multipart/form-data' } }
       )
+      return response.data
     },
     [apiService]
   )
+
+  const saveAttachmentChanges = useCallback(
+    async (
+      commentId: number | string,
+      files: File[],
+      removedDocumentIds: (number | string)[],
+      changes: AttachmentChanges
+    ) => {
+      // Upload replacements first so a failed upload keeps the old documents.
+      for (const file of files) {
+        if (changes.uploaded.has(file)) continue
+        const document = await uploadAttachment(commentId, file)
+        changes.uploaded.set(file, document.documentId)
+      }
+
+      // A user can remove a staged file after an earlier upload partly
+      // succeeded. Reconcile that choice with the saved document on retry.
+      const selectedFiles = new Set(files)
+      const discardedUploads = [...changes.uploaded].filter(
+        ([file]) => !selectedFiles.has(file)
+      )
+      const removedIds = new Set([
+        ...removedDocumentIds,
+        ...discardedUploads.map(([, documentId]) => documentId)
+      ])
+      for (const documentId of removedIds) {
+        if (changes.removed.has(documentId)) continue
+        await apiService.delete(
+          `/documents/internal_comment/${commentId}/${documentId}`
+        )
+        changes.removed.add(documentId)
+      }
+      for (const [file] of discardedUploads) changes.uploaded.delete(file)
+    },
+    [apiService, uploadAttachment]
+  )
+
+  const cancelEditComment = useCallback((commentId: number | string) => {
+    editAttachments.current.delete(commentId)
+  }, [])
 
   const {
     staleTime = DEFAULT_STALE_TIME,
@@ -148,6 +211,17 @@ export const useComments = (
     return response.data
   }, [apiService, entityType, entityId])
 
+  const invalidateCommentQueries = useCallback(() => {
+    queryClient.invalidateQueries({
+      queryKey: ['internal-comments', entityType, entityId]
+    })
+    queryClient.invalidateQueries({
+      queryKey: ['organization-comments'],
+      predicate: ({ queryKey }) =>
+        entityType !== 'penaltyLog' || String(queryKey[1]) === String(entityId)
+    })
+  }, [queryClient, entityType, entityId])
+
   const commentsQuery = useQuery({
     queryKey: ['internal-comments', entityType, entityId],
     queryFn: fetchComments,
@@ -189,19 +263,46 @@ export const useComments = (
         visibility: isDualMode ? visibility : 'Internal'
       }
 
-      const response = await apiService.post('/internal_comments/', payload)
-      const createdComment = response.data
+      let pending = pendingCreation.current
+      if (
+        pending?.entityType !== entityType ||
+        pending?.entityId !== entityId
+      ) {
+        pending = null
+      }
+      if (!pending) {
+        const response = await apiService.post('/internal_comments/', payload)
+        pending = {
+          entityType,
+          entityId,
+          comment: response.data,
+          attachmentChanges: createAttachmentChanges()
+        }
+        pendingCreation.current = pending
+      } else {
+        const response = await apiService.put(
+          `/internal_comments/${pending.comment.internalCommentId}`,
+          payload
+        )
+        pending.comment = response.data
+      }
+      const createdComment = pending.comment
       const commentId = createdComment?.internalCommentId
 
-      if (commentId && files.length > 0) {
-        for (const file of files) {
-          await uploadAttachment(commentId, file)
-        }
+      if (commentId) {
+        await saveAttachmentChanges(
+          commentId,
+          files,
+          [],
+          pending.attachmentChanges
+        )
       }
 
+      pendingCreation.current = null
       return createdComment
     },
     onMutate: async (variables) => {
+      setMutationError(null)
       if (!optimisticUpdates) return
 
       const commentText =
@@ -224,7 +325,7 @@ export const useComments = (
           audience_scope: audienceScope,
           visibility: isDualMode ? visibility : 'Internal',
           documents: [],
-          createdAt: new Date().toISOString(),
+          createDate: new Date().toISOString(),
           isOptimistic: true
         }
 
@@ -242,6 +343,7 @@ export const useComments = (
       return { previousComments }
     },
     onError: (_err, _commentText, context) => {
+      setMutationError(_err)
       if (context?.previousComments && optimisticUpdates) {
         queryClient.setQueryData(
           ['internal-comments', entityType, entityId],
@@ -298,11 +400,7 @@ export const useComments = (
         setVisibility('Internal')
       }
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['internal-comments', entityType, entityId]
-      })
-    }
+    onSettled: invalidateCommentQueries
   })
 
   const editCommentMutation = useMutation({
@@ -332,15 +430,16 @@ export const useComments = (
         payload
       )
 
-      // Apply staged attachment changes against the now-saved comment.
-      for (const documentId of removedDocumentIds) {
-        await apiService.delete(
-          `/documents/internal_comment/${commentId}/${documentId}`
-        )
-      }
-      for (const file of newFiles) {
-        await uploadAttachment(commentId, file)
-      }
+      const progress =
+        editAttachments.current.get(commentId) ?? createAttachmentChanges()
+      editAttachments.current.set(commentId, progress)
+      await saveAttachmentChanges(
+        commentId,
+        newFiles,
+        removedDocumentIds,
+        progress
+      )
+      editAttachments.current.delete(commentId)
 
       return response.data
     },
@@ -349,6 +448,7 @@ export const useComments = (
       commentText,
       visibility: editVisibility
     }) => {
+      setMutationError(null)
       if (!optimisticUpdates) return
 
       await queryClient.cancelQueries({
@@ -385,6 +485,7 @@ export const useComments = (
       return { previousComments }
     },
     onError: (_err, _variables, context) => {
+      setMutationError(_err)
       if (context?.previousComments && optimisticUpdates) {
         queryClient.setQueryData(
           ['internal-comments', entityType, entityId],
@@ -403,11 +504,7 @@ export const useComments = (
           ) || []
       )
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['internal-comments', entityType, entityId]
-      })
-    }
+    onSettled: invalidateCommentQueries
   })
 
   const deleteCommentMutation = useMutation({
@@ -422,6 +519,7 @@ export const useComments = (
       return { commentId, response: response.data }
     },
     onMutate: async (commentId: number | string) => {
+      setMutationError(null)
       if (!optimisticUpdates) return
 
       await queryClient.cancelQueries({
@@ -448,6 +546,7 @@ export const useComments = (
       return { previousComments }
     },
     onError: (_err, _commentId, context) => {
+      setMutationError(_err)
       if (context?.previousComments && optimisticUpdates) {
         queryClient.setQueryData(
           ['internal-comments', entityType, entityId],
@@ -456,6 +555,10 @@ export const useComments = (
       }
     },
     onSuccess: ({ commentId }) => {
+      editAttachments.current.delete(commentId)
+      if (pendingCreation.current?.comment.internalCommentId === commentId) {
+        pendingCreation.current = null
+      }
       queryClient.setQueryData(
         ['internal-comments', entityType, entityId],
         (oldData: CommentRecord[] | undefined) =>
@@ -464,11 +567,7 @@ export const useComments = (
           ) || []
       )
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['internal-comments', entityType, entityId]
-      })
-    }
+    onSettled: invalidateCommentQueries
   })
 
   const handleCommentInputChange = useCallback((value: string) => {
@@ -560,11 +659,14 @@ export const useComments = (
 
   const sortedComments = useMemo(() => {
     const comments = commentsQuery.data || []
-    return [...comments].sort((a: CommentRecord, b: CommentRecord) =>
-      sortOrder === 'desc'
-        ? b.internalCommentId - a.internalCommentId
-        : a.internalCommentId - b.internalCommentId
-    )
+    return [...comments].sort((a: CommentRecord, b: CommentRecord) => {
+      const dateA = Date.parse(String(a.createDate ?? ''))
+      const dateB = Date.parse(String(b.createDate ?? ''))
+      const difference =
+        Number.isFinite(dateA) && Number.isFinite(dateB) ? dateA - dateB : 0
+      const comparison = difference || a.internalCommentId - b.internalCommentId
+      return sortOrder === 'desc' ? -comparison : comparison
+    })
   }, [commentsQuery.data, sortOrder])
 
   return {
@@ -586,6 +688,7 @@ export const useComments = (
 
     // Error states
     error: commentsQuery.error,
+    mutationError,
     addError: addCommentMutation.error,
     editError: editCommentMutation.error,
     deleteError: deleteCommentMutation.error,
@@ -593,6 +696,7 @@ export const useComments = (
     // Actions
     addComment: handleAddComment,
     editComment: handleEditComment,
+    cancelEditComment,
     deleteComment: handleDeleteComment,
     refreshComments,
 

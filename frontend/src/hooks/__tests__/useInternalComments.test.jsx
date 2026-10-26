@@ -765,3 +765,300 @@ describe('useComments', () => {
     })
   })
 })
+
+describe('penalty log comment attachments', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockHasAnyRole.mockReturnValue(true)
+    mockApiService.get.mockResolvedValue({ data: [] })
+  })
+
+  it('uploads multiple documents to the saved comment and retries failed uploads without duplicating it', async () => {
+    const files = [new File(['a'], 'first.pdf'), new File(['b'], 'second.pdf')]
+    const saved = { internalCommentId: 42, comment: 'Payment evidence' }
+    let failSecond = true
+    mockApiService.post.mockImplementation(async (url, body) => {
+      if (url === '/internal_comments/') return { data: saved }
+      if (body.get('file') === files[1] && failSecond) {
+        throw new Error('Upload failed')
+      }
+      return { data: { documentId: body.get('file') === files[0] ? 81 : 82 } }
+    })
+    mockApiService.put.mockResolvedValue({ data: saved })
+    const { result } = renderHook(() => useComments('penaltyLog', 7), {
+      wrapper: createWrapper()
+    })
+    await act(async () => {
+      result.current.handleCommentInputChange('Payment evidence')
+      result.current.handleAttachmentsChange(files)
+    })
+    await act(async () => {
+      await expect(result.current.addComment()).rejects.toThrow('Upload failed')
+    })
+    expect(result.current.commentInput).toBe('Payment evidence')
+    failSecond = false
+    await act(async () => {
+      await result.current.addComment()
+    })
+    expect(
+      mockApiService.post.mock.calls.filter(
+        ([url]) => url === '/internal_comments/'
+      )
+    ).toHaveLength(1)
+    expect(
+      mockApiService.post.mock.calls.filter(
+        ([, body]) => body instanceof FormData && body.get('file') === files[0]
+      )
+    ).toHaveLength(1)
+    expect(
+      mockApiService.post.mock.calls.filter(
+        ([, body]) => body instanceof FormData && body.get('file') === files[1]
+      )
+    ).toHaveLength(2)
+    expect(result.current.commentInput).toBe('')
+    expect(result.current.attachments).toEqual([])
+  })
+
+  it('keeps the original attachment when uploading a replacement fails', async () => {
+    mockApiService.put.mockResolvedValue({
+      data: { internalCommentId: 42, comment: 'Replaced' }
+    })
+    mockApiService.post.mockRejectedValue(new Error('Upload failed'))
+    const { result } = renderHook(() => useComments('penaltyLog', 7), {
+      wrapper: createWrapper()
+    })
+    await act(async () => {
+      await expect(
+        result.current.editComment({
+          commentId: 42,
+          commentText: 'Replaced',
+          newFiles: [new File(['a'], 'new.pdf')],
+          removedDocumentIds: [81]
+        })
+      ).rejects.toThrow('Upload failed')
+    })
+    expect(mockApiService.delete).not.toHaveBeenCalled()
+  })
+
+  it('retries a partial removal without deleting an already removed document again', async () => {
+    mockApiService.put.mockResolvedValue({
+      data: { internalCommentId: 42, comment: 'Updated' }
+    })
+    let failSecond = true
+    mockApiService.delete.mockImplementation(async (url) => {
+      if (url.endsWith('/82') && failSecond) throw new Error('Removal failed')
+      return { data: {} }
+    })
+    const { result } = renderHook(() => useComments('penaltyLog', 7), {
+      wrapper: createWrapper()
+    })
+    const edit = {
+      commentId: 42,
+      commentText: 'Updated',
+      removedDocumentIds: [81, 82]
+    }
+    await act(async () => {
+      await expect(result.current.editComment(edit)).rejects.toThrow(
+        'Removal failed'
+      )
+    })
+    failSecond = false
+    await act(async () => {
+      await result.current.editComment(edit)
+    })
+    expect(
+      mockApiService.delete.mock.calls.filter(([url]) => url.endsWith('/81'))
+    ).toHaveLength(1)
+    expect(
+      mockApiService.delete.mock.calls.filter(([url]) => url.endsWith('/82'))
+    ).toHaveLength(2)
+  })
+
+  it('sorts by creation date with a stable ID tiebreaker', async () => {
+    mockApiService.get.mockResolvedValue({
+      data: [
+        {
+          internalCommentId: 1,
+          comment: 'Newer',
+          createDate: '2026-10-22T12:00:00Z'
+        },
+        {
+          internalCommentId: 2,
+          comment: 'Older',
+          createDate: '2026-10-21T12:00:00Z'
+        }
+      ]
+    })
+    const { result } = renderHook(() => useComments('penaltyLog', 7), {
+      wrapper: createWrapper()
+    })
+    await waitFor(() => expect(result.current.comments).toHaveLength(2))
+    expect(result.current.comments.map((c) => c.comment)).toEqual([
+      'Newer',
+      'Older'
+    ])
+    act(() => result.current.handleSortOrderChange('asc'))
+    expect(result.current.comments.map((c) => c.comment)).toEqual([
+      'Older',
+      'Newer'
+    ])
+  })
+})
+
+describe('penalty attachment recovery', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    mockHasAnyRole.mockReturnValue(true)
+    mockApiService.get.mockResolvedValue({ data: [] })
+  })
+
+  it.each(['add', 'edit'])(
+    'removes a previously uploaded file discarded before retrying an %s',
+    async (operation) => {
+      const files = [
+        new File(['a'], 'first.pdf'),
+        new File(['b'], 'second.pdf')
+      ]
+      const saved = { internalCommentId: 42, comment: 'Evidence' }
+      let failSecond = true
+      mockApiService.post.mockImplementation(async (url, body) => {
+        if (url === '/internal_comments/') return { data: saved }
+        if (body.get('file') === files[1] && failSecond)
+          throw new Error('Upload failed')
+        return { data: { documentId: body.get('file') === files[0] ? 81 : 82 } }
+      })
+      mockApiService.put.mockResolvedValue({ data: saved })
+      mockApiService.delete.mockResolvedValue({ data: {} })
+      const { result } = renderHook(() => useComments('penaltyLog', 7), {
+        wrapper: createWrapper()
+      })
+      await act(async () => {
+        result.current.handleCommentInputChange('Evidence')
+        result.current.handleAttachmentsChange(files)
+      })
+      await act(async () => {
+        const save =
+          operation === 'add'
+            ? result.current.addComment()
+            : result.current.editComment({
+                commentId: 42,
+                commentText: 'Evidence',
+                newFiles: files
+              })
+        await expect(save).rejects.toThrow('Upload failed')
+      })
+      failSecond = false
+      if (operation === 'add')
+        act(() => result.current.handleAttachmentsChange([files[1]]))
+      await act(async () => {
+        if (operation === 'add') await result.current.addComment()
+        else
+          await result.current.editComment({
+            commentId: 42,
+            commentText: 'Evidence',
+            newFiles: [files[1]]
+          })
+      })
+      expect(mockApiService.delete).toHaveBeenCalledWith(
+        '/documents/internal_comment/42/81'
+      )
+      expect(mockApiService.delete).not.toHaveBeenCalledWith(
+        '/documents/internal_comment/42/82'
+      )
+      expect(
+        mockApiService.post.mock.calls.filter(
+          ([url]) => url === '/internal_comments/'
+        )
+      ).toHaveLength(operation === 'add' ? 1 : 0)
+    }
+  )
+
+  it('releases attachment progress after an edit is cancelled', async () => {
+    const file = new File(['a'], 'evidence.pdf')
+    mockApiService.put.mockResolvedValue({
+      data: { internalCommentId: 42, comment: 'Evidence' }
+    })
+    mockApiService.post.mockResolvedValue({ data: { documentId: 81 } })
+    mockApiService.delete
+      .mockRejectedValueOnce(new Error('Removal failed'))
+      .mockResolvedValue({ data: {} })
+    const { result } = renderHook(() => useComments('penaltyLog', 7), {
+      wrapper: createWrapper()
+    })
+    await act(async () => {
+      await expect(
+        result.current.editComment({
+          commentId: 42,
+          commentText: 'Evidence',
+          newFiles: [file],
+          removedDocumentIds: [80]
+        })
+      ).rejects.toThrow('Removal failed')
+    })
+    act(() => result.current.cancelEditComment(42))
+    await act(async () => {
+      await result.current.editComment({
+        commentId: 42,
+        commentText: 'Evidence',
+        newFiles: [file]
+      })
+    })
+    expect(mockApiService.post).toHaveBeenCalledTimes(2)
+  })
+
+  it('invalidates the affected organization without refreshing unrelated organizations', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } }
+    })
+    const affectedKey = ['organization-comments', '7']
+    const unrelatedKey = ['organization-comments', '8']
+    queryClient.setQueryData(affectedKey, { comments: [] })
+    queryClient.setQueryData(unrelatedKey, { comments: [] })
+    mockApiService.post.mockResolvedValue({
+      data: { internalCommentId: 42, comment: 'Evidence' }
+    })
+    const { result } = renderHook(() => useComments('penaltyLog', 7), {
+      wrapper: ({ children }) => (
+        <QueryClientProvider client={queryClient}>
+          {children}
+        </QueryClientProvider>
+      )
+    })
+    act(() => result.current.handleCommentInputChange('Evidence'))
+    await act(async () => {
+      await result.current.addComment()
+    })
+    expect(queryClient.getQueryState(affectedKey).isInvalidated).toBe(true)
+    expect(queryClient.getQueryState(unrelatedKey).isInvalidated).toBe(false)
+  })
+})
+
+it('shows the latest failed action and clears its error on a subsequent save', async () => {
+  vi.resetAllMocks()
+  mockHasAnyRole.mockReturnValue(true)
+  mockApiService.get.mockResolvedValue({ data: [] })
+  const addFailure = new Error('Create failed')
+  const editFailure = new Error('Edit failed')
+  mockApiService.post.mockRejectedValue(addFailure)
+  mockApiService.put
+    .mockRejectedValueOnce(editFailure)
+    .mockResolvedValue({ data: { internalCommentId: 42, comment: 'Evidence' } })
+  const { result } = renderHook(() => useComments('penaltyLog', 7), {
+    wrapper: createWrapper()
+  })
+  act(() => result.current.handleCommentInputChange('Evidence'))
+  await act(async () => {
+    await expect(result.current.addComment()).rejects.toThrow('Create failed')
+  })
+  expect(result.current.mutationError).toBe(addFailure)
+  await act(async () => {
+    await expect(
+      result.current.editComment({ commentId: 42, commentText: 'Evidence' })
+    ).rejects.toThrow('Edit failed')
+  })
+  expect(result.current.mutationError).toBe(editFailure)
+  await act(async () => {
+    await result.current.editComment({ commentId: 42, commentText: 'Evidence' })
+  })
+  expect(result.current.mutationError).toBeNull()
+})

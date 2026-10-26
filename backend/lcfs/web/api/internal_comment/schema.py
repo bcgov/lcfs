@@ -3,7 +3,7 @@ from enum import Enum
 from datetime import date, datetime
 from lcfs.web.api.base import BaseSchema
 from lcfs.services.s3.schema import FileResponseSchema
-from pydantic import computed_field
+from pydantic import Field, computed_field
 
 
 # --------------------------------------
@@ -25,6 +25,7 @@ class EntityTypeEnum(str, Enum):
     COMPLIANCE_REPORT = "complianceReport"
     CI_APPLICATION = "ciApplication"
     ORGANIZATION = "Organization"
+    PENALTY_LOG = "penaltyLog"
 
 
 class AudienceScopeEnum(str, Enum):
@@ -65,7 +66,7 @@ class InternalCommentResponseSchema(BaseSchema):
     update_user: Optional[str] = None
     update_full_name: Optional[str] = None
     full_name: Optional[str] = None
-    documents: List[FileResponseSchema] = []
+    documents: List[FileResponseSchema] = Field(default_factory=list)
 
 
 class OrganizationCommentRecordSchema(BaseSchema):
@@ -87,6 +88,7 @@ class OrganizationCommentRecordSchema(BaseSchema):
     update_user: Optional[str] = None
     update_full_name: Optional[str] = None
     can_edit: bool = False
+    documents: List[FileResponseSchema] = Field(default_factory=list)
 
 
 class OrganizationCommentsPaginationSchema(BaseSchema):
@@ -137,4 +139,3 @@ class MentionableUserSchema(BaseSchema):
     def display_name(self) -> str:
         name = f"{self.first_name or ''} {self.last_name or ''}".strip()
         return name or self.email or str(self.user_profile_id)
-
