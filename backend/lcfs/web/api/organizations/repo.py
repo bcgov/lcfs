@@ -9,7 +9,19 @@ from typing import Dict, List, Optional
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import and_, case, func, select, asc, desc, distinct, or_, delete
+from sqlalchemy import (
+    Integer,
+    and_,
+    case,
+    cast,
+    func,
+    select,
+    asc,
+    desc,
+    distinct,
+    or_,
+    delete,
+)
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.core.decorators import repo_handler
@@ -1127,6 +1139,25 @@ class OrganizationsRepository:
             )
         ).cte("latest_reports")
 
+        # Pre-2024 summaries were migrated from TFRS, whose ETL stored fossil
+        # fuel volumes (litres) in line_11_fossil_derived_base_fuel_total. Their
+        # renewable penalty is only in the per-fuel Line 11 columns.
+        line_11_penalty_payable = case(
+            (
+                cast(latest_reports_cte.c.compliance_year, Integer) < 2024,
+                func.coalesce(
+                    ComplianceReportSummary.line_11_non_compliance_penalty_gasoline, 0
+                )
+                + func.coalesce(
+                    ComplianceReportSummary.line_11_non_compliance_penalty_diesel, 0
+                )
+                + func.coalesce(
+                    ComplianceReportSummary.line_11_non_compliance_penalty_jet_fuel, 0
+                ),
+            ),
+            else_=ComplianceReportSummary.line_11_fossil_derived_base_fuel_total,
+        )
+
         summary_query = (
             select(
                 latest_reports_cte.c.compliance_period_id,
@@ -1158,9 +1189,7 @@ class OrganizationsRepository:
                 ComplianceReportSummary.line_11_non_compliance_penalty_jet_fuel.label(
                     "line_11_penalty_jet_fuel"
                 ),
-                ComplianceReportSummary.line_11_fossil_derived_base_fuel_total.label(
-                    "line_11_penalty_payable"
-                ),
+                line_11_penalty_payable.label("line_11_penalty_payable"),
                 ComplianceReportSummary.line_21_non_compliance_penalty_payable.label(
                     "line_21_penalty_payable"
                 ),
@@ -1201,8 +1230,7 @@ class OrganizationsRepository:
                             ComplianceReportStatusEnum.Exempted,
                         ]
                     ),
-                    ComplianceReportSummary.line_11_fossil_derived_base_fuel_total
-                    > 0,
+                    line_11_penalty_payable > 0,
                     ComplianceReportSummary.line_21_non_compliance_penalty_payable
                     > 0,
                     ComplianceReportSummary.line_11_invoice_sent.is_(True),

@@ -1,6 +1,6 @@
 """Transfer search definition."""
 
-from sqlalchemy import case, func, or_, select
+from sqlalchemy import and_, case, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
@@ -8,6 +8,7 @@ from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.transfer.Transfer import Transfer
 from lcfs.db.models.transfer.TransferCategory import TransferCategory
 from lcfs.db.models.transfer.TransferComment import TransferComment
+from lcfs.db.models.transfer.TransferHistory import TransferHistory
 from lcfs.db.models.transfer.TransferStatus import TransferStatus, TransferStatusEnum
 from lcfs.web.api.search.entities.base import (
     RESULT_LIMIT,
@@ -66,6 +67,47 @@ def _effective_transfer_status_values_for_supplier(
         safe.append(_TRANSFER_SUBMITTED_VALUE)
         safe.extend(_SUPPLIER_MASKED_TRANSFER_STATUSES)
     return tuple(safe)
+
+
+def _visibility_scope(context: SearchContext):
+    """
+    The transfers the caller's Transactions list shows, by the visibility
+    flags on transfer_status (mirrors TransactionRepository.
+    get_transactions_paginated). Government sees a transfer only once it has
+    been submitted to it: never a Draft, Sent, Declined or Deleted one, and a
+    Rescinded one only if it was submitted first (#5231). Each party sees
+    the statuses flagged for its side, so the receiving organization never
+    sees the sender's Draft.
+    """
+    if context.is_government:
+        history_status = aliased(TransferStatus, name="history_status")
+        was_submitted = exists(
+            select(TransferHistory.transfer_history_id)
+            .join(
+                history_status,
+                TransferHistory.transfer_status_id == history_status.transfer_status_id,
+            )
+            .where(
+                TransferHistory.transfer_id == Transfer.transfer_id,
+                history_status.status == TransferStatusEnum.Submitted,
+            )
+        )
+        return and_(
+            TransferStatus.visible_to_government.is_(True),
+            or_(TransferStatus.status != TransferStatusEnum.Rescinded, was_submitted),
+        )
+    if context.organization_id is None:
+        return None
+    return or_(
+        and_(
+            Transfer.from_organization_id == context.organization_id,
+            TransferStatus.visible_to_transferor.is_(True),
+        ),
+        and_(
+            Transfer.to_organization_id == context.organization_id,
+            TransferStatus.visible_to_transferee.is_(True),
+        ),
+    )
 
 
 async def search_transfers(
@@ -174,18 +216,12 @@ async def search_transfers(
             Transfer.transfer_category_id == TransferCategory.transfer_category_id,
         )
     )
-    organization_scope = None
-    if not context.is_government and context.organization_id is not None:
-        organization_scope = or_(
-            Transfer.from_organization_id == context.organization_id,
-            Transfer.to_organization_id == context.organization_id,
-        )
     statement = where_present(
         statement,
         clause,
         equals_any(TransferStatus.status, status_values),
         date_years(Transfer.agreement_date, query.values("year")),
-        organization_scope,
+        _visibility_scope(context),
     )
     if score is not None:
         statement = statement.order_by(score.desc())

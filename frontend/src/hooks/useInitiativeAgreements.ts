@@ -219,9 +219,11 @@ export const useEvidenceRequirements = (
   })
 }
 
-const useEvidenceMutation = <TVariables,>(
+const useEvidenceMutation = <TVariables>(
   designatedActionId: number | string,
-  mutationFn: (client: ApiServiceInstance) => (variables: TVariables) => Promise<unknown>
+  mutationFn: (
+    client: ApiServiceInstance
+  ) => (variables: TVariables) => Promise<unknown>
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -333,29 +335,6 @@ export const useSetRecommendedCredits = (
             designatedActionId
           ),
           { recommendedCredits }
-        )
-      ).data,
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ['designated-actions'] })
-  })
-}
-
-// The Missing information box's working text (#5118). Requesting
-// additional information sends it; saving it records nothing.
-export const useSetMissingInformation = (
-  designatedActionId: number | string
-) => {
-  const client = useApiService()
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async (missingInformation: string | null) =>
-      (
-        await client.put(
-          actionPath(
-            apiRoutes.designatedActionMissingInformation,
-            designatedActionId
-          ),
-          { missingInformation }
         )
       ).data,
     onSuccess: () =>

@@ -12,6 +12,8 @@ import { roles } from '@/constants/roles'
 import { ROUTES } from '@/routes/routes'
 import { useTransactionCounts } from '@/hooks/useDashboard'
 import { TRANSACTION_STATUSES, TRANSFER_STATUSES } from '@/constants/statuses'
+import { CountDisplay } from '../../CountDisplay'
+import { countDigits } from '../../countDigits'
 
 // Constants for transaction configurations
 const TRANSACTION_CONFIGS = {
@@ -96,21 +98,18 @@ const TransactionsCard = () => {
     [navigate, createFilter]
   )
 
+  // One counter width for the whole list, so its links line up (#4911).
+  const digits = countDigits(
+    counts.transfers,
+    counts.initiativeAgreements,
+    counts.adminAdjustments
+  )
+
+  // A row without a count keeps an empty counter, so its link lines up too.
   const renderLinkWithCount = useCallback(
     (text, count, onClick) => (
       <>
-        {count != null && (
-          <BCTypography
-            component="span"
-            variant="h3"
-            sx={{
-              color: 'success.main',
-              marginX: 3
-            }}
-          >
-            {count}
-          </BCTypography>
-        )}
+        <CountDisplay count={count} digits={digits} hidden={count == null} />
         <BCTypography
           variant="body2"
           color="link"
@@ -121,7 +120,7 @@ const TransactionsCard = () => {
         </BCTypography>
       </>
     ),
-    []
+    [digits]
   )
 
   const transactionItems = useMemo(

@@ -171,7 +171,6 @@ class DesignatedActionSchema(BaseSchema):
     determination_date: Optional[date] = None
     credit_allocation: int
     recommended_credits: Optional[int] = None
-    missing_information: Optional[str] = None
     determination: Optional[str] = None
     current_status: DesignatedActionStatusSchema
     assigned_analyst: Optional[AssignedAnalystSchema] = None
@@ -198,6 +197,7 @@ class EvidenceRequirementSchema(BaseSchema):
     analyst_review: Optional[str] = None
     review_outcome: Optional[str] = None
     review_notes: Optional[str] = None
+    missing_information: Optional[str] = None
     reviewed_by: Optional[AssignedAnalystSchema] = None
     reviewed_date: Optional[datetime] = None
 
@@ -219,6 +219,7 @@ class EvidenceRequirementUpdateSchema(BaseSchema):
     requirement_number: Optional[int] = None
     analyst_review: Optional[str] = None
     review_notes: Optional[str] = None
+    missing_information: Optional[str] = None
     # Absent leaves the outcome untouched; explicit null clears it back to
     # unreviewed, which is how the UI unchecks both boxes.
     review_outcome: Optional[str] = None
@@ -227,18 +228,12 @@ class EvidenceRequirementUpdateSchema(BaseSchema):
 
 class DesignatedActionWorkflowSchema(BaseSchema):
     action: str
-    # The dedicated text area behind Request additional information, and the
-    # reason a manager or director returns or rejects (#4898).
     comment: Optional[str] = None
     recommended_credits: Optional[int] = None
 
 
 class RecommendedCreditsSchema(BaseSchema):
     recommended_credits: Optional[int] = None
-
-
-class MissingInformationSchema(BaseSchema):
-    missing_information: Optional[str] = None
 
 
 class DesignatedActionHistorySchema(BaseSchema):

@@ -80,6 +80,28 @@ class TransferServices:
             result_list.append(transfer_schema)
         return result_list
 
+    @staticmethod
+    def _status_hidden_from(transfer, user, is_government_viewer: bool) -> bool:
+        """
+        Whether the transfer's status is one this viewer's lists leave out,
+        by the visibility flags on transfer_status (#5231). Government sees
+        a transfer only once it has been submitted to it, so never a Draft,
+        Sent, Declined or Deleted one; the receiving organization never sees
+        the sender's Draft.
+        """
+        status = transfer.current_status
+        if is_government_viewer:
+            return not status.visible_to_government
+        # The organization as TransferValidation.get_transfer reads it.
+        organization = getattr(user, "organization", None)
+        organization_id = organization.organization_id if organization else None
+        if (
+            organization_id is not None
+            and transfer.to_organization_id == organization_id
+        ):
+            return not status.visible_to_transferee
+        return False
+
     @service_handler
     async def get_transfer(self, user: UserProfile, transfer_id: int) -> TransferSchema:
         """Fetches a single transfer by its ID and converts it to a Pydantic model."""
@@ -87,12 +109,7 @@ class TransferServices:
         # Check if the current viewer is a gov user
         is_government_viewer = user_has_roles(user, [RoleEnum.GOVERNMENT])
         if not transfer or (
-            is_government_viewer
-            and transfer.current_status.status
-            in [
-                TransferStatusEnum.Draft,
-                TransferStatusEnum.Sent,
-            ]
+            self._status_hidden_from(transfer, user, is_government_viewer)
             or (
                 transfer.current_status.status == TransferStatusEnum.Rescinded
                 and not any(

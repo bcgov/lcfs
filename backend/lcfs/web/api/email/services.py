@@ -148,6 +148,37 @@ class CHESEmailService:
         return await self.send_email(email_payload)
 
     @service_handler
+    async def send_mention_notification_email(
+        self,
+        email: EmailStr,
+        notification_context: Dict[str, Any],
+    ) -> bool:
+        """
+        Send an @mention email directly to one user. Unlike
+        `send_notification_email`, this is not gated by the recipient's
+        notification subscription preferences.
+        """
+        if not settings.ches_enabled:
+            return False
+
+        if not self._validate_configuration():
+            return False
+
+        if not email:
+            return False
+
+        notification_context["environment"] = settings.environment.lower()
+
+        email_body = self._render_email_template(
+            NotificationTypeEnum.IDIR_ANY__INTERNAL_COMMENT__MENTION.value,
+            notification_context,
+        )
+
+        email_payload = self._build_email_payload([email], notification_context, email_body)
+
+        return await self.send_email(email_payload)
+
+    @service_handler
     async def send_credit_market_report_email(
         self,
         recipients: List[str],
@@ -177,6 +208,24 @@ class CHESEmailService:
             attachments=attachments,
         )
         return await self.send_email(email_payload)
+
+    @service_handler
+    async def send_account_change_email(
+        self, email: EmailStr, context: Dict[str, Any]
+    ) -> bool:
+        """Send a mandatory service email independently of subscriptions."""
+        if not settings.ches_enabled or not email:
+            return False
+
+        if not self._validate_configuration():
+            return False
+
+        template = self.template_env.get_template("account_change.html")
+        body = template.render(
+            **context, environment=settings.environment.lower()
+        ).strip()
+        payload = self._build_email_payload([email], context, body)
+        return await self.send_email(payload)
 
     @service_handler
     async def send_email(self, payload: Dict[str, Any]) -> bool:

@@ -45,4 +45,5 @@ TEMPLATE_MAPPING = {
     "IDIR_ANALYST__GOVERNMENT_NOTIFICATION": "government_notification.html",
     "IDIR_COMPLIANCE_MANAGER__GOVERNMENT_NOTIFICATION": "government_notification.html",
     "IDIR_DIRECTOR__GOVERNMENT_NOTIFICATION": "government_notification.html",
+    "IDIR_ANY__INTERNAL_COMMENT__MENTION": "idir_any__internal_comment__mention.html",
 }
