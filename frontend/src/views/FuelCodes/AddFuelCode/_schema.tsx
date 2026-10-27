@@ -247,7 +247,7 @@ export const fuelCodeColDefs = (
         }
         return params.data.fuelSuffix
       },
-      minWidth: 90,
+      minWidth: 120,
       tooltipValueGetter: () => 'select the next fuel code version'
     },
     {
@@ -261,7 +261,7 @@ export const fuelCodeColDefs = (
         showStepperButtons: false
       },
       type: 'leftAligned',
-      minWidth: 260
+      minWidth: 275
     },
     {
       field: 'edrms',
@@ -625,7 +625,7 @@ export const fuelCodeColDefs = (
         title: 'fuelProductionFacilityProvinceState',
         enabled: true
       }),
-      minWidth: 325,
+      minWidth: 355,
       valueSetter: (params) => {
         if (!params.newValue || params.newValue === '') {
           params.data.fuelProductionFacilityProvinceState = ''

@@ -105,6 +105,10 @@ const DesignatedActionDetailBase = () => {
   const { hasRoles } = useCurrentUser()
   const canRecommend =
     hasRoles?.(roles.ia_analyst) || hasRoles?.(roles.ia_manager)
+  const canEditCredits =
+    canRecommend &&
+    action?.currentStatus?.status !== 'Approved' &&
+    action?.transactionId == null
 
   const { data: requirements = [] } =
     useEvidenceRequirements(designatedActionId)
@@ -335,7 +339,7 @@ const DesignatedActionDetailBase = () => {
                   count: (action.creditAllocation ?? 0).toLocaleString()
                 })}
               />
-              {canRecommend ? (
+              {canEditCredits ? (
                 <BCBox
                   sx={{
                     display: 'flex',

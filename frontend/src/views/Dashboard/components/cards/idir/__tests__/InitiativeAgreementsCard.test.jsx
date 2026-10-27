@@ -65,7 +65,7 @@ describe('InitiativeAgreementsCard Component', () => {
 
   test('renders the lifecycle counts', ({ render, app }) => {
     useInitiativeAgreementCounts.mockReturnValue({
-      data: { underway: 5, draft: 2 },
+      data: { underway: 5 },
       isLoading: false
     })
 
@@ -75,15 +75,28 @@ describe('InitiativeAgreementsCard Component', () => {
       'Initiative agreements'
     )
     expect(screen.getByText('5')).toBeInTheDocument()
-    expect(screen.getByText('2')).toBeInTheDocument()
     expect(
       screen.getByText('View all initiative agreement(s)')
     ).toBeInTheDocument()
   })
 
+  test('has no draft counter, since IDIR users do not see drafts', ({
+    render,
+    app
+  }) => {
+    useInitiativeAgreementCounts.mockReturnValue({
+      data: { underway: 5 },
+      isLoading: false
+    })
+
+    render(<InitiativeAgreementsCard />, app)
+
+    expect(screen.queryByText(/draft/i)).not.toBeInTheDocument()
+  })
+
   test('navigates to the grid pre-filtered to Underway', ({ render, app }) => {
     useInitiativeAgreementCounts.mockReturnValue({
-      data: { underway: 5, draft: 2 },
+      data: { underway: 5 },
       isLoading: false
     })
 
@@ -105,7 +118,7 @@ describe('InitiativeAgreementsCard Component', () => {
 
   test('clears the stored filter for the view-all link', ({ render, app }) => {
     useInitiativeAgreementCounts.mockReturnValue({
-      data: { underway: 5, draft: 2 },
+      data: { underway: 5 },
       isLoading: false
     })
 
