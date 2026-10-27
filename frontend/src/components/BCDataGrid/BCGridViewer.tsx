@@ -587,7 +587,7 @@ export const BCGridViewer = forwardRef<
 
     const onGridReady = useCallback(
       (params: GridReadyEvent<BCGridRow>) => {
-        const filterState = readGridCache<Record<string, unknown>>(
+        const filterState = readGridCache(
           gridCacheKey(gridKey as string, 'filter'),
           cacheMode
         )
@@ -644,12 +644,11 @@ export const BCGridViewer = forwardRef<
           }
         } else if (paginationOptionsRef.current.sortOrders?.length) {
           params.api.applyColumnState({
-            state: paginationOptionsRef.current.sortOrders.flatMap(
-              (col: BCSortOrder) =>
-                typeof col.field === 'string' &&
-                (col.direction === 'asc' || col.direction === 'desc')
-                  ? [{ colId: col.field, sort: col.direction }]
-                  : []
+            state: paginationOptionsRef.current.sortOrders.map(
+              (col: BCSortOrder) => ({
+                colId: col.field,
+                sort: col.direction
+              })
             ),
             defaultState: { sort: null }
           })
