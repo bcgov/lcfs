@@ -1,6 +1,7 @@
 import { PropTypes } from 'prop-types'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useSnackbar } from 'notistack'
 import { useTranslation } from 'react-i18next'
 import { useForm, FormProvider } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
@@ -56,6 +57,7 @@ export const AddEditUser = ({
   } = useCurrentUser()
   const navigate = useNavigate()
   const { t } = useTranslation(['common', 'admin'])
+  const { enqueueSnackbar } = useSnackbar()
   const { userID, orgID } = useParams()
   const [orgName, setOrgName] = useState('')
   const [openConfirm, setOpenConfirm] = useState(false)
@@ -116,7 +118,15 @@ export const AddEditUser = ({
     isPending: isUpdating,
     isError: isUpdateError
   } = useUpdateUser({
-    onSuccess: handleSaveSuccess,
+    onSuccess: (result, variables) => {
+      if (result?.data?.accountChangeEmailSent === false) {
+        enqueueSnackbar(t('admin:accountChangeEmailFailed'), {
+          variant: 'warning',
+          autoHideDuration: 10000
+        })
+      }
+      handleSaveSuccess?.(result, variables)
+    },
     onError: onUserOperationError,
     isSupplier: hasRoles(roles.supplier),
     organizationId: orgID || currentUser?.organization?.organizationId

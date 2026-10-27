@@ -23,7 +23,6 @@ import { AddEvidenceRequirementModal } from './AddEvidenceRequirementModal'
 export const EvidenceOfCompletion = ({
   designatedActionId,
   canEdit = true,
-  actions = null,
   renderRequestAction = null,
   missingInformationReadOnly = false
 }) => {
@@ -203,8 +202,6 @@ export const EvidenceOfCompletion = ({
               {t('initiativeAgreement:evidence.empty')}
             </BCTypography>
           )}
-
-          {actions && <Box data-test="eoc-review-actions">{actions}</Box>}
         </Box>
       )}
 

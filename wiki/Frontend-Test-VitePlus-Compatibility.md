@@ -138,8 +138,10 @@ locator compatibility setting. There are no deferred compatibility removals.
 
 The existing CI matrix still has 32 shards. Its merge step expects one blob per
 configured shard and lets the installed Vite+ validate blob contents and version.
-JUnit output lives outside the blob input directory. Missing, malformed, or
-incompatible reports must fail rather than produce an empty successful report.
+JUnit output lives outside the blob input directory. Partial report sets are
+merged for diagnostics without coverage thresholds; the final gate requires all
+32 reports and successful setup and shard jobs. Complete sets enforce aggregate
+coverage thresholds. Malformed or incompatible reports fail the merge.
 
 ## Optimization rollout follow-up
 

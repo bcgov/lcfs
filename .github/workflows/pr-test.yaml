@@ -576,6 +576,7 @@ jobs:
         with:
           name: blob-report-${{ matrix.shardIndex }}
           path: frontend/.vitest-reports/*
+          if-no-files-found: error
           include-hidden-files: true
           retention-days: 1
           compression-level: 9
@@ -583,7 +584,7 @@ jobs:
   post-frontend-tests:
     name: "Publish Frontend Test Results"
     if: always()
-    needs: [frontend-tests]
+    needs: [frontend-setup, frontend-tests]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6.0.2
@@ -613,20 +614,27 @@ jobs:
           merge-multiple: true
 
       - name: Merge reports
+        id: merge-reports
         run: |
           cd frontend
 
-          # Every configured shard must contribute a report. Let Vite+ validate
-          # the blob format and version rather than deleting invalid reports.
+          # Merge all reports that arrived so failures remain visible. The
+          # final gate below enforces that all 32 configured shards reported.
           REPORT_COUNT=$(find .vitest-reports -maxdepth 1 -name 'blob-*.json' -type f | wc -l | tr -d ' ')
-          if [ "$REPORT_COUNT" -ne 32 ]; then
-            echo "Expected 32 frontend shard reports, received $REPORT_COUNT"
-            exit 1
+          echo "report-count=$REPORT_COUNT" >> "$GITHUB_OUTPUT"
+          if [ "$REPORT_COUNT" -eq 0 ]; then
+            echo "No frontend shard reports arrived"
+            exit 0
           fi
 
-          # Thresholds are enforced only here, against aggregate coverage.
-          # Keep JUnit outside the input directory so it cannot be read as a blob.
-          ENFORCE_COVERAGE_THRESHOLDS=true ./node_modules/.bin/vp test --merge-reports=.vitest-reports --reporter=junit --outputFile.junit=vitest-results.xml
+          # Enforce coverage floors only when the complete shard set is
+          # present. Partial runs still produce JUnit diagnostics.
+          if [ "$REPORT_COUNT" -eq 32 ]; then
+            ENFORCE_COVERAGE_THRESHOLDS=true ./node_modules/.bin/vp test --merge-reports=.vitest-reports --reporter=junit --outputFile.junit=vitest-results.xml
+          else
+            echo "Merging $REPORT_COUNT of 32 frontend shard reports without coverage thresholds"
+            ./node_modules/.bin/vp test --merge-reports=.vitest-reports --reporter=junit --outputFile.junit=vitest-results.xml
+          fi
 
       - name: Upload merged coverage report
         if: always()
@@ -649,6 +657,22 @@ jobs:
           report_individual_runs: "true"
           deduplicate_classes_by_file_name: "true"
           comment_mode: "always"
+
+      - name: Require successful frontend checks and tests
+        if: always()
+        env:
+          SETUP_RESULT: ${{ needs.frontend-setup.result }}
+          TEST_RESULT: ${{ needs.frontend-tests.result }}
+          REPORT_COUNT: ${{ steps.merge-reports.outputs.report-count }}
+        run: |
+          if [ "$SETUP_RESULT" != "success" ] || [ "$TEST_RESULT" != "success" ]; then
+            echo "Frontend checks or tests did not succeed: setup=$SETUP_RESULT tests=$TEST_RESULT"
+            exit 1
+          fi
+          if [ "$REPORT_COUNT" != "32" ]; then
+            echo "Expected 32 frontend shard reports, received ${REPORT_COUNT:-none}"
+            exit 1
+          fi
 
   teams-notification:
     needs: [post-backend-tests, post-frontend-tests]

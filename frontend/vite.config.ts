@@ -132,7 +132,7 @@ export default defineConfig({
     port: 3000,
     hmr: {
       overlay: false,
-      clientPort: Number(process.env.VITE_HMR_CLIENT_PORT) || 3000
+      clientPort: 3000
     }
   },
   test: {
