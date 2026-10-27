@@ -135,9 +135,36 @@ export const defaultSortModel = [{ field: 'updateDate', direction: 'desc' }]
 // the ID read off each row's own agreement. The analyst column is shared
 // too (#5197): the same cell, assignment mutation and server-side filter
 // apply, since the endpoint serves the same row shape across agreements.
+// Its rows come from many agreements, so the agreement's organization and
+// code follow the ID (#5203).
+const parentAgreementColDefs = (
+  t: TFunction
+): ColDef<InitiativeAgreementGridRow>[] => [
+  {
+    field: 'organization.name',
+    headerName: t('initiativeAgreement:actions.columns.organization'),
+    valueGetter: (params) => params.data?.organization?.name,
+    minWidth: 180,
+    filter: 'agTextColumnFilter',
+    filterParams: TEXT_FILTER_PARAMS
+  },
+  {
+    field: 'iaCode',
+    headerName: t('initiativeAgreement:actions.columns.iaName'),
+    minWidth: 130,
+    filter: 'agTextColumnFilter',
+    filterParams: TEXT_FILTER_PARAMS
+  }
+]
+
 export const allDesignatedActionColDefs = (
   t: TFunction
-): ColDef<InitiativeAgreementGridRow>[] => designatedActionColDefs(t, null)
+): ColDef<InitiativeAgreementGridRow>[] =>
+  designatedActionColDefs(t, null).flatMap((colDef) =>
+    colDef.colId === 'actionNumber'
+      ? [colDef, ...parentAgreementColDefs(t)]
+      : [colDef]
+  )
 
 export const designatedActionColDefs = (
   t: TFunction,
@@ -213,6 +240,14 @@ export const designatedActionColDefs = (
           })
         : '',
     valueGetter: ({ data }) => data?.creditAllocation
+  },
+  {
+    // The completion date from the agreement's schedule (#5203).
+    ...dateCol(
+      'specifiedDate',
+      t('initiativeAgreement:actions.columns.dateForCompletion')
+    ),
+    minWidth: 160
   },
   {
     ...dateCol(

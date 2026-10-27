@@ -12,12 +12,10 @@ import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
 import { useCreateDesignatedAction } from '@/hooks/useInitiativeAgreements'
 
-// Adding a designated action to an agreement that is still a draft.
-// Designated actions are the substance of the agreement, so they are
-// settled before it takes effect; once it is underway the route is a
-// change order, not a new row beside the signed schedule. The API
-// enforces that too — this only hides a control that would be refused.
-export const AddDesignatedAction = ({ initiativeAgreementId, isDraft }) => {
+// Adding a designated action to an agreement that is still open: a draft
+// or underway (INITIATIVE_AGREEMENT_OPEN_TO_NEW_ACTIONS). The API enforces
+// that too — this only disables a control that would be refused.
+export const AddDesignatedAction = ({ initiativeAgreementId, canAdd }) => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
@@ -72,9 +70,9 @@ export const AddDesignatedAction = ({ initiativeAgreementId, isDraft }) => {
           there. Disabled, it says why. */}
       <Tooltip
         title={
-          isDraft
+          canAdd
             ? t('initiativeAgreement:actions.addTooltip')
-            : t('initiativeAgreement:actions.draftOnly')
+            : t('initiativeAgreement:actions.closedToNewActions')
         }
       >
         <span data-test="add-designated-action-tip">
@@ -84,7 +82,7 @@ export const AddDesignatedAction = ({ initiativeAgreementId, isDraft }) => {
             color="primary"
             size="small"
             startIcon={<AddIcon />}
-            disabled={!isDraft}
+            disabled={!canAdd}
             data-test="add-designated-action"
             onClick={() => setOpen(true)}
           >
