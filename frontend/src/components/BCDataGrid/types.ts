@@ -105,9 +105,14 @@ export interface BCGridEditorProps<TData extends BCGridRow = BCGridRow>
   onAction?: (
     action: string,
     params?: unknown
-  ) => RowDataTransaction<TData> | void | Promise<RowDataTransaction<TData> | void>
+  ) =>
+    | RowDataTransaction<TData>
+    | void
+    | Promise<RowDataTransaction<TData> | void>
   onAddRows?: (rows: TData[]) => void
-  onCellEditingStopped?: (params: BCGridEditContext<TData>) => void | Promise<unknown>
+  onCellEditingStopped?: (
+    params: BCGridEditContext<TData>
+  ) => void | Promise<unknown>
   onCellValueChanged?: (params: CellValueChangedEvent<TData>) => void
   saveButtonProps?: BCSaveButtonProps
   showAddRowsButton?: boolean
@@ -146,6 +151,7 @@ export interface BCGridViewerProps<TData extends BCGridRow = BCGridRow>
   enableExportButton?: boolean
   enableFloatingPagination?: boolean
   enablePageCaching?: boolean
+  persistForLoginSession?: boolean
   enableResetButton?: boolean
   exportName?: string
   filterToolbarConfig?: {
