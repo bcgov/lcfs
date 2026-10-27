@@ -155,6 +155,7 @@ export interface BCGridViewerProps<
   enableExportButton?: boolean
   enableFloatingPagination?: boolean
   enablePageCaching?: boolean
+  persistForLoginSession?: boolean
   enableResetButton?: boolean
   exportName?: string
   filterToolbarConfig?: {
