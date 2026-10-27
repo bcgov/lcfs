@@ -246,6 +246,42 @@ class InternalCommentService:
         if org_id is None or user_org_id is None or org_id != user_org_id:
             raise HTTPException(status_code=403, detail="Forbidden resource")
 
+    async def _require_visible_initiative_agreement(
+        self, entity_type: EntityTypeEnum, entity_id: int
+    ) -> None:
+        """
+        A proponent's unsubmitted draft agreement is hidden from government
+        (#5186). Its comment thread, and those of its designated actions,
+        read as missing, like the agreement itself.
+        """
+        # Imported here: the initiative agreement package imports this
+        # service, so a module-level import would be circular.
+        from lcfs.web.api.initiative_agreement.workflow import is_hidden_from
+
+        if entity_type not in (
+            EntityTypeEnum.INITIATIVE_AGREEMENT,
+            EntityTypeEnum.DESIGNATED_ACTION,
+        ):
+            return
+        agreement = await self.repo.get_parent_initiative_agreement(
+            entity_type, entity_id
+        )
+        if agreement is None or is_hidden_from(agreement, self.request.user):
+            raise HTTPException(status_code=404, detail="Not found")
+
+    async def require_visible_comment(self, internal_comment_id: int) -> None:
+        """
+        A comment on a draft agreement, or on one of its designated actions,
+        reads as missing to government (#5186), like its thread.
+        """
+        from lcfs.web.api.initiative_agreement.workflow import is_hidden_from
+
+        agreement = await self.repo.get_parent_initiative_agreement_of_comment(
+            internal_comment_id
+        )
+        if agreement is not None and is_hidden_from(agreement, self.request.user):
+            raise HTTPException(status_code=404, detail="Internal comment not found.")
+
     async def _send_ci_comment_notification(
         self,
         ci_application_id: int,
@@ -510,6 +546,9 @@ class InternalCommentService:
                     status_code=422,
                     detail="audience_scope is required for internal comments.",
                 )
+        await self._require_visible_initiative_agreement(
+            data.entity_type, data.entity_id
+        )
 
         # Enforced here as well as in the editor.
         data.comment = await self._sanitize_comment_for_visibility(
@@ -637,6 +676,7 @@ class InternalCommentService:
                 raise HTTPException(status_code=403, detail="Forbidden resource")
             await self._require_own_organization(entity_type, entity_id)
             visibility_filter = CommentVisibilityEnum.PUBLIC.value
+        await self._require_visible_initiative_agreement(entity_type, entity_id)
 
         comments = await self.repo.get_internal_comments(
             entity_type, entity_id, visibility_filter
@@ -857,6 +897,12 @@ class InternalCommentService:
         if size > 100:
             size = 100
 
+        # Imported here: the initiative agreement package imports this
+        # service, so a module-level import would be circular.
+        from lcfs.web.api.initiative_agreement.workflow import (
+            hidden_lifecycle_statuses,
+        )
+
         rows, total = await self.repo.get_comments_for_organization(
             organization_id=organization_id,
             page=page,
@@ -869,6 +915,8 @@ class InternalCommentService:
             search=filters.search,
             sort_by=filters.sort_by.value,
             sort_order=filters.sort_order.value,
+            # A draft agreement's comments are hidden from government (#5186).
+            hidden_lifecycle_statuses=tuple(hidden_lifecycle_statuses(current_user)),
         )
 
         username = getattr(current_user, "keycloak_username", None)

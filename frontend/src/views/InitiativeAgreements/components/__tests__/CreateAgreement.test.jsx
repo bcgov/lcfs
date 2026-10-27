@@ -55,19 +55,39 @@ describe('CreateAgreement', () => {
     expect(screen.getByTestId('create-agreement')).toBeInTheDocument()
   })
 
-  test('will not create without an organization and a code', ({
-    render,
-    app
-  }) => {
+  test('will not create without a code', ({ render, app }) => {
     render(<CreateAgreement />, app)
     openModal()
+    pickFirstOrganization()
 
     fireEvent.click(screen.getByText('initiativeAgreement:create.confirm'))
 
     expect(mockCreate).not.toHaveBeenCalled()
   })
 
-  test('creates a draft from the organization and code alone', ({
+  test('creates an agreement from a code alone, with no organization yet (#5186)', ({
+    render,
+    app
+  }) => {
+    render(<CreateAgreement />, app)
+    openModal()
+    // The organization is marked optional.
+    expect(
+      screen.getByText('initiativeAgreement:create.organizationLabel')
+    ).toHaveTextContent('(optional)')
+    fireEvent.change(screen.getByTestId('create-agreement-code'), {
+      target: { value: 'IA-26NOORG' }
+    })
+
+    fireEvent.click(screen.getByText('initiativeAgreement:create.confirm'))
+
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ organizationId: null, iaCode: 'IA-26NOORG' }),
+      expect.anything()
+    )
+  })
+
+  test('creates an agreement from the organization and code alone', ({
     render,
     app
   }) => {

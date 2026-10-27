@@ -23,7 +23,6 @@ import { AddEvidenceRequirementModal } from './AddEvidenceRequirementModal'
 export const EvidenceOfCompletion = ({
   designatedActionId,
   canEdit = true,
-  actions = null,
   renderRequestAction = null,
   missingInformationReadOnly = false
 }) => {
@@ -173,19 +172,18 @@ export const EvidenceOfCompletion = ({
                 const save = updateRequirement({
                   evidenceRequirementId: id,
                   ...payload
-                })
-                  .then(
-                    (result) => {
-                      fields.forEach((field) => failures.delete(field))
-                      callbacks.onSuccess(result)
-                      return result
-                    },
-                    (err) => {
-                      fields.forEach((field) => failures.set(field, err))
-                      callbacks.onError(err)
-                      throw err
-                    }
-                  )
+                }).then(
+                  (result) => {
+                    fields.forEach((field) => failures.delete(field))
+                    callbacks.onSuccess(result)
+                    return result
+                  },
+                  (err) => {
+                    fields.forEach((field) => failures.set(field, err))
+                    callbacks.onError(err)
+                    throw err
+                  }
+                )
                 pending.add(save)
                 const clearPending = () => {
                   pending.delete(save)
@@ -204,8 +202,6 @@ export const EvidenceOfCompletion = ({
               {t('initiativeAgreement:evidence.empty')}
             </BCTypography>
           )}
-
-          {actions && <Box data-test="eoc-review-actions">{actions}</Box>}
         </Box>
       )}
 

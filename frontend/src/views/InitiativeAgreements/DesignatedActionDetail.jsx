@@ -105,6 +105,10 @@ const DesignatedActionDetailBase = () => {
   const { hasRoles } = useCurrentUser()
   const canRecommend =
     hasRoles?.(roles.ia_analyst) || hasRoles?.(roles.ia_manager)
+  const canEditCredits =
+    canRecommend &&
+    action?.currentStatus?.status !== 'Approved' &&
+    action?.transactionId == null
 
   const { data: requirements = [] } =
     useEvidenceRequirements(designatedActionId)
@@ -227,20 +231,6 @@ const DesignatedActionDetailBase = () => {
     )
   }
 
-  const evidenceActions = requirements.length ? null : (
-    <DesignatedActionWorkflow
-      designatedActionId={designatedActionId}
-      availableActions={action.availableActions}
-      onlyAction={ACTION_REQUEST_INFORMATION}
-      recommendedCredits={action.recommendedCredits}
-      allEvidenceSatisfactory={allEvidenceSatisfactory}
-      hasRequirements={requirements.length > 0}
-      missingInformation={action.missingInformation ?? ''}
-      placement={PLACEMENT_EVIDENCE}
-      onChanged={refreshAction}
-    />
-  )
-
   return (
     <BCBox>
       <InitiativeAgreementTabs />
@@ -349,7 +339,7 @@ const DesignatedActionDetailBase = () => {
                   count: (action.creditAllocation ?? 0).toLocaleString()
                 })}
               />
-              {canRecommend ? (
+              {canEditCredits ? (
                 <BCBox
                   sx={{
                     display: 'flex',
@@ -463,7 +453,6 @@ const DesignatedActionDetailBase = () => {
                 // would be refused.
                 canEdit={canRecommend}
                 missingInformationReadOnly={!canRecommend}
-                actions={evidenceActions}
                 renderRequestAction={renderRequestAction}
               />
               <DesignatedActionWorkflow
