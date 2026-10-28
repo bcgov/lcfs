@@ -97,6 +97,13 @@ class InitiativeAgreementSchema(InitiativeAgreementBaseSchema):
     returned: Optional[bool] = False
     create_date: datetime
 
+    @field_validator("compliance_units")
+    def validate_compliance_units(cls, v):
+        # Responses allow zero-credit approvals; manual writes require positive units.
+        if v < 0:
+            raise ValueError("compliance_units cannot be negative")
+        return v
+
 
 class InitiativeAgreementCreateSchema(InitiativeAgreementBaseSchema):
     current_status: str
@@ -275,11 +282,14 @@ class DesignatedActionListItemSchema(DesignatedActionSchema):
     """A row of the module-wide Designated actions tab (#5078).
 
     Carries which agreement the action belongs to, for the ID column
-    (DA{n}-IA{agreement}) and for navigating to the action's page.
+    (DA{n}-IA{agreement}) and for navigating to the action's page, and the
+    agreement's code and organization for their own columns (#5203).
     """
 
     initiative_agreement_id: int
     ia_code: Optional[str] = None
+    # An agreement can be saved before its organization is known (#5186).
+    organization: Optional[OrganizationSchema] = None
 
 
 class AllDesignatedActionsListSchema(BaseSchema):
@@ -336,7 +346,9 @@ class InitiativeAgreementListItemSchema(BaseSchema):
     total_credits_issued: int
     update_date: datetime
     lifecycle_status: Optional[InitiativeAgreementLifecycleStatusSchema] = None
-    organization: OrganizationSchema
+    # Optional: an agreement can be saved before its organization is known
+    # (#5186).
+    organization: Optional[OrganizationSchema] = None
     last_comment: Optional[LastCommentSchema] = None
 
     model_config = ConfigDict(from_attributes=True)
@@ -349,7 +361,7 @@ class InitiativeAgreementsListSchema(BaseSchema):
 
 class InitiativeAgreementProfileSchema(InitiativeAgreementListItemSchema):
     # Overrides the grid's lean organization payload with the detail card's.
-    organization: AgreementOrganizationSchema
+    organization: Optional[AgreementOrganizationSchema] = None
     project_description: Optional[str] = None
     project_location: Optional[str] = None
     contact_email: Optional[str] = None
@@ -361,13 +373,14 @@ class InitiativeAgreementProfileSchema(InitiativeAgreementListItemSchema):
 class AgreementCreateSchema(BaseSchema):
     """A new agreement-management record, entered by an analyst.
 
-    Only the organization and the agreement code are required. An
-    agreement is drafted over time — the title, dates, contact and
-    description are all editable afterwards, so demanding them up front
-    would only push analysts into typing placeholders.
+    Only the agreement code is required. The organization may not be
+    settled when an analyst opens the file (#5186), and the title, dates,
+    contact and description are filled in as the agreement takes shape, so
+    demanding them up front would only push analysts into typing
+    placeholders.
     """
 
-    organization_id: int
+    organization_id: Optional[int] = None
     ia_code: str
     agreement_type: str = AGREEMENT_TYPE_INITIATIVE_AGREEMENT
     title: Optional[str] = None
@@ -381,8 +394,12 @@ class AgreementCreateSchema(BaseSchema):
 
 
 class AgreementUpdateSchema(BaseSchema):
-    """Partial update: only fields present in the request are applied."""
+    """Partial update: only fields present in the request are applied.
 
+    organization_id fills in an organization the agreement was saved
+    without (#5186); once set, it cannot be changed or cleared."""
+
+    organization_id: Optional[int] = None
     ia_code: Optional[str] = Field(None, max_length=50)
     agreement_type: Optional[str] = None
     title: Optional[str] = Field(None, max_length=500)
