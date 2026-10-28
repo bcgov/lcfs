@@ -44,14 +44,13 @@ class CIApplicationCountsSchema(BaseSchema):
 
 class InitiativeAgreementCountsSchema(BaseSchema):
     # Counts of agreement-kind records by lifecycle status; legacy award
-    # rows are excluded (#4895).
-    draft: int = Field(default=0)
+    # rows are excluded (#4895). No draft count: drafts are proponents'
+    # unsubmitted applications, which IDIR users do not see (#5186).
     underway: int = Field(default=0)
 
 
 class OrgInitiativeAgreementCountsSchema(BaseSchema):
     # The caller's organization's agreements by lifecycle status, for the
-    # BCeID dashboard card (#4893). No draft count: a draft is the
-    # ministry's working record until it is executed.
+    # BCeID dashboard card (#4893).
     underway: int = Field(default=0)
     completed: int = Field(default=0)

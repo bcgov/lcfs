@@ -86,14 +86,17 @@ async def seed_initiative_agreements(session):
             ],
         },
         {
+            # Entered by an analyst, so Underway rather than Draft: IDIR users
+            # do not see drafts (#5186). It has no actions yet, which makes
+            # it the one to try adding designated actions on.
             "ia_code": "IA-26DEV2",
             "to_organization_id": 2,
             "record_kind": RECORD_KIND_AGREEMENT,
-            "lifecycle_status": "Draft",
+            "lifecycle_status": "Underway",
             "title": "Renewable diesel co-processing upgrade",
             "project_description": (
                 "Refinery upgrades enabling co-processing of renewable "
-                "feedstock. Agreement drafting is underway."
+                "feedstock. The designated actions are still being set out."
             ),
             "entry_date": date(2026, 3, 2),
             "total_credits_allocated": 12000,

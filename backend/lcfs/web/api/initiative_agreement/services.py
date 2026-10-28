@@ -12,6 +12,7 @@ from lcfs.db.models.initiative_agreement.DesignatedActionHistory import (
     EVENT_ANALYST_ASSIGNED,
     EVENT_ANALYST_REASSIGNED,
     EVENT_ANALYST_UNASSIGNED,
+    EVENT_CREDITS_ISSUED,
     EVENT_DETAILS_EDITED,
     DesignatedActionHistory,
 )
@@ -24,13 +25,18 @@ from lcfs.db.models.initiative_agreement.EvidenceRequirement import (
 from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
     AGREEMENT_TYPES,
     RECORD_KIND_AGREEMENT,
+    RECORD_KIND_LEGACY_AWARD,
     InitiativeAgreement,
+)
+from lcfs.db.models.initiative_agreement.InitiativeAgreementLifecycleHistory import (
+    InitiativeAgreementLifecycleHistory,
 )
 from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
     InitiativeAgreementStatusEnum,
 )
 from lcfs.db.models.transaction.Transaction import TransactionActionEnum
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.utils.dates import PACIFIC_TZ
 from lcfs.web.api.base import (
     PaginationRequestSchema,
@@ -63,12 +69,18 @@ from lcfs.web.api.initiative_agreement.schema import (
     InitiativeAgreementSchema,
     InitiativeAgreementsListSchema,
     LastCommentSchema,
+    OrganizationSchema,
 )
 from lcfs.web.api.initiative_agreement.workflow import (
-    LIFECYCLE_STATUS_DRAFT,
+    ACTION_APPROVE,
+    LIFECYCLE_STATUSES_OPEN_TO_NEW_ACTIONS,
+    STATUS_APPROVED,
     STATUS_NOT_STARTED,
     TRANSITIONS,
     WORKFLOW_ACTIONS,
+    hidden_lifecycle_statuses,
+    initial_lifecycle_status,
+    is_hidden_from,
 )
 from lcfs.web.api.internal_comment.schema import (
     AudienceScopeEnum,
@@ -87,6 +99,7 @@ from lcfs.web.api.notification.schema import (
 from lcfs.web.api.notification.services import NotificationService
 from lcfs.web.api.organizations.services import OrganizationsService
 from lcfs.web.api.role.schema import user_has_roles
+from lcfs.web.api.transaction.repo import TransactionRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
 
@@ -106,12 +119,14 @@ class InitiativeAgreementServices:
         ),
         notfn_service: NotificationService = Depends(NotificationService),
         request: Request = None,
+        transaction_repo: TransactionRepository = Depends(TransactionRepository),
     ) -> None:
         self.repo = repo
         self.org_service = org_service
         self.internal_comment_service = internal_comment_service
         self.request = request
         self.notfn_service = notfn_service
+        self.transaction_repo = transaction_repo
 
     @service_handler
     async def get_initiative_agreement(
@@ -177,7 +192,9 @@ class InitiativeAgreementServices:
                 user.organization.organization_id if user.organization else -1
             )
         agreements, total_count = await self.repo.get_initiative_agreements_paginated(
-            pagination, organization_id
+            pagination,
+            organization_id,
+            hidden_statuses=hidden_lifecycle_statuses(user),
         )
         # Non-government callers never receive internal comment text.
         latest_comments = await self.repo.get_latest_comments_by_agreement_ids(
@@ -206,8 +223,14 @@ class InitiativeAgreementServices:
 
     @service_handler
     async def get_lifecycle_statuses(self):
-        """Lifecycle statuses for the agreement grid's status filter."""
-        return await self.repo.get_lifecycle_statuses()
+        """Lifecycle statuses for the agreement grid's status filter, less
+        any the caller does not see."""
+        hidden = hidden_lifecycle_statuses(self.request.user if self.request else None)
+        return [
+            lifecycle_status
+            for lifecycle_status in await self.repo.get_lifecycle_statuses()
+            if lifecycle_status.status not in hidden
+        ]
 
     @service_handler
     async def get_initiative_agreement_profile(
@@ -243,19 +266,24 @@ class InitiativeAgreementServices:
         data: AgreementCreateSchema,
         user,
     ) -> InitiativeAgreementProfileSchema:
-        """Start a new agreement as a draft.
+        """Start a new agreement.
 
         The record is deliberately thin at birth: an analyst opening a file
-        typically has the organization and the agreement code and little
-        else. Everything else is filled in as the agreement is negotiated,
-        and the draft lifecycle is what keeps it out of the reporting
-        totals until it is real.
+        typically has the agreement code and little else, sometimes not
+        even the organization (#5186). Everything else is filled in as the
+        agreement is negotiated.
+
+        The starting lifecycle status depends on who creates it (see
+        INITIAL_LIFECYCLE_STATUS_RULES). An agreement government enters
+        starts Underway. Draft is kept for the applications BCeID
+        proponents will start.
         """
-        organization = await self.org_service.get_organization(data.organization_id)
-        if not organization:
-            raise DataNotFoundException(
-                f"Organization with id {data.organization_id} not found"
-            )
+        if data.organization_id is not None:
+            organization = await self.org_service.get_organization(data.organization_id)
+            if not organization:
+                raise DataNotFoundException(
+                    f"Organization with id {data.organization_id} not found"
+                )
 
         ia_code = (data.ia_code or "").strip()
         if not ia_code:
@@ -284,11 +312,17 @@ class InitiativeAgreementServices:
                 detail="The agreement end date cannot precede its start date.",
             )
 
-        draft = await self.repo.get_lifecycle_status_by_name(LIFECYCLE_STATUS_DRAFT)
-        if draft is None:
+        status_name = initial_lifecycle_status(user)
+        if status_name is None:
+            raise HTTPException(
+                status_code=403,
+                detail="You are not permitted to start an initiative agreement.",
+            )
+        lifecycle_status = await self.repo.get_lifecycle_status_by_name(status_name)
+        if lifecycle_status is None:
             raise HTTPException(
                 status_code=500,
-                detail=f"Lifecycle status '{LIFECYCLE_STATUS_DRAFT}' is not configured.",
+                detail=f"Lifecycle status '{status_name}' is not configured.",
             )
 
         username = getattr(user, "keycloak_username", None)
@@ -307,7 +341,28 @@ class InitiativeAgreementServices:
                 entry_date=datetime.now(timezone.utc).date(),
                 agreement_start_date=data.agreement_start_date,
                 agreement_end_date=data.agreement_end_date,
-                lifecycle_status_id=(draft.initiative_agreement_lifecycle_status_id),
+                lifecycle_status_id=(
+                    lifecycle_status.initiative_agreement_lifecycle_status_id
+                ),
+                create_user=username,
+                update_user=username,
+            )
+        )
+        # The status history starts with the status the agreement was
+        # created in; the table's audit trigger records the insert itself.
+        display_name = " ".join(
+            p
+            for p in (getattr(user, "first_name", ""), getattr(user, "last_name", ""))
+            if p
+        ).strip()
+        await self.repo.add_lifecycle_history(
+            InitiativeAgreementLifecycleHistory(
+                initiative_agreement_id=agreement.initiative_agreement_id,
+                lifecycle_status_id=(
+                    lifecycle_status.initiative_agreement_lifecycle_status_id
+                ),
+                user_profile_id=getattr(user, "user_profile_id", None),
+                display_name=display_name or None,
                 create_user=username,
                 update_user=username,
             )
@@ -323,16 +378,38 @@ class InitiativeAgreementServices:
         data: AgreementUpdateSchema,
         user,
     ) -> InitiativeAgreementProfileSchema:
-        """Edit an agreement's details, in any lifecycle status."""
+        """Edit an agreement's details, in any lifecycle status the caller
+        can see. A draft is hidden from government (#5186), so it reads as
+        missing here too."""
         agreement = await self.repo.get_initiative_agreement_by_id(
             initiative_agreement_id
         )
-        if not agreement or agreement.record_kind != RECORD_KIND_AGREEMENT:
+        if (
+            not agreement
+            or agreement.record_kind != RECORD_KIND_AGREEMENT
+            or is_hidden_from(agreement, user)
+        ):
             raise DataNotFoundException(
                 f"Initiative Agreement with id {initiative_agreement_id} not found"
             )
 
         provided = data.model_fields_set
+
+        # An agreement may be saved before its organization is known (#5186).
+        # The organization can be filled in later, but once set it stays:
+        # credits the agreement issues go to that organization.
+        if (
+            "organization_id" in provided
+            and data.organization_id != agreement.to_organization_id
+        ):
+            if agreement.to_organization_id is not None:
+                raise HTTPException(
+                    status_code=400,
+                    detail="The agreement's organization is already set and cannot be changed.",
+                )
+            agreement.to_organization = await self.org_service.get_organization(
+                data.organization_id
+            )
 
         if "ia_code" in provided:
             ia_code = (data.ia_code or "").strip()
@@ -399,17 +476,16 @@ class InitiativeAgreementServices:
         data: DesignatedActionCreateSchema,
         user,
     ) -> DesignatedActionSchema:
-        """Add a designated action to an agreement that is still a draft.
+        """Add a designated action to an agreement that is still open.
 
-        Designated actions are the substance of the agreement, so they are
-        settled before it takes effect. Once an agreement is underway a
-        change order is the route, not a new row appearing beside the
-        signed schedule.
+        Agreements government enters start Underway (#5186), and that is
+        when an analyst sets out the schedule. A completed or terminated
+        agreement takes no new actions.
         """
         agreement = await self.repo.get_initiative_agreement_by_id(
             initiative_agreement_id
         )
-        if not agreement:
+        if not agreement or is_hidden_from(agreement, user):
             raise DataNotFoundException(
                 f"Initiative Agreement with id {initiative_agreement_id} not found"
             )
@@ -417,12 +493,12 @@ class InitiativeAgreementServices:
         lifecycle = (
             agreement.lifecycle_status.status if agreement.lifecycle_status else None
         )
-        if lifecycle != LIFECYCLE_STATUS_DRAFT:
+        if lifecycle not in LIFECYCLE_STATUSES_OPEN_TO_NEW_ACTIONS:
             raise HTTPException(
                 status_code=400,
                 detail=(
                     "Designated actions can only be added while the agreement "
-                    f"is a draft; this one is '{lifecycle or 'not set'}'."
+                    f"is a draft or underway; this one is '{lifecycle or 'not set'}'."
                 ),
             )
 
@@ -484,11 +560,7 @@ class InitiativeAgreementServices:
         before and after, so the record shows what was altered and by
         whom.
         """
-        action = await self.repo.get_designated_action_by_id(designated_action_id)
-        if not action:
-            raise DataNotFoundException(
-                f"Designated action with id {designated_action_id} not found"
-            )
+        action = await self._get_action_or_404(designated_action_id, user)
 
         changes = {}
 
@@ -568,7 +640,9 @@ class InitiativeAgreementServices:
         agreement = await self.repo.get_initiative_agreement_by_id(
             initiative_agreement_id
         )
-        if not agreement:
+        if not agreement or is_hidden_from(
+            agreement, self.request.user if self.request else None
+        ):
             raise DataNotFoundException(
                 f"Initiative Agreement with id {initiative_agreement_id} not found"
             )
@@ -603,15 +677,22 @@ class InitiativeAgreementServices:
         if not pagination.sort_orders:
             pagination.sort_orders = [SortOrder(field="update_date", direction="desc")]
         actions, total_count = await self.repo.get_designated_actions_paginated(
-            None, pagination
+            None,
+            pagination,
+            hidden_statuses=hidden_lifecycle_statuses(
+                self.request.user if self.request else None
+            ),
         )
         rows = await self._designated_action_rows(
             actions, DesignatedActionListItemSchema
         )
         for row, action in zip(rows, actions):
-            row.ia_code = (
-                action.initiative_agreement.ia_code
-                if action.initiative_agreement
+            agreement = action.initiative_agreement
+            row.ia_code = agreement.ia_code if agreement else None
+            # The agreement's organization, for the tab's column (#5203).
+            row.organization = (
+                OrganizationSchema.model_validate(agreement.to_organization)
+                if agreement and agreement.to_organization
                 else None
             )
         return AllDesignatedActionsListSchema(
@@ -665,11 +746,7 @@ class InitiativeAgreementServices:
         self, designated_action_id: int
     ) -> DesignatedActionProfileSchema:
         """The action detail page's record (#4840)."""
-        action = await self.repo.get_designated_action_by_id(designated_action_id)
-        if not action:
-            raise DataNotFoundException(
-                f"Designated action with id {designated_action_id} not found"
-            )
+        action = await self._get_action_or_404(designated_action_id)
         siblings = await self.repo.get_current_designated_actions(
             action.initiative_agreement_id
         )
@@ -684,13 +761,40 @@ class InitiativeAgreementServices:
             ),
         )
 
-    async def _get_action_or_404(self, designated_action_id: int):
-        action = await self.repo.get_designated_action_by_id(designated_action_id)
-        if not action:
+    async def _get_action_or_404(
+        self, designated_action_id: int, user=None, *, for_update: bool = False
+    ) -> DesignatedAction:
+        """The action, unless it is missing or its agreement is hidden from
+        the caller. Every route to an action comes through here, so a
+        draft's actions read as missing everywhere, not only on the
+        profile (#5186)."""
+        if user is None and self.request:
+            user = self.request.user
+        action = await self.repo.get_designated_action_by_id(
+            designated_action_id, for_update=for_update
+        )
+        if not action or is_hidden_from(action.initiative_agreement, user):
             raise DataNotFoundException(
                 f"Designated action with id {designated_action_id} not found"
             )
         return action
+
+    async def _get_requirement_or_404(self, evidence_requirement_id: int, user):
+        """The evidence requirement, unless it is missing or its action is
+        hidden from the caller (see _get_action_or_404)."""
+        requirement = await self.repo.get_evidence_requirement(evidence_requirement_id)
+        action = (
+            await self.repo.get_designated_action_by_id(
+                requirement.designated_action_id
+            )
+            if requirement
+            else None
+        )
+        if not action or is_hidden_from(action.initiative_agreement, user):
+            raise DataNotFoundException(
+                f"Evidence requirement with id {evidence_requirement_id} not found"
+            )
+        return requirement
 
     def _user_may(self, transition, user) -> bool:
         return any(user_has_roles(user, [role]) for role in transition.roles)
@@ -750,7 +854,16 @@ class InitiativeAgreementServices:
         No history event: this is a working value until a recommendation is
         actually made, and that event records the figure that counted.
         """
-        action = await self._get_action_or_404(designated_action_id)
+        action = await self._get_action_or_404(
+            designated_action_id, user, for_update=True
+        )
+        if action.transaction_id is not None or (
+            action.current_status and action.current_status.status == STATUS_APPROVED
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Recommended credits cannot be changed after approval.",
+            )
         if credits is not None:
             if credits < 0:
                 raise HTTPException(
@@ -779,7 +892,10 @@ class InitiativeAgreementServices:
         self, designated_action_id: int, data: DesignatedActionWorkflowSchema, user
     ) -> DesignatedActionSchema:
         """Advance a designated action through its review workflow (#4898)."""
-        action = await self._get_action_or_404(designated_action_id)
+        # Hold through issuance to serialize approvals and returns.
+        action = await self._get_action_or_404(
+            designated_action_id, user, for_update=True
+        )
 
         transition = TRANSITIONS.get(data.action)
         if transition is None:
@@ -901,11 +1017,101 @@ class InitiativeAgreementServices:
                 snapshot=snapshot or None,
             )
         )
+        if data.action == ACTION_APPROVE:
+            await self._issue_designated_action_credits(action, user, display_name)
         action.update_user = getattr(user, "keycloak_username", None)
         await self.repo.db.flush()
 
         refreshed = await self.repo.get_designated_action_by_id(designated_action_id)
         return DesignatedActionSchema.model_validate(refreshed)
+
+    async def _issue_designated_action_credits(
+        self, action: DesignatedAction, user: UserProfile, display_name: str
+    ) -> None:
+        """Use the existing credit-award records consumed by transaction views."""
+        if action.transaction_id is not None:
+            return
+
+        credits = action.recommended_credits
+        if credits is None or credits < 0:
+            raise HTTPException(
+                status_code=400,
+                detail="A non-negative recommended credit amount is required for approval.",
+            )
+        if credits > action.credit_allocation:
+            raise HTTPException(
+                status_code=400,
+                detail="Recommended credits cannot exceed the allocation for this action.",
+            )
+        agreement = action.initiative_agreement
+        if agreement.to_organization_id is None:
+            raise HTTPException(
+                status_code=400,
+                detail="The initiative agreement must have a receiving organization.",
+            )
+        approved = await self.repo.get_initiative_agreement_status_by_name(
+            InitiativeAgreementStatusEnum.Approved
+        )
+        # Match agreement edits: lock the parent before refreshing transaction views.
+        await self.repo.add_issued_credits(agreement.initiative_agreement_id, credits)
+        # Zero-credit approvals still need an auditable transaction.
+        transaction = await self.transaction_repo.create_transaction(
+            transaction_action=TransactionActionEnum.Adjustment,
+            compliance_units=credits,
+            organization_id=agreement.to_organization_id,
+        )
+        username = getattr(user, "keycloak_username", None)
+        today = datetime.now(PACIFIC_TZ).date()
+        transaction.effective_date = today
+        award = await self.repo.create_initiative_agreement(
+            InitiativeAgreement(
+                record_kind=RECORD_KIND_LEGACY_AWARD,
+                agreement_type=agreement.agreement_type,
+                compliance_units=credits,
+                to_organization_id=agreement.to_organization_id,
+                current_status_id=approved.initiative_agreement_status_id,
+                transaction_id=transaction.transaction_id,
+                transaction_effective_date=today,
+                gov_comment=(
+                    f"System-generated from approval of designated action "
+                    f"{action.designated_action_id} (DA{action.action_number}), "
+                    f"initiative agreement {agreement.ia_code or agreement.initiative_agreement_id}."
+                ),
+                create_user=username,
+                update_user=username,
+            )
+        )
+        action.transaction_id = transaction.transaction_id
+        if action.determination_date is None:
+            action.determination_date = today
+        await self.repo.add_initiative_agreement_history(
+            CreateInitiativeAgreementHistorySchema(
+                initiative_agreement_id=award.initiative_agreement_id,
+                initiative_agreement_status_id=approved.initiative_agreement_status_id,
+                user_profile_id=user.user_profile_id,
+                display_name=display_name,
+            )
+        )
+        await self.repo.add_designated_action_history(
+            DesignatedActionHistory(
+                designated_action_id=action.designated_action_id,
+                designated_action_group_uuid=action.group_uuid,
+                event=EVENT_CREDITS_ISSUED,
+                status_id=action.current_status_id,
+                display_name="System",
+                create_user=username,
+                update_user=username,
+                snapshot={
+                    "system_generated": True,
+                    "designated_action_id": action.designated_action_id,
+                    "initiative_agreement_id": agreement.initiative_agreement_id,
+                    "credit_transaction_id": award.initiative_agreement_id,
+                    "transaction_id": transaction.transaction_id,
+                    "recommended_credits": credits,
+                    "approved_by_user_profile_id": user.user_profile_id,
+                },
+            )
+        )
 
     @service_handler
     async def get_designated_action_history(
@@ -955,7 +1161,7 @@ class InitiativeAgreementServices:
         user,
     ) -> EvidenceRequirementSchema:
         """Add an evidence requirement to an action (the wireframe's Add EOC)."""
-        await self._get_action_or_404(designated_action_id)
+        await self._get_action_or_404(designated_action_id, user)
         title = (data.title or "").strip()
         if not title:
             raise HTTPException(
@@ -996,11 +1202,7 @@ class InitiativeAgreementServices:
         round's finding is not lost when information is requested: the round
         is captured with its full payload in designated_action_history.
         """
-        requirement = await self.repo.get_evidence_requirement(evidence_requirement_id)
-        if not requirement:
-            raise DataNotFoundException(
-                f"Evidence requirement with id {evidence_requirement_id} not found"
-            )
+        requirement = await self._get_requirement_or_404(evidence_requirement_id, user)
 
         # The text an analyst saves deliberately — title, description and
         # evaluation — is recorded with its before and after, the way a
@@ -1108,11 +1310,7 @@ class InitiativeAgreementServices:
     ) -> None:
         """Remove a requirement from the list without erasing it — a
         requirement that was once reviewed is part of the record."""
-        requirement = await self.repo.get_evidence_requirement(evidence_requirement_id)
-        if not requirement:
-            raise DataNotFoundException(
-                f"Evidence requirement with id {evidence_requirement_id} not found"
-            )
+        requirement = await self._get_requirement_or_404(evidence_requirement_id, user)
         requirement.is_active = False
         requirement.update_user = getattr(user, "keycloak_username", None)
         await self.repo.db.flush()
@@ -1136,11 +1334,7 @@ class InitiativeAgreementServices:
         designated_action_history — assignment is operational state, not a
         change order, so it must never append a version row (#4896).
         """
-        action = await self.repo.get_designated_action_by_id(designated_action_id)
-        if not action:
-            raise DataNotFoundException(
-                f"Designated action with id {designated_action_id} not found"
-            )
+        action = await self._get_action_or_404(designated_action_id, user)
 
         new_analyst_id = data.assigned_analyst_id
         if new_analyst_id is not None:
