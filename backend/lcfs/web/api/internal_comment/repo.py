@@ -40,6 +40,9 @@ from lcfs.db.models.comment.DesignatedActionInternalComment import (
     DesignatedActionInternalComment,
 )
 from lcfs.db.models.initiative_agreement.DesignatedAction import DesignatedAction
+from lcfs.db.models.initiative_agreement.InitiativeAgreementLifecycleStatus import (
+    InitiativeAgreementLifecycleStatus,
+)
 from lcfs.db.models.comment.AdminAdjustmentInternalComment import (
     AdminAdjustmentInternalComment,
 )
@@ -696,6 +699,66 @@ class InternalCommentRepository:
         return result.scalar_one_or_none()
 
     @repo_handler
+    async def get_parent_initiative_agreement_of_comment(
+        self, internal_comment_id: int
+    ) -> Optional[InitiativeAgreement]:
+        """
+        The agreement a comment belongs to, directly or through one of its
+        designated actions, with its lifecycle status loaded; None for a
+        comment on anything else.
+        """
+        on_agreement = select(
+            InitiativeAgreementInternalComment.initiative_agreement_id
+        ).where(
+            InitiativeAgreementInternalComment.internal_comment_id
+            == internal_comment_id
+        )
+        on_action = (
+            select(DesignatedAction.initiative_agreement_id)
+            .join(
+                DesignatedActionInternalComment,
+                DesignatedActionInternalComment.designated_action_id
+                == DesignatedAction.designated_action_id,
+            )
+            .where(
+                DesignatedActionInternalComment.internal_comment_id
+                == internal_comment_id
+            )
+        )
+        stmt = (
+            select(InitiativeAgreement)
+            .options(selectinload(InitiativeAgreement.lifecycle_status))
+            .where(
+                or_(
+                    InitiativeAgreement.initiative_agreement_id.in_(on_agreement),
+                    InitiativeAgreement.initiative_agreement_id.in_(on_action),
+                )
+            )
+        )
+        return (await self.db.execute(stmt)).scalars().first()
+
+    @repo_handler
+    async def get_parent_initiative_agreement(
+        self, entity_type: EntityTypeEnum, entity_id: int
+    ) -> Optional[InitiativeAgreement]:
+        """
+        The agreement an initiative agreement or designated action comment
+        thread belongs to, with its lifecycle status loaded.
+        """
+        stmt = select(InitiativeAgreement).options(
+            selectinload(InitiativeAgreement.lifecycle_status)
+        )
+        if entity_type == EntityTypeEnum.DESIGNATED_ACTION:
+            stmt = stmt.join(
+                DesignatedAction,
+                DesignatedAction.initiative_agreement_id
+                == InitiativeAgreement.initiative_agreement_id,
+            ).where(DesignatedAction.designated_action_id == entity_id)
+        else:
+            stmt = stmt.where(InitiativeAgreement.initiative_agreement_id == entity_id)
+        return (await self.db.execute(stmt)).scalars().first()
+
+    @repo_handler
     async def get_entity_org_and_year(
         self, entity_type: EntityTypeEnum, entity_id: int
     ) -> Tuple[Optional[int], Optional[int]]:
@@ -964,6 +1027,7 @@ class InternalCommentRepository:
         search: Optional[str] = None,
         sort_by: str = "create_date",
         sort_order: str = "desc",
+        hidden_lifecycle_statuses: Tuple[str, ...] = (),
     ) -> Tuple[List[dict], int]:
         """
         Paginated organization comments with live-derived org/year, server-side
@@ -975,12 +1039,38 @@ class InternalCommentRepository:
         ``category='Organization details'`` it also matches
         ``organization.name``/``operating_name``, and with ``category='Person'``
         it also matches the author's name / email.
+
+        Comments on an initiative agreement whose lifecycle status is in
+        ``hidden_lifecycle_statuses`` are left out: a proponent's draft is
+        hidden from government (#5186), and so is what is said about it.
         """
         entity_meta = self._entity_meta_subquery(organization_id)
 
         where_clauses = []
         if visibility_filter:
             where_clauses.append(InternalComment.visibility == visibility_filter)
+        if hidden_lifecycle_statuses:
+            hidden_agreement_comment_ids = (
+                select(InitiativeAgreementInternalComment.internal_comment_id)
+                .join(
+                    InitiativeAgreement,
+                    InitiativeAgreement.initiative_agreement_id
+                    == InitiativeAgreementInternalComment.initiative_agreement_id,
+                )
+                .join(
+                    InitiativeAgreementLifecycleStatus,
+                    InitiativeAgreementLifecycleStatus.initiative_agreement_lifecycle_status_id
+                    == InitiativeAgreement.lifecycle_status_id,
+                )
+                .where(
+                    InitiativeAgreementLifecycleStatus.status.in_(
+                        hidden_lifecycle_statuses
+                    )
+                )
+            )
+            where_clauses.append(
+                InternalComment.internal_comment_id.not_in(hidden_agreement_comment_ids)
+            )
         if compliance_year is not None:
             where_clauses.append(
                 func.coalesce(entity_meta.c.live_year, InternalComment.compliance_year)
