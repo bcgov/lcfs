@@ -15,21 +15,34 @@ from fastapi import HTTPException
 
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.services.s3.client import DocumentService
+from lcfs.web.api.initiative_agreement.workflow import (
+    LIFECYCLE_STATUS_DRAFT,
+    LIFECYCLE_STATUS_UNDERWAY,
+)
 
 
-def _service_with_comment(comment, owner_organization_ids=()):
+def _service_with_comment(comment, owner_organization_ids=(), agreement=None):
     """Build a DocumentService with a mocked db.
 
     ``get()`` returns the comment; ``execute()`` stands in for the live
-    lookup of the organizations owning the comment's readable entities.
+    lookups of the organizations owning the comment's readable entities and
+    of the initiative agreement the comment belongs to, if any.
     """
     rows = [(organization_id,) for organization_id in owner_organization_ids]
+    result = SimpleNamespace(
+        all=lambda: rows,
+        scalars=lambda: SimpleNamespace(first=lambda: agreement),
+    )
     service = DocumentService.__new__(DocumentService)
     service.db = SimpleNamespace(
         get=AsyncMock(return_value=comment),
-        execute=AsyncMock(return_value=SimpleNamespace(all=lambda: rows)),
+        execute=AsyncMock(return_value=result),
     )
     return service
+
+
+def _agreement(lifecycle_status):
+    return SimpleNamespace(lifecycle_status=SimpleNamespace(status=lifecycle_status))
 
 
 def _comment(create_user="author", visibility="Internal"):
@@ -152,3 +165,30 @@ async def test_non_government_cannot_read_internal():
             write=False,
         )
     assert exc.value.status_code == 403
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("write", [False, True], ids=["read", "write"])
+async def test_a_comment_on_a_draft_agreement_reads_as_missing_to_government(write):
+    """A draft agreement is hidden from government (#5186), its comment
+    threads included, so the attachments on those comments are too: not
+    listed, downloaded, added or removed, even by the comment's author."""
+    service = _service_with_comment(
+        _comment(create_user="author"), agreement=_agreement(LIFECYCLE_STATUS_DRAFT)
+    )
+    with pytest.raises(HTTPException) as exc:
+        await service.verify_internal_comment_access(
+            1, _user(username="author", roles=[RoleEnum.GOVERNMENT]), write=write
+        )
+    assert exc.value.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_government_reads_attachments_on_an_underway_agreements_comment():
+    service = _service_with_comment(
+        _comment(), agreement=_agreement(LIFECYCLE_STATUS_UNDERWAY)
+    )
+    result = await service.verify_internal_comment_access(
+        1, _user(username="reader", roles=[RoleEnum.GOVERNMENT]), write=False
+    )
+    assert result is not None
