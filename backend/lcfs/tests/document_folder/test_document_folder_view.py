@@ -304,10 +304,14 @@ async def test_only_empty_folders_can_be_deleted(
 
     tree = (await client.get(_tree_url(fastapi_app, action))).json()
     assert [folder["name"] for folder in tree["folders"]] == ["Top"]
-    assert [child["name"] for child in tree["folders"][0]["children"]] == ["Middle"]
-    assert [doc["fileName"] for doc in tree["folders"][0]["documents"]] == [
-        "evidence.pdf"
-    ]
+    top_node = tree["folders"][0]
+    assert [child["name"] for child in top_node["children"]] == ["Middle"]
+    # The file stays filed in Middle; Top only sees it through the rolled-up count.
+    assert top_node["documents"] == []
+    assert top_node["documentCount"] == 1
+    middle_node = top_node["children"][0]
+    assert [doc["fileName"] for doc in middle_node["documents"]] == ["evidence.pdf"]
+    assert [child["name"] for child in middle_node["children"]] == ["Leaf"]
 
     deleted = (await client.get(_deleted_url(fastapi_app, action))).json()
     assert deleted["folders"] == []
