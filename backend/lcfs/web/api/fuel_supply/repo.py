@@ -38,6 +38,7 @@ from lcfs.web.api.base import PaginationRequestSchema, camel_to_snake
 from lcfs.web.api.fuel_supply.schema import FuelSupplyCreateUpdateSchema, ModeEnum
 from lcfs.web.api.versioning_query_helper import VersioningQueryHelper
 from lcfs.web.core.decorators import repo_handler
+from lcfs.web.core.ownership import delete_one
 
 logger = structlog.get_logger(__name__)
 
@@ -788,9 +789,16 @@ class FuelSupplyRepository:
 
         return fuel_supplies
 
-    async def delete_fuel_supply(self, fuel_supply_id):
-        await self.db.execute(
-            delete(FuelSupply).where(FuelSupply.fuel_supply_id == fuel_supply_id)
+    async def delete_fuel_supply(
+        self, fuel_supply_id, compliance_report_id, group_uuid
+    ):
+        """Delete the row only if it is in this report and this group."""
+        await delete_one(
+            self.db,
+            FuelSupply,
+            fuel_supply_id=fuel_supply_id,
+            compliance_report_id=compliance_report_id,
+            group_uuid=group_uuid,
         )
 
     def _organization_effective_fuel_supply_query(
