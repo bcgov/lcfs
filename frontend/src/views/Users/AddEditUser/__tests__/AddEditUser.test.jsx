@@ -1288,4 +1288,136 @@ describe('AddEditUser', () => {
       })
     })
   })
+
+  // --- Login identity fields ---
+  const existingBceidUser = {
+    userProfileId: 'user123',
+    firstName: 'Jane',
+    lastName: 'Smith',
+    title: 'Manager',
+    keycloakEmail: 'jane@company.com',
+    keycloakUsername: 'jane.smith',
+    email: '',
+    roles: [],
+    isActive: true,
+    isGovernmentUser: false,
+    organization: { organizationId: 'org123', name: 'Test Company' }
+  }
+
+  const mockCurrentUserWithRoles = (userRoles) =>
+    vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
+      data: {
+        organization: { organizationId: 'org123', name: 'Test Company' },
+        organizationId: 'org123',
+        roles: userRoles.map((name) => ({ name })),
+        isGovernmentUser: userRoles.includes(roles.government)
+      },
+      hasRoles: vi.fn((...names) => names.every((n) => userRoles.includes(n))),
+      isLoading: false
+    })
+
+  test('shows login user name and email read-only when a supplier edits a user', async ({
+    render,
+    theme
+  }) => {
+    mockUseParams.mockReturnValue({ userID: 'user123', orgID: 'org123' })
+    vi.mocked(organizationUserHooks.useOrganizationUser).mockReturnValue({
+      data: existingBceidUser,
+      isLoading: false,
+      isFetched: true
+    })
+    mockCurrentUserWithRoles([roles.supplier, roles.manage_users])
+
+    render(
+      <AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />,
+      [theme]
+    )
+
+    await waitFor(() => {
+      expect(document.getElementById('userName')).toHaveValue('jane.smith')
+    })
+    expect(document.getElementById('userName')).toBeDisabled()
+    expect(document.getElementById('keycloakEmail')).toBeDisabled()
+    expect(document.getElementById('firstName')).not.toBeDisabled()
+
+    // Other edits still save, carrying the stored login identity.
+    fillField('firstName', 'Janet')
+    fireEvent.click(screen.getByTestId('saveUser'))
+    fireEvent.click(await screen.findByTestId('impact-modal-confirm-btn'))
+
+    await waitFor(() => {
+      expect(mockUpdateUser).toHaveBeenCalledWith({
+        userID: 'user123',
+        payload: expect.objectContaining({
+          firstName: 'Janet',
+          keycloakUsername: 'jane.smith',
+          keycloakEmail: 'jane@company.com'
+        })
+      })
+    })
+  })
+
+  test('shows login user name and email read-only when a non-administrator IDIR user edits a user', async ({
+    render,
+    theme
+  }) => {
+    mockUseParams.mockReturnValue({ userID: 'user123', orgID: 'org123' })
+    vi.mocked(userHooks.useUser).mockReturnValue({
+      data: existingBceidUser,
+      isLoading: false,
+      isFetched: true
+    })
+    mockCurrentUserWithRoles([roles.government, roles.analyst])
+
+    render(
+      <AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />,
+      [theme]
+    )
+
+    await waitFor(() => {
+      expect(document.getElementById('userName')).toHaveValue('jane.smith')
+    })
+    expect(document.getElementById('userName')).toBeDisabled()
+    expect(document.getElementById('keycloakEmail')).toBeDisabled()
+  })
+
+  test('lets a government administrator edit login user name and email', async ({
+    render,
+    theme
+  }) => {
+    mockUseParams.mockReturnValue({ userID: 'user123', orgID: 'org123' })
+    vi.mocked(userHooks.useUser).mockReturnValue({
+      data: existingBceidUser,
+      isLoading: false,
+      isFetched: true
+    })
+    mockCurrentUserWithRoles([roles.government, roles.administrator])
+
+    render(
+      <AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />,
+      [theme]
+    )
+
+    await waitFor(() => {
+      expect(document.getElementById('userName')).toHaveValue('jane.smith')
+    })
+    expect(document.getElementById('userName')).not.toBeDisabled()
+    expect(document.getElementById('keycloakEmail')).not.toBeDisabled()
+  })
+
+  test('lets a supplier enter login user name and email when adding a user', async ({
+    render,
+    theme
+  }) => {
+    mockUseParams.mockReturnValue({ orgID: 'org123' })
+    mockCurrentUserWithRoles([roles.supplier, roles.manage_users])
+
+    render(
+      <AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />,
+      [theme]
+    )
+
+    expect(document.getElementById('userName')).not.toBeDisabled()
+    expect(document.getElementById('keycloakEmail')).not.toBeDisabled()
+  })
 })
