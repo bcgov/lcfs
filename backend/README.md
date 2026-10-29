@@ -5,27 +5,30 @@ This project was generated using fastapi_template.
 ## Python version
 
 [`backend/.python-version`](.python-version) is the source of truth for the
-application's Python major/minor version. CI reads it directly; the repository
-root and ETL `.python-version` files are symlinks to it. We follow production's
-minor-version policy, allowing patch updates within that minor release.
+application's Python major/minor version. CI reads it directly, and the
+repository-root `.python-version` is a symlink to it. The standalone ETL tool
+keeps its own `.python-version` and runtime. We follow production's minor-version
+policy, allowing patch updates within that minor release.
 
 Docker must select its base image before it can read files from the build
-context, and Poetry requires a literal compatibility range. These declarations
-are generated and checked in CI. To change the Python version, from the repo root:
+context, and Poetry requires a literal compatibility range. Keep the Dockerfile
+image tags and Poetry compatibility range manually aligned with this version
+file. The CI setup steps use this file for their interpreter, but do not verify
+those two literal declarations. To change the Python version:
 
 ```bash
-# Edit backend/.python-version first.
-python3 scripts/sync-python-version.py --write
+# Edit backend/.python-version, both Dockerfile base-image tags, and
+# backend/pyproject.toml's Python constraint together.
 cd backend
 poetry env use "$(cat .python-version)"
-poetry lock  # Poetry 1.x: poetry lock --no-update
+poetry lock  # Use the Poetry 2.x release pinned in the Dockerfiles and CI.
+poetry check --lock
 cd ..
-python3 scripts/sync-python-version.py
 ```
 
-Commit the version file, generated declarations, and updated lockfile together.
-Existing Docker Compose and OpenShift builds use the generated Dockerfiles
-without additional arguments.
+Commit the version file, declarations, and updated lockfile together. Existing
+Docker Compose and OpenShift builds use the checked-in Dockerfiles without
+additional arguments.
 
 ## Poetry
 

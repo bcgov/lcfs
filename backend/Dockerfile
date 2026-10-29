@@ -1,4 +1,4 @@
-# Python version is generated from .python-version; run scripts/sync-python-version.py --write.
+# Keep this minor-version tag aligned with .python-version.
 # Base stage for common setup
 FROM python:3.13-slim-trixie as base
 
