@@ -13,7 +13,8 @@ readme = "README.md"
 [tool.poetry.dependencies]
 # Generated from .python-version by scripts/sync-python-version.py.
 python = "^3.13"
-fastapi = "^0.115.4"
+fastapi = "~0.133.0"
+starlette = ">=1.0.1,<1.1"
 uvicorn = { version = "^0.24.0", extras = ["standard"] }
 pydantic = { extras = ["email"], version = "^2.4.2" }
 yarl = "^1.8.2"
