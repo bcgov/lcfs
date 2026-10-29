@@ -31,6 +31,9 @@
     "cypress:verify": "cypress verify",
     "cypress:open": "cypress open",
     "cypress:run": "cypress run --headless --browser chrome",
+    "cypress:dev": "cypress run --config baseUrl=https://lcfs-dev.apps.silver.devops.gov.bc.ca/",
+    "cypress:clear": "cypress cache clear",
+    "type-check": "tsc --noEmit",
     "cypress:run:firefox": "cross-env E2E_ARTIFACT_BROWSER=firefox cypress run --headless --browser firefox",
     "cypress:run:webkit": "cross-env E2E_ARTIFACT_BROWSER=webkit cypress run --headless --browser webkit",
     "cypress:run:comparison:chrome": "cross-env E2E_ARTIFACT_BROWSER=chrome E2E_COMPARISON_FEATURE=true cypress run --headless --browser chrome --spec cypress/e2e/Pages/User/PublicLogin.feature",
@@ -40,8 +43,6 @@
     "cypress:run:benchmark:firefox": "cross-env E2E_BENCHMARK=true E2E_ARTIFACT_BROWSER=firefox cypress run --headless --browser firefox --spec \"cypress/e2e/credit_calculator.cy.js,cypress/e2e/admin.cy.js\"",
     "cypress:run:benchmark:webkit": "cross-env E2E_BENCHMARK=true E2E_ARTIFACT_BROWSER=webkit cypress run --headless --browser webkit --spec \"cypress/e2e/credit_calculator.cy.js,cypress/e2e/admin.cy.js\"",
     "cypress:run:benchmark:sequential": "npm run cypress:run:benchmark:chrome && npm run cypress:run:benchmark:firefox",
-    "cypress:dev": "cypress run --config baseUrl=https://lcfs-dev.apps.silver.devops.gov.bc.ca/",
-    "cypress:clear": "cypress cache clear",
     "playwright:install": "node ./node_modules/playwright/cli.js install chromium firefox webkit",
     "playwright:run": "bddgen && node ./node_modules/playwright/cli.js test",
     "playwright:ui": "bddgen && node ./node_modules/playwright/cli.js test --ui",
@@ -53,7 +54,6 @@
     "playwright:run:benchmark:4workers": "cross-env E2E_BENCHMARK=true node ./node_modules/playwright/cli.js test --project chrome firefox --workers=4 --grep \"Public Credit Calculator and Calculation Data|Admin view happy paths\"",
     "playwright:run:benchmark:parallel": "cross-env E2E_BENCHMARK=true node ./node_modules/playwright/cli.js test --project chrome firefox --workers=6 --grep \"Public Credit Calculator and Calculation Data|Admin view happy paths\"",
     "playwright:run:benchmark:webkit": "cross-env E2E_BENCHMARK=true node ./node_modules/playwright/cli.js test --project=webkit --workers=1 --grep \"Public Credit Calculator and Calculation Data|Admin view happy paths\"",
-    "type-check": "tsc --noEmit",
     "benchmark:e2e": "node playwright/benchmark.js"
   },
   "lint-staged": {
@@ -90,7 +90,7 @@
     "country-list": "^2.3.0",
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.13",
-    "dompurify": "^3.4.16",
+    "dompurify": "^3.4.17",
     "dotenv": "^16.4.7",
     "echarts": "^6.1.0",
     "echarts-for-react": "^3.0.6",
@@ -121,7 +121,7 @@
     "react-snowfall": "^2.2.0",
     "swagger-ui-react": "^5.32.11",
     "uuid": "^14.0.0",
-    "vite": "^6.4.3",
+    "vite": "^6.4.5",
     "vite-plugin-svgr": "^4.3.0",
     "xlsx": "^0.18.5",
     "yup": "^1.6.1",
@@ -151,8 +151,8 @@
     "@types/react-dom": "^18.3.7",
     "@typescript-eslint/eslint-plugin": "^8.34.0",
     "@typescript-eslint/parser": "^8.34.0",
-    "@vitest/coverage-v8": "4.1.11",
-    "@vitest/ui": "4.1.11",
+    "@vitest/coverage-v8": "4.1.12",
+    "@vitest/ui": "4.1.12",
     "axe-core": "^4.14.0",
     "cross-env": "^7.0.3",
     "cypress": "^16.2.0",
@@ -179,10 +179,10 @@
     "prettier": "3.5.3",
     "prop-types": "^15.8.1",
     "standard": "^17.1.2",
-    "storybook": "^8.6.17",
+    "storybook": "^8.6.19",
     "typescript": "^5.8.3",
     "vite-plugin-terminal": "^1.3.0",
-    "vitest": "4.1.11"
+    "vitest": "4.1.12"
   },
   "optionalDependencies": {
     "@rollup/rollup-linux-x64-gnu": "4.6.1"
@@ -193,11 +193,11 @@
       "minimatch": "5.1.9"
     },
     "@cypress/request": {
-      "qs": "^6.16.0",
+      "qs": "^6.17.0",
       "uuid": "^11.1.1"
     },
     "mocha": {
-      "serialize-javascript": "^7.1.2"
+      "serialize-javascript": "^7.1.4"
     },
     "@badeball/cypress-cucumber-preprocessor": {
       "uuid": "^11.1.1"
