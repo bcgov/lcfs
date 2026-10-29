@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 
 import {
   CI_STEP_APPLICATION_INFO,
@@ -34,9 +34,9 @@ describe('isCIStep1Complete', () => {
     expect(
       isCIStep1Complete({ ...step1Fields, facilityProvinceState: '' })
     ).toBe(false)
-    expect(
-      isCIStep1Complete({ ...step1Fields, facilityCountry: '' })
-    ).toBe(false)
+    expect(isCIStep1Complete({ ...step1Fields, facilityCountry: '' })).toBe(
+      false
+    )
     expect(
       isCIStep1Complete({ ...step1Fields, facilityNameplateCapacity: 0 })
     ).toBe(false)
@@ -61,12 +61,8 @@ describe('isCIStep2Complete', () => {
 describe('isCIStep3Complete', () => {
   it('requires both a technical report and a GHGenius model', () => {
     expect(isCIStep3Complete({ documents: [] })).toBe(false)
-    expect(
-      isCIStep3Complete({ documents: [requiredDocuments[0]] })
-    ).toBe(false)
-    expect(
-      isCIStep3Complete({ documents: [requiredDocuments[1]] })
-    ).toBe(false)
+    expect(isCIStep3Complete({ documents: [requiredDocuments[0]] })).toBe(false)
+    expect(isCIStep3Complete({ documents: [requiredDocuments[1]] })).toBe(false)
     expect(isCIStep3Complete({ documents: requiredDocuments })).toBe(true)
   })
 })
@@ -78,9 +74,7 @@ describe('getCIResumeStep', () => {
   })
 
   it('opens Step 2 when only Step 1 is saved', () => {
-    expect(getCIResumeStep({ ...step1Fields })).toBe(
-      CI_STEP_PROPOSED_PATHWAYS
-    )
+    expect(getCIResumeStep({ ...step1Fields })).toBe(CI_STEP_PROPOSED_PATHWAYS)
   })
 
   it('opens Step 3 when Steps 1–2 are saved', () => {

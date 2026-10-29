@@ -39,3 +39,6 @@ playwright/.cypress-firefox-home/
 
 # Vistest coverage folder
 /coverage
+.vitest/
+.vitest-reports/
+vitest-results.xml

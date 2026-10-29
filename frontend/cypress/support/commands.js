@@ -1,4 +1,4 @@
-/* eslint-disable cypress/unsafe-to-chain-command */
+/* oxlint-disable cypress/unsafe-to-chain-command */
 import axeCore from 'axe-core'
 
 /**
@@ -85,7 +85,11 @@ Cypress.Commands.add('loginWith', (userType, username, password) => {
     'POST',
     'https://dev.loginproxy.gov.bc.ca/auth/realms/standard/protocol/openid-connect/token'
   ).as('loginRequest')
-  cy.getByDataTest(userType === 'idir' ? 'link-idir' : 'link-bceid').click()
+  const loginSelector =
+    userType === 'idir'
+      ? '[data-test=public-login-idir], [data-test=link-idir]'
+      : '[data-test=public-login-bceid], [data-test=link-bceid]'
+  cy.get(loginSelector, { timeout: 30000 }).first().click()
   const loginProcess = (args) => {
     const [username, password] = args
 

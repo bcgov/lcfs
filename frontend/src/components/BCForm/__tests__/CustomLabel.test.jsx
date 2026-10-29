@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, expect, vi } from 'vitest'
+import { describe, expect, vi } from 'vite-plus/test'
 import { screen } from '@testing-library/react'
 import { CustomLabel } from '../CustomLabel'
 import { test as fixtureTest } from '@/tests/utils/fixtures'
@@ -29,19 +29,13 @@ vi.mock('@/components/BCTypography', () => ({
   )
 }))
 
-describe.sequential('CustomLabel', () => {
+describe('CustomLabel', { concurrent: false }, () => {
   const defaultProps = {
     header: 'Test Header',
     text: 'Test description text'
   }
 
-  const renderCustomLabel = (
-    {
-  render,
-  theme
-},
-    props = {}
-  ) => {
+  const renderCustomLabel = ({ render, theme }, props = {}) => {
     return render(<CustomLabel {...defaultProps} {...props} />, [theme])
   }
 
@@ -58,9 +52,7 @@ describe.sequential('CustomLabel', () => {
 
       expect(screen.getByText('Test Header')).toBeInTheDocument()
       expect(
-        screen.getByText((content) =>
-          content.includes('Test description text')
-        )
+        screen.getByText((content) => content.includes('Test description text'))
       ).toBeInTheDocument()
     })
 

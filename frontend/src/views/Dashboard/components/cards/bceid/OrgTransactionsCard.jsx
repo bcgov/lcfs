@@ -107,7 +107,9 @@ export const OrgTransactionsCard = () => {
 
               <ListItemButton
                 component="a"
-                onClick={() => navigate(ROUTES.TRANSACTIONS.CREDIT_TRADING_MARKET)}
+                onClick={() =>
+                  navigate(ROUTES.TRANSACTIONS.CREDIT_TRADING_MARKET)
+                }
               >
                 {renderLinkWithCount(
                   t('dashboard:orgTransactions.organizationsRegistered'),
@@ -135,9 +137,6 @@ export const OrgTransactionsCard = () => {
 }
 
 const AllowedRoles = [roles.transfers]
-const OrgTransactionsCardWithRole = withRole(
-  OrgTransactionsCard,
-  AllowedRoles
-)
+const OrgTransactionsCardWithRole = withRole(OrgTransactionsCard, AllowedRoles)
 
 export default OrgTransactionsCardWithRole

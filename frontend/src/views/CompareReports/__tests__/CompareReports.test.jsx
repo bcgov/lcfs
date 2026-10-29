@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor, act } from '@testing-library/react'
-import { vi } from 'vitest'
+import { vi } from 'vite-plus/test'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useGetComplianceReportSummary } from '@/hooks/useComplianceReports'
 import useComplianceReportStore from '@/stores/useComplianceReportStore'

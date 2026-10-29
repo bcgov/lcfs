@@ -275,7 +275,7 @@ const ApplicationSummaryDetails = ({
     currentUser?.keycloakUsername || currentUser?.keycloak_username || ''
   const isCurrentUserSignatory = Boolean(
     (currentUserFullName && currentUserFullName === signatureName) ||
-      (currentUsername && currentUsername === ciApplication.signatureUser)
+    (currentUsername && currentUsername === ciApplication.signatureUser)
   )
   const facilityLocationParts = [
     ciApplication.facilityCity,

@@ -1,6 +1,6 @@
 import { screen, act } from '@testing-library/react'
 import '@testing-library/user-event'
-import { beforeEach, describe, expect, vi } from 'vitest'
+import { beforeEach, describe, expect, vi } from 'vite-plus/test'
 import { FinalSupplyEquipmentSummary } from '../FinalSupplyEquipmentSummary'
 import { test } from '@/tests/utils/fixtures'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'

@@ -1,5 +1,5 @@
 import { render, screen, waitFor, act } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vite-plus/test'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import axios from 'axios'
 import { I18nextProvider } from 'react-i18next'
@@ -123,9 +123,7 @@ describe('FormView', () => {
       renderWithRouter('/forms/unknown-form')
 
       await waitFor(() => {
-        expect(
-          screen.getByText(/is not yet supported/)
-        ).toBeInTheDocument()
+        expect(screen.getByText(/is not yet supported/)).toBeInTheDocument()
       })
     })
   })

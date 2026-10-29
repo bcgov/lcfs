@@ -257,7 +257,7 @@ const DocumentPreviewDialog = ({
     }
     // fetchDocument is recreated like the existing download helper; document
     // identity controls preview reloads.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react/exhaustive-deps
   }, [documentId, fileName, open, parentID, parentType])
 
   const handleClose = () => {

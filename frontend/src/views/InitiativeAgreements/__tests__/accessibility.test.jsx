@@ -11,7 +11,7 @@
  * a floor, not a substitute for driving the pages with a keyboard.
  */
 import 'react'
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import axe from 'axe-core'
 
 import { roles } from '@/constants/roles'
@@ -73,6 +73,7 @@ vi.mock('@/hooks/useInitiativeAgreements', () => ({
   useDeleteEvidenceRequirement: () => ({ mutate: vi.fn() }),
   useDesignatedActionWorkflow: () => ({ mutate: vi.fn(), isPending: false }),
   useSetRecommendedCredits: () => ({ mutate: vi.fn() }),
+  useSetMissingInformation: () => ({ mutate: vi.fn() }),
   useDesignatedActionHistory: () => ({
     data: [
       {

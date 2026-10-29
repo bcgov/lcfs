@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from 'vite-plus/test'
 import { roles } from '@/constants/roles'
 import {
   orgAvailableRoleOptions,
@@ -39,16 +39,15 @@ describe('organizationRoles (#4565)', () => {
     ])
     expect(
       suggestedRolesForTypes(['fuel_supplier', 'initiative_agreement_holder'])
-    ).toEqual([
-      roles.compliance_reporting,
-      roles.transfers,
-      roles.ia_proponent
-    ])
+    ).toEqual([roles.compliance_reporting, roles.transfers, roles.ia_proponent])
   })
 
   it('does not re-add roles the organization already has, and de-duplicates', () => {
     expect(
-      suggestedRolesForTypes(['fuel_supplier', 'credit_trader'], [roles.transfers])
+      suggestedRolesForTypes(
+        ['fuel_supplier', 'credit_trader'],
+        [roles.transfers]
+      )
     ).toEqual([roles.compliance_reporting])
   })
 

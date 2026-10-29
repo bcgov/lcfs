@@ -100,9 +100,7 @@ export const createStatusRenderer = (
     if (value !== undefined) {
       statusValue = value
     }
-    const badgeNode = buildBadge(
-      statusValue as string
-    )
+    const badgeNode = buildBadge(statusValue as string)
     const component = (
       <BCBox
         m={margin}

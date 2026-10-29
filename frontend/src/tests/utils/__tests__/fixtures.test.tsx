@@ -1,4 +1,4 @@
-import { expect, vi } from 'vitest'
+import { expect, vi } from 'vite-plus/test'
 import { makeProvider, test, type ProviderValue } from '../fixtures'
 
 const mswNodeLoaded = vi.hoisted(() => vi.fn())

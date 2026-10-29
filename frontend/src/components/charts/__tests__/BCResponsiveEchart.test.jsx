@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vite-plus/test'
 import { BCResponsiveEChart } from '../BCResponsiveEchart'
 
 const mockSetOption = vi.fn()
@@ -33,7 +33,10 @@ describe('BCResponsiveEChart', () => {
   })
 
   describe('rendering', () => {
-    it('registers the ECharts ARIA component', () => {
+    it('registers the ECharts ARIA component', async () => {
+      vi.resetModules()
+      await import('../BCResponsiveEchart')
+
       expect(mockUse).toHaveBeenCalledWith([mockAriaComponent])
     })
 

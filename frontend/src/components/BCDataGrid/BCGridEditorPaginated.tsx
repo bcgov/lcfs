@@ -1,4 +1,4 @@
-/* eslint-disable react-hooks/exhaustive-deps */
+/* oxlint-disable react/exhaustive-deps */
 import BCBox from '@/components/BCBox'
 import { BCGridBase } from '@/components/BCDataGrid/BCGridBase'
 import { isEqual } from '@/utils/grid/eventHandlers'
@@ -62,8 +62,7 @@ export type { BCGridEditorPaginatedProps } from './types'
 const getColumnDef = (column: Column<BCGridRow>): ColDef<BCGridRow> =>
   (column as unknown as { colDef: ColDef<BCGridRow> }).colDef
 
-const getColumnId = (column: Column<BCGridRow>): string =>
-  column.getColId()
+const getColumnId = (column: Column<BCGridRow>): string => column.getColId()
 
 const floatingPaginationStyles = {
   position: 'fixed',
@@ -192,10 +191,7 @@ export const BCGridEditorPaginated = ({
   const previousGridKey = useRef(gridKey)
   const isRestoringFromCache = useRef(false)
 
-  const {
-  data,
-  isLoading
-} = queryData || {}
+  const { data, isLoading } = queryData || {}
   const isPaginationFloating = !isPaginationVisible && isGridVisible
 
   // Cache pagination options to sessionStorage
@@ -607,12 +603,12 @@ export const BCGridEditorPaginated = ({
     if (!firstEditableColumnRef.current) {
       const columns = ref.current.api.getAllDisplayedColumns()
       firstEditableColumnRef.current = columns.find((col) => {
-          const colDef = getColumnDef(col)
-          return (
-            colDef.editable !== false &&
-            !['action', 'checkbox'].includes(colDef.field ?? '')
-          )
-        }) as Column<BCGridRow> | null
+        const colDef = getColumnDef(col)
+        return (
+          colDef.editable !== false &&
+          !['action', 'checkbox'].includes(colDef.field ?? '')
+        )
+      }) as Column<BCGridRow> | null
     }
     return firstEditableColumnRef.current
   }, [])
@@ -644,8 +640,8 @@ export const BCGridEditorPaginated = ({
         (window as Window & { clipboardData?: DataTransfer })
           .clipboardData) as DataTransfer
       const pastedData = clipboardData.getData('text/plain')
-      const headerRow = ref.current!.api
-        .getAllDisplayedColumns()
+      const headerRow = ref
+        .current!.api.getAllDisplayedColumns()
         .map((column) => getColumnDef(column).field)
         .filter((col) => col)
         .join('\t')
@@ -674,8 +670,7 @@ export const BCGridEditorPaginated = ({
         onCellEditingStopped!({
           node,
           oldValue: '',
-          newValue:
-            node.data![findFirstEditableColumn() as unknown as string],
+          newValue: node.data![findFirstEditableColumn() as unknown as string],
           ...gridProps
         } as import('./types').BCGridEditContext<BCGridRow>)
       })
@@ -709,7 +704,9 @@ export const BCGridEditorPaginated = ({
   }, [handleExcelPaste, handlePaste, ref, enablePaste])
 
   const handleOnCellEditingStopped = useCallback(
-    (params: import('ag-grid-community').CellEditingStoppedEvent<BCGridRow>) => {
+    (
+      params: import('ag-grid-community').CellEditingStoppedEvent<BCGridRow>
+    ) => {
       if (params.data!.modified && !params.data!.deleted) {
         if (onCellEditingStopped) {
           onCellEditingStopped(params)
@@ -737,7 +734,8 @@ export const BCGridEditorPaginated = ({
       ((params.event as Event).target as HTMLElement).dataset.action &&
       onAction
     ) {
-      const action = ((params.event as Event).target as HTMLElement).dataset.action
+      const action = ((params.event as Event).target as HTMLElement).dataset
+        .action
       const transaction = (await onAction(action as string, params)) as
         | RowDataTransaction<BCGridRow>
         | undefined
@@ -877,9 +875,7 @@ export const BCGridEditorPaginated = ({
     const sortTemp = ref.current?.api
       .getColumnState()
       .filter((col) => col.sort)
-      .sort(
-        (a, b) => (a.sortIndex as number) - (b.sortIndex as number)
-      )
+      .sort((a, b) => (a.sortIndex as number) - (b.sortIndex as number))
       .map((col) => ({ field: col.colId, direction: col.sort }))
 
     const updatedOptions = {
@@ -994,7 +990,8 @@ export const BCGridEditorPaginated = ({
         autoSizeStrategy={shouldFitColumns ? computedAutoSizeStrategy : null}
         loading={isLoading || loading}
         rowData={
-          (!isLoading && ((data && data[dataKey]) || [])) as unknown as BCGridRow[]
+          (!isLoading &&
+            ((data && data[dataKey]) || [])) as unknown as BCGridRow[]
         }
         defaultColDef={mergedDefaultColDef}
         enableCellTextSelection={true}

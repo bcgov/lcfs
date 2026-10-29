@@ -92,7 +92,13 @@ export const usePeriodCreditLedger = (
 
 export const useDownloadCreditLedger = (apiOpts: AxiosRequestConfig) => {
   const api = useApiService(apiOpts)
-  return ({ orgId, format = 'xlsx' }: { orgId: number | string; format?: string }) =>
+  return ({
+    orgId,
+    format = 'xlsx'
+  }: {
+    orgId: number | string
+    format?: string
+  }) =>
     api.download({
       url: apiRoutes.exportCreditLedger.replace(':orgID', String(orgId ?? '')),
       method: 'get',
