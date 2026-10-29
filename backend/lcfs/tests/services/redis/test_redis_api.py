@@ -4,6 +4,7 @@ import pytest
 from fakeredis import aioredis
 from fastapi import FastAPI, Request
 from fastapi_cache import FastAPICache
+from fastapi_cache.backends.inmemory import InMemoryBackend
 from fastapi_cache.backends.redis import RedisBackend
 from fastapi_cache.decorator import cache
 from httpx import ASGITransport, AsyncClient
@@ -19,9 +20,14 @@ async def test_cached_api_response_is_reused_from_redis():
     app = FastAPI()
     calls = 0
 
+    # Simulate a prior test initializing the process-wide cache singleton.
+    FastAPICache.init(InMemoryBackend(), prefix="preinitialized-test-cache")
+    FastAPICache.reset()
     FastAPICache.init(
         RedisBackend(redis_client), prefix="redis-api-test", coder=RedisJsonCoder
     )
+    assert isinstance(FastAPICache.get_backend(), RedisBackend)
+    assert FastAPICache.get_coder() is RedisJsonCoder
 
     @app.get("/cached-value")
     @cache(expire=60)
