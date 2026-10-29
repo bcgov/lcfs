@@ -4,6 +4,10 @@ FROM artifacts.developer.gov.bc.ca/docker-remote/python:3.13-slim-trixie as base
 
 RUN apt-get update && apt-get install -y --no-install-recommends procps \
   gcc \
+  libpango-1.0-0 \
+  libpangocairo-1.0-0 \
+  libcairo2 \
+  libgdk-pixbuf-2.0-0 \
   tzdata \
   && rm -rf /var/lib/apt/lists/*
 
