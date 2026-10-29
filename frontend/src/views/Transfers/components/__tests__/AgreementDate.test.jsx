@@ -3,7 +3,7 @@ import { screen, fireEvent } from '@testing-library/react'
 import { FormProvider, useForm } from 'react-hook-form'
 import { AgreementDate } from '../AgreementDate'
 import { test } from '@/tests/utils/fixtures'
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import * as formatters from '@/utils/formatters'
 import { useTranslation } from 'react-i18next'
 

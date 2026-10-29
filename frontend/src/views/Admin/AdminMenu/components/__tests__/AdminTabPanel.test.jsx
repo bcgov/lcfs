@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from 'vite-plus/test'
 import { render, screen } from '@testing-library/react'
 import { ThemeProvider } from '@mui/material/styles'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -76,8 +76,8 @@ describe('AdminTabPanel Component', () => {
 
   it('passes through additional props', () => {
     customRender(
-      <AdminTabPanel 
-        value={0} 
+      <AdminTabPanel
+        value={0}
         index={0}
         data-testid="custom-panel"
         className="custom-class"

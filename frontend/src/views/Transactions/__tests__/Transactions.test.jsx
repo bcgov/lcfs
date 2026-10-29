@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vite-plus/test'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import ThemeProvider from '@mui/material/styles/ThemeProvider'
@@ -397,9 +397,8 @@ describe('Transactions Component', () => {
 
     // Apply mocks
     const { useCurrentUser } = await import('@/hooks/useCurrentUser')
-    const { useGetTransactionList, useDownloadTransactions } = await import(
-      '@/hooks/useTransactions'
-    )
+    const { useGetTransactionList, useDownloadTransactions } =
+      await import('@/hooks/useTransactions')
     const { useApiService } = await import('@/services/useApiService')
 
     vi.mocked(useCurrentUser).mockReturnValue(mockUseCurrentUser)

@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
-import '../_utils';
+import { describe, expect, it, vi, beforeEach } from 'vite-plus/test'
+import '../_utils'
 
 // Mock uuid
 
@@ -301,7 +301,7 @@ describe('fuelSupplyUtils', () => {
 
     it('updates column visibility when changed', () => {
       mockGridApi.getColumn.mockImplementation((colId) => ({
-        isVisible: () => (colId !== 'isCanadaProduced')
+        isVisible: () => colId !== 'isCanadaProduced'
       }))
 
       const columnVisibility = {

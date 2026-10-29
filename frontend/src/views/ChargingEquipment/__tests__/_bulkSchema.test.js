@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from 'vite-plus/test'
 import { bulkChargingEquipmentColDefs } from '../_bulkSchema'
 
 const chargingSiteId = (colDefs) =>
@@ -10,7 +10,9 @@ const makeParams = (data = {}, col = null) => ({
 })
 
 describe('bulkChargingEquipmentColDefs – chargingSiteId editability', () => {
-  const sites = [{ chargingSiteId: 1, siteName: 'Site A', latitude: 0, longitude: 0 }]
+  const sites = [
+    { chargingSiteId: 1, siteName: 'Site A', latitude: 0, longitude: 0 }
+  ]
 
   describe('when isChargingSiteLocked = false (default)', () => {
     const colDefs = bulkChargingEquipmentColDefs(sites)
@@ -25,7 +27,11 @@ describe('bulkChargingEquipmentColDefs – chargingSiteId editability', () => {
     it('is editable for a Draft record that has been saved (chargingEquipmentId present)', () => {
       expect(
         col.editable(
-          makeParams({ chargingEquipmentId: 5, status: 'Draft', registrationNumber: '' })
+          makeParams({
+            chargingEquipmentId: 5,
+            status: 'Draft',
+            registrationNumber: ''
+          })
         )
       ).toBe(true)
     })
@@ -46,7 +52,11 @@ describe('bulkChargingEquipmentColDefs – chargingSiteId editability', () => {
       for (const status of ['Draft', 'Updated', 'Validated']) {
         expect(
           col.editable(
-            makeParams({ chargingEquipmentId: 5, status, registrationNumber: 'LCFS-0001' })
+            makeParams({
+              chargingEquipmentId: 5,
+              status,
+              registrationNumber: 'LCFS-0001'
+            })
           )
         ).toBe(false)
       }
@@ -55,7 +65,11 @@ describe('bulkChargingEquipmentColDefs – chargingSiteId editability', () => {
     it('is NOT editable when status is Submitted (unrelated to registration)', () => {
       expect(
         col.editable(
-          makeParams({ chargingEquipmentId: 5, status: 'Submitted', registrationNumber: '' })
+          makeParams({
+            chargingEquipmentId: 5,
+            status: 'Submitted',
+            registrationNumber: ''
+          })
         )
       ).toBe(false)
     })
@@ -63,7 +77,11 @@ describe('bulkChargingEquipmentColDefs – chargingSiteId editability', () => {
     it('is NOT editable for a saved non-Draft record without registration number', () => {
       expect(
         col.editable(
-          makeParams({ chargingEquipmentId: 5, status: 'Updated', registrationNumber: '' })
+          makeParams({
+            chargingEquipmentId: 5,
+            status: 'Updated',
+            registrationNumber: ''
+          })
         )
       ).toBe(false)
     })
@@ -71,7 +89,17 @@ describe('bulkChargingEquipmentColDefs – chargingSiteId editability', () => {
 
   describe('when isChargingSiteLocked = true', () => {
     const colDefs = bulkChargingEquipmentColDefs(
-      sites, [], [], [], [], {}, {}, null, true, true, true
+      sites,
+      [],
+      [],
+      [],
+      [],
+      {},
+      {},
+      null,
+      true,
+      true,
+      true
     )
     const col = chargingSiteId(colDefs)
 
@@ -84,11 +112,17 @@ describe('bulkChargingEquipmentColDefs – chargingSiteId editability', () => {
 })
 
 describe('bulkChargingEquipmentColDefs – chargingSiteId cellStyle', () => {
-  const sites = [{ chargingSiteId: 1, siteName: 'Site A', latitude: 0, longitude: 0 }]
+  const sites = [
+    { chargingSiteId: 1, siteName: 'Site A', latitude: 0, longitude: 0 }
+  ]
 
   it('applies greyed-out style when registration number is present', () => {
     const col = chargingSiteId(bulkChargingEquipmentColDefs(sites))
-    const data = { chargingEquipmentId: 5, status: 'Draft', registrationNumber: 'LCFS-0001' }
+    const data = {
+      chargingEquipmentId: 5,
+      status: 'Draft',
+      registrationNumber: 'LCFS-0001'
+    }
     const style = col.cellStyle(makeParams(data, col))
     expect(style).toMatchObject({
       backgroundColor: '#f5f5f5',
@@ -98,7 +132,11 @@ describe('bulkChargingEquipmentColDefs – chargingSiteId cellStyle', () => {
 
   it('does NOT apply greyed-out style when no registration number', () => {
     const col = chargingSiteId(bulkChargingEquipmentColDefs(sites))
-    const data = { chargingEquipmentId: 5, status: 'Draft', registrationNumber: '' }
+    const data = {
+      chargingEquipmentId: 5,
+      status: 'Draft',
+      registrationNumber: ''
+    }
     const style = col.cellStyle(makeParams(data, col))
     expect(style).not.toMatchObject({
       backgroundColor: '#f5f5f5',
@@ -108,7 +146,19 @@ describe('bulkChargingEquipmentColDefs – chargingSiteId cellStyle', () => {
 
   it('applies greyed-out style when isChargingSiteLocked = true', () => {
     const col = chargingSiteId(
-      bulkChargingEquipmentColDefs(sites, [], [], [], [], {}, {}, null, true, true, true)
+      bulkChargingEquipmentColDefs(
+        sites,
+        [],
+        [],
+        [],
+        [],
+        {},
+        {},
+        null,
+        true,
+        true,
+        true
+      )
     )
     const data = { status: 'Draft', registrationNumber: '' }
     const style = col.cellStyle(makeParams(data, col))

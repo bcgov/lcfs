@@ -22,10 +22,7 @@ import { ComplianceUnitsTotal } from '@/views/ComplianceReports/components/Compl
 const REFRESH_POLL_INTERVAL_MS = 2000
 const REFRESH_POLL_LIMIT_MS = 60 * 1000
 
-export const FinalSupplyEquipmentSummary = ({
-  status,
-  organizationId
-}) => {
+export const FinalSupplyEquipmentSummary = ({ status, organizationId }) => {
   const [showMap, setShowMap] = useState(false)
   const { complianceReportId } = useParams()
   const { hasAnyRole } = useCurrentUser()
@@ -57,9 +54,7 @@ export const FinalSupplyEquipmentSummary = ({
     // vw_fse_base holds only the latest submitted version of each report.
     status === COMPLIANCE_REPORT_STATUSES.DRAFT ? undefined : 'vw_fse_base'
   )
-  const {
-  data: fseData
-} = queryData
+  const { data: fseData } = queryData
 
   const gridRef = useRef()
   const { t } = useTranslation(['common', 'finalSupplyEquipment'])

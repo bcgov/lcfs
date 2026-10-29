@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach } from 'vite-plus/test'
 
 import { BCeIDSpecificRoleFields } from '../components/BCeIDSpecificRoleFields'
 import { bceidRoleOptions, iaSignerOption } from '../_schema'
@@ -17,10 +17,7 @@ vi.mock('@/components/BCForm/CustomLabel', () => ({
 }))
 
 vi.mock('react-hook-form', () => ({
-  Controller: ({
-  control,
-  render: renderFn
-}) =>
+  Controller: ({ control, render: renderFn }) =>
     renderFn({
       field: {
         onChange: vi.fn(),
@@ -30,15 +27,15 @@ vi.mock('react-hook-form', () => ({
 }))
 
 vi.mock('@mui/material/Box', () => ({
-    default: ({ children }) => <div data-test="box">{children}</div>
+  default: ({ children }) => <div data-test="box">{children}</div>
 }))
 
 vi.mock('@mui/material/FormControl', () => ({
-    default: ({ children }) => <div data-test="form-control">{children}</div>
+  default: ({ children }) => <div data-test="form-control">{children}</div>
 }))
 
 vi.mock('@mui/material/FormControlLabel', () => ({
-    default: ({ control: ctrl, label }) => (
+  default: ({ control: ctrl, label }) => (
     <div data-test="form-control-label">
       {ctrl}
       {label}
@@ -47,7 +44,7 @@ vi.mock('@mui/material/FormControlLabel', () => ({
 }))
 
 vi.mock('@mui/material/Checkbox', () => ({
-    default: ({ id, checked, disabled }) => (
+  default: ({ id, checked, disabled }) => (
     <input
       data-test="ia-signer-checkbox"
       id={id}
@@ -61,8 +58,20 @@ vi.mock('@mui/material/Checkbox', () => ({
 
 vi.mock('../_schema', () => ({
   bceidRoleOptions: vi.fn(() => [
-    { label: 'Manage Users', header: 'Manage Users', text: 'desc', value: 'manage users', dataTestId: 'bceidRoles1' },
-    { label: 'IA Proponent', header: 'IA Proponent', text: 'desc', value: 'ia proponent', dataTestId: 'bceidRoles2' }
+    {
+      label: 'Manage Users',
+      header: 'Manage Users',
+      text: 'desc',
+      value: 'manage users',
+      dataTestId: 'bceidRoles1'
+    },
+    {
+      label: 'IA Proponent',
+      header: 'IA Proponent',
+      text: 'desc',
+      value: 'ia proponent',
+      dataTestId: 'bceidRoles2'
+    }
   ]),
   iaSignerOption: vi.fn(() => ({
     label: 'IA Signer',
@@ -102,8 +111,20 @@ describe('BCeIDSpecificRoleFields', () => {
     vi.clearAllMocks()
     t.mockImplementation((key) => key)
     bceidRoleOptions.mockReturnValue([
-      { label: 'Manage Users', header: 'Manage Users', text: 'desc', value: 'manage users', dataTestId: 'bceidRoles1' },
-      { label: 'IA Proponent', header: 'IA Proponent', text: 'desc', value: 'ia proponent', dataTestId: 'bceidRoles2' }
+      {
+        label: 'Manage Users',
+        header: 'Manage Users',
+        text: 'desc',
+        value: 'manage users',
+        dataTestId: 'bceidRoles1'
+      },
+      {
+        label: 'IA Proponent',
+        header: 'IA Proponent',
+        text: 'desc',
+        value: 'ia proponent',
+        dataTestId: 'bceidRoles2'
+      }
     ])
     iaSignerOption.mockReturnValue({
       label: 'IA Signer',

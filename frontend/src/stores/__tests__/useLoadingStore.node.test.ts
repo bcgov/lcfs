@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vite-plus/test'
 import {
   useLoadingStore,
   type LoadingDetails,
@@ -36,13 +36,13 @@ describe('useLoadingStore', () => {
   describe('initial state', () => {
     it('should initialize with loading false', () => {
       const { result } = getStoreResult()
-      
+
       expect(result.current.loading).toBe(false)
     })
 
     it('should have setLoading function available', () => {
       const { result } = getStoreResult()
-      
+
       expect(typeof result.current.setLoading).toBe('function')
     })
   })
@@ -65,7 +65,7 @@ describe('useLoadingStore', () => {
       run(() => {
         result.current.setLoading(true)
       })
-      
+
       expect(result.current.loading).toBe(true)
 
       // Then set to false
@@ -215,19 +215,19 @@ describe('useLoadingStore', () => {
     it('should maintain state across hook unmount/mount cycles', () => {
       // First hook instance
       const { result: result1, unmount } = getStoreResult()
-      
+
       run(() => {
         result1.current.setLoading(true)
       })
-      
+
       expect(result1.current.loading).toBe(true)
-      
+
       // Unmount the first hook
       unmount()
-      
+
       // Create a new hook instance
       const { result: result2 } = getStoreResult()
-      
+
       // State should persist
       expect(result2.current.loading).toBe(true)
     })
@@ -245,7 +245,7 @@ describe('useLoadingStore', () => {
 
       // Simulate async operation completion
       await run(async () => {
-        await new Promise(resolve => setTimeout(resolve, 10))
+        await new Promise((resolve) => setTimeout(resolve, 10))
         result.current.setLoading(false)
       })
       expect(result.current.loading).toBe(false)
@@ -274,7 +274,7 @@ describe('useLoadingStore', () => {
 
       // Both false
       run(() => {
-        result.current.setLoading(false && false)
+        result.current.setLoading(false)
       })
       expect(result.current.loading).toBe(false)
     })
@@ -283,19 +283,19 @@ describe('useLoadingStore', () => {
   describe('performance considerations', () => {
     it('should handle rapid state changes efficiently', () => {
       const { result } = getStoreResult()
-      
+
       const startTime = performance.now()
-      
+
       run(() => {
         // Simulate rapid state changes
         for (let i = 0; i < 100; i++) {
           result.current.setLoading(i % 2 === 0)
         }
       })
-      
+
       const endTime = performance.now()
       const duration = endTime - startTime
-      
+
       // Should complete rapidly (less than 50ms)
       expect(duration).toBeLessThan(50)
       expect(result.current.loading).toBe(false) // 100 is even, so final state should be false
@@ -303,7 +303,7 @@ describe('useLoadingStore', () => {
 
     it('should handle complex loading objects efficiently', () => {
       const { result } = getStoreResult()
-      
+
       const complexLoadingState = {
         isLoading: true,
         operations: ['fetchUser', 'fetchReports', 'saveData'],
@@ -319,11 +319,11 @@ describe('useLoadingStore', () => {
       }
 
       const startTime = performance.now()
-      
+
       run(() => {
         result.current.setLoading(complexLoadingState)
       })
-      
+
       const endTime = performance.now()
       const duration = endTime - startTime
 

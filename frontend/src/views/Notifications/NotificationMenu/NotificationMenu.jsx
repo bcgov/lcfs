@@ -22,7 +22,10 @@ export function NotificationMenu({ tabIndex }) {
   const { t } = useTranslation(['notifications'])
   const [tabsOrientation, setTabsOrientation] = useState('horizontal')
   const navigate = useNavigate()
-  const paths = useMemo(() => [ROUTES.NOTIFICATIONS.LIST, ROUTES.NOTIFICATIONS.SETTINGS], [])
+  const paths = useMemo(
+    () => [ROUTES.NOTIFICATIONS.LIST, ROUTES.NOTIFICATIONS.SETTINGS],
+    []
+  )
 
   useEffect(() => {
     // A function that sets the orientation state of the tabs.
@@ -50,7 +53,7 @@ export function NotificationMenu({ tabIndex }) {
     <BCBox sx={{ bgcolor: 'background.paper' }}>
       <AppBar position="static" sx={{ boxShadow: 'none', border: 'none' }}>
         <Tabs
-          sx={{ background: 'rgb(0, 0, 0, 0.08)', width: {md: '50%'} }}
+          sx={{ background: 'rgb(0, 0, 0, 0.08)', width: { md: '50%' } }}
           orientation={tabsOrientation}
           value={tabIndex}
           aria-label="Tabs for selection of notifications options"

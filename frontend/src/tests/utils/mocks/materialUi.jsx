@@ -2,7 +2,7 @@
  * Shared Material-UI component mocks for BC Form testing
  */
 
-import { vi } from 'vitest'
+import { vi } from 'vite-plus/test'
 
 /**
  * Material-UI component mocks used by BC Form components
