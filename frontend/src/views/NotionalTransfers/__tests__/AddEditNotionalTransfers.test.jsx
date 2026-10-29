@@ -563,7 +563,11 @@ describe('AddEditNotionalTransfers', () => {
         }
       })
 
-      expect(mockParams.api.sizeColumnsToFit).toHaveBeenCalled()
+      await waitFor(() => {
+        expect(mockParams.api.startEditingCell).toHaveBeenCalled()
+      })
+      // Column sizing is left to BCGridEditor; fitting squeezed the columns
+      expect(mockParams.api.sizeColumnsToFit).not.toHaveBeenCalled()
     })
 
     it('handles error in try-catch block', async () => {

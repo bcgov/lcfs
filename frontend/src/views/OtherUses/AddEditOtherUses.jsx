@@ -206,8 +206,6 @@ export const AddEditOtherUses = () => {
       if (!params?.api) return
 
       try {
-        params.api.sizeColumnsToFit()
-
         // Auto-focus the last row (new empty row for input) after data is loaded
         setTimeout(() => {
           const lastRowIndex = params.api.getLastDisplayedRowIndex()
@@ -404,7 +402,7 @@ export const AddEditOtherUses = () => {
           severity: 'error'
         })
       }
-      params.api?.autoSizeAllColumns?.()
+      params.api?.autoSizeAllColumns?.({ scaleUpToFitGridWidth: true })
     },
     [errors, numericComplianceReportId, saveRow, t, validate]
   )
@@ -448,21 +446,13 @@ export const AddEditOtherUses = () => {
     [t, handleNavigateBack]
   )
 
-  const autoSizeStrategy = useMemo(
-    () => ({
-      type: 'fitGridWidth',
-      defaultMinWidth: 50,
-      defaultMaxWidth: 600
-    }),
-    []
-  )
   // Call this function whenever relevant data changes
   useEffect(() => {
     updateGridColumnsVisibility()
   }, [rowData, optionsData, updateGridColumnsVisibility])
 
   const onFirstDataRendered = useCallback((params) => {
-    params.api?.autoSizeAllColumns?.()
+    params.api?.autoSizeAllColumns?.({ scaleUpToFitGridWidth: true })
   }, [])
 
   // Show loading state
@@ -494,7 +484,6 @@ export const AddEditOtherUses = () => {
         defaultColDef={defaultColDef}
         onGridReady={onGridReady}
         rowData={rowData}
-        autoSizeStrategy={autoSizeStrategy}
         overlayNoRowsTemplate={t('otherUses:noOtherUsesFound')}
         loading={optionsLoading || usesLoading}
         onAction={onAction}
