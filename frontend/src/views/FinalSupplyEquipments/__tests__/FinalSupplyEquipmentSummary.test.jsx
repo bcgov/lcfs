@@ -1,6 +1,6 @@
 import { screen, act } from '@testing-library/react'
 import '@testing-library/user-event'
-import { beforeEach, describe, expect, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, vi } from 'vitest'
 import { FinalSupplyEquipmentSummary } from '../FinalSupplyEquipmentSummary'
 import { test } from '@/tests/utils/fixtures'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
@@ -209,16 +209,94 @@ describe('FinalSupplyEquipmentSummary', () => {
           page: expect.any(Number),
           size: expect.any(Number)
         }),
-        {},
+        { refetchInterval: expect.any(Function) },
         undefined,
         'summary',
-        'vw_fse_base'
+        undefined
       )
     })
 
     it('renders with different status', () => {
       renderComponent({ status: COMPLIANCE_REPORT_STATUSES.SUBMITTED })
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+    })
+  })
+
+  describe('Row source', () => {
+    it("reads a Draft's own rows (base_pref source)", () => {
+      renderComponent({ status: COMPLIANCE_REPORT_STATUSES.DRAFT })
+      expect(hookCalls.length).toBeGreaterThan(0)
+      hookCalls.forEach((args) => {
+        expect(args[4]).toBe('summary')
+        expect(args[5]).toBeUndefined()
+      })
+    })
+    ;[
+      COMPLIANCE_REPORT_STATUSES.SUBMITTED,
+      COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT,
+      COMPLIANCE_REPORT_STATUSES.ASSESSED
+    ].forEach((status) => {
+      it(`reads vw_fse_base for a ${status} report`, () => {
+        renderComponent({ status })
+        expect(hookCalls.length).toBeGreaterThan(0)
+        hookCalls.forEach((args) => {
+          expect(args[4]).toBe('summary')
+          expect(args[5]).toBe('vw_fse_base')
+        })
+      })
+    })
+  })
+
+  describe('Refresh polling', () => {
+    const getRefetchInterval = () => hookCalls.at(-1)[2].refetchInterval
+    const queryWith = (data) => ({ state: { data } })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('does not poll when no refresh is pending', () => {
+      renderComponent()
+      const refetchInterval = getRefetchInterval()
+      expect(refetchInterval(queryWith({ refreshPending: false }))).toBe(false)
+      expect(refetchInterval(queryWith(undefined))).toBe(false)
+    })
+
+    it('polls every 2 seconds while a refresh is pending', () => {
+      renderComponent()
+      const refetchInterval = getRefetchInterval()
+      expect(refetchInterval(queryWith({ refreshPending: true }))).toBe(2000)
+      expect(refetchInterval(queryWith({ refreshPending: true }))).toBe(2000)
+      expect(refetchInterval(queryWith({ refreshPending: false }))).toBe(false)
+    })
+
+    it('stops polling after a minute of pending responses', () => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-10-29T12:00:00Z'))
+      renderComponent()
+      const refetchInterval = getRefetchInterval()
+      const pending = queryWith({ refreshPending: true })
+
+      expect(refetchInterval(pending)).toBe(2000)
+      vi.setSystemTime(new Date('2026-10-29T12:00:59Z'))
+      expect(refetchInterval(pending)).toBe(2000)
+      vi.setSystemTime(new Date('2026-10-29T12:01:00Z'))
+      expect(refetchInterval(pending)).toBe(false)
+    })
+
+    it('restarts the one-minute window after a fresh response', () => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-10-29T12:00:00Z'))
+      renderComponent()
+      const refetchInterval = getRefetchInterval()
+      const pending = queryWith({ refreshPending: true })
+
+      expect(refetchInterval(pending)).toBe(2000)
+      vi.setSystemTime(new Date('2026-10-29T12:00:50Z'))
+      expect(refetchInterval(queryWith({ refreshPending: false }))).toBe(false)
+      expect(refetchInterval(pending)).toBe(2000)
+      vi.setSystemTime(new Date('2026-10-29T12:01:30Z'))
+      expect(refetchInterval(pending)).toBe(2000)
     })
   })
 

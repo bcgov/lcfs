@@ -16,6 +16,12 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { govRoles } from '@/constants/roles'
 import { ComplianceUnitsTotal } from '@/views/ComplianceReports/components/ComplianceUnitsTotal'
 
+// The rows come from a materialized view the backend refreshes a moment after
+// each save. Re-fetch while the API reports saves not yet in it (for up to a
+// minute), so saved values show without a page reload.
+const REFRESH_POLL_INTERVAL_MS = 2000
+const REFRESH_POLL_LIMIT_MS = 60 * 1000
+
 export const FinalSupplyEquipmentSummary = ({
   status,
   organizationId
@@ -28,13 +34,28 @@ export const FinalSupplyEquipmentSummary = ({
   const [paginationOptions, setPaginationOptions] = useState(
     defaultInitialPagination
   )
+  const pendingSinceRef = useRef(null)
+  const refetchInterval = useCallback((query) => {
+    if (!query.state.data?.refreshPending) {
+      pendingSinceRef.current = null
+      return false
+    }
+    if (pendingSinceRef.current === null) {
+      pendingSinceRef.current = Date.now()
+    }
+    return Date.now() - pendingSinceRef.current < REFRESH_POLL_LIMIT_MS
+      ? REFRESH_POLL_INTERVAL_MS
+      : false
+  }, [])
   const queryData = useGetFSEReportingList(
     complianceReportId,
     paginationOptions,
-    {},
+    { refetchInterval },
     organizationId,
     'summary',
-    'vw_fse_base'
+    // A Draft shows its own saved rows, as its FSE reporting page does.
+    // vw_fse_base holds only the latest submitted version of each report.
+    status === COMPLIANCE_REPORT_STATUSES.DRAFT ? undefined : 'vw_fse_base'
   )
   const {
   data: fseData

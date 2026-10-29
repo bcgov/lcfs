@@ -16,6 +16,15 @@ from lcfs.web.api.final_supply_equipment.schema import (
 )
 
 
+@pytest.fixture
+def mock_schedule_refresh():
+    """Patch the prompt FSE reporting view refresh that write endpoints request."""
+    with patch(
+        "lcfs.services.scheduler.scheduler.schedule_fse_reporting_mv_refresh"
+    ) as mock_schedule:
+        yield mock_schedule
+
+
 @pytest.mark.anyio
 async def test_get_fse_options_success(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
@@ -517,7 +526,7 @@ async def test_get_fse_reporting_list_with_params(
 
 @pytest.mark.anyio
 async def test_create_fse_reporting_success(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, mock_schedule_refresh
 ):
     """Test successful creation of FSE reporting batch"""
     with patch(
@@ -546,11 +555,12 @@ async def test_create_fse_reporting_success(
 
         assert response.status_code == 201
         assert "message" in response.json()
+        mock_schedule_refresh.assert_called_once_with(fastapi_app)
 
 
 @pytest.mark.anyio
 async def test_update_fse_reporting_success(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, mock_schedule_refresh
 ):
     """Test successful update of FSE reporting"""
     with patch(
@@ -579,11 +589,12 @@ async def test_update_fse_reporting_success(
         assert response.status_code == 200
         assert response.json()["id"] == 1
         mock_update.assert_called_once()
+        mock_schedule_refresh.assert_called_once_with(fastapi_app)
 
 
 @pytest.mark.anyio
 async def test_delete_fse_reporting_batch_success(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, mock_schedule_refresh
 ):
     """Test successful batch deletion of FSE reporting"""
     with patch(
@@ -605,11 +616,12 @@ async def test_delete_fse_reporting_batch_success(
         assert response.status_code == 200
         assert "message" in response.json()
         mock_delete.assert_called_once_with([1, 2])
+        mock_schedule_refresh.assert_called_once_with(fastapi_app)
 
 
 @pytest.mark.anyio
 async def test_update_fse_reporting_active_status_success(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, mock_schedule_refresh
 ):
     """Test toggling FSE reporting active status"""
     with patch(
@@ -630,11 +642,12 @@ async def test_update_fse_reporting_active_status_success(
         assert response.status_code == 200
         assert response.json()["updated"] == 1
         mock_toggle.assert_called_once()
+        mock_schedule_refresh.assert_called_once_with(fastapi_app)
 
 
 @pytest.mark.anyio
 async def test_set_default_dates_fse_reporting_success(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, mock_schedule_refresh
 ):
     """Test successful setting of default dates for FSE reporting"""
     with patch(
@@ -658,11 +671,12 @@ async def test_set_default_dates_fse_reporting_success(
         assert response.json()["updated"] == 3
         # The payload gets converted to FSEReportingDefaultDates schema, so we just check it was called
         mock_set_dates.assert_called_once()
+        mock_schedule_refresh.assert_called_once_with(fastapi_app)
 
 
 @pytest.mark.anyio
 async def test_set_default_dates_fse_reporting_unauthorized(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, mock_schedule_refresh
 ):
     """Test unauthorized access to set default dates"""
     set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
@@ -676,6 +690,7 @@ async def test_set_default_dates_fse_reporting_unauthorized(
     }
     response = await client.post(url, json=payload)
     assert response.status_code == 403
+    mock_schedule_refresh.assert_not_called()
 
 
 # Schema validation tests for required fields
