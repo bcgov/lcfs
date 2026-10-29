@@ -29,9 +29,7 @@ import {
   FUEL_CATEGORIES,
   LEGISLATION_TRANSITION_YEAR
 } from '@/constants/common'
-import {
-  formatEnergyContentWithCommas
-} from '@/utils/formatters'
+import { formatEnergyContentWithCommas } from '@/utils/formatters'
 import { copyToClipboard } from '@/utils/clipboard'
 
 const CUSTOM_CI_OPTION_VALUE = 'customCi'
@@ -587,7 +585,7 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
     <BCBox
       sx={{
         paddingTop: 2,
-        '& .MuiCardContent-root': { padding: '0 !important', margin: 0, },
+        '& .MuiCardContent-root': { padding: '0 !important', margin: 0 },
         '& .MuiFormLabel-root': {
           transform: 'translate(-0px, -32px) scale(1) !important'
         }

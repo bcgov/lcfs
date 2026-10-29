@@ -1,8 +1,8 @@
-import 'react';
-import { screen, fireEvent } from '@testing-library/react';
+import 'react'
+import { screen, fireEvent } from '@testing-library/react'
 import { Recommendation } from '../Recommendation'
 import { useForm, FormProvider } from 'react-hook-form'
-import { beforeEach, describe, expect, vi } from 'vitest'
+import { beforeEach, describe, expect, vi } from 'vite-plus/test'
 import { useTransfer } from '@/hooks/useTransfer'
 import { test } from '@/tests/utils/fixtures'
 import { TRANSFER_STATUSES } from '@/constants/statuses'

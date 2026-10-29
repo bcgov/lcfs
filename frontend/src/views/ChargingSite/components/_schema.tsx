@@ -3,8 +3,9 @@ import type {
   CellStyle,
   GridApi,
   ValueSetterFunc,
-  ValueSetterParams
-, ColDef } from 'ag-grid-community'
+  ValueSetterParams,
+  ColDef
+} from 'ag-grid-community'
 import type { GridErrors, GridWarnings } from '@/types/schema'
 import type { MouseEvent as ReactMouseEvent } from 'react'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
@@ -17,7 +18,10 @@ import { RequiredHeader } from '@/components/BCDataGrid/components/Renderers/Req
 import { TextCellEditor } from '@/components/BCDataGrid/components/Editors/TextCellEditor'
 import i18n from '@/i18n'
 import { actions, validation } from '@/components/BCDataGrid/columns'
-import { ChargingSiteStatusRenderer, CommonArrayRenderer } from '@/utils/grid/cellRenderers'
+import {
+  ChargingSiteStatusRenderer,
+  CommonArrayRenderer
+} from '@/utils/grid/cellRenderers'
 import { createStatusRenderer } from '@/utils/grid/createStatusRenderer'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import { apiRoutes } from '@/constants/routes'
@@ -182,9 +186,7 @@ export const chargingSiteColDefs = (
         queryFn: addressAutocompleteQuery,
         optionLabel: 'label'
       }),
-      valueSetter: (async (
-        params: ValueSetterParams<ChargingSiteGridRow>
-      ) => {
+      valueSetter: (async (params: ValueSetterParams<ChargingSiteGridRow>) => {
         if (params.newValue === '' || params.newValue?.name === '') {
           params.data.streetAddress = ''
           params.data.city = ''
@@ -302,8 +304,7 @@ export const chargingSiteColDefs = (
         queryFn: async ({ queryKey, client }: SuggestionQueryContext) => {
           let path = apiRoutes.allocationOrganizationsSearch
           const searchTerm = queryKey[1]
-          path +=
-            'query=' + encodeURIComponent((searchTerm as string) || '')
+          path += 'query=' + encodeURIComponent((searchTerm as string) || '')
           const response = await client.get(path)
           params.node.data!.apiDataCache = response.data
           return response.data
@@ -372,16 +373,16 @@ export const chargingEquipmentColDefs = (
 ): ColDef[] => {
   const options = args[1] || {}
   const {
-  enableSelection = false,
-  historyMode = false,
-  onToggleHistory = null,
-  expandedRows = new Set(),
-  showDateColumns = false,
-  showIntendedUsers = false,
-  showLocationFields = true,
-  showNotes = false,
-  showOrganizationColumn = false
-} = options
+    enableSelection = false,
+    historyMode = false,
+    onToggleHistory = null,
+    expandedRows = new Set(),
+    showDateColumns = false,
+    showIntendedUsers = false,
+    showLocationFields = true,
+    showNotes = false,
+    showOrganizationColumn = false
+  } = options
 
   const cols: ColDef<ChargingSiteGridRow>[] = []
 
@@ -467,9 +468,7 @@ export const chargingEquipmentColDefs = (
     headerName: t('chargingSite:fseColumnLabels.status'),
     valueGetter: (params) => {
       const status = params.data?.status
-      return (
-        (status as { status?: string } | undefined)?.status || status || ''
-      )
+      return (status as { status?: string } | undefined)?.status || status || ''
     },
     cellRenderer: createStatusRenderer(
       {

@@ -202,7 +202,8 @@ export const useSaveOtherUses = (
                 query.queryKey.some(
                   (key) =>
                     typeof key === 'object' &&
-                    (key as { complianceReportId?: number | string } | null)?.complianceReportId === complianceReportId
+                    (key as { complianceReportId?: number | string } | null)
+                      ?.complianceReportId === complianceReportId
                 ))
             )
           }
@@ -219,7 +220,8 @@ export const useSaveOtherUses = (
                 query.queryKey.some(
                   (key) =>
                     typeof key === 'object' &&
-                    (key as { complianceReportId?: number | string } | null)?.complianceReportId === complianceReportId
+                    (key as { complianceReportId?: number | string } | null)
+                      ?.complianceReportId === complianceReportId
                 ))
             )
           }
@@ -247,7 +249,8 @@ export const useSaveOtherUses = (
               query.queryKey.some(
                 (key) =>
                   typeof key === 'object' &&
-                  (key as { complianceReportId?: number | string } | null)?.complianceReportId === complianceReportId
+                  (key as { complianceReportId?: number | string } | null)
+                    ?.complianceReportId === complianceReportId
               ))
           )
         }
@@ -261,7 +264,10 @@ export const useSaveOtherUses = (
 
 export const useUpdateOtherUses = (
   complianceReportId: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, Record<string, unknown> & { id?: number | string }> = {}
+  options: ExtMutationOptions<
+    unknown,
+    Record<string, unknown> & { id?: number | string }
+  > = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -275,7 +281,9 @@ export const useUpdateOtherUses = (
   } = options
 
   return useMutation({
-    mutationFn: async (data: Record<string, unknown> & { id?: number | string }) => {
+    mutationFn: async (
+      data: Record<string, unknown> & { id?: number | string }
+    ) => {
       if (!data?.id) {
         throw new Error('Other uses ID is required for update')
       }
@@ -305,7 +313,8 @@ export const useUpdateOtherUses = (
                 query.queryKey.some(
                   (key) =>
                     typeof key === 'object' &&
-                    (key as { complianceReportId?: number | string } | null)?.complianceReportId === complianceReportId
+                    (key as { complianceReportId?: number | string } | null)
+                      ?.complianceReportId === complianceReportId
                 ))
             )
           }
@@ -321,7 +330,8 @@ export const useUpdateOtherUses = (
                 query.queryKey.some(
                   (key) =>
                     typeof key === 'object' &&
-                    (key as { complianceReportId?: number | string } | null)?.complianceReportId === complianceReportId
+                    (key as { complianceReportId?: number | string } | null)
+                      ?.complianceReportId === complianceReportId
                 ))
             )
           }
@@ -348,7 +358,8 @@ export const useUpdateOtherUses = (
               query.queryKey.some(
                 (key) =>
                   typeof key === 'object' &&
-                  (key as { complianceReportId?: number | string } | null)?.complianceReportId === complianceReportId
+                  (key as { complianceReportId?: number | string } | null)
+                    ?.complianceReportId === complianceReportId
               ))
           )
         }
@@ -397,7 +408,8 @@ export const useDeleteOtherUses = (
               query.queryKey.some(
                 (key) =>
                   typeof key === 'object' &&
-                  (key as { complianceReportId?: number | string } | null)?.complianceReportId === complianceReportId
+                  (key as { complianceReportId?: number | string } | null)
+                    ?.complianceReportId === complianceReportId
               ))
           )
         }
@@ -423,7 +435,8 @@ export const useDeleteOtherUses = (
               query.queryKey.some(
                 (key) =>
                   typeof key === 'object' &&
-                  (key as { complianceReportId?: number | string } | null)?.complianceReportId === complianceReportId
+                  (key as { complianceReportId?: number | string } | null)
+                    ?.complianceReportId === complianceReportId
               ))
           )
         }
@@ -437,7 +450,10 @@ export const useDeleteOtherUses = (
 
 export const useImportOtherUses = (
   complianceReportId: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, { file: File; isOverwrite: boolean }> = {}
+  options: ExtMutationOptions<
+    unknown,
+    { file: File; isOverwrite: boolean }
+  > = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -450,7 +466,13 @@ export const useImportOtherUses = (
   } = options
 
   return useMutation({
-    mutationFn: async ({ file, isOverwrite }: { file: File; isOverwrite: boolean }) => {
+    mutationFn: async ({
+      file,
+      isOverwrite
+    }: {
+      file: File
+      isOverwrite: boolean
+    }) => {
       if (!complianceReportId) {
         throw new Error('Compliance report ID is required')
       }
@@ -458,10 +480,9 @@ export const useImportOtherUses = (
         throw new Error('File is required for import')
       }
 
-      const path = (apiRoutes as unknown as { importOtherUses: string }).importOtherUses.replace(
-        ':reportID',
-        complianceReportId as string
-      )
+      const path = (
+        apiRoutes as unknown as { importOtherUses: string }
+      ).importOtherUses.replace(':reportID', complianceReportId as string)
 
       const formData = new FormData()
       formData.append('file', file)
@@ -486,7 +507,8 @@ export const useImportOtherUses = (
               query.queryKey.some(
                 (key) =>
                   typeof key === 'object' &&
-                  (key as { complianceReportId?: number | string } | null)?.complianceReportId === complianceReportId
+                  (key as { complianceReportId?: number | string } | null)
+                    ?.complianceReportId === complianceReportId
               ))
           )
         }

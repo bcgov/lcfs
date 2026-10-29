@@ -15,14 +15,7 @@ export interface TextCellEditorProps {
 }
 
 export const TextCellEditor = forwardRef<HTMLDivElement, TextCellEditorProps>(
-  (
-    {
-      value,
-      onValueChange,
-      ...props
-    },
-    ref
-  ) => {
+  ({ value, onValueChange, ...props }, ref) => {
     const handleTextFieldChange = (event: ChangeEvent<HTMLInputElement>) => {
       onValueChange(event.target.value)
     }

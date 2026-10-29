@@ -1,7 +1,7 @@
-import 'react';
+import 'react'
 import { fireEvent, screen } from '@testing-library/react'
 
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 
 import { AddDesignatedAction } from '../AddDesignatedAction'
 import { roles } from '@/constants/roles'

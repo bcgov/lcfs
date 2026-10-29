@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vite-plus/test'
 import { MemoryRouter } from 'react-router-dom'
 import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'

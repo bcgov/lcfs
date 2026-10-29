@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach } from 'vite-plus/test'
 import { RoleSelectFloatingFilter } from '../RoleSelectFloatingFilter'
 
 import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'

@@ -117,7 +117,9 @@ export const FloatingAlert = forwardRef(
         <FloatingAlertRoot ownerState={{ color }} {...rest}>
           <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
             {severity === 'info' && <InfoIcon style={{ margin: '5px' }} />}
-            {severity === 'warning' && <WarningIcon style={{ margin: '5px' }} />}
+            {severity === 'warning' && (
+              <WarningIcon style={{ margin: '5px' }} />
+            )}
             {severity === 'error' && <ErrorIcon style={{ margin: '5px' }} />}
             {severity === 'success' && (
               <CheckCircleIcon style={{ margin: '5px' }} />

@@ -111,7 +111,8 @@ export const useTargetUserNotificationSubscriptions = (
       } catch (error) {
         if (
           (error as { response?: { status?: number } }).response?.status === 404
-        ) return []
+        )
+          return []
         throw error
       }
     },

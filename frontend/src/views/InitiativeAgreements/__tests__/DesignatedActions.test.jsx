@@ -1,5 +1,5 @@
 import 'react'
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import { screen } from '@testing-library/react'
 import { roles } from '@/constants/roles'
 import { DesignatedActions } from '../DesignatedActions'

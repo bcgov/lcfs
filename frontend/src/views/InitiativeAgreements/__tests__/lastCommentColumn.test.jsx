@@ -1,5 +1,5 @@
-import 'react';
-import { describe, expect, vi } from 'vitest'
+import 'react'
+import { describe, expect, vi } from 'vite-plus/test'
 import { screen } from '@testing-library/react'
 import { initiativeAgreementColDefs } from '../_schema'
 import { test } from '@/tests/utils/fixtures'

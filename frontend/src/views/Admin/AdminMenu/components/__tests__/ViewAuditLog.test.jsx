@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { ViewAuditLog } from '../ViewAuditLog'
 import { useAuditLog } from '@/hooks/useAuditLog'
 import { useParams } from 'react-router-dom'
-import { vi } from 'vitest'
+import { vi } from 'vite-plus/test'
 
 // Mock necessary modules
 vi.mock('react-router-dom', () => ({

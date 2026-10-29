@@ -522,7 +522,10 @@ export const PublicMarketData = () => {
   const kpis = data?.kpis
   const ytdKpis = data?.ytdKpis ?? kpis
   const allTime = data?.allTime
-  const a1MonthlyChartRows = useMemo(() => data?.a1Monthly ?? [], [data?.a1Monthly])
+  const a1MonthlyChartRows = useMemo(
+    () => data?.a1Monthly ?? [],
+    [data?.a1Monthly]
+  )
 
   const chartOption = useMemo(() => {
     const priceName = t('publicDashboard.marketData.kpi.avgPrice')
@@ -597,7 +600,9 @@ export const PublicMarketData = () => {
   }, [series, t])
 
   const monthlyAverageChartOption = useMemo(() => {
-    const title = t('publicDashboard.marketData.trendCharts.monthlyAverageTitle')
+    const title = t(
+      'publicDashboard.marketData.trendCharts.monthlyAverageTitle'
+    )
     return {
       tooltip: {
         trigger: 'axis',
@@ -613,7 +618,10 @@ export const PublicMarketData = () => {
       },
       title: { text: title, textStyle: { fontSize: 13, color: DARK } },
       grid: { left: '10%', right: '5%', top: '20%', bottom: '15%' },
-      xAxis: { type: 'category', data: a1MonthlyChartRows.map((p) => p.period) },
+      xAxis: {
+        type: 'category',
+        data: a1MonthlyChartRows.map((p) => p.period)
+      },
       yAxis: {
         type: 'value',
         name: 'CA$',

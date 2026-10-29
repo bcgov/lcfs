@@ -1,5 +1,5 @@
 import 'react'
-import { describe, expect, vi } from 'vitest'
+import { describe, expect, vi } from 'vite-plus/test'
 import ChargingSitesMap from '../../components/ChargingSitesMap'
 import { test as fixtureTest } from '@/tests/utils/fixtures'
 

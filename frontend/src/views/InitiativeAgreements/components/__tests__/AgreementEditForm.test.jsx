@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react'
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 
 import { AgreementEditForm } from '../AgreementEditForm'
 import { test } from '@/tests/utils/fixtures'
