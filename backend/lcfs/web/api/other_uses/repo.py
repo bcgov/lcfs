@@ -29,7 +29,7 @@ logger = structlog.get_logger(__name__)
 class OtherUsesRepository:
     def __init__(
         self,
-        db: AsyncSession = Depends(get_async_db_session),
+        db: AsyncSession = Depends(get_async_db_session, scope="function"),
         fuel_code_repo: FuelCodeRepository = Depends(),
     ):
         self.db = db

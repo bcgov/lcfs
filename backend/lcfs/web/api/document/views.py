@@ -28,7 +28,7 @@ def _content_disposition(filename: str) -> str:
 # Lazy-resolved CI validation: see note inside ``ci_application_validator``.
 async def ci_application_validator(
     request: Request,
-    db=Depends(get_async_db_session),
+    db=Depends(get_async_db_session, scope="function"),
 ):
     """
     Resolve a CIApplicationValidation instance on-demand.

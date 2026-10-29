@@ -43,7 +43,10 @@ logger = structlog.get_logger(__name__)
 
 
 class ChargingEquipmentRepository:
-    def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
+    def __init__(self, db: AsyncSession = Depends(
+        get_async_db_session,
+        scope="function",
+    )):
         self.db = db
 
     def _apply_latest_site_filter(self, stmt):

@@ -163,7 +163,10 @@ def _scalar_reference_options(fuel_category_loader, fuel_type_loader):
 
 
 class FuelSupplyRepository:
-    def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
+    def __init__(self, db: AsyncSession = Depends(
+        get_async_db_session,
+        scope="function",
+    )):
         self.db = db
         self.query = select(FuelSupply).options(*self._row_load_options())
 

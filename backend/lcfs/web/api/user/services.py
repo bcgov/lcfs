@@ -79,7 +79,7 @@ class UserServices:
         self,
         request: Request = None,
         repo: UserRepository = Depends(UserRepository),
-        session: AsyncSession = Depends(get_async_db_session),
+        session: AsyncSession = Depends(get_async_db_session, scope="function"),
         notification_service: NotificationService = Depends(NotificationService),
         role_service: RoleServices = Depends(RoleServices),
         email_service: CHESEmailService = Depends(CHESEmailService),

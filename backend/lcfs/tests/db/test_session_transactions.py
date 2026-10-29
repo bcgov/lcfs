@@ -69,14 +69,21 @@ async def transaction_app(_engine, monkeypatch):
     stream_closed = anyio.Event()
 
     @app.post("/write", status_code=201)
-    async def write(session: AsyncSession = Depends(dependencies.get_async_db_session)):
+    async def write(
+        session: AsyncSession = Depends(
+            dependencies.get_async_db_session, scope="function"
+        )
+    ):
         await insert(session)
         username = await session.scalar(text("SELECT current_setting('app.username')"))
         return {"username": username}
 
     @app.post("/rollback/{failure}")
     async def rollback(
-        failure: str, session: AsyncSession = Depends(dependencies.get_async_db_session)
+        failure: str,
+        session: AsyncSession = Depends(
+            dependencies.get_async_db_session, scope="function"
+        ),
     ):
         await insert(session)
         if failure == "http":
@@ -85,7 +92,9 @@ async def transaction_app(_engine, monkeypatch):
 
     @app.post("/commit-error", status_code=201)
     async def commit_error(
-        session: AsyncSession = Depends(dependencies.get_async_db_session),
+        session: AsyncSession = Depends(
+            dependencies.get_async_db_session, scope="function"
+        ),
     ):
         await insert(session, 1, "duplicate")
         await insert(session, 2, "duplicate")
@@ -93,7 +102,10 @@ async def transaction_app(_engine, monkeypatch):
 
     @app.get("/stream/{mode}")
     async def stream(
-        mode: str, session: AsyncSession = Depends(dependencies.get_async_db_session)
+        mode: str,
+        session: AsyncSession = Depends(
+            dependencies.get_async_db_session, scope="function"
+        ),
     ):
         await insert(session)
 

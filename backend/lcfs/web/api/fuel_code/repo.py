@@ -88,7 +88,10 @@ def _row_mapping(row: Any) -> dict[str, Any]:
 
 
 class FuelCodeRepository:
-    def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
+    def __init__(self, db: AsyncSession = Depends(
+        get_async_db_session,
+        scope="function",
+    )):
         self.db = db
 
     def get_fuel_code_bulletin_pagination_params(

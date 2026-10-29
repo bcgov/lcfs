@@ -65,7 +65,10 @@ logger = structlog.get_logger(__name__)
 
 
 class FinalSupplyEquipmentRepository:
-    def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
+    def __init__(self, db: AsyncSession = Depends(
+        get_async_db_session,
+        scope="function",
+    )):
         self.db = db
 
     def _apply_site_registration_sort(self, stmt, site_field, registration_field, tie_breaker_field):

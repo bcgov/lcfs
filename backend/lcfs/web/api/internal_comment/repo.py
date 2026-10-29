@@ -68,7 +68,7 @@ class InternalCommentRepository:
 
     def __init__(
         self,
-        db: AsyncSession = Depends(get_async_db_session),
+        db: AsyncSession = Depends(get_async_db_session, scope="function"),
         user_repo: UserRepository = Depends(),
         report_repo: ComplianceReportRepository = Depends(),
     ):

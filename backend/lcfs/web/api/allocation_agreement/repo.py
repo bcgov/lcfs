@@ -34,7 +34,7 @@ ALLOCATION_AGREEMENT_BULK_DELETE_EXCLUDE_FIELDS = {
 class AllocationAgreementRepository:
     def __init__(
         self,
-        db: AsyncSession = Depends(get_async_db_session),
+        db: AsyncSession = Depends(get_async_db_session, scope="function"),
         fuel_repo: FuelCodeRepository = Depends(),
     ):
         self.db = db

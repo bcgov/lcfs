@@ -86,7 +86,7 @@ def _form_response(form: Form, request: Request) -> FormResponse:
 async def get_form_authenticated(
     request: Request,
     form_slug: str,
-    db: AsyncSession = Depends(get_async_db_session),
+    db: AsyncSession = Depends(get_async_db_session, scope="function"),
 ) -> FormResponse:
     form = await _get_form_or_404(db, form_slug)
     return _form_response(form, request)
@@ -102,7 +102,7 @@ async def get_form_by_link_key(
     request: Request,
     form_slug: str,
     link_key: str,
-    db: AsyncSession = Depends(get_async_db_session),
+    db: AsyncSession = Depends(get_async_db_session, scope="function"),
 ) -> FormResponse:
     form = await _get_form_or_404(db, form_slug)
     return _form_response(form, request)
@@ -122,7 +122,7 @@ async def export_form_authenticated(
     form_slug: str,
     body: dict[str, Any] = Body(...),
     format: Literal["docx", "pdf"] = Query(default="docx"),
-    db: AsyncSession = Depends(get_async_db_session),
+    db: AsyncSession = Depends(get_async_db_session, scope="function"),
 ) -> StreamingResponse:
     form = await _get_form_or_404(db, form_slug)
     logger.info("form export", form_slug=form_slug, format=format)
@@ -141,7 +141,7 @@ async def export_form_by_link_key(
     link_key: str,
     body: dict[str, Any] = Body(...),
     format: Literal["docx", "pdf"] = Query(default="docx"),
-    db: AsyncSession = Depends(get_async_db_session),
+    db: AsyncSession = Depends(get_async_db_session, scope="function"),
 ) -> StreamingResponse:
     form = await _get_form_or_404(db, form_slug)
     logger.info("form export via link key", form_slug=form_slug, format=format)

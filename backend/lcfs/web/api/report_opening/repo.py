@@ -12,7 +12,10 @@ from lcfs.web.core.decorators import repo_handler
 
 
 class ReportOpeningRepository:
-    def __init__(self, db: AsyncSession = Depends(get_async_db_session)) -> None:
+    def __init__(self, db: AsyncSession = Depends(
+        get_async_db_session,
+        scope="function",
+    )) -> None:
         self.db = db
 
     def _build_default_record(self, year: int) -> ReportOpening:

@@ -67,7 +67,10 @@ def _allocating_organization_display_name_expression():
 
 
 class ChargingSiteRepository:
-    def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
+    def __init__(self, db: AsyncSession = Depends(
+        get_async_db_session,
+        scope="function",
+    )):
         self.db = db
 
     def _site_version_subquery(self, government_visible: bool = False):

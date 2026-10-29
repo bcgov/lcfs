@@ -19,7 +19,7 @@ logger = structlog.get_logger(__name__)
 class RoleRepository:
     def __init__(
         self,
-        session: AsyncSession = Depends(get_async_db_session),
+        session: AsyncSession = Depends(get_async_db_session, scope="function"),
         request: Request = None,
     ):
         self.session = session

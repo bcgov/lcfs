@@ -38,7 +38,10 @@ logger = structlog.get_logger(__name__)
 
 
 class FuelExportRepository:
-    def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
+    def __init__(self, db: AsyncSession = Depends(
+        get_async_db_session,
+        scope="function",
+    )):
         self.db = db
         self.query = select(FuelExport).options(
             subqueryload(FuelExport.fuel_code).options(

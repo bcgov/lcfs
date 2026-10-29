@@ -56,6 +56,8 @@ async def get_async_db_session(
     """
     Create and get database session.
     Ensures user context is set for auditing within the transaction.
+    Inject this dependency with ``scope="function"`` so transaction commit or
+    rollback completes before response headers are sent.
     :yield: database session.
     """
     async with AsyncSession(async_engine) as session:

@@ -168,7 +168,10 @@ def _build_list_filter(filter_model, columns=None, date_fields=None):
 
 
 class InitiativeAgreementRepository:
-    def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
+    def __init__(self, db: AsyncSession = Depends(
+        get_async_db_session,
+        scope="function",
+    )):
         self.db = db
 
     @repo_handler

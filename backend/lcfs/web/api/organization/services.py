@@ -34,7 +34,7 @@ class OrganizationService:
         request: Request = None,
         user_repo: UserRepository = Depends(UserRepository),
         transaction_repo: TransactionRepository = Depends(TransactionRepository),
-        session: AsyncSession = Depends(get_async_db_session),
+        session: AsyncSession = Depends(get_async_db_session, scope="function"),
     ) -> None:
         self.transaction_repo = transaction_repo
         self.user_repo = user_repo

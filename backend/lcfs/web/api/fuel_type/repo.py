@@ -13,7 +13,10 @@ logger = structlog.get_logger("fuel_type_repo")
 
 
 class FuelTypeRepository:
-    def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
+    def __init__(self, db: AsyncSession = Depends(
+        get_async_db_session,
+        scope="function",
+    )):
         self.db = db
 
     @repo_handler
