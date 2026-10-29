@@ -114,6 +114,10 @@ export const useUploadDocument = (
         // Invalidate any parent entity that might display document counts or status
         if (parentType === 'compliance_report') {
           invalidateComplianceReportRelatedQueries(queryClient, parentID)
+        } else if (parentType === 'ci_application') {
+          queryClient.invalidateQueries({
+            queryKey: ['ci-application', String(parentID)]
+          })
         }
       }
 
@@ -166,6 +170,10 @@ export const useDeleteDocument = (
       if (invalidateRelatedQueries) {
         if (parentType === 'compliance_report') {
           invalidateComplianceReportRelatedQueries(queryClient, parentID)
+        } else if (parentType === 'ci_application') {
+          queryClient.invalidateQueries({
+            queryKey: ['ci-application', String(parentID)]
+          })
         }
       }
 
@@ -381,6 +389,10 @@ export const useUpdateDocument = (
       if (invalidateRelatedQueries) {
         if (parentType === 'compliance_report') {
           invalidateComplianceReportRelatedQueries(queryClient, parentID)
+        } else if (parentType === 'ci_application') {
+          queryClient.invalidateQueries({
+            queryKey: ['ci-application', String(parentID)]
+          })
         }
       }
 

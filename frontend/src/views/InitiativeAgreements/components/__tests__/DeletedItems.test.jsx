@@ -1,5 +1,5 @@
-import 'react';
-import { fireEvent, screen } from '@testing-library/react'
+import 'react'
+import { fireEvent, screen, within } from '@testing-library/react'
 
 import { describe, expect, vi, beforeEach } from 'vitest'
 
@@ -20,10 +20,12 @@ vi.mock('@/utils/formatters', () => ({
 const mockDeleted = vi.fn()
 const mockRestore = vi.fn()
 const mockRestoreFolder = vi.fn()
+const mockHardDelete = vi.fn()
 vi.mock('@/hooks/useDocumentFolders', () => ({
   useDeletedDocuments: () => mockDeleted(),
   useRestoreDocument: () => ({ mutate: mockRestore }),
-  useRestoreFolder: () => ({ mutate: mockRestoreFolder })
+  useRestoreFolder: () => ({ mutate: mockRestoreFolder }),
+  useHardDeleteDocument: () => ({ mutate: mockHardDelete })
 }))
 
 const binned = (overrides = {}) => ({
@@ -96,6 +98,41 @@ describe('DeletedItems', () => {
     fireEvent.click(screen.getByTestId('restore-88'))
 
     expect(mockRestore).toHaveBeenCalledWith(88)
+  })
+
+  test('offers hard delete only when the user uploaded and deleted the file', ({
+    render,
+    app
+  }) => {
+    mockDeleted.mockReturnValue({
+      data: {
+        documents: [binned({ canHardDelete: true })],
+        total: 1
+      }
+    })
+    render(<DeletedItems parentType="designatedAction" parentID="9" />, app)
+    fireEvent.click(screen.getByTestId('deleted-items-header'))
+
+    fireEvent.click(screen.getByTestId('hard-delete-88'))
+    expect(screen.getByRole('dialog')).toHaveTextContent(
+      'initiativeAgreement:folders.confirmHardDeleteBody'
+    )
+    fireEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: 'initiativeAgreement:folders.hardDelete'
+      })
+    )
+    expect(mockHardDelete).toHaveBeenCalledWith(88)
+  })
+
+  test('does not offer hard delete for a file uploaded by another user', ({
+    render,
+    app
+  }) => {
+    render(<DeletedItems parentType="designatedAction" parentID="9" />, app)
+    fireEvent.click(screen.getByTestId('deleted-items-header'))
+
+    expect(screen.queryByTestId('hard-delete-88')).not.toBeInTheDocument()
   })
 
   test('falls back to the username when no name resolved', ({

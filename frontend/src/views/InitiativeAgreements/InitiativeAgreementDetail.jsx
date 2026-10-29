@@ -25,11 +25,15 @@ import { constructAddress } from '@/utils/constructAddress'
 import { dateFormatter } from '@/utils/formatters'
 import withRole from '@/utils/withRole'
 
-import { useGetInitiativeAgreement } from '@/hooks/useInitiativeAgreements'
+import {
+  useGetInitiativeAgreement,
+  useInitiativeAgreementDocumentRestoreTargets
+} from '@/hooks/useInitiativeAgreements'
 import { useInitiativeAgreementPageStore } from '@/stores/useInitiativeAgreementPageStore'
 import { DesignatedActionsGrid } from './components/DesignatedActionsGrid'
 import { AddDesignatedAction } from './components/AddDesignatedAction'
 import { AgreementEditForm } from './components/AgreementEditForm'
+import { DeletedItems } from './components/DeletedItems'
 
 // The shared document machinery keys on this string for initiative agreements.
 const PARENT_TYPE = 'initiativeAgreement'
@@ -39,6 +43,31 @@ const LabelValue = ({ label, value }) => (
     <strong>{label}</strong> {value || '—'}
   </BCTypography>
 )
+
+const DeletedActionRestoreBins = ({ initiativeAgreementId }) => {
+  const { t } = useTranslation(['initiativeAgreement'])
+  const { data: targets = [], isError } =
+    useInitiativeAgreementDocumentRestoreTargets(initiativeAgreementId)
+
+  if (isError) {
+    return (
+      <BCAlert severity="error" data-test="document-restore-targets-error">
+        {t('initiativeAgreement:detail.documentRestoreTargetsError')}
+      </BCAlert>
+    )
+  }
+
+  return targets.map((target) => (
+    <DeletedItems
+      key={target.designatedActionId}
+      parentType="designatedAction"
+      parentID={target.designatedActionId}
+      heading={t('initiativeAgreement:detail.actionDeletedItems', {
+        actionNumber: target.actionNumber
+      })}
+    />
+  ))
+}
 
 const InitiativeAgreementDetailBase = () => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
@@ -297,6 +326,12 @@ const InitiativeAgreementDetailBase = () => {
         parentType={PARENT_TYPE}
         parentID={initiativeAgreementId}
       />
+
+      <Role roles={[roles.ia_proponent]}>
+        <DeletedActionRestoreBins
+          initiativeAgreementId={initiativeAgreementId}
+        />
+      </Role>
 
       {/* The designated-action grid is the IDIR story (#4896); the
           proponent's view arrives with the BCeID story. */}

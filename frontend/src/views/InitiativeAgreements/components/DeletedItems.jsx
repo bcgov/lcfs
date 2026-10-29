@@ -4,6 +4,7 @@ import Box from '@mui/material/Box'
 import Collapse from '@mui/material/Collapse'
 import Paper from '@mui/material/Paper'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
+import DeleteForeverOutlinedIcon from '@mui/icons-material/DeleteForeverOutlined'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined'
@@ -11,20 +12,22 @@ import RestoreIcon from '@mui/icons-material/Restore'
 import prettyBytes from 'pretty-bytes'
 
 import BCBox from '@/components/BCBox'
+import BCModal from '@/components/BCModal'
 import BCTypography from '@/components/BCTypography'
 import {
   useDeletedDocuments,
+  useHardDeleteDocument,
   useRestoreDocument,
   useRestoreFolder
 } from '@/hooks/useDocumentFolders'
 import { timezoneFormatter } from '@/utils/formatters'
 
-// The bin beneath the document tree. Nothing removed from the tree is
-// destroyed — it lands here and stays, so the tree can be kept tidy
-// without anything being lost.
-export const DeletedItems = ({ parentType, parentID }) => {
+// The bin beneath the document tree. Files can be restored, or permanently
+// removed by the user who uploaded and deleted them.
+export const DeletedItems = ({ parentType, parentID, heading }) => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const [expanded, setExpanded] = useState(false)
+  const [pendingHardDelete, setPendingHardDelete] = useState(null)
   // Folder rows can open to show what a restore would bring back.
   const [openFolders, setOpenFolders] = useState(() => new Set())
   const toggleFolder = (folderId) =>
@@ -37,6 +40,7 @@ export const DeletedItems = ({ parentType, parentID }) => {
   const { data } = useDeletedDocuments(parentType, parentID)
   const { mutate: restore } = useRestoreDocument(parentType, parentID)
   const { mutate: restoreFolder } = useRestoreFolder(parentType, parentID)
+  const { mutate: hardDelete } = useHardDeleteDocument(parentType, parentID)
 
   const documents = data?.documents ?? []
   const folders = data?.folders ?? []
@@ -68,6 +72,40 @@ export const DeletedItems = ({ parentType, parentID }) => {
       {t('initiativeAgreement:folders.restore')}
     </BCTypography>
   )
+
+  const hardDeleteControl = (document, key) =>
+    document.canHardDelete ? (
+      <BCTypography
+        component="button"
+        type="button"
+        variant="subtitle2"
+        color="error"
+        data-test={key}
+        aria-label={t('initiativeAgreement:folders.hardDeleteLabel', {
+          name: document.fileName
+        })}
+        onClick={() =>
+          setPendingHardDelete({
+            documentId: document.documentId,
+            fileName: document.fileName
+          })
+        }
+        sx={{
+          background: 'none',
+          border: 'none',
+          padding: 0,
+          font: 'inherit',
+          cursor: 'pointer',
+          textDecoration: 'underline',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 0.5
+        }}
+      >
+        <DeleteForeverOutlinedIcon fontSize="inherit" />
+        {t('initiativeAgreement:folders.hardDelete')}
+      </BCTypography>
+    ) : null
 
   return (
     <Paper
@@ -102,7 +140,7 @@ export const DeletedItems = ({ parentType, parentID }) => {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <DeleteOutlineIcon fontSize="small" color="action" />
           <BCTypography variant="body4" sx={{ fontWeight: 700 }}>
-            {t('initiativeAgreement:folders.deletedItems')}
+            {heading ?? t('initiativeAgreement:folders.deletedItems')}
           </BCTypography>
           {/* The count shows while collapsed, so a full bin is visible
               without opening it. */}
@@ -216,19 +254,32 @@ export const DeletedItems = ({ parentType, parentID }) => {
                       }}
                     >
                       {folder.documents.map((document) => (
-                        <BCTypography
+                        <Box
                           component="li"
-                          variant="subtitle2"
-                          color="text.secondary"
                           key={document.documentId}
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                            flexWrap: 'wrap'
+                          }}
                         >
-                          {document.relativePath
-                            ? `${document.relativePath} / `
-                            : ''}
-                          {document.fileName}
-                          {' · '}
-                          {prettyBytes(document.fileSize ?? 0)}
-                        </BCTypography>
+                          <BCTypography
+                            variant="subtitle2"
+                            color="text.secondary"
+                          >
+                            {document.relativePath
+                              ? `${document.relativePath} / `
+                              : ''}
+                            {document.fileName}
+                            {' · '}
+                            {prettyBytes(document.fileSize ?? 0)}
+                          </BCTypography>
+                          {hardDeleteControl(
+                            document,
+                            `hard-delete-folder-document-${document.documentId}`
+                          )}
+                        </Box>
                       ))}
                     </Box>
                   )}
@@ -278,6 +329,10 @@ export const DeletedItems = ({ parentType, parentID }) => {
                   }),
                   () => restore(document.documentId)
                 )}
+                {hardDeleteControl(
+                  document,
+                  `hard-delete-${document.documentId}`
+                )}
               </Box>
             ))
           )}
@@ -288,6 +343,26 @@ export const DeletedItems = ({ parentType, parentID }) => {
           )}
         </Box>
       </Collapse>
+      <BCModal
+        open={!!pendingHardDelete}
+        onClose={() => setPendingHardDelete(null)}
+        data={{
+          title: t('initiativeAgreement:folders.confirmHardDeleteTitle'),
+          primaryButtonText: t('initiativeAgreement:folders.hardDelete'),
+          primaryButtonAction: () => {
+            hardDelete(pendingHardDelete.documentId)
+            setPendingHardDelete(null)
+          },
+          secondaryButtonText: t('common:cancelBtn'),
+          content: (
+            <BCTypography variant="body4" data-test="confirm-hard-delete-body">
+              {t('initiativeAgreement:folders.confirmHardDeleteBody', {
+                name: pendingHardDelete?.fileName ?? ''
+              })}
+            </BCTypography>
+          )
+        }}
+      />
     </Paper>
   )
 }

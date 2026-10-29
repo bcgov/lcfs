@@ -24,7 +24,12 @@ from lcfs.db.models.document import Document
 from lcfs.db.models.compliance.ComplianceReport import (
     compliance_report_document_association,
 )
-from lcfs.services.s3.client import DocumentService, MAX_FILE_SIZE_BYTES, BUCKET_NAME
+from lcfs.services.s3.client import (
+    BUCKET_NAME,
+    DOCUMENT_PARENT_ASSOCIATIONS,
+    MAX_FILE_SIZE_BYTES,
+    DocumentService,
+)
 from lcfs.services.clamav.client import ClamAVService
 
 
@@ -477,11 +482,7 @@ async def test_delete_file_last_link(document_service, document_mock, db_mock):
     # Setup
     db_mock.get_one.return_value = document_mock
 
-    # Create a proper mock for the execute result
-    # Looking at the code, it appears the pattern is (await db.execute()).all()
-    execute_result = MagicMock()
-    execute_result.all.return_value = [MagicMock()]  # One link
-    db_mock.execute = AsyncMock(return_value=execute_result)
+    _mock_document_links(db_mock, "compliance_report", 1)
 
     # Execute
     await document_service.delete_file(1, 1, "compliance_report")
@@ -496,13 +497,13 @@ async def test_delete_file_last_link(document_service, document_mock, db_mock):
 async def test_delete_file_multiple_links(document_service, document_mock, db_mock):
     # Setup
     db_mock.get_one.return_value = document_mock
-
-    # Mock for execute - make sure it's not an AsyncMock but a regular MagicMock with the .all method
-    execute_result = MagicMock()
-    execute_result.all.return_value = [MagicMock(), MagicMock()]  # Multiple links
-
-    # Replace the execute method completely with an AsyncMock that returns our result object
-    db_mock.execute = AsyncMock(return_value=execute_result)
+    _mock_document_links(
+        db_mock,
+        "compliance_report",
+        1,
+        extra_parent_ids=[2],
+        include_association_delete=True,
+    )
 
     # Execute
     await document_service.delete_file(1, 1, "compliance_report")
@@ -510,6 +511,78 @@ async def test_delete_file_multiple_links(document_service, document_mock, db_mo
     # Assert
     document_service.s3_client.delete_object.assert_not_called()
     db_mock.delete.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_delete_file_preserves_cross_parent_type_reference(
+    document_service, document_mock, db_mock
+):
+    db_mock.get_one.return_value = document_mock
+    _mock_document_links(
+        db_mock,
+        "compliance_report",
+        1,
+        other_parent_type="initiativeAgreement",
+        other_parent_ids=[5],
+        include_association_delete=True,
+    )
+
+    await document_service.delete_file(1, 1, "compliance_report")
+
+    document_service.s3_client.delete_object.assert_not_called()
+    db_mock.delete.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_hard_delete_refuses_cross_parent_type_reference(
+    document_service, document_mock, db_mock
+):
+    db_mock.get_one.return_value = document_mock
+    _mock_document_links(
+        db_mock,
+        "compliance_report",
+        1,
+        other_parent_type="initiativeAgreement",
+        other_parent_ids=[5],
+    )
+
+    deleted = await document_service.delete_file(
+        1, 1, "compliance_report", require_physical_delete=True
+    )
+
+    assert deleted is False
+    document_service.s3_client.delete_object.assert_not_called()
+    db_mock.delete.assert_not_called()
+
+
+def _mock_document_links(
+    db_mock,
+    parent_type,
+    parent_id,
+    extra_parent_ids=None,
+    other_parent_type=None,
+    other_parent_ids=None,
+    include_association_delete=False,
+):
+    association_index = list(DOCUMENT_PARENT_ASSOCIATIONS).index(parent_type)
+    other_index = (
+        list(DOCUMENT_PARENT_ASSOCIATIONS).index(other_parent_type)
+        if other_parent_type
+        else None
+    )
+    result_mocks = []
+    for index, _ in enumerate(DOCUMENT_PARENT_ASSOCIATIONS):
+        parent_ids = []
+        if index == association_index:
+            parent_ids = [parent_id, *(extra_parent_ids or [])]
+        elif index == other_index:
+            parent_ids = other_parent_ids or []
+        result = MagicMock()
+        result.all.return_value = [(value,) for value in parent_ids]
+        result_mocks.append(result)
+    if include_association_delete:
+        result_mocks.append(MagicMock())
+    db_mock.execute = AsyncMock(side_effect=result_mocks)
 
 
 @pytest.mark.anyio

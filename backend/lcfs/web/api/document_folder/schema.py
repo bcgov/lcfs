@@ -29,6 +29,7 @@ class FolderNodeSchema(BaseSchema):
     parent_folder_id: Optional[int] = None
     sort_order: int = 0
     is_system: bool = False
+    can_delete: bool = False
     document_count: int = 0
     documents: List[FolderDocumentSchema] = []
     children: List["FolderNodeSchema"] = []
@@ -52,6 +53,7 @@ class DeletedDocumentSchema(BaseSchema):
     # was there or because the folder it came from has since gone.
     restore_folder_id: Optional[int] = None
     restore_folder_name: Optional[str] = None
+    can_hard_delete: bool = False
 
 
 class DeletedFolderDocumentSchema(BaseSchema):
@@ -60,6 +62,7 @@ class DeletedFolderDocumentSchema(BaseSchema):
     document_id: int
     file_name: str
     file_size: int
+    can_hard_delete: bool = False
     # Folders between the listed folder and the file, joined with " / ";
     # empty when the file sat directly in it.
     relative_path: str = ""

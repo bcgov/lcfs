@@ -78,6 +78,8 @@ export const apiRoutes = {
   getInitiativeAgreementStatuses: '/initiative-agreements/statuses',
   getInitiativeAgreement:
     '/initiative-agreements/:initiativeAgreementId/profile',
+  getInitiativeAgreementDocumentRestoreTargets:
+    '/initiative-agreements/:initiativeAgreementId/document-restore-targets',
   getInitiativeAgreementAnalysts: '/initiative-agreements/analysts',
   getDesignatedActionsList:
     '/initiative-agreements/:initiativeAgreementId/designated-actions/list',
@@ -106,6 +108,8 @@ export const apiRoutes = {
   documentFolderDeleted: '/document-folders/:parentType/:parentID/deleted',
   documentFolderDeleteDocument:
     '/document-folders/:parentType/:parentID/documents/:documentId',
+  documentFolderHardDeleteDocument:
+    '/document-folders/:parentType/:parentID/documents/:documentId/hard-delete',
   documentFolderRestoreDocument:
     '/document-folders/:parentType/:parentID/documents/:documentId/restore',
   documentFolderRestoreFolder:

@@ -10,6 +10,7 @@ from lcfs.web.api.initiative_agreement.schema import (
     AgreementUpdateSchema,
     AnalystAssignmentSchema,
     DesignatedActionCreateSchema,
+    DesignatedActionDocumentTargetSchema,
     DesignatedActionHistorySchema,
     DesignatedActionProfileSchema,
     DesignatedActionSchema,
@@ -111,9 +112,7 @@ async def update_agreement(
     service: InitiativeAgreementServices = Depends(),
 ):
     """Edit an existing agreement's details."""
-    return await service.update_agreement(
-        initiative_agreement_id, data, request.user
-    )
+    return await service.update_agreement(initiative_agreement_id, data, request.user)
 
 
 @router.post(
@@ -369,6 +368,31 @@ async def get_initiative_agreement_profile(
     """Agreement profile with designated actions for the detail page."""
     await validate.validate_organization_access(initiative_agreement_id)
     return await service.get_initiative_agreement_profile(initiative_agreement_id)
+
+
+@router.get(
+    "/{initiative_agreement_id}/document-restore-targets",
+    response_model=List[DesignatedActionDocumentTargetSchema],
+)
+@view_handler(IA_MODULE_ROLES)
+async def get_designated_action_document_targets(
+    request: Request,
+    initiative_agreement_id: int,
+    service: InitiativeAgreementServices = Depends(),
+    validate: InitiativeAgreementValidation = Depends(),
+):
+    """Action identifiers needed to show an agreement's user-scoped bins."""
+    await validate.validate_organization_access(initiative_agreement_id)
+    targets = await service.get_designated_action_document_targets(
+        initiative_agreement_id
+    )
+    return [
+        {
+            "designated_action_id": action_id,
+            "action_number": action_number,
+        }
+        for action_id, action_number in targets
+    ]
 
 
 @router.get("/{initiative_agreement_id}", response_model=InitiativeAgreementSchema)

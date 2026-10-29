@@ -150,7 +150,8 @@ vi.mock('@/hooks/useDocumentFolders', () => ({
   useSoftDeleteDocument: () => ({ mutate: mockSoftDelete }),
   useDeletedDocuments: () => ({ data: { documents: [], total: 0 } }),
   useRestoreDocument: () => ({ mutate: vi.fn() }),
-  useRestoreFolder: () => ({ mutate: mockRestoreFolder })
+  useRestoreFolder: () => ({ mutate: mockRestoreFolder }),
+  useHardDeleteDocument: () => ({ mutate: vi.fn() })
 }))
 
 const check = async (ui, render, app) => {

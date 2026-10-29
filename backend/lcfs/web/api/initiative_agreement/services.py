@@ -658,6 +658,14 @@ class InitiativeAgreementServices:
         )
 
     @service_handler
+    async def get_designated_action_document_targets(
+        self, initiative_agreement_id: int
+    ):
+        return await self.repo.get_designated_action_document_targets(
+            initiative_agreement_id
+        )
+
+    @service_handler
     async def get_all_designated_actions_paginated(
         self, pagination: PaginationRequestSchema
     ) -> AllDesignatedActionsListSchema:
