@@ -1,12 +1,10 @@
 import { test } from '@/tests/utils/fixtures'
 import React from 'react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vite-plus/test'
 import { screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import * as OrganizationSnapshotHooks from '@/hooks/useOrganizationSnapshot.js'
-import {
-  OrganizationAddress
-} from '../OrganizationAddress'
+import { OrganizationAddress } from '../OrganizationAddress'
 import {
   addressHasPostalCode,
   addressWithPostalCode
@@ -63,21 +61,15 @@ vi.mock('react-hook-form', () => ({
     getValues: mockGetValues,
     formState: { errors: {} }
   }),
-  FormProvider: ({
-  children,
-  ...props
-}) => {
-delete props.control; delete props.setValue;
+  FormProvider: ({ children, ...props }) => {
+    delete props.control
+    delete props.setValue
 
     // Create a form wrapper that properly handles submit events, but filter out non-DOM props
     const { ...domProps } = props
     return React.createElement('div', domProps, children)
   },
-  Controller: ({
-  render,
-  name,
-  defaultValue
-}) => {
+  Controller: ({ render, name, defaultValue }) => {
     return render({
       field: {
         onChange: vi.fn(),

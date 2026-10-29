@@ -2,7 +2,7 @@ import { Login } from '@/components/Login'
 import { IDENTITY_PROVIDERS } from '@/constants/auth'
 import { CONFIG } from '@/constants/config'
 import { screen, fireEvent } from '@testing-library/react'
-import { vi, describe, expect, beforeEach, afterEach } from 'vitest'
+import { vi, describe, expect, beforeEach, afterEach } from 'vite-plus/test'
 import { test } from '@/tests/utils/fixtures'
 import 'react-router-dom'
 

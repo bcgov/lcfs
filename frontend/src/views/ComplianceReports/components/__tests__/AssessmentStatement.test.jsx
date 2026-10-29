@@ -5,7 +5,7 @@ import { useUpdateComplianceReport } from '@/hooks/useComplianceReports'
 import useComplianceReportStore from '@/stores/useComplianceReportStore'
 import { useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
-import { describe, beforeEach, test, expect, vi } from 'vitest'
+import { describe, beforeEach, test, expect, vi } from 'vite-plus/test'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 
 // Mock the hooks
@@ -429,10 +429,10 @@ describe('AssessmentStatement Component', () => {
     // Verify we can access and execute the callback functions without error
     const callArgs = mutateMock.mock.calls[0]
     const callbacks = callArgs[1]
-    
+
     expect(typeof callbacks.onSuccess).toBe('function')
     expect(typeof callbacks.onError).toBe('function')
-    
+
     // Execute callbacks to ensure they don't throw errors
     expect(() => callbacks.onSuccess()).not.toThrow()
     expect(() => callbacks.onError()).not.toThrow()
@@ -452,7 +452,9 @@ describe('AssessmentStatement Component', () => {
       currentReport: {
         report: {
           assessmentStatement: 'Director assessment',
-          currentStatus: { status: COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER }
+          currentStatus: {
+            status: COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER
+          }
         }
       }
     })

@@ -30,4 +30,4 @@ export const config = {
   }
 }
 
-export default window.lcfs_config = config
+export default (window.lcfs_config = config)

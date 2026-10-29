@@ -34,7 +34,6 @@ export const logout = (): void => {
       })
     return
   }
-
   const tokenParsed = keycloak.tokenParsed as { idToken?: string } | undefined
   const idToken = keycloak.idToken || tokenParsed?.idToken
 

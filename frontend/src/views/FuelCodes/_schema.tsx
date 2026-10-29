@@ -10,11 +10,11 @@ import BCTypography from '@/components/BCTypography'
 import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
 import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
 import { useFuelCodeStatuses, useTransportModes } from '@/hooks/useFuelCode'
+import { CO_PROCESSED_OPTIONS, FUEL_CODE_STATUSES } from '@/constants/statuses'
 import {
-  CO_PROCESSED_OPTIONS,
-  FUEL_CODE_STATUSES
-} from '@/constants/statuses'
-import { FuelCodeStatusBadge, TransportModeCellRenderer } from './FuelCodeGridRenderers'
+  FuelCodeStatusBadge,
+  TransportModeCellRenderer
+} from './FuelCodeGridRenderers'
 export { formatTransportModeDistances } from './fuelCodeGridUtils'
 
 const getCoProcessedOptions = () => ({
@@ -24,9 +24,7 @@ const getCoProcessedOptions = () => ({
   error: null
 })
 
-export const fuelCodeColDefs = (
-  t: TFunction
-): ColDef[] => [
+export const fuelCodeColDefs = (t: TFunction): ColDef[] => [
   {
     field: 'status',
     headerName: t('fuelCode:fuelCodeColLabels.status'),

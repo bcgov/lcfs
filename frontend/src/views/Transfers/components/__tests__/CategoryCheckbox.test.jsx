@@ -1,8 +1,8 @@
-import 'react';
+import 'react'
 import { fireEvent, screen } from '@testing-library/react'
 import { CategoryCheckbox } from '../CategoryCheckbox'
 import { test } from '@/tests/utils/fixtures'
-import { describe, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, expect, vi, beforeEach, afterEach } from 'vite-plus/test'
 import { useTransfer, useUpdateCategory } from '@/hooks/useTransfer'
 import { useLoadingStore } from '@/stores/useLoadingStore'
 import { useQueryClient } from '@tanstack/react-query'

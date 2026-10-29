@@ -6,10 +6,7 @@ import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { defaultInitialPagination } from '@/constants/schedules'
 import { useCreditMarketAuditLogs } from '@/hooks/useOrganization'
 
-import {
-  creditMarketAuditLogColDefs,
-  defaultAuditSortModel
-} from './_schema'
+import { creditMarketAuditLogColDefs, defaultAuditSortModel } from './_schema'
 
 const initialPaginationOptions = {
   ...defaultInitialPagination,

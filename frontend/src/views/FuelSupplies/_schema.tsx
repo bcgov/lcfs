@@ -1,4 +1,8 @@
-import type { ICellEditorParams, RowClassParams, ColDef } from 'ag-grid-community'
+import type {
+  ICellEditorParams,
+  RowClassParams,
+  ColDef
+} from 'ag-grid-community'
 import type { GridErrors, GridWarnings, OptionsData } from '@/types/schema'
 import type { ApiServiceInstance } from '@/services/useApiService'
 import { actions, validation } from '@/components/BCDataGrid/columns'
@@ -1076,28 +1080,41 @@ export const changelogCommonColDefs = (
       minWidth: 180,
       valueFormatter: formatNumberWithCommas as NumberCellFormatter,
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'complianceUnits')) as unknown as ReturnType<typeof changelogCellStyle>
+        (highlight &&
+          changelogCellStyle(
+            params,
+            'complianceUnits'
+          )) as unknown as ReturnType<typeof changelogCellStyle>
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelType'),
       field: 'fuelType.fuelType',
       minWidth: 200,
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'fuelType')) as unknown as ReturnType<typeof changelogCellStyle>
+        (highlight &&
+          changelogCellStyle(params, 'fuelType')) as unknown as ReturnType<
+          typeof changelogCellStyle
+        >
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCategoryId'),
       field: 'fuelCategory.category',
       minWidth: 150,
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'fuelCategory')) as unknown as ReturnType<typeof changelogCellStyle>
+        (highlight &&
+          changelogCellStyle(params, 'fuelCategory')) as unknown as ReturnType<
+          typeof changelogCellStyle
+        >
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.endUseId'),
       field: 'endUseType.type',
       minWidth: 200,
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'endUseType')) as unknown as ReturnType<typeof changelogCellStyle>
+        (highlight &&
+          changelogCellStyle(params, 'endUseType')) as unknown as ReturnType<
+          typeof changelogCellStyle
+        >
     },
     {
       headerName: i18n.t(
@@ -1106,14 +1123,21 @@ export const changelogCommonColDefs = (
       field: 'provisionOfTheAct.name',
       minWidth: 370,
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'provisionOfTheAct')) as unknown as ReturnType<typeof changelogCellStyle>
+        (highlight &&
+          changelogCellStyle(
+            params,
+            'provisionOfTheAct'
+          )) as unknown as ReturnType<typeof changelogCellStyle>
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCode'),
       field: 'fuelCode.fuelCode',
       minWidth: 175,
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'fuelCode')) as unknown as ReturnType<typeof changelogCellStyle>
+        (highlight &&
+          changelogCellStyle(params, 'fuelCode')) as unknown as ReturnType<
+          typeof changelogCellStyle
+        >
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isCanadaProduced'),
@@ -1121,7 +1145,11 @@ export const changelogCommonColDefs = (
       minWidth: 240,
       hide: (complianceYear as number) < NEW_REGULATION_YEAR,
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'isCanadaProduced')) as unknown as ReturnType<typeof changelogCellStyle>,
+        (highlight &&
+          changelogCellStyle(
+            params,
+            'isCanadaProduced'
+          )) as unknown as ReturnType<typeof changelogCellStyle>,
       valueGetter: (params) => {
         // For fuel codes with known location, show the system-determined value
         const showCanadianProduced = canEditCanadianProduced(
@@ -1150,7 +1178,10 @@ export const changelogCommonColDefs = (
       minWidth: 170,
       hide: complianceYear !== NEW_REGULATION_YEAR,
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'fuelCode')) as unknown as ReturnType<typeof changelogCellStyle>,
+        (highlight &&
+          changelogCellStyle(params, 'fuelCode')) as unknown as ReturnType<
+          typeof changelogCellStyle
+        >,
       valueGetter: (params) => {
         const showCanadianProduced = canEditCanadianProduced(
           params.data,
@@ -1178,42 +1209,60 @@ export const changelogCommonColDefs = (
       minWidth: 185,
       valueFormatter: formatNumberWithCommas as NumberCellFormatter,
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'quantity')) as unknown as ReturnType<typeof changelogCellStyle>
+        (highlight &&
+          changelogCellStyle(params, 'quantity')) as unknown as ReturnType<
+          typeof changelogCellStyle
+        >
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.units'),
       field: 'units',
       minWidth: 200,
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'units')) as unknown as ReturnType<typeof changelogCellStyle>
+        (highlight &&
+          changelogCellStyle(params, 'units')) as unknown as ReturnType<
+          typeof changelogCellStyle
+        >
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.targetCi'),
       field: 'targetCi',
       minWidth: 135,
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'targetCi')) as unknown as ReturnType<typeof changelogCellStyle>
+        (highlight &&
+          changelogCellStyle(params, 'targetCi')) as unknown as ReturnType<
+          typeof changelogCellStyle
+        >
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.ciOfFuel'),
       field: 'ciOfFuel',
       minWidth: 90,
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'ciOfFuel')) as unknown as ReturnType<typeof changelogCellStyle>
+        (highlight &&
+          changelogCellStyle(params, 'ciOfFuel')) as unknown as ReturnType<
+          typeof changelogCellStyle
+        >
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.uci'),
       field: 'uci',
       minWidth: 90,
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'uci')) as unknown as ReturnType<typeof changelogCellStyle>
+        (highlight &&
+          changelogCellStyle(params, 'uci')) as unknown as ReturnType<
+          typeof changelogCellStyle
+        >
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energyDensity'),
       field: 'energyDensity',
       minWidth: 160,
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'energyDensity')) as unknown as ReturnType<typeof changelogCellStyle>
+        (highlight &&
+          changelogCellStyle(params, 'energyDensity')) as unknown as ReturnType<
+          typeof changelogCellStyle
+        >
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.eer'),
@@ -1221,7 +1270,10 @@ export const changelogCommonColDefs = (
       minWidth: 80,
       valueFormatter: (params) => formatNumberWithDecimals(params, 2),
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'eer')) as unknown as ReturnType<typeof changelogCellStyle>
+        (highlight &&
+          changelogCellStyle(params, 'eer')) as unknown as ReturnType<
+          typeof changelogCellStyle
+        >
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energy'),
@@ -1229,7 +1281,10 @@ export const changelogCommonColDefs = (
       minWidth: 170,
       valueFormatter: (params) => formatNumberWithDecimals(params, 2),
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'energy')) as unknown as ReturnType<typeof changelogCellStyle>
+        (highlight &&
+          changelogCellStyle(params, 'energy')) as unknown as ReturnType<
+          typeof changelogCellStyle
+        >
     }
   ]
   if (isEarlyIssuance) {
@@ -1242,7 +1297,11 @@ export const changelogCommonColDefs = (
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q1Quantity'),
             valueFormatter: formatNumberWithCommas as NumberCellFormatter,
             cellStyle: (params) =>
-              (highlight && changelogCellStyle(params, 'q1Quantity')) as unknown as ReturnType<typeof changelogCellStyle>
+              (highlight &&
+                changelogCellStyle(
+                  params,
+                  'q1Quantity'
+                )) as unknown as ReturnType<typeof changelogCellStyle>
           },
           {
             field: 'q2Quantity',
@@ -1250,7 +1309,11 @@ export const changelogCommonColDefs = (
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q2Quantity'),
             valueFormatter: formatNumberWithCommas as NumberCellFormatter,
             cellStyle: (params) =>
-              (highlight && changelogCellStyle(params, 'q2Quantity')) as unknown as ReturnType<typeof changelogCellStyle>
+              (highlight &&
+                changelogCellStyle(
+                  params,
+                  'q2Quantity'
+                )) as unknown as ReturnType<typeof changelogCellStyle>
           },
           {
             field: 'q3Quantity',
@@ -1258,7 +1321,11 @@ export const changelogCommonColDefs = (
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q3Quantity'),
             valueFormatter: formatNumberWithCommas as NumberCellFormatter,
             cellStyle: (params) =>
-              (highlight && changelogCellStyle(params, 'q3Quantity')) as unknown as ReturnType<typeof changelogCellStyle>
+              (highlight &&
+                changelogCellStyle(
+                  params,
+                  'q3Quantity'
+                )) as unknown as ReturnType<typeof changelogCellStyle>
           },
           {
             field: 'q4Quantity',
@@ -1266,7 +1333,11 @@ export const changelogCommonColDefs = (
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.q4Quantity'),
             valueFormatter: formatNumberWithCommas as NumberCellFormatter,
             cellStyle: (params) =>
-              (highlight && changelogCellStyle(params, 'q4Quantity')) as unknown as ReturnType<typeof changelogCellStyle>
+              (highlight &&
+                changelogCellStyle(
+                  params,
+                  'q4Quantity'
+                )) as unknown as ReturnType<typeof changelogCellStyle>
           },
           {
             field: 'totalQuantity',
@@ -1274,7 +1345,11 @@ export const changelogCommonColDefs = (
             headerName: i18n.t('fuelSupply:fuelSupplyColLabels.totalQuantity'),
             valueFormatter: formatNumberWithCommas as NumberCellFormatter,
             cellStyle: (params) =>
-              (highlight && changelogCellStyle(params, 'totalQuantity')) as unknown as ReturnType<typeof changelogCellStyle>,
+              (highlight &&
+                changelogCellStyle(
+                  params,
+                  'totalQuantity'
+                )) as unknown as ReturnType<typeof changelogCellStyle>,
             valueGetter: (params) => {
               const data = params.data
               return (

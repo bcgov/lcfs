@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from 'vite-plus/test'
 import { changelogCellStyle, changelogRowStyle } from '../changelogCellStyle'
 import colors from '@/themes/base/colors'
 

@@ -2,7 +2,7 @@ import { buttonClusterConfigFn } from '../buttonConfigs'
 import { TRANSACTION_STATUSES } from '@/constants/statuses'
 import { roles } from '@/constants/roles'
 import { ADMIN_ADJUSTMENT } from '@/views/Transactions/constants'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, it, vi, beforeEach } from 'vite-plus/test'
 
 vi.mock('@/themes/base/colors', () => ({
   default: {
@@ -30,9 +30,9 @@ describe('buttonConfigs', () => {
         createUpdateInitiativeAgreement: vi.fn(),
         internalComment: 'test'
       }
-      
+
       const result = buttonClusterConfigFn(mockParams)
-      
+
       expect(result.New[0].variant).toBe('outlined')
       expect(result.New[0].color).toBe('primary')
     })
@@ -49,9 +49,9 @@ describe('buttonConfigs', () => {
         createUpdateInitiativeAgreement: vi.fn(),
         internalComment: 'test'
       }
-      
+
       const result = buttonClusterConfigFn(mockParams)
-      
+
       expect(result.New[1].variant).toBe('contained')
       expect(result.New[1].color).toBe('primary')
       expect(result.New[1].iconColor).toBe('#ffffff')
@@ -69,9 +69,9 @@ describe('buttonConfigs', () => {
         createUpdateInitiativeAgreement: vi.fn(),
         internalComment: 'test'
       }
-      
+
       const result = buttonClusterConfigFn(mockParams)
-      
+
       expect(result.Draft[0].variant).toBe('outlined')
       expect(result.Draft[0].color).toBe('error')
       expect(result.Draft[0].iconColor).toBe('#ff0000')
@@ -87,7 +87,7 @@ describe('buttonConfigs', () => {
     const mockCreateUpdateInitiativeAgreement = vi.fn()
     const mockHasRoles = vi.fn()
     const mockMethods = { getValues: vi.fn() }
-    
+
     const baseMockParams = {
       transactionId: 123,
       transactionType: 'initiativeAgreement',
@@ -108,7 +108,7 @@ describe('buttonConfigs', () => {
     describe('Button Structure', () => {
       it('should return correct button structure', () => {
         const result = buttonClusterConfigFn(baseMockParams)
-        
+
         expect(result).toEqual({
           New: expect.arrayContaining([
             expect.objectContaining({ id: 'save-draft-btn' }),
@@ -133,34 +133,34 @@ describe('buttonConfigs', () => {
     describe('saveDraft Button', () => {
       it('should be disabled if user lacks analyst role', () => {
         mockHasRoles.mockImplementation((role) => role !== roles.analyst)
-        
+
         const result = buttonClusterConfigFn(baseMockParams)
-        
+
         expect(result.New[0].disabled).toBe(true)
         expect(result.Draft[1].disabled).toBe(true)
       })
 
       it('should be enabled if user has analyst role', () => {
         mockHasRoles.mockImplementation((role) => role === roles.analyst)
-        
+
         const result = buttonClusterConfigFn(baseMockParams)
-        
+
         expect(result.New[0].disabled).toBe(false)
         expect(result.Draft[1].disabled).toBe(false)
       })
 
       it('should call createUpdateAdminAdjustment for ADMIN_ADJUSTMENT transaction type', () => {
-        const params = { 
-          ...baseMockParams, 
-          transactionType: ADMIN_ADJUSTMENT 
+        const params = {
+          ...baseMockParams,
+          transactionType: ADMIN_ADJUSTMENT
         }
         mockHasRoles.mockImplementation((role) => role === roles.analyst)
-        
+
         const result = buttonClusterConfigFn(params)
         const formData = { test: 'data' }
-        
+
         result.New[0].handler(formData)
-        
+
         expect(mockCreateUpdateAdminAdjustment).toHaveBeenCalledWith({
           data: {
             test: 'data',
@@ -172,12 +172,12 @@ describe('buttonConfigs', () => {
 
       it('should call createUpdateInitiativeAgreement for other transaction types', () => {
         mockHasRoles.mockImplementation((role) => role === roles.analyst)
-        
+
         const result = buttonClusterConfigFn(baseMockParams)
         const formData = { test: 'data' }
-        
+
         result.New[0].handler(formData)
-        
+
         expect(mockCreateUpdateInitiativeAgreement).toHaveBeenCalledWith({
           data: {
             test: 'data',
@@ -191,20 +191,20 @@ describe('buttonConfigs', () => {
     describe('deleteDraft Button', () => {
       it('should be disabled if user lacks analyst role', () => {
         mockHasRoles.mockImplementation((role) => role !== roles.analyst)
-        
+
         const result = buttonClusterConfigFn(baseMockParams)
-        
+
         expect(result.Draft[0].disabled).toBe(true)
       })
 
       it('should setup modal with correct config', () => {
         mockHasRoles.mockImplementation((role) => role === roles.analyst)
-        
+
         const result = buttonClusterConfigFn(baseMockParams)
         const formData = { test: 'data' }
-        
+
         result.Draft[0].handler(formData)
-        
+
         expect(mockSetModalData).toHaveBeenCalledWith({
           primaryButtonAction: expect.any(Function),
           primaryButtonText: 'txn:actionBtns.deleteDraftBtn',
@@ -216,20 +216,20 @@ describe('buttonConfigs', () => {
       })
 
       it('should execute primaryButtonAction with ADMIN_ADJUSTMENT', async () => {
-        const params = { 
-          ...baseMockParams, 
-          transactionType: ADMIN_ADJUSTMENT 
+        const params = {
+          ...baseMockParams,
+          transactionType: ADMIN_ADJUSTMENT
         }
         mockHasRoles.mockImplementation((role) => role === roles.analyst)
-        
+
         const result = buttonClusterConfigFn(params)
         const formData = { test: 'data' }
-        
+
         await result.Draft[0].handler(formData)
-        
+
         const modalCall = mockSetModalData.mock.calls[0][0]
         await modalCall.primaryButtonAction()
-        
+
         expect(mockCreateUpdateAdminAdjustment).toHaveBeenCalledWith({
           data: {
             test: 'data',
@@ -242,9 +242,9 @@ describe('buttonConfigs', () => {
     describe('recommendTransaction Button', () => {
       it('should be disabled if user lacks analyst role', () => {
         mockHasRoles.mockImplementation((role) => role !== roles.analyst)
-        
+
         const result = buttonClusterConfigFn(baseMockParams)
-        
+
         expect(result.New[1].disabled).toBe(true)
         expect(result.Draft[2].disabled).toBe(true)
       })
@@ -252,21 +252,21 @@ describe('buttonConfigs', () => {
       it('should be disabled if no transactionId', () => {
         const params = { ...baseMockParams, transactionId: null }
         mockHasRoles.mockImplementation((role) => role === roles.analyst)
-        
+
         const result = buttonClusterConfigFn(params)
-        
+
         expect(result.New[1].disabled).toBe(true)
         expect(result.Draft[2].disabled).toBe(true)
       })
 
       it('should setup modal with correct config', async () => {
         mockHasRoles.mockImplementation((role) => role === roles.analyst)
-        
+
         const result = buttonClusterConfigFn(baseMockParams)
         const formData = { test: 'data' }
-        
+
         await result.New[1].handler(formData)
-        
+
         expect(mockSetModalData).toHaveBeenCalledWith({
           primaryButtonAction: expect.any(Function),
           primaryButtonText: 'txn:actionBtns.recommendBtn',
@@ -279,15 +279,15 @@ describe('buttonConfigs', () => {
 
       it('should execute primaryButtonAction correctly', async () => {
         mockHasRoles.mockImplementation((role) => role === roles.analyst)
-        
+
         const result = buttonClusterConfigFn(baseMockParams)
         const formData = { test: 'data' }
-        
+
         await result.New[1].handler(formData)
-        
+
         const modalCall = mockSetModalData.mock.calls[0][0]
         await modalCall.primaryButtonAction()
-        
+
         expect(mockCreateUpdateInitiativeAgreement).toHaveBeenCalledWith({
           data: {
             test: 'data',
@@ -301,20 +301,20 @@ describe('buttonConfigs', () => {
     describe('returnTransaction Button', () => {
       it('should be disabled if user lacks director role', () => {
         mockHasRoles.mockImplementation((role) => role !== roles.director)
-        
+
         const result = buttonClusterConfigFn(baseMockParams)
-        
+
         expect(result.Recommended[1].disabled).toBe(true)
       })
 
       it('should setup modal with warning text', async () => {
         mockHasRoles.mockImplementation((role) => role === roles.director)
-        
+
         const result = buttonClusterConfigFn(baseMockParams)
         const formData = { test: 'data' }
-        
+
         await result.Recommended[1].handler(formData)
-        
+
         expect(mockSetModalData).toHaveBeenCalledWith({
           primaryButtonAction: expect.any(Function),
           primaryButtonText: 'txn:actionBtns.returnToAnalystBtn',
@@ -328,15 +328,15 @@ describe('buttonConfigs', () => {
 
       it('should execute primaryButtonAction correctly', async () => {
         mockHasRoles.mockImplementation((role) => role === roles.director)
-        
+
         const result = buttonClusterConfigFn(baseMockParams)
         const formData = { test: 'data' }
-        
+
         await result.Recommended[1].handler(formData)
-        
+
         const modalCall = mockSetModalData.mock.calls[0][0]
         await modalCall.primaryButtonAction()
-        
+
         expect(mockCreateUpdateInitiativeAgreement).toHaveBeenCalledWith({
           data: {
             test: 'data',
@@ -349,20 +349,20 @@ describe('buttonConfigs', () => {
     describe('approveTransaction Button', () => {
       it('should be disabled if user lacks director role', () => {
         mockHasRoles.mockImplementation((role) => role !== roles.director)
-        
+
         const result = buttonClusterConfigFn(baseMockParams)
-        
+
         expect(result.Recommended[2].disabled).toBe(true)
       })
 
       it('should setup modal with correct config', async () => {
         mockHasRoles.mockImplementation((role) => role === roles.director)
-        
+
         const result = buttonClusterConfigFn(baseMockParams)
         const formData = { test: 'data' }
-        
+
         await result.Recommended[2].handler(formData)
-        
+
         expect(mockSetModalData).toHaveBeenCalledWith({
           primaryButtonAction: expect.any(Function),
           primaryButtonText: 'txn:actionBtns.approveBtn',
@@ -375,15 +375,15 @@ describe('buttonConfigs', () => {
 
       it('should execute primaryButtonAction correctly', async () => {
         mockHasRoles.mockImplementation((role) => role === roles.director)
-        
+
         const result = buttonClusterConfigFn(baseMockParams)
         const formData = { test: 'data' }
-        
+
         await result.Recommended[2].handler(formData)
-        
+
         const modalCall = mockSetModalData.mock.calls[0][0]
         await modalCall.primaryButtonAction()
-        
+
         expect(mockCreateUpdateInitiativeAgreement).toHaveBeenCalledWith({
           data: {
             test: 'data',
@@ -397,9 +397,9 @@ describe('buttonConfigs', () => {
       it('should setup modal with correct config', async () => {
         const result = buttonClusterConfigFn(baseMockParams)
         const formData = { test: 'data' }
-        
+
         await result.Recommended[0].handler(formData)
-        
+
         expect(mockSetModalData).toHaveBeenCalledWith({
           primaryButtonAction: expect.any(Function),
           primaryButtonText: 'txn:actionBtns.deleteBtn',
@@ -411,19 +411,19 @@ describe('buttonConfigs', () => {
       })
 
       it('should execute primaryButtonAction with ADMIN_ADJUSTMENT', async () => {
-        const params = { 
-          ...baseMockParams, 
-          transactionType: ADMIN_ADJUSTMENT 
+        const params = {
+          ...baseMockParams,
+          transactionType: ADMIN_ADJUSTMENT
         }
-        
+
         const result = buttonClusterConfigFn(params)
         const formData = { test: 'data' }
-        
+
         await result.Recommended[0].handler(formData)
-        
+
         const modalCall = mockSetModalData.mock.calls[0][0]
         await modalCall.primaryButtonAction()
-        
+
         expect(mockCreateUpdateAdminAdjustment).toHaveBeenCalledWith({
           data: {
             test: 'data',
@@ -435,12 +435,12 @@ describe('buttonConfigs', () => {
       it('should execute primaryButtonAction with other transaction types', async () => {
         const result = buttonClusterConfigFn(baseMockParams)
         const formData = { test: 'data' }
-        
+
         await result.Recommended[0].handler(formData)
-        
+
         const modalCall = mockSetModalData.mock.calls[0][0]
         await modalCall.primaryButtonAction()
-        
+
         expect(mockCreateUpdateInitiativeAgreement).toHaveBeenCalledWith({
           data: {
             test: 'data',
@@ -453,13 +453,13 @@ describe('buttonConfigs', () => {
     describe('Status Arrays', () => {
       it('should return empty arrays for Approved status', () => {
         const result = buttonClusterConfigFn(baseMockParams)
-        
+
         expect(result.Approved).toEqual([])
       })
 
       it('should return empty arrays for Deleted status', () => {
         const result = buttonClusterConfigFn(baseMockParams)
-        
+
         expect(result.Deleted).toEqual([])
       })
     })
@@ -467,26 +467,26 @@ describe('buttonConfigs', () => {
     describe('Edge Cases', () => {
       it('should handle missing transactionId gracefully', () => {
         const params = { ...baseMockParams, transactionId: undefined }
-        
+
         const result = buttonClusterConfigFn(params)
-        
+
         expect(result).toBeDefined()
         expect(result.New[1].disabled).toBe(true)
       })
 
       it('should handle missing internalComment gracefully', () => {
         const params = { ...baseMockParams, internalComment: undefined }
-        
+
         const result = buttonClusterConfigFn(params)
-        
+
         expect(result).toBeDefined()
       })
 
       it('should handle falsy hasRoles function', () => {
         const params = { ...baseMockParams, hasRoles: vi.fn(() => false) }
-        
+
         const result = buttonClusterConfigFn(params)
-        
+
         expect(result).toBeDefined()
         expect(result.New[0].disabled).toBe(true)
         expect(result.New[1].disabled).toBe(true)
@@ -496,11 +496,11 @@ describe('buttonConfigs', () => {
     describe('Button Labels and Icons', () => {
       it('should have correct labels and icons for all buttons', () => {
         const result = buttonClusterConfigFn(baseMockParams)
-        
+
         expect(result.New[0].startIcon).toBe('faFloppyDisk')
         expect(result.Draft[0].startIcon).toBe('faTrash')
         expect(result.Recommended[0].startIcon).toBe('faTrash')
-        
+
         expect(mockT).toHaveBeenCalledWith('txn:actionBtns.saveDraftBtn')
         expect(mockT).toHaveBeenCalledWith('txn:actionBtns.deleteDraftBtn')
         expect(mockT).toHaveBeenCalledWith('txn:actionBtns.recommendBtn')

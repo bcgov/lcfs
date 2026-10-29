@@ -11,7 +11,7 @@
  * in the source component for parts that are difficult to test in
  * React component test context (third-party grid API interactions).
  */
-import { vi, describe, expect, beforeEach } from 'vitest'
+import { vi, describe, expect, beforeEach } from 'vite-plus/test'
 import { screen, fireEvent, waitFor } from '@testing-library/react'
 import '@testing-library/user-event'
 import React from 'react'

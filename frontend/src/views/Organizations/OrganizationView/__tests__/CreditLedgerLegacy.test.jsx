@@ -1,6 +1,6 @@
 import React from 'react'
-import { cleanup, render, screen, fireEvent } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { cleanup, render, screen, fireEvent } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { CreditLedgerLegacy } from '../CreditLedgerLegacy'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import ThemeProvider from '@mui/material/styles/ThemeProvider'
@@ -101,70 +101,68 @@ let lastGridProps = null
 
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => {
   return {
-    BCGridViewer: React.forwardRef(
-      function CreditLedgerGridMock(
-        {
-          queryData,
-          onPaginationChange,
-          getRowId,
-          gridKey,
-          dataKey,
-          columnDefs,
-          suppressPagination,
-          paginationOptions,
-          defaultColDef,
-          autoSizeStrategy,
-          ...props
-        },
-        ref
-      ) {
-        lastGridProps = {
-          queryData,
-          onPaginationChange,
-          getRowId,
-          gridKey,
-          dataKey,
-          columnDefs,
-          suppressPagination,
-          paginationOptions,
-          defaultColDef,
-          autoSizeStrategy
-        }
-        const domProps = {}
-        // Only pass through standard DOM attributes
-        Object.keys(props).forEach((key) => {
-          if (
-            key.startsWith('data-') ||
-            key.startsWith('aria-') ||
-            ['id', 'className', 'style'].includes(key)
-          ) {
-            domProps[key] = props[key]
-          }
-        })
-        return (
-          <div ref={ref} data-test="credit-ledger-grid" {...domProps}>
-            Mock Grid with {queryData?.data?.ledger?.length || 0} items
-            {queryData?.data?.ledger?.map((item, index) => (
-              <div
-                key={getRowId ? getRowId({ data: item }) : index}
-                data-test={`grid-row-${index}`}
-              >
-                {item.compliancePeriod}-{item.complianceUnits}-
-                {item.transactionType}
-              </div>
-            ))}
-            <button
-              data-test="pagination-change"
-              onClick={() =>
-                onPaginationChange && onPaginationChange({ page: 2, size: 20 })
-              }
-            >
-              Change Page
-            </button>
-          </div>
-        )
+    BCGridViewer: React.forwardRef(function CreditLedgerGridMock(
+      {
+        queryData,
+        onPaginationChange,
+        getRowId,
+        gridKey,
+        dataKey,
+        columnDefs,
+        suppressPagination,
+        paginationOptions,
+        defaultColDef,
+        autoSizeStrategy,
+        ...props
+      },
+      ref
+    ) {
+      lastGridProps = {
+        queryData,
+        onPaginationChange,
+        getRowId,
+        gridKey,
+        dataKey,
+        columnDefs,
+        suppressPagination,
+        paginationOptions,
+        defaultColDef,
+        autoSizeStrategy
       }
-    )
+      const domProps = {}
+      // Only pass through standard DOM attributes
+      Object.keys(props).forEach((key) => {
+        if (
+          key.startsWith('data-') ||
+          key.startsWith('aria-') ||
+          ['id', 'className', 'style'].includes(key)
+        ) {
+          domProps[key] = props[key]
+        }
+      })
+      return (
+        <div ref={ref} data-test="credit-ledger-grid" {...domProps}>
+          Mock Grid with {queryData?.data?.ledger?.length || 0} items
+          {queryData?.data?.ledger?.map((item, index) => (
+            <div
+              key={getRowId ? getRowId({ data: item }) : index}
+              data-test={`grid-row-${index}`}
+            >
+              {item.compliancePeriod}-{item.complianceUnits}-
+              {item.transactionType}
+            </div>
+          ))}
+          <button
+            data-test="pagination-change"
+            onClick={() =>
+              onPaginationChange && onPaginationChange({ page: 2, size: 20 })
+            }
+          >
+            Change Page
+          </button>
+        </div>
+      )
+    })
   }
 })
 
@@ -190,7 +188,7 @@ const mockUseCreditLedgerYears = vi.mocked(useCreditLedgerYears)
 const mockUseOrganizationBalance = vi.mocked(useOrganizationBalance)
 const mockUseCurrentOrgBalance = vi.mocked(useCurrentOrgBalance)
 const mockUseCurrentUser = vi.mocked(useCurrentUser)
-vi.mocked(useTranslation);
+vi.mocked(useTranslation)
 
 const renderComponent = (props = {}) => {
   const queryClient = new QueryClient({

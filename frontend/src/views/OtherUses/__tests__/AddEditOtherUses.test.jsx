@@ -1,4 +1,4 @@
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import { screen, fireEvent, waitFor } from '@testing-library/react'
 import { test } from '@/tests/utils/fixtures'
 import { AddEditOtherUses } from '../AddEditOtherUses'

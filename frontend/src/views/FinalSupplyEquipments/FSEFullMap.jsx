@@ -65,9 +65,30 @@ import { useOrganizationNames } from '@/hooks/useOrganizations'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { govRoles } from '@/constants/roles'
 import { fixLeafletIcons } from './components/utils'
-import { theme, STATUS_CONFIG, BC_CENTER, DEFAULT_ZOOM, MAP_STYLES } from './components/constants'
-import { transformData, transformChargingSites, groupBySite, buildAddressLine, getLevelInfo, getMarkerIconForStatus, getSiteUrl, getEquipmentUrl } from './components/helpers'
-import { PopupCloseButton, DetailSectionDivider, CoordinatesDisplay, PopupTypeBadge, StatusBadge } from './components/PopupComponents'
+import {
+  theme,
+  STATUS_CONFIG,
+  BC_CENTER,
+  DEFAULT_ZOOM,
+  MAP_STYLES
+} from './components/constants'
+import {
+  transformData,
+  transformChargingSites,
+  groupBySite,
+  buildAddressLine,
+  getLevelInfo,
+  getMarkerIconForStatus,
+  getSiteUrl,
+  getEquipmentUrl
+} from './components/helpers'
+import {
+  PopupCloseButton,
+  DetailSectionDivider,
+  CoordinatesDisplay,
+  PopupTypeBadge,
+  StatusBadge
+} from './components/PopupComponents'
 import { ROUTES } from '@/routes/routes'
 import 'leaflet/dist/leaflet.css'
 
@@ -76,7 +97,6 @@ fixLeafletIcons()
 /**
  * Injects global CSS styles for the map
  */
-
 
 // ============================================================================
 // MAP COMPONENTS
@@ -535,7 +555,7 @@ const SitePopup = ({ siteData, isGovernmentUser }) => {
       return !Number.isNaN(value) && value > 0 ? sum + value : sum
     }, 0)
     return total > 0 ? total : null
-  }, [filtered]);
+  }, [filtered])
 
   return (
     <Box
@@ -1159,8 +1179,6 @@ const EquipmentPopup = ({ equipment, isGovernmentUser }) => {
 // STATE COMPONENTS
 // ============================================================================
 
-
-
 const ErrorState = ({ error, onRetry }) => (
   <Alert
     severity="error"
@@ -1289,9 +1307,7 @@ const EmptyState = () => (
  * @param {Object} props.stats - Statistics object with totalEquipment and totalSites
  * @param {React.ReactNode} props.action - Optional action buttons/content
  */
-const PageHeader = ({
-  action = null
-}) => (
+const PageHeader = ({ action = null }) => (
   <Box sx={{ mb: 4 }}>
     <Box sx={{ mb: 2 }}>
       <BCTypography
@@ -1403,7 +1419,7 @@ const MAP_CONFIG = {
  * @returns {React.ReactElement} The map component
  */
 const FSEFullMap = ({ organizationId: propOrgId }) => {
-  useTranslation(['fse']);
+  useTranslation(['fse'])
 
   // Route params and user context
   const { complianceReportId } = useParams()
@@ -1414,7 +1430,7 @@ const FSEFullMap = ({ organizationId: propOrgId }) => {
   const [selectedOrgId, setSelectedOrgId] = useState('all')
   const [viewMode, setViewMode] = useState('sites') // 'equipment' or 'sites' - default to 'sites'
   const [isMapExpanded, setIsMapExpanded] = useState(false)
-  React.useRef(null);
+  React.useRef(null)
   const mapInstanceRef = React.useRef(null)
   const [showLoading, setShowLoading] = useState(false)
   const loadingTimeoutRef = React.useRef(null)
@@ -1541,11 +1557,7 @@ const FSEFullMap = ({ organizationId: propOrgId }) => {
   }, [isLoading, isRefetching])
 
   // Transform and group equipment data
-  const {
-  locations,
-  grouped,
-  stats
-} = useMemo(() => {
+  const { locations, grouped, stats } = useMemo(() => {
     const locs = transformData(data)
     const sites = transformChargingSites(chargingSitesData?.chargingSites || [])
     const grp = groupBySite(locs, sites)
@@ -1568,8 +1580,8 @@ const FSEFullMap = ({ organizationId: propOrgId }) => {
   // Generate cluster icons with size based on marker count
   const clusterIcon = useCallback((cluster) => {
     const count = cluster.getChildCount()
-    let cls = 'cluster-sm';
-      let size = 32
+    let cls = 'cluster-sm'
+    let size = 32
 
     // Scale cluster size based on count
     if (count >= 50) {
