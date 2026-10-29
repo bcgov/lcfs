@@ -1,6 +1,6 @@
 import 'react'
 import { screen, waitFor } from '@testing-library/react'
-import { describe, expect, beforeEach, vi } from 'vitest'
+import { describe, expect, beforeEach, vi } from 'vite-plus/test'
 import { OtherUsesChangelog } from '../OtherUsesChangelog'
 import { test } from '@/tests/utils/fixtures'
 
@@ -152,11 +152,7 @@ vi.mock('@mui/material/Box', () => ({
 }))
 
 vi.mock('@mui/material/TextField', () => ({
-  default: ({ children, ...props }) => (
-    <input data-test="mui-textfield" {...props}>
-      {children}
-    </input>
-  )
+  default: (props) => <input data-test="mui-textfield" {...props} />
 }))
 
 vi.mock('@mui/material/Button', () => ({

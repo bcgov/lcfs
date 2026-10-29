@@ -6,7 +6,7 @@ import { useTheme } from '@mui/material/styles'
 import { useParams } from 'react-router-dom'
 
 import BCBox from '@/components/BCBox'
-import '@/components/BCTypography';
+import '@/components/BCTypography'
 import Loading from '@/components/Loading'
 import BCAlert from '@/components/BCAlert'
 

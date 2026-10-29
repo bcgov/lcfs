@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from 'vite-plus/test'
 import { render, screen } from '@testing-library/react'
 import { NotificationTabPanel } from '../NotificationTabPanel'
 import { ThemeProvider } from '@mui/material/styles'

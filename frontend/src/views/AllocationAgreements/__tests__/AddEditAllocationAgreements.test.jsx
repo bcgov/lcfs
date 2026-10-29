@@ -1,6 +1,6 @@
 import React from 'react'
 import { screen, fireEvent, act } from '@testing-library/react'
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vite-plus/test'
 import { AddEditAllocationAgreements } from '../AddEditAllocationAgreements'
 import { flattenNestedFields } from '../allocationAgreementUtils'
 import * as useAllocationAgreementHook from '@/hooks/useAllocationAgreement'
@@ -542,6 +542,26 @@ describe('AddEditAllocationAgreements', () => {
       expect(
         screen.getByText('allocationAgreement:allocationAgreementTitle')
       ).toBeInTheDocument()
+    })
+
+    test('leaves column sizing to the grid on grid ready', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(<AddEditAllocationAgreements />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
+      expect((await screen.findAllByTestId('grid-row')).length).toBeGreaterThan(
+        0
+      )
+      // Fitting the schedule's columns to the viewport squeezed them
+      expect(mockGridApi.sizeColumnsToFit).not.toHaveBeenCalled()
     })
 
     test('renders loading state when data is loading', ({

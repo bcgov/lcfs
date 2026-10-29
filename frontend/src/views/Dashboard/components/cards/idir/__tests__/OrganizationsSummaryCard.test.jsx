@@ -1,6 +1,6 @@
 import { screen, fireEvent, act } from '@testing-library/react'
 import OrganizationsSummaryCard from '../OrganizationsSummaryCard'
-import { vi, describe, expect, beforeEach } from 'vitest'
+import { vi, describe, expect, beforeEach } from 'vite-plus/test'
 import { useOrganizationNames } from '@/hooks/useOrganizations'
 import { test } from '@/tests/utils/fixtures'
 

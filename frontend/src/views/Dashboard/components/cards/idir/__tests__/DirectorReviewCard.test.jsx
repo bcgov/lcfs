@@ -1,6 +1,6 @@
 import 'react'
 import { screen, fireEvent } from '@testing-library/react'
-import { vi, describe, expect, beforeEach } from 'vitest'
+import { vi, describe, expect, beforeEach } from 'vite-plus/test'
 import DirectorReviewCard from '../DirectorReviewCard'
 import { useDirectorReviewCounts } from '@/hooks/useDashboard'
 import { test } from '@/tests/utils/fixtures'

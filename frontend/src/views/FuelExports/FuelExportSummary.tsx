@@ -8,7 +8,10 @@ import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { defaultInitialPagination } from '@/constants/schedules'
-import type { BCPaginationOptions , BCGridRow } from '@/components/BCDataGrid/types'
+import type {
+  BCPaginationOptions,
+  BCGridRow
+} from '@/components/BCDataGrid/types'
 
 interface FuelExport {
   fuelExportId: number | string
@@ -196,10 +199,13 @@ export const FuelExportSummary = ({ data, status }: FuelExportSummaryProps) => {
           suppressPagination={(data?.fuelExports?.length || 0) <= 10}
           paginationOptions={paginationOptions}
           onPaginationChange={(newPagination: BCPaginationOptions) =>
-            setPaginationOptions((prev) => ({
-              ...prev,
-              ...newPagination
-            }) as PaginationOptions)
+            setPaginationOptions(
+              (prev) =>
+                ({
+                  ...prev,
+                  ...newPagination
+                }) as PaginationOptions
+            )
           }
           enablePageCaching={false}
         />

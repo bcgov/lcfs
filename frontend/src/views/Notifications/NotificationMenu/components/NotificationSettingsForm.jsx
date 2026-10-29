@@ -321,12 +321,13 @@ const NotificationSettingsForm = ({
                             EMAIL_ONLY_NOTIFICATION_TYPES.has(
                               notificationTypeName
                             )
-                          const inAppUnavailableMessage = isEmailOnlyNotification
-                            ? 'emailOnlyNotificationNoInApp'
-                            : 'governmentNotificationNoInApp'
+                          const inAppUnavailableMessage =
+                            isEmailOnlyNotification
+                              ? 'emailOnlyNotificationNoInApp'
+                              : 'governmentNotificationNoInApp'
 
-                          const renderNotificationCheckbox =
-                            (channel) => function NotificationCheckbox({ field }) {
+                          const renderNotificationCheckbox = (channel) =>
+                            function NotificationCheckbox({ field }) {
                               const checkboxTestId = `notification-toggle-${notificationTypeKey}-${channel?.toLowerCase?.() || ''}`
                               const toggleSelection = (isChecked) => {
                                 field.onChange(isChecked)

@@ -1,17 +1,17 @@
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import BCTypography from '@/components/BCTypography'
-import { NEW_REGULATION_YEAR, REPORT_SCHEDULES } from '@/constants/common';
-import { useComplianceReportWithCache } from '@/hooks/useComplianceReports';
-import '@/hooks/useCurrentUser';
+import { NEW_REGULATION_YEAR, REPORT_SCHEDULES } from '@/constants/common'
+import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
+import '@/hooks/useCurrentUser'
 import { buildPath, ROUTES } from '@/routes/routes'
 import {
   useFuelSupplyOptions,
   useGetFuelSuppliesList,
   useSaveFuelSupply
 } from '@/hooks/useFuelSupply'
-import '@/utils/formatters';
-import { handleScheduleDelete } from '@/utils/schedules.js';
+import '@/utils/formatters'
+import { handleScheduleDelete } from '@/utils/schedules.js'
 import {
   processFuelSupplyRowData,
   calculateColumnVisibility,

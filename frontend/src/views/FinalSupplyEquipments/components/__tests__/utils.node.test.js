@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vite-plus/test'
 import {
   fixLeafletIcons,
   createMarkerIcon,
@@ -74,7 +74,7 @@ describe('FinalSupplyEquipments utils.js', () => {
       const L = (await import('leaflet')).default
       const color = 'red'
 
-      createMarkerIcon(color);
+      createMarkerIcon(color)
 
       expect(L.Icon).toHaveBeenCalledWith({
         iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${color}.png`,

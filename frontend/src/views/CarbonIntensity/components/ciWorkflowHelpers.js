@@ -8,7 +8,8 @@ export const CI_APPLICATION_STEPS = [
   { key: 'step5', labelKey: 'carbonIntensity:steps.step5' }
 ]
 
-export const formatDate = (value) => (value ? dayjs(value).format('YYYY-MM-DD') : '')
+export const formatDate = (value) =>
+  value ? dayjs(value).format('YYYY-MM-DD') : ''
 
 const getInitials = (name = '') =>
   name

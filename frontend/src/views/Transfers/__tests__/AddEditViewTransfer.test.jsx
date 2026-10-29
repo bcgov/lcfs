@@ -1,8 +1,18 @@
 import React from 'react'
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { QueryClient, QueryClientProvider , useQueryClient } from '@tanstack/react-query'
-import { MemoryRouter , useLocation, useMatches, useNavigate, useParams } from 'react-router-dom'
+import { describe, expect, it, vi, beforeEach } from 'vite-plus/test'
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQueryClient
+} from '@tanstack/react-query'
+import {
+  MemoryRouter,
+  useLocation,
+  useMatches,
+  useNavigate,
+  useParams
+} from 'react-router-dom'
 import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import theme from '@/themes'
 
@@ -27,7 +37,9 @@ vi.mock('react-hook-form', () => ({
     watch: () => null,
     handleSubmit: () => () => {}
   }),
-  FormProvider: ({ children }) => <div data-test="form-provider">{children}</div>
+  FormProvider: ({ children }) => (
+    <div data-test="form-provider">{children}</div>
+  )
 }))
 
 vi.mock('react-router-dom', async () => {
@@ -101,7 +113,11 @@ vi.mock('@/routes/routes', () => ({
 
 // Mock child components
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, ...props }) => <div data-test="bc-typography" {...props}>{children}</div>
+  default: ({ children, ...props }) => (
+    <div data-test="bc-typography" {...props}>
+      {children}
+    </div>
+  )
 }))
 
 vi.mock('@/components/BCAlert', () => ({
@@ -115,15 +131,27 @@ vi.mock('@/components/BCAlert', () => ({
 }))
 
 vi.mock('@/components/BCBox', () => ({
-  default: ({ children, ...props }) => <div data-test="bc-box" {...props}>{children}</div>
+  default: ({ children, ...props }) => (
+    <div data-test="bc-box" {...props}>
+      {children}
+    </div>
+  )
 }))
 
 vi.mock('@/components/BCButton', () => ({
-  default: ({ children, ...props }) => <button data-test="bc-button" {...props}>{children}</button>
+  default: ({ children, ...props }) => (
+    <button data-test="bc-button" {...props}>
+      {children}
+    </button>
+  )
 }))
 
 vi.mock('@/components/BCModal', () => ({
-  default: ({ children, ...props }) => <div data-test="bc-modal" {...props}>{children}</div>
+  default: ({ children, ...props }) => (
+    <div data-test="bc-modal" {...props}>
+      {children}
+    </div>
+  )
 }))
 
 vi.mock('@/components/Loading', () => ({
@@ -137,8 +165,12 @@ vi.mock('@/components/Role', () => ({
 vi.mock('@/views/Transfers/components', () => ({
   AgreementDate: () => <div data-test="agreement-date">AgreementDate</div>,
   Comments: () => <div data-test="comments">Comments</div>,
-  TransferDetails: () => <div data-test="transfer-details">TransferDetails</div>,
-  TransferGraphic: () => <div data-test="transfer-graphic">TransferGraphic</div>,
+  TransferDetails: () => (
+    <div data-test="transfer-details">TransferDetails</div>
+  ),
+  TransferGraphic: () => (
+    <div data-test="transfer-graphic">TransferGraphic</div>
+  ),
   TransferView: ({ categoryOverride }) => (
     <div data-test="transfer-view">
       TransferView
@@ -148,7 +180,9 @@ vi.mock('@/views/Transfers/components', () => ({
 }))
 
 vi.mock('../components/CategoryCheckbox', () => ({
-  CategoryCheckbox: () => <div data-test="category-checkbox">CategoryCheckbox</div>
+  CategoryCheckbox: () => (
+    <div data-test="category-checkbox">CategoryCheckbox</div>
+  )
 }))
 
 vi.mock('../components/Recommendation', () => ({

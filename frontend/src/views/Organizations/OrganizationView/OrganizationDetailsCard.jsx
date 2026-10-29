@@ -1,6 +1,6 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react'
 import BCBox from '@/components/BCBox'
-import '@/components/BCTypography';
+import '@/components/BCTypography'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import Loading from '@/components/Loading'
 import { useTranslation } from 'react-i18next'
@@ -13,12 +13,12 @@ import {
 } from '@/hooks/useOrganization'
 
 import { roles } from '@/constants/roles'
-import '@/constants/statuses';
-import '@/components/Role';
+import '@/constants/statuses'
+import '@/components/Role'
 import { AddEditOrgForm } from '../AddEditOrg/AddEditOrgForm'
 import { OrganizationProfile } from './OrganizationProfile'
 import { CompanyOverviewComments } from './components/CompanyOverviewComments'
-import { FloatingAlert } from '@/components/BCAlert';
+import { FloatingAlert } from '@/components/BCAlert'
 
 export const OrganizationDetailsCard = ({ addMode = false }) => {
   const alertRef = useRef(null)
@@ -64,33 +64,36 @@ export const OrganizationDetailsCard = ({ addMode = false }) => {
     }
   }, [addMode, navigate])
 
-  const handleSaveSuccess = useCallback((organizationId) => {
-    if (addMode) {
-      const successMessage = {
-        state: {
-          message: t('org:addSuccessMessage'),
-          severity: 'success'
+  const handleSaveSuccess = useCallback(
+    (organizationId) => {
+      if (addMode) {
+        const successMessage = {
+          state: {
+            message: t('org:addSuccessMessage'),
+            severity: 'success'
+          }
         }
-      }
-      setIsEditMode(false)
-      if (organizationId) {
-        navigate(
-          ROUTES.ORGANIZATIONS.VIEW.replace(':orgID', organizationId),
-          successMessage
-        )
+        setIsEditMode(false)
+        if (organizationId) {
+          navigate(
+            ROUTES.ORGANIZATIONS.VIEW.replace(':orgID', organizationId),
+            successMessage
+          )
+        } else {
+          navigate(ROUTES.ORGANIZATIONS.LIST, successMessage)
+        }
       } else {
-        navigate(ROUTES.ORGANIZATIONS.LIST, successMessage)
+        alertRef.current?.triggerAlert({
+          message: t('org:editSuccessMessage'),
+          severity: 'success'
+        })
+        setIsEditMode(false)
+        refetch()
+        window.scrollTo({ top: 0, behavior: 'smooth' })
       }
-    } else {
-      alertRef.current?.triggerAlert({
-        message: t('org:editSuccessMessage'),
-        severity: 'success'
-      })
-      setIsEditMode(false)
-      refetch()
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    }
-  }, [addMode, navigate, refetch, t])
+    },
+    [addMode, navigate, refetch, t]
+  )
 
   if (isLoading) {
     return <Loading />

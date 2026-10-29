@@ -1,10 +1,18 @@
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { format, isValid, parseISO } from 'date-fns'
 import { useEffect, useRef, useState } from 'react'
-import type { ComponentProps, MouseEvent, SyntheticEvent, KeyboardEvent } from 'react'
+import type {
+  ComponentProps,
+  MouseEvent,
+  SyntheticEvent,
+  KeyboardEvent
+} from 'react'
 import type { ColDef, Column, GridApi } from 'ag-grid-community'
 
-interface DateEditorApi extends Pick<GridApi, 'stopEditing' | 'setFocusedCell'> {
+interface DateEditorApi extends Pick<
+  GridApi,
+  'stopEditing' | 'setFocusedCell'
+> {
   getLastDisplayedRowIndex: () => number
 }
 

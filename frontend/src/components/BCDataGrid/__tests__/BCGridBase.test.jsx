@@ -1,5 +1,5 @@
-import { render, fireEvent, act } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { render, fireEvent, act } from '@testing-library/react'
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vite-plus/test'
 import React, { createRef } from 'react'
 import { BrowserRouter } from 'react-router-dom'
 import { BCGridBase } from '../BCGridBase'
