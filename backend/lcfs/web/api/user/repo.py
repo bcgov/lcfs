@@ -64,10 +64,7 @@ ORG_BOUND_TEST_USER_RE = re.compile(r"^(lcfs|tfs)\d+$", re.IGNORECASE)
 class UserRepository:
     EXCLUDED_USER_ACTIVITY_STATUSES = ["Draft"]
 
-    def __init__(self, db: AsyncSession = Depends(
-        get_async_db_session,
-        scope="function",
-    )):
+    def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
         self.db = db
 
     @staticmethod

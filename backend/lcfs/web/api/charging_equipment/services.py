@@ -35,7 +35,7 @@ class ChargingEquipmentServices:
     def __init__(
         self,
         repo: ChargingEquipmentRepository = Depends(),
-        session: AsyncSession = Depends(get_async_db_session, scope="function"),
+        session: AsyncSession = Depends(get_async_db_session),
         notification_service: NotificationService = Depends(NotificationService),
     ):
         self.repo = repo

@@ -18,7 +18,7 @@ class OrganizationSnapshotService:
         self,
         request: Request = None,
         repo: OrganizationSnapshotRepository = Depends(OrganizationSnapshotRepository),
-        session: AsyncSession = Depends(get_async_db_session, scope="function"),
+        session: AsyncSession = Depends(get_async_db_session),
         geocoder: BCGeocoderService = Depends(get_geocoder_service_async),
     ) -> None:
         self.repo = repo

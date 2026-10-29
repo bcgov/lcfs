@@ -131,7 +131,7 @@ def _normalize_display_name(requested_name: str, original_file_name: str) -> str
 class DocumentService:
     def __init__(
         self,
-        db: AsyncSession = Depends(get_async_db_session, scope="function"),
+        db: AsyncSession = Depends(get_async_db_session),
         clamav_service: ClamAVService = Depends(),
         s3_client=Depends(get_s3_client),
         compliance_report_repo: ComplianceReportRepository = Depends(),

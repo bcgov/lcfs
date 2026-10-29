@@ -1,6 +1,9 @@
 from lcfs.db.base import Auditable, BaseModel
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, JSON
+from sqlalchemy.ext.declarative import declarative_base
 from enum import Enum
+
+Base = declarative_base()
 
 
 class TaskStatus(str, Enum):

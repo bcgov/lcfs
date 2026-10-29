@@ -1,4 +1,3 @@
-from pydantic import ConfigDict
 from datetime import datetime
 from typing import List, Optional
 
@@ -127,4 +126,5 @@ class FolderSchema(BaseSchema):
     sort_order: int = 0
     is_system: bool = False
 
-    model_config = ConfigDict(from_attributes=True)
+    class Config:
+        from_attributes = True

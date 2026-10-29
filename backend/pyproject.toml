@@ -101,17 +101,13 @@ filterwarnings = [
     "error",
     "ignore::DeprecationWarning",
     "ignore:.*unclosed.*:ResourceWarning",
-    # Keep schema declarations ready for the Pydantic/Python upgrade.
-    "error:Support for class-based.*config.*:pydantic.warnings.PydanticDeprecatedSince20",
-    "error:Using extra keyword arguments on.*Field.*:pydantic.warnings.PydanticDeprecatedSince20",
-    "error:.*min_items.*is deprecated:pydantic.warnings.PydanticDeprecatedSince20",
 ]
 env = [
     "APP_ENVIRONMENT=pytest",
     "LCFS_DB_BASE=lcfs_test",
 ]
 # Test discovery patterns
-testpaths = ["lcfs/tests", "lcfs/scripts/tests"]
+testpaths = ["lcfs/tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]

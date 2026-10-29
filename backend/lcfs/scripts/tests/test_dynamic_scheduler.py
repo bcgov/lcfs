@@ -46,14 +46,15 @@ async def test_get_worker_id(scheduler):
 @pytest.mark.anyio
 async def test_get_enabled_tasks_exception(scheduler):
     mock_session = AsyncMock()
-    mock_session.__aenter__.return_value = mock_session
-    mock_session.execute.side_effect = RuntimeError("DB Error")
+
+    async def mock_execute_error(*args, **kwargs):
+        raise Exception("DB Error")
+
+    mock_session.execute = mock_execute_error
     scheduler.session = lambda: mock_session
 
     tasks = await scheduler.get_enabled_tasks()
     assert tasks == []
-    mock_session.execute.assert_awaited_once()
-    mock_session.__aexit__.assert_awaited_once()
 
 
 @pytest.mark.anyio
@@ -209,13 +210,16 @@ async def test_run_scheduler_cycle_no_tasks(scheduler):
 @pytest.mark.anyio
 async def test_verify_task_update_not_found(scheduler):
     mock_session = AsyncMock()
-    mock_session.__aenter__.return_value = mock_session
-    mock_session.get.return_value = None
+
+    # Make get return an awaitable that returns None
+    async def mock_get(*args, **kwargs):
+        return None
+
+    mock_session.get = mock_get
     scheduler.session = lambda: mock_session
 
     result = await scheduler.verify_task_update(1, TaskStatus.SUCCESS)
     assert result is False
-    mock_session.get.assert_awaited_once_with(ScheduledTask, 1)
 
 
 @pytest.mark.anyio

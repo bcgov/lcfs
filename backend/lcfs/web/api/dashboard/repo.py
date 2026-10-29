@@ -34,7 +34,7 @@ logger = structlog.get_logger(__name__)
 class DashboardRepository:
     def __init__(
         self,
-        db: AsyncSession = Depends(get_async_db_session, scope="function"),
+        db: AsyncSession = Depends(get_async_db_session),
         ci_application_repo: CIApplicationRepository = Depends(CIApplicationRepository),
     ):
         self.db = db

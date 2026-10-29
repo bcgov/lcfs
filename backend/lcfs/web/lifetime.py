@@ -1,16 +1,15 @@
 from typing import Awaitable, Callable
 
-import boto3
 from fastapi import FastAPI
+import boto3
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
+from lcfs.services.scheduler.scheduler import shutdown_scheduler, start_scheduler
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
-from lcfs.services.redis.coder import RedisJsonCoder
 from lcfs.services.redis.lifetime import init_redis, shutdown_redis
-from lcfs.services.scheduler.scheduler import shutdown_scheduler, start_scheduler
 from lcfs.settings import settings
 
 
@@ -66,11 +65,7 @@ def register_startup_event(
         app.state.settings = settings
 
         # Initialize FastAPI cache with the Redis client
-        FastAPICache.init(
-            RedisBackend(app.state.redis_client),
-            prefix="lcfs",
-            coder=RedisJsonCoder,
-        )
+        FastAPICache.init(RedisBackend(app.state.redis_client), prefix="lcfs")
 
         # Start the scheduler
         start_scheduler(app)

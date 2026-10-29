@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import List, Optional
 
-from pydantic import Field, field_validator, ConfigDict
+from pydantic import Field, field_validator
 
 from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
     AGREEMENT_TYPE_INITIATIVE_AGREEMENT,
@@ -13,21 +13,24 @@ class InitiativeAgreementStatusSchema(BaseSchema):
     initiative_agreement_status_id: int
     status: str
 
-    model_config = ConfigDict(from_attributes=True)
+    class Config:
+        from_attributes = True
 
 
 class HistoryUserSchema(BaseSchema):
     first_name: str
     last_name: str
 
-    model_config = ConfigDict(from_attributes=True)
+    class Config:
+        from_attributes = True
 
 
 class OrganizationSchema(BaseSchema):
     organization_id: int
     name: str
 
-    model_config = ConfigDict(from_attributes=True)
+    class Config:
+        from_attributes = True
 
 
 class AgreementOrganizationAddressSchema(BaseSchema):
@@ -44,7 +47,8 @@ class AgreementOrganizationAddressSchema(BaseSchema):
     country: Optional[str] = None
     postalCode_zipCode: Optional[str] = None
 
-    model_config = ConfigDict(from_attributes=True)
+    class Config:
+        from_attributes = True
 
 
 class AgreementOrganizationSchema(BaseSchema):
@@ -61,7 +65,8 @@ class AgreementOrganizationSchema(BaseSchema):
     phone: Optional[str] = None
     org_address: Optional[AgreementOrganizationAddressSchema] = None
 
-    model_config = ConfigDict(from_attributes=True)
+    class Config:
+        from_attributes = True
 
 
 class InitiativeAgreementHistorySchema(BaseSchema):
@@ -70,7 +75,8 @@ class InitiativeAgreementHistorySchema(BaseSchema):
     user_profile: HistoryUserSchema
     display_name: Optional[str] = None
 
-    model_config = ConfigDict(from_attributes=True)
+    class Config:
+        from_attributes = True
 
 
 class InitiativeAgreementBaseSchema(BaseSchema):
@@ -87,7 +93,8 @@ class InitiativeAgreementBaseSchema(BaseSchema):
             raise ValueError("compliance_units must be positive")
         return v
 
-    model_config = ConfigDict(from_attributes=True)
+    class Config:
+        from_attributes = True
 
 
 class InitiativeAgreementSchema(InitiativeAgreementBaseSchema):
@@ -132,7 +139,8 @@ class DesignatedActionStatusSchema(BaseSchema):
     # Drives the workflow progress stepper on the action detail page.
     display_order: Optional[int] = None
 
-    model_config = ConfigDict(from_attributes=True)
+    class Config:
+        from_attributes = True
 
 
 class AssignedAnalystSchema(BaseSchema):
@@ -140,7 +148,8 @@ class AssignedAnalystSchema(BaseSchema):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
 
-    model_config = ConfigDict(from_attributes=True)
+    class Config:
+        from_attributes = True
 
 
 class LastCommentSchema(BaseSchema):
@@ -155,7 +164,8 @@ class LastCommentSchema(BaseSchema):
     comment: str
     create_date: datetime
 
-    model_config = ConfigDict(from_attributes=True)
+    class Config:
+        from_attributes = True
 
 
 class DesignatedActionSchema(BaseSchema):
@@ -177,7 +187,8 @@ class DesignatedActionSchema(BaseSchema):
     # only. DA comments arrive with #4900 — the column exists first.
     last_comment: Optional[LastCommentSchema] = None
 
-    model_config = ConfigDict(from_attributes=True)
+    class Config:
+        from_attributes = True
 
 
 class EvidenceRequirementSchema(BaseSchema):
@@ -197,7 +208,8 @@ class EvidenceRequirementSchema(BaseSchema):
     reviewed_by: Optional[AssignedAnalystSchema] = None
     reviewed_date: Optional[datetime] = None
 
-    model_config = ConfigDict(from_attributes=True)
+    class Config:
+        from_attributes = True
 
 
 class EvidenceRequirementCreateSchema(BaseSchema):
@@ -242,7 +254,8 @@ class DesignatedActionHistorySchema(BaseSchema):
     # response is camelCase. Readers of the snapshot must expect that.
     snapshot: Optional[dict] = None
 
-    model_config = ConfigDict(from_attributes=True)
+    class Config:
+        from_attributes = True
 
 
 class DesignatedActionCreateSchema(BaseSchema):
@@ -330,7 +343,8 @@ class InitiativeAgreementLifecycleStatusSchema(BaseSchema):
     status: str
     description: Optional[str] = None
 
-    model_config = ConfigDict(from_attributes=True)
+    class Config:
+        from_attributes = True
 
 
 class InitiativeAgreementListItemSchema(BaseSchema):
@@ -351,7 +365,8 @@ class InitiativeAgreementListItemSchema(BaseSchema):
     organization: Optional[OrganizationSchema] = None
     last_comment: Optional[LastCommentSchema] = None
 
-    model_config = ConfigDict(from_attributes=True)
+    class Config:
+        from_attributes = True
 
 
 class InitiativeAgreementsListSchema(BaseSchema):

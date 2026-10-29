@@ -128,8 +128,7 @@ class EndUserTypeSchema(BaseSchema):
 
 class EnergyDensitySchema(BaseSchema):
     energy_density_id: int
-    # Preserve published schema metadata; coercion/rounding uses the validator.
-    density: float = Field(..., json_schema_extra={"pre": True, "always": True})
+    density: float = Field(..., pre=True, always=True)
 
     fuel_type_id: int
     fuel_type: Optional[FuelTypeSchema] = None
@@ -155,7 +154,7 @@ class EnergyEffectivenessRatioSchema(BaseSchema):
     fuel_type: Optional[FuelTypeSchema] = None
     end_use_type_id: Optional[int] = None
     end_use_type: Optional[EndUseTypeSchema] = None
-    ratio: float = Field(..., json_schema_extra={"pre": True, "always": True})
+    ratio: float = Field(..., pre=True, always=True)
 
     @field_validator("ratio")
     def quantize_ratio(cls, value):
@@ -172,7 +171,7 @@ class AdditionalCarbonIntensitySchema(BaseSchema):
     compliance_period: CompliancePeriodBaseSchema
     uom_id: Optional[int] = None
     uom: Optional[UOMSchema] = None
-    intensity: float = Field(..., json_schema_extra={"pre": True, "always": True})
+    intensity: float = Field(..., pre=True, always=True)
 
     @field_validator("intensity")
     def quantize_intensity(cls, value):

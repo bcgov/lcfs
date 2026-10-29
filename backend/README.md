@@ -83,7 +83,7 @@ All environment variables should start with "LCFS\_" prefix.
 For example if you see in your "lcfs/settings.py" a variable named like
 `random_parameter`, you should provide the "LCFS_RANDOM_PARAMETER"
 variable to configure the value. This behaviour can be changed by overriding `env_prefix` property
-in `lcfs.settings.Settings.model_config`.
+in `lcfs.settings.Settings.Config`.
 
 You can read more about BaseSettings class here: https://pydantic-docs.helpmanual.io/usage/settings/
 
@@ -236,19 +236,6 @@ Omit `[revision]` to revert to the base state.
 - The script automatically activates and deactivates the virtual environment as needed.
 
 ## Running Tests
-
-Default discovery includes both `lcfs/tests` and `lcfs/scripts/tests`, so the
-scheduler and scheduled-task tests run locally and in the existing CI shards.
-
-`lcfs/tests/db/test_session_transactions.py` exercises the actual database session
-dependency against PostgreSQL, including commit failures and streaming cleanup.
-It does not use the usual client fixture that replaces this dependency. These
-tests preserve the current contract: transactions finish before response headers,
-and later stream failures or disconnects cannot undo an already committed write.
-
-Schema declaration deprecations are errors even inside tests that otherwise
-suppress legacy deprecation warnings. Remaining runtime Pydantic API migrations
-are separate upgrade work.
 
 To ensure the quality and correctness of the code, it's important to run tests regularly. This project uses `pytest` for testing. Follow these steps to run tests on your local machine:
 

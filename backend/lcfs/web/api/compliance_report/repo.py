@@ -75,7 +75,7 @@ logger = structlog.get_logger(__name__)
 class ComplianceReportRepository:
     def __init__(
         self,
-        db: AsyncSession = Depends(get_async_db_session, scope="function"),
+        db: AsyncSession = Depends(get_async_db_session),
         fuel_supply_repo: FuelSupplyRepository = Depends(),
     ):
         self.db = db

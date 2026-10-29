@@ -16,10 +16,7 @@ from lcfs.web.api.search.schema import SearchGroup, SearchResponse
 class SearchService:
     """Parse one query and collect results from registered entity searches."""
 
-    def __init__(self, db: AsyncSession = Depends(
-        get_async_db_session,
-        scope="function",
-    )):
+    def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
         self.db = db
 
     async def search(self, raw_query: str, user: UserProfile) -> SearchResponse:

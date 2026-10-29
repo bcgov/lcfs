@@ -17,10 +17,7 @@ from lcfs.web.core.decorators import repo_handler
 
 
 class AdminAdjustmentRepository:
-    def __init__(self, db: AsyncSession = Depends(
-        get_async_db_session,
-        scope="function",
-    )):
+    def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
         self.db = db
 
     @repo_handler

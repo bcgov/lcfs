@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from pydantic import Field, ValidationInfo, field_validator, model_validator, ConfigDict
+from pydantic import Field, ValidationInfo, field_validator, model_validator
 
 from lcfs.web.api.base import (
     BaseSchema,
@@ -160,7 +160,8 @@ class FuelSupplyCreateUpdateSchema(BaseSchema):
     is_canada_produced: Optional[bool] = False
     is_q1_supplied: Optional[bool] = False
 
-    model_config = ConfigDict(use_enum_values=True)
+    class Config:
+        use_enum_values = True
 
     @model_validator(mode="before")
     @classmethod
