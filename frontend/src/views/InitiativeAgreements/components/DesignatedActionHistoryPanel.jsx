@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Box from '@mui/material/Box'
+import Accordion from '@mui/material/Accordion'
+import AccordionSummary from '@mui/material/AccordionSummary'
+import AccordionDetails from '@mui/material/AccordionDetails'
 import Collapse from '@mui/material/Collapse'
 import IconButton from '@mui/material/IconButton'
-import Paper from '@mui/material/Paper'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 
@@ -12,6 +14,8 @@ import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
 import { useDesignatedActionHistory } from '@/hooks/useInitiativeAgreements'
 import { timezoneFormatter } from '@/utils/formatters'
+import { evidencePlainText } from './evidenceRichText'
+import { OUTCOME_SATISFACTORY } from './evidenceConstants'
 
 // The audit trail behind a designated action (#4898, #5081). Every
 // workflow step is recorded; this is where a reviewer reads back what
@@ -26,8 +30,6 @@ import { timezoneFormatter } from '@/utils/formatters'
 
 // Snapshot keys are stored as written — snake_case — while the rest of the
 // response is camelCase. See DesignatedActionHistorySchema.
-const OUTCOME_SATISFACTORY = 'Satisfactory'
-
 const EVENT_LABELS = {
   STATUS_CHANGE: 'statusChange',
   ANALYST_ASSIGNED: 'analystAssigned',
@@ -43,14 +45,22 @@ const EVENT_LABELS = {
 
 // In display order. An event no group claims lands in "other" so nothing
 // the trail recorded is ever silently dropped from the page.
-export const HISTORY_GROUPS = [
+const HISTORY_GROUPS = [
   {
     key: 'evidenceReview',
-    events: ['EVIDENCE_REVIEWED', 'INFORMATION_REQUESTED']
+    events: ['EVIDENCE_REVIEWED']
+  },
+  {
+    key: 'informationRequests',
+    events: ['INFORMATION_REQUESTED']
+  },
+  {
+    key: 'recommendations',
+    events: ['CREDITS_RECOMMENDED']
   },
   {
     key: 'workflow',
-    events: ['STATUS_CHANGE', 'CREDITS_RECOMMENDED', 'CREDITS_ISSUED']
+    events: ['STATUS_CHANGE', 'CREDITS_ISSUED']
   },
   {
     key: 'assignment',
@@ -59,7 +69,7 @@ export const HISTORY_GROUPS = [
   { key: 'recordChanges', events: ['DETAILS_EDITED', 'CHANGE_ORDER'] }
 ]
 
-export const groupHistory = (entries) => {
+const groupHistory = (entries) => {
   const claimed = new Set(HISTORY_GROUPS.flatMap((group) => group.events))
   const groups = HISTORY_GROUPS.map((group) => ({
     key: group.key,
@@ -73,17 +83,10 @@ export const groupHistory = (entries) => {
   return groups.filter((group) => group.entries.length > 0)
 }
 
-const railColour = (event) => {
-  if (event === 'INFORMATION_REQUESTED') return 'warning.main'
-  if (event === 'EVIDENCE_REVIEWED') return 'success.main'
-  if (event === 'CREDITS_ISSUED') return 'success.main'
-  return 'primary.main'
-}
-
 // Requirements recorded before titles existed carry none; the
 // description stands in, as it does on the live card.
 const requirementHeading = (requirement) =>
-  requirement.title || requirement.description
+  requirement.title || evidencePlainText(requirement.description)
 
 const evidenceCounts = (requirements) => {
   const satisfactory = requirements.filter(
@@ -141,13 +144,30 @@ const detailLines = (entry, t) => {
     }
     // Show the correction itself: "1,000 to 1,850" is the useful part.
     for (const [field, change] of Object.entries(snapshot.changed)) {
+      const richText = [
+        'description',
+        'analyst_review',
+        'evaluation',
+        'review_notes',
+        'missing_information'
+      ].includes(field)
       lines.push(
         t('initiativeAgreement:history.changed', {
           field: t(`initiativeAgreement:history.fields.${field}`, {
             defaultValue: field
           }),
-          from: change.from ?? '—',
-          to: change.to ?? '—'
+          from:
+            change.from == null
+              ? '—'
+              : richText
+                ? evidencePlainText(change.from)
+                : change.from,
+          to:
+            change.to == null
+              ? '—'
+              : richText
+                ? evidencePlainText(change.to)
+                : change.to
         })
       )
     }
@@ -200,7 +220,7 @@ const EvidenceList = ({ requirements }) => {
           </BCTypography>
           {requirement.analyst_review && (
             <BCTypography variant="body4" component="p" sx={{ m: 0 }}>
-              {requirement.analyst_review}
+              {evidencePlainText(requirement.analyst_review)}
             </BCTypography>
           )}
         </Box>
@@ -234,11 +254,7 @@ const HistoryEntry = ({ entry }) => {
   const detailId = `history-entry-detail-${id}`
 
   return (
-    <Paper
-      variant="outlined"
-      data-test={`history-entry-${id}`}
-      sx={{ p: 2, borderLeft: 4, borderLeftColor: railColour(entry.event) }}
-    >
+    <Box component="li" data-test={`history-entry-${id}`} sx={{ mb: 1 }}>
       <Box
         sx={{
           display: 'flex',
@@ -307,7 +323,7 @@ const HistoryEntry = ({ entry }) => {
                 data-test="history-comment"
                 sx={{ fontStyle: 'italic', mt: 0.5 }}
               >
-                &ldquo;{snapshot.comment}&rdquo;
+                &ldquo;{evidencePlainText(snapshot.comment)}&rdquo;
               </BCTypography>
             )}
             {requirements.length > 0 && (
@@ -316,7 +332,7 @@ const HistoryEntry = ({ entry }) => {
           </Box>
         </Collapse>
       )}
-    </Paper>
+    </Box>
   )
 }
 
@@ -343,8 +359,6 @@ const HistoryGroup = ({ group }) => {
           gap: 1,
           background: 'none',
           border: 'none',
-          borderBottom: 1,
-          borderColor: 'divider',
           px: 0,
           py: 1,
           mb: 1,
@@ -365,7 +379,7 @@ const HistoryGroup = ({ group }) => {
         ) : (
           <ExpandMoreIcon fontSize="small" color="action" />
         )}
-        <BCTypography variant="body4" sx={{ fontWeight: 700 }}>
+        <BCTypography variant="body4" color="primary">
           {t(`initiativeAgreement:history.groups.${group.key}`)}
         </BCTypography>
         <BCBox
@@ -384,8 +398,16 @@ const HistoryGroup = ({ group }) => {
       </Box>
       <Collapse in={open}>
         <Box
+          component="ul"
           id={bodyId}
-          sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 2 }}
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 1.5,
+            mt: 0,
+            pl: 5,
+            mb: 2
+          }}
         >
           {group.entries.map((entry) => (
             <HistoryEntry key={entry.designatedActionHistoryId} entry={entry} />
@@ -399,37 +421,38 @@ const HistoryGroup = ({ group }) => {
 export const DesignatedActionHistoryPanel = ({ designatedActionId }) => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const [expanded, setExpanded] = useState(true)
+  const panelId = useId()
   const { data: entries = [], isLoading } =
     useDesignatedActionHistory(designatedActionId)
 
   return (
-    <BCBox mt={3} data-test="designated-action-history">
-      <Box
+    <Accordion
+      expanded={expanded}
+      onChange={(_, open) => setExpanded(open)}
+      data-test="designated-action-history"
+      sx={{
+        mt: 3,
+        border: 1,
+        borderColor: 'divider',
+        boxShadow: 'none',
+        '&:before': { display: 'none' }
+      }}
+    >
+      <AccordionSummary
+        expandIcon={<ExpandMoreIcon sx={{ width: 20, height: 20 }} />}
+        data-test="history-toggle"
+        aria-controls={`${panelId}-content`}
+        id={`${panelId}-header`}
         sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          borderBottom: 1,
-          borderColor: 'divider',
-          pb: 1,
-          mb: 2
+          px: 3
         }}
       >
-        <BCTypography variant="h6" color="primary">
+        <BCTypography variant="h6" component="span" color="primary">
           {t('initiativeAgreement:history.title')}
         </BCTypography>
-        <IconButton
-          size="small"
-          data-test="history-toggle"
-          aria-label={t('initiativeAgreement:history.title')}
-          aria-expanded={expanded}
-          onClick={() => setExpanded((open) => !open)}
-        >
-          {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-        </IconButton>
-      </Box>
+      </AccordionSummary>
 
-      <Collapse in={expanded}>
+      <AccordionDetails id={`${panelId}-content`} sx={{ px: 3 }}>
         {isLoading ? (
           <Loading message={t('initiativeAgreement:history.loading')} />
         ) : entries.length === 0 ? (
@@ -441,8 +464,8 @@ export const DesignatedActionHistoryPanel = ({ designatedActionId }) => {
             <HistoryGroup key={group.key} group={group} />
           ))
         )}
-      </Collapse>
-    </BCBox>
+      </AccordionDetails>
+    </Accordion>
   )
 }
 

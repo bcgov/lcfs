@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react';
 import { screen, cleanup } from '@testing-library/react'
 import TransferHistory from '../TransferHistory'
 import { beforeEach, describe, expect, vi } from 'vitest'
@@ -9,7 +9,7 @@ import {
   TRANSFER_STATUSES,
   TRANSFER_RECOMMENDATION
 } from '@/constants/statuses'
-import dayjs from 'dayjs'
+import 'dayjs';
 
 vi.mock('@/hooks/useTransfer')
 vi.mock('@/hooks/useCurrentUser')

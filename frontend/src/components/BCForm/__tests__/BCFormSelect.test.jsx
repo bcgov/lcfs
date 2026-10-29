@@ -39,7 +39,9 @@ describe('BCFormSelect', () => {
   }
 
   const renderBCFormSelect = (
-    { render, theme },
+    {
+  render
+},
     props = {},
     formDefaults = {}
   ) => {
@@ -241,7 +243,9 @@ describe('BCFormSelect', () => {
   })
 
   describe('Edge Cases and Error Handling', () => {
-    test('handles undefined options gracefully', ({ render, theme }) => {
+    test('handles undefined options gracefully', ({
+  render
+}) => {
       expect(() => {
         render(
           <FormWrapper defaultValues={{ test: '' }}>
@@ -312,7 +316,9 @@ describe('BCFormSelect', () => {
       expect(endTime - startTime).toBeLessThan(500)
     })
 
-    test('maintains performance during re-renders', ({ render, theme }) => {
+    test('maintains performance during re-renders', ({
+  render
+}) => {
       const { rerender } = render(
         <FormWrapper defaultValues={{ testSelect: 'option1' }}>
           {({ control }) => (
@@ -349,7 +355,9 @@ describe('BCFormSelect', () => {
   })
 
   describe('PropTypes and API', () => {
-    test('renders with minimal required props', ({ render, theme }) => {
+    test('renders with minimal required props', ({
+  render
+}) => {
       render(
         <FormWrapper defaultValues={{ minimal: '' }}>
           {({ control }) => (

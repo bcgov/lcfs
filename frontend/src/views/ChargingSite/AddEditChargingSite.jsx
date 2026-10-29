@@ -32,12 +32,17 @@ const ALLOCATING_ORG_FIELDS = [
   'allocatingOrganizationName'
 ]
 
-export const AddEditChargingSite = ({
-  isEditMode = false,
-  setIsEditMode,
-  data,
-  refetch
-}) => {
+/**
+ * @typedef {Object} AddEditChargingSiteProps
+ * @property {boolean} [isEditMode]
+ * @property {(value: boolean) => void} [setIsEditMode]
+ * @property {Record<string, unknown>} [data]
+ * @property {() => unknown} [refetch]
+ */
+
+/** @param {AddEditChargingSiteProps} props */
+export const AddEditChargingSite = (props) => {
+  const { isEditMode = false, setIsEditMode, data, refetch } = props
   const [rowData, setRowData] = useState([])
   const gridRef = useRef(null)
   const [errors, setErrors] = useState({})
@@ -72,7 +77,8 @@ export const AddEditChargingSite = ({
       autoSizeStrategy: {
         type: 'fitCellContents',
         defaultMinWidth: 50,
-        defaultMaxWidth: 600
+        defaultMaxWidth: 600,
+        scaleUpToFitGridWidth: true
       }
     }),
     [t]
@@ -107,7 +113,6 @@ export const AddEditChargingSite = ({
     }
 
     const gridApi = gridRef.current?.api
-    gridApi?.sizeColumnsToFit()
 
     const timeout = setTimeout(() => {
       const lastRowIndex = gridApi?.getLastDisplayedRowIndex?.()
@@ -128,7 +133,7 @@ export const AddEditChargingSite = ({
   }, [errors, warnings, isGridReady])
 
   const onFirstDataRendered = useCallback((params) => {
-    params.api?.autoSizeAllColumns?.()
+    params.api?.autoSizeAllColumns?.({ scaleUpToFitGridWidth: true })
   }, [])
 
   const onCellEditingStopped = useCallback(
@@ -205,7 +210,7 @@ export const AddEditChargingSite = ({
         // Update with error/warning status but keep the alert visible
         params.node.updateData({ ...responseData })
       }
-      params.api?.autoSizeAllColumns?.()
+      params.api?.autoSizeAllColumns?.({ scaleUpToFitGridWidth: true })
     },
     [isEditMode, navigate, organizationId, saveRow, siteId, t]
   )
@@ -376,10 +381,6 @@ export const AddEditChargingSite = ({
         setWarnings({})
         importResultAppliedRef.current = true
 
-        setTimeout(() => {
-          gridRef.current?.api?.sizeColumnsToFit()
-        }, 0)
-
         alertRef.current?.triggerAlert({
           message: t('chargingSite:importSuccess', {
             defaultValue: 'Charging sites have been refreshed.'
@@ -396,7 +397,7 @@ export const AddEditChargingSite = ({
         })
       }
     },
-    [apiService, organizationId, hasRoles, t, gridRef, setErrors, setWarnings]
+    [apiService, organizationId, hasRoles, t, setErrors, setWarnings]
   )
 
   const handleImportComplete = () => {
@@ -418,11 +419,7 @@ export const AddEditChargingSite = ({
     if (isEditMode) {
       setIsEditMode?.(false)
       const latestSiteId = rowData?.[0]?.chargingSiteId
-      if (
-        latestSiteId &&
-        siteId &&
-        String(latestSiteId) !== String(siteId)
-      ) {
+      if (latestSiteId && siteId && String(latestSiteId) !== String(siteId)) {
         navigate(
           ROUTES.REPORTS.CHARGING_SITE.VIEW.replace(':siteId', latestSiteId),
           { replace: true }

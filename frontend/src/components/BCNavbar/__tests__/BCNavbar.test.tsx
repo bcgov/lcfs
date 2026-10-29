@@ -9,7 +9,8 @@ import BCNavbar from '../index'
 import theme from '@/themes'
 
 vi.mock('@mui/material/styles/useTheme', async (importOriginal) => {
-  const actual = await importOriginal()
+  const actual =
+    await importOriginal<typeof import('@mui/material/styles/useTheme')>()
   return {
     ...actual,
     default: vi.fn()
@@ -17,7 +18,8 @@ vi.mock('@mui/material/styles/useTheme', async (importOriginal) => {
 })
 
 vi.mock('@mui/material/useMediaQuery', async (importOriginal) => {
-  const actual = await importOriginal()
+  const actual =
+    await importOriginal<typeof import('@mui/material/useMediaQuery')>()
   return {
     ...actual,
     default: vi.fn()

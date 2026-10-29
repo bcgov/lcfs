@@ -10,7 +10,7 @@
  * in the Cypress pass; and axe finds machine-checkable failures, which is
  * a floor, not a substitute for driving the pages with a keyboard.
  */
-import React from 'react'
+import 'react'
 import { describe, expect, vi, beforeEach } from 'vitest'
 import axe from 'axe-core'
 
@@ -73,7 +73,6 @@ vi.mock('@/hooks/useInitiativeAgreements', () => ({
   useDeleteEvidenceRequirement: () => ({ mutate: vi.fn() }),
   useDesignatedActionWorkflow: () => ({ mutate: vi.fn(), isPending: false }),
   useSetRecommendedCredits: () => ({ mutate: vi.fn() }),
-  useSetMissingInformation: () => ({ mutate: vi.fn() }),
   useDesignatedActionHistory: () => ({
     data: [
       {

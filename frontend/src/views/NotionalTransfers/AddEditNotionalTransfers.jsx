@@ -111,7 +111,7 @@ export const AddEditNotionalTransfers = () => {
               complianceReportId
             }
           ])
-        } catch (error) {
+        } catch {
           alertRef.triggerAlert({
             message: t('notionalTransfer:LoadFailMsg'),
             severity: 'error'
@@ -120,8 +120,6 @@ export const AddEditNotionalTransfers = () => {
       } else {
         setRowData([{ id: uuid(), complianceReportId }])
       }
-
-      params.api.sizeColumnsToFit()
 
       setTimeout(() => {
         const lastRowIndex = params.api.getLastDisplayedRowIndex()
@@ -212,10 +210,10 @@ export const AddEditNotionalTransfers = () => {
 
       // Auto-resize columns after data update
       setTimeout(() => {
-        params.api?.autoSizeAllColumns?.()
+        params.api?.autoSizeAllColumns?.({ scaleUpToFitGridWidth: true })
       }, 0)
     },
-    [saveRow, t, complianceReportId]
+    [saveRow, t, complianceReportId, orgName]
   )
 
   const onAction = async (action, params) => {
@@ -255,35 +253,39 @@ export const AddEditNotionalTransfers = () => {
     optionsData,
     warnings,
     orgName,
-    compliancePeriod
+    compliancePeriod,
+    optionsLoading
   ])
 
   useEffect(() => {
     if (!transfersLoading && !isArrayEmpty(notionalTransfers)) {
-      const updatedRowData =
-        notionalTransfers?.map((item) => {
-          let matchingRow = rowData.find(
-            (row) => row.notionalTransferId === item.notionalTransferId
-          )
-          if (!matchingRow) {
-            matchingRow = rowData.find(
-              (row) =>
-                row.notionalTransferId === undefined ||
-                row.notionalTransferId === null
+      setRowData((currentRowData) => {
+        const updatedRowData =
+          notionalTransfers?.map((item) => {
+            let matchingRow = currentRowData.find(
+              (row) => row.notionalTransferId === item.notionalTransferId
             )
-          }
-          return {
-            ...item,
-            complianceReportId,
-            isNewSupplementalEntry:
-              isSupplemental && item.complianceReportId === +complianceReportId,
-            id: matchingRow ? matchingRow.id : uuid()
-          }
-        }) ?? []
-      setRowData([
-        ...updatedRowData,
-        { id: uuid(), complianceReportId, compliancePeriod }
-      ])
+            if (!matchingRow) {
+              matchingRow = currentRowData.find(
+                (row) =>
+                  row.notionalTransferId === undefined ||
+                  row.notionalTransferId === null
+              )
+            }
+            return {
+              ...item,
+              complianceReportId,
+              isNewSupplementalEntry:
+                isSupplemental &&
+                item.complianceReportId === +complianceReportId,
+              id: matchingRow ? matchingRow.id : uuid()
+            }
+          }) ?? []
+        return [
+          ...updatedRowData,
+          { id: uuid(), complianceReportId, compliancePeriod }
+        ]
+      })
     } else {
       setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
     }
@@ -320,18 +322,32 @@ export const AddEditNotionalTransfers = () => {
     if (showColumns) {
       api?.autoSizeAllColumns?.()
     }
-  })
+  }, [compliancePeriod])
+
+  // Preserve the original row-data/options-only effect trigger.
+  const previousGridColumnsEffectInputsRef = useRef({ rowData, optionsData })
+  const updateGridColumnsVisibilityForEffectRef = useRef(
+    updateGridColumnsVisibility
+  )
+  if (
+    previousGridColumnsEffectInputsRef.current.rowData !== rowData ||
+    previousGridColumnsEffectInputsRef.current.optionsData !== optionsData
+  ) {
+    previousGridColumnsEffectInputsRef.current = { rowData, optionsData }
+    updateGridColumnsVisibilityForEffectRef.current =
+      updateGridColumnsVisibility
+  }
 
   const onFirstDataRendered = useCallback((params) => {
-    params.api?.autoSizeAllColumns?.()
+    params.api?.autoSizeAllColumns?.({ scaleUpToFitGridWidth: true })
   }, [])
   const onCellValueChanged = useCallback(async () => {
     setTimeout(() => {
       updateGridColumnsVisibility()
     }, 0)
-  })
+  }, [updateGridColumnsVisibility])
   useEffect(() => {
-    updateGridColumnsVisibility()
+    updateGridColumnsVisibilityForEffectRef.current()
   }, [rowData, optionsData])
 
   const handleNavigateBack = useCallback(() => {
@@ -386,7 +402,8 @@ export const AddEditNotionalTransfers = () => {
             autoSizeStrategy={{
               type: 'fitCellContents',
               defaultMinWidth: 80,
-              defaultMaxWidth: 800
+              defaultMaxWidth: 800,
+              scaleUpToFitGridWidth: true
             }}
             showAddRowsButton={true}
             stopEditingWhenCellsLoseFocus

@@ -26,17 +26,9 @@ import {
 import colors from '@/themes/base/colors'
 import { isDocumentRenameEnabled } from '@/constants/common'
 import { getDocumentDisplayName } from '@/utils/documents'
-import {
-  DOC_CATEGORY_GHGENIUS_MODEL,
-  DOC_CATEGORY_SUPPORTING,
-  DOC_CATEGORY_TECHNICAL_REPORT
-} from './documentCategories'
+import './documentCategories'
 
-export {
-  DOC_CATEGORY_GHGENIUS_MODEL,
-  DOC_CATEGORY_SUPPORTING,
-  DOC_CATEGORY_TECHNICAL_REPORT
-} from './documentCategories'
+
 
 const PARENT_TYPE = 'ci_application'
 

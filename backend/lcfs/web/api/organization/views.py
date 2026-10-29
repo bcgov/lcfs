@@ -12,13 +12,17 @@ from fastapi import (
 )
 from fastapi.responses import StreamingResponse
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
-from starlette import status
 from typing import List
 
 from lcfs.db import dependencies
 from lcfs.web.core.decorators import view_handler
 from lcfs.web.api.base import PaginationRequestSchema
-from lcfs.web.api.user.schema import UserBaseSchema, UserCreateSchema, UsersSchema
+from lcfs.web.api.user.schema import (
+    UserBaseSchema,
+    UserCreateSchema,
+    UsersSchema,
+    UserUpdateResponseSchema,
+)
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.transfer.Transfer import Transfer
 from lcfs.db.models.transfer.TransferStatus import TransferStatusEnum
@@ -125,7 +129,7 @@ async def create_user(
 
 @router.put(
     "/{organization_id}/users/{user_id}",
-    response_model=UserBaseSchema,
+    response_model=UserUpdateResponseSchema,
     status_code=status.HTTP_200_OK,
 )
 @view_handler([RoleEnum.MANAGE_USERS])
@@ -136,7 +140,7 @@ async def update_user(
     user_id: int = None,
     user_create: UserCreateSchema = ...,
     user_service: UserServices = Depends(),
-) -> UserBaseSchema:
+) -> UserUpdateResponseSchema:
     """
     Endpoint to update a user
     This endpoint updates a user and returns the information of the updated user.
@@ -152,8 +156,7 @@ async def update_user(
             detail="You do not have permission to update users in this organization.",
         )
     user_create.organization_id = organization_id
-    await user_service.update_user(user_create, user_id)
-    return await user_service.get_user_by_id(user_id)
+    return await user_service.update_user_and_notify(user_create, user_id)
 
 
 @router.post(

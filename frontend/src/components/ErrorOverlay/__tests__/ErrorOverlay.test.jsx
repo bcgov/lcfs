@@ -1,5 +1,5 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react';
 import { ErrorOverlay } from '../ErrorOverlay'
 import { useTranslation } from 'react-i18next'
 import { useAuthorization } from '@/contexts/AuthorizationContext'
@@ -18,25 +18,37 @@ vi.mock('@/components/BCButton', () => ({
 // Mock BCTypography
 vi.mock('@/components/BCTypography', () => ({
   __esModule: true,
-  default: ({ children, variant, sx, ...props }) => (
-    <div data-variant={variant} {...props}>{children}</div>
-  )
+  default: ({
+  children,
+  variant,
+  ...props
+}) => { delete props.sx; return <div data-variant={variant} {...props}>{children}</div>; }
 }))
 
 // Mock MUI components
 vi.mock('@mui/material/Box', () => ({
-    default: ({ children, onClick, sx, component, ...props }) => {
+    default: ({
+  children,
+  onClick,
+  component,
+  ...props
+}) => {
+delete props.sx;
+
     const Component = component || 'div'
     return <Component onClick={onClick} {...props}>{children}</Component>
   }
 }))
 
 vi.mock('@mui/material/IconButton', () => ({
-    default: ({ children, onClick, 'aria-label': ariaLabel, size, sx, ...props }) => (
-    <button onClick={onClick} aria-label={ariaLabel} {...props}>
+    default: ({
+  children,
+  onClick,
+  'aria-label': ariaLabel,
+  ...props
+}) => { delete props.size; delete props.sx; return <button onClick={onClick} aria-label={ariaLabel} {...props}>
       {children}
-    </button>
-  )
+    </button>; }
 }))
 
 vi.mock('@mui/icons-material/Close', () => ({

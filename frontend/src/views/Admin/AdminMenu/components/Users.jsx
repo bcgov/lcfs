@@ -15,7 +15,7 @@ import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { apiRoutes } from '@/constants/routes'
+import '@/constants/routes'
 import { ROUTES } from '@/routes/routes'
 import { usersColumnDefs } from './_schema'
 import { LinkRenderer } from '@/utils/grid/cellRenderers'
@@ -81,22 +81,6 @@ export const Users = () => {
       setAlertSeverity(location.state.severity || 'info')
     }
   }, [location.state])
-
-  const handleSetResetGrid = useCallback(
-    /* c8 ignore next */ (fn) => {
-      setResetGridFn(() => fn)
-    },
-    []
-  )
-
-  const handleClearFilters = useCallback(() => {
-    try {
-      gridRef.current?.clearFilters?.()
-    } catch (e) {
-      // no-op
-    }
-    setPaginationOptions((prev) => ({ ...prev, page: 1, filters: [] }))
-  }, [])
 
   // Use the users list hook
   const queryData = useUsersList(paginationOptions)

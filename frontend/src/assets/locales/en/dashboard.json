@@ -36,7 +36,6 @@
     "title": "Initiative agreements",
     "thereAre": "There are:",
     "underway": "Initiative agreement(s) underway",
-    "draft": "Draft initiative agreement(s)",
     "viewAll": "View all initiative agreement(s)",
     "loadingMessage": "Loading initiative agreements card..."
   },
@@ -101,13 +100,15 @@
     "title": "User settings",
     "notifications": "Notifications",
     "configureNotifications": "Configure your notifications",
-    "help": "Help"
+    "help": "Help",
+    "helpLinkLabel": "Help (opens in a new browser tab)"
   },
   "orgUserSettings": {
     "title": "User settings",
     "notifications": "Notifications",
     "configureNotifications": "Configure your notifications",
-    "help": "Help"
+    "help": "Help",
+    "helpLinkLabel": "Help (opens in a new browser tab)"
   },
   "governmentNotifications": {
     "titles": {

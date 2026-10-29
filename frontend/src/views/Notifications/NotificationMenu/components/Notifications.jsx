@@ -8,19 +8,14 @@ import { faSquareCheck } from '@fortawesome/free-solid-svg-icons'
 import BCButton from '@/components/BCButton'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
-import {
-  columnDefs,
-  routesMapping,
-  defaultColDef,
-  defaultSortModel
-} from './_schema'
+import { columnDefs, routesMapping, defaultSortModel } from './_schema';
 import {
   useDeleteNotificationMessages,
   useGetNotificationMessages,
   useMarkNotificationAsRead
 } from '@/hooks/useNotifications'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { defaultInitialPagination } from '@/constants/schedules'
+import '@/constants/schedules';
 
 const initialPaginationOptions = {
   page: 1,
@@ -154,11 +149,18 @@ export const Notifications = () => {
 
   const handleRowClicked = useCallback(
     (params) => {
-      const { id, service, compliancePeriod } = JSON.parse(params.data.message)
+      const { id, service, compliancePeriod, linkPath } = JSON.parse(
+        params.data.message
+      )
       // Select the appropriate route based on the notification type
       // For fuel codes, use the notification type since they don't have a service field
       const serviceKey = service || params.data.type
-      const routeTemplate = routesMapping(currentUser)[serviceKey]
+      // Mention links are resolved alongside their email links on the server,
+      // including the parent agreement needed to open a designated action.
+      const routeTemplate =
+        params.data.type === 'Mention' && linkPath
+          ? linkPath
+          : routesMapping(currentUser)[serviceKey]
 
       if (routeTemplate && params.event.target.dataset.action !== 'delete') {
         navigate(

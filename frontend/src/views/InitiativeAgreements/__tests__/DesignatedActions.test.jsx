@@ -1,11 +1,10 @@
-import React from 'react'
+import 'react'
 import { describe, expect, vi, beforeEach } from 'vitest'
 import { screen } from '@testing-library/react'
 import { roles } from '@/constants/roles'
-import {
-  DesignatedActions,
-  defaultActionsSortModel
-} from '../DesignatedActions'
+import { DesignatedActions } from '../DesignatedActions'
+import { defaultActionsSortModel } from '../designatedActionsConfig'
+import { DAAssignedAnalystCell } from '../components/DAAssignedAnalystCell'
 import { test } from '@/tests/utils/fixtures'
 
 vi.mock('react-i18next', () => ({
@@ -49,6 +48,8 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 
 describe('DesignatedActions (module tab)', () => {
   beforeEach(() => {
+    sessionStorage.clear()
+    localStorage.clear()
     vi.clearAllMocks()
     mockRoles = [roles.ia_analyst]
     mockUseAllDesignatedActions.mockReturnValue({
@@ -72,7 +73,8 @@ describe('DesignatedActions (module tab)', () => {
     expect(mockBCGridViewer).toHaveBeenCalledWith(
       expect.objectContaining({
         gridKey: 'all-designated-actions-grid',
-        dataKey: 'designatedActions'
+        dataKey: 'designatedActions',
+        persistForLoginSession: true
       })
     )
   })
@@ -106,6 +108,28 @@ describe('DesignatedActions (module tab)', () => {
     expect(defaultColDef.cellRendererParams.isAbsolute).toBe(true)
   })
 
+  test('offers the assigned analyst column, assignable and filterable (#5197)', ({
+    render,
+    app
+  }) => {
+    render(<DesignatedActions />, app)
+
+    const { columnDefs } = mockBCGridViewer.mock.calls[0][0]
+    const analystColumn = columnDefs.find(
+      (colDef) => colDef.colId === 'assignedAnalyst'
+    )
+    expect(analystColumn).toBeDefined()
+    expect(analystColumn.cellRenderer).toBe(DAAssignedAnalystCell)
+    expect(analystColumn.headerName).toBe(
+      'initiativeAgreement:actions.columns.assignedAnalyst'
+    )
+    // The floating filter sends the analyst's id, which the endpoint
+    // already filters on.
+    expect(analystColumn.floatingFilterComponentParams.valueKey).toBe(
+      'userProfileId'
+    )
+  })
+
   test('surfaces a load failure in the alert box', ({ render, app }) => {
     mockUseAllDesignatedActions.mockReturnValue({
       data: undefined,
@@ -116,6 +140,31 @@ describe('DesignatedActions (module tab)', () => {
     render(<DesignatedActions />, app)
 
     expect(screen.getByTestId('alert-box')).toHaveTextContent('Boom')
+  })
+
+  test('hydrates pagination from localStorage so prefs survive closing the window (#5032)', ({
+    render,
+    app
+  }) => {
+    localStorage.setItem(
+      'all-designated-actions-grid-pagination',
+      JSON.stringify({
+        page: 4,
+        size: 50,
+        sortOrders: [{ field: 'name', direction: 'asc' }],
+        filters: []
+      })
+    )
+
+    render(<DesignatedActions />, app)
+
+    expect(mockUseAllDesignatedActions).toHaveBeenCalledWith(
+      expect.objectContaining({
+        page: 4,
+        size: 50,
+        sortOrders: [{ field: 'name', direction: 'asc' }]
+      })
+    )
   })
 
   test('is not offered to a proponent', ({ render, app }) => {

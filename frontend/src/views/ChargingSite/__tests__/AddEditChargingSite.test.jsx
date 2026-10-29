@@ -5,7 +5,18 @@ import { AddEditChargingSite } from '../AddEditChargingSite'
 import { test } from '@/tests/utils/fixtures'
 import ROUTES from '@/routes/routes'
 
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import {
+  useSaveChargingSite,
+  useGetAllocationOrganizations
+} from '@/hooks/useChargingSite'
+
 const mockNavigate = vi.fn()
+const mockGridApi = {
+  sizeColumnsToFit: vi.fn(),
+  getLastDisplayedRowIndex: vi.fn(() => 0),
+  startEditingCell: vi.fn()
+}
 
 vi.mock('react-router-dom', async (orig) => {
   const actual = await orig()
@@ -46,49 +57,57 @@ vi.mock('@/utils/schedules', () => ({
   handleScheduleSave: (...args) => mockHandleScheduleSave(...args)
 }))
 vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
-  BCGridEditor: React.forwardRef((props, ref) => (
-    <div data-testid="bc-grid-editor">
+  BCGridEditor: React.forwardRef(function BCGridEditorMock(props) {
+  return <div data-testid="bc-grid-editor">
+      <button onClick={() => {
+      props.gridRef.current = { api: mockGridApi }
+      props.onGridReady?.()
+    }}>
+        Grid Ready
+      </button>
       <button onClick={() => props.onAddRows(1)}>Add Row</button>
       <button onClick={() => props.saveButtonProps?.onSave()}>Save</button>
-      <button
-        onClick={() =>
-          props.onAction?.('delete', {
-            node: { data: { chargingSiteId: 123 } },
-            api: { isRowDataEmpty: () => false }
-          })
+      <button onClick={() => props.onAction?.('delete', {
+      node: {
+        data: {
+          chargingSiteId: 123
         }
-      >
+      },
+      api: {
+        isRowDataEmpty: () => false
+      }
+    })}>
         Delete
       </button>
-      <button
-        onClick={() =>
-          props.onCellEditingStopped?.({
-            oldValue: 'Old Allocating Org',
-            newValue: '',
-            node: {
-              data: {
-                chargingSiteId: 123,
-                siteName: 'Site A',
-                streetAddress: '1 Main St',
-                city: 'Vancouver',
-                postalCode: 'V6B 1A1',
-                latitude: 49.28,
-                longitude: -123.12,
-                notes: '',
-                allocatingOrganizationId: null,
-                allocatingOrganizationName: '',
-                status: { status: 'Draft' }
-              },
-              updateData: vi.fn()
-            },
-            api: { autoSizeAllColumns: vi.fn() }
-          })
-        }
-      >
+      <button onClick={() => props.onCellEditingStopped?.({
+      oldValue: 'Old Allocating Org',
+      newValue: '',
+      node: {
+        data: {
+          chargingSiteId: 123,
+          siteName: 'Site A',
+          streetAddress: '1 Main St',
+          city: 'Vancouver',
+          postalCode: 'V6B 1A1',
+          latitude: 49.28,
+          longitude: -123.12,
+          notes: '',
+          allocatingOrganizationId: null,
+          allocatingOrganizationName: '',
+          status: {
+            status: 'Draft'
+          }
+        },
+        updateData: vi.fn()
+      },
+      api: {
+        autoSizeAllColumns: vi.fn()
+      }
+    })}>
         Clear Allocating Org
       </button>
-    </div>
-  ))
+    </div>;
+})
 }))
 
 vi.mock('@/components/Role', () => ({
@@ -106,12 +125,6 @@ vi.mock('@/components/ImportDialog', () => {
     __esModule: true
   }
 })
-
-import { useCurrentUser } from '@/hooks/useCurrentUser'
-import {
-  useSaveChargingSite,
-  useGetAllocationOrganizations
-} from '@/hooks/useChargingSite'
 
 describe('AddEditChargingSite', () => {
   const mockProps = {
@@ -163,6 +176,28 @@ describe('AddEditChargingSite', () => {
     expect(
       screen.getByText('chargingSite:templateDescriptor')
     ).toBeInTheDocument()
+  })
+
+  test('leaves column sizing to the grid once it is ready', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<AddEditChargingSite {...mockProps} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
+    fireEvent.click(screen.getByText('Grid Ready'))
+
+    await waitFor(() => {
+      expect(mockGridApi.startEditingCell).toHaveBeenCalled()
+    })
+    // The ready effect re-runs on every row change; fitting there squeezed the columns
+    expect(mockGridApi.sizeColumnsToFit).not.toHaveBeenCalled()
   })
 
   test('renders edit mode with site name as title', ({

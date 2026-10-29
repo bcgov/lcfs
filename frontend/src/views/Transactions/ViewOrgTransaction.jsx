@@ -97,7 +97,6 @@ export const ViewOrgTransaction = () => {
     )
   }, [
     transactionType,
-    transactionId,
     isTransactionDataLoading,
     isLoadingError,
     transactionData,

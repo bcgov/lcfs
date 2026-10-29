@@ -1,6 +1,6 @@
 import { test } from '@/tests/utils/fixtures'
-import React from 'react'
-import { render, screen } from '@testing-library/react'
+import 'react'
+import { screen } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { Dashboard } from '../Dashboard'
 import { Dashboard as DashboardFromIndex } from '../index'

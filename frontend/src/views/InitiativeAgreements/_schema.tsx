@@ -1,7 +1,5 @@
-// @ts-nocheck
-import type { ColDef } from '@ag-grid-community/core'
-import BCBox from '@/components/BCBox'
-import BCUserInitials from '@/components/BCUserInitials/BCUserInitials'
+import type { ColDef } from 'ag-grid-community'
+import type { TFunction } from 'i18next'
 import {
   BCDateFloatingFilter,
   BCSelectFloatingFilter
@@ -12,7 +10,19 @@ import {
 } from '@/hooks/useInitiativeAgreements'
 import { DAAssignedAnalystCell } from './components/DAAssignedAnalystCell'
 import { dateFormatter } from '@/utils/formatters'
-import { createStatusRenderer } from '@/utils/grid/cellRenderers'
+import { InitiativeAgreementStatusRenderer, LastCommentRenderer } from './components/AgreementGridRenderers'
+
+type InitiativeAgreementGridRow = {
+  lifecycleStatus?: { status?: string }
+  organization?: { name?: string }
+  actionNumber?: number | string
+  initiativeAgreementId?: number | string
+  currentStatus?: { status?: string }
+  assignedAnalyst?: { userProfileId?: number | string }
+  lastComment?: { fullName?: string; comment?: string }
+  creditAllocation?: number | null
+  [key: string]: unknown
+}
 
 // Column definitions staged for the agreements index grid (#4833). Field
 // names follow the camelCase wire format of the initiative_agreement model;
@@ -20,56 +30,7 @@ import { createStatusRenderer } from '@/utils/grid/cellRenderers'
 
 // Status chip colours are provisional until the PO confirms the status
 // vocabulary (statuses are seed data on initiative_agreement_status).
-export const InitiativeAgreementStatusRenderer = createStatusRenderer(
-  {
-    Draft: 'info',
-    Underway: 'success',
-    Completed: 'primary',
-    Terminated: 'warning'
-  },
-  { statusField: 'lifecycleStatus.status' }
-)
-
-const COMMENT_CHIP_SX = {
-  bgcolor: '#606060',
-  color: 'common.white',
-  borderRadius: '50%',
-  width: 32,
-  height: 32,
-  minWidth: 32,
-  '& .MuiChip-label': { padding: 0 },
-  '&:hover': { bgcolor: '#505050' }
-}
-
-const LastCommentRenderer = ({ data }) => {
-  const last = data?.lastComment
-  if (!last?.fullName) {
-    return <BCBox component="div" sx={{ width: '100%', height: '100%' }} />
-  }
-  return (
-    <BCBox
-      component="div"
-      sx={{
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        py: 1
-      }}
-    >
-      <BCUserInitials
-        fullName={last.fullName}
-        tooltipText={last.comment}
-        maxLength={500}
-        variant="filled"
-        sx={COMMENT_CHIP_SX}
-      />
-    </BCBox>
-  )
-}
-
-const TEXT_FILTER_PARAMS = {
+export const TEXT_FILTER_PARAMS = {
   filterOptions: ['contains', 'startsWith', 'equals'],
   buttons: ['clear']
 }
@@ -84,7 +45,10 @@ const DATE_FLOATING_FILTER_PARAMS = {
   initialFilterType: 'equals'
 }
 
-const dateCol = (field, headerName) => ({
+const dateCol = (
+  field: ColDef<InitiativeAgreementGridRow>['field'],
+  headerName: string
+): ColDef<InitiativeAgreementGridRow> => ({
   field,
   headerName,
   valueFormatter: dateFormatter,
@@ -98,12 +62,16 @@ const dateCol = (field, headerName) => ({
 
 // A proponent's grid holds one organization, so the column would show
 // the same value in every row and its filter would filter nothing (#4893).
-export const proponentInitiativeAgreementColDefs = (t): ColDef[] =>
+export const proponentInitiativeAgreementColDefs = (
+  t: TFunction
+): ColDef<InitiativeAgreementGridRow>[] =>
   initiativeAgreementColDefs(t).filter(
     (colDef) => colDef.field !== 'organization.name'
   )
 
-export const initiativeAgreementColDefs = (t): ColDef[] => [
+export const initiativeAgreementColDefs = (
+  t: TFunction
+): ColDef<InitiativeAgreementGridRow>[] => [
   {
     field: 'lifecycleStatus.status',
     headerName: t('initiativeAgreement:columns.status'),
@@ -161,15 +129,44 @@ export const defaultSortModel = [{ field: 'updateDate', direction: 'desc' }]
 // the wireframe; the analyst column assigns inline for managers and
 // directors and its floating filter sends the analyst's id.
 // The module-wide tab (#5078) reuses the agreement grid's columns, with
-// the ID read off each row's own agreement and the analyst column left
-// out — the wireframe's tab has no analyst, and the rows come from many
-// agreements at once.
-export const allDesignatedActionColDefs = (t): ColDef[] =>
-  designatedActionColDefs(t, null).filter(
-    (colDef) => colDef.colId !== 'assignedAnalyst'
+// the ID read off each row's own agreement. The analyst column is shared
+// too (#5197): the same cell, assignment mutation and server-side filter
+// apply, since the endpoint serves the same row shape across agreements.
+// Its rows come from many agreements, so the agreement's organization and
+// code follow the ID (#5203).
+const parentAgreementColDefs = (
+  t: TFunction
+): ColDef<InitiativeAgreementGridRow>[] => [
+  {
+    field: 'organization.name',
+    headerName: t('initiativeAgreement:actions.columns.organization'),
+    valueGetter: (params) => params.data?.organization?.name,
+    minWidth: 180,
+    filter: 'agTextColumnFilter',
+    filterParams: TEXT_FILTER_PARAMS
+  },
+  {
+    field: 'iaCode',
+    headerName: t('initiativeAgreement:actions.columns.iaName'),
+    minWidth: 130,
+    filter: 'agTextColumnFilter',
+    filterParams: TEXT_FILTER_PARAMS
+  }
+]
+
+export const allDesignatedActionColDefs = (
+  t: TFunction
+): ColDef<InitiativeAgreementGridRow>[] =>
+  designatedActionColDefs(t, null).flatMap((colDef) =>
+    colDef.colId === 'actionNumber'
+      ? [colDef, ...parentAgreementColDefs(t)]
+      : [colDef]
   )
 
-export const designatedActionColDefs = (t, initiativeAgreementId): ColDef[] => [
+export const designatedActionColDefs = (
+  t: TFunction,
+  initiativeAgreementId: number | null
+): ColDef<InitiativeAgreementGridRow>[] => [
   {
     colId: 'actionNumber',
     field: 'actionNumber',
@@ -240,6 +237,14 @@ export const designatedActionColDefs = (t, initiativeAgreementId): ColDef[] => [
           })
         : '',
     valueGetter: ({ data }) => data?.creditAllocation
+  },
+  {
+    // The completion date from the agreement's schedule (#5203).
+    ...dateCol(
+      'specifiedDate',
+      t('initiativeAgreement:actions.columns.dateForCompletion')
+    ),
+    minWidth: 160
   },
   {
     ...dateCol(

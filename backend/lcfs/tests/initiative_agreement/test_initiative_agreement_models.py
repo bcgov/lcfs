@@ -403,12 +403,15 @@ async def test_evidence_requirement_soft_delete_default(dbsession):
         designated_action_id=action.designated_action_id,
         requirement_number=1,
         description="Provide the executed environmental permit",
+        missing_information="Provide the signed copy for stage two",
     )
     dbsession.add(requirement)
     await dbsession.flush()
     await dbsession.refresh(requirement)
 
     assert requirement.is_active is True
+    assert requirement.missing_information == "Provide the signed copy for stage two"
+    assert not hasattr(action, "missing_information")
     # Requirements are amended by is_active, not versioned.
     assert not hasattr(requirement, "group_uuid")
 

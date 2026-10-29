@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import React, { createRef } from 'react'
 import { BCGridEditorPaginated } from '../BCGridEditorPaginated'
@@ -17,7 +17,7 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('@/components/BCAlert', () => ({
-  FloatingAlert: React.forwardRef((props, ref) => {
+  FloatingAlert: React.forwardRef(function MockFloatingAlert(props, ref) {
     React.useImperativeHandle(ref, () => ({ clearAlert: vi.fn() }))
     return <div data-test="floating-alert" />
   })
@@ -44,12 +44,12 @@ vi.mock('@/components/BCTypography', () => ({
 }))
 
 vi.mock('@mui/material/Menu', () => ({
-    default: ({ children, open }) =>
+  default: ({ children, open }) =>
     open ? <div data-test="menu">{children}</div> : null
 }))
 
 vi.mock('@mui/material/MenuItem', () => ({
-    default: ({ children, onClick }) => (
+  default: ({ children, onClick }) => (
     <div data-test="menu-item" onClick={onClick}>
       {children}
     </div>
@@ -62,15 +62,19 @@ vi.mock('@/components/BCModal', () => ({
 }))
 
 vi.mock('@/components/BCDataGrid/components/Renderers/RequiredHeader', () => ({
-    RequiredHeader: () => <div data-test="required-header">Required</div>
+    RequiredHeader: function MockRequiredHeader() {
+      return <div data-test="required-header">Required</div>
+    }
 }))
 
 vi.mock('@/components/BCDataGrid/components/Renderers/AccessibleHeader', () => ({
-    AccessibleHeader: () => <div data-test="accessible-header">Accessible</div>
+    AccessibleHeader: function MockAccessibleHeader() {
+      return <div data-test="accessible-header">Accessible</div>
+    }
 }))
 
 vi.mock('@/components/BCDataGrid/components/StatusBar/BCPagination', () => ({
-    BCPagination: ({ handleChangePage, handleChangeRowsPerPage, ...props }) => {
+    BCPagination: ({ handleChangePage, handleChangeRowsPerPage }) => {
     return (
       <div data-test="bc-pagination">
         <button
@@ -81,7 +85,7 @@ vi.mock('@/components/BCDataGrid/components/StatusBar/BCPagination', () => ({
         </button>
         <button
           data-test="size-btn"
-          onClick={(e) =>
+          onClick={() =>
             handleChangeRowsPerPage &&
             handleChangeRowsPerPage({ target: { value: '20' } })
           }
@@ -94,6 +98,7 @@ vi.mock('@/components/BCDataGrid/components/StatusBar/BCPagination', () => ({
 }))
 
 // Simplified grid API mock
+let mockBCGridBaseProps
 const mockGridApi = {
   applyTransaction: vi.fn(() => ({ add: [{ rowIndex: 0 }] })),
   getAllDisplayedColumns: vi.fn(() => [
@@ -112,18 +117,20 @@ const mockGridApi = {
 }
 
 vi.mock('@/components/BCDataGrid/BCGridBase', () => ({
-  BCGridBase: React.forwardRef((props, ref) => {
+  BCGridBase: React.forwardRef(function MockGridBase(props, ref) {
+    mockBCGridBaseProps = props
     React.useImperativeHandle(ref, () => ({ api: mockGridApi, columnApi: {} }))
 
+    const { onGridReady } = props
     React.useEffect(() => {
-      if (props.onGridReady) {
+      if (onGridReady) {
         setTimeout(() => {
           if (ref.current) {
-            props.onGridReady({ api: mockGridApi, columnApi: {} })
+            onGridReady({ api: mockGridApi, columnApi: {} })
           }
         }, 0)
       }
-    }, [props.onGridReady])
+    }, [onGridReady, ref])
 
     return <div data-test="bc-grid-base">Grid Base</div>
   })
@@ -325,6 +332,29 @@ describe('BCGridEditorPaginated - Simplified Coverage Test Suite', () => {
     )
 
     expect(screen.getByTestId('bc-grid-base')).toBeInTheDocument()
+  })
+
+  it('passes the original clicked cell event to the action callback', async () => {
+    const onAction = vi.fn()
+    const target = document.createElement('button')
+    target.dataset.action = 'delete'
+    const rowData = { id: 'row-1', name: 'Fuel' }
+    const cellEvent = {
+      column: { colId: 'action', getColId: () => 'action' },
+      data: rowData,
+      node: { data: rowData },
+      event: { target },
+      api: mockGridApi
+    }
+
+    render(<BCGridEditorPaginated {...defaultProps} onAction={onAction} />)
+
+    await act(async () => {
+      await mockBCGridBaseProps.onCellClicked(cellEvent)
+    })
+
+    expect(onAction).toHaveBeenCalledOnce()
+    expect(onAction).toHaveBeenCalledWith('delete', cellEvent)
   })
 
   it('handles custom pagination page size selector', () => {

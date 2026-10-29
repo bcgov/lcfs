@@ -8,7 +8,6 @@ import {
 } from '@/hooks/useCalculator'
 import { useApiService } from '@/services/useApiService'
 import { test } from '@/tests/utils/fixtures'
-import { LEGISLATION_TRANSITION_YEAR } from '@/constants/common'
 
 vi.mock('@/services/useApiService')
 vi.mock('@/constants/common', () => ({

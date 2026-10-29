@@ -18,7 +18,7 @@ import { NewComplianceReportButton } from './components/NewComplianceReportButto
 import BCTypography from '@/components/BCTypography'
 import { LinkRenderer } from '@/utils/grid/cellRenderers'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
-import { defaultInitialPagination } from '@/constants/schedules'
+import '@/constants/schedules'
 import BCButton from '@/components/BCButton'
 import CalculateOutlined from '@mui/icons-material/CalculateOutlined'
 
@@ -69,7 +69,7 @@ export const ComplianceReports = () => {
 
   const { mutate: createComplianceReport, isLoading: isCreating } =
     useCreateComplianceReport(currentUser?.organization?.organizationId, {
-      onSuccess: (response, variables) => {
+      onSuccess: (response) => {
         setAlertMessage(
           t('report:actionMsgs.successText', {
             status: 'created'
@@ -86,7 +86,7 @@ export const ComplianceReports = () => {
         )
         alertRef.current.triggerAlert()
       },
-      onError: (_error, _variables) => {
+      onError: (_error) => {
         setIsButtonLoading(false)
         const errorMsg = _error.response.data?.detail
         setAlertMessage(errorMsg)
@@ -112,28 +112,6 @@ export const ComplianceReports = () => {
     }),
     []
   )
-
-  const handleClearFilters = () => {
-    setPaginationOptions(initialPaginationOptions)
-    sessionStorage.removeItem('compliance-reports-grid-filter')
-    sessionStorage.removeItem('compliance-reports-grid-column')
-
-    if (gridRef?.current) {
-      gridRef.current.clearFilters?.()
-
-      const defaultSortState =
-        initialPaginationOptions.sortOrders?.map((order, index) => ({
-          colId: order.field,
-          sort: order.direction,
-          sortIndex: index
-        })) || []
-
-      gridRef.current.api?.applyColumnState({
-        state: defaultSortState,
-        defaultState: { sort: null }
-      })
-    }
-  }
 
   return (
     <>

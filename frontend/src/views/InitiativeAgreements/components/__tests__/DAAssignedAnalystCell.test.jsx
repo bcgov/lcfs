@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react';
 import { fireEvent, screen } from '@testing-library/react'
 
 import { describe, expect, vi, beforeEach } from 'vitest'
@@ -61,8 +61,27 @@ describe('DAAssignedAnalystCell', () => {
     expect(mockMutate).toHaveBeenCalledWith(7)
   })
 
-  test('shows a read-only chip to an IA analyst', ({ render, app }) => {
-    mockRoleNames = [roles.government, roles.ia_analyst]
+  test.for([
+    ['an IA analyst', roles.ia_analyst],
+    ['a director', roles.director]
+  ])(
+    'lets %s assign an analyst, as on compliance reports',
+    ([, role], { render, app }) => {
+      mockRoleNames = [roles.government, role]
+      render(<DAAssignedAnalystCell data={row} />, app)
+
+      expect(screen.getByTestId('da-analyst-select')).toBeInTheDocument()
+      expect(
+        screen.queryByTestId('da-analyst-readonly')
+      ).not.toBeInTheDocument()
+    }
+  )
+
+  test('shows a read-only chip to an IDIR user without an IA role', ({
+    render,
+    app
+  }) => {
+    mockRoleNames = [roles.government]
     render(
       <DAAssignedAnalystCell
         data={{

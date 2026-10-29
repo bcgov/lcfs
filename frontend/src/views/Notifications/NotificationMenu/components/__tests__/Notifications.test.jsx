@@ -1,4 +1,6 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import React from 'react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom'
 import { vi } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
@@ -14,12 +16,13 @@ const createWrapper = () => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } }
   })
-  const { MemoryRouter } = require('react-router-dom')
-  return ({ children }) => (
-    <QueryClientProvider client={queryClient}>
-      <MemoryRouter>{children}</MemoryRouter>
-    </QueryClientProvider>
-  )
+  return function TestWrapper({ children }) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>{children}</MemoryRouter>
+      </QueryClientProvider>
+    )
+  }
 }
 
 const mockCurrentUser = { data: { id: 1, roles: [] } }
@@ -44,7 +47,7 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('@/components/BCButton', () => ({
-  default: ({ children, startIcon, endIcon, color, size, variant, ...props }) => (
+  default: ({ children, ...props }) => (
     <button
       data-test={props['data-test']}
       data-testid={props['data-test']}
@@ -65,12 +68,14 @@ const clearFiltersMock = vi.fn()
 const forEachNodeMock = vi.fn()
 const getSelectedNodesMock = vi.fn(() => [])
 const setSelectedMock = vi.fn()
-const isSelectedMock = vi.fn(() => false)
+vi.fn(() => false);
 
 const mockGridApi = {
   forEachNodeAfterFilterAndSort: forEachNodeMock,
   getSelectedNodes: getSelectedNodesMock
 }
+
+let rowNotification
 
 const createMockNode = (id, selected = false) => ({
   data: { notificationMessageId: id },
@@ -79,35 +84,32 @@ const createMockNode = (id, selected = false) => ({
 })
 
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => {
-  const React = require('react')
   return {
-    BCGridViewer: React.forwardRef((props, ref) => {
+    BCGridViewer: React.forwardRef(function NotificationsGridMock(props) {
+      const { gridRef, onGridReady, onSelectionChanged, onRowClicked, onCellClicked } = props
       React.useEffect(() => {
-        if (props.gridRef) {
-          props.gridRef.current = {
+        if (gridRef) {
+          gridRef.current = {
             api: mockGridApi,
             clearFilters: clearFiltersMock
           }
-          if (props.onGridReady) {
-            props.onGridReady({ api: mockGridApi })
+          if (onGridReady) {
+            onGridReady({ api: mockGridApi })
           }
           // Trigger onSelectionChanged to enable buttons
-          if (props.onSelectionChanged) {
-            props.onSelectionChanged({ api: mockGridApi })
+          if (onSelectionChanged) {
+            onSelectionChanged({ api: mockGridApi })
           }
         }
-      }, [props.gridRef, props.onGridReady, props.onSelectionChanged])
+      }, [gridRef, onGridReady, onSelectionChanged])
 
       return (
         <div data-test="bc-grid-viewer" data-testid="bc-grid-viewer">
           BCGridViewer
           <div 
             data-test="test-row" 
-            onClick={() => props.onRowClicked?.({
-              data: {
-                notificationMessageId: 'test-id',
-                message: JSON.stringify({ id: 'test-id', service: 'testService' })
-              },
+            onClick={() => onRowClicked?.({
+              data: rowNotification,
               event: { target: { dataset: {} } }
             })}
           >
@@ -115,7 +117,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => {
           </div>
           <div 
             data-test="test-cell" 
-            onClick={() => props.onCellClicked?.({
+            onClick={() => onCellClicked?.({
               data: { notificationMessageId: 'test-id' },
               column: { colId: 'action' },
               event: { target: { dataset: { action: 'delete' } } }
@@ -133,8 +135,8 @@ vi.mock('../_schema', async (importOriginal) => {
   const actual = await importOriginal()
   return {
     ...actual,
-    columnDefs: (t, currentUser) => [],
-    routesMapping: (currentUser) => ({
+    columnDefs: () => [],
+    routesMapping: () => ({
       testService: '/test-route/:transactionId',
       fuelCode: '/fuel-codes/:fuelCodeID'
     }),
@@ -150,6 +152,10 @@ vi.mock('@/constants/schedules', () => ({
 describe('Notifications Component', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    rowNotification = {
+      notificationMessageId: 'test-id',
+      message: JSON.stringify({ id: 'test-id', service: 'testService' })
+    }
     forEachNodeMock.mockClear()
     getSelectedNodesMock.mockClear().mockReturnValue([])
     setSelectedMock.mockClear()
@@ -369,6 +375,32 @@ describe('Notifications Component', () => {
   })
 
   describe('Handle Row Clicked', () => {
+    it.each([
+      ['Transfer', '/transfers/10'],
+      ['initiativeAgreement', '/initiative-agreements/11'],
+      ['designatedAction', '/initiative-agreements/4/designated-actions/12'],
+      ['administrativeAdjustment', '/admin-adjustment/13'],
+      ['complianceReport', '/compliance-reporting/2024/14'],
+      ['ciApplication', '/ci-applications/15'],
+      ['Organization', '/organizations/16/comment-log'],
+      ['designatedAction', '/initiative-agreements/designated-actions']
+    ])('opens a %s mention and marks it as read', (service, linkPath) => {
+      rowNotification = {
+        notificationMessageId: 'mention-id',
+        type: 'Mention',
+        message: JSON.stringify({ id: 10, service, linkPath })
+      }
+      render(<Notifications />, { wrapper: createWrapper() })
+
+      fireEvent.click(screen.getByTestId('test-row'))
+
+      expect(navigateMock).toHaveBeenCalledWith(linkPath)
+      expect(markAsReadMutateMock).toHaveBeenCalledWith(
+        { notification_ids: ['mention-id'] },
+        expect.any(Object)
+      )
+    })
+
     it('navigates and marks as read with valid route', async () => {
       render(<Notifications />, { wrapper: createWrapper() })
       const testRow = screen.getByTestId('test-row')

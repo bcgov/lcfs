@@ -15,6 +15,7 @@ from .schema import (
     InternalCommentCreateSchema,
     InternalCommentUpdateSchema,
     InternalCommentResponseSchema,
+    MentionableUserSchema,
     OrganizationCommentsFilterSchema,
     OrganizationCommentsResponseSchema,
 )
@@ -104,6 +105,21 @@ async def get_comment_categories(
     return await service.get_all_categories()
 
 
+@router.get(
+    "/mentionable-users",
+    response_model=List[MentionableUserSchema],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def get_mentionable_users(
+    request: Request,
+    q: Optional[str] = Query(None, max_length=100),
+    service: InternalCommentService = Depends(),
+):
+    """Active IDIR users matching ``q``, for the comment @mention lookup."""
+    return await service.get_mentionable_users(q)
+
+
 @router.post(
     "/",
     response_model=InternalCommentResponseSchema,
@@ -181,6 +197,7 @@ async def update_comment(
 
     if not existing_comment:
         raise HTTPException(status_code=404, detail="Internal comment not found.")
+    await service.require_visible_comment(internal_comment_id)
 
     current_username = request.user.keycloak_username
     # Administrators may edit any comment; Company Overview is a shared

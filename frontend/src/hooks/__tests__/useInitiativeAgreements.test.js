@@ -4,7 +4,9 @@ import { useApiService } from '@/services/useApiService'
 import {
   useGetInitiativeAgreement,
   useGetInitiativeAgreements,
-  useInitiativeAgreementStatuses
+  useInitiativeAgreementStatuses,
+  useUpdateAgreement,
+  useDesignatedActionWorkflow
 } from '../useInitiativeAgreements'
 import { test } from '@/tests/utils/fixtures'
 
@@ -13,10 +15,15 @@ vi.mock('@/services/useApiService')
 describe('useInitiativeAgreements hooks', () => {
   const mockGet = vi.fn()
   const mockPost = vi.fn()
+  const mockPut = vi.fn()
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(useApiService).mockReturnValue({ get: mockGet, post: mockPost })
+    vi.mocked(useApiService).mockReturnValue({
+      get: mockGet,
+      post: mockPost,
+      put: mockPut
+    })
   })
 
   test('list hook POSTs the default pagination body', async ({
@@ -97,5 +104,52 @@ describe('useInitiativeAgreements hooks', () => {
     )
     expect(result.current.fetchStatus).toBe('idle')
     expect(mockGet).not.toHaveBeenCalled()
+  })
+
+  test('update hook PUTs the edit to the agreement and refreshes the lists', async ({
+    renderHook,
+    query
+  }) => {
+    const data = { initiativeAgreementId: 5, title: 'Corrected' }
+    mockPut.mockResolvedValue({ data })
+
+    const { result } = renderHook(() => useUpdateAgreement(5), [query])
+    const returned = await result.current.mutateAsync({ title: 'Corrected' })
+
+    expect(mockPut).toHaveBeenCalledWith(
+      '/initiative-agreements/agreements/5',
+      {
+        title: 'Corrected'
+      }
+    )
+    expect(returned).toEqual(data)
+  })
+
+  test('approval refreshes cached agreement totals, transactions and balances', async ({
+    renderHook,
+    query
+  }) => {
+    const keys = [
+      ['initiative-agreements', 'detail', '5'],
+      ['transactions-list', 1],
+      ['credit-ledger', 7],
+      ['period-credit-ledger', 7, 2026],
+      ['organization', 7],
+      ['organization-balance', 7],
+      ['current-org-balance']
+    ]
+    for (const key of keys) query.client.setQueryData(key, { previous: true })
+    mockPut.mockResolvedValue({ data: { transactionId: 42 } })
+    const { result } = renderHook(() => useDesignatedActionWorkflow(8), [query])
+
+    await result.current.mutateAsync({ action: 'approve' })
+
+    expect(mockPut).toHaveBeenCalledWith(
+      '/initiative-agreements/designated-actions/8/workflow',
+      { action: 'approve' }
+    )
+    for (const key of keys) {
+      expect(query.client.getQueryState(key).isInvalidated).toBe(true)
+    }
   })
 })

@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import List, Optional
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 
 from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
     AGREEMENT_TYPE_INITIATIVE_AGREEMENT,
@@ -104,6 +104,13 @@ class InitiativeAgreementSchema(InitiativeAgreementBaseSchema):
     returned: Optional[bool] = False
     create_date: datetime
 
+    @field_validator("compliance_units")
+    def validate_compliance_units(cls, v):
+        # Responses allow zero-credit approvals; manual writes require positive units.
+        if v < 0:
+            raise ValueError("compliance_units cannot be negative")
+        return v
+
 
 class InitiativeAgreementCreateSchema(InitiativeAgreementBaseSchema):
     current_status: str
@@ -171,7 +178,6 @@ class DesignatedActionSchema(BaseSchema):
     determination_date: Optional[date] = None
     credit_allocation: int
     recommended_credits: Optional[int] = None
-    missing_information: Optional[str] = None
     determination: Optional[str] = None
     current_status: DesignatedActionStatusSchema
     assigned_analyst: Optional[AssignedAnalystSchema] = None
@@ -198,6 +204,7 @@ class EvidenceRequirementSchema(BaseSchema):
     analyst_review: Optional[str] = None
     review_outcome: Optional[str] = None
     review_notes: Optional[str] = None
+    missing_information: Optional[str] = None
     reviewed_by: Optional[AssignedAnalystSchema] = None
     reviewed_date: Optional[datetime] = None
 
@@ -219,6 +226,7 @@ class EvidenceRequirementUpdateSchema(BaseSchema):
     requirement_number: Optional[int] = None
     analyst_review: Optional[str] = None
     review_notes: Optional[str] = None
+    missing_information: Optional[str] = None
     # Absent leaves the outcome untouched; explicit null clears it back to
     # unreviewed, which is how the UI unchecks both boxes.
     review_outcome: Optional[str] = None
@@ -227,18 +235,12 @@ class EvidenceRequirementUpdateSchema(BaseSchema):
 
 class DesignatedActionWorkflowSchema(BaseSchema):
     action: str
-    # The dedicated text area behind Request additional information, and the
-    # reason a manager or director returns or rejects (#4898).
     comment: Optional[str] = None
     recommended_credits: Optional[int] = None
 
 
 class RecommendedCreditsSchema(BaseSchema):
     recommended_credits: Optional[int] = None
-
-
-class MissingInformationSchema(BaseSchema):
-    missing_information: Optional[str] = None
 
 
 class DesignatedActionHistorySchema(BaseSchema):
@@ -293,11 +295,14 @@ class DesignatedActionListItemSchema(DesignatedActionSchema):
     """A row of the module-wide Designated actions tab (#5078).
 
     Carries which agreement the action belongs to, for the ID column
-    (DA{n}-IA{agreement}) and for navigating to the action's page.
+    (DA{n}-IA{agreement}) and for navigating to the action's page, and the
+    agreement's code and organization for their own columns (#5203).
     """
 
     initiative_agreement_id: int
     ia_code: Optional[str] = None
+    # An agreement can be saved before its organization is known (#5186).
+    organization: Optional[OrganizationSchema] = None
 
 
 class AllDesignatedActionsListSchema(BaseSchema):
@@ -355,7 +360,9 @@ class InitiativeAgreementListItemSchema(BaseSchema):
     total_credits_issued: int
     update_date: datetime
     lifecycle_status: Optional[InitiativeAgreementLifecycleStatusSchema] = None
-    organization: OrganizationSchema
+    # Optional: an agreement can be saved before its organization is known
+    # (#5186).
+    organization: Optional[OrganizationSchema] = None
     last_comment: Optional[LastCommentSchema] = None
 
     class Config:
@@ -369,7 +376,7 @@ class InitiativeAgreementsListSchema(BaseSchema):
 
 class InitiativeAgreementProfileSchema(InitiativeAgreementListItemSchema):
     # Overrides the grid's lean organization payload with the detail card's.
-    organization: AgreementOrganizationSchema
+    organization: Optional[AgreementOrganizationSchema] = None
     project_description: Optional[str] = None
     project_location: Optional[str] = None
     contact_email: Optional[str] = None
@@ -381,13 +388,14 @@ class InitiativeAgreementProfileSchema(InitiativeAgreementListItemSchema):
 class AgreementCreateSchema(BaseSchema):
     """A new agreement-management record, entered by an analyst.
 
-    Only the organization and the agreement code are required. An
-    agreement is drafted over time — the title, dates, contact and
-    description are all editable afterwards, so demanding them up front
-    would only push analysts into typing placeholders.
+    Only the agreement code is required. The organization may not be
+    settled when an analyst opens the file (#5186), and the title, dates,
+    contact and description are filled in as the agreement takes shape, so
+    demanding them up front would only push analysts into typing
+    placeholders.
     """
 
-    organization_id: int
+    organization_id: Optional[int] = None
     ia_code: str
     agreement_type: str = AGREEMENT_TYPE_INITIATIVE_AGREEMENT
     title: Optional[str] = None
@@ -396,5 +404,24 @@ class AgreementCreateSchema(BaseSchema):
     contact_name: Optional[str] = None
     contact_email: Optional[str] = None
     contact_phone: Optional[str] = None
+    agreement_start_date: Optional[date] = None
+    agreement_end_date: Optional[date] = None
+
+
+class AgreementUpdateSchema(BaseSchema):
+    """Partial update: only fields present in the request are applied.
+
+    organization_id fills in an organization the agreement was saved
+    without (#5186); once set, it cannot be changed or cleared."""
+
+    organization_id: Optional[int] = None
+    ia_code: Optional[str] = Field(None, max_length=50)
+    agreement_type: Optional[str] = None
+    title: Optional[str] = Field(None, max_length=500)
+    project_description: Optional[str] = None
+    project_location: Optional[str] = None
+    contact_name: Optional[str] = Field(None, max_length=500)
+    contact_email: Optional[str] = Field(None, max_length=255)
+    contact_phone: Optional[str] = Field(None, max_length=50)
     agreement_start_date: Optional[date] = None
     agreement_end_date: Optional[date] = None

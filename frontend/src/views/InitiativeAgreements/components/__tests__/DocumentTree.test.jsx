@@ -1,10 +1,23 @@
-import React from 'react'
+import 'react'
 import { fireEvent, screen } from '@testing-library/react'
 
 import { describe, expect, vi, beforeEach } from 'vitest'
 
 import { DocumentTree } from '../DocumentTree'
 import { test } from '@/tests/utils/fixtures'
+
+vi.mock('@/components/Documents/DocumentPreviewDialog', () => ({
+  default: ({ open, document, parentType, parentID }) =>
+    open ? (
+      <div
+        data-test="tree-document-preview"
+        data-parent-type={parentType}
+        data-parent-id={parentID}
+      >
+        {document.fileName}
+      </div>
+    ) : null
+}))
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
@@ -123,6 +136,43 @@ describe('DocumentTree', () => {
     expect(mockDownload).toHaveBeenCalledWith(88)
   })
 
+  test('does not add preview controls unless explicitly enabled', ({
+    render,
+    app
+  }) => {
+    render(<DocumentTree parentType="designatedAction" parentID="9" />, app)
+    expect(
+      screen.queryByTestId('document-preview-button')
+    ).not.toBeInTheDocument()
+  })
+
+  test('previews both folder and root evidence submissions while retaining downloads', ({
+    render,
+    app
+  }) => {
+    render(
+      <DocumentTree parentType="designatedAction" parentID="9" enablePreview />,
+      app
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Preview permit.pdf' }))
+    expect(screen.getByTestId('tree-document-preview')).toHaveTextContent(
+      'permit.pdf'
+    )
+    expect(screen.getByTestId('tree-document-preview')).toHaveAttribute(
+      'data-parent-type',
+      'designatedAction'
+    )
+    expect(screen.getByTestId('tree-document-preview')).toHaveAttribute(
+      'data-parent-id',
+      '9'
+    )
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Preview root-letter.pdf' })
+    )
+    expect(screen.getAllByTestId('tree-document-preview')).toHaveLength(2)
+    fireEvent.click(screen.getByTestId('tree-file-download-90'))
+    expect(mockDownload).toHaveBeenCalledWith(90)
+  })
   test('lays each file row out in aligned columns', ({ render, app }) => {
     render(<DocumentTree parentType="designatedAction" parentID="9" />, app)
 

@@ -1,4 +1,4 @@
-import React from 'react'
+import 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import Stack from '@mui/material/Stack'
@@ -14,24 +14,15 @@ import { useOrganization } from '@/hooks/useOrganization'
 import { useOrgComplianceReportCounts } from '@/hooks/useDashboard'
 import { FILTER_KEYS } from '@/constants/common'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
-
-const CountDisplay = ({ count }) => (
-  <BCTypography
-    component="span"
-    variant="h3"
-    sx={{
-      color: 'success.main',
-      marginX: 3
-    }}
-  >
-    {count}
-  </BCTypography>
-)
+import { CountDisplay } from '../../CountDisplay'
+import { countDigits } from '../../countDigits'
 
 const OrgComplianceReportsCard = () => {
   const { t } = useTranslation(['dashboard'])
   const navigate = useNavigate()
-  const { data: orgData, isLoading: orgLoading } = useOrganization()
+  const {
+  data: orgData
+} = useOrganization()
   const { data: counts, isLoading } = useOrgComplianceReportCounts()
 
   const handleNavigation = (route, status) => {
@@ -45,7 +36,7 @@ const OrgComplianceReportsCard = () => {
   const renderLinkWithCount = (text, count, onClick) => {
     return count > 0 ? (
       <ListItemButton component="a" onClick={onClick}>
-        <CountDisplay count={count} />
+        <CountDisplay count={count} digits={digits} />
         <BCTypography
           variant="body2"
           color="link"
@@ -63,6 +54,8 @@ const OrgComplianceReportsCard = () => {
 
   const inProgressCount = counts?.inProgress || 0
   const awaitingGovReviewCount = counts?.awaitingGovReview || 0
+  // One counter width for the whole card, so its links line up (#4911).
+  const digits = countDigits(inProgressCount, awaitingGovReviewCount)
 
   return (
     <BCWidgetCard
@@ -113,9 +106,12 @@ const OrgComplianceReportsCard = () => {
             {
                 <ListItemButton
                   component="a"
-                  sx={{ pl: '4.2rem' }}
+                  // Outside the list, so it takes the list rows' padding
+                  // itself; the empty counter then lines its link up.
+                  sx={{ padding: '2px 0' }}
                   onClick={() => navigate(ROUTES.CREDIT_CALCULATOR)}
                 >
+                  <CountDisplay digits={digits} hidden />
                   <BCTypography
                     variant="body2"
                     color="link"

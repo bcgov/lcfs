@@ -1,5 +1,6 @@
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
+import type { ApiServiceInstance } from '@/services/useApiService'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { PaginationParams, QueryOptions } from './types'
 
@@ -9,10 +10,10 @@ import type { PaginationParams, QueryOptions } from './types'
 // cutover.
 
 const QUERY_KEYS = {
-  list: (pagination: any) => ['initiative-agreements', pagination],
-  detail: (id: any) => ['initiative-agreements', 'detail', String(id)],
+  list: (pagination: unknown) => ['initiative-agreements', pagination],
+  detail: (id: unknown) => ['initiative-agreements', 'detail', String(id)],
   statuses: ['initiative-agreement-statuses'],
-  designatedActions: (agreementId: any, pagination: any) => [
+  designatedActions: (agreementId: unknown, pagination: unknown) => [
     'designated-actions',
     String(agreementId),
     pagination
@@ -218,9 +219,11 @@ export const useEvidenceRequirements = (
   })
 }
 
-const useEvidenceMutation = (
+const useEvidenceMutation = <TVariables>(
   designatedActionId: number | string,
-  mutationFn: (client: any) => (variables: any) => Promise<unknown>
+  mutationFn: (
+    client: ApiServiceInstance
+  ) => (variables: TVariables) => Promise<unknown>
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -309,11 +312,27 @@ export const useDesignatedActionWorkflow = (
           payload
         )
       ).data,
-    onSuccess: () => {
+    onSuccess: (_data, payload) => {
       queryClient.invalidateQueries({ queryKey: ['designated-actions'] })
       queryClient.invalidateQueries({
         queryKey: ['designated-action-history', String(designatedActionId)]
       })
+      if (payload.action === 'approve') {
+        for (const key of [
+          'initiative-agreements',
+          'transactions-list',
+          'credit-ledger',
+          'period-credit-ledger',
+          'credit-ledger-years',
+          'organization',
+          'organization-balance',
+          'current-org-balance',
+          'transaction-counts',
+          'org-transaction-counts'
+        ]) {
+          queryClient.invalidateQueries({ queryKey: [key] })
+        }
+      }
     }
   })
 }
@@ -339,29 +358,6 @@ export const useSetRecommendedCredits = (
   })
 }
 
-// The Missing information box's working text (#5118). Requesting
-// additional information sends it; saving it records nothing.
-export const useSetMissingInformation = (
-  designatedActionId: number | string
-) => {
-  const client = useApiService()
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async (missingInformation: string | null) =>
-      (
-        await client.put(
-          actionPath(
-            apiRoutes.designatedActionMissingInformation,
-            designatedActionId
-          ),
-          { missingInformation }
-        )
-      ).data,
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ['designated-actions'] })
-  })
-}
-
 export const useDesignatedActionHistory = (
   designatedActionId: number | string,
   options: QueryOptions<unknown> = {}
@@ -380,7 +376,8 @@ export const useDesignatedActionHistory = (
   })
 }
 
-/** Add a designated action to a draft agreement (analysts and managers). */
+/** Add a designated action to a draft or underway agreement (analysts and
+ * managers). */
 export const useCreateDesignatedAction = (
   initiativeAgreementId: number | string
 ) => {
@@ -439,13 +436,46 @@ export const useUpdateDesignatedAction = (
   })
 }
 
-/** Start a new initiative agreement as a draft (analysts and managers). */
+export const useUpdateAgreement = (initiativeAgreementId: number | string) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: {
+      organizationId?: number | null
+      iaCode?: string
+      agreementType?: string
+      title?: string | null
+      projectDescription?: string | null
+      projectLocation?: string | null
+      contactName?: string | null
+      contactEmail?: string | null
+      contactPhone?: string | null
+      agreementStartDate?: string | null
+      agreementEndDate?: string | null
+    }) =>
+      (
+        await client.put(
+          apiRoutes.updateAgreement.replace(
+            ':initiativeAgreementId',
+            String(initiativeAgreementId)
+          ),
+          payload
+        )
+      ).data,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['initiative-agreements'] })
+    }
+  })
+}
+
+/** Start a new initiative agreement (analysts and managers). It starts
+ * Underway, and the organization may be left unset (#5186). */
 export const useCreateAgreement = () => {
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (payload: {
-      organizationId: number
+      organizationId?: number | null
       iaCode: string
       agreementType?: string
       title?: string | null

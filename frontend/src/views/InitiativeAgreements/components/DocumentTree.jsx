@@ -49,6 +49,7 @@ import BCTypography from '@/components/BCTypography'
 import BCModal from '@/components/BCModal'
 import Loading from '@/components/Loading'
 import { useDownloadDocument, useUpdateDocument } from '@/hooks/useDocuments'
+import DocumentPreviewButton from '@/components/Documents/DocumentPreviewButton'
 import {
   useCreateFolder,
   useDeleteFolder,
@@ -146,6 +147,9 @@ const NameEditor = ({ initialValue, onCommit, onCancel }) => {
 // written under and nothing that points at it breaks.
 const FileLabel = ({
   file,
+  parentType,
+  parentID,
+  enablePreview,
   onDownload,
   onDelete,
   canRename,
@@ -236,6 +240,13 @@ const FileLabel = ({
         >
           <DriveFileRenameOutlineIcon fontSize="inherit" />
         </IconButton>
+      )}
+      {enablePreview && (
+        <DocumentPreviewButton
+          parentType={parentType}
+          parentID={parentID}
+          document={file}
+        />
       )}
       <IconButton
         size="small"
@@ -471,7 +482,8 @@ export const DocumentTree = ({
   parentID,
   title,
   headerAction,
-  allowSubfolders = false
+  allowSubfolders = false,
+  enablePreview = false
 }) => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const { data: tree, isLoading } = useDocumentTree(parentType, parentID)
@@ -726,7 +738,8 @@ export const DocumentTree = ({
       const key = uploadKey(folderId)
       const next = (prev[key] ?? 0) + delta
       if (next <= 0) {
-        const { [key]: _done, ...rest } = prev
+        const rest = { ...prev }
+        delete rest[key]
         return rest
       }
       return { ...prev, [key]: next }
@@ -806,6 +819,9 @@ export const DocumentTree = ({
           label={
             <FileLabel
               file={file}
+              parentType={parentType}
+              parentID={parentID}
+              enablePreview={enablePreview}
               onMoveToRoot={(documentId) => runDocumentMove([documentId], null)}
               onDownload={downloadDocument}
               onDelete={(documentId) =>
@@ -939,6 +955,9 @@ export const DocumentTree = ({
                   label={
                     <FileLabel
                       file={file}
+                      parentType={parentType}
+                      parentID={parentID}
+                      enablePreview={enablePreview}
                       onDownload={downloadDocument}
                       onDelete={(documentId) =>
                         setPendingDelete({

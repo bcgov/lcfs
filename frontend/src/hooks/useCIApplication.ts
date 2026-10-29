@@ -1,13 +1,18 @@
 import { useRef } from 'react'
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient
+} from '@tanstack/react-query'
 import type { PaginationParams, QueryOptions } from './types'
 
 const QUERY_KEYS = {
   options: ['ci-application-options'],
-  list: (pagination: any) => ['ci-applications', pagination],
-  detail: (id: any) => ['ci-application', String(id)],
+  list: (pagination: unknown) => ['ci-applications', pagination],
+  detail: (id: unknown) => ['ci-application', String(id)],
   locationSearch: (params: {
     city?: string
     province?: string
@@ -15,20 +20,31 @@ const QUERY_KEYS = {
   }) => ['ci-facility-location-search', params]
 }
 
+type CIApplicationCacheRecord = Record<string, unknown> & {
+  ciApplicationId?: number | string
+  assignedAnalyst?: unknown
+  preliminaryRiskAssessment?: unknown
+  priorityScore?: number | null
+}
+
+type CIApplicationListCache = Record<string, unknown> & {
+  ciApplications?: CIApplicationCacheRecord[]
+}
+
 const updateCIApplicationListCaches = (
-  queryClient: any,
-  updatedCIApplication: any
+  queryClient: QueryClient,
+  updatedCIApplication: CIApplicationCacheRecord
 ) => {
   if (!updatedCIApplication?.ciApplicationId) return
 
-  queryClient.setQueriesData(
+  queryClient.setQueriesData<CIApplicationListCache>(
     { queryKey: ['ci-applications'] },
-    (current: any) => {
+    (current: CIApplicationListCache | undefined) => {
       if (!current?.ciApplications) return current
 
       return {
         ...current,
-        ciApplications: current.ciApplications.map((item: any) =>
+        ciApplications: current.ciApplications.map((item) =>
           item.ciApplicationId === updatedCIApplication.ciApplicationId
             ? {
                 ...item,
@@ -67,7 +83,7 @@ export const useCIApplicationStatuses = (
   const result = useCIApplicationOptions(options)
   return {
     ...result,
-    data: (result.data as any)?.statuses ?? []
+    data: (result.data as { statuses?: unknown[] } | undefined)?.statuses ?? []
   }
 }
 
@@ -155,7 +171,7 @@ export const useCreateCIApplication = () => {
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (payload: any) => {
+    mutationFn: async (payload: unknown) => {
       return (await client.post(apiRoutes.createCIApplication, payload)).data
     },
     onSuccess: (data) => {
@@ -173,7 +189,7 @@ export const useUpdateCIApplicationStep1 = (
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (payload: any) => {
+    mutationFn: async (payload: unknown) => {
       return (
         await client.put(
           apiRoutes.updateCIApplicationStep1.replace(
@@ -197,7 +213,7 @@ export const useUpdateCIApplicationStep2 = (
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (payload: any) => {
+    mutationFn: async (payload: unknown) => {
       return (
         await client.put(
           apiRoutes.updateCIApplicationStep2.replace(
@@ -221,7 +237,7 @@ export const useUpdateCIApplicationStep3 = (
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (payload: any) => {
+    mutationFn: async (payload: unknown) => {
       return (
         await client.put(
           apiRoutes.updateCIApplicationStep3.replace(
@@ -250,7 +266,7 @@ export const useUpdateCIApplicationStep4 = (
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (payload: any) => {
+    mutationFn: async (payload: unknown) => {
       return (
         await client.put(
           apiRoutes.updateCIApplicationStep4.replace(
@@ -274,7 +290,7 @@ export const useSubmitCIApplication = (
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (payload: any) => {
+    mutationFn: async (payload: unknown) => {
       return (
         await client.post(
           apiRoutes.submitCIApplication.replace(
@@ -298,7 +314,7 @@ export const useRecordCIDecision = (
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (payload: any) => {
+    mutationFn: async (payload: unknown) => {
       return (
         await client.post(
           apiRoutes.ciApplicationDecision.replace(
@@ -337,7 +353,7 @@ export const useAssignCIApplicationAnalyst = (
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (assignedAnalystId: any) => {
+    mutationFn: async (assignedAnalystId: unknown) => {
       return (
         await client.put(
           apiRoutes.assignCIApplicationAnalyst.replace(
@@ -368,7 +384,7 @@ export const useUpdateCIApplicationRiskAssessment = (
   )
 
   return useMutation({
-    mutationFn: (payload: any) => {
+    mutationFn: (payload: unknown) => {
       const request = saveQueueRef.current
         .catch(() => undefined)
         .then(async () => (await client.put(url, payload)).data)
@@ -393,7 +409,10 @@ export const useCompleteCIApplicationVerification1 = (
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ preliminaryRiskAssessment, priorityScore }: any) => {
+    mutationFn: async ({
+      preliminaryRiskAssessment,
+      priorityScore
+    }: Record<string, unknown>) => {
       return (
         await client.post(
           apiRoutes.completeCIApplicationVerification1.replace(
@@ -420,7 +439,7 @@ export const useCompleteCIApplicationVerification2 = (
     mutationFn: async ({
       preliminaryRiskAssessment,
       priorityScore
-    }: any = {}) => {
+    }: Record<string, unknown> = {}) => {
       return (
         await client.post(
           apiRoutes.completeCIApplicationVerification2.replace(
@@ -545,7 +564,7 @@ export const useUpdateCIApplicationGeneratedFuelCode = (
       payload
     }: {
       generatedFuelCodeId: string
-      payload: any
+      payload: unknown
     }) => {
       return (
         await client.put(

@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 import Alert from '@mui/material/Alert'
@@ -16,8 +16,10 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   useOrganizationComments,
   useCommentCategories,
-  useEditOrganizationComment
+  useEditOrganizationComment,
+  COMPANY_OVERVIEW_ENTITY_TYPE
 } from '@/hooks/useOrganizationComments'
+import { useMentionableUsers } from '@/hooks/useMentionableUsers'
 
 import { CommentRow } from './CommentRow'
 import { CommentLogFilters } from './CommentLogFilters'
@@ -88,9 +90,9 @@ export const CommentLog = ({ organizationId }) => {
     refetch
   } = useOrganizationComments(effectiveOrgId)
 
-  const comments = data?.comments ?? []
+  const comments = data?.comments
   const threadGroups = useMemo(
-    () => groupConsecutiveByEntity(comments),
+    () => groupConsecutiveByEntity(comments ?? []),
     [comments]
   )
   const pagination = data?.pagination
@@ -99,6 +101,14 @@ export const CommentLog = ({ organizationId }) => {
   const yearOptions = useMemo(buildYearOptions, [])
   const { data: categoryOptions = [] } = useCommentCategories()
   const editMutation = useEditOrganizationComment(effectiveOrgId)
+
+  // One lookup is shared by whichever row is being edited. `null` means no
+  // lookup is in progress.
+  const [mentionQuery, setMentionQuery] = useState(null)
+  const mentionResults = useMentionableUsers(
+    mentionQuery ?? '',
+    isGovernment && mentionQuery !== null
+  )
 
   return (
     <BCBox component="section" aria-label={t('internalComment:log.title')}>
@@ -166,13 +176,13 @@ export const CommentLog = ({ organizationId }) => {
           </Alert>
         )}
 
-        {!isLoading && !isError && comments.length === 0 && (
+        {!isLoading && !isError && (comments?.length ?? 0) === 0 && (
           <Alert severity="info" icon={false} data-test="comment-log-empty">
             {t('internalComment:log.empty')}
           </Alert>
         )}
 
-        {comments.length > 0 && (
+        {(comments?.length ?? 0) > 0 && (
           <BCBox
             variant="bordered"
             borderRadius="sm"
@@ -215,7 +225,7 @@ export const CommentLog = ({ organizationId }) => {
                             comment={c}
                             index={groupIdx}
                             showInternalBadge={isGovernment}
-                            isGovernmentUser={isGovernment}
+                            showOrganizationName={false}
                             searchQuery={filters.search}
                             onEdit={(commentId, comment, visibility) =>
                               editMutation.mutate({
@@ -225,6 +235,13 @@ export const CommentLog = ({ organizationId }) => {
                               })
                             }
                             isEditPending={editMutation.isPending}
+                            // Company Overview notes don't support @mentions.
+                            enableMentions={
+                              isGovernment &&
+                              c.entityType !== COMPANY_OVERVIEW_ENTITY_TYPE
+                            }
+                            mentionResults={mentionResults}
+                            onMentionQueryChange={setMentionQuery}
                           />
                         </Box>
                       ))}

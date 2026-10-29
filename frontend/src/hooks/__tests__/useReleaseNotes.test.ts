@@ -1,6 +1,7 @@
 import { waitFor } from '@testing-library/react'
 import { describe, expect, vi, beforeEach } from 'vitest'
 import { useApiService } from '@/services/useApiService'
+import type { ApiServiceInstance } from '@/services/useApiService'
 import { test } from '@/tests/utils/fixtures'
 import { useReleaseNotes, useUpdateReleaseNote } from '../useReleaseNotes'
 
@@ -42,7 +43,7 @@ describe('useReleaseNotes', () => {
     vi.mocked(useApiService).mockReturnValue({
       get: mockGet,
       put: mockPut
-    } as any)
+    } as unknown as ApiServiceInstance)
   })
 
   test('returns the auto-generated release notes unmodified when there are no overrides', async ({
@@ -151,7 +152,9 @@ describe('useUpdateReleaseNote', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(useApiService).mockReturnValue({ put: mockPut } as any)
+    vi.mocked(useApiService).mockReturnValue(
+      { put: mockPut } as unknown as ApiServiceInstance
+    )
   })
 
   test('PUTs to the version-specific endpoint with summary and sections', async ({

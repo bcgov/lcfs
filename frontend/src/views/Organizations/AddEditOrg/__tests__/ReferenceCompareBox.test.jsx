@@ -1,4 +1,5 @@
-import { fireEvent, screen, waitFor, act } from '@testing-library/react'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, vi, beforeEach, afterAll } from 'vitest'
 import { test } from '@/tests/utils/fixtures'
 import ReferenceCompareBox from '../ReferenceCompareBox'
@@ -90,6 +91,41 @@ describe('ReferenceCompareBox', () => {
     })
   })
 
+  test('supports keyboard focus and copies a row value with Enter and Space', async ({
+    render
+  }) => {
+    render(
+      <ReferenceCompareBox
+        title="Reference Data"
+        data={singleItemData}
+        onDismiss={vi.fn()}
+      />
+    )
+
+    const rowButton = screen.getByRole('button', {
+      name: 'Single Item: Single Value'
+    })
+
+    await userEvent.tab()
+    expect(rowButton).toHaveFocus()
+
+    await userEvent.keyboard('{Enter}')
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenNthCalledWith(
+        1,
+        'Single Value'
+      )
+    })
+
+    await userEvent.keyboard(' ')
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenNthCalledWith(
+        2,
+        'Single Value'
+      )
+    })
+  })
+
   test('shows copy button on hover and hides on mouse leave', ({ render }) => {
     render(
       <ReferenceCompareBox
@@ -102,7 +138,7 @@ describe('ReferenceCompareBox', () => {
     const firstItem = screen.getByText('Test Company Ltd.').closest('div')
 
     // Before hover, buttons should be hidden
-    let copyButtons = screen.queryAllByLabelText('Copy to clipboard')
+    const copyButtons = screen.queryAllByLabelText('Copy to clipboard')
     expect(copyButtons.length).toBeGreaterThanOrEqual(0)
 
     fireEvent.mouseEnter(firstItem)

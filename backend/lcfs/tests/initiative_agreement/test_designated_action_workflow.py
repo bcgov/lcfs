@@ -2,8 +2,7 @@
 
 The transition table is the feature, so most of these assert against it
 directly: who may act, from where, what lands, and what the audit trail
-keeps. Credit issuance is out of scope for this story and no test here
-expects any transaction to move.
+keeps. Director approval also issues the recommended credits.
 """
 
 import pytest
@@ -12,6 +11,7 @@ from httpx import AsyncClient
 from sqlalchemy import select
 
 from lcfs.db.models.initiative_agreement.DesignatedActionHistory import (
+    EVENT_CREDITS_ISSUED,
     EVENT_CREDITS_RECOMMENDED,
     EVENT_EVIDENCE_REVIEWED,
     EVENT_INFORMATION_REQUESTED,
@@ -102,14 +102,20 @@ async def test_requesting_information_keeps_the_round_in_the_audit_trail(
     round happened — otherwise the next round overwrites this one's
     findings and they are gone."""
     action = await _seed_da(dbsession, "IA-26WF1")
-    await _seed_requirement(dbsession, action, REVIEW_OUTCOME_INFORMATION_REQUESTED)
+    requirement = await _seed_requirement(
+        dbsession, action, REVIEW_OUTCOME_INFORMATION_REQUESTED
+    )
+    requirement.missing_information = (
+        "<p>Please send the <strong>signed permit</strong> for stage two.</p>"
+    )
+    await dbsession.flush()
     set_mock_user(fastapi_app, IDIR_IA_ANALYST)
 
     response = await client.put(
         _workflow_url(fastapi_app, action),
         json={
             "action": "request_information",
-            "comment": "Please send the signed permit for stage two.",
+            "comment": "The client-supplied text is not used for EOC requests.",
         },
     )
 
@@ -119,10 +125,111 @@ async def test_requesting_information_keeps_the_round_in_the_audit_trail(
     entries = await _history(dbsession, action)
     assert [e.event for e in entries] == [EVENT_INFORMATION_REQUESTED]
     snapshot = entries[0].snapshot
-    assert snapshot["comment"] == "Please send the signed permit for stage two."
+    assert snapshot["comment"] == (
+        "EOC 1 - List of major permits: "
+        "<p>Please send the <strong>signed permit</strong> for stage two.</p>"
+    )
     captured = snapshot["evidence_requirements"]
     assert captured[0]["analyst_review"] == "Permits verified."
     assert captured[0]["review_outcome"] == REVIEW_OUTCOME_INFORMATION_REQUESTED
+    assert (
+        captured[0]["missing_information"]
+        == "<p>Please send the <strong>signed permit</strong> for stage two.</p>"
+    )
+
+
+@pytest.mark.anyio
+async def test_requesting_information_combines_all_requested_eocs(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    action = await _seed_da(dbsession, "IA-26WF1A")
+    first = await _seed_requirement(
+        dbsession, action, REVIEW_OUTCOME_INFORMATION_REQUESTED
+    )
+    first.missing_information = "Send the permit."
+    second = EvidenceRequirement(
+        designated_action_id=action.designated_action_id,
+        requirement_number=2,
+        title="Risk register",
+        description="Risk register",
+        review_outcome=REVIEW_OUTCOME_INFORMATION_REQUESTED,
+        missing_information="Update the mitigation owners.",
+    )
+    dbsession.add(second)
+    await dbsession.flush()
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    response = await client.put(
+        _workflow_url(fastapi_app, action), json={"action": "request_information"}
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    entries = await _history(dbsession, action)
+    assert entries[0].snapshot["comment"] == (
+        "EOC 1 - List of major permits: Send the permit.\n\n"
+        "EOC 2 - Risk register: Update the mitigation owners."
+    )
+
+
+@pytest.mark.anyio
+async def test_requesting_information_requires_text_for_each_selected_eoc(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    action = await _seed_da(dbsession, "IA-26WF1B")
+    requirement = await _seed_requirement(
+        dbsession, action, REVIEW_OUTCOME_INFORMATION_REQUESTED
+    )
+    requirement.missing_information = "The permit."
+    second = EvidenceRequirement(
+        designated_action_id=action.designated_action_id,
+        requirement_number=2,
+        title="Risk register",
+        description="Risk register",
+        review_outcome=REVIEW_OUTCOME_INFORMATION_REQUESTED,
+    )
+    dbsession.add(second)
+    await dbsession.flush()
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    response = await client.put(
+        _workflow_url(fastapi_app, action),
+        json={"action": "request_information", "comment": "Only one EOC has text."},
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "every EOC" in response.json()["detail"]
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "missing_information",
+    ["<p><br></p>", "<p>&nbsp;</p>", "<p> &#160; </p>"],
+)
+async def test_requesting_information_rejects_visually_empty_rich_text(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    dbsession,
+    missing_information,
+):
+    action = await _seed_da(dbsession, "IA-26WF1C")
+    requirement = await _seed_requirement(
+        dbsession, action, REVIEW_OUTCOME_INFORMATION_REQUESTED
+    )
+    requirement.missing_information = missing_information
+    await dbsession.flush()
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    response = await client.put(
+        _workflow_url(fastapi_app, action),
+        json={
+            "action": "request_information",
+            "comment": "A client-supplied comment cannot replace visible text.",
+        },
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "every EOC" in response.json()["detail"]
 
 
 @pytest.mark.anyio
@@ -171,7 +278,7 @@ async def test_accepting_evidence_requires_every_requirement_satisfactory(
 
 
 @pytest.mark.anyio
-async def test_the_analyst_recommends_with_an_amount(
+async def test_the_analyst_accepts_and_recommends_with_an_amount(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
     action = await _seed_da(dbsession, "IA-26WF4", credits=1850)
@@ -188,8 +295,13 @@ async def test_the_analyst_recommends_with_an_amount(
     assert await _status_of(dbsession, action) == "Recommended to manager"
 
     entries = await _history(dbsession, action)
+    assert len(entries) == 1
     assert entries[-1].event == EVENT_CREDITS_RECOMMENDED
     assert entries[-1].snapshot["recommended_credits"] == 1200
+    evidence = entries[-1].snapshot["evidence_requirements"]
+    assert len(evidence) == 1
+    assert evidence[0]["review_outcome"] == REVIEW_OUTCOME_SATISFACTORY
+    assert evidence[0]["analyst_review"] == "Permits verified."
 
 
 @pytest.mark.anyio
@@ -277,11 +389,10 @@ async def test_the_manager_returns_or_advances_to_the_director(
 async def test_the_director_approves(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
-    """Approved is the terminal reviewed state the ticket calls Completed.
-    No credits move — issuance is a separate step."""
     action = await _seed_da(
         dbsession, "IA-26WF9", status_name="Recommended to director"
     )
+    action.recommended_credits = 1200
     await _seed_requirement(dbsession, action)
     set_mock_user(fastapi_app, IDIR_DIRECTOR)
 
@@ -291,12 +402,15 @@ async def test_the_director_approves(
 
     assert response.status_code == status.HTTP_200_OK
     assert await _status_of(dbsession, action) == "Approved"
-    assert response.json()["transactionId"] is None
+    assert response.json()["transactionId"] is not None
 
     entries = await _history(dbsession, action)
-    assert entries[-1].event == EVENT_STATUS_CHANGE
-    # The approval preserves what was approved.
-    assert "evidence_requirements" in entries[-1].snapshot
+    assert [entry.event for entry in entries] == [
+        EVENT_STATUS_CHANGE,
+        EVENT_CREDITS_ISSUED,
+    ]
+    assert "evidence_requirements" in entries[0].snapshot
+    assert entries[1].snapshot["recommended_credits"] == 1200
 
 
 @pytest.mark.anyio
@@ -512,13 +626,6 @@ async def test_an_unassignment_names_only_who_was_removed(
     assert unassignment["snapshot"]["to_analyst"] is None
 
 
-def _missing_information_url(fastapi_app, action):
-    return fastapi_app.url_path_for(
-        "set_designated_action_missing_information",
-        designated_action_id=action.designated_action_id,
-    )
-
-
 @pytest.mark.anyio
 async def test_the_analyst_does_not_recommend_with_a_reason(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
@@ -608,80 +715,8 @@ async def test_a_director_cannot_not_recommend(
 
 
 @pytest.mark.anyio
-async def test_the_missing_information_box_is_kept_between_rounds(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
-):
-    action = await _seed_da(dbsession, "IA-26MI1")
-    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
-
-    saved = await client.put(
-        _missing_information_url(fastapi_app, action),
-        json={"missingInformation": "  The signed stage two permit.  "},
+async def test_designated_action_missing_information_endpoint_is_removed(fastapi_app):
+    assert not any(
+        route.name == "set_designated_action_missing_information"
+        for route in fastapi_app.routes
     )
-    assert saved.status_code == status.HTTP_200_OK
-    assert saved.json()["missingInformation"] == "The signed stage two permit."
-    # Working text: nothing is recorded until the request is sent.
-    assert not await _history(dbsession, action)
-
-    cleared = await client.put(
-        _missing_information_url(fastapi_app, action),
-        json={"missingInformation": "   "},
-    )
-    assert cleared.json()["missingInformation"] is None
-
-
-@pytest.mark.anyio
-async def test_directors_cannot_write_the_missing_information(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
-):
-    action = await _seed_da(dbsession, "IA-26MI2")
-    set_mock_user(fastapi_app, IDIR_DIRECTOR)
-
-    response = await client.put(
-        _missing_information_url(fastapi_app, action),
-        json={"missingInformation": "Not the director's text."},
-    )
-
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-
-
-@pytest.mark.anyio
-async def test_requesting_information_sends_the_saved_box(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
-):
-    action = await _seed_da(dbsession, "IA-26MI3")
-    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
-    await client.put(
-        _missing_information_url(fastapi_app, action),
-        json={"missingInformation": "The signed stage two permit."},
-    )
-
-    response = await client.put(
-        _workflow_url(fastapi_app, action), json={"action": "request_information"}
-    )
-
-    assert response.status_code == status.HTTP_200_OK
-    entries = await _history(dbsession, action)
-    assert entries[-1].snapshot["comment"] == "The signed stage two permit."
-    # The box stays on the page after the request goes out.
-    assert response.json()["missingInformation"] == "The signed stage two permit."
-
-
-@pytest.mark.anyio
-async def test_a_request_with_its_own_text_updates_the_box(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
-):
-    action = await _seed_da(dbsession, "IA-26MI4")
-    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
-    await client.put(
-        _missing_information_url(fastapi_app, action),
-        json={"missingInformation": "An older draft."},
-    )
-
-    response = await client.put(
-        _workflow_url(fastapi_app, action),
-        json={"action": "request_information", "comment": "What was really sent."},
-    )
-
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json()["missingInformation"] == "What was really sent."

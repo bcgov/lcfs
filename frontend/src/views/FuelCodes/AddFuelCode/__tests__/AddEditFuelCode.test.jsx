@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -59,6 +59,10 @@ const filterNonNullValues =
     return result
   })
 
+const { mockGridApi } = vi.hoisted(() => ({
+  mockGridApi: { sizeColumnsToFit: vi.fn() }
+}))
+
 // Mock hooks and update
 vi.mock('@/hooks/useFuelCode')
 vi.mock('@/hooks/useCurrentUser')
@@ -79,11 +83,7 @@ vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
     handlePaste
   }) => (
     <div data-testid="grid">
-      <button
-        onClick={() => onGridReady?.({ api: { sizeColumnsToFit: vi.fn() } })}
-      >
-        Ready
-      </button>
+      <button onClick={() => onGridReady?.({ api: mockGridApi })}>Ready</button>
       <button
         onClick={() =>
           onCellValueChanged?.({
@@ -183,20 +183,12 @@ vi.mock('@/components/Loading', () => ({
 
 vi.mock('@/components/BCButton', () => ({
   default: ({
-    children,
-    onClick,
-    startIcon,
-    loading,
-    variant,
-    color,
-    size,
-    sx,
-    ...domProps
-  }) => (
-    <button onClick={onClick} {...domProps}>
+  children,
+  onClick,
+  ...domProps
+}) => { delete domProps.startIcon; delete domProps.loading; delete domProps.variant; delete domProps.color; delete domProps.size; delete domProps.sx; return <button onClick={onClick} {...domProps}>
       {children}
-    </button>
-  )
+    </button>; }
 }))
 
 vi.mock('@/components/BCModal', () => ({
@@ -451,7 +443,7 @@ describe('AddEditFuelCode', () => {
     })
   })
 
-  it('handles grid ready callback', async () => {
+  it('leaves column sizing to the grid on grid ready', async () => {
     render(
       <TestWrapper>
         <AddEditFuelCode />
@@ -462,6 +454,8 @@ describe('AddEditFuelCode', () => {
     fireEvent.click(readyButton)
 
     expect(readyButton).toBeInTheDocument()
+    // Fitting ~30 fuel code columns to the viewport squeezed them unreadably (#5288)
+    expect(mockGridApi.sizeColumnsToFit).not.toHaveBeenCalled()
   })
 
   it('handles cell value changes', async () => {

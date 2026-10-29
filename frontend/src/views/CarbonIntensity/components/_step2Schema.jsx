@@ -13,6 +13,7 @@ import { CommonArrayRenderer } from '@/utils/grid/cellRenderers'
 import i18n from '@/i18n'
 
 const APPLICATION_TYPE_RENEWAL = 'Renewal'
+const ADJACENT_TRANSPORT_MODE = 'Adjacent'
 
 const fuelCodeFieldSuggestionQuery = (field) => async ({ queryKey, client }) => {
   const searchTerm = queryKey[1] || ''
@@ -46,6 +47,13 @@ export const normalizeTransportModes = (value) => {
   return []
 }
 
+export const isAdjacentTransportMode = (transportMode) =>
+  transportMode?.toString().trim().toLowerCase() ===
+  ADJACENT_TRANSPORT_MODE.toLowerCase()
+
+const normalizeTransportDistance = (transportMode, distance) =>
+  isAdjacentTransportMode(transportMode) ? 0 : distance
+
 export const normalizeTransportModeDistances = (
   value,
   fallbackDistance = null
@@ -59,10 +67,12 @@ export const normalizeTransportModeDistances = (
       : null
     return {
       transportMode,
-      distance:
+      distance: normalizeTransportDistance(
+        transportMode,
         source && typeof source === 'object'
           ? (source.distance ?? fallbackDistance)
           : fallbackDistance
+      )
     }
   })
 
@@ -108,7 +118,8 @@ const hasModeLevelDistances = (value) =>
   )
 
 const transportModePayloadValue = (value) =>
-  hasModeLevelDistances(value)
+  hasModeLevelDistances(value) ||
+  normalizeTransportModes(value).some(isAdjacentTransportMode)
     ? normalizeTransportModeDistances(value)
     : normalizeTransportModes(value)
 
@@ -202,7 +213,6 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
   const transportModes = optionsData?.transportModes || []
   const fuelCodes = optionsData?.fuelCodes || []
 
-  const fuelCodeById = new Map(fuelCodes.map((fc) => [fc.fuelCodeId, fc]))
 
   const isRenewal = (params) => isRenewalRow(params.data, applicationTypes)
   const lockedOnRenewal = (params) => canEdit && !isRenewal(params)
