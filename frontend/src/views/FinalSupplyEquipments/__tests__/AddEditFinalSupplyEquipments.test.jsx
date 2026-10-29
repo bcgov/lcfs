@@ -795,6 +795,11 @@ describe('AddEditFinalSupplyEquipments', () => {
       })
 
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
+      await waitFor(() => {
+        expect(mockGridApi.startEditingCell).toHaveBeenCalled()
+      })
+      // Re-fitting on every data refresh squeezed the columns into the viewport
+      expect(mockGridApi.sizeColumnsToFit).not.toHaveBeenCalled()
     })
 
     it('should hide overwrite for versioned reports with data', () => {
