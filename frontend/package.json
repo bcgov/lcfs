@@ -67,7 +67,7 @@
     "country-list": "^2.3.0",
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.13",
-    "dompurify": "^3.4.16",
+    "dompurify": "^3.4.17",
     "dotenv": "^16.4.7",
     "echarts": "^6.1.0",
     "echarts-for-react": "^3.0.6",
@@ -105,7 +105,7 @@
     "zustand": "^5.0.3"
   },
   "devDependencies": {
-    "@badeball/cypress-cucumber-preprocessor": "^22.0.1",
+    "@badeball/cypress-cucumber-preprocessor": "^28.0.1",
     "@bahmutov/cypress-esbuild-preprocessor": "^2.2.4",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
@@ -116,14 +116,14 @@
     "@types/react-dom": "^18.3.7",
     "@typescript-eslint/eslint-plugin": "^8.34.0",
     "@typescript-eslint/parser": "^8.34.0",
-    "@vitest/coverage-v8": "4.1.11",
-    "@vitest/ui": "4.1.11",
+    "@vitest/coverage-v8": "4.1.12",
+    "@vitest/ui": "4.1.12",
     "axe-core": "^4.10.3",
     "cross-env": "^7.0.3",
-    "cypress": "^14.2.1",
+    "cypress": "^15.21.1",
     "cypress-axe": "^1.6.0",
     "cypress-react-selector": "^3.0.0",
-    "cypress-real-events": "^1.14.0",
+    "cypress-real-events": "^1.15.1",
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^9.1.0",
     "eslint-config-standard": "^17.1.0",
@@ -143,7 +143,7 @@
     "prop-types": "^15.8.1",
     "standard": "^17.1.2",
     "typescript": "^5.8.3",
-    "vitest": "4.1.11"
+    "vitest": "4.1.12"
   },
   "optionalDependencies": {
     "@rollup/rollup-linux-x64-gnu": "4.6.1"
@@ -154,11 +154,11 @@
       "minimatch": "5.1.9"
     },
     "@cypress/request": {
-      "qs": "^6.16.0",
+      "qs": "^6.17.0",
       "uuid": "^11.1.1"
     },
     "mocha": {
-      "serialize-javascript": "^7.1.2"
+      "serialize-javascript": "^7.1.4"
     },
     "@badeball/cypress-cucumber-preprocessor": {
       "uuid": "^11.1.1"
