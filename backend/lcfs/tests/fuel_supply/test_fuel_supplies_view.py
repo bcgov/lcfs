@@ -235,7 +235,7 @@ async def test_save_fuel_supply_row_duplicate(
 
     response = await client.post(url, json=payload)
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     data = response.json()
     assert "Validation failed" in data["message"]
 
