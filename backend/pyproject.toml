@@ -14,7 +14,7 @@ readme = "README.md"
 # Keep this compatibility range aligned with .python-version.
 python = "^3.13"
 fastapi = "~0.133.0"
-starlette = ">=1.0.1,<1.1"
+starlette = ">=1.0.1,<1.4"
 uvicorn = { version = "^0.24.0", extras = ["standard"] }
 pydantic = { extras = ["email"], version = "^2.4.2" }
 yarl = "^1.8.2"
