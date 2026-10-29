@@ -6,6 +6,7 @@
     "stepDefinitions": "cypress/[filepath].cy.js"
   },
   "html": {
-    "enabled": true
+    "enabled": true,
+    "output": "cypress/reports/cucumber.html"
   }
 }
