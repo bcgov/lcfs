@@ -1685,6 +1685,36 @@ describe('EditViewComplianceReport', () => {
         ).toBeInTheDocument()
       })
 
+      it('uses the latest submission when a report was resubmitted', () => {
+        const resubmittedReport = {
+          ...defaultReportData,
+          report: {
+            ...defaultReportData.report,
+            reportingFrequency: 'Quarterly',
+            history: [
+              {
+                status: { status: 'Submitted' },
+                createDate: '2024-04-15T10:00:00Z' // April = Q1
+              },
+              {
+                status: { status: 'Submitted' },
+                createDate: '2024-08-15T10:00:00Z' // August = Q2
+              }
+            ]
+          }
+        }
+        // Selector-level mock so reportData resolves to the object
+        useComplianceReportStore.mockImplementation((selector) =>
+          selector({ getCachedReport: () => resubmittedReport })
+        )
+
+        render(<EditViewComplianceReport />)
+
+        expect(
+          screen.getByTestId('compliance-report-header')
+        ).toHaveTextContent(/complianceReportEarlyIssuance 2$/)
+      })
+
       it('handles quarterly report with no history', () => {
         const noHistoryReport = {
           ...defaultReportData,

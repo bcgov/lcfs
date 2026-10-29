@@ -241,6 +241,57 @@ async def test_add_compliance_report_history_success(
 
 
 @pytest.mark.anyio
+async def test_add_compliance_report_history_keeps_earlier_entry_for_same_status(
+    compliance_report_repo,
+    dbsession,
+    users,
+    compliance_reports,
+    compliance_report_statuses,
+):
+    """Re-entering a status adds a history entry instead of overwriting the
+    earlier one (#5172). A report returned to the analyst and re-recommended
+    by the Director must keep the analyst's original recommendation."""
+    report = compliance_reports[0]
+    report_id = report.compliance_report_id
+    recommended_status_id = compliance_report_statuses[2].compliance_report_status_id
+    analyst_id, director_id = (user.user_profile_id for user in users)
+
+    report.current_status_id = recommended_status_id
+    original = await compliance_report_repo.add_compliance_report_history(
+        report=report, user=users[0]
+    )
+    await dbsession.refresh(original)
+    original_id = original.compliance_report_history_id
+    original_date = original.create_date
+
+    # Returned (returns write no history), then re-recommended by the Director
+    report.current_status_id = recommended_status_id
+    await compliance_report_repo.add_compliance_report_history(
+        report=report, user=users[1]
+    )
+
+    dbsession.expire_all()
+    rows = (
+        (
+            await dbsession.execute(
+                select(ComplianceReportHistory)
+                .where(
+                    ComplianceReportHistory.compliance_report_id == report_id,
+                    ComplianceReportHistory.status_id == recommended_status_id,
+                )
+                .order_by(ComplianceReportHistory.compliance_report_history_id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    assert [row.user_profile_id for row in rows] == [analyst_id, director_id]
+    assert rows[0].compliance_report_history_id == original_id
+    assert rows[0].create_date == original_date
+
+
+@pytest.mark.anyio
 async def test_add_compliance_report_history_exception(
     compliance_report_repo,
 ):
