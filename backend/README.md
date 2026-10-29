@@ -5,10 +5,10 @@ This project was generated using fastapi_template.
 ## Python version
 
 [`backend/.python-version`](.python-version) is the source of truth for the
-application's Python major/minor version. CI reads it directly, and the
-repository-root `.python-version` is a symlink to it. The standalone ETL tool
-keeps its own `.python-version` and runtime. We follow production's minor-version
-policy, allowing patch updates within that minor release.
+application's Python major/minor version, and backend CI setup reads it
+directly. The standalone ETL tool keeps its own `.python-version` and runtime.
+We follow production's minor-version policy, allowing patch updates within that
+minor release.
 
 Docker must select its base image before it can read files from the build
 context, and Poetry requires a literal compatibility range. Keep the Dockerfile
