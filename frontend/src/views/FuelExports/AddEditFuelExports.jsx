@@ -62,7 +62,8 @@ export const AddEditFuelExports = () => {
       autoSizeStrategy: {
         type: 'fitCellContents',
         defaultMinWidth: 50,
-        defaultMaxWidth: 600
+        defaultMaxWidth: 600,
+        scaleUpToFitGridWidth: true
       }
     }),
     [t]
@@ -102,7 +103,6 @@ export const AddEditFuelExports = () => {
       } else {
         setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
       }
-      params.api.sizeColumnsToFit()
 
       gridTimersRef.current.push(
         setTimeout(() => {
@@ -173,7 +173,7 @@ export const AddEditFuelExports = () => {
   ])
 
   const onFirstDataRendered = useCallback((params) => {
-    params.api?.autoSizeAllColumns?.()
+    params.api?.autoSizeAllColumns?.({ scaleUpToFitGridWidth: true })
   }, [])
 
   const onCellValueChanged = useCallback(
@@ -250,7 +250,7 @@ export const AddEditFuelExports = () => {
           columns: ['ciOfFuel', 'targetCi', 'uci', 'complianceUnits']
         })
       }
-      params.api?.autoSizeAllColumns?.()
+      params.api?.autoSizeAllColumns?.({ scaleUpToFitGridWidth: true })
     },
     [optionsData]
   )
