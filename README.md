@@ -9,6 +9,11 @@ Check out our [wiki docs](https://github.com/bcgov/lcfs/wiki) for documentation!
 For local Keycloak login across parallel development stacks, see
 [`wiki/Local-Keycloak-Development.md`](wiki/Local-Keycloak-Development.md).
 
+## Python
+
+The application Python version is defined in [backend/.python-version](backend/.python-version).
+See the [backend setup instructions](backend/README.md#python-version) for local setup and version updates.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.

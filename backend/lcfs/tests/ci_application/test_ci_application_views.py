@@ -342,7 +342,7 @@ async def test_create_application_validation_error_missing_required(
     payload = _step1_payload()
     del payload["facilityCountry"]
     response = await client.post("/api/ci-applications", json=payload)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 @pytest.mark.anyio
@@ -355,7 +355,7 @@ async def test_create_application_capacity_must_be_positive(
     payload = _step1_payload()
     payload["facilityNameplateCapacity"] = 0
     response = await client.post("/api/ci-applications", json=payload)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 # ---------------------------------------------------------------------------
@@ -553,7 +553,7 @@ async def test_submit_endpoint_validation_error_when_declarations_incomplete(
     payload = _step4_payload()
     payload["declarationSection206"] = False
     response = await client.post("/api/ci-applications/10/submit", json=payload)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 # ---------------------------------------------------------------------------
@@ -605,7 +605,7 @@ async def test_decision_endpoint_rejects_non_terminal_status(
     response = await client.post(
         "/api/ci-applications/10/decision", json={"status": "Recommended"}
     )
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 @pytest.mark.anyio
