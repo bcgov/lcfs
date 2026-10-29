@@ -6,7 +6,9 @@ This project was generated using fastapi_template.
 
 [`backend/.python-version`](.python-version) is the source of truth for the
 application's Python major/minor version, and backend CI setup reads it
-directly. The standalone ETL tool keeps its own `.python-version` and runtime.
+directly. The standalone ETL tool remains independently pinned to Python
+3.11.10 in [`etl/python_migration/.python-version`](../etl/python_migration/.python-version);
+changing the backend version does not change the ETL runtime.
 We follow production's minor-version policy, allowing patch updates within that
 minor release.
 
