@@ -399,14 +399,13 @@ async def test_update_endpoints_expose_email_failure_status(account_service, pat
 
     @app.middleware("http")
     async def authenticate(request: Request, call_next):
-        request.scope["user"] = SimpleNamespace(
+        request.scope["user"] = UserProfile(
             user_profile_id=42,
-            is_government=True,
-            role_names=[
+            user_roles=user_roles(
                 RoleEnum.GOVERNMENT,
                 RoleEnum.ADMINISTRATOR,
                 RoleEnum.MANAGE_USERS,
-            ],
+            ),
         )
         return await call_next(request)
 
@@ -436,7 +435,7 @@ async def test_email_update_endpoint_keeps_existing_response():
 
     @app.middleware("http")
     async def authenticate(request: Request, call_next):
-        request.scope["user"] = SimpleNamespace(user_profile_id=42)
+        request.scope["user"] = UserProfile(user_profile_id=42)
         return await call_next(request)
 
     async with AsyncClient(

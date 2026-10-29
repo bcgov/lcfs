@@ -7,7 +7,6 @@ import structlog
 from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import UJSONResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 from starlette.authentication import (
     AuthenticationBackend,
@@ -89,8 +88,9 @@ class LazyAuthenticationBackend(AuthenticationBackend):
         if request.scope["method"] == "OPTIONS":
             return AuthCredentials([]), UnauthenticatedUser()
 
-        # Check for specific paths that should skip authentication
-        path = request.url.path.rstrip("/")
+        # Check for specific paths that should skip authentication, matched
+        # against the raw request path the router dispatches on
+        path = request.scope["path"].rstrip("/")
 
         # Always skip auth for these paths
         if (
@@ -177,7 +177,6 @@ def get_app() -> FastAPI:
         docs_url="/api/docs",
         redoc_url="/api/redoc",
         openapi_url="/api/openapi.json",
-        default_response_class=UJSONResponse,
     )
 
     # Set up CORS middleware options
