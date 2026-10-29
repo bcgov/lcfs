@@ -149,7 +149,7 @@ class TestCreditMarketViews:
         )
 
         # Should return validation error or forbidden (depending on auth setup)
-        assert response.status_code in [status.HTTP_422_UNPROCESSABLE_ENTITY, status.HTTP_403_FORBIDDEN]
+        assert response.status_code in [status.HTTP_422_UNPROCESSABLE_CONTENT, status.HTTP_403_FORBIDDEN]
 
     @pytest.mark.anyio
     async def test_update_current_org_credit_market_service_error(
