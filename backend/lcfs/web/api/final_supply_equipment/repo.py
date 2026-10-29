@@ -1270,6 +1270,27 @@ class FinalSupplyEquipmentRepository:
         )
         return float(total or 0)
 
+    @repo_handler
+    async def is_fse_reporting_refresh_pending(self) -> bool:
+        """
+        Return True while FSE writes are not yet in ``mv_fse_reporting_base_pref``.
+
+        Source-table triggers bump ``dirty_generation``; the refresh job sets
+        ``refreshed_generation`` only after the materialized view is refreshed.
+        Read this before the reporting rows: once it reports False, the rows
+        read afterwards include every committed write.
+        """
+        pending = await self.db.scalar(
+            sa.text(
+                """
+                SELECT dirty_generation > refreshed_generation
+                FROM fse_reporting_mv_refresh_state
+                WHERE id = 1
+                """
+            )
+        )
+        return bool(pending)
+
     @staticmethod
     def _get_fse_reporting_source_table(source: str):
         if source == "vw_fse_base":
