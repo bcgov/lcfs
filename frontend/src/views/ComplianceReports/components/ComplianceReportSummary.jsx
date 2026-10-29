@@ -99,12 +99,7 @@ const ComplianceReportSummary = ({
   const { hasRoles, data: currentUser } = useCurrentUser()
   const isGovernmentUser = currentUser?.isGovernmentUser
 
-  const {
-  data,
-  isLoading,
-  isError,
-  error
-} =
+  const { data, isLoading, isError, error } =
     useGetComplianceReportSummary(reportID)
   const { mutate: updateComplianceReportSummary } =
     useUpdateComplianceReportSummary(reportID, {
@@ -171,13 +166,7 @@ const ComplianceReportSummary = ({
         severity: 'error'
       })
     }
-  }, [
-    alertRef,
-    data,
-    error,
-    isError,
-    setHasEligibleRenewableFuel
-  ])
+  }, [alertRef, data, error, isError, setHasEligibleRenewableFuel])
 
   useEffect(() => {
     if (snapshotData) {

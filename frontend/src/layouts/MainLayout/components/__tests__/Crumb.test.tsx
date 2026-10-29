@@ -1,6 +1,6 @@
 import { screen } from '@testing-library/react'
 import Crumb from '../Crumb'
-import { vi, describe, expect, type Mock } from 'vitest'
+import { vi, describe, expect, type Mock } from 'vite-plus/test'
 import { test } from '@/tests/utils/fixtures'
 import { useLocation, useMatches, useParams } from 'react-router-dom'
 import { useOrganizationPageStore } from '@/stores/useOrganizationPageStore'

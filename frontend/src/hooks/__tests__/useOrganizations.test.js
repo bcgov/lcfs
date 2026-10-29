@@ -1,5 +1,5 @@
 import { waitFor } from '@testing-library/react'
-import { describe, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, expect, vi, beforeEach, afterEach } from 'vite-plus/test'
 import { useApiService } from '@/services/useApiService'
 import { test } from '@/tests/utils/fixtures'
 import { ORGANIZATION_STATUSES } from '@/constants/statuses'

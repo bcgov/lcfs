@@ -17,7 +17,7 @@ const ANALYST_CHIP_SX = {
 
 // Centered chip wrapper so analyst / last-comment pills sit visually
 // centered in their grid cell regardless of the row's natural height.
-const PillCell = ({ children }: {children: ReactNode}) => (
+const PillCell = ({ children }: { children: ReactNode }) => (
   <BCBox
     component="div"
     sx={{
@@ -33,7 +33,11 @@ const PillCell = ({ children }: {children: ReactNode}) => (
   </BCBox>
 )
 
-export const LastCommentRenderer = ({ data }: {data?: {lastComment?: {fullName?: string; comment?: string}}}) => {
+export const LastCommentRenderer = ({
+  data
+}: {
+  data?: { lastComment?: { fullName?: string; comment?: string } }
+}) => {
   const last = data?.lastComment
   if (!last?.fullName) {
     return <BCBox component="div" sx={{ width: '100%', height: '100%' }} />
@@ -58,7 +62,12 @@ const CIApplicationChangesRequestedRenderer = createStatusRenderer(
   CI_APPLICATION_CHANGES_REQUESTED_LABEL
 )
 
-export const CIApplicationListStatusRenderer = (props: {data?: {pathwaySupplementalEditEnabled?: boolean; pathway_supplemental_edit_enabled?: boolean}}) => {
+export const CIApplicationListStatusRenderer = (props: {
+  data?: {
+    pathwaySupplementalEditEnabled?: boolean
+    pathway_supplemental_edit_enabled?: boolean
+  }
+}) => {
   const supplementalEditEnabled =
     props.data?.pathwaySupplementalEditEnabled ||
     props.data?.pathway_supplemental_edit_enabled

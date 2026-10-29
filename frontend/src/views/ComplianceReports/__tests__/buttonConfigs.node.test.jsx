@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vite-plus/test'
 import { buttonClusterConfigFn } from '../buttonConfigs'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { roles, govRoles } from '@/constants/roles'
@@ -302,7 +302,13 @@ describe('ComplianceReports buttonConfigs', () => {
       // Directors can only recommendByManager or returnToAnalyst at this status
       const buttons = config[COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST]
       expect(buttons).toBeDefined()
-      expect(buttons.some((b) => b.id === 'recommend-by-manager-btn' || b.id === 'return-to-analyst-btn')).toBe(true)
+      expect(
+        buttons.some(
+          (b) =>
+            b.id === 'recommend-by-manager-btn' ||
+            b.id === 'return-to-analyst-btn'
+        )
+      ).toBe(true)
     })
 
     it('should not show issueAssessment button when hasDraftSupplemental is true', () => {
@@ -545,7 +551,8 @@ describe('ComplianceReports buttonConfigs', () => {
         // Use ANALYST_ADJUSTMENT status where director has both:
         // - recommendByAnalyst (Analyst role - has roleIndicator)
         // - issueAssessment (Director role - no roleIndicator)
-        mockContext.currentStatus = COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT
+        mockContext.currentStatus =
+          COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT
 
         const config = buttonClusterConfigFn(mockContext)
         const buttons = config[COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT]

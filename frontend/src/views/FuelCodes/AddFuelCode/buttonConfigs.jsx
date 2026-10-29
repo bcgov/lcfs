@@ -210,7 +210,7 @@ function shouldShowButton(buttonName, context) {
     case 'save':
       // Show save button if in edit mode or creating new fuel code, and there are changes
       return context.shouldShowSaveButton
-      //  && context.hasChanges
+    //  && context.hasChanges
 
     case 'edit':
       // Show edit button if not in edit mode and fuel code exists

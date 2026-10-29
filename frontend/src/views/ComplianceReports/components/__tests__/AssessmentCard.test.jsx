@@ -1,5 +1,5 @@
 import { screen, waitFor, fireEvent, act } from '@testing-library/react'
-import { expect, describe, vi, beforeEach } from 'vitest'
+import { expect, describe, vi, beforeEach } from 'vite-plus/test'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { roles } from '@/constants/roles'
 import { test } from '@/tests/utils/fixtures'
@@ -173,9 +173,8 @@ vi.mock('@/components/BCTypography', () => ({
 }))
 
 // Setup default imports
-const { useOrganizationSnapshot } = await import(
-  '@/hooks/useOrganizationSnapshot.js'
-)
+const { useOrganizationSnapshot } =
+  await import('@/hooks/useOrganizationSnapshot.js')
 const { useReportOpenings } = await import('@/hooks/useReportOpenings')
 
 describe('AssessmentCard', () => {

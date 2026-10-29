@@ -120,7 +120,13 @@ const BCBoxRoot = styled(Box, {
 
   const validBorderRadius = ['xs', 'sm', 'md', 'lg', 'xl', 'xxl', 'section']
   const validBoxShadows = ['xs', 'sm', 'md', 'lg', 'xl', 'xxl', 'inset']
-  const alertVariants = ['success', 'info', 'warning', 'error', 'pending'] as const
+  const alertVariants = [
+    'success',
+    'info',
+    'warning',
+    'error',
+    'pending'
+  ] as const
 
   let boxShadowValue = 'none'
 

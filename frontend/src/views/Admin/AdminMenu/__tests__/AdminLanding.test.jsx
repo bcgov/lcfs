@@ -1,5 +1,5 @@
 import { render } from '@testing-library/react'
-import { vi } from 'vitest'
+import { vi } from 'vite-plus/test'
 import { AdminLanding } from '../AdminLanding'
 
 vi.mock('react-router-dom', () => ({
@@ -32,7 +32,11 @@ vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: () => mockUseCurrentUser()
 }))
 
-const makeUser = ({ hasRoles = () => false, isLoading = false, data = {} } = {}) => ({
+const makeUser = ({
+  hasRoles = () => false,
+  isLoading = false,
+  data = {}
+} = {}) => ({
   data,
   isLoading,
   hasRoles

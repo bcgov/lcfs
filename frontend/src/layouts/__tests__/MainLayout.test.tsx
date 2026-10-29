@@ -1,25 +1,26 @@
 import { screen, waitFor } from '@testing-library/react'
 import { MainLayout } from '../MainLayout/MainLayout'
-import { vi, describe, expect, type Mock } from 'vitest'
+import { vi, describe, expect, type Mock } from 'vite-plus/test'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { test } from '@/tests/utils/fixtures'
-import { useMatches, useNavigate } from 'react-router-dom'
 import { useAuthorization } from '@/contexts/AuthorizationContext'
 import { useLoadingStore } from '@/stores/useLoadingStore'
 import { ROUTES } from '@/routes/routes'
 import { useAuth } from '@/hooks/useAuth'
 import type { ReactNode } from 'react'
 
+const routerMocks = vi.hoisted(() => ({
+  useMatches: vi.fn(),
+  useNavigate: vi.fn(),
+  Outlet: vi.fn()
+}))
+
 // Mock all required hooks and components
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom')
   return {
     ...actual,
-    useMatches: vi.fn(),
-    useNavigate: vi.fn(),
-    Outlet: vi
-      .fn()
-      .mockReturnValue(<div data-test="outlet-content">Outlet Content</div>)
+    ...routerMocks
   }
 })
 vi.mock('@/hooks/useAuth')
@@ -70,8 +71,8 @@ vi.mock('react-i18next', () => ({
   })
 }))
 
-const mockedUseMatches = useMatches as unknown as Mock
-const mockedUseNavigate = useNavigate as unknown as Mock
+const mockedUseMatches = routerMocks.useMatches as unknown as Mock
+const mockedUseNavigate = routerMocks.useNavigate as unknown as Mock
 const mockedUseCurrentUser = useCurrentUser as unknown as Mock
 const mockedUseAuthorization = useAuthorization as unknown as Mock
 const mockedUseLoadingStore = useLoadingStore as unknown as Mock
@@ -82,6 +83,9 @@ describe('MainLayout', () => {
 
   test.beforeEach(() => {
     // Default mock setup
+    routerMocks.Outlet.mockReturnValue(
+      <div data-test="outlet-content">Outlet Content</div>
+    )
     mockedUseMatches.mockReturnValue([{ handle: { title: 'Test Page Title' } }])
     mockedUseNavigate.mockReturnValue(navigate)
     mockedUseCurrentUser.mockReturnValue({

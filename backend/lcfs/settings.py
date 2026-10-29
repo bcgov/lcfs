@@ -59,6 +59,7 @@ class Settings(BaseSettings):
     compliance_reindex_run_on_startup: bool = False
     fse_reporting_mv_refresh_enabled: bool = True
     fse_reporting_mv_refresh_interval_seconds: int = 30
+    fse_reporting_mv_refresh_after_write_delay_seconds: float = 2
 
     credit_market_report_enabled: bool = False
     credit_market_report_day: int = 1

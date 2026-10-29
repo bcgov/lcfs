@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vite-plus/test'
 import useComplianceReportStore from '../useComplianceReportStore'
 
 const getStoreResult = () => ({
@@ -25,20 +25,20 @@ describe('useComplianceReportStore', () => {
   describe('initial state', () => {
     it('should initialize with null currentReport', () => {
       const { result } = getStoreResult()
-      
+
       expect(result.current.currentReport).toBeNull()
     })
 
     it('should initialize with empty reportCache Map', () => {
       const { result } = getStoreResult()
-      
+
       expect(result.current.reportCache).toBeInstanceOf(Map)
       expect(result.current.reportCache.size).toBe(0)
     })
 
     it('should have all required functions available', () => {
       const { result } = getStoreResult()
-      
+
       expect(typeof result.current.setCurrentReport).toBe('function')
       expect(typeof result.current.cacheReport).toBe('function')
       expect(typeof result.current.getCachedReport).toBe('function')
@@ -125,7 +125,7 @@ describe('useComplianceReportStore', () => {
 
     it('should be safe to call when current report is already null', () => {
       const { result } = getStoreResult()
-      
+
       expect(result.current.currentReport).toBeNull()
 
       run(() => {
@@ -209,7 +209,7 @@ describe('useComplianceReportStore', () => {
 
     it('should return undefined for non-existent report ID', () => {
       const { result } = getStoreResult()
-      
+
       const retrieved = result.current.getCachedReport(999)
       expect(retrieved).toBeUndefined()
     })
@@ -218,7 +218,7 @@ describe('useComplianceReportStore', () => {
   describe('shouldFetchReport functionality', () => {
     it('should return true for non-cached report', () => {
       const { result } = getStoreResult()
-      
+
       expect(result.current.shouldFetchReport(1)).toBe(true)
     })
 
@@ -254,7 +254,7 @@ describe('useComplianceReportStore', () => {
 
     it('should return false for non-cached report', () => {
       const { result } = getStoreResult()
-      
+
       expect(result.current.isReportCached(999)).toBe(false)
     })
   })
@@ -289,7 +289,7 @@ describe('useComplianceReportStore', () => {
         result.current.setCurrentReport(reportData)
         result.current.cacheReport(reportId, reportData)
       })
-      
+
       expect(result.current.currentReport).toEqual(reportData)
       expect(result.current.isReportCached(reportId)).toBe(true)
 
@@ -329,7 +329,7 @@ describe('useComplianceReportStore', () => {
 
     it('should handle removing non-existent report gracefully', () => {
       const { result } = getStoreResult()
-      
+
       // Should not throw an error
       run(() => {
         result.current.removeReport(999)
@@ -356,7 +356,7 @@ describe('useComplianceReportStore', () => {
 
     it('should return undefined when no current report', () => {
       const { result } = getStoreResult()
-      
+
       expect(result.current.getCurrentReportId()).toBeUndefined()
     })
 
@@ -377,7 +377,7 @@ describe('useComplianceReportStore', () => {
   describe('getAllCachedReports functionality', () => {
     it('should return empty array when no reports cached', () => {
       const { result } = getStoreResult()
-      
+
       expect(result.current.getAllCachedReports()).toEqual([])
     })
 
@@ -453,7 +453,7 @@ describe('useComplianceReportStore', () => {
 
     it('should return null when report is not cached and not current', () => {
       const { result } = getStoreResult()
-      
+
       const retrieved = result.current.getReportByIdOrCurrent(999)
       expect(retrieved).toBeNull()
     })
@@ -500,10 +500,10 @@ describe('useComplianceReportStore', () => {
         result.current.cacheReport(1, report1)
         result.current.cacheReport(2, report2)
         result.current.cacheReport(3, report3)
-        
+
         // Set current report
         result.current.setCurrentReport(report2)
-        
+
         // Remove one report
         result.current.removeReport(3)
       })
@@ -551,14 +551,14 @@ describe('useComplianceReportStore', () => {
 
     it('should handle rapid cache operations', () => {
       const { result } = getStoreResult()
-      
+
       run(() => {
         // Rapidly cache and remove reports
         for (let i = 1; i <= 10; i++) {
           const report = { report: { id: i, title: `Report ${i}` } }
           result.current.cacheReport(i, report)
         }
-        
+
         for (let i = 1; i <= 5; i++) {
           result.current.removeReport(i)
         }

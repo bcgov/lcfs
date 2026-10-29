@@ -73,14 +73,14 @@ export const AddEditUser = ({
     isFetched: isUserFetched
   } = hasRoles(roles.supplier) && userID
     ? userID
-      ? // eslint-disable-next-line react-hooks/rules-of-hooks
+      ? // oxlint-disable-next-line react/rules-of-hooks
         useOrganizationUser(
           orgID || currentUser?.organization?.organizationId,
           userID,
           { enabled: !isCurrentUserLoading }
         )
       : { undefined, isLoading: false, isFetched: false }
-    : // eslint-disable-next-line react-hooks/rules-of-hooks
+    : // oxlint-disable-next-line react/rules-of-hooks
       useUser(userID, { enabled: !!userID, retry: false })
 
   const safeToDelete = data?.isSafeToRemove

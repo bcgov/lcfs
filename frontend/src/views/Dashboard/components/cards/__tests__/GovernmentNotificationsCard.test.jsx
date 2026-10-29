@@ -1,5 +1,5 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import userEvent from '@testing-library/user-event'
 import { SnackbarProvider } from 'notistack'
 import { makeProvider, providerWrapper, test } from '@/tests/utils/fixtures'

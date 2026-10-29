@@ -1,6 +1,6 @@
 import 'react'
 import { render, screen, fireEvent, act } from '@testing-library/react'
-import { describe, expect, it, beforeEach, vi } from 'vitest'
+import { describe, expect, it, beforeEach, vi } from 'vite-plus/test'
 import { ThemeProvider } from '@mui/material/styles'
 import { ExcelUpload } from '../ExcelUpload'
 import theme from '@/themes'

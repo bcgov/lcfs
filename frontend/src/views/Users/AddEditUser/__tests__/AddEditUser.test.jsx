@@ -1,20 +1,22 @@
 import { test } from '@/tests/utils/fixtures'
-import 'react';
-import { screen, fireEvent, waitFor } from '@testing-library/react';
-import '@testing-library/user-event';
-import { describe, expect, beforeEach, vi } from 'vitest';
+import 'react'
+import { screen, fireEvent, waitFor } from '@testing-library/react'
+import '@testing-library/user-event'
+import { describe, expect, beforeEach, vi } from 'vite-plus/test'
 import { AddEditUser } from '../AddEditUser'
-import 'msw';
+import 'msw'
 import * as currentUserHooks from '@/hooks/useCurrentUser'
 import * as userHooks from '@/hooks/useUser'
 import * as organizationUserHooks from '@/hooks/useOrganization'
-import '@/routes/routes';
+import '@/routes/routes'
 import { roles } from '@/constants/roles'
-import { useWatch } from 'react-hook-form';
-import '@hookform/resolvers/yup';
-import '../_schema';
+import { useWatch } from 'react-hook-form'
+import '@hookform/resolvers/yup'
+import '../_schema'
 
-const { mockEnqueueSnackbar } = vi.hoisted(() => ({ mockEnqueueSnackbar: vi.fn() }))
+const { mockEnqueueSnackbar } = vi.hoisted(() => ({
+  mockEnqueueSnackbar: vi.fn()
+}))
 vi.mock('notistack', () => ({
   useSnackbar: () => ({ enqueueSnackbar: mockEnqueueSnackbar })
 }))
@@ -147,28 +149,23 @@ vi.mock('@/components/BCForm/BCFormRadio', async () => {
 })
 
 vi.mock('@/components/BCForm/BCFormCheckbox', () => ({
-    BCFormCheckbox: ({ name, options = [] }) => (
-      <div data-test={`${name}-checkbox-group`}>
-        {options.map((option, index) => (
-          <input
-            key={`${name}-${index}`}
-            type="checkbox"
-            data-test={option.dataTestId || `${name}${index + 1}`}
-          />
-        ))}
-      </div>
-    )
+  BCFormCheckbox: ({ name, options = [] }) => (
+    <div data-test={`${name}-checkbox-group`}>
+      {options.map((option, index) => (
+        <input
+          key={`${name}-${index}`}
+          type="checkbox"
+          data-test={option.dataTestId || `${name}${index + 1}`}
+        />
+      ))}
+    </div>
+  )
 }))
 
 vi.mock('@/components/BCForm/BCFormAddressAutocomplete', () => ({
-    BCFormAddressAutocomplete: ({ name, label, disabled, ...props }) => (
-      <input
-        data-test={name}
-        aria-label={label}
-        disabled={disabled}
-        {...props}
-      />
-    )
+  BCFormAddressAutocomplete: ({ name, label, disabled, ...props }) => (
+    <input data-test={name} aria-label={label} disabled={disabled} {...props} />
+  )
 }))
 
 // Mock child components to simplify testing focus on parent logic
@@ -226,10 +223,7 @@ vi.mock('../components/IDIRSpecificRoleFields', () => ({
 }))
 
 vi.mock('../components/BCeIDSpecificRoleFields', () => ({
-  BCeIDSpecificRoleFields: ({
-  form,
-  disabled
-}) => {
+  BCeIDSpecificRoleFields: ({ form, disabled }) => {
     return (
       <div data-test="bceid-roles">
         <input
@@ -403,10 +397,15 @@ describe('AddEditUser', () => {
     expect(screen.getByText('Updating user...')).toBeInTheDocument()
   })
 
-  test('warns about email failure while completing a successful account update', ({ render, theme }) => {
+  test('warns about email failure while completing a successful account update', ({
+    render,
+    theme
+  }) => {
     const handleSaveSuccess = vi.fn()
     render(<AddEditUser handleSaveSuccess={handleSaveSuccess} />, [theme])
-    const { onSuccess } = vi.mocked(userHooks.useUpdateUser).mock.calls.at(-1)[0]
+    const { onSuccess } = vi
+      .mocked(userHooks.useUpdateUser)
+      .mock.calls.at(-1)[0]
     const result = { data: { accountChangeEmailSent: false } }
     const variables = { userID: 'user123' }
 
