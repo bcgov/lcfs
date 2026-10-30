@@ -174,6 +174,7 @@ async def save_notional_transfer_row(
         compliance_report_id
     )
     await report_validate.validate_compliance_report_access(compliance_report)
+    await report_validate.validate_compliance_report_editable(compliance_report)
     await validate.validate_compliance_report_id(compliance_report_id, [request_data])
 
     if request_data.deleted:

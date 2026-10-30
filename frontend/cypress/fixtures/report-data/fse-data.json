@@ -13,7 +13,11 @@
       "intendedUses": ["Light duty motor vehicles", "Battery bus"],
       "intendedUsers": ["Public", "Employee"],
       "intendedUseTypes": [
-        { "endUseTypeId": 1, "type": "Light duty motor vehicles", "subType": null },
+        {
+          "endUseTypeId": 1,
+          "type": "Light duty motor vehicles",
+          "subType": null
+        },
         { "endUseTypeId": 5, "type": "Battery truck", "subType": null }
       ],
       "intendedUserTypes": [
@@ -39,7 +43,11 @@
       "intendedUses": ["Light duty motor vehicles", "Battery bus"],
       "intendedUsers": ["Public", "Employee"],
       "intendedUseTypes": [
-        { "endUseTypeId": 1, "type": "Light duty motor vehicles", "subType": null },
+        {
+          "endUseTypeId": 1,
+          "type": "Light duty motor vehicles",
+          "subType": null
+        },
         { "endUseTypeId": 5, "type": "Battery truck", "subType": null }
       ],
       "intendedUserTypes": [

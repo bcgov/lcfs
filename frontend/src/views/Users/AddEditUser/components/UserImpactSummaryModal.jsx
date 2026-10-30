@@ -30,8 +30,12 @@ import {
 } from '@/constants/notificationCategories'
 import colors from '@/themes/base/colors'
 
-const BASE_ROLES = [roles.government.toLowerCase(), roles.supplier.toLowerCase()]
-const displayName = (r) => Object.values(roles).find((v) => v.toLowerCase() === r) ?? r
+const BASE_ROLES = [
+  roles.government.toLowerCase(),
+  roles.supplier.toLowerCase()
+]
+const displayName = (r) =>
+  Object.values(roles).find((v) => v.toLowerCase() === r) ?? r
 
 const RoleBadge = ({ role, isGovUser, variant = 'outlined' }) => (
   <BCBadge
@@ -121,14 +125,14 @@ export const UserImpactSummaryModal = ({
 
   const isGovUser =
     currentUserData?.isGovernmentUser ??
-    proposedRoles.some((r) => r.toLowerCase() === roles.government.toLowerCase())
+    proposedRoles.some(
+      (r) => r.toLowerCase() === roles.government.toLowerCase()
+    )
 
-  const {
-    data: userSubscriptions = [],
-    isFetching: isSubscriptionsLoading
-  } = useTargetUserNotificationSubscriptions(
-    open && !isNewUser && isCurrentUserGovernment ? userId : null
-  )
+  const { data: userSubscriptions = [], isFetching: isSubscriptionsLoading } =
+    useTargetUserNotificationSubscriptions(
+      open && !isNewUser && isCurrentUserGovernment ? userId : null
+    )
 
   const {
     data: _assignedWorkRaw,
@@ -153,14 +157,18 @@ export const UserImpactSummaryModal = ({
     if (!open) return null
 
     const strip = (list) => list.filter((r) => r && !BASE_ROLES.includes(r))
-    const currentRoles = strip(currentUserData?.roles?.map((r) => r.name.toLowerCase()) ?? [])
+    const currentRoles = strip(
+      currentUserData?.roles?.map((r) => r.name.toLowerCase()) ?? []
+    )
     const newRoles = strip(proposedRoles.map((r) => r.toLowerCase()))
 
     const rolesAdded = newRoles.filter((r) => !currentRoles.includes(r))
     const rolesRemoved = currentRoles.filter((r) => !newRoles.includes(r))
     const rolesKept = newRoles.filter((r) => currentRoles.includes(r))
 
-    const currentIsActive = isNewUser ? true : (currentUserData?.isActive ?? true)
+    const currentIsActive = isNewUser
+      ? true
+      : (currentUserData?.isActive ?? true)
     const statusChanged = !isNewUser && currentIsActive !== proposedIsActive
     const isDeactivating = statusChanged && !proposedIsActive
     const analystRole = roles.analyst.toLowerCase()
@@ -185,7 +193,10 @@ export const UserImpactSummaryModal = ({
         if (!NOTIF_TYPE_CONFIG[typeName]) return false
 
         // IN_APP government notifications are not user-configurable; skip them
-        if (channelName === 'IN_APP' && typeName.endsWith('__GOVERNMENT_NOTIFICATION')) {
+        if (
+          channelName === 'IN_APP' &&
+          typeName.endsWith('__GOVERNMENT_NOTIFICATION')
+        ) {
           return false
         }
 
@@ -200,8 +211,10 @@ export const UserImpactSummaryModal = ({
     const notifsLost = Object.values(
       removedSubscriptions.reduce((grouped, subscription) => {
         const typeName = subscription.notificationTypeName
-        const [categoryKey, labelKey, categoryOrder] = NOTIF_TYPE_CONFIG[typeName]
-        const channel = subscription.notificationChannelName === 'IN_APP' ? 'In-app' : 'Email'
+        const [categoryKey, labelKey, categoryOrder] =
+          NOTIF_TYPE_CONFIG[typeName]
+        const channel =
+          subscription.notificationChannelName === 'IN_APP' ? 'In-app' : 'Email'
 
         if (!grouped[typeName]) {
           grouped[typeName] = {
@@ -227,8 +240,7 @@ export const UserImpactSummaryModal = ({
       }))
       .sort(
         (a, b) =>
-          a.categoryOrder - b.categoryOrder ||
-          a.label.localeCompare(b.label)
+          a.categoryOrder - b.categoryOrder || a.label.localeCompare(b.label)
       )
 
     const notifGroups = Object.values(
@@ -261,7 +273,15 @@ export const UserImpactSummaryModal = ({
       hasRoleChanges: rolesAdded.length > 0 || rolesRemoved.length > 0,
       hasNotifChanges: notifGroups.length > 0
     }
-  }, [open, currentUserData, proposedRoles, proposedIsActive, isNewUser, userSubscriptions, t])
+  }, [
+    open,
+    currentUserData,
+    proposedRoles,
+    proposedIsActive,
+    isNewUser,
+    userSubscriptions,
+    t
+  ])
 
   if (!impact) return null
 
@@ -279,7 +299,9 @@ export const UserImpactSummaryModal = ({
   const showNotificationImpact = impact.hasNotifChanges
   const showAssignedWorkImpact = impact.losesAssignedWorkAccess && isGovUser
   const impactColumnCount =
-    [showRoleImpact, showNotificationImpact, showAssignedWorkImpact].filter(Boolean).length || 1
+    [showRoleImpact, showNotificationImpact, showAssignedWorkImpact].filter(
+      Boolean
+    ).length || 1
   const dialogMaxWidth =
     impactColumnCount === 3
       ? '1500px'
@@ -319,7 +341,9 @@ export const UserImpactSummaryModal = ({
       }}
     >
       <DialogTitle id="impact-modal-title" sx={{ px: 3, py: 1.5, pr: 6 }}>
-        {isNewUser ? t('admin:impactModal.titleNew') : t('admin:impactModal.titleEdit')}
+        {isNewUser
+          ? t('admin:impactModal.titleNew')
+          : t('admin:impactModal.titleEdit')}
       </DialogTitle>
 
       <IconButton
@@ -402,7 +426,12 @@ export const UserImpactSummaryModal = ({
               }}
             >
               {showRoleImpact && (
-                <BCBox sx={{ ...impactPanelSx, borderTop: `3px solid ${colors.primary.main}` }}>
+                <BCBox
+                  sx={{
+                    ...impactPanelSx,
+                    borderTop: `3px solid ${colors.primary.main}`
+                  }}
+                >
                   {impact.statusChanged && (
                     <BCBox mb={2.5}>
                       <BCTypography variant="label" component="div" mb={1.25}>
@@ -410,16 +439,24 @@ export const UserImpactSummaryModal = ({
                       </BCTypography>
                       <BCBox display="flex" alignItems="center" gap={1.5}>
                         <StatusBadge isActive={impact.currentIsActive} />
-                        <ArrowForward sx={{ fontSize: 18, color: colors.grey[500] }} />
+                        <ArrowForward
+                          sx={{ fontSize: 18, color: colors.grey[500] }}
+                        />
                         <StatusBadge isActive={proposedIsActive} />
                       </BCBox>
                     </BCBox>
                   )}
 
-                  {impact.statusChanged && impact.hasRoleChanges && <Divider sx={{ mb: 2.5 }} />}
+                  {impact.statusChanged && impact.hasRoleChanges && (
+                    <Divider sx={{ mb: 2.5 }} />
+                  )}
 
                   {impact.hasRoleChanges && (
-                    <BCBox display="flex" flexDirection="column" sx={{ flex: 1 }}>
+                    <BCBox
+                      display="flex"
+                      flexDirection="column"
+                      sx={{ flex: 1 }}
+                    >
                       <BCTypography variant="label" component="div" mb={1.25}>
                         Role changes
                       </BCTypography>
@@ -430,7 +467,11 @@ export const UserImpactSummaryModal = ({
                             variant="body3"
                             fontWeight="medium"
                             component="div"
-                            sx={{ color: colors.success.main, mb: 0.75, fontSize: '0.8125rem' }}
+                            sx={{
+                              color: colors.success.main,
+                              mb: 0.75,
+                              fontSize: '0.8125rem'
+                            }}
                           >
                             Roles being added
                           </BCTypography>
@@ -460,7 +501,11 @@ export const UserImpactSummaryModal = ({
                                 }}
                               >
                                 <BCBox>
-                                  <RoleBadge role={role} isGovUser={isGovUser} variant="contained" />
+                                  <RoleBadge
+                                    role={role}
+                                    isGovUser={isGovUser}
+                                    variant="contained"
+                                  />
                                 </BCBox>
                                 {ROLE_ACCESS[role] && (
                                   <BCTypography
@@ -483,7 +528,11 @@ export const UserImpactSummaryModal = ({
                             variant="body3"
                             fontWeight="medium"
                             component="div"
-                            sx={{ color: colors.error.main, mb: 0.75, fontSize: '0.8125rem' }}
+                            sx={{
+                              color: colors.error.main,
+                              mb: 0.75,
+                              fontSize: '0.8125rem'
+                            }}
                           >
                             Roles being removed
                           </BCTypography>
@@ -513,7 +562,10 @@ export const UserImpactSummaryModal = ({
                                 }}
                               >
                                 <BCBox>
-                                  <RoleBadge role={role} isGovUser={isGovUser} />
+                                  <RoleBadge
+                                    role={role}
+                                    isGovUser={isGovUser}
+                                  />
                                 </BCBox>
                                 {ROLE_ACCESS[role] && (
                                   <BCTypography
@@ -544,11 +596,18 @@ export const UserImpactSummaryModal = ({
                               boxSizing: 'border-box'
                             }}
                           >
-                            <BCTypography variant="body3" color="text.secondary">
+                            <BCTypography
+                              variant="body3"
+                              color="text.secondary"
+                            >
                               Unchanged:
                             </BCTypography>
                             {impact.rolesKept.map((r) => (
-                              <RoleBadge key={r} role={r} isGovUser={isGovUser} />
+                              <RoleBadge
+                                key={r}
+                                role={r}
+                                isGovUser={isGovUser}
+                              />
                             ))}
                           </BCBox>
                         </BCBox>
@@ -559,9 +618,18 @@ export const UserImpactSummaryModal = ({
               )}
 
               {showNotificationImpact && (
-                <BCBox sx={{ ...impactPanelSx, borderTop: `3px solid ${colors.error.main}` }}>
+                <BCBox
+                  sx={{
+                    ...impactPanelSx,
+                    borderTop: `3px solid ${colors.error.main}`
+                  }}
+                >
                   {impact.hasNotifChanges && (
-                    <BCBox display="flex" flexDirection="column" sx={{ flex: 1 }}>
+                    <BCBox
+                      display="flex"
+                      flexDirection="column"
+                      sx={{ flex: 1 }}
+                    >
                       <BCTypography variant="label" component="div" mb={1.25}>
                         Subscriptions that will be removed
                       </BCTypography>
@@ -569,7 +637,9 @@ export const UserImpactSummaryModal = ({
                       {impact.notifGroups.map((group, groupIndex) => (
                         <BCBox
                           key={group.key}
-                          mb={groupIndex < impact.notifGroups.length - 1 ? 1.5 : 0}
+                          mb={
+                            groupIndex < impact.notifGroups.length - 1 ? 1.5 : 0
+                          }
                         >
                           <BCTypography
                             variant="body3"
@@ -639,9 +709,17 @@ export const UserImpactSummaryModal = ({
                             boxSizing: 'border-box'
                           }}
                         >
-                          <InfoOutlined sx={{ fontSize: 14, color: colors.text.secondary, mt: '4px', flexShrink: 0 }} />
+                          <InfoOutlined
+                            sx={{
+                              fontSize: 14,
+                              color: colors.text.secondary,
+                              mt: '4px',
+                              flexShrink: 0
+                            }}
+                          />
                           <BCTypography variant="body3" color="text.secondary">
-                            These are subscriptions the user currently has enabled that will be removed by this change.
+                            These are subscriptions the user currently has
+                            enabled that will be removed by this change.
                           </BCTypography>
                         </BCBox>
                       </BCBox>
@@ -651,9 +729,18 @@ export const UserImpactSummaryModal = ({
               )}
 
               {showAssignedWorkImpact && (
-                <BCBox sx={{ ...impactPanelSx, borderTop: `3px solid ${colors.warning.main}` }}>
+                <BCBox
+                  sx={{
+                    ...impactPanelSx,
+                    borderTop: `3px solid ${colors.warning.main}`
+                  }}
+                >
                   {impact.losesAssignedWorkAccess && (
-                    <BCBox display="flex" flexDirection="column" sx={{ flex: 1 }}>
+                    <BCBox
+                      display="flex"
+                      flexDirection="column"
+                      sx={{ flex: 1 }}
+                    >
                       <BCTypography variant="label" component="div" mb={1.25}>
                         Assigned work affected
                       </BCTypography>
@@ -665,153 +752,191 @@ export const UserImpactSummaryModal = ({
                       )}
 
                       {isAssignedWorkError && (
-                        <BCTypography variant="body3" sx={{ color: colors.error.main }}>
-                          Assigned work could not be loaded. Review assignments before confirming.
+                        <BCTypography
+                          variant="body3"
+                          sx={{ color: colors.error.main }}
+                        >
+                          Assigned work could not be loaded. Review assignments
+                          before confirming.
                         </BCTypography>
                       )}
 
-                      {!isAssignedWorkLoading && !isAssignedWorkError && !hasAssignedWork && (
-                        <BCTypography variant="body3" color="text.secondary">
-                          No active compliance reports or CI applications are assigned to this user.
-                        </BCTypography>
-                      )}
-
-                      {!isAssignedWorkLoading && assignedWork.complianceReports.length > 0 && (
-                        <BCBox mb={assignedWork.ciApplications.length > 0 ? 1.5 : 0}>
-                          <BCTypography
-                            variant="body3"
-                            sx={{ fontWeight: 600, color: colors.text.secondary, mb: 0.75, display: 'block' }}
-                          >
-                            Compliance reports ({assignedWork.complianceReports.length})
+                      {!isAssignedWorkLoading &&
+                        !isAssignedWorkError &&
+                        !hasAssignedWork && (
+                          <BCTypography variant="body3" color="text.secondary">
+                            No active compliance reports or CI applications are
+                            assigned to this user.
                           </BCTypography>
-                          <BCBox
-                            sx={{
-                              border: `1px solid ${colors.grey[300]}`,
-                              borderRadius: 1,
-                              overflow: 'hidden'
-                            }}
-                          >
-                            {assignedWork.complianceReports.map((r, i) => (
-                              <BCBox
-                                key={r.complianceReportId}
-                                display="flex"
-                                alignItems="center"
-                                justifyContent="space-between"
-                                gap={1}
-                                sx={{
-                                  px: 2,
-                                  py: 1,
-                                  borderBottom:
-                                    i < assignedWork.complianceReports.length - 1
-                                      ? `1px solid ${colors.grey[300]}`
-                                      : 'none',
-                                  bgcolor: colors.grey[100]
-                                }}
-                              >
-                                <BCBox>
-                                  <MuiLink
-                                    component={RouterLink}
-                                    to={ROUTES.REPORTS.VIEW
-                                      .replace(':compliancePeriod', r.period)
-                                      .replace(':complianceReportId', String(r.complianceReportId))}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    sx={{ fontWeight: 600, fontSize: '0.8125rem', color: colors.link.main }}
-                                  >
-                                    {r.organization} | {r.period}
-                                  </MuiLink>
-                                </BCBox>
-                                <BCBadge
-                                  badgeContent={r.status}
-                                  color="info"
-                                  variant="contained"
-                                  size="xs"
-                                  sx={{
-                                    flexShrink: 0,
-                                    '& .MuiBadge-badge': {
-                                      padding: '0.3em 0.6em',
-                                      fontWeight: 600,
-                                      fontSize: '0.72rem',
-                                      minWidth: '88px',
-                                      whiteSpace: 'nowrap',
-                                      ...assignedWorkStatusStyle(r.status)
-                                    }
-                                  }}
-                                />
-                              </BCBox>
-                            ))}
-                          </BCBox>
-                        </BCBox>
-                      )}
+                        )}
 
-                      {!isAssignedWorkLoading && assignedWork.ciApplications.length > 0 && (
-                        <BCBox>
-                          <BCTypography
-                            variant="body3"
-                            sx={{ fontWeight: 600, color: colors.text.secondary, mb: 0.75, display: 'block' }}
-                          >
-                            CI applications ({assignedWork.ciApplications.length})
-                          </BCTypography>
+                      {!isAssignedWorkLoading &&
+                        assignedWork.complianceReports.length > 0 && (
                           <BCBox
-                            sx={{
-                              border: `1px solid ${colors.grey[300]}`,
-                              borderRadius: 1,
-                              overflow: 'hidden'
-                            }}
+                            mb={
+                              assignedWork.ciApplications.length > 0 ? 1.5 : 0
+                            }
                           >
-                            {assignedWork.ciApplications.map((app, i) => (
-                              <BCBox
-                                key={app.ciApplicationId}
-                                display="flex"
-                                alignItems="center"
-                                justifyContent="space-between"
-                                gap={1}
-                                sx={{
-                                  px: 2,
-                                  py: 1,
-                                  borderBottom:
-                                    i < assignedWork.ciApplications.length - 1
-                                      ? `1px solid ${colors.grey[300]}`
-                                      : 'none',
-                                  bgcolor: colors.grey[100]
-                                }}
-                              >
-                                <BCBox>
-                                  <MuiLink
-                                    component={RouterLink}
-                                    to={ROUTES.CI_APPLICATIONS.EDIT.replace(
-                                      ':ciApplicationId',
-                                      String(app.ciApplicationId)
-                                    )}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    sx={{ fontWeight: 600, fontSize: '0.8125rem', color: colors.link.main }}
-                                  >
-                                    {app.organization}
-                                  </MuiLink>
-                                </BCBox>
-                                <BCBadge
-                                  badgeContent={app.status}
-                                  color="info"
-                                  variant="contained"
-                                  size="xs"
+                            <BCTypography
+                              variant="body3"
+                              sx={{
+                                fontWeight: 600,
+                                color: colors.text.secondary,
+                                mb: 0.75,
+                                display: 'block'
+                              }}
+                            >
+                              Compliance reports (
+                              {assignedWork.complianceReports.length})
+                            </BCTypography>
+                            <BCBox
+                              sx={{
+                                border: `1px solid ${colors.grey[300]}`,
+                                borderRadius: 1,
+                                overflow: 'hidden'
+                              }}
+                            >
+                              {assignedWork.complianceReports.map((r, i) => (
+                                <BCBox
+                                  key={r.complianceReportId}
+                                  display="flex"
+                                  alignItems="center"
+                                  justifyContent="space-between"
+                                  gap={1}
                                   sx={{
-                                    flexShrink: 0,
-                                    '& .MuiBadge-badge': {
-                                      padding: '0.3em 0.6em',
-                                      fontWeight: 600,
-                                      fontSize: '0.72rem',
-                                      minWidth: '88px',
-                                      whiteSpace: 'nowrap',
-                                      ...assignedWorkStatusStyle(app.status)
-                                    }
+                                    px: 2,
+                                    py: 1,
+                                    borderBottom:
+                                      i <
+                                      assignedWork.complianceReports.length - 1
+                                        ? `1px solid ${colors.grey[300]}`
+                                        : 'none',
+                                    bgcolor: colors.grey[100]
                                   }}
-                                />
-                              </BCBox>
-                            ))}
+                                >
+                                  <BCBox>
+                                    <MuiLink
+                                      component={RouterLink}
+                                      to={ROUTES.REPORTS.VIEW.replace(
+                                        ':compliancePeriod',
+                                        r.period
+                                      ).replace(
+                                        ':complianceReportId',
+                                        String(r.complianceReportId)
+                                      )}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      sx={{
+                                        fontWeight: 600,
+                                        fontSize: '0.8125rem',
+                                        color: colors.link.main
+                                      }}
+                                    >
+                                      {r.organization} | {r.period}
+                                    </MuiLink>
+                                  </BCBox>
+                                  <BCBadge
+                                    badgeContent={r.status}
+                                    color="info"
+                                    variant="contained"
+                                    size="xs"
+                                    sx={{
+                                      flexShrink: 0,
+                                      '& .MuiBadge-badge': {
+                                        padding: '0.3em 0.6em',
+                                        fontWeight: 600,
+                                        fontSize: '0.72rem',
+                                        minWidth: '88px',
+                                        whiteSpace: 'nowrap',
+                                        ...assignedWorkStatusStyle(r.status)
+                                      }
+                                    }}
+                                  />
+                                </BCBox>
+                              ))}
+                            </BCBox>
                           </BCBox>
-                        </BCBox>
-                      )}
+                        )}
+
+                      {!isAssignedWorkLoading &&
+                        assignedWork.ciApplications.length > 0 && (
+                          <BCBox>
+                            <BCTypography
+                              variant="body3"
+                              sx={{
+                                fontWeight: 600,
+                                color: colors.text.secondary,
+                                mb: 0.75,
+                                display: 'block'
+                              }}
+                            >
+                              CI applications (
+                              {assignedWork.ciApplications.length})
+                            </BCTypography>
+                            <BCBox
+                              sx={{
+                                border: `1px solid ${colors.grey[300]}`,
+                                borderRadius: 1,
+                                overflow: 'hidden'
+                              }}
+                            >
+                              {assignedWork.ciApplications.map((app, i) => (
+                                <BCBox
+                                  key={app.ciApplicationId}
+                                  display="flex"
+                                  alignItems="center"
+                                  justifyContent="space-between"
+                                  gap={1}
+                                  sx={{
+                                    px: 2,
+                                    py: 1,
+                                    borderBottom:
+                                      i < assignedWork.ciApplications.length - 1
+                                        ? `1px solid ${colors.grey[300]}`
+                                        : 'none',
+                                    bgcolor: colors.grey[100]
+                                  }}
+                                >
+                                  <BCBox>
+                                    <MuiLink
+                                      component={RouterLink}
+                                      to={ROUTES.CI_APPLICATIONS.EDIT.replace(
+                                        ':ciApplicationId',
+                                        String(app.ciApplicationId)
+                                      )}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      sx={{
+                                        fontWeight: 600,
+                                        fontSize: '0.8125rem',
+                                        color: colors.link.main
+                                      }}
+                                    >
+                                      {app.organization}
+                                    </MuiLink>
+                                  </BCBox>
+                                  <BCBadge
+                                    badgeContent={app.status}
+                                    color="info"
+                                    variant="contained"
+                                    size="xs"
+                                    sx={{
+                                      flexShrink: 0,
+                                      '& .MuiBadge-badge': {
+                                        padding: '0.3em 0.6em',
+                                        fontWeight: 600,
+                                        fontSize: '0.72rem',
+                                        minWidth: '88px',
+                                        whiteSpace: 'nowrap',
+                                        ...assignedWorkStatusStyle(app.status)
+                                      }
+                                    }}
+                                  />
+                                </BCBox>
+                              ))}
+                            </BCBox>
+                          </BCBox>
+                        )}
 
                       {!isAssignedWorkLoading && hasAssignedWork && (
                         <BCBox mt="auto" pt={2}>
@@ -826,9 +951,20 @@ export const UserImpactSummaryModal = ({
                               boxSizing: 'border-box'
                             }}
                           >
-                            <WarningAmberOutlined sx={{ fontSize: 14, color: colors.warning.main, mt: '4px', flexShrink: 0 }} />
-                            <BCTypography variant="body3" color="text.secondary">
-                              This user will lose access to these assigned items. Reassign them after saving.
+                            <WarningAmberOutlined
+                              sx={{
+                                fontSize: 14,
+                                color: colors.warning.main,
+                                mt: '4px',
+                                flexShrink: 0
+                              }}
+                            />
+                            <BCTypography
+                              variant="body3"
+                              color="text.secondary"
+                            >
+                              This user will lose access to these assigned
+                              items. Reassign them after saving.
                             </BCTypography>
                           </BCBox>
                         </BCBox>
@@ -852,14 +988,20 @@ export const UserImpactSummaryModal = ({
                   }}
                 >
                   <WarningAmberOutlined
-                    sx={{ fontSize: 18, color: colors.warning.main, flexShrink: 0, mt: '4px' }}
+                    sx={{
+                      fontSize: 18,
+                      color: colors.warning.main,
+                      flexShrink: 0,
+                      mt: '4px'
+                    }}
                   />
                   <BCTypography
                     variant="body3"
                     sx={{ color: colors.alerts.warning.color, lineHeight: 1.6 }}
                   >
-                    <strong>Deactivating this account</strong> will remove all notification
-                    subscriptions and prevent access to assigned work.
+                    <strong>Deactivating this account</strong> will remove all
+                    notification subscriptions and prevent access to assigned
+                    work.
                   </BCTypography>
                 </BCBox>
               )}
@@ -871,9 +1013,12 @@ export const UserImpactSummaryModal = ({
                   alignItems="flex-start"
                   sx={{ gridColumn: '1 / -1' }}
                 >
-                  <InfoOutlined sx={{ fontSize: 15, color: colors.info.main, mt: '2px' }} />
+                  <InfoOutlined
+                    sx={{ fontSize: 15, color: colors.info.main, mt: '2px' }}
+                  />
                   <BCTypography variant="body3" color="text.secondary">
-                    No role or status changes. Only profile information will be updated.
+                    No role or status changes. Only profile information will be
+                    updated.
                   </BCTypography>
                 </BCBox>
               )}
@@ -900,7 +1045,9 @@ export const UserImpactSummaryModal = ({
           autoFocus
           data-test="impact-modal-confirm-btn"
         >
-          {isNewUser ? t('admin:impactModal.confirmBtnNew') : t('admin:impactModal.confirmBtnEdit')}
+          {isNewUser
+            ? t('admin:impactModal.confirmBtnNew')
+            : t('admin:impactModal.confirmBtnEdit')}
         </BCButton>
       </DialogActions>
     </Dialog>

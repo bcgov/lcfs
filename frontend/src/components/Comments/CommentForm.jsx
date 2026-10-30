@@ -399,12 +399,7 @@ const CommentForm = ({
     })
 
     return () => observer.disconnect()
-  }, [
-    t,
-    attachmentsEnabled,
-    enableMentions,
-    mentionsPausedByVisibility
-  ])
+  }, [t, attachmentsEnabled, enableMentions, mentionsPausedByVisibility])
 
   const showVisibilityUnderTitle =
     showVisibilityToggle && visibilityAlign === 'left'

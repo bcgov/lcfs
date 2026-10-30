@@ -12,13 +12,13 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { buildPath, ROUTES } from '@/routes/routes'
 import { roles } from '@/constants/roles'
-import '@/constants/routes';
+import '@/constants/routes'
 import { Role } from '@/components/Role'
 import { useOrganizationUsers } from '@/hooks/useOrganizations'
 
 export const OrganizationUsers = () => {
   const { t } = useTranslation(['common', 'org'])
-  useLocation();
+  useLocation()
   const navigate = useNavigate()
   const { orgID } = useParams()
   const {
@@ -85,7 +85,7 @@ export const OrganizationUsers = () => {
       // no-op
     }
     setPaginationOptions((prev) => ({ ...prev, page: 1, filters: [] }))
-  }, []);
+  }, [])
 
   const handleNewUserClick = () => {
     // If you are IDIR: navigate to /organizations/:orgID/add-user

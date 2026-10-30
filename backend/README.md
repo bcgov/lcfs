@@ -2,6 +2,36 @@
 
 This project was generated using fastapi_template.
 
+## Python version
+
+[`backend/.python-version`](.python-version) is the source of truth for the
+application's Python major/minor version, and backend CI setup reads it
+directly. The standalone ETL tool remains independently pinned to Python
+3.11.10 in [`etl/python_migration/.python-version`](../etl/python_migration/.python-version);
+changing the backend version does not change the ETL runtime.
+We follow production's minor-version policy, allowing patch updates within that
+minor release.
+
+Docker must select its base image before it can read files from the build
+context, and Poetry requires a literal compatibility range. Keep the Dockerfile
+image tags and Poetry compatibility range manually aligned with this version
+file. The CI setup steps use this file for their interpreter, but do not verify
+those two literal declarations. To change the Python version:
+
+```bash
+# Edit backend/.python-version, both Dockerfile base-image tags, and
+# backend/pyproject.toml's Python constraint together.
+cd backend
+poetry env use "$(cat .python-version)"
+poetry lock  # Use the Poetry 2.x release pinned in the Dockerfiles and CI.
+poetry check --lock
+cd ..
+```
+
+Commit the version file, declarations, and updated lockfile together. Existing
+Docker Compose and OpenShift builds use the checked-in Dockerfiles without
+additional arguments.
+
 ## Poetry
 
 This project uses poetry. It's a modern dependency management
@@ -200,7 +230,7 @@ Omit `[revision]` to revert to the base state.
 
 ### Notes
 
-- Ensure Python 3.9+ and Poetry are installed on your system.
+- Use the Python version specified in `.python-version` and install Poetry.
 - The script assumes that it is located in the same directory as `alembic.ini`.
 - Always test migrations in a development environment before applying them to production.
 - The script automatically activates and deactivates the virtual environment as needed.

@@ -4,7 +4,7 @@ import json
 import pytest
 from fastapi import FastAPI
 from httpx import AsyncClient
-from unittest.mock import patch, AsyncMock, MagicMock
+from unittest.mock import ANY, patch, AsyncMock, MagicMock
 
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.compliance_report.schema import (
@@ -522,7 +522,7 @@ async def test_update_compliance_report_summary_success(
 
         assert response.json() == expected_response
         mock_update_compliance_report_summary.assert_called_once_with(
-            1, request_schema, include_penalty_status=False
+            1, request_schema, ANY, include_penalty_status=False
         )
         mock_validate_organization_access.assert_called_once_with(1)
 
@@ -702,7 +702,7 @@ async def test_update_compliance_report_summary_with_penalty_override_director_r
 
         assert response.status_code == 200
         mock_update_compliance_report_summary.assert_called_once_with(
-            1, request_schema, include_penalty_status=True
+            1, request_schema, ANY, include_penalty_status=True
         )
         mock_validate_organization_access.assert_called_once_with(1)
 
@@ -752,7 +752,7 @@ async def test_update_compliance_report_summary_penalty_override_non_director_al
         # Role-based restrictions may be implemented in future PRs
         assert response.status_code == 200
         mock_update_compliance_report_summary.assert_called_once_with(
-            1, request_schema, include_penalty_status=False
+            1, request_schema, ANY, include_penalty_status=False
         )
 
 
@@ -799,7 +799,7 @@ async def test_update_compliance_report_summary_penalty_override_disabled(
 
         assert response.status_code == 200
         mock_update_compliance_report_summary.assert_called_once_with(
-            1, request_schema, include_penalty_status=True
+            1, request_schema, ANY, include_penalty_status=True
         )
 
 
@@ -845,7 +845,7 @@ async def test_update_compliance_report_summary_penalty_override_zero_values(
 
         assert response.status_code == 200
         mock_update_compliance_report_summary.assert_called_once_with(
-            1, request_schema, include_penalty_status=True
+            1, request_schema, ANY, include_penalty_status=True
         )
 
 

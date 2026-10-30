@@ -19,7 +19,8 @@ const isOnBulletins = (loc) => loc.pathname === BULLETINS_PATH
 const isOnApprovedCI = (loc) => loc.pathname === APPROVED_CI_PATH
 const isOnBulletinsOrPublic = (loc) => isOnBulletins(loc) || isOnApprovedCI(loc)
 const isOnInternalFuelCodes = (loc) => loc.pathname === FUEL_CODES_PATH
-const isOnCIApplications = (loc) => loc.pathname.startsWith(CI_APPLICATIONS_PATH)
+const isOnCIApplications = (loc) =>
+  loc.pathname.startsWith(CI_APPLICATIONS_PATH)
 const isOnCIApplicationsIndex = (loc) => loc.pathname === CI_APPLICATIONS_PATH
 const getTypeQuery = (loc) => new URLSearchParams(loc.search).get('type')
 const isArchivedQuery = (loc) => getTypeQuery(loc) === 'archived'

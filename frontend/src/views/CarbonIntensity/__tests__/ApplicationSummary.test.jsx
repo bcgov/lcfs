@@ -1,6 +1,6 @@
 import { test } from '@/tests/utils/fixtures'
 import 'react'
-import { afterEach, describe, expect, vi } from 'vitest'
+import { afterEach, describe, expect, vi } from 'vite-plus/test'
 import { cleanup, fireEvent, screen } from '@testing-library/react'
 
 import { ApplicationSummary } from '@/views/CarbonIntensity/components/ApplicationSummary'
@@ -215,5 +215,4 @@ describe('ApplicationSummary', () => {
       screen.queryByTestId('ci-summary-assignment-history')
     ).not.toBeInTheDocument()
   })
-
 })

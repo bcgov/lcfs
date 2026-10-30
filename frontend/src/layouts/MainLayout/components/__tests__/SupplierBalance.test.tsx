@@ -1,6 +1,6 @@
 import { screen, fireEvent } from '@testing-library/react'
 import SupplierBalance from '../SupplierBalance'
-import { vi, describe, expect, type Mock } from 'vitest'
+import { vi, describe, expect, type Mock } from 'vite-plus/test'
 import { useCurrentOrgBalance } from '@/hooks/useOrganization'
 import { test } from '@/tests/utils/fixtures'
 

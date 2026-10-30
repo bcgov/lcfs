@@ -1,7 +1,7 @@
 import { test } from '@/tests/utils/fixtures'
 import { act, fireEvent, screen } from '@testing-library/react'
 import ReactQuill from 'react-quill'
-import { beforeAll, expect, vi } from 'vitest'
+import { beforeAll, expect, vi } from 'vite-plus/test'
 import { useState } from 'react'
 import CommentForm from '../CommentForm'
 
@@ -70,7 +70,9 @@ test('updates the placeholder without replacing the editor or its content', asyn
   const editor = document.querySelector('.ql-editor')
   const quill = ReactQuill.Quill.find(document.querySelector('.ql-container'))
 
-  fireEvent.click(screen.getByRole('button', { name: 'internalComment:public' }))
+  fireEvent.click(
+    screen.getByRole('button', { name: 'internalComment:public' })
+  )
   expect(document.querySelector('.ql-editor')).toBe(editor)
   expect(editor).toHaveAttribute(
     'data-placeholder',

@@ -1,6 +1,6 @@
 import { test } from '@/tests/utils/fixtures'
 import { screen, fireEvent } from '@testing-library/react'
-import { describe, vi, beforeAll, expect } from 'vitest'
+import { describe, vi, beforeAll, expect } from 'vite-plus/test'
 import { useState } from 'react'
 import CommentForm from '../CommentForm'
 

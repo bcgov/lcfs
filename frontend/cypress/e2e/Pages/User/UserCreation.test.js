@@ -5,7 +5,6 @@ import {
   After
 } from '@badeball/cypress-cucumber-preprocessor'
 
-
 Given('the IDIR user logs in with valid credentials', () => {
   cy.loginWith(
     'idir',
@@ -19,9 +18,7 @@ Given('the IDIR user logs in with valid credentials', () => {
 When('the IDIR user navigates to the user creation page', () => {
   cy.get('a.NavLink[href="/admin"]').click()
   cy.url().should('include', '/admin/users')
-  cy.getByDataTest('add-user-btn', { timeout: 30000 })
-    .should('exist')
-    .click()
+  cy.getByDataTest('add-user-btn', { timeout: 30000 }).should('exist').click()
   cy.url().should('include', '/admin/users/add-user', { timeout: 30000 })
 })
 
