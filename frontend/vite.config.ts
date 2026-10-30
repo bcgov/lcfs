@@ -11,6 +11,7 @@ const releaseNotesPath = fileURLToPath(
 const appVersion: string = existsSync(releaseNotesPath)
   ? (JSON.parse(readFileSync(releaseNotesPath, 'utf-8'))[0]?.version ?? '0.0.0')
   : '0.0.0'
+const hmrClientPort = Number(process.env.VITE_HMR_CLIENT_PORT ?? 3000)
 
 // Coverage thresholds (issue #4094). These are floors, not targets: they exist
 // so coverage cannot silently regress. Raise them as coverage improves (see
@@ -132,7 +133,7 @@ export default defineConfig({
     port: 3000,
     hmr: {
       overlay: false,
-      clientPort: 3000
+      clientPort: hmrClientPort
     }
   },
   test: {
