@@ -1,6 +1,6 @@
 import 'react'
 import { screen, waitFor } from '@testing-library/react'
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { HistoryCard } from '@/views/ComplianceReports/components/HistoryCard.jsx'
 import { test } from '@/tests/utils/fixtures'

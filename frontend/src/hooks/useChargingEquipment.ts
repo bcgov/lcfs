@@ -282,13 +282,22 @@ export const useHasAllocationAgreements = () => {
 // Import charging equipment
 export const useImportChargingEquipment = (
   organizationId: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, { file: File; isOverwrite: boolean }> = {}
+  options: ExtMutationOptions<
+    unknown,
+    { file: File; isOverwrite: boolean }
+  > = {}
 ) => {
   const apiService = useApiService()
   const { onSuccess, onError, ...restOptions } = options
 
   return useMutation({
-    mutationFn: async ({ file, isOverwrite }: { file: File; isOverwrite: boolean }) => {
+    mutationFn: async ({
+      file,
+      isOverwrite
+    }: {
+      file: File
+      isOverwrite: boolean
+    }) => {
       if (!file) {
         throw new Error('File is required for import')
       }
@@ -350,12 +359,14 @@ export const useChargingEquipmentImportJobStatus = (
     gcTime,
     enabled: enabled && !!jobId,
     refetchInterval: (data) => {
-      const statusData = (
-        data as {
-          state?: { data?: { progress?: number; status?: string } }
-        } | undefined
-      )?.state?.data ??
-        (data as { progress?: number; status?: string })
+      const statusData =
+        (
+          data as
+            | {
+                state?: { data?: { progress?: number; status?: string } }
+              }
+            | undefined
+        )?.state?.data ?? (data as { progress?: number; status?: string })
       if (
         !statusData ||
         statusData?.progress === 100 ||

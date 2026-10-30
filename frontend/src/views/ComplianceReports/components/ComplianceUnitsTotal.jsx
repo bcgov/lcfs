@@ -3,7 +3,12 @@ import Box from '@mui/material/Box'
 import colors from '@/themes/base/colors'
 import PropTypes from 'prop-types'
 
-export const ComplianceUnitsTotal = ({ label, value, dataTest, isCurrency = false }) => {
+export const ComplianceUnitsTotal = ({
+  label,
+  value,
+  dataTest,
+  isCurrency = false
+}) => {
   const formattedValue =
     value !== null && value !== undefined
       ? isCurrency

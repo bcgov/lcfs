@@ -1,10 +1,10 @@
-import 'react';
-import '@testing-library/react';
-import { vi } from 'vitest'
-import '@tanstack/react-query';
-import '@mui/material/styles/ThemeProvider';
-import '@/themes';
-import '../Notifications';
+import 'react'
+import '@testing-library/react'
+import { vi } from 'vite-plus/test'
+import '@tanstack/react-query'
+import '@mui/material/styles/ThemeProvider'
+import '@/themes'
+import '../Notifications'
 
 // Import actual routes mapping
 import { routesMapping } from '../_schema'
@@ -20,11 +20,11 @@ vi.mock('react-router-dom', async () => {
 })
 
 vi.mock('@/hooks/useCurrentUser', () => ({
-  useCurrentUser: () => ({ 
-    data: { 
+  useCurrentUser: () => ({
+    data: {
       isGovernmentUser: true,
       roles: [{ name: 'Analyst' }]
-    } 
+    }
   })
 }))
 
@@ -46,7 +46,11 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('@/components/BCButton', () => ({
   default: ({ children, ...props }) => (
-    <button data-test={props['data-test']} data-testid={props['data-test']} {...props}>
+    <button
+      data-test={props['data-test']}
+      data-testid={props['data-test']}
+      {...props}
+    >
       {children}
     </button>
   )
@@ -70,7 +74,6 @@ vi.mock('../_schema', async (importOriginal) => {
 
 // Helper to create wrapper with QueryClient and Theme
 
-
 describe('Fuel Code Notifications', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -80,7 +83,7 @@ describe('Fuel Code Notifications', () => {
     it('correctly maps fuel code notification types to routes', () => {
       const currentUser = { isGovernmentUser: true }
       const mapping = routesMapping(currentUser)
-      
+
       expect(mapping['Fuel Code Recommended']).toBe(ROUTES.FUEL_CODES.EDIT)
       expect(mapping['Fuel Code Approved']).toBe(ROUTES.FUEL_CODES.EDIT)
       expect(mapping['Fuel Code Returned']).toBe(ROUTES.FUEL_CODES.EDIT)
@@ -97,7 +100,7 @@ describe('Fuel Code Notifications', () => {
         'Fuel Code Returned'
       ]
 
-      fuelCodeTypes.forEach(type => {
+      fuelCodeTypes.forEach((type) => {
         const currentUser = { isGovernmentUser: true }
         const mapping = routesMapping(currentUser)
         expect(mapping[type]).toBeDefined()

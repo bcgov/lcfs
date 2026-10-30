@@ -1,5 +1,5 @@
-import { render, screen, fireEvent, act } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { render, screen, fireEvent, act } from '@testing-library/react'
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vite-plus/test'
 import React, { createRef } from 'react'
 import { BCGridEditor } from '../BCGridEditor'
 
@@ -104,7 +104,7 @@ vi.mock('@/components/BCDataGrid/BCGridBase', () => ({
         }, 0)
       }
     }, [onGridReady, ref])
-    
+
     return <div data-test="bc-grid-base">Grid Base</div>
   })
 }))

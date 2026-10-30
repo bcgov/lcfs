@@ -1,6 +1,6 @@
 import 'react'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { ThemeProvider } from '@mui/material/styles'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import theme from '@/themes'
@@ -89,7 +89,9 @@ describe('AssignedAnalystCell', () => {
         assignedAnalyst: null
       }
 
-      customRender(<AssignedAnalystCell data={data} onRefresh={mockOnRefresh} />)
+      customRender(
+        <AssignedAnalystCell data={data} onRefresh={mockOnRefresh} />
+      )
 
       expect(screen.getByText('-')).toBeInTheDocument()
     })
@@ -105,10 +107,12 @@ describe('AssignedAnalystCell', () => {
         }
       }
 
-      customRender(<AssignedAnalystCell data={data} onRefresh={mockOnRefresh} />)
+      customRender(
+        <AssignedAnalystCell data={data} onRefresh={mockOnRefresh} />
+      )
 
       expect(screen.getByText('JD')).toBeInTheDocument()
-      
+
       // Verify the chip exists (tooltip testing would require more setup)
       const chip = screen.getByText('JD')
       expect(chip).toBeInTheDocument()
@@ -128,7 +132,9 @@ describe('AssignedAnalystCell', () => {
         assignedAnalyst: null
       }
 
-      customRender(<AssignedAnalystCell data={data} onRefresh={mockOnRefresh} />)
+      customRender(
+        <AssignedAnalystCell data={data} onRefresh={mockOnRefresh} />
+      )
 
       // The Select component should be present
       const selectElement = screen.getByRole('combobox')
@@ -146,7 +152,9 @@ describe('AssignedAnalystCell', () => {
         }
       }
 
-      customRender(<AssignedAnalystCell data={data} onRefresh={mockOnRefresh} />)
+      customRender(
+        <AssignedAnalystCell data={data} onRefresh={mockOnRefresh} />
+      )
 
       expect(screen.getByText('JD')).toBeInTheDocument()
     })
@@ -157,7 +165,9 @@ describe('AssignedAnalystCell', () => {
         assignedAnalyst: null
       }
 
-      customRender(<AssignedAnalystCell data={data} onRefresh={mockOnRefresh} />)
+      customRender(
+        <AssignedAnalystCell data={data} onRefresh={mockOnRefresh} />
+      )
 
       // Click to open dropdown
       const selectElement = screen.getByRole('combobox')
@@ -176,7 +186,9 @@ describe('AssignedAnalystCell', () => {
         assignedAnalyst: null
       }
 
-      customRender(<AssignedAnalystCell data={data} onRefresh={mockOnRefresh} />)
+      customRender(
+        <AssignedAnalystCell data={data} onRefresh={mockOnRefresh} />
+      )
 
       // Open dropdown
       const selectElement = screen.getByRole('combobox')
@@ -206,7 +218,9 @@ describe('AssignedAnalystCell', () => {
         }
       }
 
-      customRender(<AssignedAnalystCell data={data} onRefresh={mockOnRefresh} />)
+      customRender(
+        <AssignedAnalystCell data={data} onRefresh={mockOnRefresh} />
+      )
 
       // Open dropdown
       const selectElement = screen.getByRole('combobox')
@@ -236,7 +250,9 @@ describe('AssignedAnalystCell', () => {
         assignedAnalyst: null
       }
 
-      customRender(<AssignedAnalystCell data={data} onRefresh={mockOnRefresh} />)
+      customRender(
+        <AssignedAnalystCell data={data} onRefresh={mockOnRefresh} />
+      )
 
       expect(screen.getByRole('progressbar')).toBeInTheDocument()
     })
@@ -252,7 +268,9 @@ describe('AssignedAnalystCell', () => {
         assignedAnalyst: null
       }
 
-      customRender(<AssignedAnalystCell data={data} onRefresh={mockOnRefresh} />)
+      customRender(
+        <AssignedAnalystCell data={data} onRefresh={mockOnRefresh} />
+      )
 
       const selectElement = screen.getByRole('combobox')
       expect(selectElement).toHaveAttribute('aria-disabled', 'true')
@@ -275,17 +293,21 @@ describe('AssignedAnalystCell', () => {
       })
 
       // Capture the onSuccess callback from hook initialization
-      useComplianceReportsHook.useAssignAnalyst.mockImplementation((options) => {
-        capturedOnSuccess = options?.onSuccess
-        return {
-          mutate: vi.fn(() => {
-            capturedOnSuccess?.()
-          }),
-          isLoading: false
+      useComplianceReportsHook.useAssignAnalyst.mockImplementation(
+        (options) => {
+          capturedOnSuccess = options?.onSuccess
+          return {
+            mutate: vi.fn(() => {
+              capturedOnSuccess?.()
+            }),
+            isLoading: false
+          }
         }
-      })
+      )
 
-      customRender(<AssignedAnalystCell data={data} onRefresh={mockOnRefresh} />)
+      customRender(
+        <AssignedAnalystCell data={data} onRefresh={mockOnRefresh} />
+      )
 
       // Open dropdown
       const selectElement = screen.getByRole('combobox')
@@ -316,17 +338,21 @@ describe('AssignedAnalystCell', () => {
         }
       }
 
-      customRender(<AssignedAnalystCell data={data} onRefresh={mockOnRefresh} />)
+      customRender(
+        <AssignedAnalystCell data={data} onRefresh={mockOnRefresh} />
+      )
 
       const chip = screen.getByText('JD')
       expect(chip).toBeInTheDocument()
-      
+
       // For government users, test the select component
       useCurrentUserHook.useCurrentUser.mockReturnValue({
         hasRoles: vi.fn(() => true)
       })
-      
-      const { container } = customRender(<AssignedAnalystCell data={data} onRefresh={mockOnRefresh} />)
+
+      const { container } = customRender(
+        <AssignedAnalystCell data={data} onRefresh={mockOnRefresh} />
+      )
       const selectElement = container.querySelector('[role="combobox"]')
       expect(selectElement).toBeInTheDocument()
     })

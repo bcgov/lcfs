@@ -193,6 +193,50 @@ class TestChargingSiteValidation:
         assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
 
     @pytest.mark.anyio
+    async def test_another_organizations_site_is_forbidden_from_own_org_url(
+        self, validation, mock_request, mock_charging_site
+    ):
+        """The URL names the caller's own organization (the route requires
+        it); a site belonging to someone else is still refused."""
+        mock_request.user.role_names = [RoleEnum.SUPPLIER]
+        mock_request.user.organization.organization_id = 2
+        mock_charging_site.organization_id = 1
+        validation.cs_repo.get_charging_site_by_id.return_value = mock_charging_site
+
+        with pytest.raises(HTTPException) as exc_info:
+            await validation.charging_site_delete_update_access(1, 2, delete=True)
+
+        assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
+
+    @pytest.mark.anyio
+    @pytest.mark.parametrize(
+        "body", [{"charging_site_id": 2}, {"charging_site_id": 1, "organization_id": 3}]
+    )
+    async def test_update_body_must_name_this_site_and_its_organization(
+        self, validation, mock_request, mock_charging_site, body
+    ):
+        mock_request.user.organization.organization_id = 1
+        validation.cs_repo.get_charging_site_by_id.return_value = mock_charging_site
+        update_schema = ChargingSiteCreateSchema(
+            **{
+                "organization_id": 1,
+                "site_name": "Test Site",
+                "street_address": "123 Main St",
+                "city": "Vancouver",
+                "postal_code": "V6B 1A1",
+                "latitude": 49.2827,
+                "longitude": -123.1207,
+                "intended_users": [],
+                **body,
+            }
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            await validation.charging_site_delete_update_access(1, 1, update_schema)
+
+        assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
+
+    @pytest.mark.anyio
     async def test_charging_site_update_access_duplicate_name(
         self, validation, mock_request, mock_charging_site
     ):

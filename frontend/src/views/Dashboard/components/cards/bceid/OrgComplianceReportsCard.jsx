@@ -20,9 +20,7 @@ import { countDigits } from '../../countDigits'
 const OrgComplianceReportsCard = () => {
   const { t } = useTranslation(['dashboard'])
   const navigate = useNavigate()
-  const {
-  data: orgData
-} = useOrganization()
+  const { data: orgData } = useOrganization()
   const { data: counts, isLoading } = useOrgComplianceReportCounts()
 
   const handleNavigation = (route, status) => {
@@ -93,34 +91,42 @@ const OrgComplianceReportsCard = () => {
                   {renderLinkWithCount(
                     t('dashboard:orgComplianceReports.inProgress'),
                     inProgressCount,
-                    () => handleNavigation(ROUTES.REPORTS.LIST, COMPLIANCE_REPORT_STATUSES.DRAFT)
+                    () =>
+                      handleNavigation(
+                        ROUTES.REPORTS.LIST,
+                        COMPLIANCE_REPORT_STATUSES.DRAFT
+                      )
                   )}
                   {renderLinkWithCount(
                     t('dashboard:orgComplianceReports.awaitingGovReview'),
                     awaitingGovReviewCount,
-                    () => handleNavigation(ROUTES.REPORTS.LIST, COMPLIANCE_REPORT_STATUSES.SUBMITTED)
+                    () =>
+                      handleNavigation(
+                        ROUTES.REPORTS.LIST,
+                        COMPLIANCE_REPORT_STATUSES.SUBMITTED
+                      )
                   )}
                 </List>
               </>
             )}
             {
-                <ListItemButton
-                  component="a"
-                  // Outside the list, so it takes the list rows' padding
-                  // itself; the empty counter then lines its link up.
-                  sx={{ padding: '2px 0' }}
+              <ListItemButton
+                component="a"
+                // Outside the list, so it takes the list rows' padding
+                // itself; the empty counter then lines its link up.
+                sx={{ padding: '2px 0' }}
+                onClick={() => navigate(ROUTES.CREDIT_CALCULATOR)}
+              >
+                <CountDisplay digits={digits} hidden />
+                <BCTypography
+                  variant="body2"
+                  color="link"
+                  sx={{
+                    textDecoration: 'underline',
+                    '&:hover': { color: 'info.main' }
+                  }}
                   onClick={() => navigate(ROUTES.CREDIT_CALCULATOR)}
                 >
-                  <CountDisplay digits={digits} hidden />
-                  <BCTypography
-                    variant="body2"
-                    color="link"
-                    sx={{
-                      textDecoration: 'underline',
-                      '&:hover': { color: 'info.main' }
-                    }}
-                    onClick={() => navigate(ROUTES.CREDIT_CALCULATOR)}
-                  >
                   {t('report:calcTitle')}
                 </BCTypography>
               </ListItemButton>

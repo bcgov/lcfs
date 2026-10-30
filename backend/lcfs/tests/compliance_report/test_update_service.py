@@ -28,6 +28,19 @@ from lcfs.web.api.notification.services import NotificationService
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 
 
+def _user_holding(*roles):
+    """A user holding exactly these roles, as the workflow table reads them."""
+    user = MagicMock(spec=UserProfile)
+    user.role_names = list(roles)
+    return user
+
+
+REPORTER = _user_holding(RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING)
+SIGNER = _user_holding(RoleEnum.SUPPLIER, RoleEnum.SIGNING_AUTHORITY)
+ANALYST = _user_holding(RoleEnum.GOVERNMENT, RoleEnum.ANALYST)
+DIRECTOR = _user_holding(RoleEnum.GOVERNMENT, RoleEnum.DIRECTOR)
+
+
 # Mock for user_has_roles function
 @pytest.fixture
 def mock_user_has_roles():
@@ -87,9 +100,9 @@ async def test_update_compliance_report_status_change(
     mock_repo.update_compliance_report.return_value = mock_report
     compliance_report_update_service._perform_notification_call = AsyncMock()
 
-    # Call the method (updated to pass a user profile; in this test we use mock.ANY)
+    # Call the method as the supplier's signing authority, who submits
     updated_report = await compliance_report_update_service.update_compliance_report(
-        report_id, report_data, mock.ANY
+        report_id, report_data, SIGNER
     )
 
     # Assertions
@@ -101,12 +114,10 @@ async def test_update_compliance_report_status_change(
     compliance_report_update_service.handle_status_change.assert_called_once_with(
         mock_report, new_status.status, mock.ANY
     )
-    mock_repo.add_compliance_report_history.assert_called_once_with(
-        mock_report, UserProfile()
-    )
+    mock_repo.add_compliance_report_history.assert_called_once_with(mock_report, SIGNER)
     mock_repo.update_compliance_report.assert_called_once_with(mock_report)
     compliance_report_update_service._perform_notification_call.assert_called_once_with(
-        mock_report, "Submitted", UserProfile()
+        mock_report, "Submitted", SIGNER
     )
 
 
@@ -139,7 +150,7 @@ async def test_update_compliance_report_no_status_change(
 
     # Call the method (now passing a UserProfile)
     updated_report = await compliance_report_update_service.update_compliance_report(
-        report_id, report_data, UserProfile()
+        report_id, report_data, REPORTER
     )
 
     # Assertions
@@ -2649,7 +2660,7 @@ async def test_update_compliance_report_auto_transitions_to_exempted(
     compliance_report_update_service._perform_notification_call = AsyncMock()
 
     await compliance_report_update_service.update_compliance_report(
-        report_id, report_data, mock.ANY
+        report_id, report_data, DIRECTOR
     )
 
     # Should have fetched Exempted status
@@ -2702,7 +2713,7 @@ async def test_update_compliance_report_no_auto_transition_without_exemption_fla
     compliance_report_update_service._perform_notification_call = AsyncMock()
 
     await compliance_report_update_service.update_compliance_report(
-        report_id, report_data, mock.ANY
+        report_id, report_data, DIRECTOR
     )
 
     # Should have fetched status only once (Assessed, no Exempted lookup)
@@ -2752,7 +2763,7 @@ async def test_update_compliance_report_persists_exemption_flags(
     compliance_report_update_service._perform_notification_call = AsyncMock()
 
     await compliance_report_update_service.update_compliance_report(
-        report_id, report_data, mock.ANY
+        report_id, report_data, ANALYST
     )
 
     # Verify exemption flags were set on the report
@@ -2794,7 +2805,7 @@ async def test_update_compliance_report_non_assessment_does_not_notify(
     compliance_report_update_service._perform_notification_call = AsyncMock()
 
     await compliance_report_update_service.update_compliance_report(
-        report_id, report_data, UserProfile()
+        report_id, report_data, ANALYST
     )
 
     assert mock_report.is_non_assessment is True
@@ -2908,7 +2919,7 @@ async def test_director_assess_from_analyst_adjustment_matches_three_step_path(
         await compliance_report_update_service.update_compliance_report(
             report.compliance_report_id,
             ComplianceReportUpdateSchema(status=status),
-            UserProfile(),
+            DIRECTOR,
         )
 
     assert report.current_status.status == ComplianceReportStatusEnum.Assessed
@@ -2996,7 +3007,7 @@ async def test_director_exempts_from_analyst_adjustment_runs_analyst_step(
     await compliance_report_update_service.update_compliance_report(
         report.compliance_report_id,
         ComplianceReportUpdateSchema(status="Assessed"),
-        UserProfile(),
+        DIRECTOR,
     )
 
     assert report.current_status.status == ComplianceReportStatusEnum.Exempted
@@ -3004,3 +3015,94 @@ async def test_director_exempts_from_analyst_adjustment_runs_analyst_step(
     compliance_report_update_service._charging_equipment_service.auto_validate_equipment_for_report.assert_awaited_once()
     assert "exemption" in report.assessment_statement
     mock_repo.add_compliance_report_history.assert_called_once()
+
+
+# --- Workflow table: Return to supplier only undoes a reservation ---
+
+
+def _submitted_report(transaction_id=321):
+    report = MagicMock(spec=ComplianceReport)
+    report.compliance_report_id = 40
+    report.transaction_id = transaction_id
+    report.supplemental_initiator = None
+    report.current_status = MagicMock(spec=ComplianceReportStatus)
+    report.current_status.status = ComplianceReportStatusEnum.Submitted
+    report.compliance_period = MagicMock(description="2025")
+    return report
+
+
+def _wire_return(service, mock_repo, report):
+    mock_repo.get_compliance_report_by_id.return_value = report
+    mock_repo.get_compliance_report_status_by_desc.return_value = MagicMock(
+        status=ComplianceReportStatusEnum.Draft
+    )
+    service._perform_notification_call = AsyncMock()
+
+
+@pytest.mark.anyio
+async def test_return_to_supplier_deletes_the_reservation(
+    compliance_report_update_service, mock_repo, mock_summary_repo, mock_trxn_repo
+):
+    report = _submitted_report()
+    _wire_return(compliance_report_update_service, mock_repo, report)
+    mock_trxn_repo.delete_reserved_transaction = AsyncMock(return_value=True)
+
+    await compliance_report_update_service.update_compliance_report(
+        40, ComplianceReportUpdateSchema(status="Return to supplier"), ANALYST
+    )
+
+    mock_trxn_repo.delete_reserved_transaction.assert_awaited_once_with(321, 40)
+    mock_trxn_repo.delete_transaction.assert_not_called()
+    mock_summary_repo.reset_summary_lock.assert_awaited_once_with(40)
+
+
+@pytest.mark.anyio
+async def test_return_to_supplier_keeps_a_final_transaction(
+    compliance_report_update_service, mock_repo, mock_summary_repo, mock_trxn_repo
+):
+    """If the report's transaction is no longer a reservation, the return
+    is refused and the report is left as it was."""
+    report = _submitted_report()
+    _wire_return(compliance_report_update_service, mock_repo, report)
+    mock_trxn_repo.delete_reserved_transaction = AsyncMock(return_value=False)
+
+    with pytest.raises(HTTPException) as exc:
+        await compliance_report_update_service.update_compliance_report(
+            40, ComplianceReportUpdateSchema(status="Return to supplier"), ANALYST
+        )
+
+    assert exc.value.status_code == 409
+    mock_summary_repo.reset_summary_lock.assert_not_called()
+    mock_repo.update_compliance_report.assert_not_called()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "current, requested",
+    [
+        (ComplianceReportStatusEnum.Assessed, "Return to supplier"),
+        (ComplianceReportStatusEnum.Assessed, "Draft"),
+        (ComplianceReportStatusEnum.Submitted, "Return to analyst"),
+    ],
+)
+async def test_supplier_cannot_return_or_reopen_their_report(
+    compliance_report_update_service,
+    mock_repo,
+    mock_summary_repo,
+    mock_trxn_repo,
+    current,
+    requested,
+):
+    report = _submitted_report()
+    report.current_status.status = current
+    _wire_return(compliance_report_update_service, mock_repo, report)
+
+    with pytest.raises(HTTPException) as exc:
+        await compliance_report_update_service.update_compliance_report(
+            40, ComplianceReportUpdateSchema(status=requested), SIGNER
+        )
+
+    assert exc.value.status_code == 403
+    mock_trxn_repo.delete_transaction.assert_not_called()
+    mock_summary_repo.reset_summary_lock.assert_not_called()
+    mock_repo.update_compliance_report.assert_not_called()

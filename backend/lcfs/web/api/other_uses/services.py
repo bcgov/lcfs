@@ -299,7 +299,11 @@ class OtherUsesServices:
             existing_other_use.compliance_report_id
             == other_use_data.compliance_report_id
         ):
-            await self.repo.delete_other_use(other_uses_id=other_use_data.other_uses_id)
+            await self.repo.delete_other_use(
+                other_uses_id=other_use_data.other_uses_id,
+                compliance_report_id=other_use_data.compliance_report_id,
+                group_uuid=other_use_data.group_uuid,
+            )
             return DeleteOtherUsesResponseSchema(message="Marked as deleted.")
         else:
             deleted_entity = OtherUses(

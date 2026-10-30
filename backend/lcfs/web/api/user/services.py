@@ -72,6 +72,10 @@ GOV_NOTIFICATION_BY_ROLE = {
 }
 BCEID_GOV_NOTIFICATION = NotificationTypeEnum.BCEID__GOVERNMENT_NOTIFICATION
 
+# Login links a profile to the signed-in account by these fields, so only
+# government administrators may change them on an existing profile.
+IDENTITY_FIELDS = ("keycloak_username", "keycloak_email")
+
 
 class UserServices:
 
@@ -273,6 +277,22 @@ class UserServices:
                 + ", ".join(sorted(e.value for e in invalid)),
             )
 
+    @staticmethod
+    def _changed_identity_fields(
+        user: UserProfile, user_update: UserCreateSchema
+    ) -> List[str]:
+        """Identity fields whose submitted value differs from the stored one.
+
+        Login compares them case-insensitively, so case and surrounding
+        whitespace do not count as a change.
+        """
+        return [
+            field
+            for field in IDENTITY_FIELDS
+            if (getattr(user, field) or "").strip().lower()
+            != (getattr(user_update, field) or "").strip().lower()
+        ]
+
     @service_handler
     async def create_user(self, user_create: UserCreateSchema) -> str:
         """
@@ -281,6 +301,15 @@ class UserServices:
         AUTO_SUBSCRIBE_NOTIFICATIONS is True.
         """
         if user_create.organization_id:
+            # Only government (IDIR) users may assign the IA Signer role,
+            # matching the guard in update_user.
+            if not self.request.user.is_government:
+                ia_signer_value_lower = RoleEnum.IA_SIGNER.value.lower()
+                user_create.roles = [
+                    r
+                    for r in (user_create.roles or [])
+                    if r.lower() != ia_signer_value_lower
+                ]
             await self._validate_roles_for_org(
                 user_create.roles or [], user_create.organization_id
             )
@@ -318,6 +347,27 @@ class UserServices:
         user = await self.repo.get_user_by_id(user_id)
         if not user:
             raise DataNotFoundException("User not found")
+
+        # Only government administrators may change identity fields. Other
+        # callers must resubmit the stored values, which are written back as-is.
+        changed_identity = self._changed_identity_fields(user, user_create)
+        if not user_has_roles(
+            self.request.user, [RoleEnum.GOVERNMENT, RoleEnum.ADMINISTRATOR]
+        ):
+            if changed_identity:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="The user name and email used to log in cannot be changed.",
+                )
+            user_create.keycloak_username = user.keycloak_username
+            user_create.keycloak_email = user.keycloak_email
+        elif changed_identity:
+            logger.info(
+                "User identity fields changed",
+                user_profile_id=user.user_profile_id,
+                changed_fields=changed_identity,
+                changed_by=self.request.user.user_profile_id,
+            )
 
         # Enforce: only government (IDIR) users may assign or remove the IA Signer role.
         # If the caller is a BCeID user, preserve the existing IA Signer assignment

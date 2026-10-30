@@ -1,4 +1,4 @@
-import { describe, expect, vi } from 'vitest'
+import { describe, expect, vi } from 'vite-plus/test'
 import { fireEvent, screen } from '@testing-library/react'
 
 import BCWidgetCard from '../BCWidgetCard'

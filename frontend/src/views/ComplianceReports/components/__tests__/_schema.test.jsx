@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vite-plus/test'
 import { render, screen } from '@testing-library/react'
 import { reportsColDefs } from '../_schema'
 import { BrowserRouter } from 'react-router-dom'
@@ -30,16 +30,22 @@ vi.mock('@/utils/formatters', () => ({
   timezoneFormatter: 'timezoneFormatter'
 }))
 
-vi.mock('@/components/BCDataGrid/components/Filters/BCDateFloatingFilter', () => ({
+vi.mock(
+  '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter',
+  () => ({
     BCDateFloatingFilter: 'BCDateFloatingFilter'
-}))
+  })
+)
 
-vi.mock('@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter', () => ({
+vi.mock(
+  '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter',
+  () => ({
     BCSelectFloatingFilter: 'BCSelectFloatingFilter'
-}))
+  })
+)
 
 vi.mock('@mui/material/Tooltip', () => ({
-    default: ({ children, title }) => (
+  default: ({ children, title }) => (
     <div data-testid="tooltip" title={title}>
       {children}
     </div>
@@ -49,6 +55,14 @@ vi.mock('@mui/material/Tooltip', () => ({
 vi.mock('@mui/icons-material/Warning', () => ({
   default: () => <div data-testid="warning-icon">⚠️</div>
 }))
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom')
+  return {
+    ...actual,
+    useLocation: () => ({ pathname: '/compliance-reports' })
+  }
+})
 
 describe('ComplianceReports Schema', () => {
   const mockT = (key) => key
@@ -266,15 +280,6 @@ describe('ComplianceReports Schema', () => {
   })
 
   describe('TypeCellRenderer - 30-day supplemental flag', () => {
-    // Mock useLocation
-    vi.mock('react-router-dom', async () => {
-      const actual = await vi.importActual('react-router-dom')
-      return {
-        ...actual,
-        useLocation: () => ({ pathname: '/compliance-reports' })
-      }
-    })
-
     // Helper to render cell renderer
     const renderTypeCell = (data, isSupplier = false) => {
       const colDefs = reportsColDefs(mockT, isSupplier, mockOnRefresh)

@@ -1,6 +1,6 @@
-import 'react';
+import 'react'
 import { screen, fireEvent } from '@testing-library/react'
-import { describe, expect, beforeEach, vi } from 'vitest'
+import { describe, expect, beforeEach, vi } from 'vite-plus/test'
 import { NotionalTransferSummary } from '../NotionalTransferSummary'
 import { test } from '@/tests/utils/fixtures'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
@@ -16,43 +16,50 @@ const it = (name, fn) =>
 // Mock BCGridViewer
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: ({
-  gridKey,
-  columnDefs,
-  queryData,
-  dataKey,
-  defaultColDef,
-  suppressPagination,
-  onPaginationChange,
-  getRowId,
-  ...props
-}) => { delete props.paginationOptions; return <div data-test="bc-grid-viewer">
-      <div data-test="grid-key">{gridKey}</div>
-      <div data-test="data-key">{dataKey}</div>
-      <div data-test="row-count">
-        {queryData?.data?.[dataKey]?.length || 0} rows
+    gridKey,
+    columnDefs,
+    queryData,
+    dataKey,
+    defaultColDef,
+    suppressPagination,
+    onPaginationChange,
+    getRowId,
+    ...props
+  }) => {
+    delete props.paginationOptions
+    return (
+      <div data-test="bc-grid-viewer">
+        <div data-test="grid-key">{gridKey}</div>
+        <div data-test="data-key">{dataKey}</div>
+        <div data-test="row-count">
+          {queryData?.data?.[dataKey]?.length || 0} rows
+        </div>
+        <div data-test="pagination-suppressed">
+          {String(suppressPagination)}
+        </div>
+        <div data-test="has-cell-renderer">
+          {defaultColDef?.cellRenderer ? 'true' : 'false'}
+        </div>
+        <div data-test="column-defs-length">{columnDefs?.length || 0}</div>
+        <button
+          data-test="pagination-change-button"
+          onClick={() => onPaginationChange?.({ page: 2, size: 20 })}
+        >
+          Change Pagination
+        </button>
+        <button
+          data-test="get-row-id-button"
+          onClick={() => {
+            const result = getRowId?.({ data: { notionalTransferId: 123 } })
+            const event = new CustomEvent('getRowIdResult', { detail: result })
+            document.dispatchEvent(event)
+          }}
+        >
+          Test GetRowId
+        </button>
       </div>
-      <div data-test="pagination-suppressed">{String(suppressPagination)}</div>
-      <div data-test="has-cell-renderer">
-        {defaultColDef?.cellRenderer ? 'true' : 'false'}
-      </div>
-      <div data-test="column-defs-length">{columnDefs?.length || 0}</div>
-      <button
-        data-test="pagination-change-button"
-        onClick={() => onPaginationChange?.({ page: 2, size: 20 })}
-      >
-        Change Pagination
-      </button>
-      <button
-        data-test="get-row-id-button"
-        onClick={() => {
-          const result = getRowId?.({ data: { notionalTransferId: 123 } })
-          const event = new CustomEvent('getRowIdResult', { detail: result })
-          document.dispatchEvent(event)
-        }}
-      >
-        Test GetRowId
-      </button>
-    </div>; }
+    )
+  }
 }))
 
 // Mock other components

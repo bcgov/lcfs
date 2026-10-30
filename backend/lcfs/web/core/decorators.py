@@ -127,6 +127,10 @@ def view_handler(required_roles: List[Union[RoleEnum, Literal["*"]]]):
     def decorator(func):
         @wraps(func)
         async def wrapper(request: Request, *args, **kwargs):
+            # Imported here to avoid a circular import: UserProfile pulls in the
+            # organizations schema module, whose views import this module.
+            from lcfs.db.models.user.UserProfile import UserProfile
+
             logger = structlog.get_logger(func.__module__)
             request_var.set(request)
             user = getattr(request, "user", None)
@@ -136,8 +140,9 @@ def view_handler(required_roles: List[Union[RoleEnum, Literal["*"]]]):
             )
             session_var.set(session)
 
-            # check if user is authenticated
-            if not user:
+            # check if user is authenticated: every role list, including ["*"],
+            # requires a signed-in user profile
+            if not isinstance(user, UserProfile):
                 raise HTTPException(status_code=401, detail="User not authenticated")
 
             # check if the endpoint can be accessed

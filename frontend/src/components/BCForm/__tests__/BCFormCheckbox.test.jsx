@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useForm, FormProvider } from 'react-hook-form'
@@ -42,7 +42,7 @@ vi.mock('../CustomLabel', () => ({
   )
 }))
 
-describe.sequential('BCFormCheckbox', () => {
+describe('BCFormCheckbox', { concurrent: false }, () => {
   // Form wrapper for integration tests
   const FormWrapper = ({ children, defaultValues = {} }) => {
     const methods = useForm({
@@ -482,10 +482,7 @@ describe.sequential('BCFormCheckbox', () => {
   })
 
   describe('Edge Cases and Error Handling', () => {
-    test('handles undefined form prop gracefully', ({
-  render,
-  theme
-}) => {
+    test('handles undefined form prop gracefully', ({ render, theme }) => {
       expect(() => {
         render(
           <BCFormCheckbox
@@ -652,10 +649,7 @@ describe.sequential('BCFormCheckbox', () => {
       expect(endTime - startTime).toBeLessThan(2000)
     })
 
-    test('maintains selection state during re-renders', ({
-  render,
-  theme
-}) => {
+    test('maintains selection state during re-renders', ({ render, theme }) => {
       const { rerender } = render(
         <FormWrapper defaultValues={{ testCheckbox: ['option1'] }}>
           {({ form }) => (
@@ -720,10 +714,7 @@ describe.sequential('BCFormCheckbox', () => {
   })
 
   describe('PropTypes and API', () => {
-    test('renders with minimal required props', ({
-  render,
-  theme
-}) => {
+    test('renders with minimal required props', ({ render, theme }) => {
       render(
         <FormWrapper defaultValues={{ minimal: [] }}>
           {({ form }) => (

@@ -177,7 +177,7 @@ async def test_create_internal_comment_invalid_entity_type(
     url = fastapi_app.url_path_for("create_comment")
     response = await client.post(url, json=payload)
     assert (
-        response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     )  # Pydantic validation error
     data = response.json()
     assert "details" in data
@@ -200,7 +200,7 @@ async def test_create_internal_comment_missing_fields(
 
     url = fastapi_app.url_path_for("create_comment")
     response = await client.post(url, json=payload)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     data = response.json()
     assert "details" in data
 
@@ -241,7 +241,7 @@ async def test_create_internal_comment_invalid_audience_scope(
 
     url = fastapi_app.url_path_for("create_comment")
     response = await client.post(url, json=payload)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     data = response.json()
     assert "details" in data
 
