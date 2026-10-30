@@ -6,7 +6,8 @@ import {
   idirRoleOptions,
   iaRoleOptions,
   bceidRoleOptions,
-  iaSignerOption
+  iaSignerOption,
+  allowedBceidRoleValues
 } from '../_schema'
 import { roles } from '@/constants/roles'
 
@@ -111,6 +112,30 @@ describe('bceidRoleOptions', () => {
 
   it('returns 6 options', () => {
     expect(bceidRoleOptions(t)).toHaveLength(6)
+  })
+
+  it('includes LCJFIP Applicant only for an LCJFIP organization', () => {
+    expect(
+      bceidRoleOptions(t, null, true).map((option) => option.label)
+    ).toContain(roles.lcjfip_applicant)
+    expect(bceidRoleOptions(t).map((option) => option.label)).not.toContain(
+      roles.lcjfip_applicant
+    )
+  })
+
+  it('does not expose LCJFIP Administrator as a BCeID-assignable option', () => {
+    expect(
+      bceidRoleOptions(t, null, true).map((option) => option.label)
+    ).not.toContain(roles.lcjfip_administrator)
+  })
+
+  it('allows the administrator role only for IDIR editors of LCJFIP organizations', () => {
+    expect(allowedBceidRoleValues(null, true, true)).toContain(
+      roles.lcjfip_administrator.toLowerCase()
+    )
+    expect(allowedBceidRoleValues(null, true, false)).not.toContain(
+      roles.lcjfip_administrator.toLowerCase()
+    )
   })
 })
 

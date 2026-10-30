@@ -9,7 +9,8 @@ import { roles } from '@/constants/roles'
 import {
   allowedBceidRoleValues,
   bceidRoleOptions,
-  iaSignerOption
+  iaSignerOption,
+  lcjfipAdministratorOption
 } from '../_schema'
 
 export const BCeIDSpecificRoleFields = ({
@@ -17,15 +18,21 @@ export const BCeIDSpecificRoleFields = ({
   disabled,
   t,
   isGovernmentUser = false,
+  isLcjfipOrganization = false,
   availableRoles = null
 }) => {
   const { control, watch } = form
   const bceidRoles = watch('bceidRoles')
   const hasProponent = bceidRoles?.includes(roles.ia_proponent.toLowerCase())
   const signerOpt = iaSignerOption(t)
-  const allowed = allowedBceidRoleValues(availableRoles)
+  const allowed = allowedBceidRoleValues(
+    availableRoles,
+    isLcjfipOrganization,
+    isGovernmentUser
+  )
   const signerAvailable =
     allowed == null || allowed.includes(roles.ia_signer.toLowerCase())
+  const lcjfipAdminOpt = lcjfipAdministratorOption(t)
 
   return (
     <Box>
@@ -33,7 +40,7 @@ export const BCeIDSpecificRoleFields = ({
         form={form}
         name="bceidRoles"
         label={t('admin:Roles')}
-        options={bceidRoleOptions(t, availableRoles)}
+        options={bceidRoleOptions(t, availableRoles, isLcjfipOrganization)}
         disabled={disabled}
       />
 
@@ -69,6 +76,43 @@ export const BCeIDSpecificRoleFields = ({
             }
             label={
               <CustomLabel header={signerOpt.header} text={signerOpt.text} />
+            }
+          />
+        </FormControl>
+      )}
+
+      {isGovernmentUser && isLcjfipOrganization && (
+        <FormControl component="fieldset" sx={{ mt: 1 }}>
+          <FormControlLabel
+            sx={{ marginY: 1 }}
+            control={
+              <Controller
+                name="bceidRoles"
+                control={control}
+                render={({ field: { onChange, value } }) => (
+                  <Checkbox
+                    id="lcjfip-administrator"
+                    sx={{ marginTop: 0.5 }}
+                    checked={value?.includes(lcjfipAdminOpt.value) ?? false}
+                    onChange={() => {
+                      if (value?.includes(lcjfipAdminOpt.value)) {
+                        onChange(
+                          value.filter((v) => v !== lcjfipAdminOpt.value)
+                        )
+                      } else {
+                        onChange([...(value ?? []), lcjfipAdminOpt.value])
+                      }
+                    }}
+                    disabled={disabled}
+                  />
+                )}
+              />
+            }
+            label={
+              <CustomLabel
+                header={lcjfipAdminOpt.header}
+                text={lcjfipAdminOpt.text}
+              />
             }
           />
         </FormControl>

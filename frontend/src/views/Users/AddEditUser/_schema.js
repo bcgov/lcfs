@@ -184,27 +184,43 @@ export const ORG_CONTROLLABLE_ROLES = [
 
 // Lowercase role values assignable given the org's available roles.
 // A null availableRoles (org not loaded) means "no filtering".
-export const allowedBceidRoleValues = (availableRoles) => {
-  if (availableRoles == null) {
+export const allowedBceidRoleValues = (
+  availableRoles,
+  isLcjfipOrganization = false,
+  isGovernmentUser = false
+) => {
+  if (availableRoles == null && !isLcjfipOrganization) {
     return null
   }
   const allowed = [
     roles.manage_users,
     roles.signing_authority,
     roles.read_only,
-    ...ORG_CONTROLLABLE_ROLES.filter((role) => availableRoles.includes(role))
+    ...ORG_CONTROLLABLE_ROLES.filter(
+      (role) => availableRoles == null || availableRoles.includes(role)
+    )
   ]
   // IA Signer rides on IA Proponent availability
-  if (availableRoles.includes(roles.ia_proponent)) {
+  if (availableRoles == null || availableRoles.includes(roles.ia_proponent)) {
     allowed.push(roles.ia_signer)
+  }
+  if (isLcjfipOrganization) {
+    allowed.push(roles.lcjfip_applicant)
+    if (isGovernmentUser) {
+      allowed.push(roles.lcjfip_administrator)
+    }
   }
   return allowed.map((role) => role.toLowerCase())
 }
 
 // IA Signer is excluded here — it is rendered separately, indented under IA Proponent
-export const bceidRoleOptions = (t, availableRoles = null) => {
-  const allowed = allowedBceidRoleValues(availableRoles)
-  return [
+export const bceidRoleOptions = (
+  t,
+  availableRoles = null,
+  isLcjfipOrganization = false
+) => {
+  const allowed = allowedBceidRoleValues(availableRoles, isLcjfipOrganization)
+  const options = [
     roles.manage_users,
     roles.transfers,
     roles.compliance_reporting,
@@ -212,9 +228,15 @@ export const bceidRoleOptions = (t, availableRoles = null) => {
     roles.ci_applicant,
     roles.ia_proponent
   ]
+  if (isLcjfipOrganization) {
+    options.push(roles.lcjfip_applicant)
+  }
+  return options
     .filter((role) => allowed == null || allowed.includes(role.toLowerCase()))
     .map((role) => toOption(role, t))
 }
 
 // Only shown when a government user edits a BCeID user
 export const iaSignerOption = (t) => toOption(roles.ia_signer, t)
+export const lcjfipAdministratorOption = (t) =>
+  toOption(roles.lcjfip_administrator, t)

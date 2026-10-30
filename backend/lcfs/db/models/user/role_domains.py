@@ -25,6 +25,8 @@ ORG_ROLE_SET: set[RoleEnum] = {
     RoleEnum.CI_APPLICANT,
     RoleEnum.IA_PROPONENT,
     RoleEnum.IA_SIGNER,
+    RoleEnum.LCJFIP_APPLICANT,
+    RoleEnum.LCJFIP_ADMINISTRATOR,
 }
 
 # Roles an analyst can enable/disable per organization (#4565). Stored in

@@ -26,6 +26,8 @@ ROLE_ID_TO_ENUM = {
     15: RoleEnum.IA_ANALYST,
     16: RoleEnum.IA_MANAGER,
     17: RoleEnum.IA_SIGNER,
+    18: RoleEnum.LCJFIP_APPLICANT,
+    19: RoleEnum.LCJFIP_ADMINISTRATOR,
 }
 
 
@@ -106,6 +108,17 @@ def test_ia_roles_belong_to_exactly_one_domain():
 
     assert {RoleEnum.IA_ANALYST, RoleEnum.IA_MANAGER} <= GOVERNMENT_ROLE_SET
     assert {RoleEnum.IA_PROPONENT, RoleEnum.IA_SIGNER} <= ORG_ROLE_SET
+
+
+def test_lcjfip_roles_are_bceid_roles():
+    assert {
+        RoleEnum.LCJFIP_APPLICANT,
+        RoleEnum.LCJFIP_ADMINISTRATOR,
+    } <= ORG_ROLE_SET
+    assert not {
+        RoleEnum.LCJFIP_APPLICANT,
+        RoleEnum.LCJFIP_ADMINISTRATOR,
+    } & GOVERNMENT_ROLE_SET
 
 
 def test_validate_seed_user_roles_accepts_an_ia_signer():

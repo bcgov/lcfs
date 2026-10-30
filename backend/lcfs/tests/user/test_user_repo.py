@@ -26,6 +26,21 @@ async def test_get_full_name_success(dbsession, user_repo):
 
 
 @pytest.mark.anyio
+async def test_is_lcjfip_organization_checks_associated_type():
+    organization_id = 42
+    result = MagicMock()
+    result.scalar_one_or_none.return_value = organization_id
+    db = MagicMock()
+    db.execute = AsyncMock(return_value=result)
+    repo = UserRepository(db=db)
+
+    assert await repo.is_lcjfip_organization(organization_id)
+    query = db.execute.await_args.args[0]
+    compiled_query = query.compile(compile_kwargs={"literal_binds": True})
+    assert "'lcjfip'" in str(compiled_query)
+
+
+@pytest.mark.anyio
 async def test_create_login_history(dbsession, user_repo):
     """Test creating a user login history entry."""
     # Mock user profile
@@ -252,6 +267,28 @@ async def test_bceid_ia_signer_added_with_proponent():
     names = {ur.role.name for ur in user.user_roles}
     assert RoleEnum.IA_PROPONENT in names
     assert RoleEnum.IA_SIGNER in names
+
+
+@pytest.mark.anyio
+async def test_bceid_lcjfip_roles_can_be_assigned_to_bceid_user():
+    repo = _make_repo_with_find(None)
+    user = MagicMock()
+    user.user_roles = [_user_role(RoleEnum.SUPPLIER)]
+    existing = {RoleEnum.SUPPLIER}
+
+    await repo.update_bceid_roles(
+        user,
+        [
+            RoleEnum.LCJFIP_APPLICANT,
+            RoleEnum.LCJFIP_ADMINISTRATOR,
+            RoleEnum.SUPPLIER,
+        ],
+        existing,
+    )
+
+    names = {ur.role.name for ur in user.user_roles}
+    assert RoleEnum.LCJFIP_APPLICANT in names
+    assert RoleEnum.LCJFIP_ADMINISTRATOR in names
 
 
 @pytest.mark.anyio

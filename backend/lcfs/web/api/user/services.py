@@ -63,6 +63,14 @@ NON_GOV_NOTIFICATION_ROLES = {
     RoleEnum.SUPPLIER,
     RoleEnum.CI_APPLICANT,
 }
+LCJFIP_ROLES = {
+    RoleEnum.LCJFIP_APPLICANT,
+    RoleEnum.LCJFIP_ADMINISTRATOR,
+}
+GOVERNMENT_MANAGED_BCEID_ROLES = {
+    RoleEnum.IA_SIGNER,
+    RoleEnum.LCJFIP_ADMINISTRATOR,
+}
 
 # Government notification types to keep enabled for each IDIR role.
 GOV_NOTIFICATION_BY_ROLE = {
@@ -268,8 +276,18 @@ class UserServices:
             return
         requested = {r.lower() for r in roles}
         requested_enums = {e for e in RoleEnum if e.value.lower() in requested}
+        lcjfip_roles = requested_enums & LCJFIP_ROLES
+        if lcjfip_roles:
+            is_lcjfip_org = await self.repo.is_lcjfip_organization(organization_id)
+            if not is_lcjfip_org:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="LCJFIP roles are only available to LCJFIP organizations.",
+                )
         available = await self.repo.get_organization_available_roles(organization_id)
         invalid = requested_enums - allowed_roles_for_org(available)
+        if lcjfip_roles:
+            invalid -= LCJFIP_ROLES
         if invalid:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -301,14 +319,15 @@ class UserServices:
         AUTO_SUBSCRIBE_NOTIFICATIONS is True.
         """
         if user_create.organization_id:
-            # Only government (IDIR) users may assign the IA Signer role,
-            # matching the guard in update_user.
+            # Only government (IDIR) users may assign these BCeID roles.
             if not self.request.user.is_government:
-                ia_signer_value_lower = RoleEnum.IA_SIGNER.value.lower()
+                restricted_roles = {
+                    role.value.lower() for role in GOVERNMENT_MANAGED_BCEID_ROLES
+                }
                 user_create.roles = [
                     r
                     for r in (user_create.roles or [])
-                    if r.lower() != ia_signer_value_lower
+                    if r.lower() not in restricted_roles
                 ]
             await self._validate_roles_for_org(
                 user_create.roles or [], user_create.organization_id
@@ -369,24 +388,24 @@ class UserServices:
                 changed_by=self.request.user.user_profile_id,
             )
 
-        # Enforce: only government (IDIR) users may assign or remove the IA Signer role.
-        # If the caller is a BCeID user, preserve the existing IA Signer assignment
-        # regardless of what was submitted.
+        # Only government (IDIR) users may grant or remove these BCeID roles.
+        # Preserve existing assignments for non-government callers.
         if user.organization and not self.request.user.is_government:
-            submitted_roles_lower = {r.lower() for r in (user_create.roles or [])}
-            has_ia_signer = any(r == RoleEnum.IA_SIGNER for r in user.role_names)
-            ia_signer_value_lower = RoleEnum.IA_SIGNER.value.lower()
-            if has_ia_signer:
-                # Preserve the existing assignment — add it back if missing
-                if ia_signer_value_lower not in submitted_roles_lower:
-                    user_create.roles.append(RoleEnum.IA_SIGNER.value)
-            else:
-                # Strip any attempt to grant the role
-                user_create.roles = [
-                    r
-                    for r in (user_create.roles or [])
-                    if r.lower() != ia_signer_value_lower
-                ]
+            submitted_roles = list(user_create.roles or [])
+            submitted_roles_lower = {role.lower() for role in submitted_roles}
+            existing_roles = set(user.role_names)
+            for role in GOVERNMENT_MANAGED_BCEID_ROLES:
+                role_value_lower = role.value.lower()
+                if role in existing_roles:
+                    if role_value_lower not in submitted_roles_lower:
+                        submitted_roles.append(role.value)
+                else:
+                    submitted_roles = [
+                        value
+                        for value in submitted_roles
+                        if value.lower() != role_value_lower
+                    ]
+            user_create.roles = submitted_roles
 
         # Enforce the organization's available-role set (#4565). Runs after the
         # IA Signer guard so a preserved assignment is validated too.

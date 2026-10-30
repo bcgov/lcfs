@@ -92,6 +92,15 @@ export const AddEditUser = ({
     enabled: !!roleOrgId && (!!orgID || hasRoles(roles.supplier))
   })
   const availableRoles = orgData?.availableRoles ?? null
+  const organizationTypeKeys = [orgData?.orgType, ...(orgData?.orgTypes ?? [])]
+    .map((orgType) =>
+      typeof orgType === 'string'
+        ? orgType
+        : orgType?.orgType || orgType?.org_type
+    )
+    .filter(Boolean)
+    .map((orgType) => orgType.toLowerCase())
+  const isLcjfipOrganization = organizationTypeKeys.includes('lcjfip')
 
   const form = useForm({
     resolver: yupResolver(userInfoSchema(userType)),
@@ -259,8 +268,13 @@ export const AddEditUser = ({
   }, [isUserFetched, data, reset])
 
   const allowedBceidRoles = useMemo(
-    () => allowedBceidRoleValues(availableRoles),
-    [availableRoles]
+    () =>
+      allowedBceidRoleValues(
+        availableRoles,
+        isLcjfipOrganization,
+        isCurrentUserGovernment
+      ),
+    [availableRoles, isCurrentUserGovernment, isLcjfipOrganization]
   )
 
   const buildPayload = (data) => {
@@ -288,11 +302,18 @@ export const AddEditUser = ({
           ? [
               ...data.adminRole,
               ...(data.readOnly === ''
-                ? (data.bceidRoles || []).filter(
-                    (role) =>
+                ? (data.bceidRoles || []).filter((role) => {
+                    if (role === roles.lcjfip_applicant.toLowerCase()) {
+                      return isLcjfipOrganization
+                    }
+                    if (role === roles.lcjfip_administrator.toLowerCase()) {
+                      return isLcjfipOrganization && isCurrentUserGovernment
+                    }
+                    return (
                       allowedBceidRoles == null ||
                       allowedBceidRoles.includes(role)
-                  )
+                    )
+                  })
                 : []),
               data.idirRole,
               data.iaRole,
@@ -438,6 +459,7 @@ export const AddEditUser = ({
                     disabled={disabled}
                     status={status}
                     isGovernmentUser={isCurrentUserGovernment}
+                    isLcjfipOrganization={isLcjfipOrganization}
                     availableRoles={availableRoles}
                     t={t}
                   />

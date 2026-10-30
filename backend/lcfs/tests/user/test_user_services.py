@@ -378,6 +378,47 @@ async def test_create_user_rejects_government_role_for_org_user():
 
 
 @pytest.mark.anyio
+async def test_lcjfip_roles_require_lcjfip_organization():
+    fake_repo = MagicMock()
+    fake_repo.is_lcjfip_organization = AsyncMock(return_value=False)
+    fake_repo.get_organization_available_roles = AsyncMock(return_value=set())
+
+    service = UserServices(request=_caller_request(is_government=True))
+    service.repo = fake_repo
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service._validate_roles_for_org(
+            [
+                RoleEnum.SUPPLIER.value,
+                RoleEnum.LCJFIP_APPLICANT.value,
+                RoleEnum.LCJFIP_ADMINISTRATOR.value,
+            ],
+            42,
+        )
+
+    assert exc_info.value.status_code == 400
+    assert "only available to LCJFIP organizations" in exc_info.value.detail
+
+
+@pytest.mark.anyio
+async def test_lcjfip_roles_are_allowed_for_lcjfip_organization():
+    fake_repo = MagicMock()
+    fake_repo.is_lcjfip_organization = AsyncMock(return_value=True)
+    fake_repo.get_organization_available_roles = AsyncMock(return_value=set())
+
+    service = UserServices(request=_caller_request(is_government=True))
+    service.repo = fake_repo
+
+    await service._validate_roles_for_org(
+        [
+            RoleEnum.LCJFIP_APPLICANT.value,
+            RoleEnum.LCJFIP_ADMINISTRATOR.value,
+        ],
+        42,
+    )
+
+
+@pytest.mark.anyio
 async def test_create_user_always_available_roles_pass_with_empty_availability():
     fake_user = MagicMock()
     fake_user.user_profile_id = 60
@@ -419,6 +460,7 @@ def _make_create_service(is_government_caller: bool):
     fake_repo.get_organization_available_roles = AsyncMock(
         return_value={RoleEnum.IA_PROPONENT}
     )
+    fake_repo.is_lcjfip_organization = AsyncMock(return_value=True)
 
     service = UserServices(request=_caller_request(is_government_caller))
     service.repo = fake_repo
@@ -463,6 +505,42 @@ async def test_government_caller_can_grant_ia_signer_on_create():
 
 
 @pytest.mark.anyio
+async def test_bceid_caller_cannot_grant_lcjfip_administrator_on_create():
+    service, fake_repo = _make_create_service(is_government_caller=False)
+    user_create = MagicMock()
+    user_create.organization_id = 42
+    user_create.roles = [
+        RoleEnum.SUPPLIER.value,
+        RoleEnum.LCJFIP_APPLICANT.value,
+        RoleEnum.LCJFIP_ADMINISTRATOR.value,
+    ]
+
+    with patch("lcfs.web.api.user.services.FastAPICache.clear", AsyncMock()):
+        await service.create_user(user_create)
+
+    submitted = fake_repo.create_user.call_args[0][0].roles
+    assert RoleEnum.LCJFIP_APPLICANT.value in submitted
+    assert RoleEnum.LCJFIP_ADMINISTRATOR.value not in submitted
+
+
+@pytest.mark.anyio
+async def test_government_caller_can_grant_lcjfip_administrator_on_create():
+    service, fake_repo = _make_create_service(is_government_caller=True)
+    user_create = MagicMock()
+    user_create.organization_id = 42
+    user_create.roles = [
+        RoleEnum.SUPPLIER.value,
+        RoleEnum.LCJFIP_ADMINISTRATOR.value,
+    ]
+
+    with patch("lcfs.web.api.user.services.FastAPICache.clear", AsyncMock()):
+        await service.create_user(user_create)
+
+    submitted = fake_repo.create_user.call_args[0][0].roles
+    assert RoleEnum.LCJFIP_ADMINISTRATOR.value in submitted
+
+
+@pytest.mark.anyio
 async def test_update_user_rejects_role_not_available_to_org():
     current_user = _bceid_user_without_ia_signer()
     updated = _updated_user_stub([RoleEnum.SUPPLIER])
@@ -494,6 +572,7 @@ def _make_update_service(fake_user, updated_user, is_government_caller: bool):
     fake_repo.get_organization_available_roles = AsyncMock(
         return_value={RoleEnum.IA_PROPONENT}
     )
+    fake_repo.is_lcjfip_organization = AsyncMock(return_value=True)
 
     fake_notification_service = MagicMock()
     fake_notification_service.add_subscriptions_for_notification_types = AsyncMock()
@@ -571,6 +650,64 @@ async def test_bceid_caller_cannot_remove_ia_signer():
 
     submitted = fake_repo.update_user.call_args[0][1].roles
     assert RoleEnum.IA_SIGNER.value in submitted
+
+
+def _bceid_user_with_lcjfip_administrator():
+    user = MagicMock(**_BCEID_IDENTITY)
+    user.organization = MagicMock()
+    user.is_active = True
+    user.is_government = False
+    user.role_names = [
+        RoleEnum.LCJFIP_ADMINISTRATOR,
+        RoleEnum.LCJFIP_APPLICANT,
+        RoleEnum.SUPPLIER,
+    ]
+    return user
+
+
+@pytest.mark.anyio
+async def test_bceid_caller_cannot_remove_lcjfip_administrator():
+    current_user = _bceid_user_with_lcjfip_administrator()
+    updated = _updated_user_stub(
+        [
+            RoleEnum.LCJFIP_ADMINISTRATOR,
+            RoleEnum.LCJFIP_APPLICANT,
+            RoleEnum.SUPPLIER,
+        ]
+    )
+    service, fake_repo = _make_update_service(
+        current_user, updated, is_government_caller=False
+    )
+
+    with patch("lcfs.web.api.user.services.FastAPICache.clear", AsyncMock()):
+        await service.update_user(_update_payload([RoleEnum.SUPPLIER.value]), 99)
+
+    submitted = fake_repo.update_user.call_args[0][1].roles
+    assert RoleEnum.LCJFIP_ADMINISTRATOR.value in submitted
+
+
+@pytest.mark.anyio
+async def test_bceid_caller_cannot_grant_lcjfip_administrator_on_update():
+    current_user = _bceid_user_without_ia_signer()
+    updated = _updated_user_stub([RoleEnum.LCJFIP_APPLICANT, RoleEnum.SUPPLIER])
+    service, fake_repo = _make_update_service(
+        current_user, updated, is_government_caller=False
+    )
+
+    with patch("lcfs.web.api.user.services.FastAPICache.clear", AsyncMock()):
+        await service.update_user(
+            _update_payload(
+                [
+                    RoleEnum.SUPPLIER.value,
+                    RoleEnum.LCJFIP_APPLICANT.value,
+                    RoleEnum.LCJFIP_ADMINISTRATOR.value,
+                ]
+            ),
+            99,
+        )
+
+    submitted = fake_repo.update_user.call_args[0][1].roles
+    assert RoleEnum.LCJFIP_ADMINISTRATOR.value not in submitted
 
 
 @pytest.mark.anyio
