@@ -1,5 +1,5 @@
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vite-plus/test'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { ErrorOverlay } from '../ErrorOverlay'
 import { useTranslation } from 'react-i18next'
 import { useAuthorization } from '@/contexts/AuthorizationContext'
@@ -18,37 +18,40 @@ vi.mock('@/components/BCButton', () => ({
 // Mock BCTypography
 vi.mock('@/components/BCTypography', () => ({
   __esModule: true,
-  default: ({
-  children,
-  variant,
-  ...props
-}) => { delete props.sx; return <div data-variant={variant} {...props}>{children}</div>; }
+  default: ({ children, variant, ...props }) => {
+    delete props.sx
+    return (
+      <div data-variant={variant} {...props}>
+        {children}
+      </div>
+    )
+  }
 }))
 
 // Mock MUI components
 vi.mock('@mui/material/Box', () => ({
-    default: ({
-  children,
-  onClick,
-  component,
-  ...props
-}) => {
-delete props.sx;
+  default: ({ children, onClick, component, ...props }) => {
+    delete props.sx
 
     const Component = component || 'div'
-    return <Component onClick={onClick} {...props}>{children}</Component>
+    return (
+      <Component onClick={onClick} {...props}>
+        {children}
+      </Component>
+    )
   }
 }))
 
 vi.mock('@mui/material/IconButton', () => ({
-    default: ({
-  children,
-  onClick,
-  'aria-label': ariaLabel,
-  ...props
-}) => { delete props.size; delete props.sx; return <button onClick={onClick} aria-label={ariaLabel} {...props}>
-      {children}
-    </button>; }
+  default: ({ children, onClick, 'aria-label': ariaLabel, ...props }) => {
+    delete props.size
+    delete props.sx
+    return (
+      <button onClick={onClick} aria-label={ariaLabel} {...props}>
+        {children}
+      </button>
+    )
+  }
 }))
 
 vi.mock('@mui/icons-material/Close', () => ({
@@ -72,7 +75,8 @@ describe('ErrorOverlay', () => {
       'errorPage.genericMessage': 'An unexpected error occurred.',
       'errorPage.referenceNumberLabel': 'Reference number',
       'errorPage.referenceNumbersLabel': 'Reference numbers',
-      'errorPage.referenceNumberHint': 'Please quote this number when contacting support.',
+      'errorPage.referenceNumberHint':
+        'Please quote this number when contacting support.',
       'errorPage.contactSupport': 'For assistance, contact us at',
       'errorPage.closeAndContinue': 'Close',
       'unauthorized.email': 'lcfs@gov.bc.ca'
@@ -134,7 +138,9 @@ describe('ErrorOverlay', () => {
 
       render(<ErrorOverlay />)
       expect(screen.getByText(/Error 503/i)).toBeInTheDocument()
-      expect(screen.getByText('An unexpected error occurred.')).toBeInTheDocument()
+      expect(
+        screen.getByText('An unexpected error occurred.')
+      ).toBeInTheDocument()
     })
 
     it('should display error code in overline text', () => {
@@ -164,7 +170,9 @@ describe('ErrorOverlay', () => {
       })
 
       render(<ErrorOverlay />)
-      expect(screen.queryByRole('heading', { level: 6 })).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole('heading', { level: 6 })
+      ).not.toBeInTheDocument()
     })
   })
 
@@ -190,7 +198,9 @@ describe('ErrorOverlay', () => {
       render(<ErrorOverlay />)
       expect(screen.getByText('Reference number')).toBeInTheDocument()
       expect(screen.getByText('abc-123-def-456')).toBeInTheDocument()
-      expect(screen.getByText('Please quote this number when contacting support.')).toBeInTheDocument()
+      expect(
+        screen.getByText('Please quote this number when contacting support.')
+      ).toBeInTheDocument()
     })
 
     it('should display multiple reference numbers with numbering', () => {
@@ -240,8 +250,10 @@ describe('ErrorOverlay', () => {
       })
 
       render(<ErrorOverlay />)
-      expect(screen.getByText(/For assistance, contact us at/i)).toBeInTheDocument()
-      
+      expect(
+        screen.getByText(/For assistance, contact us at/i)
+      ).toBeInTheDocument()
+
       const emailLink = screen.getByRole('link', { name: 'lcfs@gov.bc.ca' })
       expect(emailLink).toBeInTheDocument()
       expect(emailLink).toHaveAttribute('href', 'mailto:lcfs@gov.bc.ca')
@@ -270,7 +282,7 @@ describe('ErrorOverlay', () => {
 
       render(<ErrorOverlay />)
       const closeButton = screen.getByTestId('error-overlay-close-btn')
-      
+
       fireEvent.click(closeButton)
 
       expect(mockSetErrorStatus).toHaveBeenCalledWith(null)
@@ -297,7 +309,7 @@ describe('ErrorOverlay', () => {
 
       render(<ErrorOverlay />)
       const iconButton = screen.getByLabelText('close')
-      
+
       fireEvent.click(iconButton)
 
       expect(mockSetErrorStatus).toHaveBeenCalledWith(null)
@@ -314,7 +326,7 @@ describe('ErrorOverlay', () => {
 
       const { container } = render(<ErrorOverlay />)
       const backdrop = container.firstChild
-      
+
       fireEvent.click(backdrop)
 
       expect(mockSetErrorStatus).toHaveBeenCalledWith(null)
@@ -328,8 +340,10 @@ describe('ErrorOverlay', () => {
       })
 
       render(<ErrorOverlay />)
-      const modalContent = screen.getByText('Internal server error').closest('div')
-      
+      const modalContent = screen
+        .getByText('Internal server error')
+        .closest('div')
+
       fireEvent.click(modalContent)
 
       expect(mockSetErrorStatus).not.toHaveBeenCalled()
@@ -371,7 +385,7 @@ describe('ErrorOverlay', () => {
       })
 
       render(<ErrorOverlay />)
-      
+
       expect(screen.getByText(/Error 500/i)).toBeInTheDocument()
       expect(mockT).toHaveBeenCalledWith('internalServerError.title')
       expect(mockT).toHaveBeenCalledWith('internalServerError.message')
@@ -384,7 +398,7 @@ describe('ErrorOverlay', () => {
       })
 
       render(<ErrorOverlay />)
-      
+
       expect(screen.getByText(/Error 502/i)).toBeInTheDocument()
       expect(mockT).toHaveBeenCalledWith('errorPage.genericMessage')
     })
@@ -399,7 +413,7 @@ describe('ErrorOverlay', () => {
 
       const { container } = render(<ErrorOverlay />)
       const overlay = container.firstChild
-      
+
       expect(overlay).toBeInTheDocument()
       expect(overlay.tagName).toBe('DIV')
     })
@@ -412,7 +426,7 @@ describe('ErrorOverlay', () => {
 
       render(<ErrorOverlay />)
       const modalContent = screen.getByText('Internal server error')
-      
+
       expect(modalContent).toBeInTheDocument()
       expect(modalContent.closest('div')).toBeInTheDocument()
     })
@@ -477,7 +491,9 @@ describe('ErrorOverlay', () => {
 
       render(<ErrorOverlay />)
       manyRefs.forEach((ref, index) => {
-        expect(screen.getByText(new RegExp(`${index + 1}\\. ${ref}`))).toBeInTheDocument()
+        expect(
+          screen.getByText(new RegExp(`${index + 1}\\. ${ref}`))
+        ).toBeInTheDocument()
       })
     })
 
@@ -505,11 +521,17 @@ describe('ErrorOverlay', () => {
 
       expect(screen.getByText(/Error 500/i)).toBeInTheDocument()
       expect(screen.getByText('Internal server error')).toBeInTheDocument()
-      expect(screen.getByText('Sorry, something went wrong on our end.')).toBeInTheDocument()
+      expect(
+        screen.getByText('Sorry, something went wrong on our end.')
+      ).toBeInTheDocument()
       expect(screen.getByText('Reference number')).toBeInTheDocument()
       expect(screen.getByText('correlation-id-xyz-789')).toBeInTheDocument()
-      expect(screen.getByText('Please quote this number when contacting support.')).toBeInTheDocument()
-      expect(screen.getByRole('link', { name: 'lcfs@gov.bc.ca' })).toBeInTheDocument()
+      expect(
+        screen.getByText('Please quote this number when contacting support.')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole('link', { name: 'lcfs@gov.bc.ca' })
+      ).toBeInTheDocument()
       expect(screen.getByTestId('error-overlay-close-btn')).toBeInTheDocument()
     })
 

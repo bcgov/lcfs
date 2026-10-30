@@ -1,5 +1,5 @@
 import pytest
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from httpx import AsyncClient
 from unittest.mock import MagicMock, AsyncMock, patch
 
@@ -149,7 +149,9 @@ async def test_save_notional_transfer_row_create(
         "lcfs.web.api.notional_transfer.views.ComplianceReportValidation.validate_organization_access"
     ) as mock_validate_organization_access, patch(
         "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_compliance_report_access"
-    ) as mock_validate_compliance_report_access:
+    ) as mock_validate_compliance_report_access, patch(
+        "lcfs.web.api.notional_transfer.views.ComplianceReportValidation.validate_compliance_report_editable"
+    ):
         mock_validate_organization_access.return_value = ComplianceReport()
         set_mock_user(fastapi_app, [RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING])
         url = fastapi_app.url_path_for("save_notional_transfer_row")
@@ -185,7 +187,9 @@ async def test_save_notional_transfer_row_update(
         "lcfs.web.api.notional_transfer.views.ComplianceReportValidation.validate_organization_access"
     ) as mock_validate_organization_access, patch(
         "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_compliance_report_access"
-    ) as mock_validate_compliance_report_access:
+    ) as mock_validate_compliance_report_access, patch(
+        "lcfs.web.api.notional_transfer.views.ComplianceReportValidation.validate_compliance_report_editable"
+    ):
         mock_validate_organization_access.return_value = ComplianceReport()
         set_mock_user(fastapi_app, [RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING])
         url = fastapi_app.url_path_for("save_notional_transfer_row")
@@ -227,7 +231,9 @@ async def test_save_notional_transfer_row_delete(
         "lcfs.web.api.notional_transfer.views.ComplianceReportValidation.validate_organization_access"
     ) as mock_validate_organization_access, patch(
         "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_compliance_report_access"
-    ) as mock_validate_compliance_report_access:
+    ) as mock_validate_compliance_report_access, patch(
+        "lcfs.web.api.notional_transfer.views.ComplianceReportValidation.validate_compliance_report_editable"
+    ):
         mock_validate_organization_access.return_value = ComplianceReport()
         set_mock_user(fastapi_app, [RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING])
         url = "/api/notional-transfers/save"
@@ -265,3 +271,41 @@ async def test_save_notional_transfer_row_delete(
         mock_notional_transfer_service.delete_notional_transfer.assert_called_once_with(
             mock_schema
         )
+
+
+@pytest.mark.anyio
+async def test_save_notional_transfer_row_refused_on_a_closed_report(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    mock_notional_transfer_service,
+    mock_notional_transfer_validation,
+):
+    """A row on a report that is no longer editable is neither deleted nor
+    saved."""
+    with patch(
+        "lcfs.web.api.notional_transfer.views.ComplianceReportValidation.validate_organization_access"
+    ) as mock_validate_organization_access, patch(
+        "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_compliance_report_access"
+    ), patch(
+        "lcfs.web.api.notional_transfer.views.ComplianceReportValidation.validate_compliance_report_editable",
+        side_effect=HTTPException(status_code=403, detail="Not editable"),
+    ):
+        mock_validate_organization_access.return_value = ComplianceReport()
+        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING])
+        mock_schema = create_mock_schema(
+            {"notional_transfer_id": 1, "deleted": True, "compliance_report_id": 1}
+        )
+        fastapi_app.dependency_overrides[NotionalTransferServices] = (
+            lambda: mock_notional_transfer_service
+        )
+        fastapi_app.dependency_overrides[NotionalTransferValidation] = (
+            lambda: mock_notional_transfer_validation
+        )
+
+        response = await client.post(
+            "/api/notional-transfers/save", json=mock_schema.model_dump()
+        )
+
+        assert response.status_code == 403
+        mock_notional_transfer_service.delete_notional_transfer.assert_not_called()

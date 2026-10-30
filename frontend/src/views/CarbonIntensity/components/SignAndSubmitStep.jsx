@@ -89,7 +89,7 @@ export const SignAndSubmitStep = ({
     setConsultantEmail(email)
     setConsultantConsent(consent)
     savedRef.current = { consent, name, company, email }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react/exhaustive-deps
   }, [ciApplicationId])
 
   /**

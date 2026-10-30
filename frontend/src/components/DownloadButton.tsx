@@ -13,13 +13,10 @@ interface DownloadButtonProps {
   dataTest?: string
 }
 
-export const DownloadButton = forwardRef<HTMLButtonElement, DownloadButtonProps>(({
-  onDownload,
-  isDownloading,
-  label,
-  downloadLabel,
-  dataTest
-}, ref) => (
+export const DownloadButton = forwardRef<
+  HTMLButtonElement,
+  DownloadButtonProps
+>(({ onDownload, isDownloading, label, downloadLabel, dataTest }, ref) => (
   <BCButton
     ref={ref}
     data-test={dataTest}

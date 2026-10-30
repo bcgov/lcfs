@@ -2,9 +2,11 @@
 FSE rows on the report page and in the Excel FSE sheet, read from the real
 views for each version of a report (#5132).
 
-Both read vw_fse_base, which holds only the latest non-Draft version of each
-report group. A Draft or an older version shows that latest submitted
-version's rows; a report with no submitted version shows none.
+vw_fse_base holds only the latest non-Draft version of each report group. Read
+from it, a Draft or an older version shows that latest submitted version's
+rows, and a report with no submitted version shows none. The Excel sheet always
+reads it. The report page reads it for every status except Draft, which shows
+its own rows from mv_fse_reporting_base_pref, as its FSE reporting page does.
 """
 
 import uuid
@@ -13,7 +15,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from sqlalchemy import select, text
+from sqlalchemy import select, text, update
 
 from lcfs.db.models import Organization
 from lcfs.db.models.compliance import (
@@ -254,3 +256,78 @@ async def test_never_submitted_report_shows_no_fse(
     assert rows == []
     assert total == 0
     assert await _export_rows(dbsession, report, is_government) == []
+
+
+async def _draft_page_rows(dbsession, organization_id, report_id):
+    """The report page's FSE rows for a Draft: its own rows (base_pref source)."""
+    repo = FinalSupplyEquipmentRepository(db=dbsession)
+    rows, _ = await repo.get_fse_reporting_list_paginated(
+        organization_id,
+        PaginationRequestSchema(page=1, size=100, filters=[], sort_orders=[]),
+        report_id,
+        "summary",
+        source="base_pref",
+    )
+    total = await repo.get_total_kwh_usage_for_report(
+        organization_id, report_id, "summary", source="base_pref"
+    )
+    return [(row.serial_number, row.kwh_usage) for row in rows], total
+
+
+async def _refresh_like_the_job(dbsession):
+    """The refresh job's statements, run inside the test transaction."""
+    await dbsession.execute(
+        text("REFRESH MATERIALIZED VIEW mv_fse_reporting_base_pref")
+    )
+    await dbsession.execute(
+        text(
+            "UPDATE fse_reporting_mv_refresh_state "
+            "SET refreshed_generation = dirty_generation WHERE id = 1"
+        )
+    )
+
+
+@pytest.mark.anyio
+async def test_never_submitted_draft_page_shows_its_own_rows(
+    dbsession, report_versions
+):
+    report = report_versions.draft_only_report
+
+    rows, total = await _draft_page_rows(
+        dbsession, report_versions.organization_id, report.compliance_report_id
+    )
+
+    assert rows == [(DRAFT_ONLY_SERIAL, 500.0)]
+    assert total == 500.0
+
+
+@pytest.mark.anyio
+async def test_refresh_pending_until_the_view_has_the_saved_kwh(
+    dbsession, report_versions
+):
+    repo = FinalSupplyEquipmentRepository(db=dbsession)
+    organization_id = report_versions.organization_id
+    report_id = report_versions.draft_only_report.compliance_report_id
+    await _refresh_like_the_job(dbsession)
+    assert await repo.is_fse_reporting_refresh_pending() is False
+
+    # A save: the source-table trigger marks the view dirty.
+    await dbsession.execute(
+        update(ComplianceReportChargingEquipment)
+        .where(ComplianceReportChargingEquipment.compliance_report_id == report_id)
+        .values(kwh_usage=750.0)
+    )
+
+    assert await repo.is_fse_reporting_refresh_pending() is True
+    assert await _draft_page_rows(dbsession, organization_id, report_id) == (
+        [(DRAFT_ONLY_SERIAL, 500.0)],
+        500.0,
+    )
+
+    await _refresh_like_the_job(dbsession)
+
+    assert await repo.is_fse_reporting_refresh_pending() is False
+    assert await _draft_page_rows(dbsession, organization_id, report_id) == (
+        [(DRAFT_ONLY_SERIAL, 750.0)],
+        750.0,
+    )

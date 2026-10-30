@@ -1,4 +1,9 @@
-import type { ICellEditorParams, ICellRendererParams, RowClassParams, ColDef } from 'ag-grid-community'
+import type {
+  ICellEditorParams,
+  ICellRendererParams,
+  RowClassParams,
+  ColDef
+} from 'ag-grid-community'
 import type { GridErrors, GridWarnings, OptionsData } from '@/types/schema'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { AsyncSuggestionEditor } from '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor'
@@ -535,7 +540,10 @@ export const changelogCommonColDefs = (
       flex: 1,
       minWidth: 280,
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'legalName')) as unknown as ReturnType<typeof changelogCellStyle>
+        (highlight &&
+          changelogCellStyle(params, 'legalName')) as unknown as ReturnType<
+          typeof changelogCellStyle
+        >
     },
     {
       headerName: i18n.t(
@@ -545,7 +553,11 @@ export const changelogCommonColDefs = (
       flex: 1,
       minWidth: 360,
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'addressForService')) as unknown as ReturnType<typeof changelogCellStyle>
+        (highlight &&
+          changelogCellStyle(
+            params,
+            'addressForService'
+          )) as unknown as ReturnType<typeof changelogCellStyle>
     },
     {
       headerName: i18n.t(
@@ -554,7 +566,10 @@ export const changelogCommonColDefs = (
       field: 'fuelCategory.category',
       minWidth: 150,
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'fuelCategory')) as unknown as ReturnType<typeof changelogCellStyle>
+        (highlight &&
+          changelogCellStyle(params, 'fuelCategory')) as unknown as ReturnType<
+          typeof changelogCellStyle
+        >
     },
     {
       headerName: i18n.t(
@@ -565,7 +580,11 @@ export const changelogCommonColDefs = (
       hide: (complianceYear as number) < NEW_REGULATION_YEAR,
       valueGetter: (params) => (params.data.isCanadaProduced ? 'Yes' : 'No'),
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'isCanadaProduced')) as unknown as ReturnType<typeof changelogCellStyle>
+        (highlight &&
+          changelogCellStyle(
+            params,
+            'isCanadaProduced'
+          )) as unknown as ReturnType<typeof changelogCellStyle>
     },
     {
       headerName: i18n.t(
@@ -576,7 +595,10 @@ export const changelogCommonColDefs = (
       minWidth: 165,
       valueGetter: (params) => (params.data.isQ1Supplied ? 'Yes' : 'No'),
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'isQ1Supplied')) as unknown as ReturnType<typeof changelogCellStyle>
+        (highlight &&
+          changelogCellStyle(params, 'isQ1Supplied')) as unknown as ReturnType<
+          typeof changelogCellStyle
+        >
     },
     {
       headerName: i18n.t(
@@ -585,14 +607,21 @@ export const changelogCommonColDefs = (
       field: 'receivedOrTransferred',
       minWidth: 240,
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'receivedOrTransferred')) as unknown as ReturnType<typeof changelogCellStyle>
+        (highlight &&
+          changelogCellStyle(
+            params,
+            'receivedOrTransferred'
+          )) as unknown as ReturnType<typeof changelogCellStyle>
     },
     {
       headerName: i18n.t('notionalTransfer:notionalTransferColLabels.quantity'),
       field: 'quantity',
       valueFormatter: numberCellFormatter,
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'quantity')) as unknown as ReturnType<typeof changelogCellStyle>
+        (highlight &&
+          changelogCellStyle(params, 'quantity')) as unknown as ReturnType<
+          typeof changelogCellStyle
+        >
     }
   ]
   if (isEarlyIssuance) {
@@ -607,7 +636,11 @@ export const changelogCommonColDefs = (
             ),
             valueFormatter: numberCellFormatter,
             cellStyle: (params) =>
-              (highlight && changelogCellStyle(params, 'q1Quantity')) as unknown as ReturnType<typeof changelogCellStyle>
+              (highlight &&
+                changelogCellStyle(
+                  params,
+                  'q1Quantity'
+                )) as unknown as ReturnType<typeof changelogCellStyle>
           },
           {
             field: 'q2Quantity',
@@ -617,7 +650,11 @@ export const changelogCommonColDefs = (
             ),
             valueFormatter: numberCellFormatter,
             cellStyle: (params) =>
-              (highlight && changelogCellStyle(params, 'q2Quantity')) as unknown as ReturnType<typeof changelogCellStyle>
+              (highlight &&
+                changelogCellStyle(
+                  params,
+                  'q2Quantity'
+                )) as unknown as ReturnType<typeof changelogCellStyle>
           },
           {
             field: 'q3Quantity',
@@ -627,7 +664,11 @@ export const changelogCommonColDefs = (
             ),
             valueFormatter: numberCellFormatter,
             cellStyle: (params) =>
-              (highlight && changelogCellStyle(params, 'q3Quantity')) as unknown as ReturnType<typeof changelogCellStyle>
+              (highlight &&
+                changelogCellStyle(
+                  params,
+                  'q3Quantity'
+                )) as unknown as ReturnType<typeof changelogCellStyle>
           },
           {
             field: 'q4Quantity',
@@ -637,7 +678,11 @@ export const changelogCommonColDefs = (
             ),
             valueFormatter: numberCellFormatter,
             cellStyle: (params) =>
-              (highlight && changelogCellStyle(params, 'q4Quantity')) as unknown as ReturnType<typeof changelogCellStyle>
+              (highlight &&
+                changelogCellStyle(
+                  params,
+                  'q4Quantity'
+                )) as unknown as ReturnType<typeof changelogCellStyle>
           },
           {
             field: 'totalQuantity',
@@ -647,7 +692,11 @@ export const changelogCommonColDefs = (
             ),
             valueFormatter: numberCellFormatter,
             cellStyle: (params) =>
-              (highlight && changelogCellStyle(params, 'totalQuantity')) as unknown as ReturnType<typeof changelogCellStyle>,
+              (highlight &&
+                changelogCellStyle(
+                  params,
+                  'totalQuantity'
+                )) as unknown as ReturnType<typeof changelogCellStyle>,
             valueGetter: (params) => {
               const data = params.data
               return (

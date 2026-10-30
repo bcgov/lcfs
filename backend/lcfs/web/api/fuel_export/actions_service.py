@@ -231,7 +231,9 @@ class FuelExportActionService:
         )
 
         if existing_export.compliance_report_id == fe_data.compliance_report_id:
-            await self.repo.delete_fuel_export(fe_data.fuel_export_id)
+            await self.repo.delete_fuel_export(
+                fe_data.fuel_export_id, fe_data.compliance_report_id, fe_data.group_uuid
+            )
             return DeleteFuelExportResponseSchema(message="Marked as deleted.")
         else:
             delete_export = FuelExport(

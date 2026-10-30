@@ -40,6 +40,7 @@ def mock_repo():
     repo = AsyncMock()
     repo.get_charging_power_output.return_value = None
     repo.get_total_kwh_usage_for_report.return_value = 0
+    repo.is_fse_reporting_refresh_pending.return_value = False
     # Default: equipment is active (not decommissioned).
     repo.get_latest_equipment_status_with_date.return_value = ("Submitted", None)
     return repo
@@ -479,6 +480,34 @@ async def test_get_fse_reporting_list_paginated_success(
     mock_repo.get_total_kwh_usage_for_report.assert_awaited_once_with(
         1, 10, "current", source="base_pref"
     )
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("pending", [True, False])
+async def test_get_fse_reporting_list_paginated_reports_refresh_pending(
+    service, mock_repo, mock_comp_report_repo, pending
+):
+    """The flag is read before the rows, which come from the materialized view."""
+    calls = []
+    mock_repo.is_fse_reporting_refresh_pending.side_effect = lambda: (
+        calls.append("pending") or pending
+    )
+    mock_repo.get_total_kwh_usage_for_report.side_effect = lambda *a, **k: (
+        calls.append("total") or 0
+    )
+    mock_repo.get_fse_reporting_list_paginated.side_effect = lambda *a, **k: (
+        calls.append("rows") or ([], 0)
+    )
+    mock_comp_report_repo.get_compliance_report_by_id.return_value = MagicMock(
+        compliance_report_id=10, compliance_report_group_uuid="uuid-1234"
+    )
+
+    result = await service.get_fse_reporting_list_paginated(
+        1, MagicMock(page=1, size=10, filters=[]), 10, "summary"
+    )
+
+    assert result["refreshPending"] is pending
+    assert calls == ["pending", "total", "rows"]
 
 
 @pytest.mark.anyio

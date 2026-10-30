@@ -31,23 +31,23 @@ import colors from '@/themes/base/colors'
 
 interface DecisionApplication extends Record<string, unknown> {
   ciApplicationId?: number
-  returnHistory?: {changedAt: string}[]
+  returnHistory?: { changedAt: string }[]
   verification1Date?: string
   verification2Date?: string
   recommendationDate?: string
-  status?: {status?: string}
+  status?: { status?: string }
   preliminaryRiskAssessment?: string
   verification2RiskAssessment?: string
   verification2PriorityScore?: number | string
   priorityScore?: number | string
   pathways?: unknown[]
-  generatedFuelCodes?: (Record<string, unknown> & {isValid?: boolean})[]
+  generatedFuelCodes?: (Record<string, unknown> & { isValid?: boolean })[]
   documentUploadEnabled?: boolean
   pathwaySupplementalEditEnabled?: boolean
 }
 interface RequestError {
   message?: string
-  response?: {data?: {detail?: string}}
+  response?: { data?: { detail?: string } }
 }
 type GovernmentDecisionStepProps = {
   ciApplication: DecisionApplication
@@ -65,7 +65,9 @@ type GovernmentDecisionStepProps = {
 const normalizeRisk = (risk?: string | null) =>
   risk === 'Moderate' ? 'Medium' : risk
 
-const isReturnToFirstVerificationPending = (ciApplication: DecisionApplication = {}) => {
+const isReturnToFirstVerificationPending = (
+  ciApplication: DecisionApplication = {}
+) => {
   const returnHistory = ciApplication.returnHistory
   if (!Array.isArray(returnHistory) || returnHistory.length === 0) return false
   if (!ciApplication.verification1Date) return true
@@ -146,7 +148,9 @@ export const GovernmentDecisionStep = ({
   const [requestedPathwayChanges, setRequestedPathwayChanges] = useState(false)
   const [requestedDocumentation, setRequestedDocumentation] = useState(false)
   const [returnReason, setReturnReason] = useState('')
-  const [returnReasonError, setReturnReasonError] = useState<string | null>(null)
+  const [returnReasonError, setReturnReasonError] = useState<string | null>(
+    null
+  )
   const [
     isRequestDocumentationConfirmOpen,
     setIsRequestDocumentationConfirmOpen
@@ -204,7 +208,9 @@ export const GovernmentDecisionStep = ({
     'feedstockLocation'
   ]
 
-  const isGeneratedFuelCodeReady = (row: Record<string, unknown> & {isValid?: boolean}) =>
+  const isGeneratedFuelCodeReady = (
+    row: Record<string, unknown> & { isValid?: boolean }
+  ) =>
     row?.isValid === true ||
     generatedFuelCodeRequiredFields.every((field) => {
       const value = row?.[field]
@@ -598,9 +604,7 @@ export const GovernmentDecisionStep = ({
                         error={!!priorityScoreError}
                         onBlur={() => {
                           setPriorityScoreTouched(true)
-                          persistRiskAssessmentDraft().catch(
-                            () => undefined
-                          )
+                          persistRiskAssessmentDraft().catch(() => undefined)
                         }}
                         onChange={(event) => {
                           const nextValue = event.target.value
@@ -873,7 +877,9 @@ export const GovernmentDecisionStep = ({
             </Stack>
             <CIApplicationReturnHistory
               returnHistory={ciApplication?.returnHistory}
-              highlightPending={isReturnToFirstVerificationPending(ciApplication)}
+              highlightPending={isReturnToFirstVerificationPending(
+                ciApplication
+              )}
             />
           </Box>
         </Role>
@@ -939,14 +945,20 @@ export const GovernmentDecisionStep = ({
           setReturnReasonError(null)
         }}
         data={{
-          title: t('carbonIntensity:step5.returnToFirstVerificationConfirmTitle'),
-          primaryButtonText: t('carbonIntensity:step5.returnToFirstVerification'),
+          title: t(
+            'carbonIntensity:step5.returnToFirstVerificationConfirmTitle'
+          ),
+          primaryButtonText: t(
+            'carbonIntensity:step5.returnToFirstVerification'
+          ),
           primaryButtonAction: confirmReturnToFirstVerification,
           secondaryButtonText: t('common:cancelBtn'),
           content: (
             <Stack spacing={2}>
               <BCTypography variant="body2">
-                {t('carbonIntensity:step5.returnToFirstVerificationConfirmText')}
+                {t(
+                  'carbonIntensity:step5.returnToFirstVerificationConfirmText'
+                )}
               </BCTypography>
               <OutlinedInput
                 multiline

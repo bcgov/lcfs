@@ -1,17 +1,21 @@
 import { render, screen } from '@testing-library/react'
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from 'vite-plus/test'
 import { ComplianceUnitsTotal } from '../ComplianceUnitsTotal'
 
 describe('ComplianceUnitsTotal', () => {
   it('renders with positive value', () => {
-    render(<ComplianceUnitsTotal label="Total compliance units:" value={1500} />)
+    render(
+      <ComplianceUnitsTotal label="Total compliance units:" value={1500} />
+    )
 
     expect(screen.getByText('Total compliance units:')).toBeInTheDocument()
     expect(screen.getByText('1,500')).toBeInTheDocument()
   })
 
   it('renders with negative value', () => {
-    render(<ComplianceUnitsTotal label="Total compliance units:" value={-500} />)
+    render(
+      <ComplianceUnitsTotal label="Total compliance units:" value={-500} />
+    )
 
     expect(screen.getByText('Total compliance units:')).toBeInTheDocument()
     expect(screen.getByText('-500')).toBeInTheDocument()
@@ -61,7 +65,9 @@ describe('ComplianceUnitsTotal', () => {
   })
 
   it('handles null value by displaying 0', () => {
-    render(<ComplianceUnitsTotal label="Total compliance units:" value={null} />)
+    render(
+      <ComplianceUnitsTotal label="Total compliance units:" value={null} />
+    )
 
     expect(screen.getByText('Total compliance units:')).toBeInTheDocument()
     expect(screen.getByText('0')).toBeInTheDocument()
@@ -103,7 +109,7 @@ describe('ComplianceUnitsTotal', () => {
   it('applies bold styling to positive values', () => {
     render(
       <ComplianceUnitsTotal label="Total compliance units:" value={1500} />
-    );
+    )
 
     const valueElement = screen.getByText('1,500')
     expect(window.getComputedStyle(valueElement).fontWeight).toBe('700')
@@ -112,19 +118,14 @@ describe('ComplianceUnitsTotal', () => {
   it('applies bold styling to negative values', () => {
     render(
       <ComplianceUnitsTotal label="Total compliance units:" value={-500} />
-    );
+    )
 
     const valueElement = screen.getByText('-500')
     expect(window.getComputedStyle(valueElement).fontWeight).toBe('700')
   })
 
   it('renders with custom label', () => {
-    render(
-      <ComplianceUnitsTotal
-        label="Custom Label:"
-        value={1500}
-      />
-    )
+    render(<ComplianceUnitsTotal label="Custom Label:" value={1500} />)
 
     expect(screen.getByText('Custom Label:')).toBeInTheDocument()
     expect(screen.getByText('1,500')).toBeInTheDocument()

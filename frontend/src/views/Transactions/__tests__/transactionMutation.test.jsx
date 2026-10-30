@@ -1,12 +1,12 @@
 import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { MemoryRouter } from 'react-router-dom';
+import { describe, it, expect, beforeEach, vi } from 'vite-plus/test'
+import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import theme from '@/themes'
 import { useTransactionMutation } from '../transactionMutation'
 import { TRANSACTION_STATUSES } from '@/constants/statuses'
-import { INITIATIVE_AGREEMENT } from '@/views/Transactions/constants';
+import { INITIATIVE_AGREEMENT } from '@/views/Transactions/constants'
 import { ROUTES, buildPath } from '@/routes/routes'
 
 let navigate
@@ -42,13 +42,6 @@ describe('useTransactionMutation', () => {
   beforeEach(() => {
     navigate = vi.fn()
     window.scrollTo = vi.fn()
-    vi.mock('react-router-dom', async () => {
-      const actual = await vi.importActual('react-router-dom')
-      return {
-        ...actual,
-        useNavigate: () => navigate
-      }
-    })
   })
 
   afterAll(() => {

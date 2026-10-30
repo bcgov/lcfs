@@ -1,7 +1,7 @@
 import { test } from '@/tests/utils/fixtures'
-import 'react';
+import 'react'
 import { screen, fireEvent } from '@testing-library/react'
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import { UserImpactSummaryModal } from '../UserImpactSummaryModal'
 // ── Module mocks ────────────────────────────────────────────────────────────
 
@@ -261,9 +261,8 @@ describe('UserImpactSummaryModal', () => {
     theme,
     router
   }) => {
-    const { useTargetUserNotificationSubscriptions } = await import(
-      '@/hooks/useNotifications'
-    )
+    const { useTargetUserNotificationSubscriptions } =
+      await import('@/hooks/useNotifications')
     useTargetUserNotificationSubscriptions.mockReturnValue({
       data: [
         {
@@ -297,9 +296,8 @@ describe('UserImpactSummaryModal', () => {
     render,
     theme
   }) => {
-    const { useTargetUserNotificationSubscriptions } = await import(
-      '@/hooks/useNotifications'
-    )
+    const { useTargetUserNotificationSubscriptions } =
+      await import('@/hooks/useNotifications')
     const { useUserAssignedWork } = await import('@/hooks/useUser')
 
     renderModal(render, theme, { isCurrentUserGovernment: false })
@@ -312,9 +310,8 @@ describe('UserImpactSummaryModal', () => {
     render,
     theme
   }) => {
-    const { useTargetUserNotificationSubscriptions } = await import(
-      '@/hooks/useNotifications'
-    )
+    const { useTargetUserNotificationSubscriptions } =
+      await import('@/hooks/useNotifications')
     useTargetUserNotificationSubscriptions.mockReturnValue({
       data: [],
       isFetching: true

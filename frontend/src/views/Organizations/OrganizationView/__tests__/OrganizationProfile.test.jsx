@@ -1,8 +1,8 @@
 import { omitProperties } from '@/utils/omitProperties'
 import { test } from '@/tests/utils/fixtures'
-import 'react';
-import { vi, describe, expect, beforeEach } from 'vitest';
-import { screen } from '@testing-library/react';
+import 'react'
+import { vi, describe, expect, beforeEach } from 'vite-plus/test'
+import { screen } from '@testing-library/react'
 
 // Now import the other modules
 import { OrganizationProfile } from '../OrganizationProfile.jsx'
@@ -74,9 +74,7 @@ vi.mock('@/hooks/useOrganization', () => ({
 vi.mock(
   '@/views/Organizations/OrganizationView/components/LinkKeyManagement',
   () => ({
-    LinkKeyManagement: ({
-  orgID
-}) => (
+    LinkKeyManagement: ({ orgID }) => (
       <div data-test="link-key-management" data-org-id={orgID}>
         LinkKeyManagement Component
       </div>
@@ -86,9 +84,7 @@ vi.mock(
 
 // Also mock relative path
 vi.mock('./components/LinkKeyManagement', () => ({
-  LinkKeyManagement: ({
-  orgID
-}) => (
+  LinkKeyManagement: ({ orgID }) => (
     <div data-test="link-key-management" data-org-id={orgID}>
       LinkKeyManagement Component
     </div>
@@ -105,9 +101,24 @@ vi.mock('react-i18next', () => ({
 vi.mock('@/components/BCBox', () => ({
   default: ({ children, className, ...props }) => {
     // Filter out style-related props that shouldn't be passed to DOM
-    const {
-  ...domProps
-} = omitProperties(props, ["p","m","mt","mb","ml","mr","pt","pb","pl","pr","display","flexDirection","gap","gridTemplateColumns","columnGap","rowGap"])
+    const { ...domProps } = omitProperties(props, [
+      'p',
+      'm',
+      'mt',
+      'mb',
+      'ml',
+      'mr',
+      'pt',
+      'pb',
+      'pl',
+      'pr',
+      'display',
+      'flexDirection',
+      'gap',
+      'gridTemplateColumns',
+      'columnGap',
+      'rowGap'
+    ])
 
     return (
       <div data-test="bc-box" className={className} {...domProps}>
@@ -120,9 +131,11 @@ vi.mock('@/components/BCBox', () => ({
 vi.mock('@/components/BCTypography', () => ({
   default: ({ children, variant, className, ...props }) => {
     // Filter out any non-standard DOM props
-    const {
-  ...domProps
-} = omitProperties(props, ["color","fontWeight","fontSize"])
+    const { ...domProps } = omitProperties(props, [
+      'color',
+      'fontWeight',
+      'fontSize'
+    ])
 
     return (
       <div
@@ -219,8 +232,6 @@ const mockUnregisteredOrgData = {
     status: 'unregistered'
   }
 }
-
-
 
 describe('OrganizationProfile Component', () => {
   const mockHasRoles = vi.fn()

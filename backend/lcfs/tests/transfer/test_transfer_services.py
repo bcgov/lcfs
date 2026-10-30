@@ -84,6 +84,16 @@ def mock_director():
     return mock_user
 
 
+def _make_signer(org_id):
+    """A supplier signing authority, the role that sends and accepts."""
+    user = MagicMock(spec=UserProfile)
+    user.role_names = [RoleEnum.SUPPLIER, RoleEnum.SIGNING_AUTHORITY]
+    user.organization_id = org_id
+    user.first_name = "First Name"
+    user.last_name = "Last Name"
+    return user
+
+
 @pytest.mark.anyio
 async def test_get_all_transfers_government_user_sees_all(
     transfer_service, mock_transfer_repo
@@ -177,12 +187,11 @@ async def test_get_transfer_success(transfer_service, mock_transfer_repo):
 
 
 @pytest.mark.anyio
-async def test_create_transfer_success(
-    transfer_service, mock_transfer_repo, mock_director
-):
+async def test_create_transfer_success(transfer_service, mock_transfer_repo):
     """
     Ensure we supply a valid status from TransferStatusEnum. E.g. 'Sent', 'Draft', etc.
     """
+    sender = _make_signer(org_id=1)
     mock_transfer_repo.get_transfer_status_by_name.return_value = TransferStatus(
         transfer_status_id=1, status="Sent"
     )
@@ -202,7 +211,7 @@ async def test_create_transfer_success(
     mock_transfer_repo.create_transfer.return_value = transfer_data
 
     with patch.object(transfer_service, "_perform_notification_call", AsyncMock()):
-        result = await transfer_service.create_transfer(transfer_data, mock_director)
+        result = await transfer_service.create_transfer(transfer_data, sender)
 
         assert result.transfer_id == transfer_id
         assert isinstance(result, TransferCreateSchema)
@@ -210,15 +219,14 @@ async def test_create_transfer_success(
 
 
 @pytest.mark.anyio
-async def test_update_transfer_success(
-    transfer_service, mock_transfer_repo, mock_director
-):
+async def test_update_transfer_success(transfer_service, mock_transfer_repo):
     """
-    DB object is in 'Draft'. We'll move to 'Submitted'.
+    DB object is 'Sent'. The receiving organization accepts it: 'Submitted'.
     We'll also change recommendation from 'Record' to 'Refuse' (both valid).
     """
-    # DB current status is "Draft"
-    old_status = TransferStatus(transfer_status_id=1, status="Draft")
+    receiver = _make_signer(org_id=2)
+    # DB current status is "Sent"
+    old_status = TransferStatus(transfer_status_id=1, status=TransferStatusEnum.Sent)
     transfer_id = 1
 
     from_org = Organization(organization_id=1, name="org1")
@@ -227,7 +235,9 @@ async def test_update_transfer_success(
     transfer_obj = Transfer(
         transfer_id=transfer_id,
         from_organization=from_org,
+        from_organization_id=1,
         to_organization=to_org,
+        to_organization_id=2,
         agreement_date=date.today(),
         quantity=1,
         price_per_unit=7.99,
@@ -257,14 +267,14 @@ async def test_update_transfer_success(
         recommendation="Refuse",  # valid
     )
 
-    result = await transfer_service.update_transfer(update_data, mock_director)
+    result = await transfer_service.update_transfer(update_data, receiver)
     assert result.transfer_id == transfer_id
     assert isinstance(result, Transfer)
 
     mock_transfer_repo.get_transfer_by_id.assert_called_once_with(transfer_id)
     mock_transfer_repo.update_transfer.assert_called_once_with(transfer_obj)
     transfer_service._perform_notification_call.assert_awaited_once_with(
-        transfer_obj, status="Submitted", user=mock_director
+        transfer_obj, status="Submitted", user=receiver
     )
 
 
@@ -645,6 +655,8 @@ async def test_director_can_recommend_transfer(
 
     mock_transfer = MagicMock(spec=Transfer)
     mock_transfer.transfer_id = 1
+    mock_transfer.from_organization_id = 1
+    mock_transfer.to_organization_id = 2
     mock_transfer.current_status = MagicMock(spec=TransferStatus)
     mock_transfer.current_status.status = TransferStatusEnum.Submitted
     mock_transfer.transfer_history = []

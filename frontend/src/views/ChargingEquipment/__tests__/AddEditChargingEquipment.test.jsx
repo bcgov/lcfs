@@ -1,12 +1,10 @@
 import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, it, vi, beforeEach } from 'vite-plus/test'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import theme from '@/themes'
-import {
-  AddEditChargingEquipment
-} from '../AddEditChargingEquipment'
+import { AddEditChargingEquipment } from '../AddEditChargingEquipment'
 import {
   createDuplicatedBulkRow,
   getNextRegistrationNumber,
@@ -61,15 +59,18 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
-  BCGridEditor: React.forwardRef(function BCGridEditorMock({
-  saveButtonProps
-}, ref) {
-  return <div data-test="bc-grid-editor" ref={ref}>
-      <button data-test="save-return-btn" onClick={saveButtonProps?.onSave}>
-        {saveButtonProps?.text || 'Save'}
-      </button>
-    </div>;
-})
+  BCGridEditor: React.forwardRef(function BCGridEditorMock(
+    { saveButtonProps },
+    ref
+  ) {
+    return (
+      <div data-test="bc-grid-editor" ref={ref}>
+        <button data-test="save-return-btn" onClick={saveButtonProps?.onSave}>
+          {saveButtonProps?.text || 'Save'}
+        </button>
+      </div>
+    )
+  })
 }))
 
 vi.mock('@/components/ImportDialog', () => ({

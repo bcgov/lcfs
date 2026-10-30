@@ -5,7 +5,7 @@ import {
   render as rtlRender,
   renderHook as rtlRenderHook
 } from '@testing-library/react'
-import { test as baseTest } from 'vitest'
+import { test as baseTest } from 'vite-plus/test'
 import type {
   RenderHookOptions,
   RenderHookResult,
@@ -310,9 +310,8 @@ export const test = baseTest
     'query',
     async ({ task }, { onCleanup }): Promise<QueryProviderValue> => {
       if (!task) throw new Error('Query fixture requires an active test task')
-      const { QueryClient, QueryClientProvider } = await import(
-        '@tanstack/react-query'
-      )
+      const { QueryClient, QueryClientProvider } =
+        await import('@tanstack/react-query')
       const value = makeQueryProvider(QueryClient, QueryClientProvider)
       onCleanup(() => value.client.clear())
       return value

@@ -1,6 +1,6 @@
 import React from 'react'
 import { screen, fireEvent, act } from '@testing-library/react'
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vite-plus/test'
 import { AddEditAllocationAgreements } from '../AddEditAllocationAgreements'
 import { flattenNestedFields } from '../allocationAgreementUtils'
 import * as useAllocationAgreementHook from '@/hooks/useAllocationAgreement'

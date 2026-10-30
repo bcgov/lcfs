@@ -30,7 +30,9 @@ from lcfs.web.api.transfer.schema import (
     TransferCreateSchema,
 )
 from lcfs.web.api.transfer.validation import TransferValidation
+from lcfs.web.api.transfer.workflow import ensure_transfer_transition
 from lcfs.web.core.decorators import service_handler
+from lcfs.web.core.ownership import ensure_matches
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 
 logger = structlog.get_logger(__name__)
@@ -190,6 +192,8 @@ class TransferServices:
         fails due to missing data or database issues, appropriate exceptions are raised
         and handled by the @service_handler decorator.
         """
+        ensure_transfer_transition(user, None, transfer_data.current_status)
+
         transfer = Transfer(
             **transfer_data.model_dump(
                 exclude={
@@ -258,6 +262,23 @@ class TransferServices:
         if not transfer:
             raise DataNotFoundException(
                 f"Transfer with id {transfer_data.transfer_id} not found"
+            )
+
+        # Authorize against the stored transfer: the caller's side comes from
+        # its counterparties, and the move from its current status. The body's
+        # organizations must be the stored ones; only a draft's recipient can
+        # still change.
+        ensure_transfer_transition(user, transfer, transfer_data.current_status)
+        ensure_matches(
+            transfer.from_organization_id,
+            transfer_data.from_organization_id,
+            field="fromOrganizationId",
+        )
+        if transfer.current_status.status != TransferStatusEnum.Draft:
+            ensure_matches(
+                transfer.to_organization_id,
+                transfer_data.to_organization_id,
+                field="toOrganizationId",
             )
 
         # Check if the new status is different from the current status of the transfer

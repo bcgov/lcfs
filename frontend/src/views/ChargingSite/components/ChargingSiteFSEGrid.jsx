@@ -101,8 +101,8 @@ const buildHistoryRows = (equipments = [], expandedRows = new Set()) => {
     const historyRows = sortedVersions.slice(1).map((versionRow, index) => {
       const compareTo = sortedVersions[index]
       const diff = Object.entries(historyFieldConfig)
-        .filter(([, getter]) =>
-          !areValuesEqual(getter(versionRow), getter(compareTo))
+        .filter(
+          ([, getter]) => !areValuesEqual(getter(versionRow), getter(compareTo))
         )
         .map(([field]) => field)
 
@@ -152,10 +152,7 @@ export const ChargingSiteFSEGrid = ({
     paginationOptions,
     { historyMode }
   )
-  const {
-  data: equipmentData,
-  refetch
-} = equipmentQuery
+  const { data: equipmentData, refetch } = equipmentQuery
 
   const { mutateAsync: bulkUpdateStatus, isPending: isUpdating } =
     useBulkUpdateEquipmentStatus()
@@ -430,7 +427,8 @@ export const ChargingSiteFSEGrid = ({
       onSelectionChanged: historyMode
         ? undefined
         : (event) => handleSelectionChanged(event.api),
-      getRowId: (params) => params.data?.rowKey || params.data.chargingEquipmentId
+      getRowId: (params) =>
+        params.data?.rowKey || params.data.chargingEquipmentId
     }),
     [handleSelectionChanged, historyMode, isIDIR]
   )

@@ -1,20 +1,22 @@
 import { test } from '@/tests/utils/fixtures'
-import 'react';
-import { screen, fireEvent, waitFor } from '@testing-library/react';
-import '@testing-library/user-event';
-import { describe, expect, beforeEach, vi } from 'vitest';
+import 'react'
+import { screen, fireEvent, waitFor } from '@testing-library/react'
+import '@testing-library/user-event'
+import { describe, expect, beforeEach, vi } from 'vite-plus/test'
 import { AddEditUser } from '../AddEditUser'
-import 'msw';
+import 'msw'
 import * as currentUserHooks from '@/hooks/useCurrentUser'
 import * as userHooks from '@/hooks/useUser'
 import * as organizationUserHooks from '@/hooks/useOrganization'
-import '@/routes/routes';
+import '@/routes/routes'
 import { roles } from '@/constants/roles'
-import { useWatch } from 'react-hook-form';
-import '@hookform/resolvers/yup';
-import '../_schema';
+import { useWatch } from 'react-hook-form'
+import '@hookform/resolvers/yup'
+import '../_schema'
 
-const { mockEnqueueSnackbar } = vi.hoisted(() => ({ mockEnqueueSnackbar: vi.fn() }))
+const { mockEnqueueSnackbar } = vi.hoisted(() => ({
+  mockEnqueueSnackbar: vi.fn()
+}))
 vi.mock('notistack', () => ({
   useSnackbar: () => ({ enqueueSnackbar: mockEnqueueSnackbar })
 }))
@@ -147,28 +149,23 @@ vi.mock('@/components/BCForm/BCFormRadio', async () => {
 })
 
 vi.mock('@/components/BCForm/BCFormCheckbox', () => ({
-    BCFormCheckbox: ({ name, options = [] }) => (
-      <div data-test={`${name}-checkbox-group`}>
-        {options.map((option, index) => (
-          <input
-            key={`${name}-${index}`}
-            type="checkbox"
-            data-test={option.dataTestId || `${name}${index + 1}`}
-          />
-        ))}
-      </div>
-    )
+  BCFormCheckbox: ({ name, options = [] }) => (
+    <div data-test={`${name}-checkbox-group`}>
+      {options.map((option, index) => (
+        <input
+          key={`${name}-${index}`}
+          type="checkbox"
+          data-test={option.dataTestId || `${name}${index + 1}`}
+        />
+      ))}
+    </div>
+  )
 }))
 
 vi.mock('@/components/BCForm/BCFormAddressAutocomplete', () => ({
-    BCFormAddressAutocomplete: ({ name, label, disabled, ...props }) => (
-      <input
-        data-test={name}
-        aria-label={label}
-        disabled={disabled}
-        {...props}
-      />
-    )
+  BCFormAddressAutocomplete: ({ name, label, disabled, ...props }) => (
+    <input data-test={name} aria-label={label} disabled={disabled} {...props} />
+  )
 }))
 
 // Mock child components to simplify testing focus on parent logic
@@ -226,10 +223,7 @@ vi.mock('../components/IDIRSpecificRoleFields', () => ({
 }))
 
 vi.mock('../components/BCeIDSpecificRoleFields', () => ({
-  BCeIDSpecificRoleFields: ({
-  form,
-  disabled
-}) => {
+  BCeIDSpecificRoleFields: ({ form, disabled }) => {
     return (
       <div data-test="bceid-roles">
         <input
@@ -403,10 +397,15 @@ describe('AddEditUser', () => {
     expect(screen.getByText('Updating user...')).toBeInTheDocument()
   })
 
-  test('warns about email failure while completing a successful account update', ({ render, theme }) => {
+  test('warns about email failure while completing a successful account update', ({
+    render,
+    theme
+  }) => {
     const handleSaveSuccess = vi.fn()
     render(<AddEditUser handleSaveSuccess={handleSaveSuccess} />, [theme])
-    const { onSuccess } = vi.mocked(userHooks.useUpdateUser).mock.calls.at(-1)[0]
+    const { onSuccess } = vi
+      .mocked(userHooks.useUpdateUser)
+      .mock.calls.at(-1)[0]
     const result = { data: { accountChangeEmailSent: false } }
     const variables = { userID: 'user123' }
 
@@ -1287,5 +1286,137 @@ describe('AddEditUser', () => {
         })
       })
     })
+  })
+
+  // --- Login identity fields ---
+  const existingBceidUser = {
+    userProfileId: 'user123',
+    firstName: 'Jane',
+    lastName: 'Smith',
+    title: 'Manager',
+    keycloakEmail: 'jane@company.com',
+    keycloakUsername: 'jane.smith',
+    email: '',
+    roles: [],
+    isActive: true,
+    isGovernmentUser: false,
+    organization: { organizationId: 'org123', name: 'Test Company' }
+  }
+
+  const mockCurrentUserWithRoles = (userRoles) =>
+    vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
+      data: {
+        organization: { organizationId: 'org123', name: 'Test Company' },
+        organizationId: 'org123',
+        roles: userRoles.map((name) => ({ name })),
+        isGovernmentUser: userRoles.includes(roles.government)
+      },
+      hasRoles: vi.fn((...names) => names.every((n) => userRoles.includes(n))),
+      isLoading: false
+    })
+
+  test('shows login user name and email read-only when a supplier edits a user', async ({
+    render,
+    theme
+  }) => {
+    mockUseParams.mockReturnValue({ userID: 'user123', orgID: 'org123' })
+    vi.mocked(organizationUserHooks.useOrganizationUser).mockReturnValue({
+      data: existingBceidUser,
+      isLoading: false,
+      isFetched: true
+    })
+    mockCurrentUserWithRoles([roles.supplier, roles.manage_users])
+
+    render(
+      <AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />,
+      [theme]
+    )
+
+    await waitFor(() => {
+      expect(document.getElementById('userName')).toHaveValue('jane.smith')
+    })
+    expect(document.getElementById('userName')).toBeDisabled()
+    expect(document.getElementById('keycloakEmail')).toBeDisabled()
+    expect(document.getElementById('firstName')).not.toBeDisabled()
+
+    // Other edits still save, carrying the stored login identity.
+    fillField('firstName', 'Janet')
+    fireEvent.click(screen.getByTestId('saveUser'))
+    fireEvent.click(await screen.findByTestId('impact-modal-confirm-btn'))
+
+    await waitFor(() => {
+      expect(mockUpdateUser).toHaveBeenCalledWith({
+        userID: 'user123',
+        payload: expect.objectContaining({
+          firstName: 'Janet',
+          keycloakUsername: 'jane.smith',
+          keycloakEmail: 'jane@company.com'
+        })
+      })
+    })
+  })
+
+  test('shows login user name and email read-only when a non-administrator IDIR user edits a user', async ({
+    render,
+    theme
+  }) => {
+    mockUseParams.mockReturnValue({ userID: 'user123', orgID: 'org123' })
+    vi.mocked(userHooks.useUser).mockReturnValue({
+      data: existingBceidUser,
+      isLoading: false,
+      isFetched: true
+    })
+    mockCurrentUserWithRoles([roles.government, roles.analyst])
+
+    render(
+      <AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />,
+      [theme]
+    )
+
+    await waitFor(() => {
+      expect(document.getElementById('userName')).toHaveValue('jane.smith')
+    })
+    expect(document.getElementById('userName')).toBeDisabled()
+    expect(document.getElementById('keycloakEmail')).toBeDisabled()
+  })
+
+  test('lets a government administrator edit login user name and email', async ({
+    render,
+    theme
+  }) => {
+    mockUseParams.mockReturnValue({ userID: 'user123', orgID: 'org123' })
+    vi.mocked(userHooks.useUser).mockReturnValue({
+      data: existingBceidUser,
+      isLoading: false,
+      isFetched: true
+    })
+    mockCurrentUserWithRoles([roles.government, roles.administrator])
+
+    render(
+      <AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />,
+      [theme]
+    )
+
+    await waitFor(() => {
+      expect(document.getElementById('userName')).toHaveValue('jane.smith')
+    })
+    expect(document.getElementById('userName')).not.toBeDisabled()
+    expect(document.getElementById('keycloakEmail')).not.toBeDisabled()
+  })
+
+  test('lets a supplier enter login user name and email when adding a user', async ({
+    render,
+    theme
+  }) => {
+    mockUseParams.mockReturnValue({ orgID: 'org123' })
+    mockCurrentUserWithRoles([roles.supplier, roles.manage_users])
+
+    render(
+      <AddEditUser userType="bceid" handleCancelEdit={mockHandleCancelEdit} />,
+      [theme]
+    )
+
+    expect(document.getElementById('userName')).not.toBeDisabled()
+    expect(document.getElementById('keycloakEmail')).not.toBeDisabled()
   })
 })
