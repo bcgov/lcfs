@@ -1,5 +1,52 @@
 [
   {
+    "version": "1.3.12",
+    "tag": "v1.3.12",
+    "date": "2026-10-30",
+    "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/v1.3.12",
+    "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/v1.3.11...v1.3.12",
+    "summary": "This release includes 2 new features, 8 bug fixes, 1 security update, 5 dependency updates and 9 other changes. Highlights: Automate IA Credit Transactions on DA Approval; gate CI with Vite+ checks; apply open Dependabot security updates on Python 3.13.",
+    "sections": {
+      "features": [
+        "Automate IA Credit Transactions on DA Approval - 5211",
+        "gate CI with Vite+ checks"
+      ],
+      "fixes": [
+        "Persist IA table preferences within session - 5032",
+        "tighten public-route auth and upgrade FastAPI and Starlette",
+        "stop the schedule and charging site grids squeezing their columns (#5288)",
+        "Correct Additional Factors Column Header - 4923",
+        "tighten organization user management permissions",
+        "check record ownership and workflow status on writes",
+        "Remove low-count suppression from public Credit Market data 5293",
+        "show names in report history as plain text"
+      ],
+      "security": [
+        "apply open Dependabot security updates on Python 3.13"
+      ],
+      "breaking": [],
+      "dependencies": [
+        "bump follow-redirects from 1.16.0 to 1.16.1 in /frontend in the npm-security group across 1 directory by @dependabot[bot] in https://github.com/bcgov/lcfs/pull/5277",
+        "bump the pip-security group across 1 directory with 4 updates by @dependabot[bot] in https://github.com/bcgov/lcfs/pull/5316",
+        "bump undici from 6.29.0 to 6.29.1 in /frontend by @dependabot[bot] in https://github.com/bcgov/lcfs/pull/5329",
+        "bump setuptools from 80.10.2 to 84.1.0 in /backend in the pip-security group across 1 directory by @dependabot[bot] in https://github.com/bcgov/lcfs/pull/5333",
+        "bump the npm-security group across 1 directory with 5 updates by @dependabot[bot] in https://github.com/bcgov/lcfs/pull/5335"
+      ],
+      "other": [
+        "Test Release v1.3.11",
+        "Test Release v1.3.11+1",
+        "Start new initiative agreements Underway and add designated action index columns (#5186, #5203)",
+        "Show the latest submitted FSE on Draft and older report versions (#5132)",
+        "[Issue #5294] Upgrade backend runtime to Python 3.13",
+        "update Vite dependencies and remove Storybook",
+        "[Issue #5098] LCFS - Migrate frontend tooling and configuration to Vite+",
+        "adopt setup-vp and preserve test reports (#5100)",
+        "Show saved FSE rows on the report page right after a save (#5132)"
+      ]
+    },
+    "contributors": []
+  },
+  {
     "version": "1.3.11",
     "tag": "v1.3.11",
     "date": "2026-10-23",
@@ -288,7 +335,9 @@
         "Centralize paginated query handling - 4085"
       ]
     },
-    "contributors": ["@mr-moto"]
+    "contributors": [
+      "@mr-moto"
+    ]
   },
   {
     "version": "1.3.8",
@@ -491,7 +540,11 @@
       "dependencies": [],
       "other": []
     },
-    "contributors": ["@hamed-valiollahi", "@AlexZorkin", "@prv-proton"]
+    "contributors": [
+      "@hamed-valiollahi",
+      "@AlexZorkin",
+      "@prv-proton"
+    ]
   },
   {
     "version": "1.3.5",
@@ -596,7 +649,11 @@
       ],
       "other": []
     },
-    "contributors": ["@hamed-valiollahi", "@AlexZorkin", "@prv-proton"]
+    "contributors": [
+      "@hamed-valiollahi",
+      "@AlexZorkin",
+      "@prv-proton"
+    ]
   },
   {
     "version": "1.3.3",
@@ -632,7 +689,11 @@
       ],
       "other": []
     },
-    "contributors": ["@AlexZorkin", "@hamed-valiollahi", "@prv-proton"]
+    "contributors": [
+      "@AlexZorkin",
+      "@hamed-valiollahi",
+      "@prv-proton"
+    ]
   },
   {
     "version": "1.3.2",
@@ -663,7 +724,11 @@
         "Removed TFRS sync code and infrastructure — issues #4297, #4298, #4299, #4300 (#4329)."
       ]
     },
-    "contributors": ["@AlexZorkin", "@hamed-valiollahi", "@prv-proton"]
+    "contributors": [
+      "@AlexZorkin",
+      "@hamed-valiollahi",
+      "@prv-proton"
+    ]
   },
   {
     "version": "1.3.1",
@@ -708,7 +773,11 @@
       ],
       "other": []
     },
-    "contributors": ["@AlexZorkin", "@hamed-valiollahi", "@prv-proton"]
+    "contributors": [
+      "@AlexZorkin",
+      "@hamed-valiollahi",
+      "@prv-proton"
+    ]
   },
   {
     "version": "1.3.0",
@@ -820,7 +889,11 @@
       ],
       "other": []
     },
-    "contributors": ["@AlexZorkin", "@hamed-valiollahi", "@prv-proton"]
+    "contributors": [
+      "@AlexZorkin",
+      "@hamed-valiollahi",
+      "@prv-proton"
+    ]
   },
   {
     "version": "1.2.4",
