@@ -44,6 +44,8 @@ import { UserImpactSummaryModal } from './components/UserImpactSummaryModal'
 import { roles } from '@/constants/roles'
 import { useOrganization, useOrganizationUser } from '@/hooks/useOrganization'
 
+const LOGIN_IDENTITY_FIELDS = ['userName', 'keycloakEmail']
+
 // switch between 'idir' and 'bceid'
 export const AddEditUser = ({
   handleSaveSuccess,
@@ -71,14 +73,14 @@ export const AddEditUser = ({
     isFetched: isUserFetched
   } = hasRoles(roles.supplier) && userID
     ? userID
-      ? // eslint-disable-next-line react-hooks/rules-of-hooks
+      ? // oxlint-disable-next-line react/rules-of-hooks
         useOrganizationUser(
           orgID || currentUser?.organization?.organizationId,
           userID,
           { enabled: !isCurrentUserLoading }
         )
       : { undefined, isLoading: false, isFetched: false }
-    : // eslint-disable-next-line react-hooks/rules-of-hooks
+    : // oxlint-disable-next-line react/rules-of-hooks
       useUser(userID, { enabled: !!userID, retry: false })
 
   const safeToDelete = data?.isSafeToRemove
@@ -105,6 +107,10 @@ export const AddEditUser = ({
         : idirTextFields(t),
     [hasRoles, orgName, t, userType]
   )
+  // The login user name and email link a profile to its sign-in account, so
+  // once the user exists only government administrators may change them.
+  const isLoginIdentityLocked =
+    !!userID && !hasRoles(roles.government, roles.administrator)
   const status = watch('status')
   const readOnly = watch('readOnly')
   const bceidRoles = watch('bceidRoles')
@@ -403,6 +409,10 @@ export const AddEditUser = ({
                     label={field.label}
                     name={field.name}
                     optional={field.optional}
+                    disabled={
+                      isLoginIdentityLocked &&
+                      LOGIN_IDENTITY_FIELDS.includes(field.name)
+                    }
                   />
                 ))}
               </Stack>

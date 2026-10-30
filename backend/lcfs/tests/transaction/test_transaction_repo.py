@@ -1183,6 +1183,7 @@ async def test_reserve_transaction(dbsession, transaction_repo, mock_transaction
 
 @pytest.mark.anyio
 async def test_release_transaction(dbsession, transaction_repo, mock_transactions):
+    await _reserve_four(dbsession)
     success = await transaction_repo.release_transaction(4)
     assert success
 
@@ -1190,13 +1191,64 @@ async def test_release_transaction(dbsession, transaction_repo, mock_transaction
     assert updated_transaction.transaction_action == TransactionActionEnum.Released
 
 
+async def _reserve_four(dbsession):
+    # The payload objects are shared module state, so an earlier test may
+    # have left transaction 4 released or confirmed.
+    transaction = await dbsession.get(Transaction, 4)
+    transaction.transaction_action = TransactionActionEnum.Reserved
+    await dbsession.flush()
+
+
 @pytest.mark.anyio
 async def test_confirm_transaction(dbsession, transaction_repo, mock_transactions):
+    await _reserve_four(dbsession)
     success = await transaction_repo.confirm_transaction(4)
     assert success
 
     updated_transaction = await dbsession.get(Transaction, 4)
     assert updated_transaction.transaction_action == TransactionActionEnum.Adjustment
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("method", ["release_transaction", "confirm_transaction"])
+async def test_only_a_reservation_is_released_or_confirmed(
+    dbsession, transaction_repo, mock_transactions, method
+):
+    """A confirmed transaction has already moved units; releasing or
+    confirming it again would hand them back or count them twice."""
+    success = await getattr(transaction_repo, method)(5)
+
+    assert not success
+    transaction = await dbsession.get(Transaction, 5)
+    assert transaction.transaction_action == TransactionActionEnum.Adjustment
+
+
+@pytest.mark.anyio
+async def test_delete_reserved_transaction(
+    dbsession, transaction_repo, mock_transactions
+):
+    # A row of its own: deleting a shared payload object would break the
+    # tests that add it after this one.
+    dbsession.add(
+        Transaction(
+            transaction_id=9104,
+            transaction_action=TransactionActionEnum.Reserved,
+            compliance_units=-10,
+            organization_id=test_org_id,
+        )
+    )
+    await dbsession.flush()
+
+    assert await transaction_repo.delete_reserved_transaction(9104, 999)
+    assert await dbsession.get(Transaction, 9104) is None
+
+
+@pytest.mark.anyio
+async def test_delete_reserved_transaction_keeps_a_confirmed_one(
+    dbsession, transaction_repo, mock_transactions
+):
+    assert not await transaction_repo.delete_reserved_transaction(5, 999)
+    assert await dbsession.get(Transaction, 5) is not None
 
 
 @pytest.mark.anyio
@@ -1379,6 +1431,7 @@ async def test_reinstate_transaction_reinstates_released(
 ):
     """A transaction released when a superseding report was created goes back
     to Reserved when that superseding report is deleted."""
+    await _reserve_four(dbsession)
     await transaction_repo.release_transaction(4)
 
     success = await transaction_repo.reinstate_transaction(4)

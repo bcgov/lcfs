@@ -1,6 +1,6 @@
-import 'react';
+import 'react'
 import { render, screen, fireEvent, act } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach } from 'vite-plus/test'
 import { CreditMarketForm } from '../CreditMarketForm'
 
 // Mock dependencies
@@ -49,26 +49,34 @@ describe('CreditMarketForm', () => {
   describe('Initial Render', () => {
     it('should render component with initial state', () => {
       render(<CreditMarketForm />)
-      
-      expect(screen.getByText('Manage your credit market listing')).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: /add listing/i })).toBeInTheDocument()
-      expect(screen.getByText(/Your organization is not currently listed/)).toBeInTheDocument()
+
+      expect(
+        screen.getByText('Manage your credit market listing')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: /add listing/i })
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(/Your organization is not currently listed/)
+      ).toBeInTheDocument()
     })
 
     it('should initialize form data with empty values', () => {
       render(<CreditMarketForm />)
-      
+
       // Add listing button should be present indicating no existing data
-      expect(screen.getByRole('button', { name: /add listing/i })).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: /add listing/i })
+      ).toBeInTheDocument()
     })
   })
 
   describe('handleAddListing Function', () => {
     it('should show form when add listing button is clicked', async () => {
       render(<CreditMarketForm />)
-      
+
       const addButton = screen.getByRole('button', { name: /add listing/i })
-      
+
       await act(async () => {
         fireEvent.click(addButton)
       })
@@ -81,23 +89,25 @@ describe('CreditMarketForm', () => {
 
     it('should enable editing mode when add listing is clicked', async () => {
       render(<CreditMarketForm />)
-      
+
       const addButton = screen.getByRole('button', { name: /add listing/i })
-      
+
       await act(async () => {
         fireEvent.click(addButton)
       })
 
       // Save and Cancel buttons should be visible in editing mode
       expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: /cancel/i })
+      ).toBeInTheDocument()
     })
   })
 
   describe('handleInputChange Function', () => {
     it('should handle text input changes', async () => {
       render(<CreditMarketForm />)
-      
+
       // Show form first
       const addButton = screen.getByRole('button', { name: /add listing/i })
       await act(async () => {
@@ -105,7 +115,7 @@ describe('CreditMarketForm', () => {
       })
 
       const contactInput = screen.getByLabelText(/contact person/i)
-      
+
       await act(async () => {
         fireEvent.change(contactInput, { target: { value: 'John Doe' } })
       })
@@ -115,7 +125,7 @@ describe('CreditMarketForm', () => {
 
     it('should handle checkbox input changes', async () => {
       render(<CreditMarketForm />)
-      
+
       // Show form first
       const addButton = screen.getByRole('button', { name: /add listing/i })
       await act(async () => {
@@ -123,7 +133,7 @@ describe('CreditMarketForm', () => {
       })
 
       const creditsCheckbox = screen.getByLabelText(/credits available/i)
-      
+
       await act(async () => {
         fireEvent.click(creditsCheckbox)
       })
@@ -133,7 +143,7 @@ describe('CreditMarketForm', () => {
 
     it('should handle email input changes', async () => {
       render(<CreditMarketForm />)
-      
+
       // Show form first
       const addButton = screen.getByRole('button', { name: /add listing/i })
       await act(async () => {
@@ -141,7 +151,7 @@ describe('CreditMarketForm', () => {
       })
 
       const emailInput = screen.getByLabelText(/email/i)
-      
+
       await act(async () => {
         fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
       })
@@ -151,7 +161,7 @@ describe('CreditMarketForm', () => {
 
     it('should handle phone input changes', async () => {
       render(<CreditMarketForm />)
-      
+
       // Show form first
       const addButton = screen.getByRole('button', { name: /add listing/i })
       await act(async () => {
@@ -159,7 +169,7 @@ describe('CreditMarketForm', () => {
       })
 
       const phoneInput = screen.getByLabelText(/phone/i)
-      
+
       await act(async () => {
         fireEvent.change(phoneInput, { target: { value: '123-456-7890' } })
       })
@@ -171,7 +181,7 @@ describe('CreditMarketForm', () => {
   describe('handleSave Function', () => {
     it('should call console.log when save is clicked', async () => {
       render(<CreditMarketForm />)
-      
+
       // Show form first
       const addButton = screen.getByRole('button', { name: /add listing/i })
       await act(async () => {
@@ -179,20 +189,22 @@ describe('CreditMarketForm', () => {
       })
 
       const saveButton = screen.getByRole('button', { name: /save/i })
-      
+
       await act(async () => {
         fireEvent.click(saveButton)
       })
 
-      expect(consoleSpy).toHaveBeenCalledWith('Saving credit market listing:', expect.any(Object))
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Saving credit market listing:',
+        expect.any(Object)
+      )
     })
   })
-
 
   describe('Additional Coverage Tests', () => {
     it('should handle checkbox change correctly', async () => {
       render(<CreditMarketForm />)
-      
+
       // Show form first
       const addButton = screen.getByRole('button', { name: /add listing/i })
       await act(async () => {
@@ -200,14 +212,14 @@ describe('CreditMarketForm', () => {
       })
 
       const creditsCheckbox = screen.getByLabelText(/credits available/i)
-      
+
       // Test checking the box
       await act(async () => {
         fireEvent.click(creditsCheckbox)
       })
 
       expect(creditsCheckbox.checked).toBe(true)
-      
+
       // Test unchecking the box
       await act(async () => {
         fireEvent.click(creditsCheckbox)
@@ -218,7 +230,7 @@ describe('CreditMarketForm', () => {
 
     it('should handle multiple input changes in sequence', async () => {
       render(<CreditMarketForm />)
-      
+
       // Show form first
       const addButton = screen.getByRole('button', { name: /add listing/i })
       await act(async () => {
@@ -228,11 +240,11 @@ describe('CreditMarketForm', () => {
       const contactInput = screen.getByLabelText(/contact person/i)
       const emailInput = screen.getByLabelText(/email/i)
       const phoneInput = screen.getByLabelText(/phone/i)
-      
+
       // Fill all fields
       await act(async () => {
         fireEvent.change(contactInput, { target: { value: 'Jane Smith' } })
-        fireEvent.change(emailInput, { target: { value: 'jane@example.com' } })  
+        fireEvent.change(emailInput, { target: { value: 'jane@example.com' } })
         fireEvent.change(phoneInput, { target: { value: '555-0123' } })
       })
 
@@ -243,7 +255,7 @@ describe('CreditMarketForm', () => {
 
     it('should verify form field types and attributes', async () => {
       render(<CreditMarketForm />)
-      
+
       // Show form first
       const addButton = screen.getByRole('button', { name: /add listing/i })
       await act(async () => {
@@ -251,7 +263,7 @@ describe('CreditMarketForm', () => {
       })
 
       const contactInput = screen.getByLabelText(/contact person/i)
-      const emailInput = screen.getByLabelText(/email/i) 
+      const emailInput = screen.getByLabelText(/email/i)
       const phoneInput = screen.getByLabelText(/phone/i)
       const creditsCheckbox = screen.getByLabelText(/credits available/i)
 
@@ -267,7 +279,7 @@ describe('CreditMarketForm', () => {
 
     it('should handle empty input changes', async () => {
       render(<CreditMarketForm />)
-      
+
       // Show form first
       const addButton = screen.getByRole('button', { name: /add listing/i })
       await act(async () => {
@@ -275,13 +287,13 @@ describe('CreditMarketForm', () => {
       })
 
       const contactInput = screen.getByLabelText(/contact person/i)
-      
+
       // Set value then clear it
       await act(async () => {
         fireEvent.change(contactInput, { target: { value: 'Test' } })
       })
       expect(contactInput.value).toBe('Test')
-      
+
       await act(async () => {
         fireEvent.change(contactInput, { target: { value: '' } })
       })
@@ -292,69 +304,83 @@ describe('CreditMarketForm', () => {
   describe('Conditional Rendering - Add Listing Button', () => {
     it('should show add listing button when not expanded and no existing listing', () => {
       render(<CreditMarketForm />)
-      
-      expect(screen.getByRole('button', { name: /add listing/i })).toBeInTheDocument()
+
+      expect(
+        screen.getByRole('button', { name: /add listing/i })
+      ).toBeInTheDocument()
     })
 
     it('should hide add listing button when form is expanded', async () => {
       render(<CreditMarketForm />)
-      
+
       const addButton = screen.getByRole('button', { name: /add listing/i })
-      
+
       await act(async () => {
         fireEvent.click(addButton)
       })
 
-      expect(screen.queryByRole('button', { name: /add listing/i })).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole('button', { name: /add listing/i })
+      ).not.toBeInTheDocument()
     })
   })
 
   describe('Conditional Rendering - Save/Cancel Buttons', () => {
     it('should show save and cancel buttons when in editing mode', async () => {
       render(<CreditMarketForm />)
-      
+
       const addButton = screen.getByRole('button', { name: /add listing/i })
-      
+
       await act(async () => {
         fireEvent.click(addButton)
       })
 
       expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: /cancel/i })
+      ).toBeInTheDocument()
     })
 
     it('should hide save and cancel buttons when not editing', () => {
       render(<CreditMarketForm />)
-      
-      expect(screen.queryByRole('button', { name: /save/i })).not.toBeInTheDocument()
-      expect(screen.queryByRole('button', { name: /cancel/i })).not.toBeInTheDocument()
+
+      expect(
+        screen.queryByRole('button', { name: /save/i })
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole('button', { name: /cancel/i })
+      ).not.toBeInTheDocument()
     })
   })
 
   describe('Conditional Rendering - No Listing Message', () => {
     it('should show no listing message when form is collapsed and no existing listing', () => {
       render(<CreditMarketForm />)
-      
-      expect(screen.getByText(/Your organization is not currently listed/)).toBeInTheDocument()
+
+      expect(
+        screen.getByText(/Your organization is not currently listed/)
+      ).toBeInTheDocument()
     })
 
     it('should hide no listing message when form is expanded', async () => {
       render(<CreditMarketForm />)
-      
+
       const addButton = screen.getByRole('button', { name: /add listing/i })
-      
+
       await act(async () => {
         fireEvent.click(addButton)
       })
 
-      expect(screen.queryByText(/Your organization is not currently listed/)).not.toBeInTheDocument()
+      expect(
+        screen.queryByText(/Your organization is not currently listed/)
+      ).not.toBeInTheDocument()
     })
   })
 
   describe('Form Field States', () => {
     it('should have enabled form fields when editing', async () => {
       render(<CreditMarketForm />)
-      
+
       // Show form first
       const addButton = screen.getByRole('button', { name: /add listing/i })
       await act(async () => {
@@ -376,9 +402,9 @@ describe('CreditMarketForm', () => {
   describe('Form Collapse Visibility', () => {
     it('should show form when expanded', async () => {
       render(<CreditMarketForm />)
-      
+
       const addButton = screen.getByRole('button', { name: /add listing/i })
-      
+
       await act(async () => {
         fireEvent.click(addButton)
       })

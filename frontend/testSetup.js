@@ -1,7 +1,7 @@
 import { omitProperties } from './src/utils/omitProperties'
 import '@testing-library/jest-dom/vitest'
 import { cleanup, configure } from '@testing-library/react'
-import { afterEach, vi } from 'vitest'
+import { afterEach, vi } from 'vite-plus/test'
 import { config } from './public/config/config'
 import React from 'react'
 

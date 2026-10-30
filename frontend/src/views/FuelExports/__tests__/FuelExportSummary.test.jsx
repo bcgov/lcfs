@@ -1,6 +1,6 @@
-import 'react';
+import 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vite-plus/test'
 import { FuelExportSummary } from '../FuelExportSummary'
 
 // Mock react-i18next
@@ -13,17 +13,17 @@ vi.mock('react-i18next', () => ({
 // Mock BCGridViewer with enhanced pagination controls
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: ({
-  gridKey,
-  queryData,
-  dataKey,
-  gridOptions,
-  defaultColDef,
-  suppressPagination,
-  paginationOptions,
-  getRowId,
-  enableCopyButton,
-  onPaginationChange
-}) => {
+    gridKey,
+    queryData,
+    dataKey,
+    gridOptions,
+    defaultColDef,
+    suppressPagination,
+    paginationOptions,
+    getRowId,
+    enableCopyButton,
+    onPaginationChange
+  }) => {
     return (
       <div data-test="bc-grid-viewer">
         <div data-test="grid-key">{gridKey}</div>
@@ -50,15 +50,24 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
           {gridOptions?.overlayNoRowsTemplate || 'default-template'}
         </div>
         <div data-test="default-col-def">
-          {defaultColDef?.cellRenderer ? 'has-cell-renderer' : 'no-cell-renderer'}
+          {defaultColDef?.cellRenderer
+            ? 'has-cell-renderer'
+            : 'no-cell-renderer'}
         </div>
         {/* Button to test pagination callback */}
-        <button data-test="test-pagination-change" onClick={() => onPaginationChange && onPaginationChange({ page: 2, size: 20 })}>
+        <button
+          data-test="test-pagination-change"
+          onClick={() =>
+            onPaginationChange && onPaginationChange({ page: 2, size: 20 })
+          }
+        >
           Test Pagination Change
         </button>
         {/* Test getRowId function */}
         <div data-test="get-row-id-result">
-          {getRowId && queryData?.data?.[dataKey]?.[0] ? getRowId({ data: queryData.data[dataKey][0] }) : 'no-result'}
+          {getRowId && queryData?.data?.[dataKey]?.[0]
+            ? getRowId({ data: queryData.data[dataKey][0] })
+            : 'no-result'}
         </div>
       </div>
     )
@@ -71,7 +80,9 @@ vi.mock('@/views/FuelExports/_schema', () => {
     { field: 'fuelType', headerName: 'Fuel Type' },
     { field: 'quantity', headerName: 'Quantity' },
     { field: 'destination', headerName: 'Destination' },
-    ...(showFuelTypeOther ? [{ field: 'otherFuelType', headerName: 'Other Fuel Type' }] : [])
+    ...(showFuelTypeOther
+      ? [{ field: 'otherFuelType', headerName: 'Other Fuel Type' }]
+      : [])
   ])
   return {
     fuelExportSummaryColDefs: mockColDefs
@@ -95,11 +106,19 @@ vi.mock('@/constants/schedules', () => ({
 
 // Mock other components
 vi.mock('@/components/BCBox', () => ({
-  default: ({ children, ...props }) => <div data-test="bc-box" {...props}>{children}</div>
+  default: ({ children, ...props }) => (
+    <div data-test="bc-box" {...props}>
+      {children}
+    </div>
+  )
 }))
 
 vi.mock('@mui/material/Grid2', () => ({
-  default: ({ children, ...props }) => <div data-test="mui-grid2" {...props}>{children}</div>
+  default: ({ children, ...props }) => (
+    <div data-test="mui-grid2" {...props}>
+      {children}
+    </div>
+  )
 }))
 
 // Mock constants
@@ -281,7 +300,9 @@ describe('FuelExportSummary', () => {
     )
 
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
-    expect(screen.getByTestId('default-col-def')).toHaveTextContent('no-cell-renderer')
+    expect(screen.getByTestId('default-col-def')).toHaveTextContent(
+      'no-cell-renderer'
+    )
   })
 
   it('handles DRAFT status correctly (with link renderer)', () => {
@@ -293,7 +314,9 @@ describe('FuelExportSummary', () => {
     )
 
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
-    expect(screen.getByTestId('default-col-def')).toHaveTextContent('has-cell-renderer')
+    expect(screen.getByTestId('default-col-def')).toHaveTextContent(
+      'has-cell-renderer'
+    )
   })
 
   it('handles undefined data gracefully', () => {
@@ -312,7 +335,7 @@ describe('FuelExportSummary', () => {
 
   it('handles data without fuelExports property', () => {
     render(
-      <FuelExportSummary data={{}} status={COMPLIANCE_REPORT_STATUSES.DRAFT} />,
+      <FuelExportSummary data={{}} status={COMPLIANCE_REPORT_STATUSES.DRAFT} />
     )
 
     expect(screen.getByTestId('row-count')).toHaveTextContent('0 rows')
@@ -368,7 +391,9 @@ describe('FuelExportSummary', () => {
       />
     )
 
-    expect(screen.getByTestId('grid-options-template')).toHaveTextContent('fuelExport:noFuelExportsFound')
+    expect(screen.getByTestId('grid-options-template')).toHaveTextContent(
+      'fuelExport:noFuelExportsFound'
+    )
   })
 
   describe('showFuelTypeOther computation', () => {

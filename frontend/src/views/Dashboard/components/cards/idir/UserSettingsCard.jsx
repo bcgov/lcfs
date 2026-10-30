@@ -54,7 +54,9 @@ export const UserSettingsCard = () => {
           </BCTypography>
 
           <List component="nav" sx={{ maxWidth: '100%', mt: 1 }}>
-            <UserSettingsLink onClick={() => navigate(ROUTES.NOTIFICATIONS.LIST)}>
+            <UserSettingsLink
+              onClick={() => navigate(ROUTES.NOTIFICATIONS.LIST)}
+            >
               {t('dashboard:userSettings.notifications')}
             </UserSettingsLink>
 

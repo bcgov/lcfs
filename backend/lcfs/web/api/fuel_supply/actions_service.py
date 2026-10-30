@@ -266,7 +266,11 @@ class FuelSupplyActionService:
             raise HTTPException(status_code=404, detail="Fuel supply record not found.")
 
         if existing_fuel_supply.compliance_report_id == fs_data.compliance_report_id:
-            await self.repo.delete_fuel_supply(fuel_supply_id=fs_data.fuel_supply_id)
+            await self.repo.delete_fuel_supply(
+                fuel_supply_id=fs_data.fuel_supply_id,
+                compliance_report_id=fs_data.compliance_report_id,
+                group_uuid=fs_data.group_uuid,
+            )
             return DeleteFuelSupplyResponseSchema(
                 success=True, message="Marked as deleted."
             )

@@ -6,6 +6,10 @@ from types import SimpleNamespace
 from fastapi import HTTPException
 
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.web.api.initiative_agreement.workflow import (
+    LIFECYCLE_STATUS_DRAFT,
+    LIFECYCLE_STATUS_UNDERWAY,
+)
 from lcfs.web.api.internal_comment.schema import (
     AudienceScopeEnum,
     CommentVisibilityEnum,
@@ -90,6 +94,13 @@ def _mention_service(requester_id=99):
     )
     mock_repo.get_active_idir_users_by_ids = AsyncMock(return_value=[JANE])
     mock_repo.get_users_by_ids = AsyncMock(return_value=[JANE])
+    # A thread on an agreement or designated action is open only while the
+    # agreement is visible to the caller (#5186); this one is underway.
+    mock_repo.get_parent_initiative_agreement = AsyncMock(
+        return_value=SimpleNamespace(
+            lifecycle_status=SimpleNamespace(status=LIFECYCLE_STATUS_UNDERWAY)
+        )
+    )
 
     mock_notification_service = MagicMock()
     mock_notification_service.send_notification = AsyncMock()
@@ -230,6 +241,31 @@ async def test_create_internal_comment_designated_action_mention_links_to_action
         kwargs["email_context"]["link_path"]
         == "/initiative-agreements/4/designated-actions/12"
     )
+
+
+@pytest.mark.anyio
+async def test_a_mention_on_a_drafts_thread_notifies_nobody():
+    """A draft agreement's threads read as missing to government (#5186), so
+    a comment there is refused before it is saved, and its mentions with it."""
+    service, mock_repo, mock_notification_service = _mention_service()
+    mock_repo.get_parent_initiative_agreement.return_value = SimpleNamespace(
+        lifecycle_status=SimpleNamespace(status=LIFECYCLE_STATUS_DRAFT)
+    )
+
+    with pytest.raises(HTTPException) as raised:
+        await service.create_internal_comment(
+            InternalCommentCreateSchema(
+                entity_type=EntityTypeEnum.DESIGNATED_ACTION,
+                entity_id=12,
+                comment='<p>Heads up <span data-mention-id="5">@Jane Doe</span></p>',
+                visibility=CommentVisibilityEnum.INTERNAL,
+                audience_scope=AudienceScopeEnum.ANALYST,
+            )
+        )
+
+    assert raised.value.status_code == 404
+    mock_repo.create_internal_comment.assert_not_awaited()
+    mock_notification_service.send_mention_notification.assert_not_awaited()
 
 
 def test_mention_regex_handles_pathological_input_quickly():

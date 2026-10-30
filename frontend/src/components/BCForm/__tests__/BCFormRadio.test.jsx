@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useForm, FormProvider } from 'react-hook-form'
@@ -42,7 +42,7 @@ vi.mock('../CustomLabel', () => ({
   )
 }))
 
-describe.sequential('BCFormRadio', () => {
+describe('BCFormRadio', { concurrent: false }, () => {
   // Form wrapper for integration tests
   const FormWrapper = ({ children, defaultValues = {} }) => {
     const methods = useForm({

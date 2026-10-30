@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from 'vite-plus/test'
 import { schemaValidation, createValidationSchema } from '../_schema'
 
 describe('Organization Form Schema Validation', () => {

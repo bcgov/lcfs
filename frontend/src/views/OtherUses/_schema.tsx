@@ -1,4 +1,9 @@
-import type { ICellEditorParams, ICellRendererParams, RowClassParams, ColDef } from 'ag-grid-community'
+import type {
+  ICellEditorParams,
+  ICellRendererParams,
+  RowClassParams,
+  ColDef
+} from 'ag-grid-community'
 import type { GridErrors, GridWarnings, OptionsData } from '@/types/schema'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { AutocompleteCellEditor } from '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor'
@@ -30,6 +35,29 @@ export const PROVISION_APPROVED_FUEL_CODE_LEGACY =
 export const isFuelCodeProvision = (provision: string | null | undefined) =>
   provision === PROVISION_APPROVED_FUEL_CODE ||
   provision === PROVISION_APPROVED_FUEL_CODE_LEGACY
+
+const isQ1SuppliedEditable = (
+  data: Record<string, unknown>,
+  optionsData: OptionsData,
+  compliancePeriod: string | number
+) => {
+  const isCanadaProducedEditable = canEditCanadianProduced(
+    data,
+    compliancePeriod,
+    optionsData
+  )
+  // Default-CI fuels not produced in Canada must allow a Yes/No Q1 selection.
+  return (
+    (isCanadaProducedEditable && !data.isCanadaProduced) ||
+    (canEditQ1Supplied(
+      data,
+      optionsData,
+      compliancePeriod,
+      PROVISION_APPROVED_FUEL_CODE
+    ) &&
+      !data.isCanadaProduced)
+  )
+}
 
 export const otherUsesColDefs = (
   optionsData: OptionsData,
@@ -308,33 +336,16 @@ export const otherUsesColDefs = (
     hide: parseInt(compliancePeriod as string, 10) !== NEW_REGULATION_YEAR,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
-    editable: (params) => {
-      const isCanadaProducedEditable = canEditCanadianProduced(
-        params.data,
-        compliancePeriod,
-        optionsData
-      )
-      // For fuels using Default carbon intensity that are not produced in Canada, an active selection
-      // should be available to indicate with Yes/No whether the fuel was supplied in Q1.
-      return (
-        (isCanadaProducedEditable && !params.data.isCanadaProduced) ||
-        (canEditQ1Supplied(
-          params.data,
-          optionsData,
-          compliancePeriod,
-          PROVISION_APPROVED_FUEL_CODE
-        ) &&
-          !params.data.isCanadaProduced)
-      )
+    editable: (params) =>
+      isQ1SuppliedEditable(params.data, optionsData, compliancePeriod),
+    valueGetter: (params) => {
+      if (!params.data) return ''
+      if (params.data.isQ1Supplied) return 'Yes'
+
+      return isQ1SuppliedEditable(params.data, optionsData, compliancePeriod)
+        ? 'No'
+        : ''
     },
-    valueGetter: (params) =>
-      params.data.isQ1Supplied
-        ? 'Yes'
-        : (params.colDef?.editable as (
-            params: ICellRendererParams
-          ) => boolean)(params as ICellRendererParams)
-          ? 'No'
-          : '',
     valueSetter: (params) => {
       if (params.newValue) {
         params.data.isQ1Supplied = params.newValue === 'Yes'
@@ -597,26 +608,39 @@ export const changelogCommonColDefs = (
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelType'),
     field: 'fuelType.fuelType',
     cellStyle: (params) =>
-      (highlight && changelogCellStyle(params, 'fuelType')) as unknown as ReturnType<typeof changelogCellStyle>
+      (highlight &&
+        changelogCellStyle(params, 'fuelType')) as unknown as ReturnType<
+        typeof changelogCellStyle
+      >
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelCategory'),
     field: 'fuelCategory.category',
     cellStyle: (params) =>
-      (highlight && changelogCellStyle(params, 'fuelCategory')) as unknown as ReturnType<typeof changelogCellStyle>
+      (highlight &&
+        changelogCellStyle(params, 'fuelCategory')) as unknown as ReturnType<
+        typeof changelogCellStyle
+      >
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.provisionOfTheAct'),
     field: 'provisionOfTheAct.name',
     cellStyle: (params) =>
-      (highlight && changelogCellStyle(params, 'provisionOfTheAct')) as unknown as ReturnType<typeof changelogCellStyle>
+      (highlight &&
+        changelogCellStyle(
+          params,
+          'provisionOfTheAct'
+        )) as unknown as ReturnType<typeof changelogCellStyle>
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelCode'),
     field: 'fuelCode.fuelCode',
     minWidth: 175,
     cellStyle: (params) =>
-      (highlight && changelogCellStyle(params, 'fuelCode')) as unknown as ReturnType<typeof changelogCellStyle>,
+      (highlight &&
+        changelogCellStyle(params, 'fuelCode')) as unknown as ReturnType<
+        typeof changelogCellStyle
+      >,
     valueGetter: (params) => {
       const fuelCode = params.data.fuelCode
       if (fuelCode && fuelCode.fuelCode) {
@@ -654,7 +678,11 @@ export const changelogCommonColDefs = (
           : 'No'
     },
     cellStyle: (params) =>
-      (highlight && changelogCellStyle(params, 'isCanadaProduced')) as unknown as ReturnType<typeof changelogCellStyle>
+      (highlight &&
+        changelogCellStyle(
+          params,
+          'isCanadaProduced'
+        )) as unknown as ReturnType<typeof changelogCellStyle>
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.isQ1Supplied'),
@@ -682,40 +710,59 @@ export const changelogCommonColDefs = (
       return ''
     },
     cellStyle: (params) =>
-      (highlight && changelogCellStyle(params, 'isQ1Supplied')) as unknown as ReturnType<typeof changelogCellStyle>
+      (highlight &&
+        changelogCellStyle(params, 'isQ1Supplied')) as unknown as ReturnType<
+        typeof changelogCellStyle
+      >
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.quantitySupplied'),
     field: 'quantitySupplied',
     valueFormatter: valueFormatter as ColDef['valueFormatter'],
     cellStyle: (params) =>
-      (highlight && changelogCellStyle(params, 'quantitySupplied')) as unknown as ReturnType<typeof changelogCellStyle>
+      (highlight &&
+        changelogCellStyle(
+          params,
+          'quantitySupplied'
+        )) as unknown as ReturnType<typeof changelogCellStyle>
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.units'),
     field: 'units',
     cellStyle: (params) =>
-      (highlight && changelogCellStyle(params, 'units')) as unknown as ReturnType<typeof changelogCellStyle>
+      (highlight &&
+        changelogCellStyle(params, 'units')) as unknown as ReturnType<
+        typeof changelogCellStyle
+      >
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.ciOfFuel'),
     field: 'ciOfFuel',
     valueFormatter: valueFormatter as ColDef['valueFormatter'],
     cellStyle: (params) =>
-      (highlight && changelogCellStyle(params, 'ciOfFuel')) as unknown as ReturnType<typeof changelogCellStyle>
+      (highlight &&
+        changelogCellStyle(params, 'ciOfFuel')) as unknown as ReturnType<
+        typeof changelogCellStyle
+      >
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.expectedUse'),
     field: 'expectedUse.name',
     cellStyle: (params) =>
-      (highlight && changelogCellStyle(params, 'expectedUse')) as unknown as ReturnType<typeof changelogCellStyle>
+      (highlight &&
+        changelogCellStyle(params, 'expectedUse')) as unknown as ReturnType<
+        typeof changelogCellStyle
+      >
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.otherExpectedUse'),
     field: 'rationale',
 
     cellStyle: (params) =>
-      (highlight && changelogCellStyle(params, 'rationale')) as unknown as ReturnType<typeof changelogCellStyle>
+      (highlight &&
+        changelogCellStyle(params, 'rationale')) as unknown as ReturnType<
+        typeof changelogCellStyle
+      >
   }
 ]
 

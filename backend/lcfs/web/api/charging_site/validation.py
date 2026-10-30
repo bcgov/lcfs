@@ -3,6 +3,7 @@ from lcfs.web.api.charging_site.repo import ChargingSiteRepository
 from fastapi import Depends, HTTPException, Request
 from lcfs.web.api.charging_site.schema import ChargingSiteCreateSchema
 from lcfs.web.api.role.schema import user_has_roles
+from lcfs.web.core.ownership import ensure_matches, is_government_user
 from starlette import status
 
 
@@ -77,14 +78,27 @@ class ChargingSiteValidation:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Charging site not found.",
             )
+        # Only the site's own organization (or government) may change it,
+        # whatever organization the URL names.
         if (
-            self.request.user.organization.organization_id
-            != charging_site.organization_id
-            and charging_site.organization_id == organization_id
+            not is_government_user(self.request.user)
+            and charging_site.organization_id
+            != self.request.user.organization.organization_id
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Validation for authorization failed.",
+            )
+        # The service updates the site the body names; it must be this one,
+        # and stay with its organization.
+        if data:
+            ensure_matches(
+                charging_site_id, data.charging_site_id, field="chargingSiteId"
+            )
+            ensure_matches(
+                charging_site.organization_id,
+                data.organization_id,
+                field="organizationId",
             )
         if delete and charging_site.status.status not in ["Draft", "Submitted"]:
             raise HTTPException(

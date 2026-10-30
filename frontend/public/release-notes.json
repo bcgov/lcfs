@@ -288,9 +288,7 @@
         "Centralize paginated query handling - 4085"
       ]
     },
-    "contributors": [
-      "@mr-moto"
-    ]
+    "contributors": ["@mr-moto"]
   },
   {
     "version": "1.3.8",
@@ -493,11 +491,7 @@
       "dependencies": [],
       "other": []
     },
-    "contributors": [
-      "@hamed-valiollahi",
-      "@AlexZorkin",
-      "@prv-proton"
-    ]
+    "contributors": ["@hamed-valiollahi", "@AlexZorkin", "@prv-proton"]
   },
   {
     "version": "1.3.5",
@@ -602,11 +596,7 @@
       ],
       "other": []
     },
-    "contributors": [
-      "@hamed-valiollahi",
-      "@AlexZorkin",
-      "@prv-proton"
-    ]
+    "contributors": ["@hamed-valiollahi", "@AlexZorkin", "@prv-proton"]
   },
   {
     "version": "1.3.3",
@@ -642,11 +632,7 @@
       ],
       "other": []
     },
-    "contributors": [
-      "@AlexZorkin",
-      "@hamed-valiollahi",
-      "@prv-proton"
-    ]
+    "contributors": ["@AlexZorkin", "@hamed-valiollahi", "@prv-proton"]
   },
   {
     "version": "1.3.2",
@@ -677,11 +663,7 @@
         "Removed TFRS sync code and infrastructure — issues #4297, #4298, #4299, #4300 (#4329)."
       ]
     },
-    "contributors": [
-      "@AlexZorkin",
-      "@hamed-valiollahi",
-      "@prv-proton"
-    ]
+    "contributors": ["@AlexZorkin", "@hamed-valiollahi", "@prv-proton"]
   },
   {
     "version": "1.3.1",
@@ -726,11 +708,7 @@
       ],
       "other": []
     },
-    "contributors": [
-      "@AlexZorkin",
-      "@hamed-valiollahi",
-      "@prv-proton"
-    ]
+    "contributors": ["@AlexZorkin", "@hamed-valiollahi", "@prv-proton"]
   },
   {
     "version": "1.3.0",
@@ -842,11 +820,7 @@
       ],
       "other": []
     },
-    "contributors": [
-      "@AlexZorkin",
-      "@hamed-valiollahi",
-      "@prv-proton"
-    ]
+    "contributors": ["@AlexZorkin", "@hamed-valiollahi", "@prv-proton"]
   },
   {
     "version": "1.2.4",

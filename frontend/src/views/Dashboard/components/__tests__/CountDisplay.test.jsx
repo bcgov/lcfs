@@ -1,5 +1,5 @@
 import { screen } from '@testing-library/react'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, it, vi, beforeEach } from 'vite-plus/test'
 import { test } from '@/tests/utils/fixtures'
 import { CountDisplay } from '../CountDisplay'
 import { countDigits, MIN_COUNT_DIGITS } from '../countDigits'

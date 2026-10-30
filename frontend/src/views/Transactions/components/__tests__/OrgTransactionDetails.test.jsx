@@ -1,7 +1,7 @@
 import { test } from '@/tests/utils/fixtures'
-import 'react';
-import { screen, fireEvent } from '@testing-library/react';
-import { vi } from 'vitest'
+import 'react'
+import { screen, fireEvent } from '@testing-library/react'
+import { vi } from 'vite-plus/test'
 import { OrgTransactionDetails } from '@/views/Transactions/components'
 import { ADMIN_ADJUSTMENT } from '@/views/Transactions/constants'
 import { useDocuments, useDownloadDocument } from '@/hooks/useDocuments.js'

@@ -1,5 +1,5 @@
 import { act, render, screen, fireEvent } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vite-plus/test'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import ThemeProvider from '@mui/material/styles/ThemeProvider'
@@ -89,11 +89,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 
 // Mock Role component
 vi.mock('@/components/Role', () => ({
-  Role: ({
-  children
-}) => (
-    <div data-testid="role-wrapper">{children}</div>
-  )
+  Role: ({ children }) => <div data-testid="role-wrapper">{children}</div>
 }))
 
 vi.mock('@/components/BCButton', () => ({
@@ -407,9 +403,8 @@ describe('PenaltyHistoryGrid - Edge Cases', () => {
   }
 
   it('should handle empty penalty logs', async () => {
-    const { useOrganizationPenaltyLogs } = await import(
-      '@/hooks/useOrganization'
-    )
+    const { useOrganizationPenaltyLogs } =
+      await import('@/hooks/useOrganization')
     const mockHook = vi.mocked(useOrganizationPenaltyLogs)
 
     mockHook.mockReturnValue({
@@ -428,9 +423,8 @@ describe('PenaltyHistoryGrid - Edge Cases', () => {
   })
 
   it('should handle loading state', async () => {
-    const { useOrganizationPenaltyLogs } = await import(
-      '@/hooks/useOrganization'
-    )
+    const { useOrganizationPenaltyLogs } =
+      await import('@/hooks/useOrganization')
     const mockHook = vi.mocked(useOrganizationPenaltyLogs)
 
     mockHook.mockReturnValue({

@@ -6,7 +6,9 @@ import type { FuelCodeCellParams } from '../_schema'
 
 export const FuelCodeStatusBadge = (params: FuelCodeCellParams) => {
   const statusArr = getAllFuelCodeStatuses()
-  const statusIndex = statusArr.indexOf(params.data?.status as (typeof statusArr)[number])
+  const statusIndex = statusArr.indexOf(
+    params.data?.status as (typeof statusArr)[number]
+  )
   const statusColors: BCBadgeColor[] = ['info', 'info', 'success', 'error']
 
   return (

@@ -4,7 +4,7 @@ WORKDIR /usr/src/app
 COPY ./ ./
 # Real release dates from git history, passed by prod-ci (empty elsewhere).
 ARG RELEASE_DATES=""
-RUN npm install --omit=dev && \
+RUN npm ci --include=dev && \
     node scripts/releaseDates.mjs apply && \
     npm run build
 

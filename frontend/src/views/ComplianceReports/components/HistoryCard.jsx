@@ -324,7 +324,11 @@ export const HistoryCard = ({
                               }),
                               displayName:
                                 item.displayName ||
-                                `${item.userProfile.firstName} ${item.userProfile.lastName}`
+                                `${item.userProfile.firstName} ${item.userProfile.lastName}`,
+                              // Rendered as HTML for the template's own <i>
+                              // markup, so escape the user-supplied values
+                              // (escaping is off globally in i18n.ts)
+                              interpolation: { escapeValue: true }
                             }
                           )
                         }}
