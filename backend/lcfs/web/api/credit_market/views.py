@@ -50,8 +50,8 @@ async def get_credit_market_public_report(
     """
     Public, aggregate-only market report: monthly/quarterly/annual transfer
     counts, volume, weighted-average price and transfer value, plus all-time
-    totals and year-over-year KPIs. Low-count periods are withheld; no
-    individual prices or organizations are exposed.
+    totals and year-over-year KPIs. Low-count periods are included; no
+    transaction records or organization identities are returned.
     """
     return await service.get_public_report()
 
