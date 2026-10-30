@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { MapContainer, useMap, Marker, Popup, TileLayer } from 'react-leaflet'
-import MarkerClusterGroup from 'react-leaflet-cluster'
+import MarkerClusterGroup from '@/components/MarkerClusterGroup'
 import { createPortal } from 'react-dom'
 import L, { Control, DomEvent, DomUtil } from 'leaflet'
 import Paper from '@mui/material/Paper'
