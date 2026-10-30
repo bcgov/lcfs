@@ -21,6 +21,7 @@ from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.allocation_agreement.schema import AllocationAgreementSchema
 from lcfs.web.api.versioning_query_helper import VersioningQueryHelper
 from lcfs.web.core.decorators import repo_handler
+from lcfs.web.core.ownership import delete_one
 from sqlalchemy import and_, select, delete, func, text
 
 logger = structlog.get_logger(__name__)
@@ -280,12 +281,17 @@ class AllocationAgreementRepository:
         return allocation_agreement
 
     @repo_handler
-    async def delete_allocation_agreement(self, allocation_agreement_id: int):
-        """Delete an allocation agreement from the database"""
-        await self.db.execute(
-            delete(AllocationAgreement).where(
-                AllocationAgreement.allocation_agreement_id == allocation_agreement_id
-            )
+    async def delete_allocation_agreement(
+        self, allocation_agreement_id: int, compliance_report_id: int, group_uuid: str
+    ):
+        """Delete an allocation agreement, only if it is in this report and
+        this group"""
+        await delete_one(
+            self.db,
+            AllocationAgreement,
+            allocation_agreement_id=allocation_agreement_id,
+            compliance_report_id=compliance_report_id,
+            group_uuid=group_uuid,
         )
         await self.db.flush()
 

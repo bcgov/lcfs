@@ -25,6 +25,7 @@ from lcfs.web.api.compliance_report.summary_repo import (
 from lcfs.web.api.compliance_report.summary_service import (
     ComplianceReportSummaryService,
 )
+from lcfs.web.api.compliance_report.workflow import ensure_report_transition
 from lcfs.web.api.notification.schema import (
     COMPLIANCE_REPORT_STATUS_NOTIFICATION_MAPPER,
     NotificationMessageSchema,
@@ -123,6 +124,10 @@ class ComplianceReportUpdateService:
         # Get and validate report
         report = await self._check_report_exists(report_id)
 
+        # Refuse a status the workflow does not allow from the stored one,
+        # before anything is changed.
+        ensure_report_transition(user, report, report_data.status)
+
         # Store original status
         current_status = report_data.status
         previous_status = getattr(report.current_status, "status", None)
@@ -134,12 +139,20 @@ class ComplianceReportUpdateService:
             )
             report_data.status = new_status
 
-            # Handle "Return to supplier" - unlock summary to allow refresh again
+            # Handle "Return to supplier" - unlock summary to allow refresh again.
+            # Only the submission's reservation goes; a confirmed transaction
+            # is an assessment result and is never undone this way.
             if current_status == ReturnStatus.SUPPLIER.value:
+                if report.transaction_id and not (
+                    await self.trx_service.repo.delete_reserved_transaction(
+                        report.transaction_id, report_id
+                    )
+                ):
+                    raise HTTPException(
+                        status_code=409,
+                        detail="This report's transaction is final; it cannot be returned to the supplier.",
+                    )
                 await self.summary_repo.reset_summary_lock(report.compliance_report_id)
-                await self.trx_service.repo.delete_transaction(
-                    report.transaction_id, report_id
-                )
             # Handle "Return to analyst" - unlock summary to allow refresh again
             elif current_status == ReturnStatus.ANALYST.value:
                 await self.summary_repo.reset_summary_lock(report.compliance_report_id)

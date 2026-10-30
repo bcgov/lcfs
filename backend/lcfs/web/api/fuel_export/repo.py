@@ -33,6 +33,7 @@ from lcfs.utils.constants import LCFS_Constants
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.versioning_query_helper import VersioningQueryHelper
 from lcfs.web.core.decorators import repo_handler
+from lcfs.web.core.ownership import delete_one
 
 logger = structlog.get_logger(__name__)
 
@@ -449,7 +450,14 @@ class FuelExportRepository:
 
         return fuel_exports
 
-    async def delete_fuel_export(self, fuel_export_id):
-        await self.db.execute(
-            delete(FuelExport).where(FuelExport.fuel_export_id == fuel_export_id)
+    async def delete_fuel_export(
+        self, fuel_export_id, compliance_report_id, group_uuid
+    ):
+        """Delete the row only if it is in this report and this group."""
+        await delete_one(
+            self.db,
+            FuelExport,
+            fuel_export_id=fuel_export_id,
+            compliance_report_id=compliance_report_id,
+            group_uuid=group_uuid,
         )
