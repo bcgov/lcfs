@@ -1648,3 +1648,120 @@ describe('History Processing Logic', () => {
     expect(screen.getByText(/Test User/)).toBeInTheDocument()
   })
 })
+
+describe('History line escaping', () => {
+  const markupName = '<img src="x"><b>Eve</b>'
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useCurrentUser.mockReturnValue({
+      data: { isGovernmentUser: true },
+      hasRoles: () => false
+    })
+  })
+
+  test('renders markup in displayName as literal text', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
+    renderComponent(render, [query, theme, localization, router, i18n], {
+      currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
+      history: [
+        {
+          status: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
+          createDate: '2024-10-01T10:00:00Z',
+          userProfile: { firstName: 'Ignored', lastName: 'Ignored' },
+          displayName: markupName
+        }
+      ]
+    })
+
+    const item = await screen.findByTestId('list-item')
+    expect(item.textContent).toContain(
+      `Signed and submitted formatted-2024-10-01T10:00:00Z by ${markupName}.`
+    )
+    expect(item.querySelector('img')).toBeNull()
+    expect(item.querySelector('b')).toBeNull()
+  })
+
+  test('renders markup in user profile names as literal text', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
+    renderComponent(render, [query, theme, localization, router, i18n], {
+      currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
+      history: [
+        {
+          status: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
+          createDate: '2024-10-01T10:00:00Z',
+          userProfile: { firstName: '<i>Eve</i>', lastName: markupName }
+        }
+      ]
+    })
+
+    const item = await screen.findByTestId('list-item')
+    expect(item.textContent).toContain(`by <i>Eve</i> ${markupName}.`)
+    expect(item.querySelector('i')).toBeNull()
+    expect(item.querySelector('img')).toBeNull()
+  })
+
+  test('shows ampersands and apostrophes in names unchanged', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
+    renderComponent(render, [query, theme, localization, router, i18n], {
+      currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
+      history: [
+        {
+          status: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
+          createDate: '2024-10-01T10:00:00Z',
+          userProfile: { firstName: "D'Arcy", lastName: 'Smith & Jones' }
+        }
+      ]
+    })
+
+    const item = await screen.findByTestId('list-item')
+    expect(item.textContent).toContain("by D'Arcy Smith & Jones.")
+  })
+
+  test('keeps the static markup in the translation template', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
+    useCurrentUser.mockReturnValue({
+      data: { isGovernmentUser: false },
+      hasRoles: () => false
+    })
+
+    renderComponent(render, [query, theme, localization, router, i18n], {
+      currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
+      history: [
+        {
+          status: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
+          createDate: '2024-10-01T10:00:00Z',
+          userProfile: { firstName: 'Test', lastName: 'User' },
+          displayName: markupName
+        }
+      ]
+    })
+
+    const item = await screen.findByTestId('list-item')
+    expect(item.querySelector('i')?.textContent).toBe('Low Carbon Fuels Act.')
+  })
+})
