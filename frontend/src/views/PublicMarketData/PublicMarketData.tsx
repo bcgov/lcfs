@@ -1,4 +1,12 @@
-import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  type KeyboardEvent,
+  type ReactNode,
+  type RefObject,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from 'react'
 import {
   Accordion,
   AccordionDetails,
@@ -100,10 +108,6 @@ type DetailItem = {
 }
 
 const intFmt = new Intl.NumberFormat('en-CA')
-const compactFmt = new Intl.NumberFormat('en-CA', {
-  notation: 'compact',
-  maximumFractionDigits: 1
-})
 const price2Fmt = new Intl.NumberFormat('en-CA', {
   style: 'currency',
   currency: 'CAD',
@@ -138,6 +142,42 @@ const fmtPeriod = (p?: string | null) => {
   const m = /^(\d{4})-(\d{2})$/.exec(p || '')
   return m ? `${MONTHS[+m[2] - 1]} ${m[1]}` : p
 }
+
+const handleChartKeyboardNavigation = (
+  event: KeyboardEvent<HTMLElement>,
+  chartRef: RefObject<ReactECharts | null>,
+  activeIndex: number | null,
+  setActiveIndex: (index: number | null) => void,
+  pointCount: number
+) => {
+  if (event.key === 'Escape') {
+    chartRef.current?.getEchartsInstance().dispatchAction({ type: 'hideTip' })
+    setActiveIndex(null)
+    return
+  }
+
+  if (
+    (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') ||
+    pointCount === 0
+  ) {
+    return
+  }
+
+  event.preventDefault()
+  const direction = event.key === 'ArrowRight' ? 1 : -1
+  const nextIndex =
+    activeIndex === null
+      ? direction === 1
+        ? 0
+        : pointCount - 1
+      : (activeIndex + direction + pointCount) % pointCount
+
+  setActiveIndex(nextIndex)
+  chartRef.current
+    ?.getEchartsInstance()
+    .dispatchAction({ type: 'showTip', seriesIndex: 0, dataIndex: nextIndex })
+}
+
 const todayStamp = () => new Date().toISOString().slice(0, 10)
 const reportTypeName = (key: ReportKey) =>
   ({ monthly: 'monthly', quarterly: 'quarterly', annual: 'yearly' })[key]
@@ -484,11 +524,15 @@ export const PublicMarketData = () => {
   const data = reportData as PublicMarketReportPayload | undefined
   const [gran, setGran] = useState<Granularity>('quarter')
   const [isExportingPdf, setIsExportingPdf] = useState(false)
+  const [activeMainChartIndex, setActiveMainChartIndex] = useState<
+    number | null
+  >(null)
+  const [activeA1ChartIndex, setActiveA1ChartIndex] = useState<number | null>(
+    null
+  )
   const reportRef = useRef<HTMLDivElement | null>(null)
   const mainChartRef = useRef<ReactECharts | null>(null)
   const monthlyAvgChartRef = useRef<ReactECharts | null>(null)
-  const transferPriceChartRef = useRef<ReactECharts | null>(null)
-  const tradeVolumeChartRef = useRef<ReactECharts | null>(null)
 
   // Charts render at their on-screen container width; the browser doesn't
   // automatically re-layout echarts canvases for the print stylesheet, so
@@ -496,12 +540,7 @@ export const PublicMarketData = () => {
   // charts in the printed/PDF output.
   useEffect(() => {
     const resizeCharts = () => {
-      ;[
-        mainChartRef,
-        monthlyAvgChartRef,
-        transferPriceChartRef,
-        tradeVolumeChartRef
-      ].forEach((ref) => {
+      ;[mainChartRef, monthlyAvgChartRef].forEach((ref) => {
         ref.current?.getEchartsInstance().resize()
       })
     }
@@ -523,14 +562,28 @@ export const PublicMarketData = () => {
   const ytdKpis = data?.ytdKpis ?? kpis
   const allTime = data?.allTime
   const a1MonthlyChartRows = useMemo(
-    () => data?.a1Monthly ?? [],
+    () => (data?.a1Monthly ?? []).slice(-12),
     [data?.a1Monthly]
   )
 
   const chartOption = useMemo(() => {
     const priceName = t('publicDashboard.marketData.kpi.avgPrice')
     const volName = t('publicDashboard.marketData.tables.volume')
+    const minPriceName = t(
+      'publicDashboard.marketData.trendCharts.minimumPrice'
+    )
+    const maxPriceName = t(
+      'publicDashboard.marketData.trendCharts.maximumPrice'
+    )
     return {
+      aria: {
+        enabled: true,
+        label: {
+          description: t(
+            'publicDashboard.marketData.trendCharts.priceVolumeChartAriaDescription'
+          )
+        }
+      },
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'cross' },
@@ -541,16 +594,21 @@ export const PublicMarketData = () => {
               const value =
                 p.value == null
                   ? '—'
-                  : p.seriesName === priceName
-                    ? price2Fmt.format(p.value)
-                    : intFmt.format(Math.round(p.value))
+                  : p.seriesName === volName
+                    ? intFmt.format(Math.round(p.value))
+                    : price2Fmt.format(p.value)
               return `${p.marker}${p.seriesName}: ${value}`
             })
             .join('<br/>')
           return `${params[0].axisValue}<br/>${lines}`
         }
       },
-      legend: { data: [priceName, volName], bottom: 0 },
+      legend: {
+        data: [priceName, minPriceName, maxPriceName, volName],
+        bottom: 0,
+        type: 'scroll',
+        textStyle: { fontSize: 10 }
+      },
       grid: {
         left: '2%',
         right: '3%',
@@ -566,7 +624,7 @@ export const PublicMarketData = () => {
       yAxis: [
         {
           type: 'value',
-          name: '$/credit',
+          name: 'CA$/credit',
           axisLabel: { color: '#767676', fontSize: 10 },
           splitLine: { lineStyle: { color: '#ECECEC' } }
         },
@@ -589,11 +647,31 @@ export const PublicMarketData = () => {
           name: priceName,
           type: 'line',
           symbol: 'circle',
-          symbolSize: 6,
+          symbolSize: 7,
           lineStyle: { width: 2.5, color: NAVY },
           itemStyle: { color: '#fff', borderColor: NAVY, borderWidth: 2 },
           connectNulls: true,
           data: series.map((p) => p.weightedAvgPrice)
+        },
+        {
+          name: minPriceName,
+          type: 'line',
+          symbol: 'triangle',
+          symbolSize: 7,
+          lineStyle: { width: 2, color: '#007A5E', type: 'dashed' },
+          itemStyle: { color: '#007A5E' },
+          connectNulls: true,
+          data: series.map((p) => p.minPrice)
+        },
+        {
+          name: maxPriceName,
+          type: 'line',
+          symbol: 'diamond',
+          symbolSize: 7,
+          lineStyle: { width: 2, color: '#A52834', type: 'dotted' },
+          itemStyle: { color: '#A52834' },
+          connectNulls: true,
+          data: series.map((p) => p.maxPrice)
         }
       ]
     }
@@ -604,6 +682,14 @@ export const PublicMarketData = () => {
       'publicDashboard.marketData.trendCharts.monthlyAverageTitle'
     )
     return {
+      aria: {
+        enabled: true,
+        label: {
+          description: t(
+            'publicDashboard.marketData.trendCharts.a1ChartAriaDescription'
+          )
+        }
+      },
       tooltip: {
         trigger: 'axis',
         formatter: (params: TooltipParam[]) =>
@@ -617,10 +703,11 @@ export const PublicMarketData = () => {
             .join('<br/>')}`
       },
       title: { text: title, textStyle: { fontSize: 13, color: DARK } },
-      grid: { left: '10%', right: '5%', top: '20%', bottom: '15%' },
+      grid: { left: '10%', right: '5%', top: '20%', bottom: '28%' },
       xAxis: {
         type: 'category',
-        data: a1MonthlyChartRows.map((p) => p.period)
+        data: a1MonthlyChartRows.map((p) => fmtPeriod(p.period)),
+        axisLabel: { interval: 0, rotate: 35, fontSize: 10 }
       },
       yAxis: {
         type: 'value',
@@ -639,142 +726,64 @@ export const PublicMarketData = () => {
           label: {
             show: true,
             position: 'top',
+            distance: 8,
             fontSize: 10,
             color: DARK,
+            backgroundColor: 'rgba(255,255,255,0.9)',
+            borderRadius: 2,
+            padding: [2, 3],
             formatter: (p: { value: number | null }) =>
               p.value == null ? '' : price2Fmt.format(p.value)
           },
+          labelLayout: { hideOverlap: true },
           data: a1MonthlyChartRows.map((p) => p.weightedAvgPrice)
         }
       ]
     }
   }, [a1MonthlyChartRows, t])
 
-  const transferPriceChartOption = useMemo(() => {
-    const annualRows = data?.annual ?? []
-    const priceSeries = [
-      {
-        name: t('publicDashboard.marketData.trendCharts.minimumPrice'),
-        color: '#9C7BC0',
-        values: annualRows.map((p) => p.minPrice)
-      },
-      {
-        name: t('publicDashboard.marketData.trendCharts.maximumPrice'),
-        color: '#E99B54',
-        values: annualRows.map((p) => p.maxPrice)
-      },
-      {
-        name: t('publicDashboard.marketData.trendCharts.weightedAverage'),
-        color: '#F2C94C',
-        values: annualRows.map((p) => p.weightedAvgPrice)
-      }
-    ]
-    return {
-      tooltip: {
-        trigger: 'axis',
-        formatter: (params: TooltipParam[]) =>
-          `${params[0]?.axisValue ?? ''}<br/>${params
-            .map(
-              (p) =>
-                `${p.marker}${p.seriesName}: ${
-                  p.value == null ? '—' : price2Fmt.format(p.value)
-                }`
-            )
-            .join('<br/>')}`
-      },
-      title: {
-        text: t('publicDashboard.marketData.trendCharts.transferPriceTitle'),
-        top: 0,
-        textStyle: { fontSize: 13, color: DARK }
-      },
-      legend: {
-        data: priceSeries.map((s) => s.name),
-        top: 38,
-        textStyle: { fontSize: 10 }
-      },
-      grid: { left: '10%', right: '5%', top: '42%', bottom: '15%' },
-      xAxis: {
-        type: 'category',
-        data: annualRows.map((p) => p.period),
-        name: t('publicDashboard.marketData.trendCharts.transferDate')
-      },
-      yAxis: {
-        type: 'value',
-        name: 'CA$',
-        axisLabel: { formatter: (value: number) => `CA$${value}` }
-      },
-      series: priceSeries.map((s) => ({
-        name: s.name,
-        type: 'line',
-        symbol: 'circle',
-        symbolSize: 5,
-        connectNulls: true,
-        itemStyle: { color: s.color },
-        lineStyle: { color: s.color, width: 1.5 },
-        label: {
-          show: true,
-          position: 'top',
-          fontSize: 9,
-          color: DARK,
-          formatter: (p: { value: number | null }) =>
-            p.value == null ? '' : price2Fmt.format(p.value)
-        },
-        data: s.values
-      }))
-    }
-  }, [data?.annual, t])
-
-  const tradeVolumeChartOption = useMemo(() => {
-    const monthlyRows = data?.monthly ?? []
-    const visibleRows = monthlyRows.slice(-36)
-    return {
-      tooltip: {
-        trigger: 'axis',
-        formatter: (params: TooltipParam[]) =>
-          `${params[0]?.axisValue ?? ''}<br/>${params
-            .map(
-              (p) =>
-                `${p.marker}${p.seriesName}: ${
-                  p.value == null ? '—' : intFmt.format(Math.round(p.value))
-                }`
-            )
-            .join('<br/>')}`
-      },
-      title: {
-        text: t('publicDashboard.marketData.trendCharts.tradeVolumeTitle'),
-        textStyle: { fontSize: 13, color: DARK }
-      },
-      grid: { left: '10%', right: '5%', top: '20%', bottom: '18%' },
-      xAxis: {
-        type: 'category',
-        data: visibleRows.map((p) => p.period),
-        name: t('publicDashboard.marketData.trendCharts.monthYear'),
-        axisLabel: { interval: 2 }
-      },
-      yAxis: {
-        type: 'value',
-        name: t('publicDashboard.marketData.trendCharts.creditVolume')
-      },
-      series: [
-        {
-          name: t('publicDashboard.marketData.trendCharts.creditVolume'),
-          type: 'bar',
-          itemStyle: { color: '#4BA3E3' },
-          label: {
-            show: true,
-            position: 'top',
-            fontSize: 9,
-            color: DARK,
-            formatter: (p: { value: number | null; dataIndex: number }) => {
-              if (p.value == null) return ''
-              return p.dataIndex % 3 === 0 ? compactFmt.format(p.value) : ''
-            }
-          },
-          data: visibleRows.map((p) => p.volume)
-        }
-      ]
-    }
-  }, [data?.monthly, t])
+  const keyboardHelp = t(
+    'publicDashboard.marketData.trendCharts.chartKeyboardInstructions'
+  )
+  const mainChartAnnouncement =
+    activeMainChartIndex === null || !series[activeMainChartIndex]
+      ? ''
+      : t(
+          'publicDashboard.marketData.trendCharts.priceVolumeChartKeyboardAnnouncement',
+          {
+            period: fmtPeriod(series[activeMainChartIndex].period),
+            weightedAverage:
+              series[activeMainChartIndex].weightedAvgPrice == null
+                ? '—'
+                : price2Fmt.format(
+                    series[activeMainChartIndex].weightedAvgPrice
+                  ),
+            minimumPrice:
+              series[activeMainChartIndex].minPrice == null
+                ? '—'
+                : price2Fmt.format(series[activeMainChartIndex].minPrice),
+            maximumPrice:
+              series[activeMainChartIndex].maxPrice == null
+                ? '—'
+                : price2Fmt.format(series[activeMainChartIndex].maxPrice),
+            volume: intFmt.format(series[activeMainChartIndex].volume)
+          }
+        )
+  const a1ChartAnnouncement =
+    activeA1ChartIndex === null || !a1MonthlyChartRows[activeA1ChartIndex]
+      ? ''
+      : t(
+          'publicDashboard.marketData.trendCharts.a1ChartKeyboardAnnouncement',
+          {
+            period: fmtPeriod(a1MonthlyChartRows[activeA1ChartIndex].period),
+            price:
+              a1MonthlyChartRows[activeA1ChartIndex].weightedAvgPrice == null
+                ? '—'
+                : price2Fmt.format(
+                    a1MonthlyChartRows[activeA1ChartIndex].weightedAvgPrice
+                  )
+          }
+        )
 
   const classificationItems = [
     {
@@ -1765,28 +1774,41 @@ export const PublicMarketData = () => {
             }}
           >
             <CardShell dataTest="monthly-average-price-chart">
-              <ReactECharts
-                ref={monthlyAvgChartRef}
-                option={monthlyAverageChartOption}
-                style={{ height: 250 }}
-              />
-            </CardShell>
-            <CardShell dataTest="transfer-price-trend-chart">
-              <ReactECharts
-                ref={transferPriceChartRef}
-                option={transferPriceChartOption}
-                style={{ height: 250 }}
-              />
-            </CardShell>
-            <CardShell
-              dataTest="trade-volume-chart"
-              sx={{ gridColumn: { md: '1 / -1' } }}
-            >
-              <ReactECharts
-                ref={tradeVolumeChartRef}
-                option={tradeVolumeChartOption}
-                style={{ height: 250 }}
-              />
+              <BCBox
+                tabIndex={0}
+                role="group"
+                aria-label={t(
+                  'publicDashboard.marketData.trendCharts.monthlyAverageTitle'
+                )}
+                aria-describedby="a1-chart-keyboard-help"
+                aria-keyshortcuts="ArrowLeft ArrowRight Escape"
+                data-test="a1-price-chart-keyboard"
+                onKeyDown={(event) =>
+                  handleChartKeyboardNavigation(
+                    event,
+                    monthlyAvgChartRef,
+                    activeA1ChartIndex,
+                    setActiveA1ChartIndex,
+                    a1MonthlyChartRows.length
+                  )
+                }
+              >
+                <ReactECharts
+                  ref={monthlyAvgChartRef}
+                  option={monthlyAverageChartOption}
+                  style={{ height: 290 }}
+                />
+                <span id="a1-chart-keyboard-help" className="visually-hidden">
+                  {keyboardHelp}
+                </span>
+                <span
+                  aria-live="polite"
+                  aria-atomic="true"
+                  className="visually-hidden"
+                >
+                  {a1ChartAnnouncement}
+                </span>
+              </BCBox>
             </CardShell>
           </BCBox>
           <BCBox className="pdf-avoid-break">
@@ -1831,11 +1853,42 @@ export const PublicMarketData = () => {
               </ToggleButtonGroup>
             </BCBox>
             {series.length > 0 ? (
-              <ReactECharts
-                ref={mainChartRef}
-                option={chartOption}
-                style={{ height: 380 }}
-              />
+              <BCBox
+                tabIndex={0}
+                role="group"
+                aria-label={t('publicDashboard.marketData.chartTitle')}
+                aria-describedby="price-volume-chart-keyboard-help"
+                aria-keyshortcuts="ArrowLeft ArrowRight Escape"
+                data-test="price-volume-chart-keyboard"
+                onKeyDown={(event) =>
+                  handleChartKeyboardNavigation(
+                    event,
+                    mainChartRef,
+                    activeMainChartIndex,
+                    setActiveMainChartIndex,
+                    series.length
+                  )
+                }
+              >
+                <ReactECharts
+                  ref={mainChartRef}
+                  option={chartOption}
+                  style={{ height: 380 }}
+                />
+                <span
+                  id="price-volume-chart-keyboard-help"
+                  className="visually-hidden"
+                >
+                  {keyboardHelp}
+                </span>
+                <span
+                  aria-live="polite"
+                  aria-atomic="true"
+                  className="visually-hidden"
+                >
+                  {mainChartAnnouncement}
+                </span>
+              </BCBox>
             ) : (
               <BCTypography sx={{ fontSize: 14, color: MUTED, py: 4 }}>
                 {t('publicDashboard.marketData.tables.noData')}

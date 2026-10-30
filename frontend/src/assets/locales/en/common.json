@@ -154,18 +154,17 @@
         "transferValue": "Sum of Transfer Value ($)"
       },
       "chartTitle": "Price and volume over time",
-      "chartSubtitle": "Volume-weighted average price per credit and credits traded",
+      "chartSubtitle": "Weighted average, minimum and maximum price per credit, and credits traded",
       "trendCharts": {
-        "monthlyAverageTitle": "Weighted Average Price A1 - monthly trend line",
-        "transferPriceTitle": "Credit Transfer Price Trend",
-        "tradeVolumeTitle": "Credit Trade Volume",
+        "monthlyAverageTitle": "A1 Price Trend",
         "weightedAverage": "Weighted average",
         "minimumPrice": "Min of Price Per Unit",
         "maximumPrice": "Max of Price Per Unit",
-        "creditVolume": "Sum of Credit Quantity",
-        "month": "Month",
-        "transferDate": "Transfer Date",
-        "monthYear": "Month/Year"
+        "priceVolumeChartAriaDescription": "Interactive chart showing credit volume and weighted average, minimum, and maximum prices for the selected reporting periods.",
+        "a1ChartAriaDescription": "Interactive line chart showing monthly A1 weighted average prices for the latest 12 available months. Price values are labeled on the chart.",
+        "chartKeyboardInstructions": "Use the left and right arrow keys to explore data points. Press Escape to dismiss the tooltip.",
+        "priceVolumeChartKeyboardAnnouncement": "{{period}}. Weighted average: {{weightedAverage}}. Minimum price: {{minimumPrice}}. Maximum price: {{maximumPrice}}. Volume: {{volume}} credits.",
+        "a1ChartKeyboardAnnouncement": "{{period}}. Weighted average price: {{price}}."
       },
       "granularity": {
         "month": "Monthly",

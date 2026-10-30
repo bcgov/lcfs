@@ -4,7 +4,14 @@ import * as XLSX from 'xlsx'
 import { test } from '@/tests/utils/fixtures'
 import { PublicMarketData } from '../PublicMarketData'
 
-vi.mock('echarts-for-react', () => ({ default: () => null }))
+vi.mock('echarts-for-react', () => ({
+  default: ({ option }: { option: unknown }) => (
+    <div
+      data-test="echarts-chart"
+      data-chart-option={JSON.stringify(option) ?? ''}
+    />
+  )
+}))
 vi.mock('html2canvas', () => ({ default: vi.fn() }))
 vi.mock('jspdf', () => ({ default: vi.fn() }))
 vi.mock('xlsx', () => ({
@@ -36,17 +43,18 @@ const mockReport = {
       transferValue: 10000000
     }
   ],
-  a1Monthly: [
-    {
-      period: '2026-06',
+  a1Monthly: Array.from({ length: 15 }, (_, index) => {
+    const date = new Date(Date.UTC(2025, 3 + index, 1))
+    return {
+      period: `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`,
       transfers: 5,
       volume: 30000,
-      weightedAvgPrice: 141.75,
+      weightedAvgPrice: 141.75 + index,
       minPrice: 120.3,
       maxPrice: 155,
       transferValue: 4252500
     }
-  ],
+  }),
   quarterly: [
     {
       period: '2026-Q2',
@@ -107,8 +115,27 @@ vi.mock('@/hooks/useCreditMarket', () => ({
 }))
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key })
+  useTranslation: () => ({
+    t: (key: string, values?: Record<string, string>) =>
+      values ? Object.values(values).join(' ') : key
+  })
 }))
+
+type ChartOption = {
+  aria?: { enabled?: boolean }
+  xAxis?: { data?: string[]; axisLabel?: { interval?: number } }
+  series?: Array<{ name?: string; data?: unknown[] }>
+}
+
+const getChartOptions = () =>
+  screen
+    .getAllByTestId('echarts-chart')
+    .map(
+      (chart) =>
+        JSON.parse(
+          chart.getAttribute('data-chart-option') ?? '{}'
+        ) as ChartOption
+    )
 
 describe('PublicMarketData', () => {
   test('renders the title and KPI cards', ({ render, theme }) => {
@@ -129,8 +156,10 @@ describe('PublicMarketData', () => {
     expect(
       screen.getByTestId('monthly-average-price-chart')
     ).toBeInTheDocument()
-    expect(screen.getByTestId('transfer-price-trend-chart')).toBeInTheDocument()
-    expect(screen.getByTestId('trade-volume-chart')).toBeInTheDocument()
+    expect(
+      screen.queryByTestId('transfer-price-trend-chart')
+    ).not.toBeInTheDocument()
+    expect(screen.queryByTestId('trade-volume-chart')).not.toBeInTheDocument()
     expect(screen.getByTestId('download-pdf')).toBeInTheDocument()
     expect(screen.getByTestId('download-all-xlsx')).toBeInTheDocument()
     expect(screen.getByTestId('download-monthly-csv')).toBeInTheDocument()
@@ -143,6 +172,97 @@ describe('PublicMarketData', () => {
     ).not.toBeInTheDocument()
     expect(screen.getByTestId('download-annual-csv')).toBeInTheDocument()
     expect(screen.queryByTestId('download-annual-xlsx')).not.toBeInTheDocument()
+  })
+
+  test('shows minimum and maximum prices in the price and volume chart', ({
+    render,
+    theme
+  }) => {
+    render(<PublicMarketData />, [theme])
+
+    const mainChart = getChartOptions().find((option) =>
+      option.series?.some(
+        (series) =>
+          series.name === 'publicDashboard.marketData.trendCharts.minimumPrice'
+      )
+    )
+
+    expect(mainChart?.aria?.enabled).toBe(true)
+    expect(mainChart?.series?.map((series) => series.name)).toEqual([
+      'publicDashboard.marketData.tables.volume',
+      'publicDashboard.marketData.kpi.avgPrice',
+      'publicDashboard.marketData.trendCharts.minimumPrice',
+      'publicDashboard.marketData.trendCharts.maximumPrice'
+    ])
+    expect(mainChart?.series?.[2].data).toEqual([110])
+    expect(mainChart?.series?.[3].data).toEqual([170])
+  })
+
+  test('shows the latest 12 monthly A1 prices with a monthly date tick', ({
+    render,
+    theme
+  }) => {
+    render(<PublicMarketData />, [theme])
+
+    const a1Chart = getChartOptions().find(
+      (option) => option.series?.length === 1
+    )
+
+    expect(a1Chart?.aria?.enabled).toBe(true)
+    expect(a1Chart?.xAxis?.data).toEqual([
+      'Jul 2025',
+      'Aug 2025',
+      'Sep 2025',
+      'Oct 2025',
+      'Nov 2025',
+      'Dec 2025',
+      'Jan 2026',
+      'Feb 2026',
+      'Mar 2026',
+      'Apr 2026',
+      'May 2026',
+      'Jun 2026'
+    ])
+    expect(a1Chart?.xAxis?.axisLabel?.interval).toBe(0)
+    expect(a1Chart?.series?.[0].data).toHaveLength(12)
+    expect(screen.getByTestId('a1-price-chart-keyboard')).toHaveAttribute(
+      'tabindex',
+      '0'
+    )
+  })
+
+  test('supports keyboard navigation through A1 monthly chart values', ({
+    render,
+    theme
+  }) => {
+    render(<PublicMarketData />, [theme])
+
+    const chart = screen.getByTestId('a1-price-chart-keyboard')
+    fireEvent.keyDown(chart, { key: 'ArrowRight' })
+    const announcement = chart.querySelector('[aria-live="polite"]')
+    expect(announcement?.textContent).toContain('Jul 2025')
+
+    fireEvent.keyDown(chart, { key: 'ArrowLeft' })
+    expect(announcement?.textContent).toContain('Jun 2026')
+
+    fireEvent.keyDown(chart, { key: 'Escape' })
+    expect(announcement?.textContent).toBe('')
+  })
+
+  test('announces price range and volume while navigating the main chart', ({
+    render,
+    theme
+  }) => {
+    render(<PublicMarketData />, [theme])
+
+    const chart = screen.getByTestId('price-volume-chart-keyboard')
+    fireEvent.keyDown(chart, { key: 'ArrowRight' })
+
+    const announcement = chart.querySelector('[aria-live="polite"]')
+    expect(announcement?.textContent).toContain('$139.86')
+    expect(announcement?.textContent).toContain('$110.00')
+    expect(announcement?.textContent).toContain('$170.00')
+    expect(announcement?.textContent).toContain('302,359')
   })
 
   test('downloads all report tables as a formatted Excel workbook', ({
