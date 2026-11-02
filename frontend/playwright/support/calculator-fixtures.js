@@ -152,8 +152,8 @@ export const assertDescription = async (
     const nextContent = element.ownerDocument.querySelector(selector)
     return Boolean(
       nextContent &&
-        element.compareDocumentPosition(nextContent) &
-          Node.DOCUMENT_POSITION_FOLLOWING
+      element.compareDocumentPosition(nextContent) &
+        Node.DOCUMENT_POSITION_FOLLOWING
     )
   }, nextContentSelector)
   expect(followsNextContent).toBe(true)
