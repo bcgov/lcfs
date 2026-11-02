@@ -1,3 +1,4 @@
+from datetime import datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
@@ -8,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lcfs.db.models.user.Role import Role, RoleEnum
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.user.UserRole import UserRole
+from lcfs.utils.dates import PACIFIC_TZ
 from lcfs.web.api.email.services import CHESEmailService
 from lcfs.web.api.notification.services import NotificationService
 from lcfs.web.api.user.repo import UserRepository
@@ -146,9 +148,7 @@ async def test_role_removal_emails_after_commit_even_when_subscriptions_deleted(
         assert context["loses_assigned_work_access"] is True
         assert "Sensitive organization" not in str(context)
         assert "Account Administrator (admin_user)" == context["changed_by"]
-        # BC has been on permanent UTC-7 since 2026-11-01, which tzdata labels
-        # MST (#5125).
-        assert context["changed_at"].split()[-1] in {"PST", "PDT", "MST"}
+        assert context["changed_at"].split()[-1] == datetime.now(PACIFIC_TZ).tzname()
         return True
 
     service.email_service.send_account_change_email.side_effect = send

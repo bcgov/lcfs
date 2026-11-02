@@ -108,4 +108,72 @@ describe('ReportOpenings', () => {
     expect(supplementalToggle2020).toBeChecked()
     expect(saveButton).not.toBeDisabled()
   })
+
+  test('saves independent compliance and supplemental settings for 2017 and 2018', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
+  }) => {
+    const mutate = vi.fn()
+    useReportOpeningsMock.mockReturnValue({
+      data: [
+        {
+          complianceYear: 2017,
+          complianceReportingEnabled: false,
+          earlyIssuanceEnabled: false,
+          createSupplementalEnabled: false
+        },
+        {
+          complianceYear: 2018,
+          complianceReportingEnabled: false,
+          earlyIssuanceEnabled: false,
+          createSupplementalEnabled: false
+        }
+      ],
+      isLoading: false
+    })
+    useUpdateReportOpeningsMock.mockReturnValue({ isPending: false, mutate })
+
+    render(<ReportOpenings />, [query, theme, localization, router, i18n])
+
+    await userEvent.click(
+      await screen.findByLabelText(/compliance reporting availability.*2017/i)
+    )
+    await userEvent.click(
+      screen.getByLabelText(/create supplemental report availability.*2017/i)
+    )
+    await userEvent.click(
+      screen.getByLabelText(/create supplemental report availability.*2018/i)
+    )
+    await userEvent.click(screen.getByRole('button', { name: /^Save$/i }))
+    await userEvent.click(
+      await screen.findByRole('button', { name: /save changes/i })
+    )
+
+    expect(mutate).toHaveBeenCalledWith(
+      {
+        reportOpenings: [
+          {
+            complianceYear: 2017,
+            complianceReportingEnabled: true,
+            earlyIssuanceEnabled: false,
+            createSupplementalEnabled: true
+          },
+          {
+            complianceYear: 2018,
+            complianceReportingEnabled: false,
+            earlyIssuanceEnabled: false,
+            createSupplementalEnabled: true
+          }
+        ]
+      },
+      expect.objectContaining({
+        onSuccess: expect.any(Function),
+        onError: expect.any(Function)
+      })
+    )
+  })
 })
