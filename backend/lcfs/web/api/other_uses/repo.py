@@ -22,6 +22,7 @@ from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.other_uses.schema import OtherUsesSchema
 from lcfs.web.api.versioning_query_helper import VersioningQueryHelper
 from lcfs.web.core.decorators import repo_handler
+from lcfs.web.core.ownership import delete_one
 
 logger = structlog.get_logger(__name__)
 
@@ -463,9 +464,14 @@ class OtherUsesRepository:
 
         return formatted_fuel_types
 
-    async def delete_other_use(self, other_uses_id):
-        await self.db.execute(
-            delete(OtherUses).where(OtherUses.other_uses_id == other_uses_id)
+    async def delete_other_use(self, other_uses_id, compliance_report_id, group_uuid):
+        """Delete the row only if it is in this report and this group."""
+        await delete_one(
+            self.db,
+            OtherUses,
+            other_uses_id=other_uses_id,
+            compliance_report_id=compliance_report_id,
+            group_uuid=group_uuid,
         )
 
     @repo_handler

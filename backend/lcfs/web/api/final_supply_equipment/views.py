@@ -51,6 +51,21 @@ logger = structlog.get_logger(__name__)
 get_async_db = dependencies.get_async_db_session
 
 
+def schedule_fse_reporting_mv_refresh(request: Request) -> None:
+    """
+    Ask for a prompt refresh of the FSE reporting materialized view after a
+    write, so the report page shows the saved rows without a reload.
+
+    Imported here: the scheduler module loads the jobs module, which imports
+    the API services and would re-enter this module at startup.
+    """
+    from lcfs.services.scheduler.scheduler import (
+        schedule_fse_reporting_mv_refresh as schedule_refresh,
+    )
+
+    schedule_refresh(request.app)
+
+
 @router.get(
     "/table-options", response_model=FSEOptionsSchema, status_code=status.HTTP_200_OK
 )
@@ -495,7 +510,9 @@ async def create_fse_reporting(
     """
     Create FSE compliance reporting data
     """
-    return await service.create_fse_reporting_batch(request_data.fse_reports)
+    result = await service.create_fse_reporting_batch(request_data.fse_reports)
+    schedule_fse_reporting_mv_refresh(request)
+    return result
 
 
 @router.delete(
@@ -512,7 +529,9 @@ async def delete_fse_reporting_batch(
     """
     Delete multiple FSE compliance reporting records
     """
-    return await service.delete_fse_reporting_batch(request_data.reporting_ids)
+    result = await service.delete_fse_reporting_batch(request_data.reporting_ids)
+    schedule_fse_reporting_mv_refresh(request)
+    return result
 
 @router.patch(
     "/reporting/active-status",
@@ -528,7 +547,9 @@ async def update_fse_reporting_active_status(
     """
     Activate or deactivate multiple FSE compliance reporting records without deleting data
     """
-    return await service.update_fse_reporting_active_status(request_data)
+    result = await service.update_fse_reporting_active_status(request_data)
+    schedule_fse_reporting_mv_refresh(request)
+    return result
 
 
 @router.put(
@@ -546,7 +567,9 @@ async def update_fse_reporting(
     """
     Update FSE compliance reporting data
     """
-    return await service.update_fse_reporting(reporting_id, request_data)
+    result = await service.update_fse_reporting(reporting_id, request_data)
+    schedule_fse_reporting_mv_refresh(request)
+    return result
 
 
 @router.delete(
@@ -563,6 +586,7 @@ async def delete_fse_reporting(
     Delete FSE compliance reporting data
     """
     await service.delete_fse_reporting(reporting_id)
+    schedule_fse_reporting_mv_refresh(request)
 
 
 @router.post("/reporting/set-default", status_code=status.HTTP_200_OK)
@@ -595,4 +619,8 @@ async def set_default_dates_fse_reporting(
             detail="Organization ID does not match the user's organization",
         )
 
-    return await service.set_default_dates_fse_reporting(request_data, organization_id)
+    result = await service.set_default_dates_fse_reporting(
+        request_data, organization_id
+    )
+    schedule_fse_reporting_mv_refresh(request)
+    return result

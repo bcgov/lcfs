@@ -111,7 +111,7 @@ async def get_user_by_id(
 @router.post(
     "/{organization_id}/users", response_model=None, status_code=status.HTTP_201_CREATED
 )
-@view_handler([RoleEnum.SUPPLIER])
+@view_handler([RoleEnum.MANAGE_USERS])
 async def create_user(
     request: Request,
     organization_id: int,
@@ -123,6 +123,16 @@ async def create_user(
     Endpoint to create a new user
     This endpoint creates a new user and returns the information of the created user.
     """
+    # Suppliers may only create users within their own organization.
+    # Government users (IDIR) are not bound by this restriction.
+    if not request.user.is_government and (
+        not request.user.organization
+        or request.user.organization.organization_id != organization_id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to create users in this organization.",
+        )
     user_create.organization_id = organization_id
     return await user_service.create_user(user_create)
 
