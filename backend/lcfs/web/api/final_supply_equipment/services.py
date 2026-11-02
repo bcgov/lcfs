@@ -558,6 +558,10 @@ class FinalSupplyEquipmentServices:
             organization_id
         )
 
+        # Read before the rows, which come from the materialized view: the
+        # report page keeps re-fetching while recent saves are not in it yet.
+        refresh_pending = await self.repo.is_fse_reporting_refresh_pending()
+
         # Total kWh must be summed over the same rows the table/Excel export
         # show, so it is derived from the same view and filters as the list
         # query below (not a separate group-level aggregate, which could count
@@ -593,6 +597,7 @@ class FinalSupplyEquipmentServices:
                 total_pages=calculate_total_pages(total, pagination.size),
             ),
             "hasChargingEquipment": has_equipment,
+            "refreshPending": refresh_pending,
         }
 
     @staticmethod

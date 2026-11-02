@@ -23,7 +23,7 @@ from lcfs.web.api.initiative_agreement.repo import InitiativeAgreementRepository
 from lcfs.web.api.initiative_agreement.workflow import is_hidden_from
 from lcfs.web.api.internal_comment.repo import InternalCommentRepository
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
-from sqlalchemy import select, delete, and_
+from sqlalchemy import select, delete, and_, func
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 from lcfs.services.s3.dependency import get_s3_client
@@ -643,29 +643,25 @@ class DocumentService:
 
     @repo_handler
     async def delete_file(self, document_id: int, parent_id: int, parent_type: str):
-        document = await self.db.get_one(Document, document_id)
+        # The caller was authorized for the parent, so the document must hang
+        # off that parent; one linked elsewhere reads as missing.
+        document = await self._get_document_for_parent(
+            document_id, parent_id, parent_type
+        )
+        association_table, parent_column = DOCUMENT_PARENT_ASSOCIATIONS[parent_type]
 
-        if not document:
-            raise Exception("Document not found")
-
-        association_info = DOCUMENT_PARENT_ASSOCIATIONS.get(parent_type)
-
-        if not association_info:
-            raise Exception(f"Unsupported parent_type: {parent_type}")
-
-        association_table, parent_column = association_info
-
-        # Check how many links this document has across all instances of this parent type
-        links = (
-            await self.db.execute(
-                select(association_table).where(
-                    document_id == association_table.c.document_id
-                )
+        # Count the document's links across every parent type, not just this
+        # one, before deciding this is the last.
+        link_count = 0
+        for table, _ in DOCUMENT_PARENT_ASSOCIATIONS.values():
+            link_count += await self.db.scalar(
+                select(func.count())
+                .select_from(table)
+                .where(table.c.document_id == document_id)
             )
-        ).all()
 
         # If last link, delete the whole document
-        if len(links) == 1:
+        if link_count == 1:
             # Delete the file from S3
             self.s3_client.delete_object(Bucket=BUCKET_NAME, Key=document.file_key)
 
