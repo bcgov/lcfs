@@ -377,7 +377,6 @@ jobs:
 
       - name: Merge pytest split timing data
         id: merge-pytest-timings
-        continue-on-error: true
         if: needs.backend-tests.result == 'success'
         run: |
           python3 - <<'PY'
@@ -407,7 +406,6 @@ jobs:
 
       - name: Save merged pytest split timing data
         if: needs.backend-tests.result == 'success' && steps.merge-pytest-timings.outputs.ready == 'true'
-        continue-on-error: true
         uses: actions/cache/save@v5.0.4
         with:
           path: backend/.test_durations
@@ -441,7 +439,16 @@ jobs:
           cd frontend
           pnpm run check
 
+      - name: Check for existing shared node_modules cache
+        id: node-modules-cache-lookup
+        uses: actions/cache/restore@v5.0.4
+        with:
+          path: frontend/node_modules
+          key: ${{ runner.os }}-${{ runner.arch }}-node-modules-shared-pnpm-v1-${{ hashFiles('frontend/pnpm-lock.yaml', 'frontend/.nvmrc') }}
+          lookup-only: true
+
       - name: Cache node_modules for test shards
+        if: steps.node-modules-cache-lookup.outputs.cache-hit != 'true'
         # Save the checked dependencies for workers. Never restore a cache over
         # the fresh frozen-lockfile install. Workers use the same exact key.
         uses: actions/cache/save@v5.0.4
@@ -536,7 +543,7 @@ jobs:
           echo "=== Running tests for shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} ==="
 
           set +e
-          npm run test:ci:memory
+          pnpm run test:ci:memory
           EXIT_CODE=$?
           set -e
 
