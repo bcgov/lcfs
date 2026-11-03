@@ -543,7 +543,7 @@ jobs:
           echo "=== Running tests for shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} ==="
 
           set +e
-          pnpm run test:ci:memory
+          npm run test:ci:memory
           EXIT_CODE=$?
           set -e
 

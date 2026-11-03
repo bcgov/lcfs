@@ -616,7 +616,7 @@ jobs:
 
           # Preserve the test runner's exit code; missing tests or reports must
           # not turn an incomplete run into a successful coverage gate.
-          pnpm run test:ci:memory
+          npm run test:ci:memory
         env:
           CI: true
           SHARD_INDEX: ${{ matrix.shardIndex }}
