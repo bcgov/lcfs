@@ -171,6 +171,7 @@ async def report_versions(dbsession, add_models):
         organization_id=organization_id,
         reports=reports,
         draft_only_report=draft_only_report,
+        submitted_equipment=submitted_equipment,
     )
 
 
@@ -331,3 +332,67 @@ async def test_refresh_pending_until_the_view_has_the_saved_kwh(
         [(DRAFT_ONLY_SERIAL, 750.0)],
         750.0,
     )
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "original_status, new_status",
+    [
+        (
+            ComplianceReportStatusEnum.Submitted,
+            ComplianceReportStatusEnum.Analyst_adjustment,
+        ),
+        (ComplianceReportStatusEnum.Assessed, ComplianceReportStatusEnum.Draft),
+    ],
+    ids=["government-adjustment", "supplemental"],
+)
+async def test_new_report_version_is_pending_until_the_view_has_it(
+    dbsession, add_models, report_versions, original_status, new_status
+):
+    """
+    The view has rows per report, so a new version has none until it is
+    refreshed. A government adjustment also empties vw_fse_base for every
+    version, as it becomes the latest non-Draft one. Creating the report marks
+    the view dirty, so the refresh job runs and the report page polls until it
+    has.
+    """
+    repo = FinalSupplyEquipmentRepository(db=dbsession)
+    organization_id = report_versions.organization_id
+    original, new_version = await _report_group(
+        dbsession, organization_id, "2025", [original_status, new_status]
+    )
+    await add_models([original])
+    await add_models(
+        [
+            _selection(
+                report_versions.submitted_equipment,
+                original,
+                0,
+                SUBMITTED_KWH,
+                2025,
+            )
+        ]
+    )
+    await _refresh_like_the_job(dbsession)
+    assert await repo.is_fse_reporting_refresh_pending() is False
+
+    await add_models([new_version])
+
+    assert await repo.is_fse_reporting_refresh_pending() is True
+
+    await _refresh_like_the_job(dbsession)
+
+    assert await repo.is_fse_reporting_refresh_pending() is False
+    if new_status == ComplianceReportStatusEnum.Draft:
+        assert await _draft_page_rows(
+            dbsession, organization_id, new_version.compliance_report_id
+        ) == ([(SUBMITTED_SERIAL, SUBMITTED_KWH)], SUBMITTED_KWH)
+    else:
+        for report in (original, new_version):
+            rows, total = await _summary_rows(
+                dbsession, organization_id, report.compliance_report_id
+            )
+            assert [(row.serial_number, row.compliance_report_id) for row in rows] == [
+                (SUBMITTED_SERIAL, new_version.compliance_report_id)
+            ]
+            assert total == SUBMITTED_KWH
