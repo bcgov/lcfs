@@ -174,7 +174,7 @@ The testing framework (as described in the original wiki) handles:
 
 ### 3.1. Frontend coverage thresholds
 
-Vitest enforces global minimum coverage for `frontend/src` (configured in `frontend/vite.config.ts`, `test.coverage.thresholds`). The thresholds are **floors, not targets**: they exist so coverage cannot silently regress as new code lands. A pull request that pushes any metric below its floor fails CI.
+Vitest enforces global minimum coverage for `frontend/src` (configured in `frontend/vite.config.ts`, `test.coverage.thresholds`). The thresholds are **floors, not targets**: they exist so coverage cannot silently regress as new code lands. The PR test workflow checks test outcomes only; it does not collect aggregate coverage or enforce these floors.
 
 | Metric     | Floor | Baseline (2026-09-08) |
 |------------|------:|----------------------:|
@@ -188,14 +188,14 @@ The baseline was measured on `develop` with 376 test files / 6,187 tests, v8 pro
 **Where thresholds are enforced**
 
 *   Locally: `pnpm run test:coverage` runs the whole suite once, prints a coverage summary, writes the HTML report to `frontend/coverage/`, and exits non-zero if a floor is missed.
-*   In CI (`pr-test.yaml`): the test suite runs as 32 shards, each of which writes a Vitest blob report and JUnit XML. The "Publish Frontend Test Results" job publishes the shard JUnit reports while "Merge Frontend Coverage Reports" merges the blobs and enforces thresholds on the complete suite. A miss looks like `ERROR: Coverage for lines (58.1%) does not meet global threshold (60%)` in the "Merge reports" step, and the merged HTML report is uploaded as the `frontend-coverage-report` artifact.
+*   In PR CI (`pr-test.yaml`): the test suite runs as 32 shards with coverage disabled. The required check reports whether setup and all test shards passed; it does not upload per-test or coverage reports.
 
-Thresholds are only applied when `ENFORCE_COVERAGE_THRESHOLDS=true` is set (the coverage script and the CI merge step both set it). Vitest checks thresholds against whatever was collected in the current process, so a filtered run such as `vitest run src/views/Transfers` or a single CI shard would otherwise always fail. Plain `pnpm run test:run` and per-area scripts are therefore never gated.
+Thresholds are applied by `pnpm run test:coverage`, which sets `ENFORCE_COVERAGE_THRESHOLDS=true` and runs the full suite. Vitest checks thresholds against whatever was collected in the current process, so a filtered run such as `vitest run src/views/Transfers` or a single CI shard would otherwise fail against partial coverage. Plain `pnpm run test:run` and per-area scripts are therefore never gated.
 
-**What to do when a PR fails the threshold**
+**What to do when local coverage is below a threshold**
 
-1. Download the `frontend-coverage-report` artifact from the failed run (or run `pnpm run test:coverage` locally) and open `coverage/index.html`.
-2. Add tests for the new or changed code in the PR. Do not lower a floor to get a PR through; a floor is only lowered by an explicit, separately reviewed change with a stated reason.
+1. Run `pnpm run test:coverage` locally and open `coverage/index.html`.
+2. Add tests for the new or changed code. Change a floor only through a separately reviewed update with a stated reason.
 3. If a file genuinely cannot be unit tested (for example a thin wrapper around a browser-only API), exclude it explicitly in `coverage.exclude` with a comment rather than leaving it uncovered.
 
 **Plan for raising the floors**

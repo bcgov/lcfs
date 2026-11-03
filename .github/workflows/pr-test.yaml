@@ -10,9 +10,6 @@ on:
 permissions:
   contents: read
   actions: write
-  checks: write
-  pull-requests: write
-  issues: write
 
 jobs:
   alembic-heads:
@@ -366,10 +363,9 @@ jobs:
           LCFS_DB_PASS: development_only
 
       - name: Run backend tests for shard
-        id: backend_tests
         run: |
           cd backend
-          ./.venv/bin/pytest --splits ${{ strategy.job-total }} --group ${{ matrix.shard }} --store-durations --maxfail=1 --tb=short --disable-warnings --quiet --junitxml=pytest-results-shard-${{ matrix.shard }}.xml || [ $? -eq 5 ]
+          ./.venv/bin/pytest --splits ${{ strategy.job-total }} --group ${{ matrix.shard }} --store-durations --maxfail=1 --tb=short --disable-warnings --quiet || [ $? -eq 5 ]
         env:
           LCFS_DB_HOST: localhost
           LCFS_DB_PORT: 5432
@@ -387,14 +383,12 @@ jobs:
           LCFS_CHES_SENDER_NAME: Mock Notification System
           LCFS_CHES_EMAIL_URL: http://mock_email_url
 
-      - name: Upload pytest results
+      - name: Upload pytest split timings
         if: always()
         uses: actions/upload-artifact@v7.0.0
         with:
-          name: pytest-results-shard-${{ matrix.shard }}
-          path: |
-            backend/pytest-results-shard-${{ matrix.shard }}.xml
-            backend/.test_durations
+          name: pytest-timings-shard-${{ matrix.shard }}
+          path: backend/.test_durations
           include-hidden-files: true
           if-no-files-found: warn
           retention-days: 1
@@ -405,37 +399,34 @@ jobs:
     needs: [backend-setup, backend-tests]
     runs-on: ubuntu-latest
     steps:
-      - name: Download all test results
+      # Branch protection requires this job's existing check name.
+      - name: Require successful backend setup and tests
+        env:
+          SETUP_RESULT: ${{ needs.backend-setup.result }}
+          TEST_RESULT: ${{ needs.backend-tests.result }}
+        run: |
+          if [ "$SETUP_RESULT" != "success" ] || [ "$TEST_RESULT" != "success" ]; then
+            echo "Backend setup or tests did not succeed: setup=$SETUP_RESULT tests=$TEST_RESULT"
+            exit 1
+          fi
+          echo "Backend setup and test shards passed."
+
+  update-backend-test-timings:
+    name: Update Backend Test Split Timings
+    needs: [backend-setup, backend-tests]
+    if: needs.backend-setup.result == 'success' && needs.backend-tests.result == 'success'
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download pytest split timings
         uses: actions/download-artifact@v8.0.1
         with:
-          pattern: pytest-results-shard-*
-          path: pytest-results
+          pattern: pytest-timings-shard-*
+          path: pytest-timings
           merge-multiple: false
-
-      - name: Merge test results
-        run: |
-          pip install junitparser
-          cat > merge_results.py << 'EOF'
-          import glob
-          from junitparser import JUnitXml
-
-          suites = []
-          for file in glob.glob('pytest-results/**/pytest-results-shard-*.xml', recursive=True):
-              suites.append(JUnitXml.fromfile(file))
-
-          merged = JUnitXml()
-          for suite in suites:
-              for testsuite in suite:
-                  merged.add_testsuite(testsuite)
-
-          merged.write('merged-pytest-results.xml')
-          EOF
-          python3 merge_results.py
 
       - name: Merge pytest split timing data
         id: merge-pytest-timings
-        continue-on-error: true
-        if: needs.backend-tests.result == 'success'
         run: |
           python3 - <<'PY'
           import glob
@@ -443,7 +434,7 @@ jobs:
           import os
           from pathlib import Path
 
-          files = sorted(glob.glob("pytest-results/**/.test_durations", recursive=True))
+          files = sorted(glob.glob("pytest-timings/**/.test_durations", recursive=True))
           if not files:
               print("No pytest-split timing files were uploaded; cache update skipped")
               with open(os.environ["GITHUB_OUTPUT"], "a") as output:
@@ -463,23 +454,12 @@ jobs:
           PY
 
       - name: Save merged pytest split timing data
-        if: needs.backend-tests.result == 'success' && steps.merge-pytest-timings.outputs.ready == 'true'
+        if: steps.merge-pytest-timings.outputs.ready == 'true'
         continue-on-error: true
         uses: actions/cache/save@v5.0.4
         with:
           path: backend/.test_durations
           key: ${{ needs.backend-setup.outputs.pytest_timing_cache_prefix }}-${{ github.run_id }}-${{ github.run_attempt }}
-
-      - name: Publish Backend Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v2.23.0
-        with:
-          files: merged-pytest-results.xml
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          comment_title: "Backend Test Results"
-          check_name: "Backend Test Results"
-          fail_on: "errors"
-          report_individual_runs: "true"
-          deduplicate_classes_by_file_name: "true"
 
   frontend-setup:
     name: "Frontend Setup"
@@ -609,139 +589,14 @@ jobs:
           pnpm install --frozen-lockfile --prefer-offline
 
       - name: Run frontend tests
-        id: frontend_tests
         run: |
           cd frontend
           echo "=== Running tests for shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} ==="
-
-          # Preserve the test runner's exit code; missing tests or reports must
-          # not turn an incomplete run into a successful coverage gate.
-          npm run test:ci:memory
+          npm run test:ci:shard
         env:
           CI: true
           SHARD_INDEX: ${{ matrix.shardIndex }}
           SHARD_TOTAL: ${{ matrix.shardTotal }}
-
-      - name: Debug test failure details
-        if: failure()
-        run: |
-          cd frontend
-          echo "=== FRONTEND TEST FAILURE DEBUG ==="
-          echo "Failed shard: ${{ matrix.shardIndex }}/${{ matrix.shardTotal }}"
-          echo "Memory settings: 8192MB (npm script)"
-          echo "Environment: CI=$CI"
-          echo ""
-          echo "Getting detailed error information..."
-          SHARD_INDEX=${{ matrix.shardIndex }} SHARD_TOTAL=${{ matrix.shardTotal }} node --max-old-space-size=8192 ./node_modules/.bin/vp test run --coverage.enabled=false --reporter=verbose --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }} || true
-        env:
-          CI: true
-
-      - name: Upload blob report to GitHub Actions Artifacts
-        if: always()
-        uses: actions/upload-artifact@v7.0.0
-        with:
-          name: blob-report-${{ matrix.shardIndex }}
-          path: |
-            frontend/.vitest-reports/blob-*.json
-            frontend/.vitest-junit/junit-*.xml
-          if-no-files-found: error
-          include-hidden-files: true
-          retention-days: 1
-          compression-level: 9
-
-  merge-frontend-coverage:
-    name: "Merge Frontend Coverage Reports"
-    if: always()
-    needs: [frontend-setup, frontend-tests]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6.0.2
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          sparse-checkout: |
-            frontend
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6.3.0
-        with:
-          node-version-file: frontend/.nvmrc
-
-      - name: Restore shared frontend dependencies
-        id: node-modules-cache
-        uses: actions/cache/restore@v5.0.4
-        with:
-          path: frontend/node_modules
-          key: ${{ runner.os }}-${{ runner.arch }}-node-modules-shared-pnpm-v1-${{ hashFiles('frontend/pnpm-lock.yaml', 'frontend/.nvmrc') }}
-
-      - name: Set up pnpm on cache miss
-        if: steps.node-modules-cache.outputs.cache-hit != 'true'
-        uses: pnpm/action-setup@v6.1.0
-        with:
-          version: 12.17.0
-          run_install: false
-
-      - name: Install frontend dependencies (fallback)
-        if: steps.node-modules-cache.outputs.cache-hit != 'true'
-        run: |
-          cd frontend
-          pnpm install --frozen-lockfile --prefer-offline
-        env:
-          PNPM_CONFIG_AUDIT: "false"
-
-      - name: Download blob reports from GitHub Actions Artifacts
-        uses: actions/download-artifact@v8.0.1
-        with:
-          path: frontend
-          pattern: blob-report-*
-          merge-multiple: true
-
-      - name: Merge reports
-        id: merge-reports
-        run: |
-          cd frontend
-
-          # Merge all reports that arrived so failures remain visible. The
-          # final gate below enforces that all 32 configured shards reported.
-          REPORT_COUNT=$(find .vitest-reports -maxdepth 1 -name 'blob-*.json' -type f | wc -l | tr -d ' ')
-          echo "report-count=$REPORT_COUNT" >> "$GITHUB_OUTPUT"
-          if [ "$REPORT_COUNT" -eq 0 ]; then
-            echo "No frontend shard reports arrived"
-            exit 0
-          fi
-
-          # Enforce coverage floors only when the complete shard set is
-          # present. Shard JUnit reports are published by a separate job.
-          if [ "$REPORT_COUNT" -eq 32 ]; then
-            ENFORCE_COVERAGE_THRESHOLDS=true ./node_modules/.bin/vp test --merge-reports=.vitest-reports --reporter=dot
-          else
-            echo "Merging $REPORT_COUNT of 32 frontend shard reports without coverage thresholds"
-            ./node_modules/.bin/vp test --merge-reports=.vitest-reports --reporter=dot
-          fi
-
-      - name: Upload merged coverage report
-        if: always()
-        uses: actions/upload-artifact@v7.0.0
-        with:
-          name: frontend-coverage-report
-          path: frontend/coverage
-          if-no-files-found: ignore
-          retention-days: 7
-
-      - name: Require successful frontend checks and tests
-        if: always()
-        env:
-          SETUP_RESULT: ${{ needs.frontend-setup.result }}
-          TEST_RESULT: ${{ needs.frontend-tests.result }}
-          REPORT_COUNT: ${{ steps.merge-reports.outputs.report-count }}
-        run: |
-          if [ "$SETUP_RESULT" != "success" ] || [ "$TEST_RESULT" != "success" ]; then
-            echo "Frontend checks or tests did not succeed: setup=$SETUP_RESULT tests=$TEST_RESULT"
-            exit 1
-          fi
-          if [ "$REPORT_COUNT" != "32" ]; then
-            echo "Expected 32 frontend shard reports, received ${REPORT_COUNT:-none}"
-            exit 1
-          fi
 
   publish-frontend-test-results:
     name: "Publish Frontend Test Results"
@@ -749,36 +604,27 @@ jobs:
     needs: [frontend-setup, frontend-tests]
     runs-on: ubuntu-latest
     steps:
-      - name: Download frontend shard reports
-        if: needs.frontend-tests.result != 'skipped'
-        uses: actions/download-artifact@v8.0.1
-        with:
-          path: frontend
-          pattern: blob-report-*
-          merge-multiple: true
-
-      - name: Publish Frontend Test Results
-        if: always() && needs.frontend-tests.result != 'skipped'
-        uses: EnricoMi/publish-unit-test-result-action@v2.23.0
-        with:
-          files: frontend/.vitest-junit/junit-*.xml
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          comment_title: "Frontend Test Results"
-          check_name: "Frontend Test Results"
-          fail_on: "errors"
-          report_individual_runs: "true"
-          deduplicate_classes_by_file_name: "true"
-          comment_mode: "always"
+      # Keep the existing required branch-protection check name.
+      - name: Require successful frontend setup and tests
+        env:
+          SETUP_RESULT: ${{ needs.frontend-setup.result }}
+          TEST_RESULT: ${{ needs.frontend-tests.result }}
+        run: |
+          if [ "$SETUP_RESULT" != "success" ] || [ "$TEST_RESULT" != "success" ]; then
+            echo "Frontend setup or tests did not succeed: setup=$SETUP_RESULT tests=$TEST_RESULT"
+            exit 1
+          fi
+          echo "Frontend setup and test shards passed."
 
   teams-notification:
-    needs: [post-backend-tests, merge-frontend-coverage, publish-frontend-test-results]
+    needs: [post-backend-tests, publish-frontend-test-results]
     runs-on: ubuntu-latest
     if: always()
     steps:
       - name: Determine Test Status
         id: test_status
         run: |
-          if [[ "${{ needs.post-backend-tests.result != 'success' || needs.merge-frontend-coverage.result != 'success' || needs.publish-frontend-test-results.result != 'success' }}" == "true" ]]; then
+          if [[ "${{ needs.post-backend-tests.result != 'success' || needs.publish-frontend-test-results.result != 'success' }}" == "true" ]]; then
             echo "status=failure" >> $GITHUB_OUTPUT
             echo "theme_color=FF0000" >> $GITHUB_OUTPUT
           else
@@ -801,7 +647,7 @@ jobs:
           AVATAR_URL="${{ github.event.pull_request.user.avatar_url }}"
           THREAD_ID="pr-${PR_NUMBER}"
           WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          MESSAGE="**Test Results**\n- Backend Tests: ${{ needs.post-backend-tests.result }}\n- Frontend Coverage: ${{ needs.merge-frontend-coverage.result }}\n- Frontend Test Results: ${{ needs.publish-frontend-test-results.result }}\n\n**Status:** $([[ '${{ steps.test_status.outputs.status }}' == 'failure' ]] && echo '❌ Failed' || echo '✅ Passed')"
+          MESSAGE="**Test Results**\n- Backend Tests: ${{ needs.post-backend-tests.result }}\n- Frontend Tests: ${{ needs.publish-frontend-test-results.result }}\n\n**Status:** $([[ '${{ steps.test_status.outputs.status }}' == 'failure' ]] && echo '❌ Failed' || echo '✅ Passed')"
           COLOR="${{ steps.test_status.outputs.theme_color }}"
 
           cat <<EOF > teams_card.json

@@ -138,12 +138,11 @@ lint, or TypeScript diagnostics.
 The suite uses Node and jsdom projects, with no Vitest browser project or browser
 locator compatibility setting. There are no deferred compatibility removals.
 
-The existing CI matrix still has 32 shards. Its merge step expects one blob per
-configured shard and lets the installed Vite+ validate blob contents and version.
-JUnit output lives outside the blob input directory. Partial report sets are
-merged for diagnostics without coverage thresholds; the final gate requires all
-32 reports and successful setup and shard jobs. Complete sets enforce aggregate
-coverage thresholds. Malformed or incompatible reports fail the merge.
+The PR workflow runs frontend tests in 32 shards with coverage disabled. It does
+not create blob or JUnit artifacts or merge coverage; its required status check
+reflects setup and test outcomes. Aggregate coverage thresholds remain available
+through `pnpm run test:coverage` locally. The separate `test-ci.yaml` and
+`prod-ci.yaml` workflows still use the report-producing shard script.
 
 ## Optimization rollout follow-up
 
