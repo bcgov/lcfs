@@ -157,7 +157,8 @@ JOIN compliance_report_status crs
     ON rv.current_status_id = crs.compliance_report_status_id
 JOIN status_dates sd
     ON rv.compliance_report_id = sd.compliance_report_id
-WHERE sd.submitted_date IS NOT NULL;
+WHERE sd.submitted_date IS NOT NULL
+  AND crs.status::text <> 'Draft';
 
 GRANT SELECT ON vw_compliance_report_versions TO basic_lcfs_reporting_role;
 
@@ -326,6 +327,9 @@ WITH time_diff AS (
         compliance_report_history crh
         JOIN compliance_report cr ON crh.compliance_report_id = cr.compliance_report_id
         JOIN compliance_period cp ON cr.compliance_period_id = cp.compliance_period_id
+        JOIN compliance_report_status current_crs
+            ON cr.current_status_id = current_crs.compliance_report_status_id
+            AND current_crs.status <> 'Draft'::compliancereportstatusenum
 )
 SELECT
     compliance_report_id,
@@ -1053,8 +1057,7 @@ WITH
     FROM
       fuel_supply fs
     WHERE
-      action_type <> 'DELETE'
-      AND fs.compliance_report_id IN (SELECT compliance_report_id FROM grouped_reports)
+      fs.compliance_report_id IN (SELECT compliance_report_id FROM grouped_reports)
     GROUP BY
       fs.group_uuid
   ),
@@ -1487,7 +1490,7 @@ SELECT
       max(VERSION) AS max_version
     FROM
       COMPLIANCE_REPORT
-   
+
 GROUP BY
       COMPLIANCE_REPORT.compliance_report_group_uuid;
 
@@ -1544,6 +1547,9 @@ WITH ordered_history AS (
     FROM
         compliance_report_history crh
         JOIN compliance_report cr ON crh.compliance_report_id = cr.compliance_report_id
+        JOIN compliance_report_status current_crs
+            ON cr.current_status_id = current_crs.compliance_report_status_id
+            AND current_crs.status <> 'Draft'::compliancereportstatusenum
         JOIN compliance_report_status crs ON crh.status_id = crs.compliance_report_status_id
         JOIN compliance_period cp ON cr.compliance_period_id = cp.compliance_period_id
 )
@@ -1775,6 +1781,8 @@ WITH categorized AS (
         END AS workflow_state
     FROM
         v_compliance_report
+    WHERE
+        report_status <> 'Draft'::compliancereportstatusenum
 )
 SELECT
     compliance_period_id,
@@ -2650,12 +2658,15 @@ LEFT JOIN "transaction" AS "Transaction" ON "compliance_report"."transaction_id"
       INNER JOIN (
         SELECT
           compliance_report_group_uuid AS group_uuid,
-          max(VERSION) AS max_version
+          max(cr.version) AS max_version
         FROM
-          COMPLIANCE_REPORT
+          compliance_report cr
+          JOIN compliance_report_status crs
+            ON cr.current_status_id = crs.compliance_report_status_id
+            AND crs.status <> 'Draft'::compliancereportstatusenum
        
 GROUP BY
-          COMPLIANCE_REPORT.compliance_report_group_uuid
+          cr.compliance_report_group_uuid
       ) AS "Compliance Reports Chained - Compliance Report Group UUID" ON (
         "compliance_report"."compliance_report_group_uuid" = "Compliance Reports Chained - Compliance Report Group UUID"."group_uuid"
       )
@@ -3375,8 +3386,7 @@ WITH
     FROM
       fuel_supply fs
     WHERE
-      action_type <> 'DELETE'
-    AND fs.compliance_report_id IN (SELECT compliance_report_id FROM grouped_reports)
+      fs.compliance_report_id IN (SELECT compliance_report_id FROM grouped_reports)
     GROUP BY
       fs.group_uuid
   ),
@@ -3475,7 +3485,7 @@ SELECT DISTINCT
   fc.feedstock,
   fc.feedstock_location,
   fc.feedstock_misc,
-  fc.co_processed,
+  COALESCE(fc.co_processed, 'No') AS co_processed,
   fc.effective_date,
   fc.application_date,
   fc.approval_date,
@@ -4349,8 +4359,8 @@ WITH
       fs.group_uuid,
       MAX(fs.version) AS max_version
     FROM fuel_supply fs
-    WHERE action_type <> 'DELETE'
-    AND fs.compliance_report_id IN (SELECT compliance_report_id FROM grouped_reports)
+    WHERE
+      fs.compliance_report_id IN (SELECT compliance_report_id FROM grouped_reports)
     GROUP BY fs.group_uuid
   ),
   selected_fs AS (
