@@ -1,7 +1,7 @@
 import 'react'
 import { fireEvent, screen, within } from '@testing-library/react'
 
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 
 import axe from 'axe-core'
 import { DeletedItems } from '../DeletedItems'

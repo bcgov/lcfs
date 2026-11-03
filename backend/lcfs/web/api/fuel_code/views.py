@@ -54,7 +54,7 @@ def resolve_bulletin_type(
 
     if resolved_bulletin_type not in {"current", "archived"}:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Query parameter bulletinType (or bulletin_type) must be 'current' or 'archived'.",
         )
 

@@ -1,6 +1,6 @@
 import { test } from '@/tests/utils/fixtures'
 import { screen, fireEvent } from '@testing-library/react'
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import * as organizationHooks from '@/hooks/useOrganization'
 
 // Mock hooks
@@ -76,9 +76,8 @@ describe('OrgDetailsCard', () => {
 
   const renderCard = async (render, providers) => {
     // Dynamic import to allow vi.mock to take effect
-    const { default: OrgDetailsCard } = await import(
-      '@/views/Dashboard/components/cards/bceid/OrgDetailsCard'
-    )
+    const { default: OrgDetailsCard } =
+      await import('@/views/Dashboard/components/cards/bceid/OrgDetailsCard')
     return render(<OrgDetailsCard />, providers)
   }
 

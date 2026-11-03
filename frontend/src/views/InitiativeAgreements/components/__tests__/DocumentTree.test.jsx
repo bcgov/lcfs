@@ -1,7 +1,7 @@
 import 'react'
 import { fireEvent, screen } from '@testing-library/react'
 
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 
 import { DocumentTree } from '../DocumentTree'
 import { test } from '@/tests/utils/fixtures'

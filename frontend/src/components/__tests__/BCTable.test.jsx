@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi } from 'vite-plus/test'
 import {
   addFlexToColumns,
   getColumnMinWidthSum,
@@ -121,13 +121,10 @@ describe('relaxColumnMinWidths', () => {
 
     relaxColumnMinWidths(api, null, 50)
 
-    expect(api.setGridOption).toHaveBeenCalledWith(
-      'columnDefs',
-      [
-        { colId: 'a', minWidth: 50 },
-        { colId: 'b', minWidth: 50 }
-      ]
-    )
+    expect(api.setGridOption).toHaveBeenCalledWith('columnDefs', [
+      { colId: 'a', minWidth: 50 },
+      { colId: 'b', minWidth: 50 }
+    ])
   })
 
   it('restores column state after updating defs when columnApi provides state', () => {

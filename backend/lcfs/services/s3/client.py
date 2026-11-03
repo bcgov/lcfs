@@ -23,7 +23,7 @@ from lcfs.web.api.initiative_agreement.repo import InitiativeAgreementRepository
 from lcfs.web.api.initiative_agreement.workflow import is_hidden_from
 from lcfs.web.api.internal_comment.repo import InternalCommentRepository
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
-from sqlalchemy import select, delete, and_
+from sqlalchemy import select, delete, and_, func
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 from lcfs.services.s3.dependency import get_s3_client
@@ -649,33 +649,27 @@ class DocumentService:
         parent_type: str,
         require_physical_delete: bool = False,
     ) -> bool:
-        document = await self.db.get_one(Document, document_id)
+        """Remove *parent_id*'s link to the document, and the document itself
+        when that was its last link. Returns whether the file was physically
+        deleted. With *require_physical_delete*, a document still linked
+        elsewhere is left untouched and ``False`` is returned instead."""
+        # The caller was authorized for the parent, so the document must hang
+        # off that parent; one linked elsewhere reads as missing.
+        document = await self._get_document_for_parent(
+            document_id, parent_id, parent_type
+        )
+        association_table, parent_column = DOCUMENT_PARENT_ASSOCIATIONS[parent_type]
 
-        if not document:
-            raise Exception("Document not found")
-
-        association_info = DOCUMENT_PARENT_ASSOCIATIONS.get(parent_type)
-
-        if not association_info:
-            raise Exception(f"Unsupported parent_type: {parent_type}")
-
-        association_table, parent_column = association_info
-
-        has_other_links = False
-        for linked_table, linked_parent_column in DOCUMENT_PARENT_ASSOCIATIONS.values():
-            links = (
-                await self.db.execute(
-                    select(getattr(linked_table.c, linked_parent_column)).where(
-                        document_id == linked_table.c.document_id
-                    )
-                )
-            ).all()
-            if any(
-                linked_table is not association_table or row[0] != parent_id
-                for row in links
-            ):
-                has_other_links = True
-                break
+        # Count the document's links across every parent type, not just this
+        # one, before deciding this is the last.
+        link_count = 0
+        for table, _ in DOCUMENT_PARENT_ASSOCIATIONS.values():
+            link_count += await self.db.scalar(
+                select(func.count())
+                .select_from(table)
+                .where(table.c.document_id == document_id)
+            )
+        has_other_links = link_count > 1
 
         if has_other_links and require_physical_delete:
             return False

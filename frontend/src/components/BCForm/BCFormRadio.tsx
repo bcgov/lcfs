@@ -7,7 +7,7 @@ import { Controller } from 'react-hook-form'
 import type { Control, FieldValues } from 'react-hook-form'
 import PropTypes from 'prop-types'
 import { CustomLabel } from './CustomLabel'
-import type { SxProps , Theme } from '@mui/material/styles'
+import type { SxProps, Theme } from '@mui/material/styles'
 import type { ReactNode } from 'react'
 
 export interface BCFormRadioOption {

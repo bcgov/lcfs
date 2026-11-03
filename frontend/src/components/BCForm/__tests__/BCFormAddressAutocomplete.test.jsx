@@ -1,13 +1,11 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, expect, vi, beforeEach, afterEach } from 'vitest'
-import { cleanup, screen } from '@testing-library/react';
+import { describe, expect, vi, beforeEach, afterEach } from 'vite-plus/test'
+import { cleanup, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useForm, FormProvider } from 'react-hook-form'
-import {
-  BCFormAddressAutocomplete
-} from '@/components/BCForm/BCFormAddressAutocomplete'
+import { BCFormAddressAutocomplete } from '@/components/BCForm/BCFormAddressAutocomplete'
 import { addressHasPostalCode } from '@/components/BCForm/addressHelpers'
 import { test as fixtureTest } from '@/tests/utils/fixtures'
 
@@ -68,7 +66,7 @@ vi.mock('../AddressAutocomplete', () => ({
   )
 }))
 
-describe.sequential('BCFormAddressAutocomplete', () => {
+describe('BCFormAddressAutocomplete', { concurrent: false }, () => {
   let mockSetTimeout, mockClearTimeout
 
   // Form wrapper for integration tests
@@ -88,13 +86,11 @@ describe.sequential('BCFormAddressAutocomplete', () => {
     vi.clearAllMocks()
 
     // Mock setTimeout and clearTimeout for tooltip functionality
-    mockSetTimeout = vi
-      .spyOn(global, 'setTimeout')
-      .mockImplementation((fn) => {
-        // Execute immediately for testing
-        fn()
-        return 123
-      })
+    mockSetTimeout = vi.spyOn(global, 'setTimeout').mockImplementation((fn) => {
+      // Execute immediately for testing
+      fn()
+      return 123
+    })
     mockClearTimeout = vi
       .spyOn(global, 'clearTimeout')
       .mockImplementation(() => {})
@@ -135,10 +131,7 @@ describe.sequential('BCFormAddressAutocomplete', () => {
   })
 
   const renderBCFormAddressAutocomplete = (
-    {
-  render,
-  theme
-},
+    { render, theme },
     props = {},
     formDefaults = {}
   ) => {
@@ -272,10 +265,7 @@ describe.sequential('BCFormAddressAutocomplete', () => {
       expect(input).toHaveValue('456 New Address')
     })
 
-    test('handles form validation errors', ({
-  render,
-  theme
-}) => {
+    test('handles form validation errors', ({ render, theme }) => {
       // Test with form that has validation error
       const FormWithError = () => {
         const methods = useForm({
@@ -597,9 +587,9 @@ describe.sequential('BCFormAddressAutocomplete', () => {
     })
 
     test('provides proper error announcement for screen readers', ({
-  render,
-  theme
-}) => {
+      render,
+      theme
+    }) => {
       const FormWithError = () => {
         const methods = useForm({
           defaultValues: { testError: '' },
@@ -680,10 +670,7 @@ describe.sequential('BCFormAddressAutocomplete', () => {
   })
 
   describe('Edge Cases and Error Handling', () => {
-    test('handles undefined control prop gracefully', ({
-  render,
-  theme
-}) => {
+    test('handles undefined control prop gracefully', ({ render, theme }) => {
       expect(() => {
         render(
           <BCFormAddressAutocomplete
@@ -713,10 +700,7 @@ describe.sequential('BCFormAddressAutocomplete', () => {
       expect(addressAutocomplete).toBeInTheDocument()
     })
 
-    test('handles undefined name prop', ({
-  render,
-  theme
-}) => {
+    test('handles undefined name prop', ({ render, theme }) => {
       expect(() => {
         render(
           <FormWrapper>
@@ -802,10 +786,7 @@ describe.sequential('BCFormAddressAutocomplete', () => {
   })
 
   describe('PropTypes and API', () => {
-    test('renders with minimal required props', ({
-  render,
-  theme
-}) => {
+    test('renders with minimal required props', ({ render, theme }) => {
       render(
         <FormWrapper>
           {({ control }) => (

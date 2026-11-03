@@ -45,8 +45,7 @@ interface BCButtonOwnerState {
 const BCButtonRoot = styled(Button, {
   shouldForwardProp: (prop) => prop !== 'ownerState'
 })<{ ownerState: BCButtonOwnerState }>(({ theme, ownerState }) => {
-  const { palette, functions, borders, boxShadows } =
-    theme as ExtendedTheme
+  const { palette, functions, borders, boxShadows } = theme as ExtendedTheme
   const { color, variant, size, circular, iconOnly } = ownerState
   const { white, text, transparent, gradients, primary, light } = palette
   const { boxShadow, linearGradient, pxToRem, rgba } = functions
@@ -58,9 +57,7 @@ const BCButtonRoot = styled(Button, {
   // styles for the button with variant="contained"
   const containedStyles = () => {
     // background color value
-    const backgroundValue = getColor(color)
-      ? getColor(color)!.main
-      : white.main
+    const backgroundValue = getColor(color) ? getColor(color)!.main : white.main
 
     // backgroundColor value when button is focused
     const focusedBackgroundValue = getColor(color)
@@ -153,9 +150,7 @@ const BCButtonRoot = styled(Button, {
       focusedBackgroundValue = getColor(color)!.focus
     }
     // color value
-    const colorValue = getColor(color)
-      ? getColor(color)!.main
-      : white.main
+    const colorValue = getColor(color) ? getColor(color)!.main : white.main
 
     // boxShadow value
     const boxShadowValue = getColor(color)
@@ -210,10 +205,7 @@ const BCButtonRoot = styled(Button, {
     const backgroundValue =
       color === 'white' || !gradients[color]
         ? white.main
-        : linearGradient(
-            gradients[color].main,
-            gradients[color].state
-          )
+        : linearGradient(gradients[color].main, gradients[color].state)
 
     // boxShadow value
     const boxShadowValue = colored[color]
@@ -275,9 +267,7 @@ const BCButtonRoot = styled(Button, {
   // styles for the button with variant="text"
   const textStyles = () => {
     // color value
-    const colorValue = getColor(color)
-      ? getColor(color)!.main
-      : white.main
+    const colorValue = getColor(color) ? getColor(color)!.main : white.main
 
     // color value when button is focused
     const focusedColorValue = getColor(color)

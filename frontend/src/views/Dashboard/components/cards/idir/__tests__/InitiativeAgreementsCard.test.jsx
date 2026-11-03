@@ -1,6 +1,6 @@
 import 'react'
 import { screen, fireEvent } from '@testing-library/react'
-import { vi, describe, expect, beforeEach } from 'vitest'
+import { vi, describe, expect, beforeEach } from 'vite-plus/test'
 import { InitiativeAgreementsCard } from '../InitiativeAgreementsCard'
 import { useInitiativeAgreementCounts } from '@/hooks/useDashboard'
 import { isFeatureEnabled } from '@/constants/config'

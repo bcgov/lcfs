@@ -1209,10 +1209,22 @@ class FinalSupplyEquipmentRepository:
         and the total kWh shown above the table derive from the exact same set
         of rows, so they must apply identical filters. Centralizing them here
         keeps the displayed total consistent with the rows it summarizes.
+
+        ``vw_fse_base`` holds only the latest non-Draft version of each report
+        group, so it is scoped by the report's group: a Draft or an older
+        version shows the latest submitted version's rows.
         """
+        if vt is VwFSEBaseView.__table__:
+            report_scope = vt.c.compliance_report_group_uuid == (
+                select(ComplianceReport.compliance_report_group_uuid)
+                .where(ComplianceReport.compliance_report_id == compliance_report_id)
+                .scalar_subquery()
+            )
+        else:
+            report_scope = vt.c.compliance_report_id == compliance_report_id
         conditions = [
             vt.c.organization_id == organization_id,
-            vt.c.compliance_report_id == compliance_report_id,
+            report_scope,
         ]
         if include_decommissioned_attached:
             conditions.append(
@@ -1257,6 +1269,27 @@ class FinalSupplyEquipmentRepository:
             select(func.coalesce(func.sum(vt.c.kwh_usage), 0)).where(*conditions)
         )
         return float(total or 0)
+
+    @repo_handler
+    async def is_fse_reporting_refresh_pending(self) -> bool:
+        """
+        Return True while FSE writes are not yet in ``mv_fse_reporting_base_pref``.
+
+        Source-table triggers bump ``dirty_generation``; the refresh job sets
+        ``refreshed_generation`` only after the materialized view is refreshed.
+        Read this before the reporting rows: once it reports False, the rows
+        read afterwards include every committed write.
+        """
+        pending = await self.db.scalar(
+            sa.text(
+                """
+                SELECT dirty_generation > refreshed_generation
+                FROM fse_reporting_mv_refresh_state
+                WHERE id = 1
+                """
+            )
+        )
+        return bool(pending)
 
     @staticmethod
     def _get_fse_reporting_source_table(source: str):
@@ -1593,8 +1626,9 @@ class FinalSupplyEquipmentRepository:
         are taken from it directly.
 
         ``compliance_report_group_uuid`` is retained for signature
-        compatibility; scoping is handled by ``compliance_report_id`` via the
-        view, consistent with the government export.
+        compatibility; scoping is handled by ``compliance_report_id`` through
+        the shared conditions (its report group, for this view), consistent
+        with the government export.
         """
         vt = VwFSEBaseView.__table__
 

@@ -8,14 +8,14 @@ import { faSquareCheck } from '@fortawesome/free-solid-svg-icons'
 import BCButton from '@/components/BCButton'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
-import { columnDefs, routesMapping, defaultSortModel } from './_schema';
+import { columnDefs, routesMapping, defaultSortModel } from './_schema'
 import {
   useDeleteNotificationMessages,
   useGetNotificationMessages,
   useMarkNotificationAsRead
 } from '@/hooks/useNotifications'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import '@/constants/schedules';
+import '@/constants/schedules'
 
 const initialPaginationOptions = {
   page: 1,
@@ -80,7 +80,7 @@ export const Notifications = () => {
       }
       mutation.mutate(selectedNotifications, {
         onSuccess: () => {
-          // eslint-disable-next-line chai-friendly/no-unused-expressions
+          // oxlint-disable-next-line chai-friendly/no-unused-expressions
           successMessage &&
             alertRef.current?.triggerAlert({
               message: t(successMessage),

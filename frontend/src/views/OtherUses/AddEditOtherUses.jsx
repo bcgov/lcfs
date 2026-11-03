@@ -21,7 +21,7 @@ import {
   PROVISION_APPROVED_FUEL_CODE,
   isFuelCodeProvision
 } from './_schema'
-import { NEW_REGULATION_YEAR } from '@/constants/common';
+import { NEW_REGULATION_YEAR } from '@/constants/common'
 import {
   calculateRenewableClaimColumnVisibility,
   applyRenewableClaimColumnVisibility
@@ -351,7 +351,8 @@ export const AddEditOtherUses = () => {
           validationStatus: 'error'
         })
         alertRef.current?.triggerAlert({
-          message: 'Unable to save row: If other, enter expected use is required when Expected use is Other.',
+          message:
+            'Unable to save row: If other, enter expected use is required when Expected use is Other.',
           severity: 'error'
         })
         return

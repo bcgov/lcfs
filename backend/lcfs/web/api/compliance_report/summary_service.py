@@ -1,10 +1,10 @@
 import re
 import structlog
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal, ROUND_HALF_UP
 from typing import List, Tuple, Optional, Union
 
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 from sqlalchemy import inspect
 
 from lcfs.db.models.compliance.ComplianceReport import (
@@ -45,11 +45,19 @@ from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from lcfs.web.api.notional_transfer.services import NotionalTransferServices
 from lcfs.web.api.other_uses.repo import OtherUsesRepository
 from lcfs.web.api.transaction.repo import TransactionRepository
+from lcfs.web.api.compliance_report.workflow import (
+    can_edit_summary,
+    can_override_penalty,
+)
 from lcfs.web.core.decorators import service_handler
+from lcfs.web.core.ownership import ensure_matches
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.web.exception.exceptions import ServiceException
 
 logger = structlog.get_logger(__name__)
+
+# The renewable fuel summary lines a person enters (retention and deferral).
+EDITABLE_SUMMARY_LINES = {"6", "7", "8", "9"}
 
 
 class ComplianceDataService:
@@ -663,20 +671,97 @@ class ComplianceReportSummaryService:
         self,
         report_id: int,
         summary_data: ComplianceReportSummaryUpdateSchema,
+        user,
         include_penalty_status: bool = True,
     ) -> ComplianceReportSummarySchema:
         """Autosave compliance report summary details for a specific summary by ID."""
         compliance_report = await self.cr_repo.get_compliance_report_by_id(report_id)
+        if not compliance_report or not compliance_report.summary:
+            raise DataNotFoundException("Compliance report summary not found.")
         compliance_year = None
-        if compliance_report and compliance_report.compliance_period:
+        if compliance_report.compliance_period:
             compliance_year = int(compliance_report.compliance_period.description)
 
-        await self.repo.save_compliance_report_summary(summary_data, compliance_year)
+        await self.repo.save_compliance_report_summary(
+            self._editable_summary_data(
+                compliance_report, summary_data, user, compliance_year
+            ),
+            compliance_year,
+        )
 
         self._clear_compliance_report_summary_cache(compliance_report)
 
         return await self.calculate_compliance_report_summary(
             report_id, include_penalty_status=include_penalty_status
+        )
+
+    def _editable_summary_data(
+        self,
+        compliance_report,
+        summary_data: ComplianceReportSummaryUpdateSchema,
+        user,
+        compliance_year: Optional[int],
+    ) -> ComplianceReportSummaryUpdateSchema:
+        """The part of a client's summary save this user may make.
+
+        The save goes to the report the route authorized and to its own
+        summary, and the lock stays the stored one. Summary lines come through
+        only for an editor of an unlocked summary, and only the lines people
+        enter: every other line is calculated, and recalculated on this save.
+        The penalty override comes through only for the director on a
+        recommended 2024+ report, stamped server-side; otherwise the stored
+        override is kept.
+        """
+        summary = compliance_report.summary
+        ensure_matches(
+            compliance_report.compliance_report_id,
+            summary_data.compliance_report_id,
+            field="complianceReportId",
+        )
+        ensure_matches(summary.summary_id, summary_data.summary_id, field="summaryId")
+
+        edit_lines = can_edit_summary(user, compliance_report) and not summary.is_locked
+        edit_override = (
+            can_override_penalty(user, compliance_report)
+            and (compliance_year or 0) >= 2024
+        )
+        if not (edit_lines or edit_override):
+            raise HTTPException(
+                status_code=403,
+                detail="This summary cannot be changed in the report's current status.",
+            )
+
+        if edit_override:
+            override = {
+                "penalty_override_enabled": summary_data.penalty_override_enabled,
+                "renewable_penalty_override": summary_data.renewable_penalty_override,
+                "low_carbon_penalty_override": summary_data.low_carbon_penalty_override,
+                "penalty_override_date": datetime.now(timezone.utc),
+                "penalty_override_user": user.user_profile_id,
+            }
+        else:
+            override = {
+                "penalty_override_enabled": summary.penalty_override_enabled,
+                "renewable_penalty_override": summary.renewable_penalty_override,
+                "low_carbon_penalty_override": summary.low_carbon_penalty_override,
+                "penalty_override_date": summary.penalty_override_date,
+                "penalty_override_user": summary.penalty_override_user,
+            }
+
+        return summary_data.model_copy(
+            update={
+                "compliance_report_id": compliance_report.compliance_report_id,
+                "summary_id": summary.summary_id,
+                "is_locked": summary.is_locked,
+                "renewable_fuel_target_summary": [
+                    row
+                    for row in summary_data.renewable_fuel_target_summary
+                    if edit_lines and str(row.line) in EDITABLE_SUMMARY_LINES
+                ],
+                "low_carbon_fuel_target_summary": [],
+                "non_compliance_penalty_summary": [],
+                **override,
+            }
         )
 
     @service_handler

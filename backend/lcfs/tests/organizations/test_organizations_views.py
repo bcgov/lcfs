@@ -414,7 +414,7 @@ class TestOrganizationLinkKeyViews:
         payload = {}  # Missing form_id
         response = await client.post("/api/organizations/1/link-keys", json=payload)
 
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     @pytest.mark.anyio
     async def test_generate_organization_link_key_not_found(

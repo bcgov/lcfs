@@ -31,7 +31,9 @@ export default function FormView() {
         const { data } = await axios.get(url, config)
         setFormMeta(data)
       } catch (err) {
-        setError(err.response?.data?.detail || err.message || 'Failed to load form.')
+        setError(
+          err.response?.data?.detail || err.message || 'Failed to load form.'
+        )
       } finally {
         setLoading(false)
       }
@@ -72,7 +74,11 @@ export default function FormView() {
           {formMeta.description}
         </BCTypography>
       )}
-      <FormComponent formMeta={formMeta} formSlug={formSlug} linkKey={linkKey} />
+      <FormComponent
+        formMeta={formMeta}
+        formSlug={formSlug}
+        linkKey={linkKey}
+      />
     </BCBox>
   )
 }

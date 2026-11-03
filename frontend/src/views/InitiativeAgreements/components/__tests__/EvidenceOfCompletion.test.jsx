@@ -2,7 +2,7 @@ import 'react'
 import { act, fireEvent, screen, waitFor } from '@testing-library/react'
 import { useMutation } from '@tanstack/react-query'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 
 import { EvidenceOfCompletion } from '../EvidenceOfCompletion'
 import { DesignatedActionWorkflow } from '../DesignatedActionWorkflow'

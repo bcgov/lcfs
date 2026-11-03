@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from 'vite-plus/test'
 import { notificationTypes, notificationChannels } from '../notificationTypes'
 
 describe('notificationTypes', () => {
@@ -9,61 +9,75 @@ describe('notificationTypes', () => {
       'IDIR_DIRECTOR__FUEL_CODE__ANALYST_RECOMMENDATION'
     ]
 
-    fuelCodeNotifications.forEach(notification => {
+    fuelCodeNotifications.forEach((notification) => {
       expect(notificationTypes).toHaveProperty(notification)
       expect(notificationTypes[notification]).toBe(notification)
     })
   })
 
   it('has fuel code notifications for analysts', () => {
-    expect(notificationTypes.IDIR_ANALYST__FUEL_CODE__DIRECTOR_RETURNED).toBe('IDIR_ANALYST__FUEL_CODE__DIRECTOR_RETURNED')
-    expect(notificationTypes.IDIR_ANALYST__FUEL_CODE__DIRECTOR_APPROVAL).toBe('IDIR_ANALYST__FUEL_CODE__DIRECTOR_APPROVAL')
+    expect(notificationTypes.IDIR_ANALYST__FUEL_CODE__DIRECTOR_RETURNED).toBe(
+      'IDIR_ANALYST__FUEL_CODE__DIRECTOR_RETURNED'
+    )
+    expect(notificationTypes.IDIR_ANALYST__FUEL_CODE__DIRECTOR_APPROVAL).toBe(
+      'IDIR_ANALYST__FUEL_CODE__DIRECTOR_APPROVAL'
+    )
   })
 
   it('has fuel code notifications for directors', () => {
-    expect(notificationTypes.IDIR_DIRECTOR__FUEL_CODE__ANALYST_RECOMMENDATION).toBe('IDIR_DIRECTOR__FUEL_CODE__ANALYST_RECOMMENDATION')
+    expect(
+      notificationTypes.IDIR_DIRECTOR__FUEL_CODE__ANALYST_RECOMMENDATION
+    ).toBe('IDIR_DIRECTOR__FUEL_CODE__ANALYST_RECOMMENDATION')
   })
 
   it('has CI application notifications for directors', () => {
-    expect(notificationTypes.IDIR_DIRECTOR__CI_APPLICATION__ANALYST_RECOMMENDATION).toBe('IDIR_DIRECTOR__CI_APPLICATION__ANALYST_RECOMMENDATION')
+    expect(
+      notificationTypes.IDIR_DIRECTOR__CI_APPLICATION__ANALYST_RECOMMENDATION
+    ).toBe('IDIR_DIRECTOR__CI_APPLICATION__ANALYST_RECOMMENDATION')
   })
 
   it('has CI application notifications for BCeID CI applicants', () => {
-    expect(notificationTypes.BCEID__CI_APPLICATION__GOVERNMENT_ACTION).toBe('BCEID__CI_APPLICATION__GOVERNMENT_ACTION')
-    expect(notificationTypes.BCEID__CI_APPLICATION__FUEL_CODE_APPROVED).toBe('BCEID__CI_APPLICATION__FUEL_CODE_APPROVED')
+    expect(notificationTypes.BCEID__CI_APPLICATION__GOVERNMENT_ACTION).toBe(
+      'BCEID__CI_APPLICATION__GOVERNMENT_ACTION'
+    )
+    expect(notificationTypes.BCEID__CI_APPLICATION__FUEL_CODE_APPROVED).toBe(
+      'BCEID__CI_APPLICATION__FUEL_CODE_APPROVED'
+    )
   })
 
   it('follows consistent naming convention for fuel code notifications', () => {
-    const fuelCodeNotificationKeys = Object.keys(notificationTypes).filter(key => 
-      key.includes('FUEL_CODE')
+    const fuelCodeNotificationKeys = Object.keys(notificationTypes).filter(
+      (key) => key.includes('FUEL_CODE')
     )
 
-    fuelCodeNotificationKeys.forEach(key => {
+    fuelCodeNotificationKeys.forEach((key) => {
       // Should start with role
-      expect(key).toMatch(/^(IDIR_ANALYST|IDIR_DIRECTOR|IDIR_COMPLIANCE_MANAGER|BCEID)__/)
-      
+      expect(key).toMatch(
+        /^(IDIR_ANALYST|IDIR_DIRECTOR|IDIR_COMPLIANCE_MANAGER|BCEID)__/
+      )
+
       // Should contain FUEL_CODE
       expect(key).toContain('FUEL_CODE')
-      
+
       // Should end with action
       expect(key).toMatch(/__[A-Z_]+$/)
-      
+
       // Value should match key
       expect(notificationTypes[key]).toBe(key)
     })
   })
 
   it('has the correct number of fuel code notifications', () => {
-    const fuelCodeNotificationKeys = Object.keys(notificationTypes).filter(key => 
-      key.includes('FUEL_CODE')
+    const fuelCodeNotificationKeys = Object.keys(notificationTypes).filter(
+      (key) => key.includes('FUEL_CODE')
     )
-    
+
     expect(fuelCodeNotificationKeys).toHaveLength(4)
   })
 
   it('has the correct number of CI application notifications', () => {
-    const ciApplicationNotificationKeys = Object.keys(notificationTypes).filter(key =>
-      key.includes('CI_APPLICATION')
+    const ciApplicationNotificationKeys = Object.keys(notificationTypes).filter(
+      (key) => key.includes('CI_APPLICATION')
     )
 
     expect(ciApplicationNotificationKeys).toHaveLength(6)

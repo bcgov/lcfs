@@ -140,7 +140,14 @@ export const AddEditFuelExports = () => {
       )
       setColumnDefs(updatedColumnDefs)
     }
-  }, [optionsData, errors, warnings, gridReady, isSupplemental, compliancePeriod])
+  }, [
+    optionsData,
+    errors,
+    warnings,
+    gridReady,
+    isSupplemental,
+    compliancePeriod
+  ])
 
   useEffect(() => {
     if (!fuelExportsLoading && !isArrayEmpty(data)) {

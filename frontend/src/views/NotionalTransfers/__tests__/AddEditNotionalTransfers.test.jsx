@@ -6,7 +6,7 @@ import {
 } from '@/hooks/useNotionalTransfer'
 import { test } from '@/tests/utils/fixtures'
 import { screen, waitFor, act, fireEvent } from '@testing-library/react'
-import { beforeEach, describe, expect, vi } from 'vitest'
+import { beforeEach, describe, expect, vi } from 'vite-plus/test'
 import { AddEditNotionalTransfers } from '../AddEditNotionalTransfers'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
 

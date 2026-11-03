@@ -12,7 +12,11 @@ import {
   MapLegend,
   MapMarkers
 } from './components/MapComponents'
-import { GeofencingStatus, ErrorState, NoDataState } from './components/StatusComponent'
+import {
+  GeofencingStatus,
+  ErrorState,
+  NoDataState
+} from './components/StatusComponent'
 import { ExcelStyledTable } from './components/TableComponent'
 // Import utility functions and services
 import {
@@ -51,7 +55,8 @@ const calculateInclusiveDays = (from, to) => {
     return null
   }
 
-  const days = Math.floor((end.getTime() - start.getTime()) / MILLISECONDS_PER_DAY) + 1
+  const days =
+    Math.floor((end.getTime() - start.getTime()) / MILLISECONDS_PER_DAY) + 1
   return days > 0 ? days : null
 }
 
@@ -114,9 +119,7 @@ const calculateLocationMetrics = (locGroup = []) => {
   const reportedKwhUsage = hasUsageData ? sumKwhUsage : null
 
   const utilization =
-    maxCapacity &&
-    maxCapacity > 0 &&
-    reportedKwhUsage !== null
+    maxCapacity && maxCapacity > 0 && reportedKwhUsage !== null
       ? (reportedKwhUsage / maxCapacity) * 100
       : null
 
@@ -143,9 +146,7 @@ const formatNumber = (value, options = {}) => {
   }).format(value)
 }
 
-const GeoMapping = ({
-  data
-}) => {
+const GeoMapping = ({ data }) => {
   const [locations, setLocations] = useState([])
   const [groupedLocations, setGroupedLocations] = useState({})
   const [error, setError] = useState(null)
@@ -273,8 +274,7 @@ const GeoMapping = ({
 
     const locationMetrics = calculateLocationMetrics(locGroup)
     const equipmentCount =
-      locationMetrics.equipmentCount ??
-      Object.keys(uniqueSupplyUnits).length
+      locationMetrics.equipmentCount ?? Object.keys(uniqueSupplyUnits).length
     const formattedAverageOperationalDays = formatNumber(
       locationMetrics.averageOperationalDays,
       { maximumFractionDigits: 2 }
@@ -299,7 +299,7 @@ const GeoMapping = ({
           gutterBottom
           component="div"
         >
-            {firstLoc.name}
+          {firstLoc.name}
         </BCTypography>
 
         <BCTypography variant="body" component="div" gutterBottom>
@@ -338,9 +338,7 @@ const GeoMapping = ({
           </BCTypography>
           <BCTypography variant="body" component="div">
             <strong>Utilization:</strong>{' '}
-            {formattedUtilization !== null
-              ? `${formattedUtilization}%`
-              : 'N/A'}
+            {formattedUtilization !== null ? `${formattedUtilization}%` : 'N/A'}
           </BCTypography>
         </div>
 

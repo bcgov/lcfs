@@ -1,5 +1,5 @@
 import React from 'react'
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ChargingSitesList } from '../ChargingSitesList'
@@ -41,15 +41,22 @@ vi.mock('../components/ChargingSitesMap', () => ({
 // Mock grid to keep tests focused
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: React.forwardRef(function BCGridViewerMock(props) {
-  return <div data-testid="bc-grid-viewer" onClick={() => props.onRowClicked?.({
-    data: {
-      chargingSiteId: 123
-    }
-  })}>
-      Grid - Page: {props.paginationOptions?.page}, Size:{' '}
-      {props.paginationOptions?.size}
-    </div>;
-})
+    return (
+      <div
+        data-testid="bc-grid-viewer"
+        onClick={() =>
+          props.onRowClicked?.({
+            data: {
+              chargingSiteId: 123
+            }
+          })
+        }
+      >
+        Grid - Page: {props.paginationOptions?.page}, Size:{' '}
+        {props.paginationOptions?.size}
+      </div>
+    )
+  })
 }))
 
 // Mock the clear filters button

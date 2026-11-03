@@ -10,7 +10,10 @@ import {
 } from '@/hooks/useInitiativeAgreements'
 import { DAAssignedAnalystCell } from './components/DAAssignedAnalystCell'
 import { dateFormatter } from '@/utils/formatters'
-import { InitiativeAgreementStatusRenderer, LastCommentRenderer } from './components/AgreementGridRenderers'
+import {
+  InitiativeAgreementStatusRenderer,
+  LastCommentRenderer
+} from './components/AgreementGridRenderers'
 
 type InitiativeAgreementGridRow = {
   lifecycleStatus?: { status?: string }

@@ -1,5 +1,5 @@
 import 'react'
-import { afterEach, describe, expect, vi } from 'vitest'
+import { afterEach, describe, expect, vi } from 'vite-plus/test'
 import { cleanup, screen } from '@testing-library/react'
 
 import { StepStub } from '@/views/CarbonIntensity/components/StepStub'

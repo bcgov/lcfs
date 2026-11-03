@@ -1,6 +1,6 @@
 import { test } from '@/tests/utils/fixtures'
 import { screen, fireEvent, waitFor } from '@testing-library/react'
-import { describe, vi, beforeAll, beforeEach, expect } from 'vitest'
+import { describe, vi, beforeAll, beforeEach, expect } from 'vite-plus/test'
 import Comments from '@/components/Comments'
 
 // jsdom doesn't implement range layout geometry; Quill's setSelection calls

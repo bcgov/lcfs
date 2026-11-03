@@ -1,5 +1,5 @@
 import 'react'
-import { afterEach, beforeEach, describe, expect, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, vi } from 'vite-plus/test'
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 
 import { CIApplications } from '@/views/CarbonIntensity/CIApplications'

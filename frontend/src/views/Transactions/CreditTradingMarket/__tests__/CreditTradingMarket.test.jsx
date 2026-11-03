@@ -1,6 +1,6 @@
 import React from 'react'
 import { screen, fireEvent } from '@testing-library/react'
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import { CreditTradingMarket } from '../CreditTradingMarket'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { test } from '@/tests/utils/fixtures'
@@ -9,29 +9,31 @@ vi.mock('@/hooks/useCurrentUser')
 
 // Mock child components
 vi.mock('../CreditMarketTable', () => ({
-  CreditMarketTable: React.forwardRef(function CreditMarketTableMock(props, ref) {
-    React.useImperativeHandle(ref, () => ({
-      refreshListings: vi.fn()
-    }))
+  CreditMarketTable: React.forwardRef(
+    function CreditMarketTableMock(props, ref) {
+      React.useImperativeHandle(ref, () => ({
+        refreshListings: vi.fn()
+      }))
 
-    return (
-      <div data-test="credit-market-table" ref={ref}>
-        Credit Market Table
-        {props.onRowSelect && (
-          <button
-            onClick={() =>
-              props.onRowSelect({
-                organizationId: 1,
-                organizationName: 'Org'
-              })
-            }
-          >
-            Select Row
-          </button>
-        )}
-      </div>
-    )
-  })
+      return (
+        <div data-test="credit-market-table" ref={ref}>
+          Credit Market Table
+          {props.onRowSelect && (
+            <button
+              onClick={() =>
+                props.onRowSelect({
+                  organizationId: 1,
+                  organizationName: 'Org'
+                })
+              }
+            >
+              Select Row
+            </button>
+          )}
+        </div>
+      )
+    }
+  )
 }))
 
 vi.mock('../CreditMarketAccordion', () => ({
@@ -134,9 +136,7 @@ describe('CreditTradingMarket', () => {
 
     // Check that heading has correct styling properties
     const headings = screen.getAllByTestId('bc-typography')
-    headings.find(
-      (el) => el.getAttribute('data-variant') === 'h4'
-    );
+    headings.find((el) => el.getAttribute('data-variant') === 'h4')
     const disclaimer = headings.find(
       (el) => el.getAttribute('data-variant') === 'body2'
     )

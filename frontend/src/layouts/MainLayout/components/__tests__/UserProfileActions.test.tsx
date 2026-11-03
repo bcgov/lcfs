@@ -1,7 +1,14 @@
 import { test } from '@/tests/utils/fixtures'
 import { screen, fireEvent, act } from '@testing-library/react'
 import { UserProfileActions } from '../UserProfileActions'
-import { vi, describe, expect, beforeEach, afterEach, type Mock } from 'vitest'
+import {
+  vi,
+  describe,
+  expect,
+  beforeEach,
+  afterEach,
+  type Mock
+} from 'vite-plus/test'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   useGetNotificationMessages,

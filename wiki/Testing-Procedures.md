@@ -10,6 +10,15 @@ When feasible, a TDD approach is encouraged. Tests should be written to define t
 
 The frontend utilizes a combination of Vitest for unit/integration testing and Cypress with Cucumber for end-to-end (E2E) testing.
 
+Before frontend tests, run `npm run check` from `frontend/`. This Vite+ command runs Oxfmt, Oxlint, and TypeScript type checks through tsgolint; CI requires zero warnings and errors.
+
+The PR, test, and production frontend setup jobs use SHA-pinned
+`voidzero-dev/setup-vp` to resolve Vite+ from `frontend/package.json`, select Node
+from `frontend/.nvmrc`, install the frozen lockfile, and cache npm package data.
+They run `npm run check` before sharing dependencies with test workers. Workers
+restore `node_modules` with an exact OS, architecture, lockfile, and Node-version
+key; a cache miss falls back to `npm ci`.
+
 ### 1.1. Unit & Integration Testing (Vitest, React Testing Library, MSW)
 
 *   **Vitest**: A fast Jest-compatible testing framework, primarily used for unit and integration tests.
@@ -20,11 +29,7 @@ The frontend utilizes a combination of Vitest for unit/integration testing and C
 
 Navigate to the `frontend/` directory and use the following `npm` scripts:
 
-*   **Run tests with UI (interactive watch mode)**:
-    ```bash
-    npm run test:ui
-    ```
-*   **Run tests once**: 
+*   **Run tests once**:
     ```bash
     npm run test:run
     ```
@@ -35,6 +40,9 @@ Navigate to the `frontend/` directory and use the following `npm` scripts:
     (Runs the whole suite once with coverage thresholds enforced; the HTML report is written to `frontend/coverage/`. See section 3.1.)
 
 #### 1.1.2. Vitest Methodology (from original wiki)
+
+For controlled performance comparisons and the Vite+ test-report compatibility
+checks, see [Frontend test optimization compatibility with Vite+](Frontend-Test-VitePlus-Compatibility.md).
 
 *   **Unit Definition**: A unit is an isolated group of smaller items that interact (e.g., a React component with its internal logic and hooks).
 *   **Black Box Approach**: Test for expected output given specific input. Mock external dependencies (hooks, API calls via MSW) to isolate the component.
@@ -201,4 +209,4 @@ The floors are deliberately a few points under the baseline so ordinary churn do
 Lowest-coverage areas at the baseline, in rough priority order for new tests (statement coverage): `views/OtherUses` (17%), `views/FuelExports` (35%), `views/AllocationAgreements` (43%), `views/FinalSupplyEquipments` (44%), `views/FuelSupplies` (46%), `views/ChargingEquipment` (47%), `views/NotionalTransfers` (49%), `views/ChargingSite` (55%), `components/BCDataGrid` (59%), `views/FuelCodes` (60%). Small files with 0% (`components/BCBox`, `views/ComplianceReporting`, `layouts/PublicPageLayout`, `views/CreditMarket`) are quick wins.
 
 ---
-*Refer to the official documentation for Vitest, React Testing Library, MSW, Cypress, Cucumber, and Pytest for more in-depth information. Consistent and thorough testing is crucial for maintaining the quality and reliability of the LCFS application.* 
+*Refer to the official documentation for Vitest, React Testing Library, MSW, Cypress, Cucumber, and Pytest for more in-depth information. Consistent and thorough testing is crucial for maintaining the quality and reliability of the LCFS application.*

@@ -40,6 +40,34 @@ async def test_create_transfer_success(
     mock_transaction_repo.calculate_available_balance.assert_called_once()
     pass
 
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "status", [TransferStatusEnum.Draft, TransferStatusEnum.Sent]
+)
+async def test_create_transfer_from_another_organization_is_refused(
+    organization_validation, mock_orgs_repo, mock_request, mock_transaction_repo, status
+):
+    """The sender is always the caller's organization, whatever the status;
+    no balance is checked or reserved for an organization named in the body."""
+    mock_orgs_repo.is_registered_for_transfer.return_value = True
+    mock_request.user = MagicMock()
+    mock_request.user.organization.org_status.organization_status_id = 2
+
+    with pytest.raises(HTTPException) as exc:
+        await organization_validation.create_transfer(
+            1,
+            TransferCreateSchema(
+                from_organization_id=3,
+                to_organization_id=2,
+                quantity=1,
+                current_status=status,
+            ),
+        )
+
+    assert exc.value.status_code == 400
+    mock_transaction_repo.calculate_available_balance.assert_not_called()
+
 @pytest.mark.anyio
 async def test_check_available_balance_excess_quantity(organization_validation):
     organization_validation.transaction_repo.calculate_available_balance.return_value = 500

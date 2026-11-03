@@ -477,17 +477,24 @@ async def test_generate_presigned_url_document_not_found(document_service, db_mo
     assert "DatabaseException" in str(exc_info.typename)
 
 
+def _link_document(db_mock, document, counts):
+    """The document resolves through its parent; *counts* are its links in
+    each parent association table."""
+    lookup = MagicMock()
+    lookup.scalar_one_or_none.return_value = document
+    db_mock.execute = AsyncMock(return_value=lookup)
+    db_mock.scalar = AsyncMock(side_effect=counts)
+
+
+_TABLES = len(DOCUMENT_PARENT_ASSOCIATIONS)
+
+
 @pytest.mark.anyio
 async def test_delete_file_last_link(document_service, document_mock, db_mock):
-    # Setup
-    db_mock.get_one.return_value = document_mock
+    _link_document(db_mock, document_mock, [1] + [0] * (_TABLES - 1))
 
-    _mock_document_links(db_mock, "compliance_report", 1)
-
-    # Execute
     await document_service.delete_file(1, 1, "compliance_report")
 
-    # Assert
     document_service.s3_client.delete_object.assert_called_once()
     db_mock.delete.assert_called_once_with(document_mock)
     db_mock.flush.assert_called_once()
@@ -495,20 +502,37 @@ async def test_delete_file_last_link(document_service, document_mock, db_mock):
 
 @pytest.mark.anyio
 async def test_delete_file_multiple_links(document_service, document_mock, db_mock):
-    # Setup
-    db_mock.get_one.return_value = document_mock
-    _mock_document_links(
-        db_mock,
-        "compliance_report",
-        1,
-        extra_parent_ids=[2],
-        include_association_delete=True,
-    )
+    _link_document(db_mock, document_mock, [2] + [0] * (_TABLES - 1))
 
-    # Execute
     await document_service.delete_file(1, 1, "compliance_report")
 
-    # Assert
+    document_service.s3_client.delete_object.assert_not_called()
+    db_mock.delete.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_delete_file_counts_links_to_other_parent_types(
+    document_service, document_mock, db_mock
+):
+    """One link here and one on another kind of parent: only this link goes."""
+    _link_document(db_mock, document_mock, [1, 0, 0, 0, 1] + [0] * (_TABLES - 5))
+
+    await document_service.delete_file(1, 1, "compliance_report")
+
+    document_service.s3_client.delete_object.assert_not_called()
+    db_mock.delete.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_delete_file_not_linked_to_the_parent(document_service, db_mock):
+    """A document that does not hang off the authorized parent reads as
+    missing, and nothing is deleted."""
+    _link_document(db_mock, None, [])
+
+    with pytest.raises(HTTPException) as exc:
+        await document_service.delete_file(1, 1, "compliance_report")
+
+    assert exc.value.status_code == 404
     document_service.s3_client.delete_object.assert_not_called()
     db_mock.delete.assert_not_called()
 
@@ -517,18 +541,13 @@ async def test_delete_file_multiple_links(document_service, document_mock, db_mo
 async def test_delete_file_preserves_cross_parent_type_reference(
     document_service, document_mock, db_mock
 ):
-    db_mock.get_one.return_value = document_mock
-    _mock_document_links(
-        db_mock,
-        "compliance_report",
-        1,
-        other_parent_type="initiativeAgreement",
-        other_parent_ids=[5],
-        include_association_delete=True,
-    )
+    """A document shared with another parent type keeps its file; only this
+    parent's link goes, and the caller is told nothing was destroyed."""
+    _link_document(db_mock, document_mock, [1, 1] + [0] * (_TABLES - 2))
 
-    await document_service.delete_file(1, 1, "compliance_report")
+    deleted = await document_service.delete_file(1, 1, "compliance_report")
 
+    assert deleted is False
     document_service.s3_client.delete_object.assert_not_called()
     db_mock.delete.assert_not_called()
 
@@ -537,14 +556,9 @@ async def test_delete_file_preserves_cross_parent_type_reference(
 async def test_hard_delete_refuses_cross_parent_type_reference(
     document_service, document_mock, db_mock
 ):
-    db_mock.get_one.return_value = document_mock
-    _mock_document_links(
-        db_mock,
-        "compliance_report",
-        1,
-        other_parent_type="initiativeAgreement",
-        other_parent_ids=[5],
-    )
+    """Permanent deletion must not silently degrade to unlinking: a shared
+    document is left entirely untouched and the caller is told so."""
+    _link_document(db_mock, document_mock, [1, 1] + [0] * (_TABLES - 2))
 
     deleted = await document_service.delete_file(
         1, 1, "compliance_report", require_physical_delete=True
@@ -553,36 +567,23 @@ async def test_hard_delete_refuses_cross_parent_type_reference(
     assert deleted is False
     document_service.s3_client.delete_object.assert_not_called()
     db_mock.delete.assert_not_called()
+    # Not even the association row is removed.
+    db_mock.execute.assert_awaited_once()
 
 
-def _mock_document_links(
-    db_mock,
-    parent_type,
-    parent_id,
-    extra_parent_ids=None,
-    other_parent_type=None,
-    other_parent_ids=None,
-    include_association_delete=False,
+@pytest.mark.anyio
+async def test_hard_delete_last_link_reports_physical_delete(
+    document_service, document_mock, db_mock
 ):
-    association_index = list(DOCUMENT_PARENT_ASSOCIATIONS).index(parent_type)
-    other_index = (
-        list(DOCUMENT_PARENT_ASSOCIATIONS).index(other_parent_type)
-        if other_parent_type
-        else None
+    _link_document(db_mock, document_mock, [1] + [0] * (_TABLES - 1))
+
+    deleted = await document_service.delete_file(
+        1, 1, "compliance_report", require_physical_delete=True
     )
-    result_mocks = []
-    for index, _ in enumerate(DOCUMENT_PARENT_ASSOCIATIONS):
-        parent_ids = []
-        if index == association_index:
-            parent_ids = [parent_id, *(extra_parent_ids or [])]
-        elif index == other_index:
-            parent_ids = other_parent_ids or []
-        result = MagicMock()
-        result.all.return_value = [(value,) for value in parent_ids]
-        result_mocks.append(result)
-    if include_association_delete:
-        result_mocks.append(MagicMock())
-    db_mock.execute = AsyncMock(side_effect=result_mocks)
+
+    assert deleted is True
+    document_service.s3_client.delete_object.assert_called_once()
+    db_mock.delete.assert_called_once_with(document_mock)
 
 
 @pytest.mark.anyio

@@ -1,7 +1,13 @@
 import { test } from '@/tests/utils/fixtures'
 import 'react'
-import { afterEach, beforeEach, describe, expect, vi } from 'vitest'
-import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, vi } from 'vite-plus/test'
+import {
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+  within
+} from '@testing-library/react'
 
 import { SignAndSubmitStep } from '@/views/CarbonIntensity/components/SignAndSubmitStep'
 vi.mock('react-i18next', () => ({

@@ -5,14 +5,10 @@ import Tooltip from '@mui/material/Tooltip'
 import Fade from '@mui/material/Fade'
 import CloseIcon from '@mui/icons-material/Close'
 import CopyIcon from '@mui/icons-material/ContentCopy'
-import '@mui/icons-material/Visibility';
+import '@mui/icons-material/Visibility'
 import BCTypography from '@/components/BCTypography'
 
-const ReferenceCompareBox = ({
-  data,
-  onDismiss,
-  isDismissed = false
-}) => {
+const ReferenceCompareBox = ({ data, onDismiss, isDismissed = false }) => {
   const [hoveredItem, setHoveredItem] = useState(null)
   const [copiedItem, setCopiedItem] = useState(null)
 

@@ -1,5 +1,5 @@
 import { fireEvent, screen } from '@testing-library/react'
-import { describe, expect, vi } from 'vitest'
+import { describe, expect, vi } from 'vite-plus/test'
 import * as XLSX from 'xlsx'
 import { test } from '@/tests/utils/fixtures'
 import { PublicMarketData } from '../PublicMarketData'

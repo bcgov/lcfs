@@ -8,7 +8,7 @@ import {
 } from '@/hooks/useFuelSupply'
 import { test } from '@/tests/utils/fixtures'
 import { screen, fireEvent, waitFor, act } from '@testing-library/react'
-import { beforeEach, describe, expect, vi } from 'vitest'
+import { beforeEach, describe, expect, vi } from 'vite-plus/test'
 import { AddEditFuelSupplies } from '../AddEditFuelSupplies'
 
 let render
@@ -175,32 +175,35 @@ vi.mock('@/hooks/useFuelSupply')
 // Mock BCGridEditor with comprehensive callback support
 vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
   BCGridEditor: ({
-  gridRef,
-  onGridReady,
-  rowData,
-  onCellValueChanged,
-  onCellEditingStopped,
-  onAction,
-  saveButtonProps
-}) => {
-    const gridApi = React.useMemo(() => ({
-      getLastDisplayedRowIndex: vi.fn(() => rowData.length - 1),
-      startEditingCell: vi.fn(),
-      forEachNode: vi.fn((callback) => {
-        rowData.forEach((row, index) => {
-          const mockNode = {
-            data: row,
-            updateData: vi.fn((newData) => {
-              rowData[index] = newData
-            })
-          }
-          callback(mockNode)
-        })
+    gridRef,
+    onGridReady,
+    rowData,
+    onCellValueChanged,
+    onCellEditingStopped,
+    onAction,
+    saveButtonProps
+  }) => {
+    const gridApi = React.useMemo(
+      () => ({
+        getLastDisplayedRowIndex: vi.fn(() => rowData.length - 1),
+        startEditingCell: vi.fn(),
+        forEachNode: vi.fn((callback) => {
+          rowData.forEach((row, index) => {
+            const mockNode = {
+              data: row,
+              updateData: vi.fn((newData) => {
+                rowData[index] = newData
+              })
+            }
+            callback(mockNode)
+          })
+        }),
+        autoSizeAllColumns: vi.fn(),
+        getColumn: vi.fn().mockReturnValue({ isVisible: () => false }),
+        setColumnsVisible: vi.fn()
       }),
-      autoSizeAllColumns: vi.fn(),
-      getColumn: vi.fn().mockReturnValue({ isVisible: () => false }),
-      setColumnsVisible: vi.fn()
-    }), [rowData])
+      [rowData]
+    )
 
     // Set up gridRef if provided
     React.useEffect(() => {

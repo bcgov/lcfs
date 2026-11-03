@@ -32,10 +32,7 @@ export interface NumberEditorProps {
 }
 
 export const NumberEditor = forwardRef<unknown, NumberEditorProps>(
-  (
-    { value, onValueChange, ...props },
-    ref
-  ) => {
+  ({ value, onValueChange, ...props }, ref) => {
     const inputRef = useRef<HTMLInputElement | null>(null)
 
     useEffect(() => {

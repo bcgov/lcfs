@@ -495,10 +495,7 @@ const BUTTON_RULES = {
       // 'nonAssessment' // TODO: yet to implement logic
     ],
     [USER_TYPES.IDIR_MANAGER]: [],
-    [USER_TYPES.IDIR_DIRECTOR]: [
-      'recommendByAnalyst',
-      'returnToSupplier'
-    ]
+    [USER_TYPES.IDIR_DIRECTOR]: ['recommendByAnalyst', 'returnToSupplier']
   },
 
   [COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT]: {
@@ -517,10 +514,7 @@ const BUTTON_RULES = {
     [USER_TYPES.BCEID_SIGNER]: [],
     [USER_TYPES.IDIR_ANALYST]: [],
     [USER_TYPES.IDIR_MANAGER]: ['recommendByManager', 'returnToAnalyst'],
-    [USER_TYPES.IDIR_DIRECTOR]: [
-      'recommendByManager',
-      'returnToAnalyst'
-    ]
+    [USER_TYPES.IDIR_DIRECTOR]: ['recommendByManager', 'returnToAnalyst']
   },
 
   [COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER]: {

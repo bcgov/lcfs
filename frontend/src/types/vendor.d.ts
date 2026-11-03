@@ -54,8 +54,10 @@ declare module 'lodash' {
 declare module 'react-input-mask' {
   import type { ComponentType, InputHTMLAttributes, ReactNode } from 'react'
 
-  interface InputMaskProps
-    extends Omit<InputHTMLAttributes<HTMLInputElement>, 'children'> {
+  interface InputMaskProps extends Omit<
+    InputHTMLAttributes<HTMLInputElement>,
+    'children'
+  > {
     mask?: string | Array<string | RegExp>
     maskChar?: string | null
     formatChars?: Record<string, string>
