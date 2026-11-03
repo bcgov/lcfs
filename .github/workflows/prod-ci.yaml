@@ -97,15 +97,18 @@ jobs:
         run: echo "version=$(python -c 'import platform; print(platform.python_version())')" >> "$GITHUB_OUTPUT"
 
       - name: Cache backend virtual environment
+        id: backend-venv-cache
         uses: actions/cache@v5.0.4
         with:
           path: backend/.venv
           key: ${{ steps.cache-keys.outputs.poetry_venv_key_prefix }}-${{ steps.python-version.outputs.version }}
 
       - name: Install Poetry
+        if: steps.backend-venv-cache.outputs.cache-hit != 'true'
         run: pip install poetry==2.5.1
 
       - name: Install backend dependencies
+        if: steps.backend-venv-cache.outputs.cache-hit != 'true'
         run: |
           pip install --upgrade pip setuptools wheel
           cd backend
@@ -123,7 +126,7 @@ jobs:
       - name: Run migrations and create template database
         run: |
           cd backend
-          poetry run alembic upgrade heads
+          ./.venv/bin/alembic upgrade heads
         env:
           LCFS_DB_HOST: localhost
           LCFS_DB_PORT: 5432
