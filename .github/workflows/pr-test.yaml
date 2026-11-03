@@ -73,7 +73,8 @@ jobs:
     outputs:
       # Add output to signal completion
       setup-complete: ${{ steps.setup-complete.outputs.complete }}
-      poetry_venv_cache_key: ${{ steps.cache-keys.outputs.poetry_venv_key }}
+      poetry_venv_cache_key: ${{ steps.cache-keys.outputs.poetry_venv_key_prefix }}-${{ steps.python-version.outputs.version }}
+      python_version: ${{ steps.python-version.outputs.version }}
       pytest_timing_cache_prefix: ${{ steps.cache-keys.outputs.pytest_timing_prefix }}
     env:
       POETRY_VIRTUALENVS_IN_PROJECT: "true"
@@ -102,7 +103,7 @@ jobs:
       - name: Compute backend cache keys
         id: cache-keys
         run: |
-          echo "poetry_venv_key=${{ runner.os }}-poetry-venv-v2-${{ hashFiles('backend/.python-version', 'backend/poetry.lock', 'backend/pyproject.toml') }}" >> "$GITHUB_OUTPUT"
+          echo "poetry_venv_key_prefix=${{ runner.os }}-poetry-venv-v3-${{ hashFiles('backend/.python-version', 'backend/poetry.lock', 'backend/pyproject.toml') }}" >> "$GITHUB_OUTPUT"
           echo "pytest_timing_prefix=${{ runner.os }}-pytest-split-${{ hashFiles('backend/.python-version', 'backend/poetry.lock', 'backend/pyproject.toml', 'backend/lcfs/tests/**/*.py') }}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Python
@@ -110,11 +111,15 @@ jobs:
         with:
           python-version-file: backend/.python-version
 
+      - name: Record Python version for cached environment
+        id: python-version
+        run: echo "version=$(python -c 'import platform; print(platform.python_version())')" >> "$GITHUB_OUTPUT"
+
       - name: Cache backend virtual environment
         uses: actions/cache@v5.0.4
         with:
           path: backend/.venv
-          key: ${{ steps.cache-keys.outputs.poetry_venv_key }}
+          key: ${{ steps.cache-keys.outputs.poetry_venv_key_prefix }}-${{ steps.python-version.outputs.version }}
 
       - name: Install Poetry
         run: pip install poetry==2.5.1
@@ -271,7 +276,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6.2.0
         with:
-          python-version-file: backend/.python-version
+          python-version: ${{ needs.backend-setup.outputs.python_version }}
 
       - name: Restore backend virtual environment
         id: backend-venv-cache
