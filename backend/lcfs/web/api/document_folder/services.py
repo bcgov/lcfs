@@ -550,10 +550,22 @@ class DocumentFolderServices:
             for document in all_documents
             if document.document_id in all_placements
         }
-        deleted_or_live_subtree_ids = {
+        live_folder_ids = {folder.folder_id for folder in folders}
+        subtree_ids = {
             folder.folder_id: set(self._subtree_ids(folder.folder_id, all_folders))
             for folder in folders
         }
+
+        def can_delete(folder: DocumentFolder) -> bool:
+            # Mirrors delete_folder: a live descendant or any file beneath
+            # it, binned or not, keeps the folder; empty deleted descendants
+            # do not.
+            subtree = subtree_ids[folder.folder_id]
+            return (
+                not folder.is_system
+                and not (subtree - {folder.folder_id}) & live_folder_ids
+                and not subtree & occupied_folder_ids
+            )
 
         docs_by_folder: Dict[int, List[FolderDocumentSchema]] = {}
         root_documents: List[FolderDocumentSchema] = []
@@ -582,14 +594,7 @@ class DocumentFolderServices:
                 parent_folder_id=folder.parent_folder_id,
                 sort_order=folder.sort_order,
                 is_system=folder.is_system,
-                can_delete=(
-                    not folder.is_system
-                    and len(deleted_or_live_subtree_ids[folder.folder_id]) == 1
-                    and not (
-                        deleted_or_live_subtree_ids[folder.folder_id]
-                        & occupied_folder_ids
-                    )
-                ),
+                can_delete=can_delete(folder),
                 document_count=len(documents_in_folder),
                 documents=documents_in_folder,
             )
@@ -682,16 +687,26 @@ class DocumentFolderServices:
             parent_type, parent_id
         )
         subtree = self._subtree_ids(folder_id, folders)
+        by_id = {f.folder_id: f for f in folders}
+        live_descendants = [
+            fid
+            for fid in subtree
+            if fid != folder_id and by_id[fid].deleted_date is None
+        ]
         documents = await self.repo.get_documents_in_folders(subtree)
-        if len(subtree) > 1 or documents:
+        if live_descendants or documents:
             raise HTTPException(
                 status_code=400,
                 detail="Only empty folders can be deleted.",
             )
-        await self.repo.delete_folders([folder_id])
+        # Descendants still sitting in the bin with nothing left in them
+        # go too: once their last file is permanently deleted they drop
+        # out of the bin listing, so this is the only way to clear them.
+        await self.repo.delete_folders(subtree)
         logger.info(
             "empty_document_folder_deleted",
             folder_id=folder_id,
+            swept_deleted_descendants=[fid for fid in subtree if fid != folder_id],
             parent_type=parent_type,
             parent_id=parent_id,
             by=getattr(user, "keycloak_username", None),

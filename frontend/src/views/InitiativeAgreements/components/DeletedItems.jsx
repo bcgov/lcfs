@@ -11,6 +11,7 @@ import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined'
 import RestoreIcon from '@mui/icons-material/Restore'
 import prettyBytes from 'pretty-bytes'
 
+import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCModal from '@/components/BCModal'
 import BCTypography from '@/components/BCTypography'
@@ -28,6 +29,10 @@ export const DeletedItems = ({ parentType, parentID, heading }) => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const [expanded, setExpanded] = useState(false)
   const [pendingHardDelete, setPendingHardDelete] = useState(null)
+  // The last failed hard delete, kept until the next attempt or dismissed:
+  // a file the server refused to destroy (409, still linked elsewhere)
+  // would otherwise just sit in the bin with no explanation.
+  const [hardDeleteError, setHardDeleteError] = useState(null)
   // Folder rows can open to show what a restore would bring back.
   const [openFolders, setOpenFolders] = useState(() => new Set())
   const toggleFolder = (folderId) =>
@@ -40,7 +45,31 @@ export const DeletedItems = ({ parentType, parentID, heading }) => {
   const { data } = useDeletedDocuments(parentType, parentID)
   const { mutate: restore } = useRestoreDocument(parentType, parentID)
   const { mutate: restoreFolder } = useRestoreFolder(parentType, parentID)
-  const { mutate: hardDelete } = useHardDeleteDocument(parentType, parentID)
+  const { mutateAsync: hardDelete } = useHardDeleteDocument(
+    parentType,
+    parentID
+  )
+
+  const confirmHardDelete = async () => {
+    const target = pendingHardDelete
+    setHardDeleteError(null)
+    try {
+      await hardDelete(target.documentId)
+    } catch (error) {
+      setHardDeleteError({
+        fileName: target.fileName,
+        message:
+          error?.response?.data?.detail ||
+          error?.message ||
+          t('initiativeAgreement:folders.hardDeleteFailed')
+      })
+    } finally {
+      // BCModal disables its buttons for the life of the action and only
+      // re-arms on reopen, so the dialog closes either way; the failure is
+      // reported in the bin itself and the row's control stays for a retry.
+      setPendingHardDelete(null)
+    }
+  }
 
   const documents = data?.documents ?? []
   const folders = data?.folders ?? []
@@ -170,6 +199,19 @@ export const DeletedItems = ({ parentType, parentID, heading }) => {
 
       <Collapse in={expanded}>
         <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
+          {hardDeleteError && (
+            <BCAlert
+              key={`${hardDeleteError.fileName}-${hardDeleteError.message}`}
+              severity="error"
+              dismissible
+              data-test="hard-delete-error"
+            >
+              {t('initiativeAgreement:folders.hardDeleteError', {
+                name: hardDeleteError.fileName,
+                detail: hardDeleteError.message
+              })}
+            </BCAlert>
+          )}
           {/* Folders first: restoring one brings its files back with it,
               so those files are not listed separately below. */}
           {folders.map((folder) => (
@@ -349,10 +391,7 @@ export const DeletedItems = ({ parentType, parentID, heading }) => {
         data={{
           title: t('initiativeAgreement:folders.confirmHardDeleteTitle'),
           primaryButtonText: t('initiativeAgreement:folders.hardDelete'),
-          primaryButtonAction: () => {
-            hardDelete(pendingHardDelete.documentId)
-            setPendingHardDelete(null)
-          },
+          primaryButtonAction: confirmHardDelete,
           secondaryButtonText: t('common:cancelBtn'),
           content: (
             <BCTypography variant="body4" data-test="confirm-hard-delete-body">

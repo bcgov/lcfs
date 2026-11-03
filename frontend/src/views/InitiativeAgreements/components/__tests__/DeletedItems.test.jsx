@@ -1,5 +1,5 @@
 import 'react'
-import { fireEvent, screen, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 
 import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 
@@ -25,7 +25,7 @@ vi.mock('@/hooks/useDocumentFolders', () => ({
   useDeletedDocuments: () => mockDeleted(),
   useRestoreDocument: () => ({ mutate: mockRestore }),
   useRestoreFolder: () => ({ mutate: mockRestoreFolder }),
-  useHardDeleteDocument: () => ({ mutate: mockHardDelete })
+  useHardDeleteDocument: () => ({ mutateAsync: mockHardDelete })
 }))
 
 const binned = (overrides = {}) => ({
@@ -43,6 +43,7 @@ const binned = (overrides = {}) => ({
 describe('DeletedItems', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockHardDelete.mockResolvedValue(undefined)
     mockDeleted.mockReturnValue({
       data: { documents: [binned()], total: 1 }
     })
@@ -100,7 +101,7 @@ describe('DeletedItems', () => {
     expect(mockRestore).toHaveBeenCalledWith(88)
   })
 
-  test('offers hard delete only when the user uploaded and deleted the file', ({
+  test('offers hard delete only when the user uploaded and deleted the file', async ({
     render,
     app
   }) => {
@@ -123,6 +124,61 @@ describe('DeletedItems', () => {
       })
     )
     expect(mockHardDelete).toHaveBeenCalledWith(88)
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    )
+    expect(screen.queryByTestId('hard-delete-error')).not.toBeInTheDocument()
+  })
+
+  test('reports a refused hard delete and leaves the control for a retry', async ({
+    render,
+    app
+  }) => {
+    mockDeleted.mockReturnValue({
+      data: {
+        documents: [binned({ canHardDelete: true })],
+        total: 1
+      }
+    })
+    mockHardDelete.mockRejectedValueOnce({
+      response: {
+        status: 409,
+        data: {
+          detail:
+            'This file is linked to another record and cannot be permanently deleted.'
+        }
+      }
+    })
+    render(<DeletedItems parentType="designatedAction" parentID="9" />, app)
+    fireEvent.click(screen.getByTestId('deleted-items-header'))
+
+    fireEvent.click(screen.getByTestId('hard-delete-88'))
+    fireEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: 'initiativeAgreement:folders.hardDelete'
+      })
+    )
+
+    // The server's explanation reaches the user instead of vanishing.
+    const alert = await screen.findByTestId('hard-delete-error')
+    expect(alert).toHaveTextContent('obsolete.pdf')
+    expect(alert).toHaveTextContent('linked to another record')
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    )
+
+    // Still in the bin, still removable: a second attempt goes through
+    // and clears the earlier message.
+    fireEvent.click(screen.getByTestId('hard-delete-88'))
+    fireEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: 'initiativeAgreement:folders.hardDelete'
+      })
+    )
+    expect(mockHardDelete).toHaveBeenCalledTimes(2)
+    await waitFor(() =>
+      expect(screen.queryByTestId('hard-delete-error')).not.toBeInTheDocument()
+    )
   })
 
   test('does not offer hard delete for a file uploaded by another user', ({

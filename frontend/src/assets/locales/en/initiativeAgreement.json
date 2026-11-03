@@ -140,6 +140,8 @@
     "hardDeleteLabel": "Permanently delete {{name}}",
     "confirmHardDeleteTitle": "Permanently delete this file?",
     "confirmHardDeleteBody": "{{name}} will be permanently removed from storage and cannot be restored.",
+    "hardDeleteError": "{{name}} could not be permanently deleted: {{detail}}",
+    "hardDeleteFailed": "Something went wrong. Please try again.",
     "restoreTo": "Returns to {{folder}}",
     "restoreToRoot": "Returns to the top level",
     "deletedBy": "Deleted by {{name}}",
