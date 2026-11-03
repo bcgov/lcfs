@@ -109,13 +109,13 @@ Navigate to the `frontend/` directory:
     │   ├── e2e/
     │   │   ├── Pages/ (or similar for BDD structure)
     │   │   │   ├── features/             # Cucumber .feature files
-    │   │   │   └── step_definitions/     # Step definition .js files
-    │   │   └── cypress_tests/          # Traditional Cypress .cy.js files (if any)
+    │   │   │   └── step_definitions/     # Step definition .js/.ts files
+    │   │   └── cypress_tests/          # Traditional Cypress .cy.js/.cy.ts files (if any)
     │   ├── fixtures/                     # Test data fixtures
     │   ├── reports/                      # Generated test reports
     │   ├── screenshots/                  # Screenshots on failure
-    │   └── support/                      # Custom commands (commands.js), plugins (index.js)
-    ├── cypress.config.js                 # Main Cypress configuration
+    │   └── support/                      # Custom commands (commands.ts), setup (e2e.ts)
+    ├── cypress.config.ts                 # Main Cypress configuration
     ├── .cypress-cucumber-preprocessorrc.json # Cucumber preprocessor config
     └── ...
     ```
@@ -123,7 +123,7 @@ Navigate to the `frontend/` directory:
     *   Write feature files in `frontend/cypress/e2e/Pages/features/` (or as per project convention).
     *   Implement step definitions in `frontend/cypress/e2e/Pages/step_definitions/`.
     *   Use descriptive names for files and scenarios.
-    *   Utilize custom commands in `frontend/cypress/support/commands.js` for common actions.
+    *   Utilize custom commands in `frontend/cypress/support/commands.ts` for common actions.
     *   Prefer `data-testid` attributes or other stable selectors for interacting with DOM elements.
     *   Refer to official Cypress and Cucumber documentation for detailed guidance.
 *   **Chrome Recorder**: Consider using Chrome DevTools' Recorder to export Cypress tests as a starting point (see `cypress/chrome-recorder` if this tool is integrated).
