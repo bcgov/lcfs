@@ -2,6 +2,37 @@ import { apiRoutes } from '@/constants/routes'
 import { http, HttpResponse } from 'msw'
 
 const api = 'http://localhost:8000/api'
+interface ReportOpening {
+  reportOpeningId: number
+  complianceYear: number
+  complianceReportingEnabled: boolean
+  earlyIssuanceEnabled: boolean
+  createSupplementalEnabled: boolean
+}
+
+interface ReportOpeningUpdate {
+  complianceYear: number
+  complianceReportingEnabled?: boolean | null
+  earlyIssuanceEnabled?: boolean | null
+  createSupplementalEnabled?: boolean | null
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null
+
+const isReportOpeningUpdate = (value: unknown): value is ReportOpeningUpdate =>
+  isRecord(value) &&
+  typeof value.complianceYear === 'number' &&
+  (value.complianceReportingEnabled === undefined ||
+    value.complianceReportingEnabled === null ||
+    typeof value.complianceReportingEnabled === 'boolean') &&
+  (value.earlyIssuanceEnabled === undefined ||
+    value.earlyIssuanceEnabled === null ||
+    typeof value.earlyIssuanceEnabled === 'boolean') &&
+  (value.createSupplementalEnabled === undefined ||
+    value.createSupplementalEnabled === null ||
+    typeof value.createSupplementalEnabled === 'boolean')
+
 const reportOpenings = [
   {
     reportOpeningId: 1,
@@ -17,7 +48,7 @@ const reportOpenings = [
     earlyIssuanceEnabled: false,
     createSupplementalEnabled: true
   }
-]
+] satisfies ReportOpening[]
 
 export const handlers = [
   // Auth and user endpoints
@@ -55,8 +86,11 @@ export const handlers = [
     HttpResponse.json(reportOpenings)
   ),
   http.put(api + apiRoutes.reportOpenings, async ({ request }) => {
-    const body = await request.json()
-    const updatedYears = body?.reportOpenings ?? []
+    const body: unknown = await request.json()
+    const updatedYears =
+      isRecord(body) && Array.isArray(body.reportOpenings)
+        ? body.reportOpenings.filter(isReportOpeningUpdate)
+        : []
     const updated = reportOpenings.map((entry) => {
       const override = updatedYears.find(
         (item) => item.complianceYear === entry.complianceYear
