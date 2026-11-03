@@ -116,7 +116,9 @@ export default defineConfig({
     trailingComma: 'none',
     printWidth: 80,
     sortPackageJson: false,
-    ignorePatterns: []
+    // Written by the release-notes workflow (scripts/build-release-notes.mjs)
+    // with JSON.stringify, which never matches this layout.
+    ignorePatterns: ['public/release-notes.json']
   },
   define: {
     __APP_VERSION__: JSON.stringify(appVersion)
