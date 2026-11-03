@@ -473,15 +473,31 @@ jobs:
           sparse-checkout: |
             frontend
 
-      - name: Set up frontend toolchain and dependencies
-        uses: voidzero-dev/setup-vp@68f39c78aaf39be468cabd2afb09c162574c84af # v1.21.2
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6.1.0
         with:
-          working-directory: frontend
-          version-file: package.json
-          node-version-file: .nvmrc
-          cache: true
-          run-install: |
-            args: ['--frozen-lockfile', '--prefer-offline']
+          version: 12.17.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6.3.0
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Restore shared frontend dependencies
+        id: node-modules-cache
+        uses: actions/cache/restore@v5.0.4
+        with:
+          path: frontend/node_modules
+          key: ${{ runner.os }}-${{ runner.arch }}-node-modules-shared-pnpm-v1-${{ hashFiles('frontend/pnpm-lock.yaml', 'frontend/.nvmrc') }}
+
+      - name: Install frontend dependencies on cache miss
+        if: steps.node-modules-cache.outputs.cache-hit != 'true'
+        run: |
+          cd frontend
+          pnpm install --frozen-lockfile --prefer-offline
         env:
           PNPM_CONFIG_AUDIT: "false"
 
@@ -490,18 +506,10 @@ jobs:
           cd frontend
           pnpm run check
 
-      - name: Check for existing shared node_modules cache
-        id: node-modules-cache-lookup
-        uses: actions/cache/restore@v5.0.4
-        with:
-          path: frontend/node_modules
-          key: ${{ runner.os }}-${{ runner.arch }}-node-modules-shared-pnpm-v1-${{ hashFiles('frontend/pnpm-lock.yaml', 'frontend/.nvmrc') }}
-          lookup-only: true
-
       - name: Cache node_modules for test shards
-        if: steps.node-modules-cache-lookup.outputs.cache-hit != 'true'
-        # Save the checked dependencies for workers. Never restore a cache over
-        # the fresh frozen-lockfile install. Workers use the same exact key.
+        if: steps.node-modules-cache.outputs.cache-hit != 'true'
+        # Workers use this same exact key; never restore stale modules over a
+        # fresh frozen-lockfile install.
         uses: actions/cache/save@v5.0.4
         with:
           path: frontend/node_modules

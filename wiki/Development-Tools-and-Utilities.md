@@ -47,7 +47,7 @@ This document provides an overview of common development tools and utility scrip
     *   `pnpm run dev`: Start the Vite development server.
     *   `pnpm run build`: Create a production build.
     *   `pnpm run check`: Run Oxfmt, Oxlint, and TypeScript type checks through tsgolint with zero warnings and errors.
-    *   `pnpm run test:run`: Run frontend unit tests once.
+    *   `pnpm run test:run`: Run frontend unit tests once without coverage collection.
     *   `pnpm run test:coverage`: Run unit tests with coverage thresholds enforced.
     *   `pnpm run cypress:run`: Run Cypress tests headlessly.
 *   **Reference**: [Node.js Documentation](https://nodejs.org/), [pnpm Documentation](https://pnpm.io/)

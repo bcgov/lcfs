@@ -16,13 +16,10 @@ const appVersion: string = existsSync(releaseNotesPath)
 // so coverage cannot silently regress. Raise them as coverage improves (see
 // wiki/Testing-Procedures.md, "Coverage thresholds").
 //
-// Thresholds are only enforced when ENFORCE_COVERAGE_THRESHOLDS is set, because
-// Vitest checks them against whatever was collected in the current process:
-//   - a filtered run (`vitest run src/views/Foo.test.jsx`) or a CI shard
-//     (`--shard=N/M`) only covers a slice of the suite and would always fail;
-//   - `pnpm run test:coverage` (full run) and the CI `--merge-reports` step
-//     (all shards merged) are the two places that see the whole suite, and
-//     both set the variable.
+// Coverage is opt-in so routine test runs do not pay for instrumentation or
+// generate reports. Use `pnpm run test:coverage` to collect full-suite coverage
+// and enforce thresholds. Thresholds also require ENFORCE_COVERAGE_THRESHOLDS
+// because a filtered run or a single CI shard only sees partial coverage.
 const COVERAGE_THRESHOLDS = {
   statements: 60,
   branches: 50,
@@ -142,7 +139,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       thresholds: enforceCoverageThresholds ? COVERAGE_THRESHOLDS : undefined,
-      enabled: true,
+      enabled: false,
       reporter: ['text-summary', 'html'],
       include: ['src'],
       exclude: [

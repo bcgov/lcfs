@@ -33,6 +33,7 @@ Navigate to the `frontend/` directory and use the following `pnpm` scripts:
     ```bash
     pnpm run test:run
     ```
+    (Runs without coverage collection for faster feedback.)
 *   **Run tests and generate coverage report**:
     ```bash
     pnpm run test:coverage
@@ -190,7 +191,7 @@ The baseline was measured on `develop` with 376 test files / 6,187 tests, v8 pro
 *   Locally: `pnpm run test:coverage` runs the whole suite once, prints a coverage summary, writes the HTML report to `frontend/coverage/`, and exits non-zero if a floor is missed.
 *   In PR CI (`pr-test.yaml`): the test suite runs as 32 shards with coverage disabled. The required check reports whether setup and all test shards passed; it does not upload per-test or coverage reports.
 
-Thresholds are applied by `pnpm run test:coverage`, which sets `ENFORCE_COVERAGE_THRESHOLDS=true` and runs the full suite. Vitest checks thresholds against whatever was collected in the current process, so a filtered run such as `vitest run src/views/Transfers` or a single CI shard would otherwise fail against partial coverage. Plain `pnpm run test:run` and per-area scripts are therefore never gated.
+Thresholds are applied by `pnpm run test:coverage`, which enables coverage, sets `ENFORCE_COVERAGE_THRESHOLDS=true`, and runs the full suite. Coverage is disabled by default for routine test runs. Vitest checks thresholds against whatever was collected in the current process, so a filtered run such as `vitest run src/views/Transfers` or a single CI shard would otherwise fail against partial coverage. The report-producing `test:ci:memory` script explicitly enables coverage for workflows that collect shard reports.
 
 **What to do when local coverage is below a threshold**
 
