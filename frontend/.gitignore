@@ -33,4 +33,5 @@ cypress/reports/
 /coverage
 .vitest/
 .vitest-reports/
+.vitest-junit/
 vitest-results.xml

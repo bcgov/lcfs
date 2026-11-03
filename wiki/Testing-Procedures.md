@@ -188,7 +188,7 @@ The baseline was measured on `develop` with 376 test files / 6,187 tests, v8 pro
 **Where thresholds are enforced**
 
 *   Locally: `pnpm run test:coverage` runs the whole suite once, prints a coverage summary, writes the HTML report to `frontend/coverage/`, and exits non-zero if a floor is missed.
-*   In CI (`pr-test.yaml`): the test suite runs as 32 shards, each of which writes its coverage into a blob report. The "Publish Frontend Test Results" job merges the blobs with `vitest --merge-reports`; that merged map covers the whole suite and is where the thresholds are checked. A miss looks like `ERROR: Coverage for lines (58.1%) does not meet global threshold (60%)` in the "Merge reports" step, and the merged HTML report is uploaded as the `frontend-coverage-report` artifact.
+*   In CI (`pr-test.yaml`): the test suite runs as 32 shards, each of which writes a Vitest blob report and JUnit XML. The "Publish Frontend Test Results" job publishes the shard JUnit reports while "Merge Frontend Coverage Reports" merges the blobs and enforces thresholds on the complete suite. A miss looks like `ERROR: Coverage for lines (58.1%) does not meet global threshold (60%)` in the "Merge reports" step, and the merged HTML report is uploaded as the `frontend-coverage-report` artifact.
 
 Thresholds are only applied when `ENFORCE_COVERAGE_THRESHOLDS=true` is set (the coverage script and the CI merge step both set it). Vitest checks thresholds against whatever was collected in the current process, so a filtered run such as `vitest run src/views/Transfers` or a single CI shard would otherwise always fail. Plain `pnpm run test:run` and per-area scripts are therefore never gated.
 

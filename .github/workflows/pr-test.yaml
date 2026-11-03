@@ -632,14 +632,16 @@ jobs:
         uses: actions/upload-artifact@v7.0.0
         with:
           name: blob-report-${{ matrix.shardIndex }}
-          path: frontend/.vitest-reports/*
+          path: |
+            frontend/.vitest-reports/blob-*.json
+            frontend/.vitest-junit/junit-*.xml
           if-no-files-found: error
           include-hidden-files: true
           retention-days: 1
           compression-level: 9
 
   post-frontend-tests:
-    name: "Publish Frontend Test Results"
+    name: "Merge Frontend Coverage Reports"
     if: always()
     needs: [frontend-setup, frontend-tests]
     runs-on: ubuntu-latest
@@ -677,7 +679,7 @@ jobs:
       - name: Download blob reports from GitHub Actions Artifacts
         uses: actions/download-artifact@v8.0.1
         with:
-          path: frontend/.vitest-reports
+          path: frontend
           pattern: blob-report-*
           merge-multiple: true
 
@@ -696,12 +698,12 @@ jobs:
           fi
 
           # Enforce coverage floors only when the complete shard set is
-          # present. Partial runs still produce JUnit diagnostics.
+          # present. Shard JUnit reports are published by a separate job.
           if [ "$REPORT_COUNT" -eq 32 ]; then
-            ENFORCE_COVERAGE_THRESHOLDS=true ./node_modules/.bin/vp test --merge-reports=.vitest-reports --reporter=junit --outputFile.junit=vitest-results.xml
+            ENFORCE_COVERAGE_THRESHOLDS=true ./node_modules/.bin/vp test --merge-reports=.vitest-reports --reporter=dot
           else
             echo "Merging $REPORT_COUNT of 32 frontend shard reports without coverage thresholds"
-            ./node_modules/.bin/vp test --merge-reports=.vitest-reports --reporter=junit --outputFile.junit=vitest-results.xml
+            ./node_modules/.bin/vp test --merge-reports=.vitest-reports --reporter=dot
           fi
 
       - name: Upload merged coverage report
@@ -712,19 +714,6 @@ jobs:
           path: frontend/coverage
           if-no-files-found: ignore
           retention-days: 7
-
-      - name: Publish Frontend Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v2.23.0
-        if: always()
-        with:
-          files: frontend/vitest-results.xml
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          comment_title: "Frontend Test Results"
-          check_name: "Frontend Test Results"
-          fail_on: "errors"
-          report_individual_runs: "true"
-          deduplicate_classes_by_file_name: "true"
-          comment_mode: "always"
 
       - name: Require successful frontend checks and tests
         if: always()
@@ -741,6 +730,33 @@ jobs:
             echo "Expected 32 frontend shard reports, received ${REPORT_COUNT:-none}"
             exit 1
           fi
+
+  publish-frontend-test-results:
+    name: "Publish Frontend Test Results"
+    if: always()
+    needs: [frontend-setup, frontend-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download frontend shard reports
+        if: needs.frontend-tests.result != 'skipped'
+        uses: actions/download-artifact@v8.0.1
+        with:
+          path: frontend
+          pattern: blob-report-*
+          merge-multiple: true
+
+      - name: Publish Frontend Test Results
+        if: always() && needs.frontend-tests.result != 'skipped'
+        uses: EnricoMi/publish-unit-test-result-action@v2.23.0
+        with:
+          files: frontend/.vitest-junit/junit-*.xml
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          comment_title: "Frontend Test Results"
+          check_name: "Frontend Test Results"
+          fail_on: "errors"
+          report_individual_runs: "true"
+          deduplicate_classes_by_file_name: "true"
+          comment_mode: "always"
 
   teams-notification:
     needs: [post-backend-tests, post-frontend-tests]
