@@ -3,6 +3,7 @@ from fastapi import APIRouter, Body, status, Request, Depends, HTTPException
 from starlette.responses import StreamingResponse
 from typing import List, Literal
 
+from lcfs.db.dependencies import extended_statement_timeout
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.services.s3.client import DocumentService
 from lcfs.web.api.base import PaginationRequestSchema
@@ -383,6 +384,7 @@ async def create_government_initiated_supplemental_report(
     "/{report_id}/export",
     response_class=StreamingResponse,
     status_code=status.HTTP_200_OK,
+    dependencies=[Depends(extended_statement_timeout)],
 )
 @view_handler(
     [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]

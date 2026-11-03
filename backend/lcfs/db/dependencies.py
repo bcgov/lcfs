@@ -12,6 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
 from lcfs.db.base import current_user_var, get_current_user
+from lcfs.db.engine_config import build_connect_args
+from lcfs.db.pool_monitor import register_pool_monitor
 from lcfs.settings import settings
 from lcfs.utils.query_analyzer import register_query_analyzer
 
@@ -23,13 +25,32 @@ async_engine = create_async_engine(
     db_url,
     future=True,
     poolclass=NullPool,
-    connect_args={
-        "prepared_statement_cache_size": 0,
-        "statement_cache_size": 0,
-    },
+    connect_args=build_connect_args(settings.db_statement_timeout_ms),
 )
 logger = structlog.get_logger("sqlalchemy.engine")
-register_query_analyzer(async_engine.sync_engine)
+register_query_analyzer(async_engine.sync_engine, name="app")
+register_pool_monitor(async_engine.sync_engine, name="app")
+
+
+async def extended_statement_timeout(request: Request) -> None:
+    """
+    Route dependency for export/report endpoints: use the longer export timeout.
+
+    Route-level dependencies resolve before ``get_async_db_session``, which reads
+    the value this sets. No-op when timeouts are disabled globally, so an export
+    never gets a tighter limit than a normal request.
+    """
+    if settings.db_statement_timeout_ms <= 0:
+        return
+    request.state.db_statement_timeout_ms = settings.db_export_statement_timeout_ms
+
+
+async def set_statement_timeout(session: AsyncSession, timeout_ms: int) -> None:
+    """Set ``statement_timeout`` for the current transaction only (SET LOCAL)."""
+    await session.execute(
+        text("SELECT set_config('statement_timeout', :timeout_ms, true)"),
+        {"timeout_ms": str(max(int(timeout_ms), 0))},
+    )
 
 
 async def set_user_context(session: AsyncSession, username: str):
@@ -62,6 +83,12 @@ async def get_async_db_session(
         try:
             async with session.begin():
                 try:
+                    timeout_override = getattr(
+                        request.state, "db_statement_timeout_ms", None
+                    )
+                    if timeout_override is not None:
+                        await set_statement_timeout(session, timeout_override)
+
                     # Set user context for auditing within the transaction.
                     # This ensures 'app.username' is set on the connection within the active transaction.
                     if request.user:

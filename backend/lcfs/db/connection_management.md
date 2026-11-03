@@ -4,6 +4,8 @@
 
 This document explains the database connection pool configuration, connection usage patterns, and concurrent user capacity for the LCFS application.
 
+> **⚠️ Accuracy note (updated):** the application engines in `backend/lcfs/db/dependencies.py` and `backend/lcfs/web/lifetime.py` currently use `NullPool` (one connection per session, closed on release). The `pool_size` / `max_overflow` / `pool_timeout` values below describe the intended 80-connection budget and are **not enforced by SQLAlchemy**. Per-query timeouts, slow query logging and connection utilization metrics are documented in the wiki: [Database Query Timeouts and Connection Monitoring](../../../wiki/Database-Query-Timeouts-and-Connection-Monitoring.md).
+
 ## Connection Pool Configuration
 
 The application uses SQLAlchemy's async connection pool with the following settings:

@@ -11,6 +11,7 @@ from fastapi import (
     Request,
 )
 from fastapi.responses import StreamingResponse
+from lcfs.db.dependencies import extended_statement_timeout
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
 from typing import List
 
@@ -189,6 +190,7 @@ async def get_transactions_paginated_for_org(
     "/transactions/export",
     response_class=StreamingResponse,
     status_code=status.HTTP_200_OK,
+    dependencies=[Depends(extended_statement_timeout)],
 )
 @view_handler([RoleEnum.SUPPLIER])
 async def export_transactions_for_org(

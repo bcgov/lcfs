@@ -18,6 +18,7 @@ from fastapi.exceptions import RequestValidationError
 from starlette.responses import StreamingResponse, JSONResponse
 
 from lcfs.db import dependencies
+from lcfs.db.dependencies import extended_statement_timeout
 from lcfs.web.core.decorators import view_handler
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.allocation_agreement.schema import (
@@ -217,6 +218,7 @@ async def search_table_options_strings(
     "/export/{report_id}",
     response_class=StreamingResponse,
     status_code=status.HTTP_200_OK,
+    dependencies=[Depends(extended_statement_timeout)],
 )
 @view_handler(
     [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
