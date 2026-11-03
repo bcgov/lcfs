@@ -76,14 +76,14 @@ Frontend commands:
 
 ```bash
 cd frontend
-npm install
-npm run dev
-npm run test:run -- <path-or-pattern>
-npm run type-check
-npm run lint
-npm run prettier
-npm run build
-npm run cypress:run
+pnpm install --frozen-lockfile
+pnpm run dev
+pnpm run test:run -- <path-or-pattern>
+pnpm run typecheck
+pnpm run lint
+pnpm run format
+pnpm run build
+pnpm run cypress:run
 ```
 
 ## ETL and migration context
@@ -115,8 +115,8 @@ ETL compose exposes:
 ## Validation guidance
 
 - For backend-only changes, run the closest `poetry run pytest lcfs/tests/<feature>` target. Add or update tests when service, repo, validation, permissions, state-transition, calculation, import/export, or migration behavior changes.
-- For frontend changes, run the closest `npm run test:run -- <test-file-or-folder>` target. Add or update tests for visible behavior, hooks, routes, forms, permissions, and API interactions.
-- Run `npm run type-check` after TypeScript changes.
+- For frontend changes, run the closest `pnpm run test:run -- <test-file-or-folder>` target. Add or update tests for visible behavior, hooks, routes, forms, permissions, and API interactions.
+- Run `pnpm run typecheck` after TypeScript changes.
 - Run formatting/linting commands for the touched area when practical.
 - If a command cannot run because dependencies, containers, credentials, or services are missing, state that clearly and include the exact command attempted.
 

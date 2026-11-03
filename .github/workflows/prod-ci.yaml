@@ -53,9 +53,13 @@ jobs:
   backend-setup:
     name: "Backend Setup"
     runs-on: ubuntu-latest
+    env:
+      POETRY_VIRTUALENVS_IN_PROJECT: "true"
     needs: [install-oc]
     outputs:
       setup-complete: ${{ steps.setup-complete.outputs.complete }}
+      poetry_venv_cache_key: ${{ steps.cache-keys.outputs.poetry_venv_key }}
+      pytest_timing_cache_prefix: ${{ steps.cache-keys.outputs.pytest_timing_prefix }}
     services:
       postgres:
         image: postgres:17
@@ -76,20 +80,22 @@ jobs:
           sparse-checkout: |
             backend
 
+      - name: Compute backend cache keys
+        id: cache-keys
+        run: |
+          echo "poetry_venv_key=${{ runner.os }}-poetry-venv-v2-${{ hashFiles('backend/.python-version', 'backend/poetry.lock', 'backend/pyproject.toml') }}" >> "$GITHUB_OUTPUT"
+          echo "pytest_timing_prefix=${{ runner.os }}-pytest-split-${{ hashFiles('backend/.python-version', 'backend/poetry.lock', 'backend/pyproject.toml', 'backend/lcfs/tests/**/*.py') }}" >> "$GITHUB_OUTPUT"
+
       - name: Set up Python
         uses: actions/setup-python@v6.2.0
         with:
           python-version-file: backend/.python-version
 
-      - name: Cache Poetry dependencies
+      - name: Cache backend virtual environment
         uses: actions/cache@v5.0.4
         with:
-          path: |
-            ~/.cache/pypoetry
-            backend/.venv
-          key: ${{ runner.os }}-poetry-${{ hashFiles('backend/.python-version') }}-${{ hashFiles('backend/poetry.lock', 'backend/pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-poetry-${{ hashFiles('backend/.python-version') }}-
+          path: backend/.venv
+          key: ${{ steps.cache-keys.outputs.poetry_venv_key }}
 
       - name: Install Poetry
         run: pip install poetry==2.5.1
@@ -161,6 +167,8 @@ jobs:
     name: "Backend Tests (Shard ${{ matrix.shard }}/${{ strategy.job-total }})"
     needs: backend-setup
     runs-on: ubuntu-latest
+    env:
+      POETRY_VIRTUALENVS_IN_PROJECT: "true"
     if: needs.backend-setup.outputs.setup-complete == 'true'
     services:
       postgres:
@@ -237,32 +245,32 @@ jobs:
         with:
           python-version-file: backend/.python-version
 
-      - name: Cache Poetry dependencies
-        uses: actions/cache@v5.0.4
+      - name: Restore backend virtual environment
+        id: backend-venv-cache
+        uses: actions/cache/restore@v5.0.4
         with:
-          path: |
-            ~/.cache/pypoetry
-            backend/.venv
-          key: ${{ runner.os }}-poetry-${{ hashFiles('backend/.python-version') }}-${{ hashFiles('backend/poetry.lock', 'backend/pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-poetry-${{ hashFiles('backend/.python-version') }}-
+          path: backend/.venv
+          key: ${{ needs.backend-setup.outputs.poetry_venv_cache_key }}
 
-      - name: Install Poetry
+      - name: Install Poetry on cache miss
+        if: steps.backend-venv-cache.outputs.cache-hit != 'true'
         run: pip install poetry==2.5.1
 
-      - name: Install backend dependencies
+      - name: Install backend dependencies on cache miss
+        if: steps.backend-venv-cache.outputs.cache-hit != 'true'
         run: |
           pip install --upgrade pip setuptools wheel
           cd backend
           poetry install
 
-      - name: Cache pytest timing data
-        uses: actions/cache@v5.0.4
+
+      - name: Restore pytest split timing data
+        uses: actions/cache/restore@v5.0.4
         with:
-          path: backend/.pytest_cache
-          key: ${{ runner.os }}-pytest-timing-${{ strategy.job-total }}-${{ hashFiles('backend/lcfs/tests/**/*.py') }}
+          path: backend/.test_durations
+          key: ${{ needs.backend-setup.outputs.pytest_timing_cache_prefix }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
-            ${{ runner.os }}-pytest-timing-${{ strategy.job-total }}-
+            ${{ needs.backend-setup.outputs.pytest_timing_cache_prefix }}-
 
       - name: Wait for PostgreSQL to be ready
         run: |
@@ -312,16 +320,11 @@ jobs:
           LCFS_DB_USER: lcfs
           LCFS_DB_PASS: development_only
 
-      - name: Ensure pytest cache directory exists
-        run: |
-          cd backend
-          mkdir -p .pytest_cache
-
       - name: Run backend tests for shard
         id: backend_tests
         run: |
           cd backend
-          poetry run pytest --splits ${{ strategy.job-total }} --group ${{ matrix.shard }} --store-durations --maxfail=1 --tb=short --disable-warnings --quiet --junitxml=pytest-results-shard-${{ matrix.shard }}.xml || [ $? -eq 5 ]
+          ./.venv/bin/pytest --splits ${{ strategy.job-total }} --group ${{ matrix.shard }} --store-durations --maxfail=1 --tb=short --disable-warnings --quiet --junitxml=pytest-results-shard-${{ matrix.shard }}.xml || [ $? -eq 5 ]
         env:
           LCFS_DB_HOST: localhost
           LCFS_DB_PORT: 5432
@@ -344,10 +347,67 @@ jobs:
         uses: actions/upload-artifact@v7.0.0
         with:
           name: pytest-results-shard-${{ matrix.shard }}
-          path: backend/pytest-results-shard-${{ matrix.shard }}.xml
+          path: |
+            backend/pytest-results-shard-${{ matrix.shard }}.xml
+            backend/.test_durations
+          include-hidden-files: true
+          if-no-files-found: warn
           retention-days: 1
 
   # ---------- Frontend: Setup → Sharded Tests → Publish ----------
+  backend-timing-cache:
+    name: Cache Backend Test Timings
+    if: always()
+    continue-on-error: true
+    needs: [backend-setup, backend-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download backend shard outputs
+        if: needs.backend-tests.result == 'success'
+        uses: actions/download-artifact@v8.0.1
+        with:
+          pattern: pytest-results-shard-*
+          path: pytest-results
+          merge-multiple: false
+
+      - name: Merge pytest split timing data
+        id: merge-pytest-timings
+        continue-on-error: true
+        if: needs.backend-tests.result == 'success'
+        run: |
+          python3 - <<'PY'
+          import glob
+          import json
+          import os
+          from pathlib import Path
+
+          files = sorted(glob.glob("pytest-results/**/.test_durations", recursive=True))
+          if not files:
+              print("No pytest-split timing files were uploaded; cache update skipped")
+              with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+                  output.write("ready=false\n")
+              raise SystemExit(0)
+
+          durations = {}
+          for filename in files:
+              durations.update(json.loads(Path(filename).read_text()))
+
+          target = Path("backend/.test_durations")
+          target.parent.mkdir(parents=True, exist_ok=True)
+          target.write_text(json.dumps(durations, sort_keys=True, indent=2) + "\n")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write("ready=true\n")
+          print(f"Merged {len(durations)} test durations from {len(files)} shards")
+          PY
+
+      - name: Save merged pytest split timing data
+        if: needs.backend-tests.result == 'success' && steps.merge-pytest-timings.outputs.ready == 'true'
+        continue-on-error: true
+        uses: actions/cache/save@v5.0.4
+        with:
+          path: backend/.test_durations
+          key: ${{ needs.backend-setup.outputs.pytest_timing_cache_prefix }}-${{ github.run_id }}-${{ github.run_attempt }}
+
   frontend-setup:
     name: "Frontend Setup"
     runs-on: ubuntu-latest
@@ -369,13 +429,12 @@ jobs:
           run-install: |
             args: ['--frozen-lockfile', '--prefer-offline']
         env:
-          NPM_CONFIG_AUDIT: "false"
-          NPM_CONFIG_FUND: "false"
+          PNPM_CONFIG_AUDIT: "false"
 
       - name: Check frontend
         run: |
           cd frontend
-          npm run check
+          pnpm run check
 
       - name: Cache node_modules for test shards
         # Save the checked dependencies for workers. Never restore a cache over
@@ -383,7 +442,7 @@ jobs:
         uses: actions/cache/save@v5.0.4
         with:
           path: frontend/node_modules
-          key: ${{ runner.os }}-${{ runner.arch }}-node-modules-shared-v3-${{ hashFiles('frontend/package-lock.json', 'frontend/.nvmrc') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-node-modules-shared-pnpm-v1-${{ hashFiles('frontend/pnpm-lock.yaml', 'frontend/.nvmrc') }}
 
       - name: Mark setup as complete
         id: setup-complete
@@ -446,17 +505,24 @@ jobs:
       - name: Restore node_modules cache
         id: cache-restore
         # Restore only the exact lockfile and Node version, with no fallback
-        # keys. A cache miss runs the frozen-lockfile npm ci fallback below.
+        # keys. A cache miss runs the frozen-lockfile pnpm install fallback below.
         uses: actions/cache/restore@v5.0.4
         with:
           path: frontend/node_modules
-          key: ${{ runner.os }}-${{ runner.arch }}-node-modules-shared-v3-${{ hashFiles('frontend/package-lock.json', 'frontend/.nvmrc') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-node-modules-shared-pnpm-v1-${{ hashFiles('frontend/pnpm-lock.yaml', 'frontend/.nvmrc') }}
+
+      - name: Set up pnpm on cache miss
+        if: steps.cache-restore.outputs.cache-hit != 'true'
+        uses: pnpm/action-setup@v6.1.0
+        with:
+          version: 12.17.0
+          run_install: false
 
       - name: Install frontend dependencies (fallback)
         if: steps.cache-restore.outputs.cache-hit != 'true'
         run: |
           cd frontend
-          npm ci --prefer-offline --no-audit --no-fund
+          pnpm install --frozen-lockfile --prefer-offline
 
       - name: Run frontend tests
         id: frontend_tests

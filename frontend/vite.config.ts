@@ -20,7 +20,7 @@ const appVersion: string = existsSync(releaseNotesPath)
 // Vitest checks them against whatever was collected in the current process:
 //   - a filtered run (`vitest run src/views/Foo.test.jsx`) or a CI shard
 //     (`--shard=N/M`) only covers a slice of the suite and would always fail;
-//   - `npm run test:coverage` (full run) and the CI `--merge-reports` step
+//   - `pnpm run test:coverage` (full run) and the CI `--merge-reports` step
 //     (all shards merged) are the two places that see the whole suite, and
 //     both set the variable.
 const COVERAGE_THRESHOLDS = {

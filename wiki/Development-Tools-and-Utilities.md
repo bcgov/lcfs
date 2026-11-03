@@ -39,29 +39,29 @@ This document provides an overview of common development tools and utility scrip
 
 ## 2. Frontend Tools
 
-### 2.1. Node.js & npm
-*   **Purpose**: Node.js is the JavaScript runtime. npm (Node Package Manager) is used for managing frontend dependencies and running scripts.
-*   **Configuration**: `frontend/package.json`, `frontend/package-lock.json`.
+### 2.1. Node.js & pnpm
+*   **Purpose**: Node.js is the JavaScript runtime. pnpm is used for managing frontend dependencies; scripts run through pnpm or the installed Vite+ binaries.
+*   **Configuration**: `frontend/package.json`, `frontend/pnpm-lock.yaml`.
 *   **Common Commands** (run from `frontend/` directory):
-    *   `npm ci`: Install the pinned dependencies from the lockfile (Node.js 24.21.0; see `.nvmrc`).
-    *   `npm run dev`: Start the Vite development server.
-    *   `npm run build`: Create a production build.
-    *   `npm run check`: Run Oxfmt, Oxlint, and TypeScript type checks through tsgolint with zero warnings and errors.
-    *   `npm run test:run`: Run frontend unit tests once.
-    *   `npm run test.coverage`: Run unit tests with coverage thresholds enforced.
-    *   `npm run cypress:run`: Run Cypress tests headlessly.
-*   **Reference**: [Node.js Documentation](https://nodejs.org/), [npm Documentation](https://docs.npmjs.com/)
+    *   `pnpm install --frozen-lockfile`: Install the pinned dependencies from the lockfile (Node.js 24.21.0; see `.nvmrc`).
+    *   `pnpm run dev`: Start the Vite development server.
+    *   `pnpm run build`: Create a production build.
+    *   `pnpm run check`: Run Oxfmt, Oxlint, and TypeScript type checks through tsgolint with zero warnings and errors.
+    *   `pnpm run test:run`: Run frontend unit tests once.
+    *   `pnpm run test:coverage`: Run unit tests with coverage thresholds enforced.
+    *   `pnpm run cypress:run`: Run Cypress tests headlessly.
+*   **Reference**: [Node.js Documentation](https://nodejs.org/), [pnpm Documentation](https://pnpm.io/)
 
 ### 2.2. Vite+
 *   **Purpose**: Unified frontend toolchain for development, production builds, tests, formatting, linting, and type checks.
 *   **Configuration**: `frontend/vite.config.ts`.
-*   **Usage**: `npm run check` runs Oxfmt, Oxlint, and tsgolint. `npm run dev`, `npm run build`, and the test scripts use the Vite+ `vp` command.
+*   **Usage**: `pnpm run check` runs Oxfmt, Oxlint, and tsgolint. `pnpm run dev`, `pnpm run build`, and the test scripts use the Vite+ `vp` command.
 *   **Reference**: [Vite+ Documentation](https://viteplus.dev/)
 
 ### 2.3. Husky
 *   **Purpose**: Tool for managing Git hooks easily (e.g., for running linters/formatters on pre-commit).
 *   **Configuration**: `frontend/.husky/` directory.
-*   **Setup**: Typically installed via `npm install` if listed as a dev dependency.
+*   **Setup**: Typically installed via `pnpm install --frozen-lockfile` if listed as a dev dependency.
 *   **Reference**: [Husky Documentation](https://typicode.github.io/husky/)
 
 ### 2.4. Cypress Utilities

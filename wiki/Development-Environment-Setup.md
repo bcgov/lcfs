@@ -8,8 +8,7 @@ Before you begin, ensure you have the following installed on your system:
 
 *   **Git**: For cloning the repository and version control.
 *   **Docker and Docker Compose**: For running the application services in containers. ([Install Docker](https://docs.docker.com/get-docker/), Docker Compose is typically included).
-*   **Node.js 24.21.0 and npm**: Required for frontend development. Use `frontend/.nvmrc` with a Node version manager such as `nvm`; `frontend/package.json` enforces Node.js 24 or newer.
-    *   npm (Node Package Manager) is included with Node.js.
+*   **Node.js 24.21.0 and pnpm 12.17.0**: Required for frontend development. Use `frontend/.nvmrc` with a Node version manager such as `nvm`; `frontend/package.json` pins pnpm and requires Node.js 24 or newer.
 *   **Python and Poetry**: For backend development.
     *   Use CPython 3.13 for the backend; `backend/.python-version` is the version source used by the tooling.
     *   Use Poetry 2.5.1 to install the backend dependencies from `backend/poetry.lock`. ([Install Poetry](https://python-poetry.org/docs/#installation)).
@@ -92,12 +91,12 @@ If you need to work primarily on the frontend or run it independently:
     ```
 2.  **Install dependencies**:
     ```bash
-    npm install
+    pnpm install --frozen-lockfile
     ```
     This will also install Husky git hooks if configured (check `.husky/` directory).
 3.  **Run the frontend development server**:
     ```bash
-    npm run dev
+    pnpm run dev
     ```
     The frontend will typically be available at `http://localhost:3000` (as configured in Vite and `package.json`).
 
@@ -147,7 +146,7 @@ The ETL subsystem (Apache NiFi and related services) has its own Docker Compose 
 
 *   **VS Code**: Recommended extensions for Python (Pylance, Python Test Explorer), JavaScript/React (ESLint, Prettier), Docker.
     *   Ensure your VS Code settings use the project's Python interpreter (managed by Poetry) and Node.js version.
-*   **Other IDEs**: Configure according to their specific instructions for Python/Poetry and Node.js/npm projects.
+*   **Other IDEs**: Configure according to their specific instructions for Python/Poetry and Node.js/pnpm projects.
 
 ## 8. Environment Variables
 

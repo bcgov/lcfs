@@ -1,0 +1,30 @@
+# Keep npm-style node_modules resolution while pnpm uses its shared content-addressed store.
+nodeLinker: hoisted
+
+# Explicitly review dependency install scripts required by Vite+, Cypress, and native tools.
+allowBuilds:
+  "@badeball/cypress-cucumber-preprocessor": true
+  "@scarf/scarf": false
+  "@tree-sitter-grammars/tree-sitter-yaml": true
+  "core-js": false
+  "core-js-pure": false
+  "cypress": true
+  "esbuild": true
+  "fsevents": true
+  "msw": true
+  "tree-sitter": true
+  "tree-sitter-json": true
+
+overrides:
+  "minimatch": "9.0.9"
+  "find-cypress-specs>minimatch": "5.1.9"
+  "@cypress/request>qs": "^6.17.0"
+  "@cypress/request>uuid": "^11.1.1"
+  "mocha>serialize-javascript": "^7.1.4"
+  "@badeball/cypress-cucumber-preprocessor>uuid": "^11.1.1"
+  "@cucumber/cucumber>uuid": "^11.1.1"
+  "@cucumber/gherkin-utils>uuid": "^11.1.1"
+  "@cucumber/messages>uuid": "^11.1.1"
+  "mochawesome>uuid": "^11.1.1"
+  "vite": "npm:@voidzero-dev/vite-plus-core@1.3.0"
+  "vitest": "5.0.5"

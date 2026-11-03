@@ -18,22 +18,22 @@ CI is triggered on every push to a branch or when a Pull Request (PR) is created
 1.  **Checkout Code**: Fetches the latest code from the branch/PR.
 2.  **Setup Environment**: 
     *   Sets up specific versions of Node.js (for frontend) and Python (for backend).
-    *   Installs dependencies (npm for frontend, Poetry for backend).
+    *   Installs dependencies (pnpm for frontend, Poetry for backend).
     *   Caches dependencies to speed up subsequent runs.
 3.  **Linting & Formatting Checks**:
     *   **Frontend**: Runs ESLint and Prettier to check for code style and potential errors.
     *   **Backend**: Runs Flake8, Black (check mode), Isort (check mode), and MyPy for style, formatting, and type checking.
 4.  **Automated Testing**:
-    *   **Frontend Unit/Integration Tests**: Runs Vitest tests (`npm run test:run`). Generates code coverage reports.
+    *   **Frontend Unit/Integration Tests**: Runs Vitest tests (`pnpm run test:run`). Generates code coverage reports.
     *   **Backend Unit/Integration Tests**: Runs Pytest tests (`poetry run pytest`). Generates code coverage reports.
     *   **(Optional) Frontend E2E Tests**: May run Cypress tests against a preview environment or a mocked backend, though E2E tests are often part of a separate, scheduled pipeline or triggered manually due to their longer execution time.
 5.  **Build Application**:
-    *   **Frontend**: Creates a production build (`npm run build`).
+    *   **Frontend**: Creates a production build (`pnpm run build`).
     *   **Backend**: No explicit build step for Python itself, but checks might include ensuring the Poetry project is valid.
 6.  **Build Docker Images** (Optional in CI, more common in CD, but can be a check):
     *   Validates that `Dockerfile` and `Dockerfile.openshift` files can build successfully.
 7.  **Security Scans** (Optional but Recommended):
-    *   Dependency vulnerability scans (e.g., `npm audit`, `safety` or `pip-audit`).
+    *   Dependency vulnerability scans (e.g., `pnpm audit`, `safety` or `pip-audit`).
     *   Static Application Security Testing (SAST) tools.
     *   Container image vulnerability scans (if images are built).
 8.  **Notifications**: Reports build status (success/failure) to GitHub, PR comments, or team communication channels (e.g., Slack).

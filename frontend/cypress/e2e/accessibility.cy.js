@@ -1,4 +1,4 @@
-// npm run cypress:run -- --spec cypress/e2e/accessibility.cy.js
+// pnpm run cypress:run -- --spec cypress/e2e/accessibility.cy.js
 /*
  * - Accessibility checks:
  *   - Login page

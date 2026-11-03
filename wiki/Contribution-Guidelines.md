@@ -49,7 +49,7 @@ We follow the GitHub Flow for contributions. The general process is:
 #### Pre-commit Hooks
 
 *   **Backend**: The backend uses `pre-commit` to run linters (Flake8, MyPy) and formatters (Black, Isort). Install with `poetry run pre-commit install` in the `backend` directory. These hooks run automatically before each commit.
-*   **Frontend**: The frontend uses Husky for pre-commit hooks (ESLint, Prettier). These are typically installed with `npm install`.
+*   **Frontend**: The frontend uses Husky for pre-commit hooks (Vite+ checks and formatting). These are installed with `pnpm install --frozen-lockfile`.
 *   Ensure these hooks pass before pushing your changes.
 
 ## Styleguides
@@ -90,4 +90,4 @@ By contributing to LCFS, you agree that your contributions will be licensed unde
 Thank you for contributing to LCFS! Your efforts help us improve the management and compliance of the Low Carbon Fuel Standard.
 
 ---
-*If you have questions or need clarification on any part of the contribution process, please don't hesitate to ask in the project's communication channels or by opening an issue.* 
+*If you have questions or need clarification on any part of the contribution process, please don't hesitate to ask in the project's communication channels or by opening an issue.*

@@ -5,9 +5,8 @@ FROM node:24.21.0
 WORKDIR /app
 
 # Copy package files and install dependencies
-COPY package.json ./
-COPY package-lock.json ./
-RUN npm ci
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+RUN npm install --global pnpm@12.17.0 && pnpm install --frozen-lockfile
 
 # Copy other source files - node modules is excluded in .dockerignore
 COPY . .
@@ -15,4 +14,4 @@ COPY . .
 # Expose port 3000 for the app
 EXPOSE 3000
 
-CMD [ "npm" , "run" , "dev" ]
+CMD [ "pnpm" , "run" , "dev" ]

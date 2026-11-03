@@ -18,8 +18,8 @@ This page provides guidance on how to find version information for the LCFS appl
 ## 3. Frontend Component Versions
 
 *   **Node.js Version**: May be specified in `frontend/.nvmrc` or in the `engines` field of `frontend/package.json`.
-*   **Key JavaScript Libraries (React, Vite, MUI, etc.)**: Versions are managed by npm and specified in `frontend/package.json` under `dependencies` and `devDependencies`.
-    *   The exact resolved versions are locked in `frontend/package-lock.json`.
+*   **Key JavaScript Libraries (React, Vite, MUI, etc.)**: Versions are managed by pnpm and specified in `frontend/package.json` under `dependencies` and `devDependencies`.
+    *   The exact resolved versions are locked in `frontend/pnpm-lock.yaml`.
 *   **Frontend Docker Image**: The version/tag of the `lcfs-frontend` Docker image pushed to the container registry will correspond to a specific Git commit or release tag from the CI/CD pipeline.
 
 ## 4. ETL Component Versions

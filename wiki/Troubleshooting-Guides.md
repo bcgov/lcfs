@@ -8,20 +8,20 @@ This page provides troubleshooting tips for common issues encountered during dev
 *   **Issue**: `docker-compose up` fails with errors related to port conflicts.
     *   **Solution**: Check if another service on your machine is using the required ports (e.g., 3000, 8000, 5432, 6379). Stop the conflicting service or change the port mappings in the `docker-compose.yml` for local development (remember to change it back or use environment variables if committing).
 *   **Issue**: Docker images fail to build.
-    *   **Solution**: 
+    *   **Solution**:
         *   Check Dockerfile syntax.
         *   Ensure base images are accessible.
-        *   Look for errors in `apt-get install`, `npm install`, or `poetry install` steps within the Docker build process.
+        *   Look for errors in `apt-get install`, `pnpm install`, or `poetry install` steps within the Docker build process.
         *   Try `docker-compose build --no-cache` to rebuild without using cached layers.
 *   **Issue**: Containers start but application is not accessible (e.g., `localhost:3000` or `localhost:8000` not responding).
-    *   **Solution**: 
+    *   **Solution**:
         *   Check container logs: `docker-compose logs frontend` or `docker-compose logs backend`.
         *   Ensure correct port mappings in `docker-compose.yml`.
         *   Verify the application inside the container started correctly (e.g., Vite dev server, Uvicorn).
 
 ### Backend (Poetry)
 *   **Issue**: `poetry install` fails.
-    *   **Solution**: 
+    *   **Solution**:
         *   Ensure Python version matches `backend/.python-version`.
         *   Check `pyproject.toml` for syntax errors or incompatible dependencies.
         *   Try deleting `poetry.lock` and `backend/.venv` (if it exists) and running `poetry install` again.
@@ -29,14 +29,14 @@ This page provides troubleshooting tips for common issues encountered during dev
 *   **Issue**: Pre-commit hooks fail.
     *   **Solution**: Read the output from the failing hook. It usually indicates the file and the issue (e.g., formatting error from Black, linting error from Flake8). Fix the issue and try committing again.
 
-### Frontend (npm/Vite)
-*   **Issue**: `npm install` fails.
-    *   **Solution**: 
-        *   Check Node.js and npm versions.
-        *   Delete `node_modules/` and `package-lock.json` and try `npm install` again.
+### Frontend (pnpm/Vite)
+*   **Issue**: `pnpm install --frozen-lockfile` fails.
+    *   **Solution**:
+        *   Check the Node.js version in `frontend/.nvmrc` and the pnpm version pinned in `frontend/package.json`.
+        *   Delete `node_modules/` and rerun `pnpm install --frozen-lockfile`. If the lockfile is corrupted, regenerate it deliberately with `pnpm install --no-frozen-lockfile` and review the resulting lockfile diff.
         *   Look for network issues or specific package errors.
-*   **Issue**: `npm run dev` fails or frontend doesn't load correctly.
-    *   **Solution**: 
+*   **Issue**: `pnpm run dev` fails or frontend doesn't load correctly.
+    *   **Solution**:
         *   Check the browser console for JavaScript errors.
         *   Check the Vite dev server output in your terminal for errors.
         *   Ensure environment variables (if any, via `.env` files) are correctly set.
@@ -44,7 +44,7 @@ This page provides troubleshooting tips for common issues encountered during dev
 ## 2. Application Runtime Issues
 
 ### API Errors (4xx, 5xx)
-*   **Solution**: 
+*   **Solution**:
     *   Check backend logs (`docker-compose logs backend` or OpenShift pod logs) for detailed error messages and stack traces.
     *   For 401/403 errors, verify JWTs and Keycloak integration.
     *   For 400/422 errors, check request payloads against Pydantic models and API expectations.
@@ -57,7 +57,7 @@ This page provides troubleshooting tips for common issues encountered during dev
     *   **Solution**: Carefully read the Alembic error. You might need to resolve conflicts in migration scripts or manually adjust the database schema in dev environments (use with caution).
 
 ### ETL Process Failures (NiFi)
-*   **Solution**: 
+*   **Solution**:
     *   Check the NiFi UI for processor status, bulletins, and error messages.
     *   Inspect logs in `etl/nifi_output/` for failed records.
     *   Verify database connections for TFRS and LCFS within NiFi controller services.
@@ -66,7 +66,7 @@ This page provides troubleshooting tips for common issues encountered during dev
 ## 3. OpenShift Deployment Issues
 
 *   **Issue**: Pods are not starting (CrashLoopBackOff, ImagePullBackOff).
-    *   **Solution**: 
+    *   **Solution**:
         *   `oc describe pod <pod_name>` to get events and details.
         *   `oc logs <pod_name>` (and `oc logs <pod_name> -p` for previous container) to check for application errors.
         *   For `ImagePullBackOff`, verify image registry, image name/tag, and pull secrets.
@@ -85,4 +85,4 @@ This page provides troubleshooting tips for common issues encountered during dev
 *   **Ask for Help**: If you're stuck, ask a teammate. Describe the problem, what you've tried, and any relevant logs or error messages.
 
 ---
-*This guide is a living document. Please add new common issues and solutions as they are discovered.* 
+*This guide is a living document. Please add new common issues and solutions as they are discovered.*

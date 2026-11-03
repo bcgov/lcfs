@@ -1,12 +1,15 @@
 FROM artifacts.developer.gov.bc.ca/docker-remote/node:24.21.0 as builder
 ENV NODE_ENV=production
 WORKDIR /usr/src/app
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN npm install --global pnpm@12.17.0 && \
+    pnpm install --frozen-lockfile --prod=false
+
 COPY ./ ./
 # Real release dates from git history, passed by prod-ci (empty elsewhere).
 ARG RELEASE_DATES=""
-RUN npm ci --include=dev && \
-    node scripts/releaseDates.mjs apply && \
-    npm run build
+RUN node scripts/releaseDates.mjs apply && \
+    pnpm run build
 
 FROM artifacts.developer.gov.bc.ca/docker-remote/nginxinc/nginx-unprivileged:1.30.1-alpine
 COPY --from=builder /usr/src/app/dist /app

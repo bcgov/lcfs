@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "packageManager": "pnpm@12.17.0",
   "engines": {
     "node": ">=24"
   },
@@ -14,12 +15,9 @@
     "lint:fix": "vp lint --fix --report-unused-disable-directives --max-warnings 0",
     "format": "vp fmt . --check",
     "format:fix": "vp fmt .",
-    "prettier": "npm run format",
-    "prettier:fix": "npm run format:fix",
     "preview": "vp preview",
     "test": "vp test",
     "test:coverage": "cross-env ENFORCE_COVERAGE_THRESHOLDS=true vp test run --coverage",
-    "test.coverage": "npm run test:coverage",
     "test:run": "vp test run",
     "test:ci": "vp test run --reporter=verbose --reporter=junit --outputFile.junit=vitest-results.xml",
     "test:ci:memory": "node --max-old-space-size=8192 ./node_modules/.bin/vp test run --reporter=github-actions --reporter=blob --outputFile.blob=.vitest-reports/blob-$SHARD_INDEX-$SHARD_TOTAL.json --shard=$SHARD_INDEX/$SHARD_TOTAL",
@@ -29,20 +27,13 @@
     "test:services": "vp test run src/services",
     "test:utils": "vp test run src/utils",
     "test:views": "vp test run src/views",
-    "test:run:components": "npm run test:components",
-    "test:run:hooks": "npm run test:hooks",
-    "test:run:layouts": "npm run test:layouts",
-    "test:run:services": "npm run test:services",
-    "test:run:utils": "npm run test:utils",
-    "test:run:views": "npm run test:views",
     "cypress:install": "cypress install",
     "cypress:verify": "cypress verify",
     "cypress:open": "cypress open",
     "cypress:run": "cypress run --headless --browser chrome",
     "cypress:dev": "cypress run --config baseUrl=https://lcfs-dev.apps.silver.devops.gov.bc.ca/",
     "cypress:clear": "cypress cache clear",
-    "typecheck": "vp lint --type-aware --type-check",
-    "type-check": "npm run typecheck"
+    "typecheck": "vp lint --type-aware --type-check"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
@@ -149,35 +140,5 @@
   },
   "optionalDependencies": {
     "@rollup/rollup-linux-x64-gnu": "4.6.1"
-  },
-  "overrides": {
-    "minimatch": "9.0.9",
-    "find-cypress-specs": {
-      "minimatch": "5.1.9"
-    },
-    "@cypress/request": {
-      "qs": "^6.17.0",
-      "uuid": "^11.1.1"
-    },
-    "mocha": {
-      "serialize-javascript": "^7.1.4"
-    },
-    "@badeball/cypress-cucumber-preprocessor": {
-      "uuid": "^11.1.1"
-    },
-    "@cucumber/cucumber": {
-      "uuid": "^11.1.1"
-    },
-    "@cucumber/gherkin-utils": {
-      "uuid": "^11.1.1"
-    },
-    "@cucumber/messages": {
-      "uuid": "^11.1.1"
-    },
-    "mochawesome": {
-      "uuid": "^11.1.1"
-    },
-    "vite": "npm:@voidzero-dev/vite-plus-core@1.3.0",
-    "vitest": "5.0.5"
   }
 }

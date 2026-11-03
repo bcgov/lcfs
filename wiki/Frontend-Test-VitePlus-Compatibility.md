@@ -1,3 +1,5 @@
+> Historical measurements below compare npm-based setup strategies before the frontend's pnpm migration. They do not measure pnpm install performance.
+
 # Frontend test optimization compatibility with Vite+
 
 Tracking issue: [#5100](https://github.com/bcgov/lcfs/issues/5100).
@@ -446,7 +448,7 @@ its version across workflows. The action manages the package-manager data cache
 and uses the selected Node runtime's bundled npm for this unpinned npm project.
 `npm run check` remains the required zero-warning/error quality gate.
 
-The separate save-only `node_modules` cache is retained for the 32 test workers.
+At the time of this benchmark, the separate save-only `node_modules` cache was retained for the 32 test workers.
 Its `v3` key includes OS, architecture, `frontend/package-lock.json`, and
 `frontend/.nvmrc`. Workers keep their Node-only setup and exact restore, avoiding
 a global toolchain install and dependency install in every shard. If restoration
