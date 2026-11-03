@@ -18,7 +18,8 @@ import {
   bceidTextFields,
   defaultValues,
   statusOptions,
-  allowedBceidRoleValues
+  allowedBceidRoleValues,
+  DEPENDENT_BCEID_ROLES
 } from './_schema'
 import { ROUTES, buildPath } from '@/routes/routes'
 import { BCFormRadio } from '@/components/BCForm/BCFormRadio'
@@ -92,15 +93,6 @@ export const AddEditUser = ({
     enabled: !!roleOrgId && (!!orgID || hasRoles(roles.supplier))
   })
   const availableRoles = orgData?.availableRoles ?? null
-  const organizationTypeKeys = [orgData?.orgType, ...(orgData?.orgTypes ?? [])]
-    .map((orgType) =>
-      typeof orgType === 'string'
-        ? orgType
-        : orgType?.orgType || orgType?.org_type
-    )
-    .filter(Boolean)
-    .map((orgType) => orgType.toLowerCase())
-  const isLcjfipOrganization = organizationTypeKeys.includes('lcjfip')
 
   const form = useForm({
     resolver: yupResolver(userInfoSchema(userType)),
@@ -179,15 +171,23 @@ export const AddEditUser = ({
     if (bceidRoles.length > 0) {
       setValue('readOnly', '')
     }
-    // IA Signer depends on IA Proponent — clear it from form state when IA Proponent is removed.
-    // For BCeID callers the backend (services.py) restores IA Signer regardless of form state.
-    if (
-      bceidRoles.includes(roles.ia_signer.toLowerCase()) &&
-      !bceidRoles.includes(roles.ia_proponent.toLowerCase())
-    ) {
+    // Dependent roles (IA Signer, LCJFIP Administrator) ride on their parent —
+    // clear them from form state when the parent is removed. For BCeID callers
+    // the backend (services.py) restores them regardless of form state.
+    const orphaned = Object.entries(DEPENDENT_BCEID_ROLES)
+      .map(([parent, dependent]) => [
+        parent.toLowerCase(),
+        dependent.toLowerCase()
+      ])
+      .filter(
+        ([parent, dependent]) =>
+          bceidRoles.includes(dependent) && !bceidRoles.includes(parent)
+      )
+      .map(([, dependent]) => dependent)
+    if (orphaned.length > 0) {
       setValue(
         'bceidRoles',
-        bceidRoles.filter((r) => r !== roles.ia_signer.toLowerCase())
+        bceidRoles.filter((r) => !orphaned.includes(r))
       )
     }
   }, [bceidRoles, setValue])
@@ -268,13 +268,14 @@ export const AddEditUser = ({
   }, [isUserFetched, data, reset])
 
   const allowedBceidRoles = useMemo(
-    () =>
-      allowedBceidRoleValues(
-        availableRoles,
-        isLcjfipOrganization,
-        isCurrentUserGovernment
-      ),
-    [availableRoles, isCurrentUserGovernment, isLcjfipOrganization]
+    () => allowedBceidRoleValues(availableRoles),
+    [availableRoles]
+  )
+  // Only government (IDIR) users may assign dependent roles such as IA Signer
+  // and LCJFIP Administrator.
+  const governmentManagedRoles = useMemo(
+    () => Object.values(DEPENDENT_BCEID_ROLES).map((r) => r.toLowerCase()),
+    []
   )
 
   const buildPayload = (data) => {
@@ -303,11 +304,11 @@ export const AddEditUser = ({
               ...data.adminRole,
               ...(data.readOnly === ''
                 ? (data.bceidRoles || []).filter((role) => {
-                    if (role === roles.lcjfip_applicant.toLowerCase()) {
-                      return isLcjfipOrganization
-                    }
-                    if (role === roles.lcjfip_administrator.toLowerCase()) {
-                      return isLcjfipOrganization && isCurrentUserGovernment
+                    if (
+                      governmentManagedRoles.includes(role) &&
+                      !isCurrentUserGovernment
+                    ) {
+                      return false
                     }
                     return (
                       allowedBceidRoles == null ||
@@ -459,7 +460,6 @@ export const AddEditUser = ({
                     disabled={disabled}
                     status={status}
                     isGovernmentUser={isCurrentUserGovernment}
-                    isLcjfipOrganization={isLcjfipOrganization}
                     availableRoles={availableRoles}
                     t={t}
                   />

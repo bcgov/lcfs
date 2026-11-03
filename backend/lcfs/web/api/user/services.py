@@ -63,10 +63,6 @@ NON_GOV_NOTIFICATION_ROLES = {
     RoleEnum.SUPPLIER,
     RoleEnum.CI_APPLICANT,
 }
-LCJFIP_ROLES = {
-    RoleEnum.LCJFIP_APPLICANT,
-    RoleEnum.LCJFIP_ADMINISTRATOR,
-}
 GOVERNMENT_MANAGED_BCEID_ROLES = {
     RoleEnum.IA_SIGNER,
     RoleEnum.LCJFIP_ADMINISTRATOR,
@@ -269,25 +265,16 @@ class UserServices:
 
         Always-available roles (Manage Users, Signing Authority, Read Only,
         Supplier) pass regardless; org-controllable roles must be in the
-        organization's available-role set, and IA Signer requires IA Proponent
-        availability. Government roles are never valid for organization users.
+        organization's available-role set, and dependent roles (IA Signer,
+        LCJFIP Administrator) require their parent role's availability.
+        Government roles are never valid for organization users.
         """
         if not organization_id or not roles:
             return
         requested = {r.lower() for r in roles}
         requested_enums = {e for e in RoleEnum if e.value.lower() in requested}
-        lcjfip_roles = requested_enums & LCJFIP_ROLES
-        if lcjfip_roles:
-            is_lcjfip_org = await self.repo.is_lcjfip_organization(organization_id)
-            if not is_lcjfip_org:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="LCJFIP roles are only available to LCJFIP organizations.",
-                )
         available = await self.repo.get_organization_available_roles(organization_id)
         invalid = requested_enums - allowed_roles_for_org(available)
-        if lcjfip_roles:
-            invalid -= LCJFIP_ROLES
         if invalid:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -408,7 +395,7 @@ class UserServices:
             user_create.roles = submitted_roles
 
         # Enforce the organization's available-role set (#4565). Runs after the
-        # IA Signer guard so a preserved assignment is validated too.
+        # government-managed role guard so a preserved assignment is validated too.
         if user.organization:
             await self._validate_roles_for_org(
                 user_create.roles or [], user.organization.organization_id

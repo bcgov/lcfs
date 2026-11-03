@@ -110,31 +110,60 @@ describe('bceidRoleOptions', () => {
     expect(values).toContain(roles.ia_proponent)
   })
 
-  it('returns 6 options', () => {
-    expect(bceidRoleOptions(t)).toHaveLength(6)
+  it('returns 7 options when the org has not loaded (no filtering)', () => {
+    expect(bceidRoleOptions(t)).toHaveLength(7)
   })
 
-  it('includes LCJFIP Applicant only for an LCJFIP organization', () => {
+  it('includes LCJFIP Applicant only when available to the organization', () => {
     expect(
-      bceidRoleOptions(t, null, true).map((option) => option.label)
+      bceidRoleOptions(t, [roles.lcjfip_applicant]).map((o) => o.label)
     ).toContain(roles.lcjfip_applicant)
-    expect(bceidRoleOptions(t).map((option) => option.label)).not.toContain(
-      roles.lcjfip_applicant
-    )
-  })
-
-  it('does not expose LCJFIP Administrator as a BCeID-assignable option', () => {
     expect(
-      bceidRoleOptions(t, null, true).map((option) => option.label)
-    ).not.toContain(roles.lcjfip_administrator)
+      bceidRoleOptions(t, [roles.transfers]).map((o) => o.label)
+    ).not.toContain(roles.lcjfip_applicant)
   })
 
-  it('allows the administrator role only for IDIR editors of LCJFIP organizations', () => {
-    expect(allowedBceidRoleValues(null, true, true)).toContain(
+  it('never exposes dependent roles as main checkbox options', () => {
+    const labels = bceidRoleOptions(t).map((option) => option.label)
+    expect(labels).not.toContain(roles.lcjfip_administrator)
+    expect(labels).not.toContain(roles.ia_signer)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// allowedBceidRoleValues
+// ---------------------------------------------------------------------------
+describe('allowedBceidRoleValues', () => {
+  it('returns null (no filtering) when the org has not loaded', () => {
+    expect(allowedBceidRoleValues(null)).toBeNull()
+  })
+
+  it('always allows Manage Users, Signing Authority and Read Only', () => {
+    expect(allowedBceidRoleValues([])).toEqual([
+      roles.manage_users.toLowerCase(),
+      roles.signing_authority.toLowerCase(),
+      roles.read_only.toLowerCase()
+    ])
+  })
+
+  it('allows LCJFIP Administrator only when LCJFIP Applicant is available', () => {
+    expect(allowedBceidRoleValues([roles.lcjfip_applicant])).toEqual(
+      expect.arrayContaining([
+        roles.lcjfip_applicant.toLowerCase(),
+        roles.lcjfip_administrator.toLowerCase()
+      ])
+    )
+    expect(allowedBceidRoleValues([roles.ia_proponent])).not.toContain(
       roles.lcjfip_administrator.toLowerCase()
     )
-    expect(allowedBceidRoleValues(null, true, false)).not.toContain(
-      roles.lcjfip_administrator.toLowerCase()
+  })
+
+  it('allows IA Signer only when IA Proponent is available', () => {
+    expect(allowedBceidRoleValues([roles.ia_proponent])).toContain(
+      roles.ia_signer.toLowerCase()
+    )
+    expect(allowedBceidRoleValues([roles.lcjfip_applicant])).not.toContain(
+      roles.ia_signer.toLowerCase()
     )
   })
 })

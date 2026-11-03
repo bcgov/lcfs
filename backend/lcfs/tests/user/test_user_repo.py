@@ -26,21 +26,6 @@ async def test_get_full_name_success(dbsession, user_repo):
 
 
 @pytest.mark.anyio
-async def test_is_lcjfip_organization_checks_associated_type():
-    organization_id = 42
-    result = MagicMock()
-    result.scalar_one_or_none.return_value = organization_id
-    db = MagicMock()
-    db.execute = AsyncMock(return_value=result)
-    repo = UserRepository(db=db)
-
-    assert await repo.is_lcjfip_organization(organization_id)
-    query = db.execute.await_args.args[0]
-    compiled_query = query.compile(compile_kwargs={"literal_binds": True})
-    assert "'lcjfip'" in str(compiled_query)
-
-
-@pytest.mark.anyio
 async def test_create_login_history(dbsession, user_repo):
     """Test creating a user login history entry."""
     # Mock user profile

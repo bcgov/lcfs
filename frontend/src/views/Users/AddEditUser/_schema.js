@@ -179,59 +179,49 @@ export const ORG_CONTROLLABLE_ROLES = [
   roles.transfers,
   roles.compliance_reporting,
   roles.ci_applicant,
-  roles.ia_proponent
+  roles.ia_proponent,
+  roles.lcjfip_applicant
 ]
+
+// Government-assigned roles that ride on a parent org-controllable role.
+export const DEPENDENT_BCEID_ROLES = {
+  [roles.ia_proponent]: roles.ia_signer,
+  [roles.lcjfip_applicant]: roles.lcjfip_administrator
+}
 
 // Lowercase role values assignable given the org's available roles.
 // A null availableRoles (org not loaded) means "no filtering".
-export const allowedBceidRoleValues = (
-  availableRoles,
-  isLcjfipOrganization = false,
-  isGovernmentUser = false
-) => {
-  if (availableRoles == null && !isLcjfipOrganization) {
+export const allowedBceidRoleValues = (availableRoles) => {
+  if (availableRoles == null) {
     return null
   }
   const allowed = [
     roles.manage_users,
     roles.signing_authority,
     roles.read_only,
-    ...ORG_CONTROLLABLE_ROLES.filter(
-      (role) => availableRoles == null || availableRoles.includes(role)
-    )
+    ...ORG_CONTROLLABLE_ROLES.filter((role) => availableRoles.includes(role))
   ]
-  // IA Signer rides on IA Proponent availability
-  if (availableRoles == null || availableRoles.includes(roles.ia_proponent)) {
-    allowed.push(roles.ia_signer)
-  }
-  if (isLcjfipOrganization) {
-    allowed.push(roles.lcjfip_applicant)
-    if (isGovernmentUser) {
-      allowed.push(roles.lcjfip_administrator)
+  Object.entries(DEPENDENT_BCEID_ROLES).forEach(([parent, dependent]) => {
+    if (allowed.includes(parent)) {
+      allowed.push(dependent)
     }
-  }
+  })
   return allowed.map((role) => role.toLowerCase())
 }
 
-// IA Signer is excluded here — it is rendered separately, indented under IA Proponent
-export const bceidRoleOptions = (
-  t,
-  availableRoles = null,
-  isLcjfipOrganization = false
-) => {
-  const allowed = allowedBceidRoleValues(availableRoles, isLcjfipOrganization)
-  const options = [
+// Dependent roles (IA Signer, LCJFIP Administrator) are excluded here — they
+// are rendered separately, indented under their parent role.
+export const bceidRoleOptions = (t, availableRoles = null) => {
+  const allowed = allowedBceidRoleValues(availableRoles)
+  return [
     roles.manage_users,
     roles.transfers,
     roles.compliance_reporting,
     roles.signing_authority,
     roles.ci_applicant,
-    roles.ia_proponent
+    roles.ia_proponent,
+    roles.lcjfip_applicant
   ]
-  if (isLcjfipOrganization) {
-    options.push(roles.lcjfip_applicant)
-  }
-  return options
     .filter((role) => allowed == null || allowed.includes(role.toLowerCase()))
     .map((role) => toOption(role, t))
 }

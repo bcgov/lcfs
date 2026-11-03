@@ -72,7 +72,35 @@ def upgrade() -> None:
         """
     )
 
+    # LCJFIP Applicant is an org-controllable "Roles available" option (like
+    # CI Applicant / IA Proponent). Backfill availability for organizations
+    # already carrying the LCJFIP type or whose users already hold an LCJFIP
+    # role, so existing assignments remain valid under the available-role check.
+    op.execute(
+        """
+        INSERT INTO organization_available_role (organization_id, role_id)
+        SELECT ota.organization_id, 18
+        FROM organization_type_association ota
+        JOIN organization_type ot
+            ON ot.organization_type_id = ota.organization_type_id
+        WHERE ot.org_type = 'lcjfip'
+        ON CONFLICT DO NOTHING;
+        """
+    )
+    # LCJFIP Administrator (19) holders imply LCJFIP Applicant (18) availability.
+    op.execute(
+        """
+        INSERT INTO organization_available_role (organization_id, role_id)
+        SELECT DISTINCT up.organization_id, 18
+        FROM user_role ur
+        JOIN user_profile up ON up.user_profile_id = ur.user_profile_id
+        WHERE up.organization_id IS NOT NULL
+          AND ur.role_id IN (18, 19)
+        ON CONFLICT DO NOTHING;
+        """
+    )
+
 
 def downgrade() -> None:
+    op.execute("DELETE FROM organization_available_role WHERE role_id = 18;")
     # PostgreSQL enum values cannot be removed while existing data may use them.
-    pass

@@ -378,9 +378,8 @@ async def test_create_user_rejects_government_role_for_org_user():
 
 
 @pytest.mark.anyio
-async def test_lcjfip_roles_require_lcjfip_organization():
+async def test_lcjfip_roles_rejected_when_applicant_not_available_to_org():
     fake_repo = MagicMock()
-    fake_repo.is_lcjfip_organization = AsyncMock(return_value=False)
     fake_repo.get_organization_available_roles = AsyncMock(return_value=set())
 
     service = UserServices(request=_caller_request(is_government=True))
@@ -397,14 +396,16 @@ async def test_lcjfip_roles_require_lcjfip_organization():
         )
 
     assert exc_info.value.status_code == 400
-    assert "only available to LCJFIP organizations" in exc_info.value.detail
+    assert RoleEnum.LCJFIP_APPLICANT.value in exc_info.value.detail
+    assert RoleEnum.LCJFIP_ADMINISTRATOR.value in exc_info.value.detail
 
 
 @pytest.mark.anyio
-async def test_lcjfip_roles_are_allowed_for_lcjfip_organization():
+async def test_lcjfip_roles_allowed_when_applicant_available_to_org():
     fake_repo = MagicMock()
-    fake_repo.is_lcjfip_organization = AsyncMock(return_value=True)
-    fake_repo.get_organization_available_roles = AsyncMock(return_value=set())
+    fake_repo.get_organization_available_roles = AsyncMock(
+        return_value={RoleEnum.LCJFIP_APPLICANT}
+    )
 
     service = UserServices(request=_caller_request(is_government=True))
     service.repo = fake_repo
@@ -458,9 +459,8 @@ def _make_create_service(is_government_caller: bool):
     fake_repo.create_user = AsyncMock(return_value=fake_user)
     fake_repo.get_user_by_id = AsyncMock(return_value=fake_user)
     fake_repo.get_organization_available_roles = AsyncMock(
-        return_value={RoleEnum.IA_PROPONENT}
+        return_value={RoleEnum.IA_PROPONENT, RoleEnum.LCJFIP_APPLICANT}
     )
-    fake_repo.is_lcjfip_organization = AsyncMock(return_value=True)
 
     service = UserServices(request=_caller_request(is_government_caller))
     service.repo = fake_repo
@@ -570,9 +570,8 @@ def _make_update_service(fake_user, updated_user, is_government_caller: bool):
     fake_repo.get_user_by_id = AsyncMock(return_value=fake_user)
     fake_repo.update_user = AsyncMock(return_value=updated_user)
     fake_repo.get_organization_available_roles = AsyncMock(
-        return_value={RoleEnum.IA_PROPONENT}
+        return_value={RoleEnum.IA_PROPONENT, RoleEnum.LCJFIP_APPLICANT}
     )
-    fake_repo.is_lcjfip_organization = AsyncMock(return_value=True)
 
     fake_notification_service = MagicMock()
     fake_notification_service.add_subscriptions_for_notification_types = AsyncMock()

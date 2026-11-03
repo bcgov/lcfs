@@ -34,7 +34,6 @@ from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.organization.OrganizationAvailableRole import (
     OrganizationAvailableRole,
 )
-from lcfs.db.models.organization.OrganizationType import OrganizationType
 from lcfs.db.models.transfer.TransferHistory import TransferHistory
 from lcfs.db.models.transfer.TransferStatus import TransferStatus
 from lcfs.db.models.user import UserLoginHistory
@@ -126,18 +125,6 @@ class UserRepository:
             .where(OrganizationAvailableRole.organization_id == organization_id)
         )
         return set(result.scalars().all())
-
-    @repo_handler
-    async def is_lcjfip_organization(self, organization_id: int) -> bool:
-        result = await self.db.execute(
-            select(Organization.organization_id)
-            .where(
-                Organization.organization_id == organization_id,
-                Organization.org_types.any(OrganizationType.org_type == "lcjfip"),
-            )
-            .limit(1)
-        )
-        return result.scalar_one_or_none() is not None
 
     async def update_idir_roles(self, user, new_roles, existing_roles_set):
         COMPLIANCE_DIR_GROUP = {
