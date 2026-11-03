@@ -2,10 +2,10 @@
   {
     "version": "1.3.12",
     "tag": "v1.3.12",
-    "date": "2026-10-30",
+    "date": "2026-11-03",
     "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/v1.3.12",
     "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/v1.3.11...v1.3.12",
-    "summary": "This release includes 2 new features, 8 bug fixes, 1 security update, 5 dependency updates and 9 other changes. Highlights: Automate IA Credit Transactions on DA Approval; gate CI with Vite+ checks; apply open Dependabot security updates on Python 3.13.",
+    "summary": "This release includes 2 new features, 10 bug fixes, 1 security update, 5 dependency updates and 11 other changes. Highlights: Automate IA Credit Transactions on DA Approval; gate CI with Vite+ checks; apply open Dependabot security updates on Python 3.13.",
     "sections": {
       "features": [
         "Automate IA Credit Transactions on DA Approval - 5211",
@@ -19,7 +19,9 @@
         "tighten organization user management permissions",
         "check record ownership and workflow status on writes",
         "Remove low-count suppression from public Credit Market data 5293",
-        "show names in report history as plain text"
+        "show names in report history as plain text",
+        "exclude release notes JSON from format check",
+        "Charging sites and FSE map crash after the Vite+ upgrade (release)"
       ],
       "security": [
         "apply open Dependabot security updates on Python 3.13"
@@ -41,7 +43,9 @@
         "update Vite dependencies and remove Storybook",
         "[Issue #5098] LCFS - Migrate frontend tooling and configuration to Vite+",
         "adopt setup-vp and preserve test reports (#5100)",
-        "Show saved FSE rows on the report page right after a save (#5132)"
+        "Show saved FSE rows on the report page right after a save (#5132)",
+        "Test Release v1.3.12",
+        "Show FSE rows as soon as a new report version is created (#5132) [release]"
       ]
     },
     "contributors": []
