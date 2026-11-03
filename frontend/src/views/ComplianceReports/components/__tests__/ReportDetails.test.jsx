@@ -70,7 +70,7 @@ vi.mock('@/hooks/useFuelSupply', () => ({
 }))
 
 vi.mock('@/hooks/useFinalSupplyEquipment', () => ({
-  useGetFSEReportingList: () => mockUseGetFSEReportingList()
+  useGetFSEReportingList: (...args) => mockUseGetFSEReportingList(...args)
 }))
 
 vi.mock('@/hooks/useAllocationAgreement', () => ({
@@ -1309,6 +1309,30 @@ describe('ReportDetails', () => {
           screen.queryByText('finalSupplyEquipment:fseTitle')
         ).not.toBeInTheDocument()
       })
+    })
+
+    test('re-fetches the FSE list while the backend view refresh is pending', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      // A new report version has no FSE rows until the backend refreshes its
+      // view, and the FSE table only renders once this list has rows.
+      render(
+        <ReportDetails
+          currentStatus="Analyst adjustment"
+          hasRoles={() => true}
+        />,
+        [query, theme, localization, router]
+      )
+
+      const { refetchInterval } =
+        mockUseGetFSEReportingList.mock.calls.at(-1)[2]
+      const queryWith = (data) => ({ state: { data } })
+      expect(refetchInterval(queryWith({ refreshPending: true }))).toBe(2000)
+      expect(refetchInterval(queryWith({ refreshPending: false }))).toBe(false)
     })
   })
 })

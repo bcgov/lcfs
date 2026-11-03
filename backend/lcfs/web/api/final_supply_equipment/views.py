@@ -28,6 +28,9 @@ from lcfs.web.api.final_supply_equipment.export import FinalSupplyEquipmentExpor
 from lcfs.web.api.final_supply_equipment.importer import FinalSupplyEquipmentImporter
 from lcfs.web.api.final_supply_equipment.fse_reporting_export import FSEReportingExporter
 from lcfs.web.api.final_supply_equipment.fse_reporting_importer import FSEReportingImporter
+from lcfs.web.api.final_supply_equipment.mv_refresh import (
+    schedule_fse_reporting_mv_refresh,
+)
 from lcfs.web.api.final_supply_equipment.schema import (
     DeleteFinalSupplyEquipmentResponseSchema,
     FSEOptionsSchema,
@@ -49,21 +52,6 @@ from lcfs.web.core.decorators import view_handler
 router = APIRouter()
 logger = structlog.get_logger(__name__)
 get_async_db = dependencies.get_async_db_session
-
-
-def schedule_fse_reporting_mv_refresh(request: Request) -> None:
-    """
-    Ask for a prompt refresh of the FSE reporting materialized view after a
-    write, so the report page shows the saved rows without a reload.
-
-    Imported here: the scheduler module loads the jobs module, which imports
-    the API services and would re-enter this module at startup.
-    """
-    from lcfs.services.scheduler.scheduler import (
-        schedule_fse_reporting_mv_refresh as schedule_refresh,
-    )
-
-    schedule_refresh(request.app)
 
 
 @router.get(
