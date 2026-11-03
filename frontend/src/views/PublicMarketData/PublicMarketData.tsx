@@ -579,10 +579,30 @@ export const PublicMarketData = () => {
   const kpis = data?.kpis
   const ytdKpis = data?.ytdKpis ?? kpis
   const allTime = data?.allTime
-  const a1MonthlyChartRows = useMemo(
-    () => (data?.a1Monthly ?? []).slice(-A1_TREND_MONTHS),
-    [data?.a1Monthly]
-  )
+  const a1MonthlyChartRows = useMemo(() => {
+    const rows = data?.a1Monthly ?? []
+    const monthlyRows = data?.monthly ?? []
+    const reportingMonth =
+      kpis?.labelPeriod ??
+      monthlyRows[monthlyRows.length - 1]?.period ??
+      rows[rows.length - 1]?.period
+    if (!reportingMonth) return []
+
+    const [year, month] = reportingMonth.split('-').map(Number)
+    const pricesByMonth = new Map(
+      rows.map((row) => [row.period, row.weightedAvgPrice])
+    )
+    return Array.from({ length: A1_TREND_MONTHS }, (_, index) => {
+      const date = new Date(Date.UTC(year, month - A1_TREND_MONTHS + index, 1))
+      const period = `${date.getUTCFullYear()}-${String(
+        date.getUTCMonth() + 1
+      ).padStart(2, '0')}`
+      return {
+        period,
+        weightedAvgPrice: pricesByMonth.get(period) ?? null
+      }
+    })
+  }, [data?.a1Monthly, data?.monthly, kpis?.labelPeriod])
 
   const chartOption = useMemo(() => {
     const priceName = t('publicDashboard.marketData.kpi.avgPrice')
@@ -622,10 +642,7 @@ export const PublicMarketData = () => {
         }
       },
       legend: {
-        data: [priceName, minPriceName, maxPriceName, volName],
-        bottom: 0,
-        type: 'scroll',
-        textStyle: { fontSize: 10 }
+        show: false
       },
       grid: {
         left: '2%',
@@ -2125,6 +2142,44 @@ export const PublicMarketData = () => {
                   option={chartOption}
                   style={{ height: 380 }}
                 />
+                <BCBox
+                  component="ul"
+                  data-test="price-volume-chart-legend"
+                  sx={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    justifyContent: 'center',
+                    gap: 2,
+                    listStyle: 'none',
+                    m: 0,
+                    p: 0,
+                    fontSize: 12,
+                    color: DARK
+                  }}
+                >
+                  {chartOption.series.map((entry) => (
+                    <li key={entry.name}>
+                      <Box
+                        component="span"
+                        aria-hidden="true"
+                        sx={{
+                          display: 'inline-block',
+                          width: 20,
+                          mr: 1,
+                          verticalAlign: 'middle',
+                          borderTop: `3px ${
+                            entry.lineStyle?.type === 'dashed'
+                              ? 'dashed'
+                              : entry.lineStyle?.type === 'dotted'
+                                ? 'dotted'
+                                : 'solid'
+                          } ${entry.lineStyle?.color ?? entry.itemStyle.color}`
+                        }}
+                      />
+                      {entry.name}
+                    </li>
+                  ))}
+                </BCBox>
                 <span
                   id="price-volume-chart-keyboard-help"
                   className="visually-hidden"

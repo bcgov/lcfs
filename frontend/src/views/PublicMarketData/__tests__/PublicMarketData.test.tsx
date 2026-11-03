@@ -123,6 +123,7 @@ vi.mock('react-i18next', () => ({
 
 type ChartOption = {
   aria?: { enabled?: boolean }
+  legend?: { show?: boolean }
   xAxis?: { data?: string[]; axisLabel?: { interval?: number } }
   series?: Array<{ name?: string; data?: unknown[] }>
 }
@@ -230,6 +231,57 @@ describe('PublicMarketData', () => {
       'tabindex',
       '0'
     )
+  })
+
+  test('fills missing A1 months through the report month without extending the calendar window', ({
+    render,
+    theme
+  }) => {
+    const originalRows = mockReport.a1Monthly
+    mockReport.a1Monthly = originalRows.filter(
+      (row) => !['2025-09', '2026-06'].includes(row.period)
+    )
+    try {
+      render(<PublicMarketData />, [theme])
+
+      const a1Chart = getChartOptions().find(
+        (option) => option.series?.length === 1
+      )
+      expect(a1Chart?.xAxis?.data).toHaveLength(13)
+      expect(a1Chart?.xAxis?.data?.[0]).toBe('Jun 2025')
+      expect(a1Chart?.xAxis?.data?.[12]).toBe('Jun 2026')
+      expect(a1Chart?.series?.[0].data?.[3]).toBeNull()
+      expect(a1Chart?.series?.[0].data?.[12]).toBeNull()
+      expect(a1Chart?.series?.[0].data?.[4]).toBe(147.75)
+
+      const chart = screen.getByTestId('a1-price-chart-keyboard')
+      for (let index = 0; index < 4; index += 1) {
+        fireEvent.keyDown(chart, { key: 'ArrowRight' })
+      }
+      const announcement = chart.querySelector('[aria-live="polite"]')
+      expect(announcement?.textContent).toContain('Sep 2025')
+      expect(announcement?.textContent).toContain('—')
+    } finally {
+      mockReport.a1Monthly = originalRows
+    }
+  })
+
+  test('shows every legend entry without canvas paging or series toggles', ({
+    render,
+    theme
+  }) => {
+    render(<PublicMarketData />, [theme])
+
+    const mainChart = getChartOptions().find(
+      (option) => option.series?.length === 4
+    )
+    expect(mainChart?.legend?.show).toBe(false)
+    const legend = screen.getByTestId('price-volume-chart-legend')
+    expect(legend.querySelectorAll('li')).toHaveLength(4)
+    for (const series of mainChart?.series ?? []) {
+      expect(legend.textContent).toContain(series.name)
+    }
+    expect(legend.querySelector('button, [tabindex]')).toBeNull()
   })
 
   test('supports keyboard navigation through A1 monthly chart values', ({
