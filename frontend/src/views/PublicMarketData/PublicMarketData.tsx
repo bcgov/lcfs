@@ -21,6 +21,7 @@ import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined'
 import ExpandMore from '@mui/icons-material/ExpandMore'
 import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined'
 import ReactECharts from 'echarts-for-react'
+import { getInstanceByDom } from 'echarts/core'
 import { useTranslation } from 'react-i18next'
 import * as XLSX from 'xlsx'
 import html2canvas from 'html2canvas'
@@ -36,7 +37,24 @@ const DARK = '#313132'
 const MUTED = '#565656'
 const BORDER = '#D8D8D8'
 const PDF_MAX_TABLE_ROWS = 15
-const PDF_EXPORT_MIN_WIDTH_PX = 2300
+// Layout width used to render the report for the portrait PDF; MUI's `md`
+// breakpoint applies at this width so wide grids collapse to two columns.
+const PDF_EXPORT_WIDTH_PX = 1100
+// Wider layout used for landscape-only blocks (the monthly report table).
+const PDF_LANDSCAPE_EXPORT_WIDTH_PX = 1600
+// Fit-to-page blocks (tables) may share a page with a short lead-in (e.g. the
+// section heading) rather than leaving that heading orphaned on its own page.
+const PDF_FIT_BLOCK_MAX_LEAD_RATIO = 0.2
+// Only short slices are scanned for blankness; a slice counts as blank when
+// every pixel is at least this light (borders/shadows allowed, text is not).
+const PDF_BLANK_CHECK_MAX_RATIO = 0.25
+const PDF_BLANK_LUMA_MIN = 200
+// Report tables in the PDF, grouped per page (differs from on-screen order):
+// quarterly and annual share a portrait page, monthly gets a landscape page.
+const PDF_TABLE_PAGES: ReportKey[][] = [['quarterly', 'annual'], ['monthly']]
+// Trailing months shown in the A1 price trend: the same month last year
+// through the current month (e.g. Oct -> Oct).
+const A1_TREND_MONTHS = 13
 
 type ReportKey = 'monthly' | 'quarterly' | 'annual'
 type Granularity = 'month' | 'quarter' | 'year'
@@ -562,7 +580,7 @@ export const PublicMarketData = () => {
   const ytdKpis = data?.ytdKpis ?? kpis
   const allTime = data?.allTime
   const a1MonthlyChartRows = useMemo(
-    () => (data?.a1Monthly ?? []).slice(-12),
+    () => (data?.a1Monthly ?? []).slice(-A1_TREND_MONTHS),
     [data?.a1Monthly]
   )
 
@@ -1122,111 +1140,367 @@ export const PublicMarketData = () => {
     setIsExportingPdf(true)
     try {
       const node = reportRef.current
-      let atomicRangesPx: { top: number; bottom: number }[] = []
+      type PxRange = { top: number; bottom: number }
+      const isRendered = (el: HTMLElement) => el.getClientRects().length > 0
+
+      // Snapshot each chart at its on-screen aspect ratio. The cloned DOM is
+      // laid out at a different width than the screen and echarts won't
+      // re-render there, so the raw canvases would overflow/clip the page.
+      const chartSnapshots = Array.from(
+        node.querySelectorAll<HTMLElement>('.echarts-for-react')
+      ).map((el) => {
+        const instance = getInstanceByDom(el)
+        if (!instance) return null
+        return {
+          src: instance.getDataURL({
+            type: 'png',
+            pixelRatio: 2,
+            backgroundColor: '#ffffff'
+          }),
+          width: instance.getWidth(),
+          height: instance.getHeight()
+        }
+      })
+
+      // Shared clone preparation for every capture: strip interactive
+      // chrome, expand collapsed sections, compact the tables, swap charts for
+      // their snapshots and lay the report out at the requested width.
+      const prepareClone = (clonedDoc: Document, widthPx: number) => {
+        clonedDoc.querySelectorAll<HTMLElement>('.no-print').forEach((el) => {
+          el.style.display = 'none'
+        })
+        clonedDoc
+          .querySelectorAll<HTMLElement>('.MuiCollapse-root')
+          .forEach((el) => {
+            el.style.height = 'auto'
+            el.style.visibility = 'visible'
+          })
+        clonedDoc
+          .querySelectorAll<HTMLElement>('.MuiCollapse-wrapper')
+          .forEach((el) => {
+            el.style.display = 'block'
+          })
+        clonedDoc
+          .querySelectorAll<HTMLElement>('.print-table')
+          .forEach((el) => {
+            el.style.maxHeight = 'none'
+            el.style.overflow = 'visible'
+          })
+        // Collapse the wide scrolling tables to the page width: drop the
+        // min-width, let headers wrap and remove the sticky first column.
+        clonedDoc
+          .querySelectorAll<HTMLElement>('.print-table table')
+          .forEach((table) => {
+            table.style.minWidth = '0'
+            table.style.width = '100%'
+            table.style.tableLayout = 'auto'
+          })
+        clonedDoc
+          .querySelectorAll<HTMLElement>('.print-table th, .print-table td')
+          .forEach((cell) => {
+            cell.style.whiteSpace = 'normal'
+            cell.style.padding = '6px 8px'
+            cell.style.fontSize = '13px'
+            cell.style.position = 'static'
+            cell.style.boxShadow = 'none'
+          })
+        clonedDoc
+          .querySelectorAll<HTMLElement>('.print-table tbody')
+          .forEach((tbody) => {
+            const rows = Array.from(tbody.querySelectorAll('tr'))
+            rows.slice(PDF_MAX_TABLE_ROWS).forEach((row) => row.remove())
+          })
+        clonedDoc
+          .querySelectorAll<HTMLElement>('.echarts-for-react')
+          .forEach((el, index) => {
+            const snapshot = chartSnapshots[index]
+            if (!snapshot) return
+            const img = clonedDoc.createElement('img')
+            img.src = snapshot.src
+            // Intrinsic size lets the clone lay out the image (and the
+            // page-break measurements below) before the data URL decodes.
+            img.width = snapshot.width
+            img.height = snapshot.height
+            img.style.width = '100%'
+            img.style.height = 'auto'
+            img.style.display = 'block'
+            el.replaceChildren(img)
+            el.style.height = 'auto'
+            el.style.width = '100%'
+          })
+
+        const clonedRoot = clonedDoc.querySelector<HTMLElement>(
+          '[data-pdf-root="true"]'
+        )
+        if (clonedRoot) {
+          clonedRoot.style.maxWidth = 'none'
+          clonedRoot.style.width = `${widthPx}px`
+        }
+        return clonedRoot
+      }
+
+      // PDF-only ordering: the report tables follow the price & volume chart
+      // (quarterly + annual, then monthly) instead of the on-screen section.
+      // Tables sharing a page are wrapped in a single fit-to-page group.
+      const reorderForPdf = (clonedRoot: HTMLElement) => {
+        const anchor = clonedRoot.querySelector<HTMLElement>(
+          '[data-pdf-anchor="price-volume-chart"]'
+        )
+        if (!anchor) return
+        let insertAfter: HTMLElement = anchor
+        PDF_TABLE_PAGES.forEach((keys) => {
+          const blocks = keys
+            .map((key) =>
+              clonedRoot.querySelector<HTMLElement>(`[data-pdf-table="${key}"]`)
+            )
+            .filter((block): block is HTMLElement => block !== null)
+          if (blocks.length === 0) return
+          let pageBlock: HTMLElement
+          if (blocks.length === 1) {
+            pageBlock = blocks[0]
+          } else {
+            pageBlock = clonedRoot.ownerDocument.createElement('div')
+            pageBlock.className = 'pdf-fit-page'
+            blocks.forEach((block) => {
+              block.classList.remove('pdf-fit-page')
+              pageBlock.appendChild(block)
+            })
+          }
+          insertAfter.after(pageBlock)
+          insertAfter = pageBlock
+        })
+        const emptiedSection = clonedRoot.querySelector<HTMLElement>(
+          '.pdf-detailed-reports-section'
+        )
+        if (emptiedSection) emptiedSection.style.display = 'none'
+      }
+
+      // Landscape blocks (the wide monthly table) are captured on their own at
+      // a wider layout and spliced into the page sequence where they appear.
+      const landscapeNodes = Array.from(
+        node.querySelectorAll<HTMLElement>('.pdf-landscape')
+      )
+      const landscapeCanvases: HTMLCanvasElement[] = []
+      for (const landscapeNode of landscapeNodes) {
+        landscapeCanvases.push(
+          await html2canvas(landscapeNode, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: '#ffffff',
+            windowWidth: PDF_LANDSCAPE_EXPORT_WIDTH_PX,
+            onclone: (clonedDoc) => {
+              prepareClone(clonedDoc, PDF_LANDSCAPE_EXPORT_WIDTH_PX)
+            }
+          })
+        )
+      }
+
+      let atomicRangesPx: PxRange[] = []
+      let fitPageRangesPx: PxRange[] = []
       let forcedPageBreaksPx: number[] = []
+      let landscapeTopsPx: number[] = []
       let clonedRootWidthPx = 0
 
       const canvas = await html2canvas(node, {
         scale: 2,
         useCORS: true,
         backgroundColor: '#ffffff',
-        windowWidth: Math.max(node.scrollWidth, PDF_EXPORT_MIN_WIDTH_PX),
+        windowWidth: PDF_EXPORT_WIDTH_PX,
         onclone: (clonedDoc) => {
-          clonedDoc.querySelectorAll<HTMLElement>('.no-print').forEach((el) => {
-            el.style.display = 'none'
-          })
-          clonedDoc
-            .querySelectorAll<HTMLElement>('.MuiCollapse-root')
-            .forEach((el) => {
-              el.style.height = 'auto'
-              el.style.visibility = 'visible'
-            })
-          clonedDoc
-            .querySelectorAll<HTMLElement>('.MuiCollapse-wrapper')
-            .forEach((el) => {
-              el.style.display = 'block'
-            })
-          clonedDoc
-            .querySelectorAll<HTMLElement>('.print-table')
-            .forEach((el) => {
-              el.style.maxHeight = 'none'
-              el.style.overflow = 'visible'
-            })
-          clonedDoc
-            .querySelectorAll<HTMLElement>('.print-table tbody')
-            .forEach((tbody) => {
-              const rows = Array.from(tbody.querySelectorAll('tr'))
-              rows.slice(PDF_MAX_TABLE_ROWS).forEach((row) => row.remove())
-            })
+          const clonedRoot = prepareClone(clonedDoc, PDF_EXPORT_WIDTH_PX)
+          if (!clonedRoot) return
+          reorderForPdf(clonedRoot)
 
-          const clonedRoot = clonedDoc.querySelector<HTMLElement>(
-            '[data-pdf-root="true"]'
-          )
-          if (clonedRoot) {
-            clonedRoot.style.maxWidth = 'none'
-            clonedRoot.style.width = `${Math.max(
-              node.scrollWidth,
-              PDF_EXPORT_MIN_WIDTH_PX
-            )}px`
-            const rootRect = clonedRoot.getBoundingClientRect()
-            clonedRootWidthPx = rootRect.width
-            atomicRangesPx = Array.from(
-              clonedRoot.querySelectorAll<HTMLElement>(
-                '.pdf-avoid-break, .pdf-avoid-row'
-              )
-            )
-              .map((el) => {
-                const rect = el.getBoundingClientRect()
-                return {
-                  top: rect.top - rootRect.top,
-                  bottom: rect.bottom - rootRect.top
-                }
-              })
-              .filter((range) => range.bottom > range.top)
-            forcedPageBreaksPx = Array.from(
-              clonedRoot.querySelectorAll<HTMLElement>('.pdf-page-break-before')
-            )
-              .map((el) => el.getBoundingClientRect().top - rootRect.top)
-              .filter((top) => top > 0)
+          const rootRect = clonedRoot.getBoundingClientRect()
+          clonedRootWidthPx = rootRect.width
+          const rangeOf = (el: HTMLElement): PxRange => {
+            const rect = el.getBoundingClientRect()
+            return {
+              top: rect.top - rootRect.top,
+              bottom: rect.bottom - rootRect.top
+            }
           }
+          // Record where each landscape block sits, then pull it out of the
+          // portrait flow (it was captured separately above). Measuring each
+          // one just before hiding it keeps the positions consistent.
+          landscapeTopsPx = Array.from(
+            clonedRoot.querySelectorAll<HTMLElement>('.pdf-landscape')
+          ).map((el) => {
+            const top = rangeOf(el).top
+            el.style.display = 'none'
+            return top
+          })
+          atomicRangesPx = Array.from(
+            clonedRoot.querySelectorAll<HTMLElement>(
+              '.pdf-avoid-break, .pdf-avoid-row'
+            )
+          )
+            .filter(isRendered)
+            .map(rangeOf)
+            .filter((range) => range.bottom > range.top)
+          fitPageRangesPx = Array.from(
+            clonedRoot.querySelectorAll<HTMLElement>('.pdf-fit-page')
+          )
+            .filter(isRendered)
+            .map(rangeOf)
+            .filter((range) => range.bottom > range.top)
+          forcedPageBreaksPx = Array.from(
+            clonedRoot.querySelectorAll<HTMLElement>('.pdf-page-break-before')
+          )
+            .filter(isRendered)
+            .map((el) => rangeOf(el).top)
+            .filter((top) => top > 0)
         }
       })
 
-      const pdf = new JsPdf({ orientation: 'l', unit: 'mm', format: 'a4' })
-      const pageWidthMm = pdf.internal.pageSize.getWidth()
-      const pageHeightMm = pdf.internal.pageSize.getHeight()
-      const marginMm = 6
-      const contentWidthMm = pageWidthMm - marginMm * 2
-      const contentHeightMm = pageHeightMm - marginMm * 2
+      const pdf = new JsPdf({ orientation: 'p', unit: 'mm', format: 'a4' })
+      const marginMm = 8
+      const portraitContentWidthMm =
+        pdf.internal.pageSize.getWidth() - marginMm * 2
+      const portraitContentHeightMm =
+        pdf.internal.pageSize.getHeight() - marginMm * 2
 
-      const pxPerMm = canvas.width / contentWidthMm
-      const pageHeightPx = Math.floor(contentHeightMm * pxPerMm)
+      const pxPerMm = canvas.width / portraitContentWidthMm
+      const pageHeightPx = Math.floor(portraitContentHeightMm * pxPerMm)
+      const maxFitLeadPx = pageHeightPx * PDF_FIT_BLOCK_MAX_LEAD_RATIO
 
       const canvasScale = clonedRootWidthPx
         ? canvas.width / clonedRootWidthPx
         : 1
-      const atomicRangesCanvasPx = atomicRangesPx
-        .map((r) => ({
-          top: r.top * canvasScale,
-          bottom: r.bottom * canvasScale
+      const toCanvasRange = (r: PxRange): PxRange => ({
+        top: r.top * canvasScale,
+        bottom: r.bottom * canvasScale
+      })
+      const byTop = (a: { top: number }, b: { top: number }) => a.top - b.top
+      const atomicRangesCanvasPx = atomicRangesPx.map(toCanvasRange).sort(byTop)
+      const fitPageRangesCanvasPx = fitPageRangesPx
+        .map(toCanvasRange)
+        .sort(byTop)
+      const landscapeInserts = landscapeTopsPx
+        .map((top, index) => ({
+          top: top * canvasScale,
+          canvas: landscapeCanvases[index]
         }))
-        .sort((a, b) => a.top - b.top)
-      const forcedPageBreaksCanvasPx = forcedPageBreaksPx
-        .map((top) => top * canvasScale)
-        .sort((a, b) => a - b)
+        .filter((insert) => insert.canvas)
+        .sort(byTop)
+      const forcedPageBreaksCanvasPx = [
+        ...forcedPageBreaksPx.map((top) => top * canvasScale),
+        ...landscapeInserts.map((insert) => insert.top)
+      ].sort((a, b) => a - b)
+
+      // Trailing/intermediate slices made only of padding, borders and
+      // shadows (no text or graphics) are not worth a page of their own.
+      const isVisuallyBlank = (pageCanvas: HTMLCanvasElement) => {
+        const ctx = pageCanvas.getContext('2d')
+        if (!ctx) return false
+        const { data } = ctx.getImageData(
+          0,
+          0,
+          pageCanvas.width,
+          pageCanvas.height
+        )
+        for (let i = 0; i < data.length; i += 4) {
+          if (
+            data[i] < PDF_BLANK_LUMA_MIN ||
+            data[i + 1] < PDF_BLANK_LUMA_MIN ||
+            data[i + 2] < PDF_BLANK_LUMA_MIN
+          ) {
+            return false
+          }
+        }
+        return true
+      }
+
+      let pageIndex = 0
+      const addImagePage = (
+        pageCanvas: HTMLCanvasElement,
+        orientation: 'p' | 'l'
+      ) => {
+        if (pageIndex > 0) pdf.addPage('a4', orientation)
+        pageIndex += 1
+        const contentWidthMm = pdf.internal.pageSize.getWidth() - marginMm * 2
+        const contentHeightMm = pdf.internal.pageSize.getHeight() - marginMm * 2
+        // Fill the page width, shrinking further only if the slice would
+        // otherwise overflow the page height, so it always fits on one page.
+        const mmPerPx = Math.min(
+          contentWidthMm / pageCanvas.width,
+          contentHeightMm / pageCanvas.height
+        )
+        const drawWidthMm = pageCanvas.width * mmPerPx
+        const drawHeightMm = pageCanvas.height * mmPerPx
+        pdf.addImage(
+          pageCanvas.toDataURL('image/png'),
+          'PNG',
+          marginMm + (contentWidthMm - drawWidthMm) / 2,
+          marginMm,
+          drawWidthMm,
+          drawHeightMm
+        )
+      }
+
+      const addPortraitSlice = (startPx: number, endPx: number) => {
+        const sliceHeightPx = Math.max(1, Math.round(endPx - startPx))
+        const pageCanvas = document.createElement('canvas')
+        pageCanvas.width = canvas.width
+        pageCanvas.height = sliceHeightPx
+        const ctx = pageCanvas.getContext('2d')
+        if (ctx) {
+          ctx.drawImage(
+            canvas,
+            0,
+            startPx,
+            canvas.width,
+            sliceHeightPx,
+            0,
+            0,
+            canvas.width,
+            sliceHeightPx
+          )
+        }
+        if (
+          sliceHeightPx < pageHeightPx * PDF_BLANK_CHECK_MAX_RATIO &&
+          isVisuallyBlank(pageCanvas)
+        ) {
+          return
+        }
+        addImagePage(pageCanvas, 'p')
+      }
+
+      let nextLandscape = 0
+      const flushLandscapePagesUpTo = (px: number) => {
+        while (
+          nextLandscape < landscapeInserts.length &&
+          landscapeInserts[nextLandscape].top <= px + 1
+        ) {
+          addImagePage(landscapeInserts[nextLandscape].canvas, 'l')
+          nextLandscape += 1
+        }
+      }
 
       let renderedPx = 0
-      let pageIndex = 0
       while (renderedPx < canvas.height) {
-        let sliceHeightPx = Math.min(pageHeightPx, canvas.height - renderedPx)
-        let candidateEnd = renderedPx + sliceHeightPx
+        flushLandscapePagesUpTo(renderedPx)
+        let candidateEnd = Math.min(renderedPx + pageHeightPx, canvas.height)
 
         const forcedBreak = forcedPageBreaksCanvasPx.find(
           (top) => top > renderedPx + 1 && top < candidateEnd
         )
-        if (forcedBreak) {
-          candidateEnd = forcedBreak
-          sliceHeightPx = candidateEnd - renderedPx
+        if (forcedBreak) candidateEnd = forcedBreak
+
+        // Fit-to-page blocks (tables) each get a dedicated page. A short
+        // lead-in (section heading) can share it; anything longer is flushed
+        // to its own page first.
+        const fitBlock = fitPageRangesCanvasPx.find(
+          (r) => r.top >= renderedPx - 1 && r.top < candidateEnd
+        )
+        if (fitBlock) {
+          if (fitBlock.top - renderedPx > maxFitLeadPx) {
+            candidateEnd = fitBlock.top
+          } else {
+            addPortraitSlice(renderedPx, fitBlock.bottom)
+            renderedPx = fitBlock.bottom
+            continue
+          }
         }
 
         const breaking = atomicRangesCanvasPx.find(
@@ -1238,39 +1512,12 @@ export const PublicMarketData = () => {
         )
         if (breaking && breaking.top > renderedPx) {
           candidateEnd = breaking.top
-          sliceHeightPx = candidateEnd - renderedPx
         }
 
-        const pageCanvas = document.createElement('canvas')
-        pageCanvas.width = canvas.width
-        pageCanvas.height = sliceHeightPx
-        const ctx = pageCanvas.getContext('2d')
-        if (ctx) {
-          ctx.drawImage(
-            canvas,
-            0,
-            renderedPx,
-            canvas.width,
-            sliceHeightPx,
-            0,
-            0,
-            canvas.width,
-            sliceHeightPx
-          )
-        }
-        const sliceHeightMm = sliceHeightPx / pxPerMm
-        if (pageIndex > 0) pdf.addPage()
-        pdf.addImage(
-          pageCanvas.toDataURL('image/png'),
-          'PNG',
-          marginMm,
-          marginMm,
-          contentWidthMm,
-          sliceHeightMm
-        )
-        renderedPx += sliceHeightPx
-        pageIndex += 1
+        addPortraitSlice(renderedPx, candidateEnd)
+        renderedPx = candidateEnd
       }
+      flushLandscapePagesUpTo(canvas.height)
 
       pdf.save(`lcfs-credit-market-report-${todayStamp()}.pdf`)
     } finally {
@@ -1435,7 +1682,7 @@ export const PublicMarketData = () => {
               maxHeight: 'none !important',
               overflow: 'visible !important'
             },
-            '& .pdf-avoid-break, & .pdf-avoid-row': {
+            '& .pdf-avoid-break, & .pdf-avoid-row, & .pdf-fit-page': {
               breakInside: 'avoid',
               pageBreakInside: 'avoid'
             },
@@ -1811,7 +2058,10 @@ export const PublicMarketData = () => {
               </BCBox>
             </CardShell>
           </BCBox>
-          <BCBox className="pdf-avoid-break">
+          <BCBox
+            className="pdf-avoid-break"
+            data-pdf-anchor="price-volume-chart"
+          >
             <BCBox
               sx={{
                 display: 'flex',
@@ -1899,12 +2149,21 @@ export const PublicMarketData = () => {
 
         <ReportSection
           title={t('publicDashboard.marketData.sections.detailedReports')}
-          className="pdf-page-break-before"
+          className="pdf-page-break-before pdf-detailed-reports-section"
         >
           {reportTables.map((tbl) => {
             const rows = data?.[tbl.key] ?? []
             return (
-              <BCBox key={tbl.key} sx={{ mb: 4 }}>
+              <BCBox
+                key={tbl.key}
+                className={
+                  tbl.key === 'monthly'
+                    ? 'pdf-fit-page pdf-landscape'
+                    : 'pdf-fit-page'
+                }
+                data-pdf-table={tbl.key}
+                sx={{ mb: 4 }}
+              >
                 <BCBox
                   sx={{
                     display: 'flex',

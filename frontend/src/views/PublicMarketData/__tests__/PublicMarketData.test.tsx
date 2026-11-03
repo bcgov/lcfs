@@ -198,7 +198,7 @@ describe('PublicMarketData', () => {
     expect(mainChart?.series?.[3].data).toEqual([170])
   })
 
-  test('shows the latest 12 monthly A1 prices with a monthly date tick', ({
+  test('shows the trailing 13 monthly A1 prices (same month last year to current) with a monthly date tick', ({
     render,
     theme
   }) => {
@@ -210,6 +210,7 @@ describe('PublicMarketData', () => {
 
     expect(a1Chart?.aria?.enabled).toBe(true)
     expect(a1Chart?.xAxis?.data).toEqual([
+      'Jun 2025',
       'Jul 2025',
       'Aug 2025',
       'Sep 2025',
@@ -224,7 +225,7 @@ describe('PublicMarketData', () => {
       'Jun 2026'
     ])
     expect(a1Chart?.xAxis?.axisLabel?.interval).toBe(0)
-    expect(a1Chart?.series?.[0].data).toHaveLength(12)
+    expect(a1Chart?.series?.[0].data).toHaveLength(13)
     expect(screen.getByTestId('a1-price-chart-keyboard')).toHaveAttribute(
       'tabindex',
       '0'
@@ -240,7 +241,7 @@ describe('PublicMarketData', () => {
     const chart = screen.getByTestId('a1-price-chart-keyboard')
     fireEvent.keyDown(chart, { key: 'ArrowRight' })
     const announcement = chart.querySelector('[aria-live="polite"]')
-    expect(announcement?.textContent).toContain('Jul 2025')
+    expect(announcement?.textContent).toContain('Jun 2025')
 
     fireEvent.keyDown(chart, { key: 'ArrowLeft' })
     expect(announcement?.textContent).toContain('Jun 2026')
