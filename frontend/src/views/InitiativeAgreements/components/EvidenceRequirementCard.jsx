@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Accordion from '@mui/material/Accordion'
 import AccordionDetails from '@mui/material/AccordionDetails'
@@ -74,15 +74,30 @@ export const EvidenceRequirementCard = ({
   const [justSaved, setJustSaved] = useState(false)
   const [saveError, setSaveError] = useState('')
   const [outcome, setOutcome] = useState(requirement.reviewOutcome)
+  const saveAcknowledgementTimeout = useRef(null)
   useEffect(() => {
     setOutcome(requirement.reviewOutcome)
   }, [requirement.reviewOutcome])
+  useEffect(
+    () => () => {
+      if (saveAcknowledgementTimeout.current !== null) {
+        clearTimeout(saveAcknowledgementTimeout.current)
+      }
+    },
+    []
+  )
   const save = (payload, callbacks) => {
     setSaveError('')
     onSave(payload, {
       onSuccess: () => {
         setJustSaved(true)
-        setTimeout(() => setJustSaved(false), 1800)
+        if (saveAcknowledgementTimeout.current !== null) {
+          clearTimeout(saveAcknowledgementTimeout.current)
+        }
+        saveAcknowledgementTimeout.current = setTimeout(() => {
+          saveAcknowledgementTimeout.current = null
+          setJustSaved(false)
+        }, 1800)
         callbacks?.onSuccess?.()
       },
       onError: (err) => {
