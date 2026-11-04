@@ -1,0 +1,9 @@
+services:
+  frontend:
+    environment:
+      VITE_API_BASE_URL: http://backend:8000/api
+      DB_CYPRESS_HOST: db
+      DB_CYPRESS_NAME: lcfs
+      DB_CYPRESS_USER: lcfs
+      DB_CYPRESS_PASSWORD: development_only
+      DB_PORT: "5432"

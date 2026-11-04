@@ -81,6 +81,15 @@ checks, see [Frontend test optimization compatibility with Vite+](Frontend-Test-
     ```
 2.  **Edit `cypress.env.json`**: Fill in your specific IDIR and BCEID test credentials and any other required parameters. **Do not commit `cypress.env.json` to version control.**
 
+For the full suite in Docker, create an isolated Compose project so Cypress runs against its own seeded database. From the repository root, run:
+
+```bash
+docker compose -p lcfs-cypress -f docker-compose.yml -f docker-compose.cypress.yml up -d --build
+docker compose -p lcfs-cypress -f docker-compose.yml -f docker-compose.cypress.yml exec -T frontend npx cypress run --browser electron
+```
+
+The Cypress Compose override routes browser API requests to the `backend` service and the database task to `db`. Stop an already-running default Compose stack first if it occupies the same published ports. The suite needs the IDIR, BCeID, organization, and supplier test accounts listed in `frontend/cypress.env.example.json`. The full suite clears compliance reports, so keep it on the isolated Cypress database.
+
 #### 1.2.2. Running Cypress Tests
 
 Navigate to the `frontend/` directory:
