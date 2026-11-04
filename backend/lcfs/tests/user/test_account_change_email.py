@@ -148,9 +148,7 @@ async def test_role_removal_emails_after_commit_even_when_subscriptions_deleted(
         assert context["loses_assigned_work_access"] is True
         assert "Sensitive organization" not in str(context)
         assert "Account Administrator (admin_user)" == context["changed_by"]
-        assert context["changed_at"].endswith(
-            datetime.now(PACIFIC_TZ).strftime("%Z")
-        )
+        assert context["changed_at"].split()[-1] == datetime.now(PACIFIC_TZ).tzname()
         return True
 
     service.email_service.send_account_change_email.side_effect = send
