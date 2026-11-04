@@ -1,6 +1,6 @@
 import { test } from '@/tests/utils/fixtures'
 import { screen } from '@testing-library/react'
-import { vi, describe, expect, beforeEach } from 'vitest'
+import { vi, describe, expect, beforeEach } from 'vite-plus/test'
 import * as XLSX from 'xlsx'
 import DocumentPreviewDialog from '../DocumentPreviewDialog'
 import { useDownloadDocument, useFetchDocument } from '@/hooks/useDocuments'
@@ -47,7 +47,10 @@ describe('DocumentPreviewDialog', () => {
     useDownloadDocument.mockReturnValue(vi.fn())
   })
 
-  test('renders spreadsheet cells and sheet tabs', async ({ render, theme }) => {
+  test('renders spreadsheet cells and sheet tabs', async ({
+    render,
+    theme
+  }) => {
     render(
       <DocumentPreviewDialog
         open

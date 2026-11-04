@@ -942,7 +942,9 @@ describe('DocumentTable', () => {
       onError({
         response: {
           status: 400,
-          data: { detail: 'This file contains macros, which can\'t be uploaded here.' }
+          data: {
+            detail: "This file contains macros, which can't be uploaded here."
+          }
         }
       })
     })
