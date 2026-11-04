@@ -39,29 +39,6 @@ volumes. Stop a stack without removing its data volumes with `stop`:
 ./scripts/local-keycloak-stack.sh stop agent-a
 ```
 
-## Access from a remote development machine
-
-Open local-Keycloak stacks in a browser on the machine running Compose with
-`http://localhost:<frontend-port>`. Directly opening the host's Tailscale IP
-selects the normal development Keycloak settings in the frontend. For a remote
-browser, use SSH local forwarding so its origin remains `localhost`.
-
-On the remote machine, forward each stack's frontend, backend, and Keycloak
-ports. Get the allocated ports from `./scripts/local-keycloak-stack.sh list`:
-
-```sh
-ssh -N \
-  -L 127.0.0.1:<frontend-port>:127.0.0.1:<frontend-port> \
-  -L 127.0.0.1:<backend-port>:127.0.0.1:<backend-port> \
-  -L 127.0.0.1:<keycloak-port>:127.0.0.1:<keycloak-port> \
-  <mac-ssh-user>@<mac-tailscale-address>
-```
-
-Repeat those three `-L` entries for each stack, using its own ports, then open
-each frontend at `http://localhost:<frontend-port>` on the remote machine.
-Vite uses each stack's published frontend port for HMR, so that same frontend
-tunnel carries its WebSocket connection; no shared port 3000 tunnel is needed.
-
 After starting two or more stacks, the live smoke test authenticates all 17 role
 accounts against every stack in this worktree, verifies their backend role
 assignments, and checks that each Keycloak cookie host remains separate:
