@@ -76,11 +76,12 @@ Then('a success message is displayed for report return', () => {
 
 // For the supplier scenario
 Given('the supplier logs in with valid credentials', () => {
-  cy.loginWith(
-    'bceid',
-    Cypress.env('TEST_SUPPLIER_USERNAME'),
-    Cypress.env('TEST_SUPPLIER_PASSWORD')
-  )
+  const supplierUsername =
+    Cypress.env('TEST_SUPPLIER_USERNAME') || Cypress.env('BCEID_TEST_USER')
+  const supplierPassword =
+    Cypress.env('TEST_SUPPLIER_PASSWORD') || Cypress.env('BCEID_TEST_PASS')
+
+  cy.loginWith('bceid', supplierUsername, supplierPassword)
   cy.wait(5000)
   cy.visit('/', { timeout: 60000 })
   cy.get(SELECTORS.dashboard).should('exist')

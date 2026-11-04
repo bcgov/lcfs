@@ -7,3 +7,8 @@ services:
       DB_CYPRESS_USER: lcfs
       DB_CYPRESS_PASSWORD: development_only
       DB_PORT: "5432"
+    volumes:
+      - type: bind
+        source: ${CYPRESS_ENV_FILE:-./frontend/cypress.env.json}
+        target: /app/cypress.env.json
+        read_only: true
