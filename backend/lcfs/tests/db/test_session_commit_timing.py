@@ -72,7 +72,9 @@ def _probe_app(table, engine, rows_at_response_start):
         db: AsyncSession = Depends(get_async_db_session, scope="function"),
     ):
         for row_id in ids:
-            await db.execute(text(f"INSERT INTO {table} (id) VALUES ({row_id})"))
+            await db.execute(
+                text(f"INSERT INTO {table} (id) VALUES (:id)"), {"id": row_id}
+            )
         return {"inserted": len(ids)}
 
     async def asgi(scope, receive, send):
