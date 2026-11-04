@@ -12,7 +12,6 @@ import GeoMapping from './GeoMapping'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Switch from '@mui/material/Switch'
 import { useGetFSEReportingList } from '@/hooks/useFinalSupplyEquipment'
-import { useFseRefreshPolling } from '@/hooks/useFseRefreshPolling'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { govRoles } from '@/constants/roles'
 import { ComplianceUnitsTotal } from '@/views/ComplianceReports/components/ComplianceUnitsTotal'
@@ -26,11 +25,10 @@ export const FinalSupplyEquipmentSummary = ({ status, organizationId }) => {
   const [paginationOptions, setPaginationOptions] = useState(
     defaultInitialPagination
   )
-  const refetchInterval = useFseRefreshPolling()
   const queryData = useGetFSEReportingList(
     complianceReportId,
     paginationOptions,
-    { refetchInterval },
+    {},
     organizationId,
     'summary',
     // A Draft shows its own saved rows, as its FSE reporting page does.
