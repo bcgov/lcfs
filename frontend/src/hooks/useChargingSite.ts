@@ -131,8 +131,10 @@ export const useSaveChargingSite = (
     onSuccess,
     onError,
     clearCache = true,
+    invalidateRelatedQueries: ignoredInvalidateRelatedQueries,
     ...restOptions
-  } = omitProperties(options, ['invalidateRelatedQueries'])
+  } = options
+  void ignoredInvalidateRelatedQueries
 
   return useMutation({
     mutationFn: async (

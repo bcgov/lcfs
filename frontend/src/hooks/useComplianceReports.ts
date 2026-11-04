@@ -1,4 +1,3 @@
-import { omitProperties } from '@/utils/omitProperties'
 import { roles } from '@/constants/roles'
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
@@ -315,9 +314,13 @@ export const useUpdateComplianceReportSummary = (
   const client = useApiService()
   const queryClient = useQueryClient()
 
-  const { onSuccess, onError, ...restOptions } = omitProperties(options, [
-    'clearCache'
-  ])
+  const {
+    onSuccess,
+    onError,
+    clearCache: ignoredClearCache,
+    ...restOptions
+  } = options
+  void ignoredClearCache
 
   return useMutation({
     mutationFn: async (data: Record<string, unknown>) => {
