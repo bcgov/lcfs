@@ -171,23 +171,15 @@ export const AddEditUser = ({
     if (bceidRoles.length > 0) {
       setValue('readOnly', '')
     }
-    // Dependent roles (IA Signer, LCJFIP Administrator) ride on their parent —
-    // clear them from form state when the parent is removed. For BCeID callers
-    // the backend (services.py) restores them regardless of form state.
-    const orphaned = Object.entries(DEPENDENT_BCEID_ROLES)
-      .map(([parent, dependent]) => [
-        parent.toLowerCase(),
-        dependent.toLowerCase()
-      ])
-      .filter(
-        ([parent, dependent]) =>
-          bceidRoles.includes(dependent) && !bceidRoles.includes(parent)
-      )
-      .map(([, dependent]) => dependent)
-    if (orphaned.length > 0) {
+    // IA Signer requires the user's IA Proponent assignment. LCJFIP
+    // Administrator only requires the organization's Applicant availability.
+    if (
+      bceidRoles.includes(roles.ia_signer.toLowerCase()) &&
+      !bceidRoles.includes(roles.ia_proponent.toLowerCase())
+    ) {
       setValue(
         'bceidRoles',
-        bceidRoles.filter((r) => !orphaned.includes(r))
+        bceidRoles.filter((r) => r !== roles.ia_signer.toLowerCase())
       )
     }
   }, [bceidRoles, setValue])

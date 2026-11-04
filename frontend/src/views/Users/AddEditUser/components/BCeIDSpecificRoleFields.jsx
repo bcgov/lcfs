@@ -19,12 +19,14 @@ const dependentRoleDefinitions = (t) => [
   {
     id: 'ia-signer',
     option: iaSignerOption(t),
-    parent: roles.ia_proponent.toLowerCase()
+    parent: roles.ia_proponent.toLowerCase(),
+    requiresParentAssignment: true
   },
   {
     id: 'lcjfip-administrator',
     option: lcjfipAdministratorOption(t),
-    parent: roles.lcjfip_applicant.toLowerCase()
+    parent: roles.lcjfip_applicant.toLowerCase(),
+    requiresParentAssignment: false
   }
 ]
 
@@ -73,10 +75,7 @@ export const BCeIDSpecificRoleFields = ({
             disabled={disabled}
           />
 
-          {/*
-           * Dependent roles are disabled unless their parent is checked and
-           * only government (IDIR) users can assign them.
-           */}
+          {/* Only IA Signer requires the user's parent role to be checked. */}
           {isGovernmentUser && dependent && (
             <FormControl component="fieldset" sx={{ ml: 4, mt: -0.5 }}>
               <FormControlLabel
@@ -102,7 +101,9 @@ export const BCeIDSpecificRoleFields = ({
                           }
                         }}
                         disabled={
-                          disabled || !bceidRoles?.includes(dependent.parent)
+                          disabled ||
+                          (dependent.requiresParentAssignment &&
+                            !bceidRoles?.includes(dependent.parent))
                         }
                       />
                     )}
