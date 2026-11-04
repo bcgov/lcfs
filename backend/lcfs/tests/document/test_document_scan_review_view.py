@@ -148,7 +148,7 @@ async def test_unknown_decision_is_refused(fastapi_app, client, set_mock_user):
 
     response = await client.put(review_url(fastapi_app), json={"decision": "maybe"})
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 @pytest.mark.anyio
