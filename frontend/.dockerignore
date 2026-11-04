@@ -2,14 +2,3 @@ node_modules
 .git
 .DS_Store
 cypress.env.json
-cypress/downloads
-cypress/reports
-cypress/screenshots
-cypress/videos
-coverage
-.vitest-reports
-.vitest
-vitest-results.xml
-dist
-dist-ssr
-*.log

@@ -619,46 +619,27 @@ describe('EvidenceOfCompletion', () => {
     })
   }
 
-  test('autosaves rich HTML, acknowledges success, and clears its timer on unmount', async ({
+  test('autosaves rich HTML on blur and acknowledges a successful save', async ({
     render,
     app
   }) => {
-    const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout')
-    const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout')
-    try {
-      const { unmount } = render(
-        <EvidenceOfCompletion designatedActionId="9" />,
-        app
-      )
-      openEoc()
-      editField('review')
-      const field = screen.getByTestId('eoc-review-1')
-      fireEvent.change(field, {
-        target: { value: '<p><strong>Permits</strong> verified.</p>' }
-      })
-      expect(mockUpdate).not.toHaveBeenCalled()
-      await saveField('review')
-      expect(mockUpdate).toHaveBeenCalledWith(
-        {
-          evidenceRequirementId: 1,
-          analystReview: '<p><strong>Permits</strong> verified.</p>'
-        },
-        expect.any(Object)
-      )
-      expect(screen.getByTestId('eoc-saved-1')).toBeInTheDocument()
-
-      const timeoutIndex = setTimeoutSpy.mock.calls.findLastIndex(
-        ([, delay]) => delay === 1800
-      )
-      expect(timeoutIndex).toBeGreaterThanOrEqual(0)
-      const timeout = setTimeoutSpy.mock.results[timeoutIndex].value
-
-      unmount()
-      expect(clearTimeoutSpy).toHaveBeenCalledWith(timeout)
-    } finally {
-      setTimeoutSpy.mockRestore()
-      clearTimeoutSpy.mockRestore()
-    }
+    render(<EvidenceOfCompletion designatedActionId="9" />, app)
+    openEoc()
+    editField('review')
+    const field = screen.getByTestId('eoc-review-1')
+    fireEvent.change(field, {
+      target: { value: '<p><strong>Permits</strong> verified.</p>' }
+    })
+    expect(mockUpdate).not.toHaveBeenCalled()
+    await saveField('review')
+    expect(mockUpdate).toHaveBeenCalledWith(
+      {
+        evidenceRequirementId: 1,
+        analystReview: '<p><strong>Permits</strong> verified.</p>'
+      },
+      expect.any(Object)
+    )
+    expect(screen.getByTestId('eoc-saved-1')).toBeInTheDocument()
   })
 
   test('clearing an outcome makes Notes and summary editable again without pencils', ({

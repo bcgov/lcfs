@@ -66,7 +66,7 @@ Then('a success message is displayed for user creation', () => {
 
 Then('the new user appears in the user list', () => {
   cy.visit('/admin/users')
-  cy.contains('a', 'john.doe@example.com').should('be.visible')
+  cy.contains('a', Cypress.env('john.doe@example.com')).should('be.visible')
 })
 
 // Test for validation error

@@ -1,5 +1,5 @@
 import { apiRoutes } from '@/constants/routes'
-import { http, HttpResponse } from 'msw'
+import { http, HttpResponse, type PathParams } from 'msw'
 
 const api = 'http://localhost:8000/api'
 interface ReportOpening {
@@ -17,21 +17,9 @@ interface ReportOpeningUpdate {
   createSupplementalEnabled?: boolean | null
 }
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null
-
-const isReportOpeningUpdate = (value: unknown): value is ReportOpeningUpdate =>
-  isRecord(value) &&
-  typeof value.complianceYear === 'number' &&
-  (value.complianceReportingEnabled === undefined ||
-    value.complianceReportingEnabled === null ||
-    typeof value.complianceReportingEnabled === 'boolean') &&
-  (value.earlyIssuanceEnabled === undefined ||
-    value.earlyIssuanceEnabled === null ||
-    typeof value.earlyIssuanceEnabled === 'boolean') &&
-  (value.createSupplementalEnabled === undefined ||
-    value.createSupplementalEnabled === null ||
-    typeof value.createSupplementalEnabled === 'boolean')
+interface ReportOpeningsRequest {
+  reportOpenings?: ReportOpeningUpdate[]
+}
 
 const reportOpenings = [
   {
@@ -85,32 +73,33 @@ export const handlers = [
   http.get(api + apiRoutes.reportOpenings, () =>
     HttpResponse.json(reportOpenings)
   ),
-  http.put(api + apiRoutes.reportOpenings, async ({ request }) => {
-    const body: unknown = await request.json()
-    const updatedYears =
-      isRecord(body) && Array.isArray(body.reportOpenings)
-        ? body.reportOpenings.filter(isReportOpeningUpdate)
-        : []
-    const updated = reportOpenings.map((entry) => {
-      const override = updatedYears.find(
-        (item) => item.complianceYear === entry.complianceYear
-      )
-      if (!override) {
-        return entry
-      }
-      return {
-        ...entry,
-        complianceReportingEnabled:
-          override.complianceReportingEnabled ??
-          entry.complianceReportingEnabled,
-        earlyIssuanceEnabled:
-          override.earlyIssuanceEnabled ?? entry.earlyIssuanceEnabled,
-        createSupplementalEnabled:
-          override.createSupplementalEnabled ?? entry.createSupplementalEnabled
-      }
-    })
-    return HttpResponse.json(updated)
-  }),
+  http.put<PathParams, ReportOpeningsRequest | null, ReportOpening[]>(
+    api + apiRoutes.reportOpenings,
+    async ({ request }) => {
+      const body = await request.json()
+      const updatedYears = body?.reportOpenings ?? []
+      const updated = reportOpenings.map((entry) => {
+        const override = updatedYears.find(
+          (item) => item.complianceYear === entry.complianceYear
+        )
+        if (!override) {
+          return entry
+        }
+        return {
+          ...entry,
+          complianceReportingEnabled:
+            override.complianceReportingEnabled ??
+            entry.complianceReportingEnabled,
+          earlyIssuanceEnabled:
+            override.earlyIssuanceEnabled ?? entry.earlyIssuanceEnabled,
+          createSupplementalEnabled:
+            override.createSupplementalEnabled ??
+            entry.createSupplementalEnabled
+        }
+      })
+      return HttpResponse.json(updated)
+    }
+  ),
 
   // Address geocoder API for AddressAutocomplete
   http.get('https://geocoder.api.gov.bc.ca/addresses.json', ({ request }) => {
