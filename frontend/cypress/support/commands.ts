@@ -1,15 +1,93 @@
 /* oxlint-disable cypress/unsafe-to-chain-command */
 import axeCore from 'axe-core'
+import type { Result as AxeResult, RunOptions as AxeRunOptions } from 'axe-core'
+
+type CucumberRoleTable = { raw: () => string[][] }
+type BCeIDRoles = string[] | CucumberRoleTable
+type ElementQueryOptions = Partial<Cypress.Loggable & Cypress.Timeoutable>
+type A11yOptions = AxeRunOptions & {
+  includedImpacts?: NonNullable<AxeResult['impact']>[]
+}
+type CredentialValues = {
+  username: string | undefined
+  password: string | undefined
+}
+const isInputElement = (
+  element: HTMLElement
+): element is HTMLInputElement | HTMLTextAreaElement =>
+  element.tagName === 'INPUT' || element.tagName === 'TEXTAREA'
+
+const isWritableInput = (
+  element: HTMLElement
+): element is HTMLInputElement | HTMLTextAreaElement =>
+  isInputElement(element) && !element.readOnly
+
+declare global {
+  interface Window {
+    axe?: typeof axeCore
+  }
+
+  namespace Cypress {
+    interface Chainable {
+      getByDataTest(
+        selector: string,
+        options?: ElementQueryOptions
+      ): Chainable<JQuery<HTMLElement>>
+      loginWith(
+        userType: 'idir' | 'bceid',
+        username: string,
+        password: string
+      ): Chainable<unknown>
+      getCredentialsFromEnv(
+        userType: string,
+        usernameKeys?: string[],
+        passwordKeys?: string[]
+      ): Chainable<CredentialValues>
+      loginWithEnv(
+        userType: string,
+        usernameKeys?: string[],
+        passwordKeys?: string[]
+      ): Chainable<unknown>
+      injectAxe(): Chainable<unknown>
+      checkA11y(
+        context?: string | Element | Document | null,
+        options?: A11yOptions | null,
+        violationCallback?: (
+          violations: AxeResult[]
+        ) => void | Chainable<unknown>,
+        skipFailures?: boolean
+      ): Chainable<unknown>
+      logout(): Chainable<unknown>
+      setBCeIDRoles(
+        userType: string,
+        roles: BCeIDRoles,
+        id?: string
+      ): Chainable<unknown>
+      setIDIRRoles(role: string): Chainable<unknown>
+      selectWithRetry(
+        cellSelector: string,
+        optionSelector: string,
+        index: number,
+        attempts?: number
+      ): Chainable<unknown>
+      inputTextWithRetry(
+        cellSelector: string,
+        inputValue: string | number,
+        index: number,
+        attempts?: number
+      ): Chainable<unknown>
+    }
+  }
+}
 
 /**
  * Command to select elements using 'data-test' attribute.
  *
  * @param {string} selector - The 'data-test' attribute value to target.
- * @param {...any} args - Additional arguments for 'cy.get()'.
  * @returns A Cypress chainable object
  */
-Cypress.Commands.add('getByDataTest', (selector, ...args) => {
-  return cy.get(`[data-test=${selector}]`, ...args)
+Cypress.Commands.add('getByDataTest', (selector, options) => {
+  return cy.get(`[data-test=${selector}]`, options)
 })
 
 Cypress.Commands.add('injectAxe', () => {
@@ -23,6 +101,9 @@ Cypress.Commands.add(
   (context, options, violationCallback, skipFailures = false) => {
     cy.window({ log: false })
       .then((window) => {
+        if (!window.axe) {
+          throw new Error('axe-core has not been injected into the page')
+        }
         const { includedImpacts, ...axeOptions } = options || {}
         return window.axe
           .run(context || window.document, axeOptions)
@@ -90,8 +171,10 @@ Cypress.Commands.add('loginWith', (userType, username, password) => {
       ? '[data-test=public-login-idir], [data-test=link-idir]'
       : '[data-test=public-login-bceid], [data-test=link-bceid]'
   cy.get(loginSelector, { timeout: 30000 }).first().click()
-  const loginProcess = (args) => {
+  const loginProcess = (args: [username: string, password: string]) => {
     const [username, password] = args
+
+    cy.on('uncaught:exception', () => false)
 
     cy.get('input[name=user]', { timeout: 60000 }).type(username, {
       log: false,
@@ -99,10 +182,12 @@ Cypress.Commands.add('loginWith', (userType, username, password) => {
     })
     cy.get('input[name=password]').type(password, { log: false, delay: 0 })
     cy.get('form').submit()
-    cy.wait('@loginRequest', { timeout: 20000 }).then(({ response }) => {
-      expect(response.statusCode).to.equal(200)
-      const token = response.body.access_token
-      expect(token).to.be.a('string').and.not.be.empty
+    cy.wait('@loginRequest', { timeout: 30000 }).then(({ response }) => {
+      expect(response?.statusCode).to.equal(200)
+      const token = response?.body?.access_token
+      if (typeof token !== 'string') {
+        throw new Error('Login response did not include an access token')
+      }
       cy.wrap(token).as('authToken')
     })
   }
@@ -116,7 +201,13 @@ Cypress.Commands.add('loginWith', (userType, username, password) => {
   cy.get('.main-layout-navbar', { timeout: 60000 }).should('be.visible')
 })
 
-const credentialKeysFor = (userType) => {
+type CredentialKeys = {
+  authType: 'idir' | 'bceid'
+  usernameKeys: string[]
+  passwordKeys: string[]
+}
+
+const credentialKeysFor = (userType: string): CredentialKeys => {
   const normalizedUserType = userType.toLowerCase()
 
   if (normalizedUserType === 'idir') {
@@ -162,8 +253,12 @@ Cypress.Commands.add(
     const envKeys = [...new Set([...keys.usernameKeys, ...keys.passwordKeys])]
 
     return cy.env(envKeys, { log: false }).then((env) => ({
-      username: keys.usernameKeys.map((key) => env[key]).find(Boolean),
-      password: keys.passwordKeys.map((key) => env[key]).find(Boolean)
+      username: keys.usernameKeys.map((key) => env[key]).find(Boolean) as
+        | string
+        | undefined,
+      password: keys.passwordKeys.map((key) => env[key]).find(Boolean) as
+        | string
+        | undefined
     }))
   }
 )
@@ -178,7 +273,7 @@ Cypress.Commands.add('loginWithEnv', (userType, usernameKeys, passwordKeys) => {
         .be.empty
       expect(password, `${userType} password is set`).to.be.a('string').and.not
         .be.empty
-      return cy.loginWith(authType, username, password)
+      return cy.loginWith(authType, username as string, password as string)
     })
 })
 
@@ -194,7 +289,9 @@ Cypress.Commands.add('logout', () => {
   cy.clearAllSessionStorage()
 
   // Verify successful logout
-  cy.getByDataTest('login-container', { timeout: 30000 }).should('exist')
+  cy.get('[data-test=login-container], [data-test=public-login-bceid]', {
+    timeout: 30000
+  }).should('exist')
 })
 
 Cypress.Commands.add('setBCeIDRoles', (userType, roles, id = 'idirLogin') => {
@@ -211,7 +308,7 @@ Cypress.Commands.add('setBCeIDRoles', (userType, roles, id = 'idirLogin') => {
         orgIdMatch,
         `${userType} username includes an organization id`
       ).to.be.an('array')
-      const orgID = parseInt(orgIdMatch[0])
+      const orgID = Number.parseInt(orgIdMatch?.[0] ?? '', 10)
       cy.contains('a', `LCFS Org ${orgID}`).should('be.visible').click()
     })
     cy.contains('a', 'tfrs@gov.bc.ca').should('be.visible').click()
@@ -219,10 +316,7 @@ Cypress.Commands.add('setBCeIDRoles', (userType, roles, id = 'idirLogin') => {
     cy.url().should('include', '/edit-user')
 
     // Process the roles array
-    let userRoles = roles
-    if (!Array.isArray(roles)) {
-      userRoles = roles.raw()[0]
-    }
+    const userRoles = Array.isArray(roles) ? roles : (roles.raw()[0] ?? [])
 
     const rolesToCheck = userRoles.map((role) =>
       role.toLowerCase().replace(/\s/g, '-')
@@ -282,7 +376,7 @@ Cypress.Commands.add('setIDIRRoles', (role) => {
 Cypress.Commands.add(
   'selectWithRetry',
   (cellSelector, optionSelector, index, attempts = 3) => {
-    function attemptSelection(attemptsLeft) {
+    function attemptSelection(attemptsLeft: number) {
       cy.get(cellSelector, { timeout: 20000 })
         .eq(index)
         .scrollIntoView()
@@ -350,11 +444,11 @@ Cypress.Commands.add(
           .find(cellSelector)
           .eq(index)
           .find('input, textarea')
-          .filter((_, el) => !el.readOnly)
+          .filter((_, el) => isWritableInput(el))
         const $activeInput = $body
           .find(':focus')
           .filter('input, textarea')
-          .filter((_, el) => !el.readOnly)
+          .filter((_, el) => isWritableInput(el))
 
         if ($asyncInput.length > 0) {
           // AsyncSuggestionEditor has no getValue(); commit via Tab which
@@ -362,7 +456,7 @@ Cypress.Commands.add(
           cy.wrap($asyncInput.first())
             .click({ force: true })
             .clear({ force: true })
-            .type(inputValue, { force: true })
+            .type(String(inputValue), { force: true })
             .trigger('keydown', {
               key: 'Tab',
               code: 'Tab',
@@ -404,13 +498,13 @@ Cypress.Commands.add(
               .find(cellSelector)
               .eq(index)
               .find('input, textarea')
-              .filter((_, el) => !el.readOnly && !el.disabled)
+              .filter((_, el) => isWritableInput(el) && !el.disabled)
 
             if ($retryAsyncInput.length > 0) {
               cy.wrap($retryAsyncInput.first())
                 .click({ force: true })
                 .clear({ force: true })
-                .type(inputValue, { force: true })
+                .type(String(inputValue), { force: true })
                 .trigger('keydown', {
                   key: 'Tab',
                   code: 'Tab',

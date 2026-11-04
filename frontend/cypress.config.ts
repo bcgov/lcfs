@@ -10,12 +10,12 @@ import pg from 'pg'
 const { Client } = pg
 const requestedArtifactBrowser = process.env.E2E_ARTIFACT_BROWSER
 const comparisonFeature = process.env.E2E_COMPARISON_FEATURE === 'true'
-const artifactBrowser = ['chrome', 'firefox', 'webkit'].includes(
-  requestedArtifactBrowser
-)
-  ? requestedArtifactBrowser
-  : undefined
-const browserOutputSuffix = artifactBrowser ? '/' + artifactBrowser : ''
+const artifactBrowser =
+  requestedArtifactBrowser &&
+  ['chrome', 'firefox', 'webkit'].includes(requestedArtifactBrowser)
+    ? requestedArtifactBrowser
+    : undefined
+const browserOutputSuffix = artifactBrowser ? `/${artifactBrowser}` : ''
 const benchmark = process.env.E2E_BENCHMARK === 'true'
 const reportDir =
   (process.env.E2E_REPORT_DIR || 'cypress/reports') + browserOutputSuffix
@@ -23,10 +23,9 @@ const reportDir =
 export default defineConfig({
   experimentalWebKitSupport: true,
   e2e: {
-    supportFile: 'cypress/support/e2e.js',
-    // Preserve legacy scenarios that intentionally share state across tests.
+    supportFile: 'cypress/support/e2e.ts',
     testIsolation: false,
-    specPattern: ['**/*.feature', '**/*.cy.js'],
+    specPattern: ['**/*.feature', '**/*.cy.js', '**/*.cy.ts'],
     excludeSpecPattern: ['**/*.skip.feature'],
     screenshotsFolder: 'cypress/screenshots' + browserOutputSuffix,
     videosFolder: 'cypress/videos' + browserOutputSuffix,
@@ -45,10 +44,11 @@ export default defineConfig({
 
     // Screenshots for failed tests
     screenshotOnRunFailure: true,
+    watchForFileChanges: false,
     // Video recording
     video: true,
     retries: {
-      runMode: !benchmark && process.env.CI ? 1 : 0,
+      runMode: !benchmark && Boolean(process.env.CI) ? 1 : 0,
       openMode: 0
     },
 
@@ -61,8 +61,7 @@ export default defineConfig({
     async setupNodeEvents(on, config) {
       on('before:browser:launch', (browser, launchOptions) => {
         if (process.platform === 'darwin' && browser.family === 'firefox') {
-          // Recent macOS versions protect shared browser application-data
-          // folders. Give local Firefox runs a private writable home.
+          // Keep local Firefox runs in a private writable application-data directory.
           const firefoxHome = resolve(
             process.env.CFFIXED_USER_HOME || 'playwright/.firefox-home'
           )
@@ -74,11 +73,8 @@ export default defineConfig({
       })
 
       if (artifactBrowser || comparisonFeature) {
-        // The current Cucumber preprocessor uses Cypress's public expose API
-        // for its configuration overrides on Cypress 15.17 and newer.
-        config.expose = {
-          ...config.expose
-        }
+        // The Cucumber preprocessor uses Cypress's public expose API for these overrides.
+        config.expose = { ...config.expose }
         if (artifactBrowser) {
           config.expose.htmlOutput = reportDir + '/cucumber.html'
         }
@@ -89,33 +85,32 @@ export default defineConfig({
       }
 
       on('task', {
-        log(message) {
+        log(message: unknown) {
           console.log(message)
 
           return null
         },
-        table(message) {
+        table(message: unknown) {
           console.table(message)
 
           return null
         },
-        clearComplianceReports() {
-          return new Promise((resolve, reject) => {
-            const client = new Client({
-              user: process.env.DB_CYPRESS_USER || 'lcfs',
-              host: process.env.DB_CYPRESS_HOST || 'localhost',
-              database: process.env.DB_CYPRESS_NAME || 'lcfs',
-              password: process.env.DB_CYPRESS_PASSWORD || 'development_only',
-              port: parseInt(process.env.DB_PORT || '5432')
-            })
-
-            client.connect()
-            client.query('truncate compliance_report cascade;', (err) => {
-              client.end()
-              if (err) reject(err)
-              else resolve('Compliance reports cleared')
-            })
+        async clearComplianceReports() {
+          const client = new Client({
+            user: process.env.DB_CYPRESS_USER || 'lcfs',
+            host: process.env.DB_CYPRESS_HOST || 'localhost',
+            database: process.env.DB_CYPRESS_NAME || 'lcfs',
+            password: process.env.DB_CYPRESS_PASSWORD || 'development_only',
+            port: Number.parseInt(process.env.DB_PORT || '5432', 10)
           })
+
+          await client.connect()
+          try {
+            await client.query('truncate compliance_report cascade;')
+            return 'Compliance reports cleared'
+          } finally {
+            await client.end()
+          }
         }
       })
 
