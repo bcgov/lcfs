@@ -69,6 +69,75 @@ export default defineConfig({
               else resolve('Compliance reports cleared')
             })
           })
+        },
+        async createDraftTransfer({ agreementDate }) {
+          const client = new Client({
+            user: process.env.DB_CYPRESS_USER || 'lcfs',
+            host: process.env.DB_CYPRESS_HOST || 'localhost',
+            database: process.env.DB_CYPRESS_NAME || 'lcfs',
+            password: process.env.DB_CYPRESS_PASSWORD || 'development_only',
+            port: parseInt(process.env.DB_PORT || '5432')
+          })
+
+          try {
+            await client.connect()
+            const result = await client.query(
+              `WITH new_transfer AS (
+                INSERT INTO transfer (
+                  from_organization_id,
+                  to_organization_id,
+                  agreement_date,
+                  quantity,
+                  price_per_unit,
+                  current_status_id
+                )
+                SELECT 1, 2, $1::timestamp, 100, 40.99, transfer_status_id
+                FROM transfer_status
+                WHERE status = 'Draft'
+                RETURNING transfer_id, current_status_id
+              )
+              INSERT INTO transfer_history (
+                transfer_id,
+                transfer_status_id,
+                user_profile_id,
+                display_name
+              )
+              SELECT
+                transfer_id,
+                current_status_id,
+                7,
+                'Draft date persistence test'
+              FROM new_transfer
+              RETURNING transfer_id`,
+              [agreementDate]
+            )
+            return result.rows[0].transfer_id
+          } finally {
+            await client.end()
+          }
+        },
+        async deleteTransfer(transferId) {
+          const client = new Client({
+            user: process.env.DB_CYPRESS_USER || 'lcfs',
+            host: process.env.DB_CYPRESS_HOST || 'localhost',
+            database: process.env.DB_CYPRESS_NAME || 'lcfs',
+            password: process.env.DB_CYPRESS_PASSWORD || 'development_only',
+            port: parseInt(process.env.DB_PORT || '5432')
+          })
+
+          try {
+            await client.connect()
+            await client.query(
+              'DELETE FROM transfer_history WHERE transfer_id = $1',
+              [transferId]
+            )
+            await client.query('DELETE FROM transfer WHERE transfer_id = $1', [
+              transferId
+            ])
+          } finally {
+            await client.end()
+          }
+          return null
         }
       })
 
