@@ -8,10 +8,10 @@
  */
 
 // Test helpers (only the ones actually used)
-export { getByDataTest } from './testHelpers.js'
+export { getByDataTest } from './testHelpers'
 
 // Lazy test fixtures
 export { test } from './fixtures'
 
 // Mock utilities (only Material UI mocks that are used)
-export { mockMaterialUi } from './mocks/materialUi.jsx'
+export { mockMaterialUi } from './mocks/materialUi'
