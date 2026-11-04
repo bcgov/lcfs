@@ -31,9 +31,6 @@ from lcfs.web.api.compliance_report.summary_service import (
 from lcfs.web.api.compliance_report.review_service import ComplianceReportReviewService
 from lcfs.web.api.compliance_report.update_service import ComplianceReportUpdateService
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
-from lcfs.web.api.final_supply_equipment.mv_refresh import (
-    schedule_fse_reporting_mv_refresh,
-)
 from lcfs.web.core.decorators import view_handler
 
 from lcfs.web.api.compliance_report.dtos import (
@@ -341,7 +338,6 @@ async def create_supplemental_report(
     Create a supplemental compliance report.
     """
     new_report = await service.create_supplemental_report(report_id, request.user)
-    schedule_fse_reporting_mv_refresh(request)
     return new_report
 
 
@@ -360,7 +356,6 @@ async def create_government_adjustment(
     Create a government adjustment.
     """
     new_report = await service.create_analyst_adjustment_report(report_id, request.user)
-    schedule_fse_reporting_mv_refresh(request)
     return new_report
 
 
@@ -382,7 +377,6 @@ async def create_government_initiated_supplemental_report(
     new_report = await service.create_government_initiated_supplemental_report(
         report_id, request.user
     )
-    schedule_fse_reporting_mv_refresh(request)
     return new_report
 
 
