@@ -8,20 +8,29 @@ import zipfile
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
+from time import monotonic
 
 import structlog
+from defusedxml import ElementTree as ET
 
-from lcfs.services.file_inspection.common import DetectedFile
+from lcfs.services.file_inspection.common import DAMAGED_MESSAGE, DetectedFile
 from lcfs.services.file_inspection.ole import OLE_MAGIC
+from lcfs.services.file_inspection.ooxml import PACKAGE_ERRORS, read_part
 
 logger = structlog.get_logger(__name__)
 
 PROBE_SCRIPT = Path(__file__).with_name("vba_probe.py")
+# Shared by every VBA project in the file, so extra projects add no time
 PROBE_TIMEOUT_SECONDS = 90
+
+# Real VBA projects and macro sheets are a few MB at most. Checked against
+# the sizes the package declares, before anything is decompressed.
+MAX_MACRO_PART_BYTES = 32 * 1024**2
+MAX_MACRO_TOTAL_BYTES = 64 * 1024**2
 
 # Excel 4.0 functions that run code or reach outside the workbook
 DANGEROUS_XLM = re.compile(
-    rb"\b(EXEC|CALL|REGISTER|REGISTER\.ID|FOPEN|FWRITE|FWRITELN|URLDOWNLOADTOFILE)\s*\(",
+    r"\b(EXEC|CALL|REGISTER|REGISTER\.ID|FOPEN|FWRITE|FWRITELN|URLDOWNLOADTOFILE)\s*\(",
     re.IGNORECASE,
 )
 # olevba reports these as "Suspicious"; they are covered by their own finding
@@ -44,6 +53,7 @@ XLM_EXEC_MESSAGE = (
 PROJECT_REFERENCE_MESSAGE = (
     "This file's macros load code from another file and can't be uploaded."
 )
+TOO_LARGE_MESSAGE = "This file's macros are too large to check and can't be uploaded."
 NOT_ANALYZED_FINDING = "The macro code could not be fully analyzed"
 
 
@@ -60,18 +70,39 @@ def analyze_workbook_macros(data: bytes, detected: DetectedFile) -> MacroReport:
     block_reason = None
 
     with zipfile.ZipFile(BytesIO(data)) as package:
-        for part in detected.vba_parts:
-            report = _probe(package.read(part))
-            block_reason = block_reason or _vba_block_reason(report)
-            findings.extend(_vba_findings(report))
-
-        if detected.macro_sheet_parts:
-            if any(
-                DANGEROUS_XLM.search(package.read(part))
+        sizes = [
+            package.getinfo(part).file_size
+            for part in detected.vba_parts + detected.macro_sheet_parts
+        ]
+        if (
+            max(sizes, default=0) > MAX_MACRO_PART_BYTES
+            or sum(sizes) > MAX_MACRO_TOTAL_BYTES
+        ):
+            logger.warning("Macro workbook refused", reason="macros too large")
+            return MacroReport([], TOO_LARGE_MESSAGE)
+        try:
+            vba_projects = [
+                read_part(package, part, MAX_MACRO_PART_BYTES)
+                for part in detected.vba_parts
+            ]
+            runs_programs = any(
+                _formula_runs_programs(package, part)
                 for part in detected.macro_sheet_parts
-            ):
-                block_reason = block_reason or XLM_EXEC_MESSAGE
-            findings.append("Contains Excel 4.0 macro sheets")
+            )
+        except PACKAGE_ERRORS as e:
+            logger.warning("Could not read macro parts", error=str(e))
+            return MacroReport([], DAMAGED_MESSAGE)
+
+    deadline = monotonic() + PROBE_TIMEOUT_SECONDS
+    for vba_project in vba_projects:
+        report = _probe(vba_project, deadline - monotonic())
+        block_reason = block_reason or _vba_block_reason(report)
+        findings.extend(_vba_findings(report))
+
+    if detected.macro_sheet_parts:
+        if runs_programs:
+            block_reason = block_reason or XLM_EXEC_MESSAGE
+        findings.append("Contains Excel 4.0 macro sheets")
 
     if detected.has_activex:
         findings.append("Contains ActiveX controls")
@@ -82,15 +113,33 @@ def analyze_workbook_macros(data: bytes, detected: DetectedFile) -> MacroReport:
     return MacroReport(list(dict.fromkeys(findings)), block_reason)
 
 
-def _probe(vba_project: bytes) -> dict:
+def _formula_runs_programs(package: zipfile.ZipFile, part: str) -> bool:
+    """
+    Scan each formula as Excel reads it, after XML decoding, so character
+    references or a UTF-16 part can't hide a function name.
+    """
+    # iterparse reads in small chunks, and zipfile stops at the part's
+    # declared size, which the caller has checked
+    with package.open(part) as stream:
+        for _, el in ET.iterparse(stream, events=("end",)):
+            if el.tag.rpartition("}")[2] == "f" and DANGEROUS_XLM.search(el.text or ""):
+                return True
+            el.clear()
+    return False
+
+
+def _probe(vba_project: bytes, timeout: float) -> dict:
     if not vba_project.startswith(OLE_MAGIC):
         return {"error": "VBA project is not an OLE file"}
+    if timeout <= 0:
+        logger.warning("Macro analysis timed out")
+        return {"error": "timed out"}
     try:
         completed = subprocess.run(
             [sys.executable, "-I", str(PROBE_SCRIPT)],
             input=vba_project,
             capture_output=True,
-            timeout=PROBE_TIMEOUT_SECONDS,
+            timeout=timeout,
             check=False,
         )
     except subprocess.TimeoutExpired:

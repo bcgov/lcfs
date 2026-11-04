@@ -278,6 +278,20 @@ def test_zip_bomb_entry_is_rejected():
     assert "damaged" in rejected(data, "model.xlsx")
 
 
+def test_part_too_large_to_read_is_rejected(monkeypatch):
+    monkeypatch.setattr(ooxml_module, "MAX_PART_BYTES", 100)
+    assert "damaged" in rejected(xlsx_bytes(), "model.xlsx")
+
+
+def test_compression_office_never_writes_is_rejected():
+    source = zipfile.ZipFile(io.BytesIO(xlsx_bytes()))
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w", zipfile.ZIP_BZIP2) as target:
+        for info in source.infolist():
+            target.writestr(info.filename, source.read(info))
+    assert "damaged" in rejected(out.getvalue(), "model.xlsx")
+
+
 def test_too_many_entries_are_rejected(monkeypatch):
     monkeypatch.setattr(ooxml_module, "MAX_ENTRIES", 3)
     assert "damaged" in rejected(xlsx_bytes(), "model.xlsx")

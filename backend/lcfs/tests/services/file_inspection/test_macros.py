@@ -1,3 +1,5 @@
+import json
+import subprocess
 from unittest.mock import patch
 
 import pytest
@@ -9,7 +11,7 @@ from lcfs.services.file_inspection import (
     inspect_upload,
 )
 from lcfs.services.file_inspection import macros
-from lcfs.services.file_inspection.common import XLSM
+from lcfs.services.file_inspection.common import DAMAGED_MESSAGE, XLSM
 from lcfs.tests.services.file_inspection.builders import (
     rewrite_zip,
     sample_vba_project,
@@ -123,16 +125,18 @@ def test_clear_attack_signs_block_the_file(probe, message):
     assert report.block_reason == message
 
 
-def _macro_sheet_workbook(formula: bytes) -> bytes:
-    data = xlsm_bytes(
-        extra={
-            "xl/macrosheets/sheet1.xml": lambda _: (
-                b"<xm:macrosheet><sheetData><row><c><f>"
-                + formula
-                + b"</f></c></row></sheetData></xm:macrosheet>"
-            )
-        }
-    )
+def _macro_sheet(formula: str, encoding: str = "utf-8") -> bytes:
+    return (
+        f'<?xml version="1.0" encoding="{encoding}"?>'
+        '<xm:macrosheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+        'xmlns:xm="http://schemas.microsoft.com/office/excel/2006/main">'
+        f'<sheetData><row r="1"><c r="A1"><f>{formula}</f></c></row></sheetData>'
+        "</xm:macrosheet>"
+    ).encode(encoding)
+
+
+def _macro_sheet_workbook(sheet: bytes) -> bytes:
+    data = xlsm_bytes(extra={"xl/macrosheets/sheet1.xml": lambda _: sheet})
     # Declare the macro sheet's content type so it is found by type
     return rewrite_zip(
         data,
@@ -146,15 +150,95 @@ def _macro_sheet_workbook(formula: bytes) -> bytes:
     )
 
 
-def test_excel4_macro_that_runs_programs_is_blocked():
-    report = analyze(_macro_sheet_workbook(b'EXEC("calc.exe")'))
+@pytest.mark.parametrize(
+    "sheet",
+    [
+        _macro_sheet('EXEC("calc.exe")'),
+        # Excel decodes character references before it reads the formula
+        _macro_sheet('&#69;XEC("calc.exe")'),
+        _macro_sheet('&#x45;&#x58;&#x45;&#x43;("calc.exe")'),
+        _macro_sheet('EXEC("calc.exe")', encoding="utf-16"),
+    ],
+    ids=["literal", "decimal-reference", "hex-reference", "utf-16"],
+)
+def test_excel4_macro_that_runs_programs_is_blocked(sheet):
+    report = analyze(_macro_sheet_workbook(sheet))
     assert report.block_reason == macros.XLM_EXEC_MESSAGE
 
 
 def test_other_excel4_macros_are_flagged_for_review():
-    report = analyze(_macro_sheet_workbook(b"SUM(A1:A3)"))
+    report = analyze(_macro_sheet_workbook(_macro_sheet("SUM(A1:A3)")))
     assert report.block_reason is None
     assert "Contains Excel 4.0 macro sheets" in report.findings
+
+
+@pytest.mark.parametrize(
+    "sheet",
+    [
+        b"<macrosheet><f>EXEC(</macrosheet>",
+        # Entities are refused rather than expanded
+        b'<!DOCTYPE m [<!ENTITY e "EXEC">]><macrosheet><f>&e;("calc")</f></macrosheet>',
+    ],
+    ids=["malformed", "entity"],
+)
+def test_unreadable_macro_sheet_is_refused(sheet):
+    report = analyze(_macro_sheet_workbook(sheet))
+    assert report.block_reason == DAMAGED_MESSAGE
+
+
+def test_oversized_macro_part_is_refused_before_it_is_read(monkeypatch):
+    vba_project = sample_vba_project()
+    monkeypatch.setattr(macros, "MAX_MACRO_PART_BYTES", len(vba_project) - 1)
+
+    with (
+        patch.object(macros, "read_part") as read_part,
+        patch.object(macros, "_probe") as probe,
+    ):
+        report = analyze(xlsm_bytes(vba_project))
+
+    assert report.block_reason == macros.TOO_LARGE_MESSAGE
+    read_part.assert_not_called()
+    probe.assert_not_called()
+
+
+def test_macro_parts_over_the_total_limit_are_refused(monkeypatch):
+    vba_project = sample_vba_project()
+    monkeypatch.setattr(macros, "MAX_MACRO_TOTAL_BYTES", 2 * len(vba_project) - 1)
+
+    report = analyze(
+        xlsm_bytes(vba_project, extra={"xl/second.bin": lambda _: vba_project})
+    )
+
+    assert report.block_reason == macros.TOO_LARGE_MESSAGE
+
+
+def test_vba_projects_share_one_time_budget(monkeypatch):
+    """Each probe gets what is left of the budget, not a fresh timeout."""
+    now = 0.0
+    timeouts = []
+
+    def slow_probe(args, *, timeout, **kwargs):
+        nonlocal now
+        timeouts.append(timeout)
+        now += 60
+        return subprocess.CompletedProcess(args, 0, json.dumps(CLEAN_PROBE).encode())
+
+    monkeypatch.setattr(macros, "monotonic", lambda: now)
+    monkeypatch.setattr(macros.subprocess, "run", slow_probe)
+    vba_project = sample_vba_project()
+
+    report = analyze(
+        xlsm_bytes(
+            vba_project,
+            extra={
+                "xl/second.bin": lambda _: vba_project,
+                "xl/third.bin": lambda _: vba_project,
+            },
+        )
+    )
+
+    assert timeouts == [macros.PROBE_TIMEOUT_SECONDS, macros.PROBE_TIMEOUT_SECONDS - 60]
+    assert macros.NOT_ANALYZED_FINDING in report.findings
 
 
 def test_unreadable_vba_project_is_flagged_not_trusted():
