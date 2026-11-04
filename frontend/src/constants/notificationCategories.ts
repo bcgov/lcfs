@@ -1,5 +1,11 @@
 import { roles } from '@/constants/roles'
 
+type NotificationTypeConfig = readonly [
+  categoryKey: string,
+  labelKey: string,
+  order: number
+]
+
 /**
  * Maps each assignable role to the notification type names it owns.
  * Sourced from the per-role NotificationSettings components.
@@ -61,7 +67,7 @@ export const ROLE_NOTIF_TYPES = {
   [roles.ia_signer.toLowerCase()]: new Set([
     'BCEID__INITIATIVE_AGREEMENT__DIRECTOR_APPROVAL'
   ])
-}
+} as const satisfies Record<string, ReadonlySet<string>>
 
 /**
  * Maps each notification type name to its i18n category key, label key,
@@ -218,7 +224,7 @@ export const NOTIF_TYPE_CONFIG = {
     'fuelCodeApproved',
     4
   ]
-}
+} as const satisfies Record<string, NotificationTypeConfig>
 
 /**
  * One-line access description per role, shown in the impact modal role rows.
@@ -254,4 +260,4 @@ export const ROLE_ACCESS = {
     'Make recommendations on initiative agreements and designated actions',
   [roles.ia_signer.toLowerCase()]:
     'Sign and submit IA submissions and evidence to government (government-assigned only)'
-}
+} as const satisfies Record<string, string>
