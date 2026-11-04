@@ -1,6 +1,6 @@
 import { test } from '@/tests/utils/fixtures'
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
-import { vi, describe, expect, beforeEach } from 'vitest'
+import { vi, describe, expect, beforeEach } from 'vite-plus/test'
 import DocumentScanStatus from '../DocumentScanStatus'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useReviewDocumentScan } from '@/hooks/useDocuments'
