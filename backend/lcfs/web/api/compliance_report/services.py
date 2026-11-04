@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from lcfs.db.base import ActionTypeEnum
 import structlog
 import uuid
-from fastapi import Depends, Request
+from fastapi import Depends, HTTPException, Request
 from typing import List, Literal, Union
 
 from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
@@ -55,6 +55,7 @@ from lcfs.web.api.internal_comment.services import InternalCommentService
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 from lcfs.services.s3.client import DocumentService
+from lcfs.web.api.report_opening.constants import configured_years
 from lcfs.web.api.report_opening.repo import ReportOpeningRepository
 
 logger = structlog.get_logger(__name__)
@@ -412,6 +413,21 @@ class ComplianceReportServices:
             raise ServiceException(
                 "You do not have permission to create a supplemental report for this organization."
             )
+
+        compliance_year = self._extract_compliance_year(
+            current_report.compliance_period.description
+            if current_report.compliance_period
+            else None
+        )
+        if compliance_year in configured_years():
+            year_config = await self.report_opening_repo.ensure_year(compliance_year)
+            if not year_config.create_supplemental_enabled:
+                raise HTTPException(
+                    status_code=403,
+                    detail=(
+                        f"{compliance_year} supplemental reporting is not currently available."
+                    ),
+                )
 
         new_version = latest_report.version + 1
 
