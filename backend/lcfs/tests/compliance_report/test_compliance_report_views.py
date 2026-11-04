@@ -1528,3 +1528,50 @@ async def test_get_available_analysts_unauthorized(
     response = await client.get(url)
 
     assert response.status_code == 403
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "route_name, service_method, roles",
+    [
+        (
+            "create_supplemental_report",
+            "create_supplemental_report",
+            [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY],
+        ),
+        (
+            "create_government_adjustment",
+            "create_analyst_adjustment_report",
+            [RoleEnum.GOVERNMENT, RoleEnum.ANALYST],
+        ),
+        (
+            "create_government_initiated_supplemental_report",
+            "create_government_initiated_supplemental_report",
+            [RoleEnum.GOVERNMENT, RoleEnum.ANALYST],
+        ),
+    ],
+)
+async def test_new_report_version_schedules_fse_view_refresh(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    compliance_report_base_schema,
+    set_mock_user,
+    route_name,
+    service_method,
+    roles,
+):
+    """A new report version has no FSE rows until the FSE reporting view refreshes."""
+    with patch(
+        f"lcfs.web.api.compliance_report.services.ComplianceReportServices.{service_method}"
+    ) as mock_create, patch(
+        "lcfs.services.scheduler.scheduler.schedule_fse_reporting_mv_refresh"
+    ) as mock_schedule_refresh:
+        set_mock_user(fastapi_app, roles)
+        mock_create.return_value = compliance_report_base_schema()
+
+        url = fastapi_app.url_path_for(route_name, report_id=1)
+        response = await client.post(url)
+
+        assert response.status_code == 201
+        mock_create.assert_called_once_with(1, ANY)
+        mock_schedule_refresh.assert_called_once_with(fastapi_app)

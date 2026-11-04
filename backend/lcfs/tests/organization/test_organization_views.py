@@ -374,12 +374,17 @@ async def test_create_compliance_report_success(
         lambda: mock_compliance_report_services
     )
 
-    response = await client.post(
-        url,
-        json=payload,
-    )
+    with patch(
+        "lcfs.services.scheduler.scheduler.schedule_fse_reporting_mv_refresh"
+    ) as mock_schedule_refresh:
+        response = await client.post(
+            url,
+            json=payload,
+        )
 
     assert response.status_code == 201
+    # A new report has no FSE rows until the FSE reporting view refreshes.
+    mock_schedule_refresh.assert_called_once_with(fastapi_app)
 
 
 @pytest.mark.anyio
