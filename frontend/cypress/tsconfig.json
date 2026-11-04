@@ -4,6 +4,6 @@
     "types": ["cypress", "node"],
     "noEmit": true
   },
-  "include": ["support/**/*.ts"],
+  "include": ["**/*.ts"],
   "exclude": []
 }

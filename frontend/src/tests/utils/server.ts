@@ -9,7 +9,7 @@ const unhandledRejectionGuard = Symbol.for('lcfs.test.unhandledRejectionGuard')
 
 export const testServer = setupServer(...handlers)
 
-export type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete'
+export type HttpMethod = keyof typeof http
 export type RequestResolver = HttpResponseResolver
 
 export const httpOverwrite = (
@@ -21,18 +21,7 @@ export const httpOverwrite = (
   const url = api + endpoint
   const options = { once }
 
-  switch (method) {
-    case 'get':
-      return testServer.use(http.get(url, cb, options))
-    case 'post':
-      return testServer.use(http.post(url, cb, options))
-    case 'put':
-      return testServer.use(http.put(url, cb, options))
-    case 'patch':
-      return testServer.use(http.patch(url, cb, options))
-    case 'delete':
-      return testServer.use(http.delete(url, cb, options))
-  }
+  return testServer.use(http[method](url, cb, options))
 }
 
 const installUnhandledRejectionGuard = () => {

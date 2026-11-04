@@ -88,7 +88,7 @@ docker compose -p lcfs-cypress -f docker-compose.yml -f docker-compose.cypress.y
 docker compose -p lcfs-cypress -f docker-compose.yml -f docker-compose.cypress.yml exec -T frontend npx cypress run --browser electron
 ```
 
-The Cypress Compose override routes browser API requests to the `backend` service, the database task to `db`, and mounts the ignored `frontend/cypress.env.json` file into the Cypress container. Stop an already-running default Compose stack first if it occupies the same published ports. The suite needs the IDIR, BCeID, organization, and supplier test accounts listed in `frontend/cypress.env.example.json`. The full suite clears compliance reports, so keep it on the isolated Cypress database.
+The Cypress Compose override routes browser API requests to the `backend` service, the database task to `db`, and mounts the ignored `frontend/cypress.env.json` file into the Cypress container. Stop an already-running default Compose stack first if it occupies the same published ports. Populate the admin IDIR, IDIR, BCeID, and organization test-account keys in `frontend/cypress.env.example.json`. Leave both `TEST_SUPPLIER_USERNAME` and `TEST_SUPPLIER_PASSWORD` blank to use `BCEID_TEST_USER` and `BCEID_TEST_PASS` for supplier scenarios, or fill in both to use a separate supplier account. The full suite clears compliance reports, so keep it on the isolated Cypress database.
 
 #### 1.2.2. Running Cypress Tests
 

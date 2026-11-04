@@ -295,23 +295,7 @@ export const test = baseTest
         const options = { once }
         const url = api + endpoint
 
-        switch (method) {
-          case 'get':
-            server.use(http.get(url, callback, options))
-            break
-          case 'post':
-            server.use(http.post(url, callback, options))
-            break
-          case 'put':
-            server.use(http.put(url, callback, options))
-            break
-          case 'patch':
-            server.use(http.patch(url, callback, options))
-            break
-          case 'delete':
-            server.use(http.delete(url, callback, options))
-            break
-        }
+        server.use(http[method](url, callback, options))
       }
     }
   })
