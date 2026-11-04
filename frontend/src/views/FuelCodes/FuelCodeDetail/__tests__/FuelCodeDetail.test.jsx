@@ -1,6 +1,6 @@
 import 'react'
 import { screen } from '@testing-library/react'
-import { beforeEach, describe, expect, vi } from 'vitest'
+import { beforeEach, describe, expect, vi } from 'vite-plus/test'
 import { FuelCodeDetail } from '../FuelCodeDetail'
 import { test } from '@/tests/utils/fixtures'
 

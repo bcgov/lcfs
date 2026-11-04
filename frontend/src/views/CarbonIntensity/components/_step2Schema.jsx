@@ -15,15 +15,17 @@ import i18n from '@/i18n'
 const APPLICATION_TYPE_RENEWAL = 'Renewal'
 const ADJACENT_TRANSPORT_MODE = 'Adjacent'
 
-const fuelCodeFieldSuggestionQuery = (field) => async ({ queryKey, client }) => {
-  const searchTerm = queryKey[1] || ''
-  let path = apiRoutes.ciApplicationFuelCodeFieldSearch
-  path += `field=${encodeURIComponent(field)}&query=${encodeURIComponent(
-    searchTerm
-  )}`
-  const response = await client.get(path)
-  return response.data
-}
+const fuelCodeFieldSuggestionQuery =
+  (field) =>
+  async ({ queryKey, client }) => {
+    const searchTerm = queryKey[1] || ''
+    let path = apiRoutes.ciApplicationFuelCodeFieldSearch
+    path += `field=${encodeURIComponent(field)}&query=${encodeURIComponent(
+      searchTerm
+    )}`
+    const response = await client.get(path)
+    return response.data
+  }
 
 export const normalizeTransportModes = (value) => {
   if (!value && value !== 0) return []
@@ -212,7 +214,6 @@ export const buildPathwayColDefs = ({ optionsData, canEdit }) => {
   const fuelTypes = optionsData?.fuelTypes || []
   const transportModes = optionsData?.transportModes || []
   const fuelCodes = optionsData?.fuelCodes || []
-
 
   const isRenewal = (params) => isRenewalRow(params.data, applicationTypes)
   const lockedOnRenewal = (params) => canEdit && !isRenewal(params)

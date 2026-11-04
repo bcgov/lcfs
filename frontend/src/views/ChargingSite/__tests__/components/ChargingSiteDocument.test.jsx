@@ -1,6 +1,6 @@
 import { test } from '@/tests/utils/fixtures'
 import 'react'
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import { screen, fireEvent } from '@testing-library/react'
 import { ChargingSiteDocument } from '../../components/ChargingSiteDocument'
 vi.mock('react-router-dom', () => ({
@@ -28,9 +28,7 @@ vi.mock('@/components/Documents/DocumentPreviewButton', () => ({
 
 vi.mock('@/components/Documents/DocumentUploadDialog', () => ({
   __esModule: true,
-  default: ({
-  open
-}) =>
+  default: ({ open }) =>
     open ? <div data-testid="document-upload-dialog">Upload Dialog</div> : null
 }))
 

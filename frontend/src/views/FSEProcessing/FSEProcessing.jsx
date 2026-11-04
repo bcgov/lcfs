@@ -4,7 +4,12 @@ import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { ROUTES } from '@/routes/routes'
-import { faSquareCheck, faCheck, faUndo, faArrowLeft } from '@fortawesome/free-solid-svg-icons'
+import {
+  faSquareCheck,
+  faCheck,
+  faUndo,
+  faArrowLeft
+} from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import Box from '@mui/material/Box'
 import Grid from '@mui/material/Grid'
@@ -94,7 +99,7 @@ const initialPaginationOptions = {
 }
 
 export const FSEProcessing = () => {
-  useTranslation(['common', 'chargingEquipment']);
+  useTranslation(['common', 'chargingEquipment'])
   const navigate = useNavigate()
   const location = useLocation()
   const { siteId } = useParams()

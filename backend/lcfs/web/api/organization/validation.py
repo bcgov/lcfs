@@ -10,6 +10,7 @@ from lcfs.web.api.compliance_report.schema import ComplianceReportCreateSchema
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.report_opening.repo import ReportOpeningRepository
 from lcfs.utils.constants import LCFS_Constants
+from lcfs.web.core.ownership import ensure_matches
 
 
 class OrganizationValidation:
@@ -59,6 +60,14 @@ class OrganizationValidation:
     async def create_transfer(
         self, organization_id, transfer_create: TransferCreateSchema
     ):
+        # A transfer is always sent by the caller's organization; a body naming
+        # another sender is refused, not quietly used.
+        ensure_matches(
+            organization_id,
+            transfer_create.from_organization_id,
+            field="fromOrganizationId",
+        )
+
         balance_check = await self.check_available_balance(
             organization_id, transfer_create.quantity
         )
@@ -71,12 +80,7 @@ class OrganizationValidation:
             transfer_create.to_organization_id
         )
         if (
-            (
-                transfer_create.from_organization_id != organization_id
-                and transfer_create.current_status
-                not in LCFS_Constants.FROM_ORG_TRANSFER_STATUSES  # ensure the allowed statuses for creating transfer
-            )
-            or self.request.user.organization.org_status.organization_status_id != 2
+            self.request.user.organization.org_status.organization_status_id != 2
             or not is_to_org_registered
         ):  # ensure the organizations are registered for transfer
             raise HTTPException(

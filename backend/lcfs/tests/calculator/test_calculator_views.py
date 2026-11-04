@@ -392,7 +392,7 @@ async def test_get_calculated_data_missing_required_params(
     response = await client.get(url, params=params)
 
     # Assertions - should get validation error as required parameters are missing
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     error_data = response.json()
 
     # The error format is different than expected - adjust assertions
@@ -597,7 +597,7 @@ async def test_get_quantity_from_compliance_units_missing_required_params(
     )
     response = await client.get(url, params=params)
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     mock_calculator_service.get_quantity_from_compliance_units.assert_not_called()
 
 

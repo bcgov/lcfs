@@ -1,8 +1,8 @@
 // External Modules
 // External Modules
-import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons';
+import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import '@hookform/resolvers/yup';
+import '@hookform/resolvers/yup'
 import Box from '@mui/material/Box'
 import Checkbox from '@mui/material/Checkbox'
 import FormControl from '@mui/material/FormControl'
@@ -14,14 +14,14 @@ import Paper from '@mui/material/Paper'
 import Radio from '@mui/material/Radio'
 import RadioGroup from '@mui/material/RadioGroup'
 import TextField from '@mui/material/TextField'
-import '@mui/icons-material/Close';
+import '@mui/icons-material/Close'
 import BCTypography from '@/components/BCTypography'
 import { useMutation } from '@tanstack/react-query'
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { createValidationSchema } from './_schema';
+import { createValidationSchema } from './_schema'
 
 // Internal Modules
 
@@ -29,7 +29,7 @@ import { createValidationSchema } from './_schema';
 import BCAlert, { BCAlert2 } from '@/components/BCAlert'
 import BCButton from '@/components/BCButton'
 import Loading from '@/components/Loading'
-import '@/routes/routes';
+import '@/routes/routes'
 import { useOrganization, useOrganizationTypes } from '@/hooks/useOrganization'
 import { useApiService } from '@/services/useApiService'
 import { AddressAutocomplete } from '@/components/BCForm/AddressAutocomplete'
@@ -46,7 +46,7 @@ import ReferenceCompareBox from './ReferenceCompareBox'
 // Component for adding a new organization
 export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
   const { t } = useTranslation(['common', 'org'])
-  useNavigate();
+  useNavigate()
   const alertRef = useRef(null)
   const location = useLocation()
   const organizationSnapshot = location.state?.organizationSnapshot
@@ -170,7 +170,9 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
       return
     }
     const newKeys = orgTypes
-      .filter((type) => newlyChecked.includes(type.organizationTypeId.toString()))
+      .filter((type) =>
+        newlyChecked.includes(type.organizationTypeId.toString())
+      )
       .map((type) => type.orgType)
     const currentRoles = watch('availableRoles') || []
     const additions = suggestedRolesForTypes(newKeys, currentRoles)

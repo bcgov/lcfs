@@ -89,7 +89,8 @@ export const AddEditAllocationAgreements = () => {
       autoSizeStrategy: {
         type: 'fitCellContents',
         defaultMinWidth: 50,
-        defaultMaxWidth: 600
+        defaultMaxWidth: 600,
+        scaleUpToFitGridWidth: true
       }
     }),
     [t]
@@ -145,8 +146,6 @@ export const AddEditAllocationAgreements = () => {
       } else {
         setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
       }
-
-      params.api.sizeColumnsToFit()
 
       setTimeout(() => {
         const lastRowIndex = params.api.getLastDisplayedRowIndex()
@@ -229,7 +228,7 @@ export const AddEditAllocationAgreements = () => {
   ])
 
   const onFirstDataRendered = useCallback((params) => {
-    params.api?.autoSizeAllColumns?.()
+    params.api?.autoSizeAllColumns?.({ scaleUpToFitGridWidth: true })
   }, [])
 
   const onCellValueChanged = useCallback(
@@ -404,7 +403,7 @@ export const AddEditAllocationAgreements = () => {
       updatedData = flattenNestedFields(updatedData)
 
       params.node.updateData(updatedData)
-      params.api?.autoSizeAllColumns?.()
+      params.api?.autoSizeAllColumns?.({ scaleUpToFitGridWidth: true })
     },
     [currentReport?.report?.organization?.name, saveRow, t]
   )

@@ -81,7 +81,6 @@ This document outlines the major subsystems of the LCFS application, their prima
     │   ├── pages/views # Page-level components
     │   ├── App.jsx
     │   └── main.jsx
-    ├── .storybook  # Storybook configuration
     ├── cypress     # Cypress E2E tests
     └── ... (config files like vite.config.js, package.json)
     ```

@@ -1,6 +1,6 @@
 import 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach } from 'vite-plus/test'
 import { AssessmentRecommendation } from '../components/AssessmentRecommendation'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { roles } from '@/constants/roles'
@@ -11,7 +11,7 @@ const mockNavigate = vi.fn()
 const mockCreateAnalystAdjustment = vi.fn()
 const mockUpdateComplianceReport = vi.fn()
 const mockHasRoles = vi.fn(() => false)
-vi.fn(() => false);
+vi.fn(() => false)
 const mockCurrentUserData = { isGovernmentUser: true }
 
 // Mock hooks
@@ -82,11 +82,11 @@ vi.mock('@/components/BCModal.jsx', () => ({
 
 // Mock Material-UI components
 vi.mock('@mui/material/Tooltip', () => ({
-    default: ({ children }) => children
+  default: ({ children }) => children
 }))
 
 vi.mock('@mui/material/FormControlLabel', () => ({
-    default: ({ control, label }) => (
+  default: ({ control, label }) => (
     <label>
       {control}
       <span>{label}</span>
@@ -95,7 +95,7 @@ vi.mock('@mui/material/FormControlLabel', () => ({
 }))
 
 vi.mock('@mui/material/Checkbox', () => ({
-    default: ({ checked, onChange, disabled }) => (
+  default: ({ checked, onChange, disabled }) => (
     <input
       type="checkbox"
       checked={checked}
@@ -106,15 +106,15 @@ vi.mock('@mui/material/Checkbox', () => ({
 }))
 
 vi.mock('@mui/material/Fade', () => ({
-    default: ({ children, in: fadeIn }) => (fadeIn ? <div>{children}</div> : null)
+  default: ({ children, in: fadeIn }) => (fadeIn ? <div>{children}</div> : null)
 }))
 
 vi.mock('@mui/icons-material/Assignment', () => ({
-    default: () => <span>Assignment Icon</span>
+  default: () => <span>Assignment Icon</span>
 }))
 
 vi.mock('@mui/icons-material/CheckCircle', () => ({
-    default: () => <span>CheckCircle Icon</span>
+  default: () => <span>CheckCircle Icon</span>
 }))
 
 describe('AssessmentRecommendation', () => {

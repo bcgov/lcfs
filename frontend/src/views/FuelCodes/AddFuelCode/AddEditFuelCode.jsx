@@ -330,13 +330,11 @@ const AddEditFuelCodeBase = () => {
     [pendingUpdates]
   )
 
-  const onGridReady = useCallback(
-    (params) => {
-      updateState({ isGridReady: true })
-      params.api.sizeColumnsToFit()
-    },
-    [updateState]
-  )
+  // BCGridEditor sizes columns (fit when they fit, else scroll); calling
+  // sizeColumnsToFit() here squeezed every column into the viewport.
+  const onGridReady = useCallback(() => {
+    updateState({ isGridReady: true })
+  }, [updateState])
 
   const handleError = useCallback((error, message, severity = 'error') => {
     console.error('Error:', error)

@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vite-plus/test'
 import userEvent from '@testing-library/user-event'
 import { ClearFiltersButton } from '../ClearFiltersButton'
 
@@ -19,32 +19,48 @@ vi.mock('react-i18next', () => ({
 
 // Mock BCButton component
 vi.mock('@/components/BCButton', () => ({
-  default: vi.fn().mockImplementation(({ children, onClick, onKeyDown, disabled, startIcon, endIcon, size, color, variant, sx, ...props }) => {
-    const handleClick = disabled ? undefined : onClick
-    const handleKeyDown = disabled ? undefined : onKeyDown
-    const buttonProps = {
-      onClick: handleClick,
-      onKeyDown: handleKeyDown,
-      'data-test': 'bc-button',
-      'data-size': size,
-      'data-color': color,
-      'data-variant': variant,
-      style: sx,
-      ...props
-    }
+  default: vi
+    .fn()
+    .mockImplementation(
+      ({
+        children,
+        onClick,
+        onKeyDown,
+        disabled,
+        startIcon,
+        endIcon,
+        size,
+        color,
+        variant,
+        sx,
+        ...props
+      }) => {
+        const handleClick = disabled ? undefined : onClick
+        const handleKeyDown = disabled ? undefined : onKeyDown
+        const buttonProps = {
+          onClick: handleClick,
+          onKeyDown: handleKeyDown,
+          'data-test': 'bc-button',
+          'data-size': size,
+          'data-color': color,
+          'data-variant': variant,
+          style: sx,
+          ...props
+        }
 
-    if (disabled) {
-      buttonProps.disabled = true
-    }
+        if (disabled) {
+          buttonProps.disabled = true
+        }
 
-    return (
-      <button {...buttonProps}>
-        {startIcon && <span data-test="start-icon">{startIcon}</span>}
-        {children}
-        {endIcon && <span data-test="end-icon">{endIcon}</span>}
-      </button>
+        return (
+          <button {...buttonProps}>
+            {startIcon && <span data-test="start-icon">{startIcon}</span>}
+            {children}
+            {endIcon && <span data-test="end-icon">{endIcon}</span>}
+          </button>
+        )
+      }
     )
-  })
 }))
 
 // Mock MUI FilterListOffIcon
@@ -68,21 +84,21 @@ describe('ClearFiltersButton', () => {
   describe('Basic Rendering', () => {
     it('renders with default props', () => {
       render(<ClearFiltersButton {...defaultProps} />)
-      
+
       expect(screen.getByRole('button')).toBeInTheDocument()
       expect(screen.getByText('Clear Filters')).toBeInTheDocument()
     })
 
     it('displays translated text correctly', () => {
       render(<ClearFiltersButton {...defaultProps} />)
-      
+
       expect(mockT).toHaveBeenCalledWith('common:ClearFilters')
       expect(screen.getByText('Clear Filters')).toBeInTheDocument()
     })
 
     it('renders with filter clear icon', () => {
       render(<ClearFiltersButton {...defaultProps} />)
-      
+
       const icon = screen.getByTestId('filter-list-off-icon')
       expect(icon).toBeInTheDocument()
       expect(icon).toHaveClass('small-icon')
@@ -91,7 +107,7 @@ describe('ClearFiltersButton', () => {
 
     it('renders with default button properties', () => {
       render(<ClearFiltersButton {...defaultProps} />)
-      
+
       const button = screen.getByRole('button')
       expect(button).toHaveAttribute('data-variant', 'outlined')
       expect(button).toHaveAttribute('data-size', 'small')
@@ -102,14 +118,14 @@ describe('ClearFiltersButton', () => {
   describe('Customization Props', () => {
     it('accepts custom size prop', () => {
       render(<ClearFiltersButton {...defaultProps} size="medium" />)
-      
+
       const button = screen.getByRole('button')
       expect(button).toHaveAttribute('data-size', 'medium')
     })
 
     it('accepts custom color prop', () => {
       render(<ClearFiltersButton {...defaultProps} color="secondary" />)
-      
+
       const button = screen.getByRole('button')
       expect(button).toHaveAttribute('data-color', 'secondary')
     })
@@ -117,7 +133,7 @@ describe('ClearFiltersButton', () => {
     it('accepts custom sx prop', () => {
       const customSx = { margin: '10px', padding: '5px' }
       render(<ClearFiltersButton {...defaultProps} sx={customSx} />)
-      
+
       const button = screen.getByRole('button')
       expect(button).toHaveStyle('margin: 10px; padding: 5px')
     })
@@ -125,14 +141,14 @@ describe('ClearFiltersButton', () => {
     it('merges custom sx with default empty object', () => {
       const customSx = { backgroundColor: 'red' }
       render(<ClearFiltersButton {...defaultProps} sx={customSx} />)
-      
+
       const button = screen.getByRole('button')
       expect(button).toHaveStyle('background-color: rgb(255, 0, 0)')
     })
 
     it('handles empty sx prop', () => {
       render(<ClearFiltersButton {...defaultProps} sx={{}} />)
-      
+
       const button = screen.getByRole('button')
       expect(button).toBeInTheDocument()
     })
@@ -142,22 +158,22 @@ describe('ClearFiltersButton', () => {
     it('calls onClick when clicked', async () => {
       const user = userEvent.setup()
       render(<ClearFiltersButton {...defaultProps} />)
-      
+
       const button = screen.getByRole('button')
       await user.click(button)
-      
+
       expect(defaultProps.onClick).toHaveBeenCalledTimes(1)
     })
 
     it('handles multiple clicks', async () => {
       const user = userEvent.setup()
       render(<ClearFiltersButton {...defaultProps} />)
-      
+
       const button = screen.getByRole('button')
       await user.click(button)
       await user.click(button)
       await user.click(button)
-      
+
       expect(defaultProps.onClick).toHaveBeenCalledTimes(3)
     })
 
@@ -197,10 +213,10 @@ describe('ClearFiltersButton', () => {
       const onClickSpy = vi.fn()
       const user = userEvent.setup()
       render(<ClearFiltersButton {...defaultProps} onClick={onClickSpy} />)
-      
+
       const button = screen.getByRole('button')
       await user.click(button)
-      
+
       expect(onClickSpy).toHaveBeenCalledWith(expect.any(Object))
     })
   })
@@ -208,28 +224,33 @@ describe('ClearFiltersButton', () => {
   describe('State Management', () => {
     it('maintains consistent state across re-renders', () => {
       const { rerender } = render(<ClearFiltersButton {...defaultProps} />)
-      
+
       expect(screen.getByText('Clear Filters')).toBeInTheDocument()
-      
+
       rerender(<ClearFiltersButton {...defaultProps} size="large" />)
-      
+
       expect(screen.getByText('Clear Filters')).toBeInTheDocument()
-      expect(screen.getByTestId('bc-button')).toHaveAttribute('data-size', 'large')
+      expect(screen.getByTestId('bc-button')).toHaveAttribute(
+        'data-size',
+        'large'
+      )
     })
 
     it('handles prop changes without losing functionality', async () => {
       const originalOnClick = vi.fn()
       const newOnClick = vi.fn()
       const user = userEvent.setup()
-      
-      const { rerender } = render(<ClearFiltersButton onClick={originalOnClick} />)
-      
+
+      const { rerender } = render(
+        <ClearFiltersButton onClick={originalOnClick} />
+      )
+
       const button = screen.getByRole('button')
       await user.click(button)
       expect(originalOnClick).toHaveBeenCalledTimes(1)
-      
+
       rerender(<ClearFiltersButton onClick={newOnClick} />)
-      
+
       await user.click(button)
       expect(newOnClick).toHaveBeenCalledTimes(1)
       expect(originalOnClick).toHaveBeenCalledTimes(1)
@@ -240,12 +261,12 @@ describe('ClearFiltersButton', () => {
     it('simulates clearing filters with mock state', async () => {
       const mockClearFilters = vi.fn()
       const user = userEvent.setup()
-      
+
       render(<ClearFiltersButton onClick={mockClearFilters} />)
-      
+
       const button = screen.getByRole('button')
       await user.click(button)
-      
+
       expect(mockClearFilters).toHaveBeenCalled()
     })
 
@@ -261,27 +282,27 @@ describe('ClearFiltersButton', () => {
         return filters
       })
       const user = userEvent.setup()
-      
+
       render(<ClearFiltersButton onClick={mockComplexClear} />)
-      
+
       const button = screen.getByRole('button')
       await user.click(button)
-      
+
       expect(mockComplexClear).toHaveBeenCalled()
     })
 
     it('handles async filter clearing operations', async () => {
       const asyncClearFilters = vi.fn(async () => {
-        await new Promise(resolve => setTimeout(resolve, 100))
+        await new Promise((resolve) => setTimeout(resolve, 100))
         return { success: true }
       })
       const user = userEvent.setup()
-      
+
       render(<ClearFiltersButton onClick={asyncClearFilters} />)
-      
+
       const button = screen.getByRole('button')
       await user.click(button)
-      
+
       expect(asyncClearFilters).toHaveBeenCalled()
     })
   })
@@ -291,7 +312,7 @@ describe('ClearFiltersButton', () => {
       // Since ClearFiltersButton doesn't have its own disabled prop,
       // we test that it can accept additional props through spread operator
       render(<ClearFiltersButton {...defaultProps} disabled={true} />)
-      
+
       const button = screen.getByRole('button')
       expect(button).toHaveAttribute('disabled')
     })
@@ -299,17 +320,17 @@ describe('ClearFiltersButton', () => {
     it('does not call onClick when disabled', async () => {
       const user = userEvent.setup()
       render(<ClearFiltersButton {...defaultProps} disabled={true} />)
-      
+
       const button = screen.getByRole('button')
       await user.click(button)
-      
+
       expect(defaultProps.onClick).not.toHaveBeenCalled()
     })
 
     it('handles conditional disabling based on filter state', () => {
       const hasFilters = false
       render(<ClearFiltersButton {...defaultProps} disabled={!hasFilters} />)
-      
+
       const button = screen.getByRole('button')
       expect(button).toHaveAttribute('disabled')
     })
@@ -318,20 +339,20 @@ describe('ClearFiltersButton', () => {
   describe('Accessibility', () => {
     it('provides proper button semantics', () => {
       render(<ClearFiltersButton {...defaultProps} />)
-      
+
       const button = screen.getByRole('button')
       expect(button.tagName).toBe('BUTTON')
     })
 
     it('has accessible text content', () => {
       render(<ClearFiltersButton {...defaultProps} />)
-      
+
       expect(screen.getByText('Clear Filters')).toBeInTheDocument()
     })
 
     it('includes icon for visual users', () => {
       render(<ClearFiltersButton {...defaultProps} />)
-      
+
       const icon = screen.getByTestId('filter-list-off-icon')
       expect(icon).toBeInTheDocument()
       expect(icon).toHaveClass('small-icon')
@@ -339,7 +360,7 @@ describe('ClearFiltersButton', () => {
 
     it('supports screen reader navigation', () => {
       render(<ClearFiltersButton {...defaultProps} />)
-      
+
       const button = screen.getByRole('button')
       expect(button).toBeInTheDocument()
       expect(button).not.toHaveAttribute('aria-hidden')
@@ -350,8 +371,8 @@ describe('ClearFiltersButton', () => {
       // The actual aria attributes would be handled by the real BCButton component
       expect(() => {
         render(
-          <ClearFiltersButton 
-            {...defaultProps} 
+          <ClearFiltersButton
+            {...defaultProps}
             aria-label="Clear all applied filters"
             aria-describedby="filter-help-text"
           />
@@ -370,22 +391,22 @@ describe('ClearFiltersButton', () => {
     it('calls onClick handler when provided', async () => {
       const mockOnClick = vi.fn()
       const user = userEvent.setup()
-      
+
       render(<ClearFiltersButton onClick={mockOnClick} />)
-      
+
       const button = screen.getByRole('button')
       await user.click(button)
-      
+
       expect(mockOnClick).toHaveBeenCalled()
     })
 
     it('handles missing translation keys gracefully', () => {
       mockT.mockImplementation((key) => key) // Return the key itself
-      
+
       render(<ClearFiltersButton {...defaultProps} />)
-      
+
       expect(screen.getByText('common:ClearFilters')).toBeInTheDocument()
-      
+
       // Reset mock for other tests
       mockT.mockImplementation((key) => {
         const translations = {
@@ -426,7 +447,7 @@ describe('ClearFiltersButton', () => {
     it('accepts ref prop for future ref functionality', () => {
       // This test ensures the prop is passed through for real implementation
       const mockRef = vi.fn()
-      
+
       expect(() => {
         render(<ClearFiltersButton {...defaultProps} ref={mockRef} />)
       }).not.toThrow()
@@ -440,31 +461,31 @@ describe('ClearFiltersButton', () => {
         dateFilters: ['startDate', 'endDate'],
         selectFilters: ['category', 'status']
       }
-      
+
       const clearAllFilters = vi.fn(() => {
-        Object.keys(filterStates).forEach(type => {
+        Object.keys(filterStates).forEach((type) => {
           filterStates[type] = []
         })
       })
       const user = userEvent.setup()
-      
+
       render(<ClearFiltersButton onClick={clearAllFilters} />)
-      
+
       const button = screen.getByRole('button')
       await user.click(button)
-      
+
       expect(clearAllFilters).toHaveBeenCalled()
     })
 
     it('integrates with form reset functionality', async () => {
       const mockFormReset = vi.fn()
       const user = userEvent.setup()
-      
+
       render(<ClearFiltersButton onClick={mockFormReset} />)
-      
+
       const button = screen.getByRole('button')
       await user.click(button)
-      
+
       expect(mockFormReset).toHaveBeenCalled()
     })
 
@@ -475,12 +496,12 @@ describe('ClearFiltersButton', () => {
         sortBy: []
       }))
       const user = userEvent.setup()
-      
+
       render(<ClearFiltersButton onClick={mockGridClear} />)
-      
+
       const button = screen.getByRole('button')
       await user.click(button)
-      
+
       expect(mockGridClear).toHaveBeenCalled()
     })
   })
@@ -489,16 +510,16 @@ describe('ClearFiltersButton', () => {
     it('handles rapid clicking without performance issues', async () => {
       const user = userEvent.setup()
       const fastClick = vi.fn()
-      
+
       render(<ClearFiltersButton onClick={fastClick} />)
-      
+
       const button = screen.getByRole('button')
-      
+
       // Simulate rapid clicking
       for (let i = 0; i < 10; i++) {
         await user.click(button)
       }
-      
+
       expect(fastClick).toHaveBeenCalledTimes(10)
     })
 
@@ -516,9 +537,9 @@ describe('ClearFiltersButton', () => {
           backgroundColor: '#d0d0d0'
         }
       }
-      
+
       render(<ClearFiltersButton {...defaultProps} sx={complexSx} />)
-      
+
       expect(screen.getByTestId('bc-button')).toBeInTheDocument()
     })
 
@@ -530,11 +551,11 @@ describe('ClearFiltersButton', () => {
           <ClearFiltersButton {...defaultProps} color="secondary" />
         </div>
       )
-      
+
       const buttons = screen.getAllByRole('button')
       expect(buttons).toHaveLength(3)
-      
-      buttons.forEach(button => {
+
+      buttons.forEach((button) => {
         expect(button).toBeInTheDocument()
       })
     })

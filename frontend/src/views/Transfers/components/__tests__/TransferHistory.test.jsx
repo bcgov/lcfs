@@ -1,7 +1,7 @@
-import 'react';
+import 'react'
 import { screen, cleanup } from '@testing-library/react'
 import TransferHistory from '../TransferHistory'
-import { beforeEach, describe, expect, vi } from 'vitest'
+import { beforeEach, describe, expect, vi } from 'vite-plus/test'
 import { useTransfer } from '@/hooks/useTransfer'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { test } from '@/tests/utils/fixtures'
@@ -9,7 +9,7 @@ import {
   TRANSFER_STATUSES,
   TRANSFER_RECOMMENDATION
 } from '@/constants/statuses'
-import 'dayjs';
+import 'dayjs'
 
 vi.mock('@/hooks/useTransfer')
 vi.mock('@/hooks/useCurrentUser')

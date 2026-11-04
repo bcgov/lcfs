@@ -1,6 +1,6 @@
 import 'react'
 import { screen, fireEvent } from '@testing-library/react'
-import { vi, describe, expect, beforeEach, afterEach } from 'vitest'
+import { vi, describe, expect, beforeEach, afterEach } from 'vite-plus/test'
 import OrgInitiativeAgreementsCard from '../OrgInitiativeAgreementsCard'
 import { useOrgInitiativeAgreementCounts } from '@/hooks/useDashboard'
 import { useNavigate } from 'react-router-dom'

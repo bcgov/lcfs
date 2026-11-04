@@ -1,7 +1,14 @@
 import { test } from '@/tests/utils/fixtures'
 import 'react'
-import { afterEach, beforeEach, describe, expect, vi } from 'vitest'
-import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, vi } from 'vite-plus/test'
+import {
+  act,
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+  within
+} from '@testing-library/react'
 
 import { roles } from '@/constants/roles'
 
@@ -1412,10 +1419,9 @@ describe('GovernmentDecisionStep', () => {
       )
 
       expect(screen.getByTestId('ci-summary-return-history')).toBeVisible()
-      expect(screen.getByTestId('ci-summary-return-history-row')).toHaveAttribute(
-        'data-pending-return',
-        'true'
-      )
+      expect(
+        screen.getByTestId('ci-summary-return-history-row')
+      ).toHaveAttribute('data-pending-return', 'true')
       expect(
         screen.getByText(/Verification 2 finding changed assumptions/)
       ).toBeVisible()
@@ -1456,10 +1462,9 @@ describe('GovernmentDecisionStep', () => {
         [query, theme, localization, router]
       )
 
-      expect(screen.getByTestId('ci-summary-return-history-row')).toHaveAttribute(
-        'data-pending-return',
-        'false'
-      )
+      expect(
+        screen.getByTestId('ci-summary-return-history-row')
+      ).toHaveAttribute('data-pending-return', 'false')
     })
   })
 })

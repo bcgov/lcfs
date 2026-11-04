@@ -1,8 +1,8 @@
-import 'react';
+import 'react'
 import { fireEvent, screen } from '@testing-library/react'
 import SigningAuthorityWithRole, { SigningAuthority } from '../SigningAuthority'
 import { FormProvider, useForm } from 'react-hook-form'
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import { test } from '@/tests/utils/fixtures'
 
 vi.mock('react-i18next', () => ({
@@ -27,8 +27,6 @@ const MockFormProvider = ({ children, formProps = {} }) => {
   const methods = useForm(formProps)
   return <FormProvider {...methods}>{children}</FormProvider>
 }
-
-
 
 describe('SigningAuthority Component', () => {
   beforeEach(() => {

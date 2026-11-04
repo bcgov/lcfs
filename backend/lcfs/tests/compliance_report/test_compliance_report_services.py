@@ -463,10 +463,41 @@ async def test_get_report_year_navigation_report_not_found(
 
 
 @pytest.mark.anyio
+async def test_create_supplemental_report_rejects_disabled_year(
+    compliance_report_service,
+    mock_repo,
+    mock_report_opening_repo,
+):
+    current_report = MagicMock(spec=ComplianceReport)
+    current_report.compliance_report_id = 1
+    current_report.organization_id = 17
+    current_report.compliance_report_group_uuid = "group-2017"
+    current_report.compliance_period = SimpleNamespace(description="2017")
+    mock_repo.get_compliance_report_by_id.return_value = current_report
+    mock_repo.get_latest_report_by_group_uuid.return_value = SimpleNamespace(
+        compliance_report_id=1,
+        version=0,
+    )
+    mock_report_opening_repo.ensure_year.return_value = SimpleNamespace(
+        create_supplemental_enabled=False
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await compliance_report_service.create_supplemental_report(
+            1, SimpleNamespace(organization_id=17)
+        )
+
+    assert exc_info.value.status_code == 403
+    mock_report_opening_repo.ensure_year.assert_awaited_once_with(2017)
+    mock_repo.create_compliance_report.assert_not_awaited()
+
+
+@pytest.mark.anyio
 async def test_create_supplemental_report_includes_summary_lines(
     compliance_report_service,
     mock_repo,
     mock_transaction_repo,
+    mock_report_opening_repo,
 ):
     """
     Test that when creating a supplemental report, the summary lines from
@@ -517,6 +548,10 @@ async def test_create_supplemental_report_includes_summary_lines(
     mock_current_report.compliance_report_group_uuid = "test-group-uuid"
     mock_current_report.version = 0
     mock_current_report.reporting_frequency = "test_frequency"
+    mock_current_report.compliance_period = MagicMock(description="2024")
+    mock_report_opening_repo.ensure_year.return_value = SimpleNamespace(
+        create_supplemental_enabled=True
+    )
 
     # Mock status
     mock_draft_status = MagicMock()
@@ -554,6 +589,7 @@ async def test_create_supplemental_report_includes_summary_lines(
             1, mock_user
         )
         assert result is not None
+        mock_report_opening_repo.ensure_year.assert_awaited_once_with(2024)
 
         # Check that create_compliance_report was called
         mock_repo.create_compliance_report.assert_called_once()

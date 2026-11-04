@@ -24,7 +24,12 @@ from lcfs.db.models.document import Document
 from lcfs.db.models.compliance.ComplianceReport import (
     compliance_report_document_association,
 )
-from lcfs.services.s3.client import DocumentService, MAX_FILE_SIZE_BYTES, BUCKET_NAME
+from lcfs.services.s3.client import (
+    BUCKET_NAME,
+    DOCUMENT_PARENT_ASSOCIATIONS,
+    MAX_FILE_SIZE_BYTES,
+    DocumentService,
+)
 from lcfs.services.clamav.client import ClamAVService, ScanUnavailableException
 from lcfs.db.models.document.Document import DocumentScanStatusEnum
 from lcfs.services.file_inspection import FileRejectedException, MacroReport
@@ -542,21 +547,24 @@ async def test_verify_initiative_agreement_access_supplier_failure(
     assert "Only Government Staff" in exc_info.value.detail
 
 
+def _link_document(db_mock, document, counts):
+    """The document resolves through its parent; *counts* are its links in
+    each parent association table."""
+    lookup = MagicMock()
+    lookup.scalar_one_or_none.return_value = document
+    db_mock.execute = AsyncMock(return_value=lookup)
+    db_mock.scalar = AsyncMock(side_effect=counts)
+
+
+_TABLES = len(DOCUMENT_PARENT_ASSOCIATIONS)
+
+
 @pytest.mark.anyio
 async def test_delete_file_last_link(document_service, document_mock, db_mock):
-    # Setup
-    db_mock.get_one.return_value = document_mock
+    _link_document(db_mock, document_mock, [1] + [0] * (_TABLES - 1))
 
-    # Create a proper mock for the execute result
-    # Looking at the code, it appears the pattern is (await db.execute()).all()
-    execute_result = MagicMock()
-    execute_result.all.return_value = [MagicMock()]  # One link
-    db_mock.execute = AsyncMock(return_value=execute_result)
-
-    # Execute
     await document_service.delete_file(1, 1, "compliance_report")
 
-    # Assert
     document_service.s3_client.delete_object.assert_called_once()
     db_mock.delete.assert_called_once_with(document_mock)
     db_mock.flush.assert_called_once()
@@ -564,20 +572,37 @@ async def test_delete_file_last_link(document_service, document_mock, db_mock):
 
 @pytest.mark.anyio
 async def test_delete_file_multiple_links(document_service, document_mock, db_mock):
-    # Setup
-    db_mock.get_one.return_value = document_mock
+    _link_document(db_mock, document_mock, [2] + [0] * (_TABLES - 1))
 
-    # Mock for execute - make sure it's not an AsyncMock but a regular MagicMock with the .all method
-    execute_result = MagicMock()
-    execute_result.all.return_value = [MagicMock(), MagicMock()]  # Multiple links
-
-    # Replace the execute method completely with an AsyncMock that returns our result object
-    db_mock.execute = AsyncMock(return_value=execute_result)
-
-    # Execute
     await document_service.delete_file(1, 1, "compliance_report")
 
-    # Assert
+    document_service.s3_client.delete_object.assert_not_called()
+    db_mock.delete.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_delete_file_counts_links_to_other_parent_types(
+    document_service, document_mock, db_mock
+):
+    """One link here and one on another kind of parent: only this link goes."""
+    _link_document(db_mock, document_mock, [1, 0, 0, 0, 1] + [0] * (_TABLES - 5))
+
+    await document_service.delete_file(1, 1, "compliance_report")
+
+    document_service.s3_client.delete_object.assert_not_called()
+    db_mock.delete.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_delete_file_not_linked_to_the_parent(document_service, db_mock):
+    """A document that does not hang off the authorized parent reads as
+    missing, and nothing is deleted."""
+    _link_document(db_mock, None, [])
+
+    with pytest.raises(HTTPException) as exc:
+        await document_service.delete_file(1, 1, "compliance_report")
+
+    assert exc.value.status_code == 404
     document_service.s3_client.delete_object.assert_not_called()
     db_mock.delete.assert_not_called()
 

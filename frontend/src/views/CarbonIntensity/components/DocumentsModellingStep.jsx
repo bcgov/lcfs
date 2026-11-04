@@ -29,8 +29,6 @@ import { isDocumentRenameEnabled } from '@/constants/common'
 import { getDocumentDisplayName, isDocumentLocked } from '@/utils/documents'
 import './documentCategories'
 
-
-
 const PARENT_TYPE = 'ci_application'
 
 const formatBytes = (bytes) => {

@@ -1,4 +1,4 @@
-import { vi, describe, expect, beforeEach } from 'vitest'
+import { vi, describe, expect, beforeEach } from 'vite-plus/test'
 import { screen, fireEvent, waitFor } from '@testing-library/react'
 import 'react'
 import { LoginScreenBackground } from '../LoginScreenBackground'

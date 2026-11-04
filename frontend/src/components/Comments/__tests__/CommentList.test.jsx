@@ -1,7 +1,7 @@
 import { test } from '@/tests/utils/fixtures'
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, vi } from 'vitest'
+import { beforeEach, describe, expect, vi } from 'vite-plus/test'
 import { roles } from '@/constants/roles'
 import CommentList from '../CommentList'
 

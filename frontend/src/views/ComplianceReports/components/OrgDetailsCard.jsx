@@ -39,19 +39,23 @@ export const OrgDetailsCard = ({
             </BCTypography>
           </div>
           <div style={{ marginTop: '2rem' }}>
-            <BCTypography variant="body4">{t('report:bcAddrLabel')}:</BCTypography>{' '}
+            <BCTypography variant="body4">
+              {t('report:bcAddrLabel')}:
+            </BCTypography>{' '}
             <BCTypography variant="body4">
               {orgAttorneyAddress && constructAddress(orgAttorneyAddress)}
             </BCTypography>
           </div>
-          {!isGovernmentUser && <BCTypography
-            component="div"
-            style={{ marginTop: '2rem' }}
-            variant="body4"
-            dangerouslySetInnerHTML={{
-              __html: t('report:contactForAddrChange')
-            }}
-          />}
+          {!isGovernmentUser && (
+            <BCTypography
+              component="div"
+              style={{ marginTop: '2rem' }}
+              variant="body4"
+              dangerouslySetInnerHTML={{
+                __html: t('report:contactForAddrChange')
+              }}
+            />
+          )}
         </Stack>
       }
     />

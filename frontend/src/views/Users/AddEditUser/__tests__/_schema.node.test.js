@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from 'vite-plus/test'
 import {
   userInfoSchema,
   defaultValues,
@@ -80,7 +80,10 @@ describe('idirRoleOptions', () => {
 describe('iaRoleOptions', () => {
   it('returns IA Analyst and IA Manager', () => {
     const opts = iaRoleOptions(t)
-    expect(opts.map((o) => o.label)).toEqual([roles.ia_analyst, roles.ia_manager])
+    expect(opts.map((o) => o.label)).toEqual([
+      roles.ia_analyst,
+      roles.ia_manager
+    ])
   })
 
   it('values use lowercase with space preserved', () => {
@@ -166,7 +169,9 @@ describe('userInfoSchema director-ia-conflict', () => {
         idirRole: roles.director.toLowerCase(),
         iaRole: roles.ia_analyst.toLowerCase()
       })
-    ).rejects.toThrow('Director cannot be combined with IA analyst or IA manager roles.')
+    ).rejects.toThrow(
+      'Director cannot be combined with IA analyst or IA manager roles.'
+    )
   })
 
   it('passes when idirRole is empty and iaRole is set', async () => {

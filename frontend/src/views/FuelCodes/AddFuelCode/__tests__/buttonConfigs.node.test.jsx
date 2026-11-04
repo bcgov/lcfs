@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vite-plus/test'
 import {
   fuelCodeButtonConfigFn,
   buildFuelCodeButtonContext
@@ -63,7 +63,7 @@ describe('buttonConfigs', () => {
       mockContext.shouldShowSaveButton = true
 
       const result = fuelCodeButtonConfigFn(mockContext)
-      
+
       // Director in DRAFT status should have save, edit, approve buttons (per FUEL_CODE_BUTTON_RULES)
       expect(result.DRAFT).toBeDefined()
       expect(result.DRAFT.length).toBeGreaterThan(0)
@@ -78,7 +78,7 @@ describe('buttonConfigs', () => {
       mockContext.status = 'DRAFT'
 
       const result = fuelCodeButtonConfigFn(mockContext)
-      
+
       // Analyst in DRAFT status should have edit, save, recommendToDirector, delete buttons
       expect(result.DRAFT).toBeDefined()
       expect(result.DRAFT.length).toBeGreaterThan(2)
@@ -89,7 +89,7 @@ describe('buttonConfigs', () => {
       mockContext.currentStatus = 'DRAFT'
 
       const result = fuelCodeButtonConfigFn(mockContext)
-      
+
       expect(result).toEqual({
         DRAFT: []
       })
@@ -109,8 +109,10 @@ describe('buttonConfigs', () => {
       mockContext.canDelete = false
 
       const result = fuelCodeButtonConfigFn(mockContext)
-      const saveButton = result.DRAFT.find(btn => btn.id === 'save-fuel-code-btn')
-      
+      const saveButton = result.DRAFT.find(
+        (btn) => btn.id === 'save-fuel-code-btn'
+      )
+
       expect(saveButton).toBeDefined()
       expect(saveButton).toMatchObject({
         variant: 'outlined',
@@ -130,8 +132,10 @@ describe('buttonConfigs', () => {
       mockContext.canDelete = false
 
       const result = fuelCodeButtonConfigFn(mockContext)
-      const recommendButton = result.DRAFT.find(btn => btn.id === 'recommend-fuel-code-btn')
-      
+      const recommendButton = result.DRAFT.find(
+        (btn) => btn.id === 'recommend-fuel-code-btn'
+      )
+
       expect(recommendButton).toBeDefined()
       expect(recommendButton).toMatchObject({
         variant: 'contained',
@@ -149,8 +153,10 @@ describe('buttonConfigs', () => {
       mockContext.canDelete = false
 
       const result = fuelCodeButtonConfigFn(mockContext)
-      const editButton = result.DRAFT.find(btn => btn.id === 'edit-fuel-code-btn')
-      
+      const editButton = result.DRAFT.find(
+        (btn) => btn.id === 'edit-fuel-code-btn'
+      )
+
       expect(editButton).toBeDefined()
       expect(editButton).toMatchObject({
         variant: 'outlined',
@@ -169,8 +175,10 @@ describe('buttonConfigs', () => {
       mockContext.status = 'DRAFT'
 
       const result = fuelCodeButtonConfigFn(mockContext)
-      const deleteButton = result.DRAFT.find(btn => btn.id === 'delete-fuel-code-btn')
-      
+      const deleteButton = result.DRAFT.find(
+        (btn) => btn.id === 'delete-fuel-code-btn'
+      )
+
       expect(deleteButton).toBeDefined()
       expect(deleteButton).toMatchObject({
         variant: 'outlined',
@@ -196,8 +204,10 @@ describe('buttonConfigs', () => {
       mockContext.isComplete = true
 
       const result = fuelCodeButtonConfigFn(mockContext)
-      const approveButton = result.RECOMMENDED.find(btn => btn.id === 'approve-fuel-code-btn')
-      
+      const approveButton = result.RECOMMENDED.find(
+        (btn) => btn.id === 'approve-fuel-code-btn'
+      )
+
       expect(approveButton).toBeDefined()
       expect(approveButton).toMatchObject({
         variant: 'contained',
@@ -214,8 +224,10 @@ describe('buttonConfigs', () => {
       mockContext.shouldShowEditButton = false
 
       const result = fuelCodeButtonConfigFn(mockContext)
-      const returnButton = result.RECOMMENDED.find(btn => btn.id === 'return-to-analyst-btn')
-      
+      const returnButton = result.RECOMMENDED.find(
+        (btn) => btn.id === 'return-to-analyst-btn'
+      )
+
       expect(returnButton).toBeDefined()
       expect(returnButton).toMatchObject({
         variant: 'outlined',
@@ -240,8 +252,10 @@ describe('buttonConfigs', () => {
       mockContext.canDelete = false
 
       const result = fuelCodeButtonConfigFn(mockContext)
-      const saveButton = result.DRAFT.find(btn => btn.id === 'save-fuel-code-btn')
-      
+      const saveButton = result.DRAFT.find(
+        (btn) => btn.id === 'save-fuel-code-btn'
+      )
+
       expect(saveButton).toBeUndefined()
     })
 
@@ -252,8 +266,10 @@ describe('buttonConfigs', () => {
       mockContext.canDelete = false
 
       const result = fuelCodeButtonConfigFn(mockContext)
-      const editButton = result.DRAFT.find(btn => btn.id === 'edit-fuel-code-btn')
-      
+      const editButton = result.DRAFT.find(
+        (btn) => btn.id === 'edit-fuel-code-btn'
+      )
+
       expect(editButton).toBeUndefined()
     })
 
@@ -265,8 +281,10 @@ describe('buttonConfigs', () => {
       mockContext.canDelete = false
 
       const result = fuelCodeButtonConfigFn(mockContext)
-      const recommendButton = result.DRAFT.find(btn => btn.id === 'recommend-fuel-code-btn')
-      
+      const recommendButton = result.DRAFT.find(
+        (btn) => btn.id === 'recommend-fuel-code-btn'
+      )
+
       expect(recommendButton).toBeUndefined()
     })
 
@@ -278,8 +296,10 @@ describe('buttonConfigs', () => {
       mockContext.canDelete = false
 
       const result = fuelCodeButtonConfigFn(mockContext)
-      const recommendButton = result.DRAFT.find(btn => btn.id === 'recommend-fuel-code-btn')
-      
+      const recommendButton = result.DRAFT.find(
+        (btn) => btn.id === 'recommend-fuel-code-btn'
+      )
+
       expect(recommendButton).toBeUndefined()
     })
 
@@ -290,8 +310,10 @@ describe('buttonConfigs', () => {
       mockContext.canDelete = false
 
       const result = fuelCodeButtonConfigFn(mockContext)
-      const deleteButton = result.DRAFT.find(btn => btn.id === 'delete-fuel-code-btn')
-      
+      const deleteButton = result.DRAFT.find(
+        (btn) => btn.id === 'delete-fuel-code-btn'
+      )
+
       expect(deleteButton).toBeUndefined()
     })
 
@@ -302,8 +324,10 @@ describe('buttonConfigs', () => {
       mockContext.shouldShowEditButton = false
 
       const result = fuelCodeButtonConfigFn(mockContext)
-      const returnButton = result.RECOMMENDED.find(btn => btn.id === 'return-to-analyst-btn')
-      
+      const returnButton = result.RECOMMENDED.find(
+        (btn) => btn.id === 'return-to-analyst-btn'
+      )
+
       expect(returnButton).toBeDefined()
     })
 
@@ -314,8 +338,10 @@ describe('buttonConfigs', () => {
       mockContext.shouldShowEditButton = false
 
       const result = fuelCodeButtonConfigFn(mockContext)
-      const returnButton = result.DRAFT.find(btn => btn.id === 'return-to-analyst-btn')
-      
+      const returnButton = result.DRAFT.find(
+        (btn) => btn.id === 'return-to-analyst-btn'
+      )
+
       expect(returnButton).toBeUndefined()
     })
   })
@@ -333,8 +359,10 @@ describe('buttonConfigs', () => {
       mockContext.canDelete = false
 
       const result = fuelCodeButtonConfigFn(mockContext)
-      const saveButton = result.DRAFT.find(btn => btn.id === 'save-fuel-code-btn')
-      
+      const saveButton = result.DRAFT.find(
+        (btn) => btn.id === 'save-fuel-code-btn'
+      )
+
       saveButton.handler()
       expect(mockContext.handleSave).toHaveBeenCalled()
     })
@@ -348,8 +376,10 @@ describe('buttonConfigs', () => {
       mockContext.canDelete = false
 
       const result = fuelCodeButtonConfigFn(mockContext)
-      const recommendButton = result.DRAFT.find(btn => btn.id === 'recommend-fuel-code-btn')
-      
+      const recommendButton = result.DRAFT.find(
+        (btn) => btn.id === 'recommend-fuel-code-btn'
+      )
+
       recommendButton.handler()
       expect(mockContext.handleRecommend).toHaveBeenCalled()
     })
@@ -361,8 +391,10 @@ describe('buttonConfigs', () => {
       mockContext.canDelete = false
 
       const result = fuelCodeButtonConfigFn(mockContext)
-      const editButton = result.DRAFT.find(btn => btn.id === 'edit-fuel-code-btn')
-      
+      const editButton = result.DRAFT.find(
+        (btn) => btn.id === 'edit-fuel-code-btn'
+      )
+
       editButton.handler()
       expect(mockContext.handleEdit).toHaveBeenCalled()
       expect(mockContext.setModalData).not.toHaveBeenCalled()
@@ -375,8 +407,10 @@ describe('buttonConfigs', () => {
       mockContext.shouldShowEditButton = true
 
       const result = fuelCodeButtonConfigFn(mockContext)
-      const editButton = result.APPROVED.find(btn => btn.id === 'edit-fuel-code-btn')
-      
+      const editButton = result.APPROVED.find(
+        (btn) => btn.id === 'edit-fuel-code-btn'
+      )
+
       editButton.handler()
       expect(mockContext.setModalData).toHaveBeenCalledWith({
         primaryButtonAction: expect.any(Function),
@@ -396,8 +430,10 @@ describe('buttonConfigs', () => {
       mockContext.isComplete = true
 
       const result = fuelCodeButtonConfigFn(mockContext)
-      const approveButton = result.RECOMMENDED.find(btn => btn.id === 'approve-fuel-code-btn')
-      
+      const approveButton = result.RECOMMENDED.find(
+        (btn) => btn.id === 'approve-fuel-code-btn'
+      )
+
       approveButton.handler()
       expect(mockContext.setModalData).toHaveBeenCalledWith({
         primaryButtonAction: expect.any(Function),
@@ -415,7 +451,7 @@ describe('buttonConfigs', () => {
       mockContext.currentStatus = 'DRAFT'
 
       const result = fuelCodeButtonConfigFn(mockContext)
-      
+
       expect(result).toEqual({
         DRAFT: []
       })
@@ -432,7 +468,7 @@ describe('buttonConfigs', () => {
       mockContext.status = 'DRAFT'
 
       const result = fuelCodeButtonConfigFn(mockContext)
-      
+
       expect(result.DRAFT).toHaveLength(4) // edit, save, recommendToDirector, delete
     })
 
@@ -445,7 +481,7 @@ describe('buttonConfigs', () => {
       mockContext.isComplete = true
 
       const result = fuelCodeButtonConfigFn(mockContext)
-      
+
       expect(result.RECOMMENDED).toHaveLength(4) // save, edit, approve, returnToAnalyst
     })
 
@@ -459,7 +495,7 @@ describe('buttonConfigs', () => {
       mockContext.status = 'DRAFT'
 
       const result = fuelCodeButtonConfigFn(mockContext)
-      
+
       // Should only have edit and delete buttons (save and recommend filtered out)
       expect(result.DRAFT).toHaveLength(2)
     })

@@ -1,5 +1,5 @@
 import React from 'react'
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import { screen, fireEvent, waitFor } from '@testing-library/react'
 import { ComplianceReports } from '../ComplianceReports'
 import { ROUTES } from '@/routes/routes'

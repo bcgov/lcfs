@@ -758,7 +758,8 @@ const FuelCodeDetailBase = () => {
                   enablePageCaching={false}
                   overlayNoRowsTemplate={t('fuelCode:noFuelCodesFound')}
                   getRowId={(params) =>
-                    (params.data.id ?? params.data.fuelCodeId?.toString()) as string
+                    (params.data.id ??
+                      params.data.fuelCodeId?.toString()) as string
                   }
                 />
               )}

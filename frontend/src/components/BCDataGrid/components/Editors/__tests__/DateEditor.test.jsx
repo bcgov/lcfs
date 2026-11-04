@@ -1,5 +1,5 @@
 import { omitProperties } from '@/utils/omitProperties'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vite-plus/test'
 import { render, screen, fireEvent, cleanup, act } from '@testing-library/react'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { DateEditor } from '../DateEditor'
@@ -30,23 +30,32 @@ vi.mock('date-fns', () => ({
 
 // Mock @mui/x-date-pickers
 vi.mock('@mui/x-date-pickers/DatePicker', () => ({
-    DatePicker: vi.fn(
+  DatePicker: vi.fn(
     ({
-  value,
-  onChange,
-  onAccept,
-  onOpen,
-  onClose,
-  open,
-  slotProps,
-  ...restProps
-}) => {
-delete restProps.onViewChange; delete restProps.minDate; delete restProps.maxDate;
+      value,
+      onChange,
+      onAccept,
+      onOpen,
+      onClose,
+      open,
+      slotProps,
+      ...restProps
+    }) => {
+      delete restProps.onViewChange
+      delete restProps.minDate
+      delete restProps.maxDate
 
       // Filter out MUI-specific props that shouldn't go on DOM elements
-      const {
-  ...domProps
-} = omitProperties(restProps, ["fullWidth","margin","format","variant","disableToolbar","sx","className","id"])
+      const { ...domProps } = omitProperties(restProps, [
+        'fullWidth',
+        'margin',
+        'format',
+        'variant',
+        'disableToolbar',
+        'sx',
+        'className',
+        'id'
+      ])
       const inputValue = value
         ? [
             value.getFullYear(),

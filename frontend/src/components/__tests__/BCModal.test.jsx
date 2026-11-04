@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vite-plus/test'
 import BCModal from '@/components/BCModal'
 
 // Unmock the component we're testing (overrides global mock)
@@ -8,84 +8,110 @@ vi.unmock('@/components/BCModal')
 // Mock BCButton to avoid theme/function errors in tests
 vi.mock('@/components/BCButton', () => ({
   __esModule: true,
-  default: ({
-  children,
-  onClick,
-  'data-test': dataTest,
-  id,
-  ...props
-}) => { delete props.variant; delete props.color; return <button onClick={onClick} data-test={dataTest} id={id} role="button" {...props}>
-      {children}
-    </button>; }
+  default: ({ children, onClick, 'data-test': dataTest, id, ...props }) => {
+    delete props.variant
+    delete props.color
+    return (
+      <button
+        onClick={onClick}
+        data-test={dataTest}
+        id={id}
+        role="button"
+        {...props}
+      >
+        {children}
+      </button>
+    )
+  }
 }))
 
 // Mock MUI components
 vi.mock('@mui/material/Dialog', () => ({
-    default: ({
-  children,
-  open,
-  'data-test': dataTest,
-  ...props
-}) =>
-    { delete props.onClose; return open ? <div data-test={dataTest || 'modal'} role="dialog">{children}</div> : null; }
+  default: ({ children, open, 'data-test': dataTest, ...props }) => {
+    delete props.onClose
+    return open ? (
+      <div data-test={dataTest || 'modal'} role="dialog">
+        {children}
+      </div>
+    ) : null
+  }
 }))
 
 vi.mock('@mui/material/DialogTitle', () => ({
-    default: ({ children }) => <div>{children}</div>
+  default: ({ children }) => <div>{children}</div>
 }))
 
 vi.mock('@mui/material/DialogContent', () => ({
-    default: ({ children }) => <div>{children}</div>
+  default: ({ children }) => <div>{children}</div>
 }))
 
 vi.mock('@mui/material/DialogActions', () => ({
-    default: ({ children }) => <div>{children}</div>
+  default: ({ children }) => <div>{children}</div>
 }))
 
 vi.mock('@mui/material/IconButton', () => ({
-    default: ({
-  children,
-  onClick,
-  'aria-label': ariaLabel,
-  'data-test': dataTest,
-  ...props
-}) => { delete props.sx; return <button
-      onClick={onClick}
-      aria-label={ariaLabel}
-      data-test={dataTest}
-      role="button"
-      {...props}
-    >
-      {children}
-    </button>; }
+  default: ({
+    children,
+    onClick,
+    'aria-label': ariaLabel,
+    'data-test': dataTest,
+    ...props
+  }) => {
+    delete props.sx
+    return (
+      <button
+        onClick={onClick}
+        aria-label={ariaLabel}
+        data-test={dataTest}
+        role="button"
+        {...props}
+      >
+        {children}
+      </button>
+    )
+  }
 }))
 
 vi.mock('@mui/material/Box', () => ({
-    default: ({
-  children,
-  dangerouslySetInnerHTML,
-  'data-test': dataTest,
-  ...props
-}) => {
-delete props.bgcolor; delete props.borderRadius; delete props.p; delete props.display; delete props.gap;
+  default: ({
+    children,
+    dangerouslySetInnerHTML,
+    'data-test': dataTest,
+    ...props
+  }) => {
+    delete props.bgcolor
+    delete props.borderRadius
+    delete props.p
+    delete props.display
+    delete props.gap
 
     if (dangerouslySetInnerHTML) {
-      return <div data-test={dataTest} dangerouslySetInnerHTML={dangerouslySetInnerHTML} {...props} />
+      return (
+        <div
+          data-test={dataTest}
+          dangerouslySetInnerHTML={dangerouslySetInnerHTML}
+          {...props}
+        />
+      )
     }
-    return <div data-test={dataTest} {...props}>{children}</div>
+    return (
+      <div data-test={dataTest} {...props}>
+        {children}
+      </div>
+    )
   }
 }))
 
 vi.mock('@mui/material/Divider', () => ({
-    default: () => <hr />
+  default: () => <hr />
 }))
 
 vi.mock('@mui/icons-material/Close', () => ({
-    default: () => <span>×</span>
+  default: () => <span>×</span>
 }))
 
 vi.mock('@mui/icons-material/Warning', () => ({
-    default: () => <span>⚠</span>
+  default: () => <span>⚠</span>
 }))
 
 const baseData = {
@@ -160,7 +186,10 @@ describe('Not Found Component', () => {
     const secondaryButtonAction = vi.fn()
     let resolvePrimary
     const primaryButtonAction = vi.fn(
-      () => new Promise((resolve) => { resolvePrimary = resolve })
+      () =>
+        new Promise((resolve) => {
+          resolvePrimary = resolve
+        })
     )
 
     render(

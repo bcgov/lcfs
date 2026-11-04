@@ -31,7 +31,10 @@ export const ComplianceReportCard = () => {
         ]
       }
     }
-    sessionStorage.setItem(FILTER_KEYS.COMPLIANCE_REPORT_GRID, JSON.stringify(filter))
+    sessionStorage.setItem(
+      FILTER_KEYS.COMPLIANCE_REPORT_GRID,
+      JSON.stringify(filter)
+    )
     navigate(ROUTES.REPORTS.LIST)
   }
 

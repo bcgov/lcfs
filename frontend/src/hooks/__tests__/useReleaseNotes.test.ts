@@ -1,5 +1,5 @@
 import { waitFor } from '@testing-library/react'
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import { useApiService } from '@/services/useApiService'
 import type { ApiServiceInstance } from '@/services/useApiService'
 import { test } from '@/tests/utils/fixtures'
@@ -152,9 +152,9 @@ describe('useUpdateReleaseNote', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(useApiService).mockReturnValue(
-      { put: mockPut } as unknown as ApiServiceInstance
-    )
+    vi.mocked(useApiService).mockReturnValue({
+      put: mockPut
+    } as unknown as ApiServiceInstance)
   })
 
   test('PUTs to the version-specific endpoint with summary and sections', async ({
