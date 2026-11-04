@@ -171,7 +171,7 @@ export default defineConfig({
           environment: 'jsdom',
           include: ['src/**/*.{test,spec}.{js,jsx,ts,tsx}'],
           exclude: ['src/**/*.{node.test,node.spec}.{js,jsx,ts,tsx}'],
-          setupFiles: './testSetup.js'
+          setupFiles: './testSetup.ts'
         }
       }
     ]
