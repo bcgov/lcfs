@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vite-plus/test'
 import { handleScheduleSave, handleScheduleDelete } from '../schedules'
 
 // Mock uuid to predictable value

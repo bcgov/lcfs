@@ -1,6 +1,6 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react';
-import { vi } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import { vi } from 'vite-plus/test'
 import { useParams, useLocation } from 'react-router-dom'
 import { ViewOrgTransaction } from '@/views/Transactions/ViewOrgTransaction'
 
@@ -8,7 +8,7 @@ import { useAdminAdjustment } from '@/hooks/useAdminAdjustment'
 import { useInitiativeAgreement } from '@/hooks/useInitiativeAgreement'
 import { OrgTransactionDetails } from '@/views/Transactions/components'
 import Loading from '@/components/Loading'
-import '@/components/BCTypography';
+import '@/components/BCTypography'
 
 // Mock all external dependencies
 vi.mock('react-router-dom', async () => {
@@ -25,8 +25,10 @@ vi.mock('react-i18next', () => ({
     t: (key) => {
       const translations = {
         'txn:loadingText': 'Loading transaction...',
-        'adminadjustment:actionMsgs.errorRetrieval': 'Error retrieving admin adjustment',
-        'initiativeagreement:actionMsgs.errorRetrieval': 'Error retrieving initiative agreement'
+        'adminadjustment:actionMsgs.errorRetrieval':
+          'Error retrieving admin adjustment',
+        'initiativeagreement:actionMsgs.errorRetrieval':
+          'Error retrieving initiative agreement'
       }
       return translations[key] || key
     }
@@ -51,9 +53,7 @@ vi.mock('@/views/Transactions/components', () => ({
 
 vi.mock('@/components/Loading', () => ({
   __esModule: true,
-  default: vi.fn(({ message }) => (
-    <div data-test="loading">{message}</div>
-  ))
+  default: vi.fn(({ message }) => <div data-test="loading">{message}</div>)
 }))
 
 vi.mock('@/components/BCAlert', () => ({
@@ -65,7 +65,9 @@ vi.mock('@/components/BCAlert', () => ({
 vi.mock('@/components/BCTypography', () => ({
   __esModule: true,
   default: vi.fn(({ color, children }) => (
-    <div data-test="bc-typography" data-color={color}>{children}</div>
+    <div data-test="bc-typography" data-color={color}>
+      {children}
+    </div>
   ))
 }))
 
@@ -83,10 +85,10 @@ describe('ViewOrgTransaction', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    
+
     // Mock useRef
     vi.spyOn(React, 'useRef').mockReturnValue(mockAlertRef)
-    
+
     // Default mock implementations
     vi.mocked(useAdminAdjustment).mockReturnValue({
       data: null,
@@ -111,13 +113,16 @@ describe('ViewOrgTransaction', () => {
     })
   })
 
-  const renderComponent = (transactionId = '123', pathname = '/org-admin-adjustment/123') => {
+  const renderComponent = (
+    transactionId = '123',
+    pathname = '/org-admin-adjustment/123'
+  ) => {
     vi.mocked(useParams).mockReturnValue({ transactionId })
     vi.mocked(useLocation).mockReturnValue({ pathname })
-    
+
     // Update window.location.pathname for the component's useEffect
     window.location.pathname = pathname
-    
+
     return render(<ViewOrgTransaction />)
   }
 
@@ -144,7 +149,10 @@ describe('ViewOrgTransaction', () => {
 
       renderComponent('123', '/org-admin-adjustment/123')
 
-      expect(Loading).toHaveBeenCalledWith({ message: 'Loading transaction...' }, {})
+      expect(Loading).toHaveBeenCalledWith(
+        { message: 'Loading transaction...' },
+        {}
+      )
       expect(screen.getByTestId('loading')).toBeInTheDocument()
     })
 
@@ -158,7 +166,10 @@ describe('ViewOrgTransaction', () => {
 
       renderComponent('456', '/org-initiative-agreement/456')
 
-      expect(Loading).toHaveBeenCalledWith({ message: 'Loading transaction...' }, {})
+      expect(Loading).toHaveBeenCalledWith(
+        { message: 'Loading transaction...' },
+        {}
+      )
       expect(screen.getByTestId('loading')).toBeInTheDocument()
     })
   })
@@ -175,10 +186,13 @@ describe('ViewOrgTransaction', () => {
 
       renderComponent('123', '/org-admin-adjustment/123')
 
-      expect(OrgTransactionDetails).toHaveBeenCalledWith({
-        transactionType: 'ADMIN_ADJUSTMENT',
-        transactionData: mockData
-      }, {})
+      expect(OrgTransactionDetails).toHaveBeenCalledWith(
+        {
+          transactionType: 'ADMIN_ADJUSTMENT',
+          transactionData: mockData
+        },
+        {}
+      )
       expect(screen.getByTestId('org-transaction-details')).toBeInTheDocument()
     })
 
@@ -193,10 +207,13 @@ describe('ViewOrgTransaction', () => {
 
       renderComponent('456', '/org-initiative-agreement/456')
 
-      expect(OrgTransactionDetails).toHaveBeenCalledWith({
-        transactionType: 'INITIATIVE_AGREEMENT',
-        transactionData: mockData
-      }, {})
+      expect(OrgTransactionDetails).toHaveBeenCalledWith(
+        {
+          transactionType: 'INITIATIVE_AGREEMENT',
+          transactionData: mockData
+        },
+        {}
+      )
       expect(screen.getByTestId('org-transaction-details')).toBeInTheDocument()
     })
   })
@@ -204,7 +221,7 @@ describe('ViewOrgTransaction', () => {
   describe('Error Handling', () => {
     it('shows error UI elements when error occurs', () => {
       const mockError = { message: 'Network error' }
-      
+
       vi.mocked(useAdminAdjustment).mockReturnValue({
         data: null,
         isLoading: false,
@@ -220,9 +237,9 @@ describe('ViewOrgTransaction', () => {
 
     it('handles null alertRef gracefully', () => {
       vi.spyOn(React, 'useRef').mockReturnValue({ current: null })
-      
+
       const mockError = { message: 'Test error' }
-      
+
       vi.mocked(useAdminAdjustment).mockReturnValue({
         data: null,
         isLoading: false,
@@ -263,9 +280,11 @@ describe('ViewOrgTransaction', () => {
 
     it('handles undefined transactionId', () => {
       vi.mocked(useParams).mockReturnValue({ transactionId: undefined })
-      vi.mocked(useLocation).mockReturnValue({ pathname: '/org-admin-adjustment/' })
+      vi.mocked(useLocation).mockReturnValue({
+        pathname: '/org-admin-adjustment/'
+      })
       window.location.pathname = '/org-admin-adjustment/'
-      
+
       render(<ViewOrgTransaction />)
 
       expect(vi.mocked(useAdminAdjustment)).toHaveBeenCalledWith(undefined, {
@@ -303,18 +322,22 @@ describe('ViewOrgTransaction', () => {
 
       renderComponent('123', '/org-admin-adjustment/123')
 
-      expect(OrgTransactionDetails).toHaveBeenCalledWith({
-        transactionType: 'ADMIN_ADJUSTMENT',
-        transactionData: {}
-      }, {})
+      expect(OrgTransactionDetails).toHaveBeenCalledWith(
+        {
+          transactionType: 'ADMIN_ADJUSTMENT',
+          transactionData: {}
+        },
+        {}
+      )
     })
 
     it('handles path without specific transaction type indicators', () => {
       // This tests the case where transactionType remains null
-      renderComponent('789', '/some-other-path/789');
-      
+      renderComponent('789', '/some-other-path/789')
+
       // Should use initiative agreement as default and enabled should be false
-      expect(vi.mocked(useInitiativeAgreement)).toHaveBeenCalledWith('789', 
+      expect(vi.mocked(useInitiativeAgreement)).toHaveBeenCalledWith(
+        '789',
         expect.objectContaining({
           enabled: false
         })
@@ -337,9 +360,11 @@ describe('ViewOrgTransaction', () => {
 
     it('passes enabled false when transactionId is missing', () => {
       vi.mocked(useParams).mockReturnValue({ transactionId: undefined })
-      vi.mocked(useLocation).mockReturnValue({ pathname: '/org-admin-adjustment/' })
+      vi.mocked(useLocation).mockReturnValue({
+        pathname: '/org-admin-adjustment/'
+      })
       window.location.pathname = '/org-admin-adjustment/'
-      
+
       render(<ViewOrgTransaction />)
 
       expect(vi.mocked(useAdminAdjustment)).toHaveBeenCalledWith(undefined, {

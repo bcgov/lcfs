@@ -116,7 +116,8 @@ export const AddEditFinalSupplyEquipments = () => {
       autoSizeStrategy: {
         type: 'fitCellContents',
         defaultMinWidth: 50,
-        defaultMaxWidth: 600
+        defaultMaxWidth: 600,
+        scaleUpToFitGridWidth: true
       }
     }),
     [t]
@@ -164,7 +165,6 @@ export const AddEditFinalSupplyEquipments = () => {
           }
         ])
       }
-      gridRef.current.api.sizeColumnsToFit()
 
       setTimeout(() => {
         const lastRowIndex = gridRef.current.api.getLastDisplayedRowIndex()
@@ -198,7 +198,7 @@ export const AddEditFinalSupplyEquipments = () => {
   }, [compliancePeriod, errors, warnings, optionsData, isGridReady])
 
   const onFirstDataRendered = useCallback((params) => {
-    params.api?.autoSizeAllColumns?.()
+    params.api?.autoSizeAllColumns?.({ scaleUpToFitGridWidth: true })
   }, [])
 
   const onCellEditingStopped = useCallback(
@@ -237,7 +237,7 @@ export const AddEditFinalSupplyEquipments = () => {
 
       alertRef.current?.clearAlert()
       params.node.updateData(responseData)
-      params.api?.autoSizeAllColumns?.()
+      params.api?.autoSizeAllColumns?.({ scaleUpToFitGridWidth: true })
     },
     [saveRow, t]
   )

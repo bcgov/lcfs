@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach } from 'vite-plus/test'
 import { ThemeProvider, createTheme } from '@mui/material/styles'
 import { TransferGraphic } from '../TransferGraphic'
 
@@ -47,7 +47,6 @@ const TestWrapper = ({ children }) => (
 )
 
 describe('TransferGraphic Component', () => {
-
   const mockCurrentUser = {
     organization: { name: 'Current User Organization' }
   }
@@ -61,7 +60,7 @@ describe('TransferGraphic Component', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    
+
     // Default mock implementations
     mockWatch.mockImplementation((field) => {
       const defaults = {
@@ -71,7 +70,7 @@ describe('TransferGraphic Component', () => {
       }
       return defaults[field]
     })
-    
+
     useCurrentUser.mockReturnValue({ data: mockCurrentUser })
     useRegExtOrgs.mockReturnValue({ data: mockOrgData })
     useParams.mockReturnValue({ transferId: null })
@@ -85,7 +84,7 @@ describe('TransferGraphic Component', () => {
           <TransferGraphic />
         </TestWrapper>
       )
-      
+
       expect(screen.getByTestId('transfer-graphic')).toBeInTheDocument()
     })
 
@@ -95,7 +94,7 @@ describe('TransferGraphic Component', () => {
           <TransferGraphic />
         </TestWrapper>
       )
-      
+
       expect(screen.getByText('Current User Organization')).toBeInTheDocument()
       expect(screen.getByText('Target Organization')).toBeInTheDocument()
     })
@@ -254,7 +253,6 @@ describe('TransferGraphic Component', () => {
 
       expect(screen.getByText('Another Organization')).toBeInTheDocument()
     })
-
   })
 
   describe('Edge Cases and Validation Logic', () => {

@@ -1,5 +1,5 @@
 import { screen, waitFor, act } from '@testing-library/react'
-import { describe, expect, beforeEach, vi } from 'vitest'
+import { describe, expect, beforeEach, vi } from 'vite-plus/test'
 import { AllocationAgreementChangelog } from '../AllocationAgreementChangelog'
 import { test } from '@/tests/utils/fixtures'
 import { useState } from 'react'
@@ -36,15 +36,15 @@ vi.mock('react-i18next', () => ({
 // Mock BCGridViewer with function execution for coverage
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: ({
-  gridKey,
-  columnDefs,
-  queryData,
-  getRowId,
-  suppressPagination,
-  gridOptions,
-  paginationOptions,
-  onPaginationChange
-}) => {
+    gridKey,
+    columnDefs,
+    queryData,
+    getRowId,
+    suppressPagination,
+    gridOptions,
+    paginationOptions,
+    onPaginationChange
+  }) => {
     // Actually call functions to increase coverage
     let rowIds = []
     let rowStyles = []
@@ -117,19 +117,19 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 
 // Mock BCTypography
 vi.mock('@/components/BCTypography', () => ({
-  default: ({
-  children,
-  variant,
-  color,
-  ...props
-}) => { delete props.component; return <div
-      data-test="bc-typography"
-      data-variant={variant}
-      data-color={color}
-      {...props}
-    >
-      {children}
-    </div>; }
+  default: ({ children, variant, color, ...props }) => {
+    delete props.component
+    return (
+      <div
+        data-test="bc-typography"
+        data-variant={variant}
+        data-color={color}
+        {...props}
+      >
+        {children}
+      </div>
+    )
+  }
 }))
 
 // Mock Loading component

@@ -66,7 +66,7 @@ export const useApiService = (
       serverErrorBlockedRef,
       enqueueSnackbar
     }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- Handlers remain captured until auth/token/options recreate the instance.
+    // oxlint-disable-next-line react/exhaustive-deps -- Handlers remain captured until auth/token/options recreate the instance.
     [keycloak.authenticated, keycloak.token, opts]
   )
 

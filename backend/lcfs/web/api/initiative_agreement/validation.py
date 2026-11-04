@@ -11,6 +11,7 @@ from lcfs.web.api.initiative_agreement.schema import (
 )
 from lcfs.web.api.initiative_agreement.repo import InitiativeAgreementRepository
 from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
+from lcfs.web.api.initiative_agreement.workflow import is_hidden_from
 from lcfs.web.api.role.schema import user_has_roles
 
 
@@ -55,32 +56,29 @@ class InitiativeAgreementValidation:
         initiative_agreement = await self.repo.get_initiative_agreement_by_id(
             initiative_agreement_id
         )
-        if not initiative_agreement:
+        # To an IDIR user, a proponent's unsubmitted draft (#5186) reads as
+        # no agreement at all.
+        if not initiative_agreement or is_hidden_from(
+            initiative_agreement, self.request.user
+        ):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Initiative agreement not found.",
             )
 
-        # to_organization is nullable on this table, and dereferencing it
-        # unguarded turned a data gap into a 500 on every route that validates
-        # an agreement, including the document endpoints.
-        if initiative_agreement.to_organization is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Initiative agreement not found.",
-            )
+        if user_has_roles(self.request.user, [RoleEnum.GOVERNMENT]):
+            return
 
-        organization_id = initiative_agreement.to_organization.organization_id
+        # Anyone else must belong to the agreement's organization. An
+        # agreement saved before its organization was known (#5186) belongs
+        # to no one outside government.
+        organization_id = initiative_agreement.to_organization_id
         user_organization_id = (
             self.request.user.organization.organization_id
             if self.request.user.organization
             else None
         )
-
-        if (
-            not user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
-            and organization_id != user_organization_id
-        ):
+        if organization_id is None or organization_id != user_organization_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="User does not have access to this initiative agreement.",

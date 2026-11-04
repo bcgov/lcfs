@@ -20,20 +20,20 @@ export const ROLE_NOTIF_TYPES = {
     'IDIR_ANALYST__COMPLIANCE_REPORT__MANAGER_RECOMMENDATION',
     'IDIR_ANALYST__COMPLIANCE_REPORT__DIRECTOR_DECISION',
     'IDIR_ANALYST__FUEL_CODE__DIRECTOR_RETURNED',
-    'IDIR_ANALYST__FUEL_CODE__DIRECTOR_APPROVAL',
+    'IDIR_ANALYST__FUEL_CODE__DIRECTOR_APPROVAL'
   ]),
   [roles.compliance_manager.toLowerCase()]: new Set([
     'IDIR_COMPLIANCE_MANAGER__GOVERNMENT_NOTIFICATION',
     'IDIR_COMPLIANCE_MANAGER__COMPLIANCE_REPORT__SUBMITTED_FOR_REVIEW',
     'IDIR_COMPLIANCE_MANAGER__COMPLIANCE_REPORT__ANALYST_RECOMMENDATION',
-    'IDIR_COMPLIANCE_MANAGER__COMPLIANCE_REPORT__DIRECTOR_ASSESSMENT',
+    'IDIR_COMPLIANCE_MANAGER__COMPLIANCE_REPORT__DIRECTOR_ASSESSMENT'
   ]),
   [roles.director.toLowerCase()]: new Set([
     'IDIR_DIRECTOR__GOVERNMENT_NOTIFICATION',
     'IDIR_DIRECTOR__TRANSFER__ANALYST_RECOMMENDATION',
     'IDIR_DIRECTOR__INITIATIVE_AGREEMENT__ANALYST_RECOMMENDATION',
     'IDIR_DIRECTOR__COMPLIANCE_REPORT__MANAGER_RECOMMENDATION',
-    'IDIR_DIRECTOR__CI_APPLICATION__ANALYST_RECOMMENDATION',
+    'IDIR_DIRECTOR__CI_APPLICATION__ANALYST_RECOMMENDATION'
   ]),
   [roles.signing_authority.toLowerCase()]: new Set([
     'BCEID__GOVERNMENT_NOTIFICATION',
@@ -41,26 +41,26 @@ export const ROLE_NOTIF_TYPES = {
     'BCEID__TRANSFER__PARTNER_ACTIONS',
     'BCEID__TRANSFER__DIRECTOR_DECISION',
     'BCEID__INITIATIVE_AGREEMENT__DIRECTOR_APPROVAL',
-    'BCEID__COMPLIANCE_REPORT__DIRECTOR_ASSESSMENT',
+    'BCEID__COMPLIANCE_REPORT__DIRECTOR_ASSESSMENT'
   ]),
   [roles.transfers.toLowerCase()]: new Set([
     'BCEID__TRANSFER__PARTNER_ACTIONS',
     'BCEID__TRANSFER__DIRECTOR_DECISION',
-    'BCEID__CREDIT_MARKET__CREDITS_LISTED_FOR_SALE',
+    'BCEID__CREDIT_MARKET__CREDITS_LISTED_FOR_SALE'
   ]),
   [roles.compliance_reporting.toLowerCase()]: new Set([
-    'BCEID__COMPLIANCE_REPORT__DIRECTOR_ASSESSMENT',
+    'BCEID__COMPLIANCE_REPORT__DIRECTOR_ASSESSMENT'
   ]),
   [roles.ci_applicant.toLowerCase()]: new Set([
     'BCEID__CI_APPLICATION__GOVERNMENT_ACTION',
-    'BCEID__CI_APPLICATION__FUEL_CODE_APPROVED',
+    'BCEID__CI_APPLICATION__FUEL_CODE_APPROVED'
   ]),
   [roles.ia_proponent.toLowerCase()]: new Set([
-    'BCEID__INITIATIVE_AGREEMENT__DIRECTOR_APPROVAL',
+    'BCEID__INITIATIVE_AGREEMENT__DIRECTOR_APPROVAL'
   ]),
   [roles.ia_signer.toLowerCase()]: new Set([
-    'BCEID__INITIATIVE_AGREEMENT__DIRECTOR_APPROVAL',
-  ]),
+    'BCEID__INITIATIVE_AGREEMENT__DIRECTOR_APPROVAL'
+  ])
 }
 
 /**
@@ -70,38 +70,154 @@ export const ROLE_NOTIF_TYPES = {
  * Shape: [categoryKey, labelKey, categoryOrder]
  */
 export const NOTIF_TYPE_CONFIG = {
-  IDIR_ANALYST__GOVERNMENT_NOTIFICATION:                          ['idirAnalyst.categories.governmentNotifications', 'subscription',         0],
-  IDIR_ANALYST__TRANSFER__SUBMITTED_FOR_REVIEW:                   ['idirAnalyst.categories.transfers',               'submittedForReview',    1],
-  IDIR_ANALYST__TRANSFER__RESCINDED_ACTION:                       ['idirAnalyst.categories.transfers',               'rescindedAction',       1],
-  IDIR_ANALYST__TRANSFER__DIRECTOR_RECORDED:                      ['idirAnalyst.categories.transfers',               'directorRecorded',      1],
-  IDIR_ANALYST__INITIATIVE_AGREEMENT__RETURNED_TO_ANALYST:        ['idirAnalyst.categories.initiativeAgreements',    'returnedToAnalyst',     2],
-  IDIR_ANALYST__CI_APPLICATION__DIRECTOR_APPROVAL:                ['idirAnalyst.categories.ciApplications',          'directorApproval',      3],
-  IDIR_ANALYST__CI_APPLICATION__DIRECTOR_RETURNED:                ['idirAnalyst.categories.ciApplications',          'directorReturned',      3],
-  IDIR_ANALYST__CI_APPLICATION__APPLICANT_ACTIVITY:               ['idirAnalyst.categories.ciApplications',          'applicantActivity',     3],
-  IDIR_ANALYST__COMPLIANCE_REPORT__SUBMITTED_FOR_REVIEW:          ['idirAnalyst.categories.complianceReports',       'submittedForReview',    4],
-  IDIR_ANALYST__COMPLIANCE_REPORT__MANAGER_RECOMMENDATION:        ['idirAnalyst.categories.complianceReports',       'managerRecommendation', 4],
-  IDIR_ANALYST__COMPLIANCE_REPORT__DIRECTOR_DECISION:             ['idirAnalyst.categories.complianceReports',       'directorDecision',      4],
-  IDIR_ANALYST__FUEL_CODE__DIRECTOR_RETURNED:                     ['idirAnalyst.categories.fuelCodes',               'directorReturned',      5],
-  IDIR_ANALYST__FUEL_CODE__DIRECTOR_APPROVAL:                     ['idirAnalyst.categories.fuelCodes',               'directorApproval',      5],
+  IDIR_ANALYST__GOVERNMENT_NOTIFICATION: [
+    'idirAnalyst.categories.governmentNotifications',
+    'subscription',
+    0
+  ],
+  IDIR_ANALYST__TRANSFER__SUBMITTED_FOR_REVIEW: [
+    'idirAnalyst.categories.transfers',
+    'submittedForReview',
+    1
+  ],
+  IDIR_ANALYST__TRANSFER__RESCINDED_ACTION: [
+    'idirAnalyst.categories.transfers',
+    'rescindedAction',
+    1
+  ],
+  IDIR_ANALYST__TRANSFER__DIRECTOR_RECORDED: [
+    'idirAnalyst.categories.transfers',
+    'directorRecorded',
+    1
+  ],
+  IDIR_ANALYST__INITIATIVE_AGREEMENT__RETURNED_TO_ANALYST: [
+    'idirAnalyst.categories.initiativeAgreements',
+    'returnedToAnalyst',
+    2
+  ],
+  IDIR_ANALYST__CI_APPLICATION__DIRECTOR_APPROVAL: [
+    'idirAnalyst.categories.ciApplications',
+    'directorApproval',
+    3
+  ],
+  IDIR_ANALYST__CI_APPLICATION__DIRECTOR_RETURNED: [
+    'idirAnalyst.categories.ciApplications',
+    'directorReturned',
+    3
+  ],
+  IDIR_ANALYST__CI_APPLICATION__APPLICANT_ACTIVITY: [
+    'idirAnalyst.categories.ciApplications',
+    'applicantActivity',
+    3
+  ],
+  IDIR_ANALYST__COMPLIANCE_REPORT__SUBMITTED_FOR_REVIEW: [
+    'idirAnalyst.categories.complianceReports',
+    'submittedForReview',
+    4
+  ],
+  IDIR_ANALYST__COMPLIANCE_REPORT__MANAGER_RECOMMENDATION: [
+    'idirAnalyst.categories.complianceReports',
+    'managerRecommendation',
+    4
+  ],
+  IDIR_ANALYST__COMPLIANCE_REPORT__DIRECTOR_DECISION: [
+    'idirAnalyst.categories.complianceReports',
+    'directorDecision',
+    4
+  ],
+  IDIR_ANALYST__FUEL_CODE__DIRECTOR_RETURNED: [
+    'idirAnalyst.categories.fuelCodes',
+    'directorReturned',
+    5
+  ],
+  IDIR_ANALYST__FUEL_CODE__DIRECTOR_APPROVAL: [
+    'idirAnalyst.categories.fuelCodes',
+    'directorApproval',
+    5
+  ],
 
-  IDIR_COMPLIANCE_MANAGER__GOVERNMENT_NOTIFICATION:               ['idirComplianceManager.categories.governmentNotifications', 'subscription',         0],
-  IDIR_COMPLIANCE_MANAGER__COMPLIANCE_REPORT__SUBMITTED_FOR_REVIEW: ['idirComplianceManager.categories.complianceReports',    'submittedForReview',    2],
-  IDIR_COMPLIANCE_MANAGER__COMPLIANCE_REPORT__ANALYST_RECOMMENDATION: ['idirComplianceManager.categories.complianceReports', 'analystRecommendation', 2],
-  IDIR_COMPLIANCE_MANAGER__COMPLIANCE_REPORT__DIRECTOR_ASSESSMENT:  ['idirComplianceManager.categories.complianceReports',   'directorAssessment',    2],
+  IDIR_COMPLIANCE_MANAGER__GOVERNMENT_NOTIFICATION: [
+    'idirComplianceManager.categories.governmentNotifications',
+    'subscription',
+    0
+  ],
+  IDIR_COMPLIANCE_MANAGER__COMPLIANCE_REPORT__SUBMITTED_FOR_REVIEW: [
+    'idirComplianceManager.categories.complianceReports',
+    'submittedForReview',
+    2
+  ],
+  IDIR_COMPLIANCE_MANAGER__COMPLIANCE_REPORT__ANALYST_RECOMMENDATION: [
+    'idirComplianceManager.categories.complianceReports',
+    'analystRecommendation',
+    2
+  ],
+  IDIR_COMPLIANCE_MANAGER__COMPLIANCE_REPORT__DIRECTOR_ASSESSMENT: [
+    'idirComplianceManager.categories.complianceReports',
+    'directorAssessment',
+    2
+  ],
 
-  IDIR_DIRECTOR__GOVERNMENT_NOTIFICATION:                         ['idirDirector.categories.governmentNotifications', 'subscription',          0],
-  IDIR_DIRECTOR__TRANSFER__ANALYST_RECOMMENDATION:                ['idirDirector.categories.transfers',               'analystRecommendation', 1],
-  IDIR_DIRECTOR__INITIATIVE_AGREEMENT__ANALYST_RECOMMENDATION:    ['idirDirector.categories.initiativeAgreements',    'analystRecommendation', 2],
-  IDIR_DIRECTOR__COMPLIANCE_REPORT__MANAGER_RECOMMENDATION:       ['idirDirector.categories.complianceReports',       'managerRecommendation', 3],
-  IDIR_DIRECTOR__CI_APPLICATION__ANALYST_RECOMMENDATION:          ['idirDirector.categories.ciApplications',          'analystRecommendation', 4],
+  IDIR_DIRECTOR__GOVERNMENT_NOTIFICATION: [
+    'idirDirector.categories.governmentNotifications',
+    'subscription',
+    0
+  ],
+  IDIR_DIRECTOR__TRANSFER__ANALYST_RECOMMENDATION: [
+    'idirDirector.categories.transfers',
+    'analystRecommendation',
+    1
+  ],
+  IDIR_DIRECTOR__INITIATIVE_AGREEMENT__ANALYST_RECOMMENDATION: [
+    'idirDirector.categories.initiativeAgreements',
+    'analystRecommendation',
+    2
+  ],
+  IDIR_DIRECTOR__COMPLIANCE_REPORT__MANAGER_RECOMMENDATION: [
+    'idirDirector.categories.complianceReports',
+    'managerRecommendation',
+    3
+  ],
+  IDIR_DIRECTOR__CI_APPLICATION__ANALYST_RECOMMENDATION: [
+    'idirDirector.categories.ciApplications',
+    'analystRecommendation',
+    4
+  ],
 
-  BCEID__GOVERNMENT_NOTIFICATION:                                 ['bceid.categories.governmentNotifications', 'subscription',      0],
-  BCEID__TRANSFER__PARTNER_ACTIONS:                               ['bceid.categories.transfers',               'partnerActions',    1],
-  BCEID__TRANSFER__DIRECTOR_DECISION:                             ['bceid.categories.transfers',               'directorDecision',  1],
-  BCEID__INITIATIVE_AGREEMENT__DIRECTOR_APPROVAL:                 ['bceid.categories.initiativeAgreements',    'directorApproval',  2],
-  BCEID__COMPLIANCE_REPORT__DIRECTOR_ASSESSMENT:                  ['bceid.categories.complianceReports',       'directorAssessment', 3],
-  BCEID__CI_APPLICATION__GOVERNMENT_ACTION:                       ['bceid.categories.ciApplications',          'governmentAction',  4],
-  BCEID__CI_APPLICATION__FUEL_CODE_APPROVED:                      ['bceid.categories.ciApplications',          'fuelCodeApproved',  4],
+  BCEID__GOVERNMENT_NOTIFICATION: [
+    'bceid.categories.governmentNotifications',
+    'subscription',
+    0
+  ],
+  BCEID__TRANSFER__PARTNER_ACTIONS: [
+    'bceid.categories.transfers',
+    'partnerActions',
+    1
+  ],
+  BCEID__TRANSFER__DIRECTOR_DECISION: [
+    'bceid.categories.transfers',
+    'directorDecision',
+    1
+  ],
+  BCEID__INITIATIVE_AGREEMENT__DIRECTOR_APPROVAL: [
+    'bceid.categories.initiativeAgreements',
+    'directorApproval',
+    2
+  ],
+  BCEID__COMPLIANCE_REPORT__DIRECTOR_ASSESSMENT: [
+    'bceid.categories.complianceReports',
+    'directorAssessment',
+    3
+  ],
+  BCEID__CI_APPLICATION__GOVERNMENT_ACTION: [
+    'bceid.categories.ciApplications',
+    'governmentAction',
+    4
+  ],
+  BCEID__CI_APPLICATION__FUEL_CODE_APPROVED: [
+    'bceid.categories.ciApplications',
+    'fuelCodeApproved',
+    4
+  ]
 }
 
 /**
@@ -137,5 +253,5 @@ export const ROLE_ACCESS = {
   [roles.ia_manager.toLowerCase()]:
     'Make recommendations on initiative agreements and designated actions',
   [roles.ia_signer.toLowerCase()]:
-    'Sign and submit IA submissions and evidence to government (government-assigned only)',
+    'Sign and submit IA submissions and evidence to government (government-assigned only)'
 }

@@ -8,8 +8,10 @@ import BCBadgeRoot, {
   type BCBadgeSize
 } from '@/components/BCBadge/BCBadgeRoot'
 
-export interface BCBadgeProps
-  extends Omit<BadgeProps, 'color' | 'variant' | 'children'> {
+export interface BCBadgeProps extends Omit<
+  BadgeProps,
+  'color' | 'variant' | 'children'
+> {
   color?: BCBadgeColor
   variant?: BCBadgeVariant
   size?: BCBadgeSize

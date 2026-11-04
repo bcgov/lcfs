@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach } from 'vite-plus/test'
 import { SupportingDocumentSummary } from '../SupportingDocumentSummary'
 
 // Mock dependencies

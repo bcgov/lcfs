@@ -1,7 +1,7 @@
 import 'react'
 import { screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { vi, describe, expect, beforeEach } from 'vitest'
+import { vi, describe, expect, beforeEach } from 'vite-plus/test'
 import UserSettingsCard from '../UserSettingsCard'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useNavigate } from 'react-router-dom'
@@ -35,11 +35,7 @@ vi.mock('@/utils/withRole', () => ({
 
 vi.mock('@fortawesome/react-fontawesome', () => ({
   FontAwesomeIcon: ({ style, 'aria-hidden': ariaHidden }) => (
-    <span
-      aria-hidden={ariaHidden}
-      data-test="font-awesome-icon"
-      style={style}
-    >
+    <span aria-hidden={ariaHidden} data-test="font-awesome-icon" style={style}>
       mock-icon
     </span>
   )

@@ -1,11 +1,11 @@
 import { render, screen, fireEvent, within } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3'
-import 'react';
+import 'react'
 import { createInstance } from 'i18next'
 import { I18nextProvider } from 'react-i18next'
 import internalComment from '@/assets/locales/en/internalComment.json'
@@ -309,7 +309,9 @@ describe('CommentLog', () => {
     expect(row.querySelector('time').parentElement).toHaveTextContent(
       /^Guy Analyst, .+ - CR #10$/
     )
-    expect(within(row).getByTestId('comment-body')).toHaveTextContent('Hello world')
+    expect(within(row).getByTestId('comment-body')).toHaveTextContent(
+      'Hello world'
+    )
   })
 
   it('hides the Internal badge for BCeID callers', () => {
@@ -337,7 +339,9 @@ describe('CommentLog', () => {
     expect(row.querySelector('time').parentElement).toHaveTextContent(
       /^Guy Analyst, .+ - CR #10$/
     )
-    expect(within(row).getByTestId('comment-body')).toHaveTextContent('Hello world')
+    expect(within(row).getByTestId('comment-body')).toHaveTextContent(
+      'Hello world'
+    )
   })
 
   it('renders an edited indicator when update_date differs from create_date', () => {

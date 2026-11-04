@@ -43,7 +43,10 @@ export const useGetAllocationOrganizations = (
 
 export const useGetChargingSiteById = (
   siteId: number | string | undefined | null,
-  { historyMode = false, ...options }: { historyMode?: boolean } & QueryOptions<unknown> = {}
+  {
+    historyMode = false,
+    ...options
+  }: { historyMode?: boolean } & QueryOptions<unknown> = {}
 ) => {
   const client = useApiService()
   const {
@@ -116,7 +119,10 @@ export const useGetAllChargingSites = (
 
 export const useSaveChargingSite = (
   organizationId: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, Record<string, unknown> & { chargingSiteId?: number | string }> = {}
+  options: ExtMutationOptions<
+    unknown,
+    Record<string, unknown> & { chargingSiteId?: number | string }
+  > = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -129,7 +135,9 @@ export const useSaveChargingSite = (
   } = omitProperties(options, ['invalidateRelatedQueries'])
 
   return useMutation({
-    mutationFn: async (data: Record<string, unknown> & { chargingSiteId?: number | string }) => {
+    mutationFn: async (
+      data: Record<string, unknown> & { chargingSiteId?: number | string }
+    ) => {
       if (!organizationId) {
         throw new Error('Organization ID is required')
       }
@@ -315,13 +323,16 @@ export const useUpdateChargingSiteStatus = (
 }
 
 export const useBulkUpdateEquipmentStatus = (
-  options: ExtMutationOptions<unknown, {
-    siteId?: number | string
-    equipmentIds?: Array<number | string>
-    equipment_ids?: Array<number | string>
-    newStatus?: string
-    new_status?: string
-  }> = {}
+  options: ExtMutationOptions<
+    unknown,
+    {
+      siteId?: number | string
+      equipmentIds?: Array<number | string>
+      equipment_ids?: Array<number | string>
+      newStatus?: string
+      new_status?: string
+    }
+  > = {}
 ) => {
   const apiService = useApiService()
   const queryClient = useQueryClient()
@@ -470,14 +481,23 @@ export const useChargingSiteEquipmentPaginated = (
 // Charging site import/export hooks
 export const useImportChargingSites = (
   _organizationId: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, { file: File; isOverwrite: boolean }> = {}
+  options: ExtMutationOptions<
+    unknown,
+    { file: File; isOverwrite: boolean }
+  > = {}
 ) => {
   const client = useApiService()
 
   const { onSuccess, onError, ...restOptions } = options
 
   return useMutation({
-    mutationFn: async ({ file, isOverwrite }: { file: File; isOverwrite: boolean }) => {
+    mutationFn: async ({
+      file,
+      isOverwrite
+    }: {
+      file: File
+      isOverwrite: boolean
+    }) => {
       if (!file) {
         throw new Error('File is required for import')
       }
@@ -534,9 +554,11 @@ export const useGetChargingSitesImportJobStatus = (
     enabled: enabled && !!jobId,
     refetchInterval: (data) => {
       const responseData = (
-        data as {
-          state?: { data?: { status?: string; progress?: number } }
-        } | undefined
+        data as
+          | {
+              state?: { data?: { status?: string; progress?: number } }
+            }
+          | undefined
       )?.state?.data
       // Stop polling when job is complete or failed
       if (

@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll } from 'vitest'
+import { afterAll, afterEach, beforeAll } from 'vite-plus/test'
 import { http } from 'msw'
 import { setupServer } from 'msw/node'
 import { handlers } from './handlers.jsx'
@@ -21,7 +21,8 @@ const installUnhandledRejectionGuard = () => {
     if (
       reason?.message?.includes('Expected signal') &&
       reason?.message?.includes('AbortSignal')
-    ) return
+    )
+      return
     originalUnhandledRejection.forEach((listener) => listener(reason))
   })
   process[unhandledRejectionGuard] = true

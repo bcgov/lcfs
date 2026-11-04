@@ -1,8 +1,8 @@
-import 'react';
+import 'react'
 import { screen } from '@testing-library/react'
 import { LabelBox } from '../LabelBox'
 import { test } from '@/tests/utils/fixtures'
-import { describe, expect } from 'vitest'
+import { describe, expect } from 'vite-plus/test'
 
 describe('LabelBox Component', () => {
   test('renders with children only (minimal props)', ({ render, theme }) => {

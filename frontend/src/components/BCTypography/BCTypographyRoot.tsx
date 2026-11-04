@@ -34,8 +34,11 @@ interface BCTypographyOwnerState {
 const BCTypographyRoot = styled(Typography, {
   shouldForwardProp: (prop) => prop !== 'ownerState'
 })<{ ownerState: BCTypographyOwnerState }>(({ theme, ownerState }) => {
-  const { palette, typography, functions = {} } =
-    theme as unknown as BCTypographyTheme
+  const {
+    palette,
+    typography,
+    functions = {}
+  } = theme as unknown as BCTypographyTheme
   const {
     color,
     textTransform,

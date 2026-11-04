@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import FormControl from '@mui/material/FormControl'
 import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
@@ -48,9 +48,7 @@ const ALERT_TYPES = {
   INFO: 'info'
 }
 
-export const LinkKeyManagement = ({
-  orgID
-}) => {
+export const LinkKeyManagement = ({ orgID }) => {
   const { t } = useTranslation(['common', 'org'])
 
   // State management

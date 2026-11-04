@@ -1,3 +1,4 @@
+from datetime import datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
@@ -8,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lcfs.db.models.user.Role import Role, RoleEnum
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.user.UserRole import UserRole
+from lcfs.utils.dates import PACIFIC_TZ
 from lcfs.web.api.email.services import CHESEmailService
 from lcfs.web.api.notification.services import NotificationService
 from lcfs.web.api.user.repo import UserRepository
@@ -146,7 +148,7 @@ async def test_role_removal_emails_after_commit_even_when_subscriptions_deleted(
         assert context["loses_assigned_work_access"] is True
         assert "Sensitive organization" not in str(context)
         assert "Account Administrator (admin_user)" == context["changed_by"]
-        assert context["changed_at"].split()[-1] in {"PST", "PDT"}
+        assert context["changed_at"].split()[-1] == datetime.now(PACIFIC_TZ).tzname()
         return True
 
     service.email_service.send_account_change_email.side_effect = send
@@ -399,14 +401,13 @@ async def test_update_endpoints_expose_email_failure_status(account_service, pat
 
     @app.middleware("http")
     async def authenticate(request: Request, call_next):
-        request.scope["user"] = SimpleNamespace(
+        request.scope["user"] = UserProfile(
             user_profile_id=42,
-            is_government=True,
-            role_names=[
+            user_roles=user_roles(
                 RoleEnum.GOVERNMENT,
                 RoleEnum.ADMINISTRATOR,
                 RoleEnum.MANAGE_USERS,
-            ],
+            ),
         )
         return await call_next(request)
 
@@ -436,7 +437,7 @@ async def test_email_update_endpoint_keeps_existing_response():
 
     @app.middleware("http")
     async def authenticate(request: Request, call_next):
-        request.scope["user"] = SimpleNamespace(user_profile_id=42)
+        request.scope["user"] = UserProfile(user_profile_id=42)
         return await call_next(request)
 
     async with AsyncClient(

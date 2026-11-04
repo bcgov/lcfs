@@ -38,8 +38,10 @@ type BCTypographyVerticalAlign =
   | 'top'
   | 'bottom'
 
-interface BCTypographyProps
-  extends Omit<TypographyProps, 'color' | 'children' | 'fontWeight'> {
+interface BCTypographyProps extends Omit<
+  TypographyProps,
+  'color' | 'children' | 'fontWeight'
+> {
   color?: BCTypographyColor
   fontWeight?: BCTypographyFontWeight
   textTransform?: BCTypographyTextTransform

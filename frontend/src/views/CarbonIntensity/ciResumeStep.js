@@ -18,10 +18,10 @@ export const CI_STEP_SIGN_SUBMIT = 3
 export const isCIStep1Complete = (ciApplication) =>
   Boolean(
     ciApplication?.facilityCountry &&
-      ciApplication?.facilityCity &&
-      ciApplication?.facilityProvinceState &&
-      Number(ciApplication?.facilityNameplateCapacity) > 0 &&
-      ciApplication?.facilityNameplateCapacityUnit
+    ciApplication?.facilityCity &&
+    ciApplication?.facilityProvinceState &&
+    Number(ciApplication?.facilityNameplateCapacity) > 0 &&
+    ciApplication?.facilityNameplateCapacityUnit
   )
 
 export const isCIStep2Complete = (ciApplication) =>

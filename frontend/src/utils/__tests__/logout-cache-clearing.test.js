@@ -1,5 +1,5 @@
 // utils/__tests__/logout-cache-clearing.test.js
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach } from 'vite-plus/test'
 
 // Mock Keycloak first
 vi.mock('keycloak-js', () => {
@@ -23,7 +23,7 @@ vi.mock('keycloak-js', () => {
 })
 
 // Import after mocks
-// eslint-disable-next-line import/first
+// oxlint-disable-next-line import/first
 import { logout } from '../keycloak'
 
 describe('Logout - Cache Clearing', () => {

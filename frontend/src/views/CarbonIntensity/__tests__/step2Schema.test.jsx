@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vite-plus/test'
 
 import {
   apiToRow,
@@ -53,10 +53,7 @@ describe('validatePathwayRow', () => {
 
   it('allows negative proposed CI values', () => {
     expect(
-      validatePathwayRow(
-        { ...validRow, proposedCi: -5.61 },
-        APPLICATION_TYPES
-      )
+      validatePathwayRow({ ...validRow, proposedCi: -5.61 }, APPLICATION_TYPES)
     ).toEqual([])
   })
 
@@ -237,7 +234,9 @@ describe('buildPathwayColDefs — design data column', () => {
       optionsData: {},
       canEdit: true
     })
-    const fuelCodeTypeIndex = cols.findIndex((c) => c.field === 'fuelCodeTypeId')
+    const fuelCodeTypeIndex = cols.findIndex(
+      (c) => c.field === 'fuelCodeTypeId'
+    )
     expect(cols[fuelCodeTypeIndex + 1].field).toBe('designData')
   })
 })
@@ -272,7 +271,9 @@ describe('buildPathwayColDefs — predictive text options', () => {
     const params = cols
       .find((c) => c.field === 'feedstockRegion')
       .cellEditorParams({ api: {} })
-    const client = { get: vi.fn().mockResolvedValue({ data: ['Saskatchewan'] }) }
+    const client = {
+      get: vi.fn().mockResolvedValue({ data: ['Saskatchewan'] })
+    }
 
     expect(params.queryKey).toBe('ci-feedstock-location-search')
     await expect(
@@ -351,7 +352,9 @@ describe('buildPathwayColDefs — Renewal CI carry-over prevention', () => {
     optionsData: { pathwayApplicationTypes: APPLICATION_TYPES, fuelCodes },
     canEdit: true
   })
-  const applicationTypeCol = colDefs.find((c) => c.field === 'applicationTypeId')
+  const applicationTypeCol = colDefs.find(
+    (c) => c.field === 'applicationTypeId'
+  )
   const fuelCodeCol = colDefs.find((c) => c.field === 'fuelCodeId')
 
   it('blanks proposedCi when the applicant selects Renewal', () => {

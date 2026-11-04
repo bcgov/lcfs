@@ -25,7 +25,10 @@ export interface ActionsRendererProps {
 export const ActionsRenderer = (props: ActionsRendererProps) => {
   const isCurrentRowEditing = props.api
     .getEditingCells()
-    .some((cell: { rowIndex: number | null }) => cell.rowIndex === props.node.rowIndex)
+    .some(
+      (cell: { rowIndex: number | null }) =>
+        cell.rowIndex === props.node.rowIndex
+    )
 
   return (
     <Stack direction="row" spacing={0.1} m={0} mt={0.2}>
@@ -56,9 +59,10 @@ export const ActionsRenderer = (props: ActionsRendererProps) => {
             data-testid="edit-button"
             color="primary"
             onClick={() => {
-              const column = props.api.getDisplayedCenterColumns()[2] as unknown as {
-                colId: string
-              }
+              const column =
+                props.api.getDisplayedCenterColumns()[2] as unknown as {
+                  colId: string
+                }
               return props.api.startEditingCell({
                 rowIndex: props.node.rowIndex as number,
                 colKey: column.colId

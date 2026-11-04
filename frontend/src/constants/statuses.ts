@@ -106,6 +106,23 @@ export const CI_APPLICATION_STATUSES = {
 export type CIApplicationStatus =
   (typeof CI_APPLICATION_STATUSES)[keyof typeof CI_APPLICATION_STATUSES]
 
+// Initiative agreement lifecycle (initiative_agreement_lifecycle_status).
+export const INITIATIVE_AGREEMENT_LIFECYCLE_STATUSES = {
+  DRAFT: 'Draft',
+  UNDERWAY: 'Underway',
+  COMPLETED: 'Completed',
+  TERMINATED: 'Terminated'
+} as const
+
+// Lifecycle statuses that still take new designated actions. An agreement
+// government enters starts Underway (#5186), and that is when an analyst
+// sets out its schedule; a completed or terminated one takes no new
+// actions. The API enforces the same rule.
+export const INITIATIVE_AGREEMENT_OPEN_TO_NEW_ACTIONS: string[] = [
+  INITIATIVE_AGREEMENT_LIFECYCLE_STATUSES.DRAFT,
+  INITIATIVE_AGREEMENT_LIFECYCLE_STATUSES.UNDERWAY
+]
+
 export const TRANSACTION_TYPES = {
   TRANSFER: 'Transfer',
   INITIATIVE_AGREEMENT: 'InitiativeAgreement',
