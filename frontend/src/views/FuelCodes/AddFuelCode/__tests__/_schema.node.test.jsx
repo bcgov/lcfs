@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vite-plus/test'
 import {
   fuelCodeColDefs,
   normalizeTransportModeDistances,
@@ -18,29 +18,38 @@ vi.mock('@/constants/routes', () => ({
   apiRoutes: { fuelCodeSearch: '/api/fuel-codes/search?' }
 }))
 
-vi.mock('@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor', () => ({
+vi.mock(
+  '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor',
+  () => ({
     AsyncSuggestionEditor: () => null
-}))
+  })
+)
 
-vi.mock('@/components/BCDataGrid/components/Editors/AutocompleteCellEditor', () => ({
+vi.mock(
+  '@/components/BCDataGrid/components/Editors/AutocompleteCellEditor',
+  () => ({
     AutocompleteCellEditor: () => null
-}))
+  })
+)
 
 vi.mock('@/components/BCDataGrid/components/Editors/DateEditor', () => ({
-    DateEditor: () => null
+  DateEditor: () => null
 }))
 
 vi.mock('@/components/BCDataGrid/components/Editors/NumberEditor', () => ({
-    NumberEditor: () => null
+  NumberEditor: () => null
 }))
 
 vi.mock('@/components/BCDataGrid/components/Renderers/RequiredHeader', () => ({
-    RequiredHeader: () => null
+  RequiredHeader: () => null
 }))
 
-vi.mock('@/components/BCDataGrid/components/Editors/TransportModeDistanceCellEditor', () => ({
+vi.mock(
+  '@/components/BCDataGrid/components/Editors/TransportModeDistanceCellEditor',
+  () => ({
     TransportModeDistanceCellEditor: () => null
-}))
+  })
+)
 
 vi.mock('@/utils/grid/eventHandlers', () => ({
   suppressKeyboardEvent: vi.fn()

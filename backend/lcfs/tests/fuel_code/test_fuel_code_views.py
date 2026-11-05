@@ -593,7 +593,7 @@ async def test_get_fuel_code_invalid_id(
     url = "/api/fuel-codes/invalid_id"
     response = await client.get(url)
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 # FIXED: export_fuel_codes test
@@ -723,7 +723,7 @@ async def test_save_fuel_code_invalid_data(
 
     response = await client.post(url, json=invalid_data)
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 @pytest.mark.anyio
@@ -1048,7 +1048,7 @@ async def test_update_fuel_code_status_invalid_id(
 
     response = await client.put(url, json=data)
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 @pytest.mark.anyio
@@ -1064,7 +1064,7 @@ async def test_update_fuel_code_status_invalid_data(
 
     response = await client.put(url, json=data)
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 @pytest.mark.anyio
@@ -1079,7 +1079,7 @@ async def test_delete_fuel_code_invalid_id(
 
     response = await client.delete(url)
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 # Additional schema validation tests
@@ -1203,7 +1203,7 @@ async def test_get_fuel_code_bulletins_rejects_invalid_type(
         json={"page": 1, "size": 25, "sortOrders": [], "filters": []},
     )
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 @pytest.mark.anyio
@@ -1251,4 +1251,4 @@ async def test_export_fuel_code_bulletins_rejects_invalid_type(
         json={"page": 1, "size": 25, "sortOrders": [], "filters": []},
     )
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT

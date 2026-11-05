@@ -35,27 +35,30 @@ export const KeycloakProvider = ({ children }) => {
     }
   }, [])
 
-  const refreshToken = useCallback(async (force = false) => {
-    if (!keycloak.authenticated) return
+  const refreshToken = useCallback(
+    async (force = false) => {
+      if (!keycloak.authenticated) return
 
-    const now = Date.now()
-    const timeSinceLastRefresh = now - lastRefreshRef.current
-    const timeToNextRefresh = TOKEN_LIFESPAN_MS - timeSinceLastRefresh
+      const now = Date.now()
+      const timeSinceLastRefresh = now - lastRefreshRef.current
+      const timeToNextRefresh = TOKEN_LIFESPAN_MS - timeSinceLastRefresh
 
-    if (!force && timeToNextRefresh > REFRESH_THRESHOLD_MS) {
-      return
-    }
+      if (!force && timeToNextRefresh > REFRESH_THRESHOLD_MS) {
+        return
+      }
 
-    try {
-      await keycloak.updateToken(5)
-      lastRefreshRef.current = Date.now()
+      try {
+        await keycloak.updateToken(5)
+        lastRefreshRef.current = Date.now()
 
-      scheduleRefreshCheck()
-    } catch (error) {
-      console.error('Failed to refresh token', error)
-      logout()
-    }
-  }, [scheduleRefreshCheck])
+        scheduleRefreshCheck()
+      } catch (error) {
+        console.error('Failed to refresh token', error)
+        logout()
+      }
+    },
+    [scheduleRefreshCheck]
+  )
 
   refreshTokenRef.current = refreshToken
 

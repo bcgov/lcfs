@@ -40,7 +40,7 @@ import '@mui/material/Divider'
 import { Introduction } from '@/views/ComplianceReports/components/Introduction.jsx'
 import { ReportYearNavigator } from '@/views/ComplianceReports/components/ReportYearNavigator.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import colors from '@/themes/base/colors.js'
+import colors from '@/themes/base/colors'
 import ROUTES from '@/routes/routes.js'
 import KeyboardArrowDown from '@mui/icons-material/KeyboardArrowDown'
 import KeyboardArrowUp from '@mui/icons-material/KeyboardArrowUp'
@@ -297,13 +297,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
       quarter,
       isQuarterly
     }
-  }, [
-    reportData,
-    currentStatus,
-    reportCompliancePeriod,
-    isDeleted,
-    isDeleting
-  ])
+  }, [reportData, currentStatus, reportCompliancePeriod, isDeleted, isDeleting])
 
   // Derive hasDraftSupplemental state
   const [hasDraftSupplemental, setHasDraftSupplemental] = useState(false)
@@ -578,11 +572,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
       isEarlyIssuance,
       showEarlyIssuanceSummary
     }
-  }, [
-    reportData,
-    isDeleted,
-    isDeleting
-  ])
+  }, [reportData, isDeleted, isDeleting])
 
   // Memoized assessment section visibility - with deletion checks
   const assessmentSectionConfig = useMemo(() => {
@@ -624,8 +614,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
     isDeleting
   ])
 
-  const { isEarlyIssuance, showEarlyIssuanceSummary } =
-    reportConditions
+  const { isEarlyIssuance, showEarlyIssuanceSummary } = reportConditions
   const {
     shouldShowAssessmentStatement,
     shouldShowAssessmentRecommendation,

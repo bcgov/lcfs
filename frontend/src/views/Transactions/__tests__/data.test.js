@@ -1,8 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import {
-  ADMIN_ADJUSTMENT,
-  INITIATIVE_AGREEMENT
-} from '../constants'
+import { describe, it, expect } from 'vite-plus/test'
+import { ADMIN_ADJUSTMENT, INITIATIVE_AGREEMENT } from '../constants'
 
 // The legacy data.js file contained only commented-out fixture data and no
 // runtime exports.  These tests cover the sibling constants module, which

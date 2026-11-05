@@ -7,7 +7,7 @@ export const fuelTypeOtherConditionalStyle = (params) => {
       borderColor: isFuelTypeOther(params) ? 'unset' : undefined
     }
   }
-  
+
   return {
     backgroundColor: isFuelTypeOther(params) ? '#fff' : '#f2f2f2',
     borderColor: isFuelTypeOther(params) ? 'unset' : undefined

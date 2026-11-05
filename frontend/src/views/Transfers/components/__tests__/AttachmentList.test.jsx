@@ -1,8 +1,8 @@
-import 'react';
+import 'react'
 import { screen } from '@testing-library/react'
 import { AttachmentList } from '../AttachmentList'
 import { test } from '@/tests/utils/fixtures'
-import { describe, expect } from 'vitest'
+import { describe, expect } from 'vite-plus/test'
 
 describe('AttachmentList Component', () => {
   const mockAttachments = [

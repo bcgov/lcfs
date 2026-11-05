@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vite-plus/test'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import '@testing-library/user-event';
-import { ThemeProvider , createTheme } from '@mui/material/styles'
+import '@testing-library/user-event'
+import { ThemeProvider, createTheme } from '@mui/material/styles'
 import { BCPaginationActions } from '../BCPaginationActions'
 
 const theme = createTheme()
@@ -15,18 +15,21 @@ vi.mock('@mui/material/Pagination', async (importOriginal) => {
   const actual = await importOriginal()
   return {
     ...actual,
-    default: vi.fn(
-      ({
-  onChange,
-  ...props
-}) => { delete props.showFirstButton; delete props.showLastButton; delete props.component; delete props.color; return <div
+    default: vi.fn(({ onChange, ...props }) => {
+      delete props.showFirstButton
+      delete props.showLastButton
+      delete props.component
+      delete props.color
+      return (
+        <div
           data-test="pagination"
           onClick={() => onChange && onChange(null, 2)}
           {...props}
         >
           Mock Pagination
-        </div>; }
-    )
+        </div>
+      )
+    })
   }
 })
 
@@ -52,15 +55,15 @@ vi.mock('@mui/material/Tooltip', async (importOriginal) => {
 
 // Mock Material-UI icons
 vi.mock('@mui/icons-material/Replay', () => ({
-    default: () => <span>Replay</span>
+  default: () => <span>Replay</span>
 }))
 
 vi.mock('@mui/icons-material/ContentCopy', () => ({
-    default: () => <span>ContentCopy</span>
+  default: () => <span>ContentCopy</span>
 }))
 
 vi.mock('@mui/icons-material/FileDownloadOutlined', () => ({
-    default: () => <span>FileDownloadOutlined</span>
+  default: () => <span>FileDownloadOutlined</span>
 }))
 
 // Mock BCBox component

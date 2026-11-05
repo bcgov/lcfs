@@ -15,7 +15,9 @@ export const orgAvailableRoleOptions: OrgAvailableRoleOption[] = [
 ]
 
 // Display labels for an organization's available roles, in canonical order.
-export const formatOrgAvailableRoles = (roleNames?: string[] | null): string => {
+export const formatOrgAvailableRoles = (
+  roleNames?: string[] | null
+): string => {
   const names = roleNames ?? []
   return orgAvailableRoleOptions
     .filter((option) => names.includes(option.value))

@@ -77,7 +77,8 @@ export const AddEditChargingSite = (props) => {
       autoSizeStrategy: {
         type: 'fitCellContents',
         defaultMinWidth: 50,
-        defaultMaxWidth: 600
+        defaultMaxWidth: 600,
+        scaleUpToFitGridWidth: true
       }
     }),
     [t]
@@ -112,7 +113,6 @@ export const AddEditChargingSite = (props) => {
     }
 
     const gridApi = gridRef.current?.api
-    gridApi?.sizeColumnsToFit()
 
     const timeout = setTimeout(() => {
       const lastRowIndex = gridApi?.getLastDisplayedRowIndex?.()
@@ -133,7 +133,7 @@ export const AddEditChargingSite = (props) => {
   }, [errors, warnings, isGridReady])
 
   const onFirstDataRendered = useCallback((params) => {
-    params.api?.autoSizeAllColumns?.()
+    params.api?.autoSizeAllColumns?.({ scaleUpToFitGridWidth: true })
   }, [])
 
   const onCellEditingStopped = useCallback(
@@ -210,7 +210,7 @@ export const AddEditChargingSite = (props) => {
         // Update with error/warning status but keep the alert visible
         params.node.updateData({ ...responseData })
       }
-      params.api?.autoSizeAllColumns?.()
+      params.api?.autoSizeAllColumns?.({ scaleUpToFitGridWidth: true })
     },
     [isEditMode, navigate, organizationId, saveRow, siteId, t]
   )
@@ -381,10 +381,6 @@ export const AddEditChargingSite = (props) => {
         setWarnings({})
         importResultAppliedRef.current = true
 
-        setTimeout(() => {
-          gridRef.current?.api?.sizeColumnsToFit()
-        }, 0)
-
         alertRef.current?.triggerAlert({
           message: t('chargingSite:importSuccess', {
             defaultValue: 'Charging sites have been refreshed.'
@@ -401,7 +397,7 @@ export const AddEditChargingSite = (props) => {
         })
       }
     },
-    [apiService, organizationId, hasRoles, t, gridRef, setErrors, setWarnings]
+    [apiService, organizationId, hasRoles, t, setErrors, setWarnings]
   )
 
   const handleImportComplete = () => {

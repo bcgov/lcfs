@@ -1,5 +1,5 @@
 import 'react'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, it, vi, beforeEach } from 'vite-plus/test'
 import { act, render, screen } from '@testing-library/react'
 
 import { GeneratedFuelCodesSection } from '@/views/CarbonIntensity/components/GeneratedFuelCodesSection'

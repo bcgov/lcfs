@@ -29,9 +29,7 @@ from lcfs.db.models.compliance import (
     AllocationAgreement,
     ComplianceReport,
     EndUserType,
-    FSEReportingBasePrefView,
     FSEReportingBaseView,
-    VwFSEBaseView,
     FinalSupplyEquipment,
     ChargingEquipmentStatus,
     ComplianceReportChargingEquipment,
@@ -54,6 +52,10 @@ from lcfs.db.models.compliance.FinalSupplyEquipmentRegNumber import (
 from lcfs.db.models.compliance.LevelOfEquipment import LevelOfEquipment
 from lcfs.db.models.fuel.EndUseType import EndUseType
 from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.final_supply_equipment.reporting_rows import (
+    fse_reporting_rows,
+    fse_reporting_rows_sql,
+)
 from lcfs.web.api.final_supply_equipment.schema import (
     FinalSupplyEquipmentCreateSchema,
     PortsEnum,
@@ -65,7 +67,9 @@ logger = structlog.get_logger(__name__)
 
 
 class FinalSupplyEquipmentRepository:
-    def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
+    def __init__(
+        self, db: AsyncSession = Depends(get_async_db_session, scope="function")
+    ):
         self.db = db
 
     def _apply_site_registration_sort(self, stmt, site_field, registration_field, tie_breaker_field):
@@ -1198,22 +1202,19 @@ class FinalSupplyEquipmentRepository:
     def _fse_reporting_base_conditions(
         vt,
         organization_id: int,
-        compliance_report_id: int,
         mode: str,
         include_decommissioned_attached: bool = True,
     ) -> list:
         """
-        Build the shared WHERE conditions for the FSE reporting view.
+        Build the shared WHERE conditions over one report's FSE reporting rows
+        (``fse_reporting_rows``).
 
         Both the reporting list (rows shown in the report / exported to Excel)
         and the total kWh shown above the table derive from the exact same set
         of rows, so they must apply identical filters. Centralizing them here
         keeps the displayed total consistent with the rows it summarizes.
         """
-        conditions = [
-            vt.c.organization_id == organization_id,
-            vt.c.compliance_report_id == compliance_report_id,
-        ]
+        conditions = [vt.c.organization_id == organization_id]
         if include_decommissioned_attached:
             conditions.append(
                 sa.or_(
@@ -1245,11 +1246,10 @@ class FinalSupplyEquipmentRepository:
         of the rows in the table and the Excel export. Pagination/user filters
         are intentionally excluded so the total reflects the whole report.
         """
-        vt = self._get_fse_reporting_source_table(source)
+        vt = fse_reporting_rows(compliance_report_id, source)
         conditions = self._fse_reporting_base_conditions(
             vt,
             organization_id,
-            compliance_report_id,
             mode,
             include_decommissioned_attached,
         )
@@ -1257,14 +1257,6 @@ class FinalSupplyEquipmentRepository:
             select(func.coalesce(func.sum(vt.c.kwh_usage), 0)).where(*conditions)
         )
         return float(total or 0)
-
-    @staticmethod
-    def _get_fse_reporting_source_table(source: str):
-        if source == "vw_fse_base":
-            return VwFSEBaseView.__table__
-        if source in (None, "base_pref"):
-            return FSEReportingBasePrefView.__table__
-        raise ValueError("Invalid FSE reporting source")
 
     @staticmethod
     def _fse_reporting_filter_field_map(vt) -> dict:
@@ -1324,7 +1316,7 @@ class FinalSupplyEquipmentRepository:
         by the FSE reporting grid/header total.
         """
         query = sa.text(
-            """
+            f"""
             WITH fse_review_rows AS (
                 SELECT
                     charging_equipment_compliance_id,
@@ -1336,7 +1328,7 @@ class FinalSupplyEquipmentRepository:
                     capacity_utilization_percent,
                     kwh_usage,
                     registration_number
-                FROM mv_fse_reporting_base_pref
+                FROM ({fse_reporting_rows_sql()}) fse_reporting_rows
                 WHERE organization_id = :organization_id
                   AND compliance_report_id = :compliance_report_id
                   AND (
@@ -1388,7 +1380,7 @@ class FinalSupplyEquipmentRepository:
                 SELECT
                     COALESCE(
                         jsonb_object_agg(level_of_equipment_label, level_count),
-                        '{}'::jsonb
+                        '{{}}'::jsonb
                     ) AS level_counts
                 FROM fse_review_level_counts
             )
@@ -1445,9 +1437,9 @@ class FinalSupplyEquipmentRepository:
         source: str = "base_pref",
     ) -> tuple[list[dict], int]:
         """
-        Get paginated charging equipment reporting rows from reporting views.
+        Get paginated charging equipment reporting rows for a report.
         """
-        vt = self._get_fse_reporting_source_table(source)
+        vt = fse_reporting_rows(compliance_report_id, source)
 
         stmt = select(
             vt.c.charging_equipment_compliance_id,
@@ -1487,7 +1479,6 @@ class FinalSupplyEquipmentRepository:
         conditions = self._fse_reporting_base_conditions(
             vt,
             organization_id,
-            compliance_report_id,
             mode,
             include_decommissioned_attached,
         )
@@ -1549,19 +1540,8 @@ class FinalSupplyEquipmentRepository:
         Return the count of reporting rows using the same source and filters as
         the FSE reporting list shown in compliance report details.
         """
-        vt = FSEReportingBasePrefView.__table__
-
-        conditions = [
-            vt.c.organization_id == organization_id,
-            vt.c.compliance_report_id == compliance_report_id,
-            sa.or_(
-                vt.c.charging_equipment_status != "Decommissioned",
-                vt.c.charging_equipment_compliance_id.is_not(None),
-            ),
-        ]
-
-        if mode == "summary":
-            conditions.append(vt.c.is_active.is_(True))
+        vt = fse_reporting_rows(compliance_report_id)
+        conditions = self._fse_reporting_base_conditions(vt, organization_id, mode)
 
         total = await self.db.scalar(
             select(func.count()).select_from(vt).where(*conditions)
@@ -1579,8 +1559,9 @@ class FinalSupplyEquipmentRepository:
         Return export rows for a BCeID (supplier) compliance report download.
 
         The row set, kWh usage and reporting data (supply dates, compliance
-        notes) come from ``vw_fse_base`` using the exact same summary filters
-        as the FSE summary table.
+        notes) are the rows of the latest submitted version of the report
+        (``vw_fse_base`` source) with the exact same summary filters as the
+        FSE summary table.
         This guarantees the supplier's Excel kWh sum matches the total shown
         above the table.
 
@@ -1593,14 +1574,14 @@ class FinalSupplyEquipmentRepository:
         are taken from it directly.
 
         ``compliance_report_group_uuid`` is retained for signature
-        compatibility; scoping is handled by ``compliance_report_id`` via the
-        view, consistent with the government export.
+        compatibility; the rows are those of ``compliance_report_id``'s group,
+        consistent with the government export.
         """
-        vt = VwFSEBaseView.__table__
+        vt = fse_reporting_rows(compliance_report_id, "vw_fse_base")
 
         # Authoritative row set + kWh: identical to the summary table source.
         base_conditions = self._fse_reporting_base_conditions(
-            vt, organization_id, compliance_report_id, "summary"
+            vt, organization_id, "summary"
         )
 
         # Resolve each view row's equipment to its logical group so the latest
@@ -1774,13 +1755,19 @@ class FinalSupplyEquipmentRepository:
     @repo_handler
     async def create_fse_reporting_batch(self, data) -> dict:
         """
-        Create FSE compliance reporting data
+        Create FSE compliance reporting data. ``data`` lists the new record
+        ids in input order, so the grid can edit or remove a row right away.
         """
 
         records = [ComplianceReportChargingEquipment(**item) for item in data]
         self.db.add_all(records)
         await self.db.flush()
-        return {"message": "FSE compliance reporting data created successfully"}
+        return {
+            "message": "FSE compliance reporting data created successfully",
+            "data": [
+                {"id": record.charging_equipment_compliance_id} for record in records
+            ],
+        }
 
     @repo_handler
     async def bulk_update_reporting_dates(self, data: FSEReportingDefaultDates) -> int:

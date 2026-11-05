@@ -1,9 +1,13 @@
-import 'react';
+import 'react'
 import { render, screen } from '@testing-library/react'
 import { TransferDetailsCard } from '../TransferDetailsCard'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 
-import { calculateTotalValue, currencyFormatter, formatNumberWithCommas } from '@/utils/formatters'
+import {
+  calculateTotalValue,
+  currencyFormatter,
+  formatNumberWithCommas
+} from '@/utils/formatters'
 
 // Only mock absolutely necessary external dependencies
 vi.mock('@/utils/formatters', () => ({
@@ -13,25 +17,40 @@ vi.mock('@/utils/formatters', () => ({
 }))
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ 
-    t: (key) => key 
+  useTranslation: () => ({
+    t: (key) => key
   })
 }))
 
 vi.mock('@/components/BCTypography', () => ({
-  default: ({
-  children,
-  textAlign,
-  ...props
-}) => { delete props.variant; return <div data-test="typography" style={{ textAlign }} {...props}>{children}</div>; }
+  default: ({ children, textAlign, ...props }) => {
+    delete props.variant
+    return (
+      <div data-test="typography" style={{ textAlign }} {...props}>
+        {children}
+      </div>
+    )
+  }
 }))
 
 vi.mock('@/components/BCBox', () => ({
-  default: ({ children, sx, ...props }) => <div data-test="bcbox" style={sx} {...props}>{children}</div>
+  default: ({ children, sx, ...props }) => (
+    <div data-test="bcbox" style={sx} {...props}>
+      {children}
+    </div>
+  )
 }))
 
 vi.mock('@/views/Transfers/components', () => ({
-  OrganizationBadge: (props) => <div data-test="organization-badge" data-org-id={props.organizationId} data-org-name={props.organizationName}>{props.organizationName}</div>
+  OrganizationBadge: (props) => (
+    <div
+      data-test="organization-badge"
+      data-org-id={props.organizationId}
+      data-org-name={props.organizationName}
+    >
+      {props.organizationName}
+    </div>
+  )
 }))
 
 describe('TransferDetailsCard Component', () => {
@@ -41,7 +60,7 @@ describe('TransferDetailsCard Component', () => {
     toOrgId: 2,
     toOrganization: 'Organization B',
     quantity: 100,
-    pricePerUnit: 25.50,
+    pricePerUnit: 25.5,
     transferStatus: 'Submitted',
     isGovernmentUser: true
   }
@@ -56,16 +75,20 @@ describe('TransferDetailsCard Component', () => {
 
   describe('Basic Rendering', () => {
     it('renders component without crashing', () => {
-      expect(() => render(<TransferDetailsCard {...defaultProps} />)).not.toThrow()
+      expect(() =>
+        render(<TransferDetailsCard {...defaultProps} />)
+      ).not.toThrow()
     })
   })
 
   describe('Hook Integration', () => {
     it('renders component and calls utility functions', () => {
       render(<TransferDetailsCard {...defaultProps} />)
-      expect(vi.mocked(calculateTotalValue)).toHaveBeenCalledWith(100, 25.50)
+      expect(vi.mocked(calculateTotalValue)).toHaveBeenCalledWith(100, 25.5)
       expect(vi.mocked(currencyFormatter)).toHaveBeenCalledWith({ value: 2550 })
-      expect(vi.mocked(formatNumberWithCommas)).toHaveBeenCalledWith({ value: 100 })
+      expect(vi.mocked(formatNumberWithCommas)).toHaveBeenCalledWith({
+        value: 100
+      })
     })
   })
 
@@ -78,7 +101,9 @@ describe('TransferDetailsCard Component', () => {
 
     it('displays formatted values', () => {
       render(<TransferDetailsCard {...defaultProps} />)
-      expect(screen.getByText('100 transfer:complianceUnits')).toBeInTheDocument()
+      expect(
+        screen.getByText('100 transfer:complianceUnits')
+      ).toBeInTheDocument()
       expect(screen.getByText('$2,550.00')).toBeInTheDocument()
     })
   })
@@ -89,8 +114,10 @@ describe('TransferDetailsCard Component', () => {
         quantity: 50,
         pricePerUnit: 10
       }
-      
-      expect(() => render(<TransferDetailsCard {...minimalProps} />)).not.toThrow()
+
+      expect(() =>
+        render(<TransferDetailsCard {...minimalProps} />)
+      ).not.toThrow()
     })
 
     it('handles zero values', () => {
@@ -99,16 +126,18 @@ describe('TransferDetailsCard Component', () => {
         quantity: 0,
         pricePerUnit: 0
       }
-      
+
       vi.mocked(calculateTotalValue).mockReturnValue(0)
       vi.mocked(currencyFormatter).mockReturnValue('$0.00')
       vi.mocked(formatNumberWithCommas).mockReturnValue('0')
-      
+
       render(<TransferDetailsCard {...zeroProps} />)
-      
+
       expect(vi.mocked(calculateTotalValue)).toHaveBeenCalledWith(0, 0)
       expect(vi.mocked(currencyFormatter)).toHaveBeenCalledWith({ value: 0 })
-      expect(vi.mocked(formatNumberWithCommas)).toHaveBeenCalledWith({ value: 0 })
+      expect(vi.mocked(formatNumberWithCommas)).toHaveBeenCalledWith({
+        value: 0
+      })
     })
 
     it('handles large numbers', () => {
@@ -117,17 +146,20 @@ describe('TransferDetailsCard Component', () => {
         quantity: 1000000,
         pricePerUnit: 999.99
       }
-      
+
       vi.mocked(calculateTotalValue).mockReturnValue(999990000)
-      
+
       render(<TransferDetailsCard {...largeProps} />)
-      
-      expect(vi.mocked(calculateTotalValue)).toHaveBeenCalledWith(1000000, 999.99)
+
+      expect(vi.mocked(calculateTotalValue)).toHaveBeenCalledWith(
+        1000000,
+        999.99
+      )
     })
 
     it('passes correct props to OrganizationBadge components', () => {
       render(<TransferDetailsCard {...defaultProps} />)
-      
+
       const orgBadges = screen.getAllByTestId('organization-badge')
       expect(orgBadges).toHaveLength(2)
       expect(orgBadges[0]).toHaveAttribute('data-org-id', '1')

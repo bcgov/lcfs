@@ -1,9 +1,9 @@
-import 'react';
+import 'react'
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { Comments } from '../Comments'
 import { FormProvider, useForm } from 'react-hook-form'
 import { test } from '@/tests/utils/fixtures'
-import { describe, expect, vi } from 'vitest'
+import { describe, expect, vi } from 'vite-plus/test'
 
 const MockFormProvider = ({ children, errors = {} }) => {
   const methods = useForm()

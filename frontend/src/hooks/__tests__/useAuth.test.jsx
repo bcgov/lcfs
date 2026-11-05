@@ -1,5 +1,5 @@
 import { renderHook } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vite-plus/test'
 import { useAuth } from '../useAuth'
 import { KeycloakContext } from '@/components/KeycloakContext'
 

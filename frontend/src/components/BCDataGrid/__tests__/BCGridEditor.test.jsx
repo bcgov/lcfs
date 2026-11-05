@@ -1,9 +1,9 @@
-import { render, screen, fireEvent, act } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { render, screen, fireEvent, act } from '@testing-library/react'
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vite-plus/test'
 import React, { createRef } from 'react'
 import { BCGridEditor } from '../BCGridEditor'
 
-// Use global test configuration from testSetup.js (data-test attribute)
+// Use global test configuration from testSetup.ts (data-test attribute)
 
 // Minimal essential mocks
 vi.mock('@/utils/grid/eventHandlers', () => ({
@@ -104,7 +104,7 @@ vi.mock('@/components/BCDataGrid/BCGridBase', () => ({
         }, 0)
       }
     }, [onGridReady, ref])
-    
+
     return <div data-test="bc-grid-base">Grid Base</div>
   })
 }))

@@ -1,6 +1,6 @@
 import { screen } from '@testing-library/react'
 import { HeaderComponent } from '../HeaderComponent'
-import { vi, describe, expect, type Mock } from 'vitest'
+import { vi, describe, expect, type Mock } from 'vite-plus/test'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { test } from '@/tests/utils/fixtures'
 import { ROUTES } from '@/routes/routes'

@@ -86,7 +86,7 @@ class TestGeocoderViews:
             }
         )
         
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     @pytest.mark.anyio
     async def test_forward_geocode_success(self, client, mock_geocoder_service, sample_geocoding_result):
@@ -138,7 +138,7 @@ class TestGeocoderViews:
             }
         )
         
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     @pytest.mark.anyio
     async def test_batch_geocode_success(self, client, mock_geocoder_service, sample_geocoding_result):

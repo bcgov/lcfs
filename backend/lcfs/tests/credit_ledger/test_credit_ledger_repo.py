@@ -257,7 +257,7 @@ async def test_get_period_rows_includes_pending_transfer_by_date(dbsession, add_
 
 
 @pytest.mark.anyio
-async def test_get_assessed_line_22_uses_latest_assessed_version(dbsession, add_models):
+async def test_get_assessed_balance_uses_latest_assessed_version(dbsession, add_models):
     """
     The assessed balance is Line 22 of the highest assessed version for the
     year — a later supplemental supersedes the original (#4831).
@@ -332,15 +332,100 @@ async def test_get_assessed_line_22_uses_latest_assessed_version(dbsession, add_
     )
 
     repo = CreditLedgerRepository(db=dbsession)
-    assert (
-        await repo.get_assessed_line_22(organization_id=1, compliance_period=2024)
-        == 1750
-    )
+    assert await repo.get_assessed_balance(
+        organization_id=1, compliance_period=2024
+    ) == (1750, False)
     # A year with no assessed report has no assessed balance at all.
-    assert (
-        await repo.get_assessed_line_22(organization_id=1, compliance_period=2023)
-        is None
+    assert await repo.get_assessed_balance(
+        organization_id=1, compliance_period=2023
+    ) == (None, False)
+
+
+@pytest.mark.anyio
+async def test_get_assessed_balance_flags_non_assessment(dbsession, add_models):
+    """
+    A non-assessment creates no transaction, so its Line 22 is not an assessed
+    balance (#5304). A year with only a non-assessment comes back flagged, and
+    a real assessment is used ahead of a later non-assessment supplemental.
+    """
+    period_ids = dict(
+        (
+            await dbsession.execute(
+                select(
+                    CompliancePeriod.description, CompliancePeriod.compliance_period_id
+                ).where(CompliancePeriod.description.in_(["2023", "2024"]))
+            )
+        ).all()
     )
+    assessed_id = (
+        await dbsession.execute(
+            select(ComplianceReportStatus.compliance_report_status_id).where(
+                ComplianceReportStatus.status == ComplianceReportStatusEnum.Assessed
+            )
+        )
+    ).scalar_one()
+
+    await add_models(
+        [
+            # 2023: completed only as a non-assessment.
+            ComplianceReport(
+                compliance_report_id=880101,
+                compliance_period_id=period_ids["2023"],
+                organization_id=1,
+                current_status_id=assessed_id,
+                compliance_report_group_uuid=str(uuid.uuid4()),
+                version=0,
+                is_non_assessment=True,
+            ),
+        ]
+    )
+    group_2024 = str(uuid.uuid4())
+    await add_models(
+        [
+            # 2024: assessed original, then a non-assessment supplemental.
+            ComplianceReport(
+                compliance_report_id=880102,
+                compliance_period_id=period_ids["2024"],
+                organization_id=1,
+                current_status_id=assessed_id,
+                compliance_report_group_uuid=group_2024,
+                version=0,
+            ),
+            ComplianceReport(
+                compliance_report_id=880103,
+                compliance_period_id=period_ids["2024"],
+                organization_id=1,
+                current_status_id=assessed_id,
+                compliance_report_group_uuid=group_2024,
+                version=1,
+                is_non_assessment=True,
+            ),
+        ]
+    )
+    await add_models(
+        [
+            ComplianceReportSummary(
+                compliance_report_id=880101,
+                line_22_compliance_units_issued=640,
+            ),
+            ComplianceReportSummary(
+                compliance_report_id=880102,
+                line_22_compliance_units_issued=1000,
+            ),
+            ComplianceReportSummary(
+                compliance_report_id=880103,
+                line_22_compliance_units_issued=4000,
+            ),
+        ]
+    )
+
+    repo = CreditLedgerRepository(db=dbsession)
+    assert await repo.get_assessed_balance(
+        organization_id=1, compliance_period=2023
+    ) == (640, True)
+    assert await repo.get_assessed_balance(
+        organization_id=1, compliance_period=2024
+    ) == (1000, False)
 
 
 @pytest.mark.anyio

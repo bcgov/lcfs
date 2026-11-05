@@ -1,5 +1,5 @@
 import { screen, waitFor, fireEvent, act } from '@testing-library/react'
-import { expect, describe, vi, beforeEach } from 'vitest'
+import { expect, describe, vi, beforeEach } from 'vite-plus/test'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { roles } from '@/constants/roles'
 import { test } from '@/tests/utils/fixtures'
@@ -173,9 +173,8 @@ vi.mock('@/components/BCTypography', () => ({
 }))
 
 // Setup default imports
-const { useOrganizationSnapshot } = await import(
-  '@/hooks/useOrganizationSnapshot.js'
-)
+const { useOrganizationSnapshot } =
+  await import('@/hooks/useOrganizationSnapshot.js')
 const { useReportOpenings } = await import('@/hooks/useReportOpenings')
 
 describe('AssessmentCard', () => {
@@ -1140,15 +1139,15 @@ describe('AssessmentCard', () => {
         ).not.toBeInTheDocument()
       })
 
-      test('keeps the legacy lock for a pre-2019 year that has no configurable row', ({
+      test('keeps the legacy lock for a 2017 report when its opening config is unavailable', ({
         render,
         query,
         theme,
         localization,
         router
       }) => {
-        // Report openings are only configurable for 2019-2030, so an older year
-        // can never be enabled by an admin and stays locked.
+        // The response omits the 2017 row, so the legacy restriction stays in
+        // place until the per-year configuration is available.
         mockShowRoleContent = true
         vi.mocked(useReportOpenings).mockReturnValue({
           data: [{ complianceYear: 2023, createSupplementalEnabled: true }]

@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, expect, vi } from 'vitest'
+import { describe, expect, vi } from 'vite-plus/test'
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useForm, FormProvider } from 'react-hook-form'
@@ -38,13 +38,7 @@ describe('BCFormSelect', () => {
     options: defaultOptions
   }
 
-  const renderBCFormSelect = (
-    {
-  render
-},
-    props = {},
-    formDefaults = {}
-  ) => {
+  const renderBCFormSelect = ({ render }, props = {}, formDefaults = {}) => {
     const finalDefaults = {
       [props.name || defaultProps.name]: '',
       ...formDefaults
@@ -243,9 +237,7 @@ describe('BCFormSelect', () => {
   })
 
   describe('Edge Cases and Error Handling', () => {
-    test('handles undefined options gracefully', ({
-  render
-}) => {
+    test('handles undefined options gracefully', ({ render }) => {
       expect(() => {
         render(
           <FormWrapper defaultValues={{ test: '' }}>
@@ -316,9 +308,7 @@ describe('BCFormSelect', () => {
       expect(endTime - startTime).toBeLessThan(500)
     })
 
-    test('maintains performance during re-renders', ({
-  render
-}) => {
+    test('maintains performance during re-renders', ({ render }) => {
       const { rerender } = render(
         <FormWrapper defaultValues={{ testSelect: 'option1' }}>
           {({ control }) => (
@@ -355,9 +345,7 @@ describe('BCFormSelect', () => {
   })
 
   describe('PropTypes and API', () => {
-    test('renders with minimal required props', ({
-  render
-}) => {
+    test('renders with minimal required props', ({ render }) => {
       render(
         <FormWrapper defaultValues={{ minimal: '' }}>
           {({ control }) => (

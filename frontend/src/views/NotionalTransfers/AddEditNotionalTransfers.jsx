@@ -121,8 +121,6 @@ export const AddEditNotionalTransfers = () => {
         setRowData([{ id: uuid(), complianceReportId }])
       }
 
-      params.api.sizeColumnsToFit()
-
       setTimeout(() => {
         const lastRowIndex = params.api.getLastDisplayedRowIndex()
         params.api.startEditingCell({
@@ -212,7 +210,7 @@ export const AddEditNotionalTransfers = () => {
 
       // Auto-resize columns after data update
       setTimeout(() => {
-        params.api?.autoSizeAllColumns?.()
+        params.api?.autoSizeAllColumns?.({ scaleUpToFitGridWidth: true })
       }, 0)
     },
     [saveRow, t, complianceReportId, orgName]
@@ -341,7 +339,7 @@ export const AddEditNotionalTransfers = () => {
   }
 
   const onFirstDataRendered = useCallback((params) => {
-    params.api?.autoSizeAllColumns?.()
+    params.api?.autoSizeAllColumns?.({ scaleUpToFitGridWidth: true })
   }, [])
   const onCellValueChanged = useCallback(async () => {
     setTimeout(() => {
@@ -404,7 +402,8 @@ export const AddEditNotionalTransfers = () => {
             autoSizeStrategy={{
               type: 'fitCellContents',
               defaultMinWidth: 80,
-              defaultMaxWidth: 800
+              defaultMaxWidth: 800,
+              scaleUpToFitGridWidth: true
             }}
             showAddRowsButton={true}
             stopEditingWhenCellsLoseFocus

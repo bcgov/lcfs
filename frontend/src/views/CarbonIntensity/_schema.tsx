@@ -6,14 +6,22 @@ import {
   useCIApplicationStatuses,
   useGetCIApplicationAnalysts
 } from '@/hooks/useCIApplication'
-import { LastCommentRenderer, CIApplicationListStatusRenderer } from './components/CIApplicationListRenderers'
+import {
+  LastCommentRenderer,
+  CIApplicationListStatusRenderer
+} from './components/CIApplicationListRenderers'
 import { CIAssignedAnalystCell } from './components/CIAssignedAnalystCell'
 
 type CIApplicationListRow = {
   ciApplicationId?: number | string
   status?: { status?: string }
   organization?: { name?: string }
-  assignedAnalyst?: { userProfileId?: number | string; firstName?: string; lastName?: string; initials?: string }
+  assignedAnalyst?: {
+    userProfileId?: number | string
+    firstName?: string
+    lastName?: string
+    initials?: string
+  }
   lastComment?: { fullName?: string; comment?: string }
   facilityCity?: string | null
   facilityProvinceState?: string | null
@@ -61,7 +69,8 @@ const statusCol = (t: (key: string) => string) => ({
   field: 'status.status',
   headerName: t('carbonIntensity:columns.status'),
   cellRenderer: CIApplicationListStatusRenderer,
-  valueGetter: (params: { data?: CIApplicationListRow }) => params.data?.status?.status,
+  valueGetter: (params: { data?: CIApplicationListRow }) =>
+    params.data?.status?.status,
   minWidth: 140,
   sortable: false,
   floatingFilterComponent: BCSelectFloatingFilter,

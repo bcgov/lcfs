@@ -1,5 +1,5 @@
 import { waitFor } from '@testing-library/react'
-import { describe, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, expect, vi, beforeEach, afterEach } from 'vite-plus/test'
 import { useApiService } from '@/services/useApiService'
 import { roles } from '@/constants/roles'
 import { test } from '@/tests/utils/fixtures'
@@ -11,8 +11,10 @@ import {
   useGetComplianceReportSummary,
   useDeleteComplianceReport,
   useGetComplianceReportList,
-  useGetComplianceReportStatuses
+  useGetComplianceReportStatuses,
+  useComplianceReportWithCache
 } from '../useComplianceReports'
+import useComplianceReportStore from '@/stores/useComplianceReportStore'
 
 vi.mock('@/services/useApiService')
 vi.mock('../useCurrentUser')
@@ -179,6 +181,98 @@ describe('useComplianceReports', () => {
 
       expect(result.current.data).toEqual(mockData)
       expect(mockGet).toHaveBeenCalledWith('/reports/1')
+    })
+  })
+
+  describe('useComplianceReportWithCache', () => {
+    const report = { report: { complianceReportId: 1 } }
+
+    const mockCurrentUser = async (data) => {
+      const { useCurrentUser } = await import('../useCurrentUser')
+      vi.mocked(useCurrentUser).mockReturnValue({
+        hasRoles: vi.fn(() => false),
+        data,
+        isLoading: !data
+      })
+    }
+
+    beforeEach(() => {
+      // A page opened directly, or refreshed: nothing cached yet.
+      useComplianceReportStore.setState({
+        reportCache: new Map(),
+        currentReport: null
+      })
+    })
+
+    test('fetches the report for a government user, who has no organization', async ({
+      renderHook,
+      query
+    }) => {
+      await mockCurrentUser({ organization: null })
+      mockGet.mockResolvedValue({ data: report })
+
+      const { result } = renderHook(
+        () => useComplianceReportWithCache(1),
+        [query]
+      )
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+      expect(mockGet).toHaveBeenCalledWith('/reports/1')
+      expect(result.current.data).toEqual(report)
+    })
+
+    test("fetches a supplier's report through its organization", async ({
+      renderHook,
+      query
+    }) => {
+      await mockCurrentUser({ organization: { organizationId: 7 } })
+      mockGet.mockResolvedValue({ data: report })
+
+      const { result } = renderHook(
+        () => useComplianceReportWithCache(1),
+        [query]
+      )
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+      expect(mockGet).toHaveBeenCalledWith('/organization/7/reports/1')
+    })
+
+    test('waits for the current user before fetching', async ({
+      renderHook,
+      query
+    }) => {
+      await mockCurrentUser(undefined)
+
+      const { result } = renderHook(
+        () => useComplianceReportWithCache(1),
+        [query]
+      )
+
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      expect(mockGet).not.toHaveBeenCalled()
+      expect(result.current.isPending).toBe(true)
+    })
+
+    test('returns a cached report without fetching', async ({
+      renderHook,
+      query
+    }) => {
+      await mockCurrentUser({ organization: null })
+      useComplianceReportStore.setState({ reportCache: new Map([[1, report]]) })
+
+      const { result } = renderHook(
+        () => useComplianceReportWithCache(1),
+        [query]
+      )
+
+      expect(result.current.data).toEqual(report)
+      expect(result.current.isPending).toBe(false)
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      expect(mockGet).not.toHaveBeenCalled()
     })
   })
 

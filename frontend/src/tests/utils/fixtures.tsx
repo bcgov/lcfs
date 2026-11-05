@@ -5,7 +5,7 @@ import {
   render as rtlRender,
   renderHook as rtlRenderHook
 } from '@testing-library/react'
-import { test as baseTest } from 'vitest'
+import { test as baseTest } from 'vite-plus/test'
 import type {
   RenderHookOptions,
   RenderHookResult,
@@ -15,6 +15,7 @@ import type {
 import type { QueryClient, QueryClientConfig } from '@tanstack/react-query'
 import type { i18n as I18nInstance } from 'i18next'
 import type { RequestHandler } from 'msw'
+import type { HttpMethod, RequestResolver } from './server'
 import type { ReactElement, ReactNode } from 'react'
 
 export type ProviderKind =
@@ -51,15 +52,15 @@ export interface I18nProviderValue extends ProviderValue {
 }
 
 export interface TestServer {
-  readonly use: (...handlers: unknown[]) => unknown
+  readonly use: (...handlers: RequestHandler[]) => void
   readonly resetHandlers: () => void
   readonly close: () => void
   readonly httpOverwrite: (
-    method: string,
+    method: HttpMethod,
     endpoint: string,
-    callback: unknown,
+    callback: RequestResolver,
     once?: boolean
-  ) => unknown
+  ) => void
 }
 
 export type TestRender = (
@@ -272,12 +273,11 @@ export const test = baseTest
     const [{ setupServer }, { http }, { handlers }] = await Promise.all([
       import('msw/node'),
       import('msw'),
-      import('./handlers.jsx')
+      import('./handlers')
     ])
     const api = 'http://localhost:8000/api'
     if (!setupServer) throw new Error(`MSW setup unavailable for ${taskName}`)
-    const requestHandlers = handlers as RequestHandler[]
-    const server = setupServer(...requestHandlers)
+    const server = setupServer(...handlers)
 
     installUnhandledRejectionGuard()
     server.listen({ onUnhandledRequest: 'bypass' })
@@ -287,32 +287,24 @@ export const test = baseTest
     })
 
     return {
-      use: (...requestHandlers) =>
-        server.use(...(requestHandlers as RequestHandler[])),
+      use: (...requestHandlers: RequestHandler[]) =>
+        server.use(...requestHandlers),
       resetHandlers: () => server.resetHandlers(),
       close: () => server.close(),
-      httpOverwrite: (method, endpoint, callback, once) =>
-        server.use(
-          (
-            http as unknown as Record<
-              string,
-              (
-                url: string,
-                resolver: unknown,
-                options?: unknown
-              ) => RequestHandler
-            >
-          )[method](api + endpoint, callback, { once })
-        )
+      httpOverwrite: (method, endpoint, callback, once) => {
+        const options = { once }
+        const url = api + endpoint
+
+        server.use(http[method](url, callback, options))
+      }
     }
   })
   .extend(
     'query',
     async ({ task }, { onCleanup }): Promise<QueryProviderValue> => {
       if (!task) throw new Error('Query fixture requires an active test task')
-      const { QueryClient, QueryClientProvider } = await import(
-        '@tanstack/react-query'
-      )
+      const { QueryClient, QueryClientProvider } =
+        await import('@tanstack/react-query')
       const value = makeQueryProvider(QueryClient, QueryClientProvider)
       onCleanup(() => value.client.clear())
       return value

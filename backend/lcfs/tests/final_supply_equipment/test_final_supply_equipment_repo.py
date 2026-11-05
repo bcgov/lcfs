@@ -590,6 +590,19 @@ async def test_get_fse_reporting_list_paginated(repo, fake_db):
     assert "charging_equipment_compliance_id IS NOT NULL" in compiled_sql
 
 
+def assert_live_report_rows(compiled, report_id, latest_submitted=False):
+    """
+    The query reads one report's FSE rows from the tables (fse_reporting_rows),
+    not from the materialized view, scoped to ``report_id``. The vw_fse_base
+    source resolves the report to its group's latest non-Draft version.
+    """
+    assert "mv_fse_reporting_base_pref" not in compiled
+    assert "vw_fse_base" not in compiled
+    assert "FROM compliance_report_charging_equipment crce" in compiled
+    assert f"compliance_report_id = {report_id}" in compiled
+    assert ("crs.status::text != 'Draft'" in compiled) is latest_submitted
+
+
 @pytest.mark.anyio
 async def test_get_total_kwh_usage_for_report_sums_same_view_and_filters(repo, fake_db):
     """
@@ -605,12 +618,11 @@ async def test_get_total_kwh_usage_for_report_sums_same_view_and_filters(repo, f
 
     stmt = fake_db.scalar.call_args[0][0]
     compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
-    # Same source view as the list query, summing the kWh column.
-    assert "mv_fse_reporting_base_pref" in compiled
-    assert "sum(mv_fse_reporting_base_pref.kwh_usage)" in compiled
-    # Same scoping/filters as the list query, including the summary is_active
-    # filter so active-only rows are counted exactly as the table shows them.
-    assert "compliance_report_id = 10" in compiled
+    # Same rows as the list query, summing the kWh column.
+    assert_live_report_rows(compiled, 10)
+    assert "sum(fse_reporting_rows.kwh_usage)" in compiled
+    # Same filters as the list query, including the summary is_active filter
+    # so active-only rows are counted exactly as the table shows them.
     assert "Decommissioned" in compiled
     assert "charging_equipment_compliance_id IS NOT NULL" in compiled
     assert "is_active IS true" in compiled
@@ -619,7 +631,7 @@ async def test_get_total_kwh_usage_for_report_sums_same_view_and_filters(repo, f
 @pytest.mark.anyio
 async def test_review_fse_summary_uses_same_view_and_filters_as_grid(repo, fake_db):
     """
-    Analyst review FSE totals must be based on the same pref-view rows and
+    Analyst review FSE totals must be based on the same report rows and
     summary filters as the FSE grid/header total.
     """
     result = MagicMock()
@@ -648,7 +660,9 @@ async def test_review_fse_summary_uses_same_view_and_filters_as_grid(repo, fake_
 
     stmt, params = fake_db.execute.call_args.args
     sql = str(stmt)
-    assert "mv_fse_reporting_base_pref" in sql
+    assert "mv_fse_reporting_base_pref" not in sql
+    assert "FROM compliance_report_charging_equipment crce" in sql
+    assert ":compliance_report_id" in sql
     assert "fse_review_summary_counts" in sql
     assert "fse_review_level_counts" in sql
     assert "GROUP BY COALESCE(level_of_equipment, 'Unknown level')" in sql
@@ -688,17 +702,17 @@ async def test_get_total_kwh_usage_for_report_can_use_vw_fse_base(repo, fake_db)
 
     stmt = fake_db.scalar.call_args[0][0]
     compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
-    assert "vw_fse_base" in compiled
-    assert "mv_fse_reporting_base_pref" not in compiled
-    assert "sum(vw_fse_base.kwh_usage)" in compiled
-    assert "vw_fse_base.compliance_report_id = 10" in compiled
+    # The latest non-Draft version of the report's group, which a Draft or
+    # older version shows instead.
+    assert_live_report_rows(compiled, 10, latest_submitted=True)
+    assert "sum(fse_reporting_rows.kwh_usage)" in compiled
 
 
 @pytest.mark.anyio
 async def test_effective_fse_export_rows_match_total_view_and_filters(repo, fake_db):
     """
-    The supplier (BCeID) export must draw its row set + kWh from vw_fse_base,
-    matching the summary table source. Equipment metadata is enriched from the
+    The supplier (BCeID) export must draw its row set + kWh from the vw_fse_base
+    source, matching the summary table. Equipment metadata is enriched from the
     latest version via COALESCE.
     """
     data_result = MagicMock()
@@ -714,17 +728,14 @@ async def test_effective_fse_export_rows_match_total_view_and_filters(repo, fake
     stmt = fake_db.execute.call_args[0][0]
     compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
 
-    # kWh + row set come from the same view + summary filters as the summary.
-    assert "vw_fse_base" in compiled
-    assert "vw_fse_base.kwh_usage" in compiled
-    assert "vw_fse_base.compliance_report_id = 1" in compiled
-    assert "mv_fse_reporting_base_pref" not in compiled
+    # kWh + row set come from the same rows + summary filters as the summary.
+    # Like the total, the report id resolves to its group's latest submitted
+    # version, so a Draft or older version exports that version's rows.
+    assert_live_report_rows(compiled, 1, latest_submitted=True)
+    assert "fse_reporting_rows.kwh_usage" in compiled
     assert "Decommissioned" in compiled
     assert "charging_equipment_compliance_id IS NOT NULL" in compiled
     assert "is_active IS true" in compiled
-    # The old group-uuid-scoped hand-rolled selection is gone; scoping is by
-    # compliance_report_id via the view (consistent with the total).
-    assert "compliance_report_group_uuid" not in compiled
     # Equipment metadata is enriched from the latest equipment version.
     assert "latest_equipment_export" in compiled
     assert "coalesce" in compiled.lower()
@@ -880,6 +891,7 @@ async def test_create_fse_reporting_batch(repo, fake_db):
     result = await repo.create_fse_reporting_batch(data)
 
     assert result["message"] == "FSE compliance reporting data created successfully"
+    assert len(result["data"]) == 1
     fake_db.add_all.assert_called_once()
     fake_db.flush.assert_called_once()
 
@@ -1063,23 +1075,21 @@ async def test_update_reporting_active_status(repo, fake_db):
 
 
 @pytest.mark.anyio
-async def test_get_fse_reporting_list_paginated_prioritizes_group_uuid(repo, fake_db):
-    """Ensure mode='all' uses the preference view for prioritization"""
+async def test_get_fse_reporting_list_paginated_reads_the_reports_rows(repo, fake_db):
+    """mode='all' lists the report's own rows, read from the tables."""
     fake_db.scalar.return_value = 0
     data_result = MagicMock()
     data_result.fetchall.return_value = []
     fake_db.execute.return_value = data_result
 
     pagination = PaginationRequestSchema(page=1, size=10, filters=[], sort_orders=[])
-    group_uuid = "group-123"
 
-    await repo.get_fse_reporting_list_paginated(1, pagination, group_uuid, "all")
+    await repo.get_fse_reporting_list_paginated(1, pagination, 10, "all")
 
     executed_query = fake_db.execute.call_args[0][0]
     compiled_sql = str(executed_query.compile(compile_kwargs={"literal_binds": True}))
 
-    # When mode='all', the query should use FSEReportingBasePrefView which has prioritization logic
-    assert "mv_fse_reporting_base_pref" in compiled_sql
+    assert_live_report_rows(compiled_sql, 10)
 
 
 @pytest.mark.anyio
@@ -1098,8 +1108,7 @@ async def test_get_fse_reporting_list_paginated_can_use_vw_fse_base(repo, fake_d
     executed_query = fake_db.execute.call_args[0][0]
     compiled_sql = str(executed_query.compile(compile_kwargs={"literal_binds": True}))
 
-    assert "vw_fse_base" in compiled_sql
-    assert "mv_fse_reporting_base_pref" not in compiled_sql
+    assert_live_report_rows(compiled_sql, 10, latest_submitted=True)
 
 
 def test_vw_fse_base_projects_capacity_from_preferred_materialized_view():

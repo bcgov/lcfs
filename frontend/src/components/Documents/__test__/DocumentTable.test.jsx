@@ -1,6 +1,6 @@
 import { test } from '@/tests/utils/fixtures'
-import { screen, fireEvent, waitFor } from '@testing-library/react';
-import { vi, describe, expect, beforeEach } from 'vitest';
+import { screen, fireEvent, waitFor } from '@testing-library/react'
+import { vi, describe, expect, beforeEach } from 'vite-plus/test'
 import DocumentTable from '../DocumentTable'
 import { validateFile } from '@/utils/fileValidation'
 import {

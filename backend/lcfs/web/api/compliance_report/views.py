@@ -263,6 +263,7 @@ async def update_compliance_report_summary(
     return await summary_service.update_compliance_report_summary(
         report_id,
         summary_data,
+        request.user,
         include_penalty_status=bool(request.user.is_government),
     )
 

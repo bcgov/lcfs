@@ -1,6 +1,6 @@
 import { screen } from '@testing-library/react'
 import { Navbar } from '../Navbar'
-import { vi, describe, expect, type Mock } from 'vitest'
+import { vi, describe, expect, type Mock } from 'vite-plus/test'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import useTheme from '@mui/material/styles/useTheme'

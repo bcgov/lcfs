@@ -1,6 +1,6 @@
 import { test } from '@/tests/utils/fixtures'
 import { screen, waitFor } from '@testing-library/react'
-import { describe, vi, beforeEach, expect } from 'vitest'
+import { describe, vi, beforeEach, expect } from 'vite-plus/test'
 import Comments from '@/components/Comments'
 
 // Real react-quill (not the textarea stub used by CommentList.test.jsx) so the
