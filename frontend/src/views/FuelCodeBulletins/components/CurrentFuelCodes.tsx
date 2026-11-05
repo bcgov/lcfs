@@ -20,7 +20,10 @@ import {
 } from '@/hooks/useFuelCode'
 import BCAlert from '@/components/BCAlert'
 import { ROUTES, buildPath } from '@/routes/routes'
-import type { BCPaginationOptions , BCGridRef } from '@/components/BCDataGrid/types'
+import type {
+  BCPaginationOptions,
+  BCGridRef
+} from '@/components/BCDataGrid/types'
 import type { PaginationParams } from '@/hooks/types'
 
 const initialPaginationOptions: BCPaginationOptions = {

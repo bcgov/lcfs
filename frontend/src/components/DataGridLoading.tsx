@@ -9,9 +9,7 @@ const DataGridLoading = ({ loadingMessage }: DataGridLoadingProps) => {
         className="ag-overlay-loading-center-box"
         aria-label={loadingMessage || undefined}
       ></div>
-      <div className="ag-overlay-loading-center-text">
-        {loadingMessage}
-      </div>
+      <div className="ag-overlay-loading-center-text">{loadingMessage}</div>
     </div>
   )
 }

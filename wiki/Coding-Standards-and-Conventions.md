@@ -36,7 +36,6 @@ frontend/
 │   ├── App.jsx                 # Root React component, router setup
 │   ├── main.jsx                # Application entry point (renders App)
 │   └── global.scss             # Global styles (use sparingly, prefer MUI theming and component-scoped styles)
-├── .storybook/                 # Storybook configuration and stories
 ├── cypress/                    # Cypress E2E tests
 ├── .eslint.cjs                 # ESLint configuration
 ├── .prettierrc                 # Prettier configuration

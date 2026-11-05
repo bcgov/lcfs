@@ -265,7 +265,9 @@ export const useUpdateAllocationAgreement = (
   } = options
 
   return useMutation({
-    mutationFn: async (data: Record<string, unknown> & { id?: number | string }) => {
+    mutationFn: async (
+      data: Record<string, unknown> & { id?: number | string }
+    ) => {
       if (!params?.complianceReportId) {
         throw new Error('Compliance report ID is required')
       }
@@ -411,7 +413,13 @@ export const useImportAllocationAgreement = (
   } = options
 
   return useMutation({
-    mutationFn: async ({ file, isOverwrite }: { file: File; isOverwrite: boolean }) => {
+    mutationFn: async ({
+      file,
+      isOverwrite
+    }: {
+      file: File
+      isOverwrite: boolean
+    }) => {
       if (!complianceReportId) {
         throw new Error('Compliance report ID is required')
       }

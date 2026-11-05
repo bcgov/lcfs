@@ -93,7 +93,6 @@ class DashboardServices:
         counts = await self.repo.get_initiative_agreement_counts()
 
         return InitiativeAgreementCountsSchema(
-            draft=counts.get("Draft", 0),
             underway=counts.get("Underway", 0),
         )
 

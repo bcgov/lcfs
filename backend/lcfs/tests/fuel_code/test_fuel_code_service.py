@@ -570,6 +570,74 @@ async def test_get_table_options_includes_gigajoules_unit():
 
 
 @pytest.mark.anyio
+async def test_get_table_options_uses_shared_next_number_for_bclcf_prefixes():
+    repo_mock = AsyncMock()
+    service = FuelCodeServices(repo=repo_mock)
+
+    class MockPrefix:
+        def __init__(self, prefix_id, name):
+            self.fuel_code_prefix_id = prefix_id
+            self.prefix = name
+
+    repo_mock.get_fuel_types.return_value = []
+    repo_mock.get_transport_modes.return_value = []
+    repo_mock.get_fuel_code_prefixes.return_value = [
+        MockPrefix(1, "BCLCF"),
+        MockPrefix(2, "C-BCLCF"),
+    ]
+    repo_mock.get_latest_fuel_codes.return_value = []
+    repo_mock.get_fuel_code_field_options.return_value = []
+    repo_mock.get_next_available_fuel_code_by_prefix.return_value = "1000.0"
+
+    result = await service.get_table_options()
+
+    next_codes = {
+        prefix.prefix: prefix.next_fuel_code
+        for prefix in result.fuel_code_prefixes
+    }
+    assert next_codes == {"BCLCF": "1000.0", "C-BCLCF": "1000.0"}
+    assert repo_mock.get_next_available_fuel_code_by_prefix.await_count == 2
+
+
+@pytest.mark.anyio
+async def test_get_table_options_keeps_other_prefixes_when_sequence_is_exhausted():
+    repo_mock = AsyncMock()
+    service = FuelCodeServices(repo=repo_mock)
+
+    class MockPrefix:
+        def __init__(self, prefix_id, name):
+            self.fuel_code_prefix_id = prefix_id
+            self.prefix = name
+
+    repo_mock.get_fuel_types.return_value = []
+    repo_mock.get_transport_modes.return_value = []
+    repo_mock.get_fuel_code_prefixes.return_value = [
+        MockPrefix(1, "BCLCF"),
+        MockPrefix(2, "C-BCLCF"),
+        MockPrefix(3, "PROXY"),
+    ]
+    repo_mock.get_latest_fuel_codes.return_value = []
+    repo_mock.get_fuel_code_field_options.return_value = []
+    repo_mock.get_next_available_fuel_code_by_prefix.side_effect = [
+        None,
+        None,
+        "001.0",
+    ]
+
+    result = await service.get_table_options()
+
+    next_codes = {
+        prefix.prefix: prefix.next_fuel_code
+        for prefix in result.fuel_code_prefixes
+    }
+    assert next_codes == {"BCLCF": None, "C-BCLCF": None, "PROXY": "001.0"}
+    assert all(
+        call.kwargs == {"return_none_if_exhausted": True}
+        for call in repo_mock.get_next_available_fuel_code_by_prefix.await_args_list
+    )
+
+
+@pytest.mark.anyio
 async def test_convert_to_model_maps_gj_to_quantity_units_enum():
     # Arrange
     repo_mock = AsyncMock()

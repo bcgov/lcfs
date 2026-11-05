@@ -1,6 +1,6 @@
 import 'react'
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, it, vi, beforeEach } from 'vite-plus/test'
 import ComplianceReportEarlyIssuanceSummary from '../ComplianceReportEarlyIssuanceSummary'
 import { useGetComplianceReportSummary } from '@/hooks/useComplianceReports'
 import { useTranslation } from 'react-i18next'
@@ -27,11 +27,11 @@ vi.mock('@/components/Loading', () => ({
 
 // Mock MUI components
 vi.mock('@mui/material/Accordion', () => ({
-    default: ({ children }) => <div data-test="accordion">{children}</div>
+  default: ({ children }) => <div data-test="accordion">{children}</div>
 }))
 
 vi.mock('@mui/material/AccordionSummary', () => ({
-    default: ({ children, expandIcon }) => (
+  default: ({ children, expandIcon }) => (
     <div data-test="accordion-summary">
       {children}
       {expandIcon && <span data-test="expand-icon">{expandIcon}</span>}
@@ -40,13 +40,11 @@ vi.mock('@mui/material/AccordionSummary', () => ({
 }))
 
 vi.mock('@mui/material/AccordionDetails', () => ({
-    default: ({ children }) => (
-    <div data-test="accordion-details">{children}</div>
-  )
+  default: ({ children }) => <div data-test="accordion-details">{children}</div>
 }))
 
 vi.mock('@mui/icons-material/ExpandMore', () => ({
-    default: () => <div data-test="expand-more-icon">ExpandMore</div>
+  default: () => <div data-test="expand-more-icon">ExpandMore</div>
 }))
 
 describe('ComplianceReportEarlyIssuanceSummary', () => {

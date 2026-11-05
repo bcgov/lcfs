@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vite-plus/test'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
@@ -43,9 +43,9 @@ describe('ReportYearNavigator', () => {
       previous: null,
       next: null
     })
-    expect(screen.getByTestId('report-year-navigator-current')).toHaveTextContent(
-      '2025'
-    )
+    expect(
+      screen.getByTestId('report-year-navigator-current')
+    ).toHaveTextContent('2025')
   })
 
   it('disables previous and next arrows when no adjacent reports exist', () => {

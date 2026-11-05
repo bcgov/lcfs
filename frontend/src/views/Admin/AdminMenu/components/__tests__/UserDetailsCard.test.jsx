@@ -1,5 +1,5 @@
 import React from 'react'
-import { vi, describe, expect, beforeEach } from 'vitest'
+import { vi, describe, expect, beforeEach } from 'vite-plus/test'
 import { screen, fireEvent, waitFor } from '@testing-library/react'
 import { useNavigate, useParams } from 'react-router-dom'
 import * as useUserHook from '@/hooks/useUser.js'

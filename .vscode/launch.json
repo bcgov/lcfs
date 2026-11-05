@@ -64,15 +64,7 @@
       "name": "Launch UI",
       "url": "http://localhost:3000",
       "webRoot": "${workspaceFolder}/frontend",
-      "sourceMaps": true,
+      "sourceMaps": true
     },
-    {
-      "type": "msedge",
-      "request": "launch",
-      "name": "Launch storybook",
-      "url": "http://localhost:6006",
-      "webRoot": "${workspaceFolder}/frontend",
-      "sourceMaps": true,
-    }
   ]
 }

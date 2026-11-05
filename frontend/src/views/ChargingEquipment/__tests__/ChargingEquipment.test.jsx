@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vite-plus/test'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import ThemeProvider from '@mui/material/styles/ThemeProvider'
@@ -79,23 +79,19 @@ vi.mock('@/components/ClearFiltersButton', () => ({
 }))
 
 vi.mock('@/components/Role', () => ({
-  Role: ({
-  children
-}) => (
-    <div data-test="role-component">{children}</div>
-  )
+  Role: ({ children }) => <div data-test="role-component">{children}</div>
 }))
 
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: ({
-  rowData,
-  queryData,
-  onRowClicked,
-  onSelectionChanged,
-  gridRef,
-  highlightedRowId,
-  onPaginationChange
-}) => {
+    rowData,
+    queryData,
+    onRowClicked,
+    onSelectionChanged,
+    gridRef,
+    highlightedRowId,
+    onPaginationChange
+  }) => {
     const items = rowData ?? queryData?.data?.items ?? []
 
     if (gridRef) {
@@ -320,7 +316,10 @@ const TestWrapper = ({ children }) => {
 }
 
 describe('ChargingEquipment', () => {
-  let mockCurrentUser, mockChargingEquipment, mockOrganizationNames, mockDownloadChargingEquipment
+  let mockCurrentUser,
+    mockChargingEquipment,
+    mockOrganizationNames,
+    mockDownloadChargingEquipment
 
   beforeEach(async () => {
     vi.clearAllMocks()
@@ -359,12 +358,10 @@ describe('ChargingEquipment', () => {
 
     // Setup mocks
     const { useCurrentUser } = await import('@/hooks/useCurrentUser')
-    const { useChargingEquipment } = await import(
-      '@/hooks/useChargingEquipment'
-    )
-    const { useDownloadChargingEquipment } = await import(
-      '@/hooks/useChargingEquipment'
-    )
+    const { useChargingEquipment } =
+      await import('@/hooks/useChargingEquipment')
+    const { useDownloadChargingEquipment } =
+      await import('@/hooks/useChargingEquipment')
     const { useOrganizationNames } = await import('@/hooks/useOrganizations')
 
     useCurrentUser.mockReturnValue(mockCurrentUser)

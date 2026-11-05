@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vite-plus/test'
 import withRole from '../withRole.jsx'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 

@@ -111,9 +111,8 @@ export const useUpdateFolder = (
       await queryClient.cancelQueries({ queryKey: key })
       const previous = queryClient.getQueryData(key)
       if (previous) {
-        const { applyFolderMove } = await import(
-          '@/views/InitiativeAgreements/components/documentTreeDnd'
-        )
+        const { applyFolderMove } =
+          await import('@/views/InitiativeAgreements/components/documentTreeDnd')
         queryClient.setQueryData(
           key,
           applyFolderMove(
@@ -191,9 +190,8 @@ export const useMoveDocuments = (
       await queryClient.cancelQueries({ queryKey: key })
       const previous = queryClient.getQueryData(key)
       if (previous) {
-        const { applyDocumentMove } = await import(
-          '@/views/InitiativeAgreements/components/documentTreeDnd'
-        )
+        const { applyDocumentMove } =
+          await import('@/views/InitiativeAgreements/components/documentTreeDnd')
         queryClient.setQueryData(
           key,
           applyDocumentMove(previous, variables.documentIds, variables.folderId)

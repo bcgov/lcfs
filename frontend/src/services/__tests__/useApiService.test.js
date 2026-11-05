@@ -1,4 +1,4 @@
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vite-plus/test'
 import axios from 'axios'
 
 // Mock React to override useMemo

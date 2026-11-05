@@ -1,9 +1,7 @@
-import {
-  KeycloakProvider
-} from '@/components/KeycloakProvider'
+import { KeycloakProvider } from '@/components/KeycloakProvider'
 import { KeycloakContext } from '@/components/KeycloakContext'
 import { render, screen, act } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vite-plus/test'
 import { useContext } from 'react'
 
 // Mock all dependencies first

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vite-plus/test'
 import { useUserStore, type User } from '../useUserStore'
 
 const getStoreResult = () => ({
@@ -30,13 +30,13 @@ describe('useUserStore', () => {
   describe('initial state', () => {
     it('should initialize with null user', () => {
       const { result } = getStoreResult()
-      
+
       expect(result.current.user).toBeNull()
     })
 
     it('should have setUser function available', () => {
       const { result } = getStoreResult()
-      
+
       expect(typeof result.current.setUser).toBe('function')
     })
   })
@@ -76,7 +76,7 @@ describe('useUserStore', () => {
       run(() => {
         result.current.setUser(firstUser)
       })
-      
+
       expect(result.current.user).toEqual(firstUser)
 
       run(() => {
@@ -99,7 +99,7 @@ describe('useUserStore', () => {
       run(() => {
         result.current.setUser(mockUser)
       })
-      
+
       expect(result.current.user).toEqual(mockUser)
 
       // Then clear the user
@@ -154,7 +154,7 @@ describe('useUserStore', () => {
     it('should allow multiple hooks to access the same state', () => {
       const { result: result1 } = getStoreResult()
       const { result: result2 } = getStoreResult()
-      
+
       const mockUser = {
         id: 1,
         name: 'Shared User',
@@ -183,19 +183,19 @@ describe('useUserStore', () => {
 
       // First hook instance
       const { result: result1, unmount } = getStoreResult()
-      
+
       run(() => {
         result1.current.setUser(mockUser)
       })
-      
+
       expect(result1.current.user).toEqual(mockUser)
-      
+
       // Unmount the first hook
       unmount()
-      
+
       // Create a new hook instance
       const { result: result2 } = getStoreResult()
-      
+
       // State should persist
       expect(result2.current.user).toEqual(mockUser)
     })
@@ -204,7 +204,7 @@ describe('useUserStore', () => {
   describe('edge cases and error handling', () => {
     it('should handle rapid successive updates', () => {
       const { result } = getStoreResult()
-      
+
       const users = [
         { id: 1, name: 'User 1' },
         { id: 2, name: 'User 2' },
@@ -212,7 +212,7 @@ describe('useUserStore', () => {
       ]
 
       run(() => {
-        users.forEach(user => {
+        users.forEach((user) => {
           result.current.setUser(user)
         })
       })

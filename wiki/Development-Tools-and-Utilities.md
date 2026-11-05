@@ -43,44 +43,28 @@ This document provides an overview of common development tools and utility scrip
 *   **Purpose**: Node.js is the JavaScript runtime. npm (Node Package Manager) is used for managing frontend dependencies and running scripts.
 *   **Configuration**: `frontend/package.json`, `frontend/package-lock.json`.
 *   **Common Commands** (run from `frontend/` directory):
-    *   `npm install`: Install dependencies.
+    *   `npm ci`: Install the pinned dependencies from the lockfile (Node.js 24.21.0; see `.nvmrc`).
     *   `npm run dev`: Start the Vite development server.
     *   `npm run build`: Create a production build.
-    *   `npm run test`: Run Vitest unit tests.
-    *   `npm run lint`: Run ESLint.
-    *   `npm run cypress:open`: Open Cypress test runner.
+    *   `npm run check`: Run Oxfmt, Oxlint, and TypeScript type checks through tsgolint with zero warnings and errors.
+    *   `npm run test:run`: Run frontend unit tests once.
+    *   `npm run test.coverage`: Run unit tests with coverage thresholds enforced.
+    *   `npm run cypress:run`: Run Cypress tests headlessly.
 *   **Reference**: [Node.js Documentation](https://nodejs.org/), [npm Documentation](https://docs.npmjs.com/)
 
-### 2.2. Vite
-*   **Purpose**: Frontend build tool and development server. Provides fast HMR and optimized builds.
-*   **Configuration**: `frontend/vite.config.js`.
-*   **Reference**: [Vite Documentation](https://vitejs.dev/)
+### 2.2. Vite+
+*   **Purpose**: Unified frontend toolchain for development, production builds, tests, formatting, linting, and type checks.
+*   **Configuration**: `frontend/vite.config.ts`.
+*   **Usage**: `npm run check` runs Oxfmt, Oxlint, and tsgolint. `npm run dev`, `npm run build`, and the test scripts use the Vite+ `vp` command.
+*   **Reference**: [Vite+ Documentation](https://viteplus.dev/)
 
-### 2.3. ESLint
-*   **Purpose**: Pluggable JavaScript linter to find and fix problems in JavaScript code.
-*   **Configuration**: `frontend/.eslintrc.cjs`.
-*   **Usage**: Integrated into pre-commit hooks (via Husky) and can be run manually: `npm run lint`.
-*   **Reference**: [ESLint Documentation](https://eslint.org/)
-
-### 2.4. Prettier
-*   **Purpose**: Opinionated code formatter.
-*   **Configuration**: `frontend/.prettierrc`.
-*   **Usage**: Integrated into pre-commit hooks (via Husky) and can be run manually.
-*   **Reference**: [Prettier Documentation](https://prettier.io/)
-
-### 2.5. Husky
+### 2.3. Husky
 *   **Purpose**: Tool for managing Git hooks easily (e.g., for running linters/formatters on pre-commit).
 *   **Configuration**: `frontend/.husky/` directory.
 *   **Setup**: Typically installed via `npm install` if listed as a dev dependency.
 *   **Reference**: [Husky Documentation](https://typicode.github.io/husky/)
 
-### 2.6. Storybook
-*   **Purpose**: UI component development environment and documentation tool. Allows developing and testing components in isolation.
-*   **Configuration**: `frontend/.storybook/` directory.
-*   **Run**: `npm run storybook` (from `frontend/` directory).
-*   **Reference**: [Storybook Documentation](https://storybook.js.org/)
-
-### 2.7. Cypress Utilities
+### 2.4. Cypress Utilities
 *   **`cypress.env.json`**: Stores environment variables for Cypress tests (e.g., user credentials). Create from `cypress.env.example.json`. **Do not commit `cypress.env.json`**.
 *   **Chrome Recorder**: Potentially used for generating Cypress test skeletons (see `frontend/cypress/chrome-recorder` if present).
 
@@ -114,4 +98,4 @@ This document provides an overview of common development tools and utility scrip
 *   **IDE**: VS Code is popular, but other IDEs supporting Python and JavaScript development can be used.
 
 ---
-*This list provides an overview. Refer to the specific documentation for each tool for more detailed information and advanced usage.* 
+*This list provides an overview. Refer to the specific documentation for each tool for more detailed information and advanced usage.*

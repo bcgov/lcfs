@@ -3,11 +3,16 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from lcfs.web.api.report_opening.constants import configured_years
 from lcfs.web.api.report_opening.schema import (
     ReportOpeningUpdateRequest,
     ReportOpeningUpdateSchema,
 )
 from lcfs.web.api.report_opening.services import ReportOpeningService
+
+
+def test_configured_years_include_2017_through_existing_end_year():
+    assert configured_years() == list(range(2017, 2031))
 
 
 @pytest.fixture

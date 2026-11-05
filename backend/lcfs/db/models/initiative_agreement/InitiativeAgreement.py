@@ -208,6 +208,9 @@ class InitiativeAgreement(BaseModel, Auditable, EffectiveDates):
     lifecycle_status = relationship(
         "InitiativeAgreementLifecycleStatus", back_populates="initiative_agreements"
     )
+    lifecycle_history = relationship(
+        "InitiativeAgreementLifecycleHistory", back_populates="initiative_agreement"
+    )
     initiative_agreement_internal_comments = relationship(
         "InitiativeAgreementInternalComment", back_populates="initiative_agreement"
     )

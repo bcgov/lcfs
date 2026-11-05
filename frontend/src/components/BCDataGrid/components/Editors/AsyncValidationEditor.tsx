@@ -25,110 +25,99 @@ export const AsyncValidationEditor = forwardRef<
     isCancelAfterEnd: () => boolean
   },
   AsyncValidationEditorProps
->(
-  (
-    {
-      value,
-      onValueChange,
-      column,
-      debounceLimit,
-      condition
-      },
-    ref
-  ) => {
-    const [inputValue, setInputValue] = useState<string | undefined>(value)
-    const [valid, setValid] = useState(true)
-    const [validating, setValidating] = useState(false)
-    const [touched, setTouched] = useState(false)
+>(({ value, onValueChange, column, debounceLimit, condition }, ref) => {
+  const [inputValue, setInputValue] = useState<string | undefined>(value)
+  const [valid, setValid] = useState(true)
+  const [validating, setValidating] = useState(false)
+  const [touched, setTouched] = useState(false)
 
-    const debouncedInputVal = useDebounce(inputValue, debounceLimit)
-    const validationInputsRef = useRef({ inputValue, debounceLimit, condition })
+  const debouncedInputVal = useDebounce(inputValue, debounceLimit)
+  const validationInputsRef = useRef({ inputValue, debounceLimit, condition })
 
-    useEffect(() => {
-      validationInputsRef.current = { inputValue, debounceLimit, condition }
-    }, [inputValue, debounceLimit, condition])
-    // TODO: ability to show tool tip
-    // TODO: ability to show error message
-    // TODO: ability to perform both synchronous and asynhronous validations.
-    function inputHandler(e: ChangeEvent<HTMLInputElement>) {
-      setTouched(true)
-      setInputValue(e.target.value)
-      onValueChange(e.target.value)
-      setValidating(true)
-    }
+  useEffect(() => {
+    validationInputsRef.current = { inputValue, debounceLimit, condition }
+  }, [inputValue, debounceLimit, condition])
+  // TODO: ability to show tool tip
+  // TODO: ability to show error message
+  // TODO: ability to perform both synchronous and asynhronous validations.
+  function inputHandler(e: ChangeEvent<HTMLInputElement>) {
+    setTouched(true)
+    setInputValue(e.target.value)
+    onValueChange(e.target.value)
+    setValidating(true)
+  }
 
-    useEffect(() => {
-      const {
-        inputValue: currentInputValue,
-        debounceLimit: timeout,
-        condition: currentCondition
-      } = validationInputsRef.current
+  useEffect(() => {
+    const {
+      inputValue: currentInputValue,
+      debounceLimit: timeout,
+      condition: currentCondition
+    } = validationInputsRef.current
 
-      new Promise<boolean>((resolve) => {
-        if (currentInputValue === '') {
-          resolve(false)
-        } else {
-          setTimeout(() => {
-            resolve(currentCondition(currentInputValue as string))
-          }, timeout)
-        }
-      })
-        .then((valid: boolean) => {
-          setValid(valid)
-          setValidating(false)
-        })
-        .catch((err) => console.log(err))
-    }, [debouncedInputVal])
-
-    useImperativeHandle(ref, () => {
-      return {
-        getValue: () => {
-          return inputValue
-        },
-        afterGuiAttached: () => {
-          setInputValue(value)
-        },
-        isCancelAfterEnd: () => {
-          return !valid || validating
-        }
+    new Promise<boolean>((resolve) => {
+      if (currentInputValue === '') {
+        resolve(false)
+      } else {
+        setTimeout(() => {
+          resolve(currentCondition(currentInputValue as string))
+        }, timeout)
       }
     })
+      .then((valid: boolean) => {
+        setValid(valid)
+        setValidating(false)
+      })
+      .catch((err) => console.log(err))
+  }, [debouncedInputVal])
 
-    let loadingElement = null
-    let txtColor = null
-
-    if (valid) {
-      txtColor = 'black'
-      loadingElement = <span className="success">✔</span>
-    } else {
-      txtColor = '#E91E63'
-      loadingElement = <span className="fail">✘</span>
+  useImperativeHandle(ref, () => {
+    return {
+      getValue: () => {
+        return inputValue
+      },
+      afterGuiAttached: () => {
+        setInputValue(value)
+      },
+      isCancelAfterEnd: () => {
+        return !valid || validating
+      }
     }
+  })
 
-    if (validating) {
-      txtColor = 'gray'
-      loadingElement = <span className="loading"></span>
-    }
+  let loadingElement = null
+  let txtColor = null
 
-    if (!touched) {
-      txtColor = 'black'
-      loadingElement = null
-    }
-
-    return (
-      <div className="async-validation-container">
-        <input
-          type="text"
-          className="ag-input-field-input ag-text-field-input"
-          style={{ color: txtColor }}
-          onChange={inputHandler}
-          value={inputValue}
-          placeholder={'Enter ' + column!.colId}
-        />
-        {loadingElement}
-      </div>
-    )
+  if (valid) {
+    txtColor = 'black'
+    loadingElement = <span className="success">✔</span>
+  } else {
+    txtColor = '#E91E63'
+    loadingElement = <span className="fail">✘</span>
   }
-)
+
+  if (validating) {
+    txtColor = 'gray'
+    loadingElement = <span className="loading"></span>
+  }
+
+  if (!touched) {
+    txtColor = 'black'
+    loadingElement = null
+  }
+
+  return (
+    <div className="async-validation-container">
+      <input
+        type="text"
+        className="ag-input-field-input ag-text-field-input"
+        style={{ color: txtColor }}
+        onChange={inputHandler}
+        value={inputValue}
+        placeholder={'Enter ' + column!.colId}
+      />
+      {loadingElement}
+    </div>
+  )
+})
 
 AsyncValidationEditor.displayName = 'AsyncValidationEditor'

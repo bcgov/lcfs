@@ -1,5 +1,5 @@
 import { render } from '@testing-library/react'
-import { vi } from 'vitest'
+import { vi } from 'vite-plus/test'
 import userEvent from '@testing-library/user-event'
 import '@fortawesome/free-solid-svg-icons'
 import { Admin } from '../Admin'

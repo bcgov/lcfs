@@ -8,7 +8,10 @@ from lcfs.services.scheduler.scheduler import (
     shutdown_scheduler,
     scheduler,
 )
-from lcfs.services.jobs.jobs import check_overdue_supplemental_reports
+from lcfs.services.jobs.jobs import (
+    check_overdue_supplemental_reports,
+    refresh_fse_reporting_materialized_views,
+)
 from lcfs.settings import settings
 
 
@@ -298,6 +301,72 @@ async def test_scheduler_job_defaults(mock_app):
     assert scheduler._job_defaults["coalesce"] == False
     assert scheduler._job_defaults["max_instances"] == 1
     assert scheduler._job_defaults["misfire_grace_time"] == 600
+
+
+def _fse_refresh_connection(dirty_generations):
+    """
+    A connection whose scalar() answers the refresh job in order: the advisory
+    lock, the refresh objects check, then the dirty_generation reads.
+    """
+    conn = AsyncMock()
+    conn.execution_options.return_value = conn
+    conn.scalar.side_effect = [True, True, *dirty_generations]
+    app = MagicMock()
+    app.state.db_engine.connect = AsyncMock(return_value=conn)
+    return app, conn
+
+
+def _refreshed_generations(conn):
+    return [
+        call.args[1]["dirty_generation"]
+        for call in conn.execute.call_args_list
+        if len(call.args) > 1 and "dirty_generation" in call.args[1]
+    ]
+
+
+def _refresh_count(conn):
+    return sum(
+        "REFRESH MATERIALIZED VIEW CONCURRENTLY" in str(call.args[0])
+        for call in conn.execute.call_args_list
+    )
+
+
+@pytest.mark.anyio
+async def test_refresh_fse_reporting_mvs_skips_when_nothing_is_dirty():
+    app, conn = _fse_refresh_connection([None])
+
+    assert await refresh_fse_reporting_materialized_views(app) is False
+
+    assert _refresh_count(conn) == 0
+    conn.close.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_refresh_fse_reporting_mvs_leaves_writes_made_during_a_refresh():
+    # Generation 5 is refreshed; a save lands meanwhile (7). Only the captured
+    # generation is marked refreshed, so 7 stays dirty for the next run.
+    app, conn = _fse_refresh_connection([5, 7])
+
+    assert await refresh_fse_reporting_materialized_views(app) is True
+
+    assert _refresh_count(conn) == 1
+    assert _refreshed_generations(conn) == [5]
+    # The lock, the refresh objects check and one dirty_generation read.
+    assert conn.scalar.await_count == 3
+
+
+@pytest.mark.anyio
+async def test_refresh_fse_reporting_mvs_skips_when_another_run_holds_the_lock():
+    conn = AsyncMock()
+    conn.execution_options.return_value = conn
+    conn.scalar.side_effect = [False]
+    app = MagicMock()
+    app.state.db_engine.connect = AsyncMock(return_value=conn)
+
+    assert await refresh_fse_reporting_materialized_views(app) is False
+
+    assert _refresh_count(conn) == 0
+    conn.close.assert_awaited_once()
 
 
 @pytest.fixture(autouse=True)

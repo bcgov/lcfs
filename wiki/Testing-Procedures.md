@@ -10,6 +10,15 @@ When feasible, a TDD approach is encouraged. Tests should be written to define t
 
 The frontend utilizes a combination of Vitest for unit/integration testing and Cypress with Cucumber for end-to-end (E2E) testing.
 
+Before frontend tests, run `npm run check` from `frontend/`. This Vite+ command runs Oxfmt, Oxlint, and TypeScript type checks through tsgolint; CI requires zero warnings and errors.
+
+The PR, test, and production frontend setup jobs use SHA-pinned
+`voidzero-dev/setup-vp` to resolve Vite+ from `frontend/package.json`, select Node
+from `frontend/.nvmrc`, install the frozen lockfile, and cache npm package data.
+They run `npm run check` before sharing dependencies with test workers. Workers
+restore `node_modules` with an exact OS, architecture, lockfile, and Node-version
+key; a cache miss falls back to `npm ci`.
+
 ### 1.1. Unit & Integration Testing (Vitest, React Testing Library, MSW)
 
 *   **Vitest**: A fast Jest-compatible testing framework, primarily used for unit and integration tests.
@@ -20,11 +29,7 @@ The frontend utilizes a combination of Vitest for unit/integration testing and C
 
 Navigate to the `frontend/` directory and use the following `npm` scripts:
 
-*   **Run tests with UI (interactive watch mode)**:
-    ```bash
-    npm run test:ui
-    ```
-*   **Run tests once**: 
+*   **Run tests once**:
     ```bash
     npm run test:run
     ```
@@ -35,6 +40,9 @@ Navigate to the `frontend/` directory and use the following `npm` scripts:
     (Runs the whole suite once with coverage thresholds enforced; the HTML report is written to `frontend/coverage/`. See section 3.1.)
 
 #### 1.1.2. Vitest Methodology (from original wiki)
+
+For controlled performance comparisons and the Vite+ test-report compatibility
+checks, see [Frontend test optimization compatibility with Vite+](Frontend-Test-VitePlus-Compatibility.md).
 
 *   **Unit Definition**: A unit is an isolated group of smaller items that interact (e.g., a React component with its internal logic and hooks).
 *   **Black Box Approach**: Test for expected output given specific input. Mock external dependencies (hooks, API calls via MSW) to isolate the component.
@@ -73,6 +81,15 @@ Navigate to the `frontend/` directory and use the following `npm` scripts:
     ```
 2.  **Edit `cypress.env.json`**: Fill in your specific IDIR and BCEID test credentials and any other required parameters. **Do not commit `cypress.env.json` to version control.**
 
+For the full suite in Docker, create an isolated Compose project so Cypress runs against its own seeded database. From the repository root, run:
+
+```bash
+docker compose -p lcfs-cypress -f docker-compose.yml -f docker-compose.cypress.yml up -d --build
+docker compose -p lcfs-cypress -f docker-compose.yml -f docker-compose.cypress.yml exec -T frontend npx cypress run --browser electron
+```
+
+The Cypress Compose override routes browser API requests to the `backend` service, the database task to `db`, and mounts the ignored `frontend/cypress.env.json` file into the Cypress container. Populate the existing credential template with test accounts matching the seeded organizations and roles expected by the specs. Stop an already-running default Compose stack first if it occupies the same published ports. The full suite clears compliance reports, so keep it on the isolated Cypress database.
+
 #### 1.2.2. Running Cypress Tests
 
 Navigate to the `frontend/` directory:
@@ -101,13 +118,13 @@ Navigate to the `frontend/` directory:
     │   ├── e2e/
     │   │   ├── Pages/ (or similar for BDD structure)
     │   │   │   ├── features/             # Cucumber .feature files
-    │   │   │   └── step_definitions/     # Step definition .js files
-    │   │   └── cypress_tests/          # Traditional Cypress .cy.js files (if any)
+    │   │   │   └── step_definitions/     # Step definition .js/.ts files
+    │   │   └── cypress_tests/          # Traditional Cypress .cy.js/.cy.ts files (if any)
     │   ├── fixtures/                     # Test data fixtures
     │   ├── reports/                      # Generated test reports
     │   ├── screenshots/                  # Screenshots on failure
-    │   └── support/                      # Custom commands (commands.js), plugins (index.js)
-    ├── cypress.config.js                 # Main Cypress configuration
+    │   └── support/                      # Custom commands (commands.ts), setup (e2e.ts)
+    ├── cypress.config.ts                 # Main Cypress configuration
     ├── .cypress-cucumber-preprocessorrc.json # Cucumber preprocessor config
     └── ...
     ```
@@ -115,7 +132,7 @@ Navigate to the `frontend/` directory:
     *   Write feature files in `frontend/cypress/e2e/Pages/features/` (or as per project convention).
     *   Implement step definitions in `frontend/cypress/e2e/Pages/step_definitions/`.
     *   Use descriptive names for files and scenarios.
-    *   Utilize custom commands in `frontend/cypress/support/commands.js` for common actions.
+    *   Utilize custom commands in `frontend/cypress/support/commands.ts` for common actions.
     *   Prefer `data-testid` attributes or other stable selectors for interacting with DOM elements.
     *   Refer to official Cypress and Cucumber documentation for detailed guidance.
 *   **Chrome Recorder**: Consider using Chrome DevTools' Recorder to export Cypress tests as a starting point (see `cypress/chrome-recorder` if this tool is integrated).
@@ -201,4 +218,4 @@ The floors are deliberately a few points under the baseline so ordinary churn do
 Lowest-coverage areas at the baseline, in rough priority order for new tests (statement coverage): `views/OtherUses` (17%), `views/FuelExports` (35%), `views/AllocationAgreements` (43%), `views/FinalSupplyEquipments` (44%), `views/FuelSupplies` (46%), `views/ChargingEquipment` (47%), `views/NotionalTransfers` (49%), `views/ChargingSite` (55%), `components/BCDataGrid` (59%), `views/FuelCodes` (60%). Small files with 0% (`components/BCBox`, `views/ComplianceReporting`, `layouts/PublicPageLayout`, `views/CreditMarket`) are quick wins.
 
 ---
-*Refer to the official documentation for Vitest, React Testing Library, MSW, Cypress, Cucumber, and Pytest for more in-depth information. Consistent and thorough testing is crucial for maintaining the quality and reliability of the LCFS application.* 
+*Refer to the official documentation for Vitest, React Testing Library, MSW, Cypress, Cucumber, and Pytest for more in-depth information. Consistent and thorough testing is crucial for maintaining the quality and reliability of the LCFS application.*

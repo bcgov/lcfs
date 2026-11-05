@@ -2,7 +2,7 @@ import { Logout } from '@/components/Logout'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import * as keycloakUtils from '@/utils/keycloak'
 import { fireEvent, screen, waitFor } from '@testing-library/react'
-import { describe, vi } from 'vitest'
+import { describe, vi } from 'vite-plus/test'
 import { test } from '@/tests/utils/fixtures'
 
 vi.mock('@/contexts/AuthorizationContext', () => ({

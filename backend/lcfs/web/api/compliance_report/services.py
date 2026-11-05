@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from lcfs.db.base import ActionTypeEnum
 import structlog
 import uuid
-from fastapi import Depends, Request
+from fastapi import Depends, HTTPException, Request
 from typing import List, Literal, Union
 
 from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
@@ -45,6 +45,7 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportYearNavigationSchema,
     ChainedComplianceReportSchema,
 )
+from lcfs.web.api.compliance_report.workflow import ensure_report_transition
 from lcfs.web.api.final_supply_equipment.services import FinalSupplyEquipmentServices
 from lcfs.web.api.organization_snapshot.services import OrganizationSnapshotService
 from lcfs.web.api.organizations.repo import OrganizationsRepository
@@ -55,6 +56,7 @@ from lcfs.web.api.internal_comment.services import InternalCommentService
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 from lcfs.services.s3.client import DocumentService
+from lcfs.web.api.report_opening.constants import configured_years
 from lcfs.web.api.report_opening.repo import ReportOpeningRepository
 
 logger = structlog.get_logger(__name__)
@@ -230,15 +232,18 @@ class ComplianceReportServices:
         user: UserProfile,
     ) -> ComplianceReportBaseSchema:
         """Creates a new compliance report."""
+        draft_status_name = ComplianceReportStatusEnum.Draft.value
+        ensure_report_transition(user, None, draft_status_name)
+
         period = await self.repo.get_compliance_period(report_data.compliance_period)
         if not period:
             raise DataNotFoundException("Compliance period not found.")
 
         draft_status = await self.repo.get_compliance_report_status_by_desc(
-            report_data.status
+            draft_status_name
         )
         if not draft_status:
-            raise DataNotFoundException(f"Status '{report_data.status}' not found.")
+            raise DataNotFoundException(f"Status '{draft_status_name}' not found.")
 
         # Determine reporting frequency based on early issuance setting for the compliance period
         early_issuance_record = await self.org_repo.get_early_issuance_by_year(
@@ -412,6 +417,21 @@ class ComplianceReportServices:
             raise ServiceException(
                 "You do not have permission to create a supplemental report for this organization."
             )
+
+        compliance_year = self._extract_compliance_year(
+            current_report.compliance_period.description
+            if current_report.compliance_period
+            else None
+        )
+        if compliance_year in configured_years():
+            year_config = await self.report_opening_repo.ensure_year(compliance_year)
+            if not year_config.create_supplemental_enabled:
+                raise HTTPException(
+                    status_code=403,
+                    detail=(
+                        f"{compliance_year} supplemental reporting is not currently available."
+                    ),
+                )
 
         new_version = latest_report.version + 1
 

@@ -166,13 +166,11 @@ export const useSaveFuelSupply = (
 
       if (clearCache) {
         queryClient.removeQueries({
-          predicate: (query) =>
-            queryKeyMatches(query) && matchesReport(query)
+          predicate: (query) => queryKeyMatches(query) && matchesReport(query)
         })
       } else {
         queryClient.invalidateQueries({
-          predicate: (query) =>
-            queryKeyMatches(query) && matchesReport(query)
+          predicate: (query) => queryKeyMatches(query) && matchesReport(query)
         })
       }
 
@@ -202,7 +200,10 @@ export const useSaveFuelSupply = (
 
 export const useUpdateFuelSupply = (
   params: { complianceReportId: number | string },
-  options: ExtMutationOptions<unknown, Record<string, unknown> & { id?: number | string }> = {}
+  options: ExtMutationOptions<
+    unknown,
+    Record<string, unknown> & { id?: number | string }
+  > = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -216,7 +217,9 @@ export const useUpdateFuelSupply = (
   } = options
 
   return useMutation({
-    mutationFn: async (data: Record<string, unknown> & { id?: number | string }) => {
+    mutationFn: async (
+      data: Record<string, unknown> & { id?: number | string }
+    ) => {
       if (!params?.complianceReportId) {
         throw new Error('Compliance report ID is required')
       }

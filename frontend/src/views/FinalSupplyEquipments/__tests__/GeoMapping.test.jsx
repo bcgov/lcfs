@@ -1,5 +1,5 @@
 import { screen, waitFor, fireEvent } from '@testing-library/react'
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import GeoMapping from '../GeoMapping'
 import { test } from '@/tests/utils/fixtures'
 import * as utils from '../components/utils'

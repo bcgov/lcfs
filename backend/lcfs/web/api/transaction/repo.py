@@ -55,7 +55,9 @@ logger = structlog.get_logger(__name__)
 
 
 class TransactionRepository:
-    def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
+    def __init__(
+        self, db: AsyncSession = Depends(get_async_db_session, scope="function")
+    ):
         self.db = db
 
     @repo_handler
@@ -892,6 +894,9 @@ class TransactionRepository:
         """
         Attempt to release a transaction by updating its transaction_action to Released.
 
+        Only a Reserved transaction is released. A confirmed (Adjustment) one
+        has already moved units, and releasing it would hand them back.
+
         Args:
             transaction_id (int): The ID of the transaction to release.
 
@@ -900,16 +905,22 @@ class TransactionRepository:
         """
         result = await self.db.execute(
             update(Transaction)
-            .where(Transaction.transaction_id == transaction_id)
+            .where(
+                Transaction.transaction_id == transaction_id,
+                Transaction.transaction_action == TransactionActionEnum.Reserved,
+            )
             .values(transaction_action=TransactionActionEnum.Released)
         )
         # Check if the update statement affected any rows
-        return result.rowcount > 0
+        return result.rowcount == 1
 
     @repo_handler
     async def confirm_transaction(self, transaction_id: int) -> bool:
         """
         Attempt to confirm a transaction by updating its transaction_action to Adjustment.
+
+        Only a Reserved transaction is confirmed, so a transfer cannot be
+        recorded twice against the same reservation.
 
         Args:
             transaction_id (int): The ID of the transaction to release.
@@ -920,7 +931,10 @@ class TransactionRepository:
         # Execute the update statement
         result = await self.db.execute(
             update(Transaction)
-            .where(Transaction.transaction_id == transaction_id)
+            .where(
+                Transaction.transaction_id == transaction_id,
+                Transaction.transaction_action == TransactionActionEnum.Reserved,
+            )
             .values(
                 transaction_action=TransactionActionEnum.Adjustment,
             )
@@ -929,7 +943,7 @@ class TransactionRepository:
         # await self.db.commit()
 
         # Check if the update statement affected any rows
-        if result.rowcount > 0:
+        if result.rowcount == 1:
             # Retrieve the updated transaction instance
             query = select(Transaction).where(
                 Transaction.transaction_id == transaction_id
@@ -1029,3 +1043,21 @@ class TransactionRepository:
         await self.db.execute(
             delete(Transaction).where(Transaction.transaction_id == transaction_id)
         )
+
+    @repo_handler
+    async def delete_reserved_transaction(
+        self, transaction_id, attached_report_id
+    ) -> bool:
+        """Detach and delete a report's transaction, only while it is Reserved.
+
+        A Released or confirmed (Adjustment) transaction is a ledger record,
+        not a working reservation, and stays. Returns whether it was deleted.
+        """
+        transaction = await self.get_transaction_by_id(transaction_id)
+        if (
+            transaction is None
+            or transaction.transaction_action != TransactionActionEnum.Reserved
+        ):
+            return False
+        await self.delete_transaction(transaction_id, attached_report_id)
+        return True

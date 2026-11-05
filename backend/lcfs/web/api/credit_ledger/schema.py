@@ -65,12 +65,18 @@ class AssessedBalanceSchema(BaseSchema):
     Assessed balances per compliance year, read from Line 22 of the most recent
     assessed report for that year (#4831). A balance is ``None`` when the year
     has no assessed report — the UI leaves it blank rather than showing zero.
+
+    A year whose report was completed as a non-assessment has no assessed
+    balance either (#5304): its balance is ``None`` and its ``*_non_assessment``
+    flag is set so the UI shows "Non-assessment" instead of a value.
     """
 
     previous_year: Optional[int] = None
     previous_balance: Optional[int] = None
+    previous_non_assessment: bool = False
     current_year: int
     current_balance: Optional[int] = None
+    current_non_assessment: bool = False
 
 
 class PeriodLedgerSchema(BaseSchema):

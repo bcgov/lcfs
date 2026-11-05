@@ -24,6 +24,7 @@ from lcfs.db.models.compliance.ComplianceReportStatus import (
 from lcfs.db.models.user import UserProfile
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
+    ComplianceReportCreateSchema,
     ComplianceReportUpdateSchema,
     ComplianceReportStatusSchema,
     ComplianceReportOrganizationSchema,
@@ -127,7 +128,7 @@ async def test_create_compliance_report_success(
     compliance_report_create_schema,
     mock_snapshot_service,
 ):
-    mock_user = MagicMock()
+    mock_user = MagicMock(role_names=[RoleEnum.COMPLIANCE_REPORTING])
     mock_org_repo.get_early_issuance_by_year.return_value = None
 
     # Mock the compliance period
@@ -157,13 +158,61 @@ async def test_create_compliance_report_success(
         compliance_report_create_schema.compliance_period
     )
     mock_repo.get_compliance_report_status_by_desc.assert_called_once_with(
-        compliance_report_create_schema.status
+        ComplianceReportStatusEnum.Draft.value
     )
     mock_repo.create_compliance_report.assert_called_once()
     mock_snapshot_service.create_organization_snapshot.assert_called_once()
 
     saved_report = mock_repo.create_compliance_report.call_args[0][0]
     assert saved_report.reporting_frequency == ReportingFrequency.ANNUAL
+
+
+@pytest.mark.anyio
+async def test_create_compliance_report_forces_draft_when_payload_names_later_status(
+    compliance_report_service,
+    mock_repo,
+    mock_org_repo,
+    compliance_report_base_schema,
+    mock_snapshot_service,
+):
+    mock_user = MagicMock(role_names=[RoleEnum.COMPLIANCE_REPORTING])
+    mock_org_repo.get_early_issuance_by_year.return_value = None
+    mock_repo.get_compliance_period.return_value = CompliancePeriod(
+        compliance_period_id=1, description="2024"
+    )
+
+    draft_status = ComplianceReportStatus(
+        compliance_report_status_id=1,
+        status=ComplianceReportStatusEnum.Draft,
+    )
+    assessed_status = ComplianceReportStatus(
+        compliance_report_status_id=2,
+        status=ComplianceReportStatusEnum.Assessed,
+    )
+    statuses = {
+        ComplianceReportStatusEnum.Draft.value: draft_status,
+        ComplianceReportStatusEnum.Assessed.value: assessed_status,
+    }
+    mock_repo.get_compliance_report_status_by_desc.side_effect = statuses.get
+    mock_repo.create_compliance_report.return_value = compliance_report_base_schema()
+
+    # Pydantic ignores the retired status field from older or untrusted clients.
+    report_data = ComplianceReportCreateSchema.model_validate(
+        {
+            "compliance_period": "2024",
+            "organization_id": 1,
+            "status": ComplianceReportStatusEnum.Assessed.value,
+        }
+    )
+
+    await compliance_report_service.create_compliance_report(1, report_data, mock_user)
+
+    mock_repo.get_compliance_report_status_by_desc.assert_awaited_once_with(
+        ComplianceReportStatusEnum.Draft.value
+    )
+    saved_report = mock_repo.create_compliance_report.call_args.args[0]
+    assert saved_report.current_status_id == draft_status.compliance_report_status_id
+    mock_snapshot_service.create_organization_snapshot.assert_awaited_once()
 
 
 # create_compliance_report
@@ -176,7 +225,7 @@ async def test_create_compliance_report_quarterly_success(
     compliance_report_create_schema,
     mock_snapshot_service,
 ):
-    mock_user = MagicMock()
+    mock_user = MagicMock(role_names=[RoleEnum.COMPLIANCE_REPORTING])
     mock_org_repo.get_early_issuance_by_year.return_value = Mock(
         has_early_issuance=True
     )
@@ -463,10 +512,41 @@ async def test_get_report_year_navigation_report_not_found(
 
 
 @pytest.mark.anyio
+async def test_create_supplemental_report_rejects_disabled_year(
+    compliance_report_service,
+    mock_repo,
+    mock_report_opening_repo,
+):
+    current_report = MagicMock(spec=ComplianceReport)
+    current_report.compliance_report_id = 1
+    current_report.organization_id = 17
+    current_report.compliance_report_group_uuid = "group-2017"
+    current_report.compliance_period = SimpleNamespace(description="2017")
+    mock_repo.get_compliance_report_by_id.return_value = current_report
+    mock_repo.get_latest_report_by_group_uuid.return_value = SimpleNamespace(
+        compliance_report_id=1,
+        version=0,
+    )
+    mock_report_opening_repo.ensure_year.return_value = SimpleNamespace(
+        create_supplemental_enabled=False
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await compliance_report_service.create_supplemental_report(
+            1, SimpleNamespace(organization_id=17)
+        )
+
+    assert exc_info.value.status_code == 403
+    mock_report_opening_repo.ensure_year.assert_awaited_once_with(2017)
+    mock_repo.create_compliance_report.assert_not_awaited()
+
+
+@pytest.mark.anyio
 async def test_create_supplemental_report_includes_summary_lines(
     compliance_report_service,
     mock_repo,
     mock_transaction_repo,
+    mock_report_opening_repo,
 ):
     """
     Test that when creating a supplemental report, the summary lines from
@@ -517,6 +597,10 @@ async def test_create_supplemental_report_includes_summary_lines(
     mock_current_report.compliance_report_group_uuid = "test-group-uuid"
     mock_current_report.version = 0
     mock_current_report.reporting_frequency = "test_frequency"
+    mock_current_report.compliance_period = MagicMock(description="2024")
+    mock_report_opening_repo.ensure_year.return_value = SimpleNamespace(
+        create_supplemental_enabled=True
+    )
 
     # Mock status
     mock_draft_status = MagicMock()
@@ -554,6 +638,7 @@ async def test_create_supplemental_report_includes_summary_lines(
             1, mock_user
         )
         assert result is not None
+        mock_report_opening_repo.ensure_year.assert_awaited_once_with(2024)
 
         # Check that create_compliance_report was called
         mock_repo.create_compliance_report.assert_called_once()
@@ -2935,6 +3020,7 @@ async def test_update_compliance_report_non_assessment_success(
 ):
     mock_user = MagicMock()
     mock_user.roles = [Role(role_id=1, name=RoleEnum.ANALYST)]
+    mock_user.role_names = [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.ANALYST]
     mock_org_repo.get_organization.return_value = Mock(has_early_issuance=False)
 
     # Mock the compliance period
@@ -2966,7 +3052,7 @@ async def test_update_compliance_report_non_assessment_success(
         compliance_report_create_schema.compliance_period
     )
     mock_repo.get_compliance_report_status_by_desc.assert_called_once_with(
-        compliance_report_create_schema.status
+        ComplianceReportStatusEnum.Draft.value
     )
     mock_repo.create_compliance_report.assert_called_once()
     mock_snapshot_service.create_organization_snapshot.assert_called_once()

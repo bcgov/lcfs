@@ -1,11 +1,13 @@
 import { render, screen } from '@testing-library/react'
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi } from 'vite-plus/test'
 import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import theme from '@/themes'
 import HeaderBar from '@/components/BCNavbar/components/HeaderBar'
 
 // Mock heavy image assets so they don't cause import errors
-vi.mock('@/assets/images/logo-banner.svg', () => ({ default: 'logo-banner.svg' }))
+vi.mock('@/assets/images/logo-banner.svg', () => ({
+  default: 'logo-banner.svg'
+}))
 
 // Mock MUI components used inside HeaderBar so the test does not require a
 // full theme setup for Toolbar / Icon internals.
@@ -13,12 +15,14 @@ vi.mock('@mui/material/Toolbar', async (importOriginal) => {
   const actual = await importOriginal()
   return {
     ...actual,
-    default: ({
-  children,
-  ...props
-}) => { delete props.sx; return <div data-test="toolbar" {...props}>
-        {children}
-      </div>; }
+    default: ({ children, ...props }) => {
+      delete props.sx
+      return (
+        <div data-test="toolbar" {...props}>
+          {children}
+        </div>
+      )
+    }
   }
 })
 
@@ -36,25 +40,30 @@ vi.mock('@mui/material/Icon', async (importOriginal) => {
 
 vi.mock('@/components/BCBox', () => ({
   __esModule: true,
-  default: ({
-  children,
-  className,
-  ...props
-}) => { delete props.component; delete props.sx; delete props.display; return <div className={className} {...props}>
-      {children}
-    </div>; }
+  default: ({ children, className, ...props }) => {
+    delete props.component
+    delete props.sx
+    delete props.display
+    return (
+      <div className={className} {...props}>
+        {children}
+      </div>
+    )
+  }
 }))
 
 vi.mock('@/components/BCTypography', () => ({
   __esModule: true,
-  default: ({
-  children,
-  variant,
-  className,
-  ...props
-}) => { delete props.component; delete props.color; delete props.sx; return <span className={className} data-variant={variant} {...props}>
-      {children}
-    </span>; }
+  default: ({ children, variant, className, ...props }) => {
+    delete props.component
+    delete props.color
+    delete props.sx
+    return (
+      <span className={className} data-variant={variant} {...props}>
+        {children}
+      </span>
+    )
+  }
 }))
 
 // Minimal popup-state stub; HeaderBar calls bindTrigger(popupState) to attach

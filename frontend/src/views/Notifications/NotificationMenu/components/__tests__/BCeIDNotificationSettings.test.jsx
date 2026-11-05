@@ -1,5 +1,5 @@
 import { render } from '@testing-library/react'
-import { vi } from 'vitest'
+import { vi } from 'vite-plus/test'
 import { roles } from '@/constants/roles'
 import BCeIDNotificationSettings from '../BCeIDNotificationSettings'
 
