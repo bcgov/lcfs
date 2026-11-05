@@ -3,6 +3,41 @@
  */
 
 import { vi } from 'vite-plus/test'
+import type { CheckboxProps as MuiCheckboxProps } from '@mui/material/Checkbox'
+import type {
+  InputHTMLAttributes,
+  LabelHTMLAttributes,
+  OptionHTMLAttributes,
+  ReactNode,
+  SelectHTMLAttributes,
+  HTMLAttributes
+} from 'react'
+
+type DivProps = HTMLAttributes<HTMLDivElement>
+
+interface TextFieldProps extends InputHTMLAttributes<HTMLInputElement> {
+  label?: ReactNode
+  error?: boolean
+  helperText?: ReactNode
+}
+
+interface FormControlLabelProps extends LabelHTMLAttributes<HTMLLabelElement> {
+  control?: ReactNode
+  label?: ReactNode
+}
+
+interface RadioGroupProps extends DivProps {
+  value?: string | number
+}
+
+interface CheckboxMockProps extends Omit<
+  InputHTMLAttributes<HTMLInputElement>,
+  'checked' | 'onChange' | 'size'
+> {
+  checked?: MuiCheckboxProps['checked']
+  onChange?: MuiCheckboxProps['onChange']
+  size?: MuiCheckboxProps['size']
+}
 
 /**
  * Material-UI component mocks used by BC Form components
@@ -17,7 +52,7 @@ const createMaterialUiMocks = () => ({
     value,
     disabled,
     ...props
-  }) => (
+  }: TextFieldProps) => (
     <div data-test="text-field">
       {label && <label htmlFor={id}>{label}</label>}
       <input
@@ -38,26 +73,35 @@ const createMaterialUiMocks = () => ({
     </div>
   ),
 
-  FormControl: ({ children, ...props }) => (
+  FormControl: ({ children, ...props }: DivProps) => (
     <div data-test="form-control" {...props}>
       {children}
     </div>
   ),
 
-  InputLabel: ({ htmlFor, children, ...props }) => (
+  InputLabel: ({
+    htmlFor,
+    children,
+    ...props
+  }: LabelHTMLAttributes<HTMLLabelElement>) => (
     <label htmlFor={htmlFor} data-test={`label-${htmlFor}`} {...props}>
       {children}
     </label>
   ),
 
-  FormControlLabel: ({ control, label, ...props }) => (
+  FormControlLabel: ({ control, label, ...props }: FormControlLabelProps) => (
     <label data-test="form-control-label" {...props}>
       {control}
       <span data-test="form-control-label-text">{label}</span>
     </label>
   ),
 
-  Select: ({ onChange, value, children, ...props }) => (
+  Select: ({
+    onChange,
+    value,
+    children,
+    ...props
+  }: SelectHTMLAttributes<HTMLSelectElement>) => (
     <select
       data-test="select"
       onChange={(e) => onChange && onChange(e)}
@@ -68,26 +112,42 @@ const createMaterialUiMocks = () => ({
     </select>
   ),
 
-  MenuItem: ({ value, children, ...props }) => (
+  MenuItem: ({
+    value,
+    children,
+    ...props
+  }: OptionHTMLAttributes<HTMLOptionElement>) => (
     <option data-test="menu-item" value={value} {...props}>
       {children}
     </option>
   ),
 
-  Checkbox: ({ checked, onChange, size, disabled, id, ...props }) => (
+  Checkbox: ({
+    checked,
+    onChange,
+    size,
+    disabled,
+    id,
+    ...props
+  }: CheckboxMockProps) => (
     <input
       type="checkbox"
       id={id}
       data-test="checkbox"
       checked={checked || false}
-      onChange={onChange}
+      onChange={(event) => onChange?.(event, event.currentTarget.checked)}
       disabled={disabled}
       data-size={size}
       {...props}
     />
   ),
 
-  Radio: ({ checked, onChange, value, ...props }) => (
+  Radio: ({
+    checked,
+    onChange,
+    value,
+    ...props
+  }: InputHTMLAttributes<HTMLInputElement>) => (
     <input
       type="radio"
       data-test="radio"
@@ -98,7 +158,7 @@ const createMaterialUiMocks = () => ({
     />
   ),
 
-  RadioGroup: ({ value, children, ...props }) => (
+  RadioGroup: ({ value, children, ...props }: RadioGroupProps) => (
     <div
       data-test="radio-group"
       data-value={value}
@@ -109,7 +169,7 @@ const createMaterialUiMocks = () => ({
     </div>
   ),
 
-  Box: ({ children, ...props }) => (
+  Box: ({ children, ...props }: DivProps) => (
     <div data-test="box" {...props}>
       {children}
     </div>

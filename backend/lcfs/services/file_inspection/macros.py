@@ -11,11 +11,14 @@ from pathlib import Path
 from time import monotonic
 
 import structlog
-from defusedxml import ElementTree as ET
 
 from lcfs.services.file_inspection.common import DAMAGED_MESSAGE, DetectedFile
 from lcfs.services.file_inspection.ole import OLE_MAGIC
-from lcfs.services.file_inspection.ooxml import PACKAGE_ERRORS, read_part
+from lcfs.services.file_inspection.ooxml import (
+    PACKAGE_ERRORS,
+    iter_elements,
+    read_part,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -118,13 +121,12 @@ def _formula_runs_programs(package: zipfile.ZipFile, part: str) -> bool:
     Scan each formula as Excel reads it, after XML decoding, so character
     references or a UTF-16 part can't hide a function name.
     """
-    # iterparse reads in small chunks, and zipfile stops at the part's
-    # declared size, which the caller has checked
+    # Read in small chunks, and zipfile stops at the part's declared size,
+    # which the caller has checked
     with package.open(part) as stream:
-        for _, el in ET.iterparse(stream, events=("end",)):
+        for el in iter_elements(stream):
             if el.tag.rpartition("}")[2] == "f" and DANGEROUS_XLM.search(el.text or ""):
                 return True
-            el.clear()
     return False
 
 

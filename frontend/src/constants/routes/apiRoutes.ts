@@ -2,6 +2,8 @@
  * This file contains all the API routes used in the application.
  */
 
+type ApiRouteValue = string | Readonly<Record<string, string>>
+
 export const apiRoutes = {
   // OpenAPI
   openapi: '/openapi.json/',
@@ -361,4 +363,4 @@ export const apiRoutes = {
   releaseNoteOverrides: '/release-notes/overrides',
   updateReleaseNote: '/release-notes/:version',
   resetReleaseNote: '/release-notes/:version'
-}
+} as const satisfies Record<string, ApiRouteValue>

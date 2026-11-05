@@ -176,6 +176,8 @@ WITH expected_triggers AS (
     UNION ALL
     SELECT 'refresh_fse_reporting_mvs_after_crce', 'compliance_report_charging_equipment'
     UNION ALL
+    SELECT 'refresh_fse_reporting_mvs_after_cr', 'compliance_report'
+    UNION ALL
     SELECT 'update_organization_balance_trigger', 'transaction'
     UNION ALL
     SELECT 'update_count_transfers_in_progress_trigger', 'transfer'

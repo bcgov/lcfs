@@ -587,6 +587,45 @@ describe('useFinalSupplyEquipment', () => {
       )
     })
 
+    it('marks the FSE lists of every report version stale after a save', async () => {
+      mockApiService.put.mockResolvedValue({ data: { id: 1 } })
+      const queryClient = new QueryClient({
+        defaultOptions: {
+          queries: { retry: false },
+          mutations: { retry: false }
+        }
+      })
+      // The edited report's grid, and another version's report page table.
+      const ownList = ['fse-reporting-list', 123, 456, {}, 'all', undefined]
+      const otherVersionList = [
+        'fse-reporting-list',
+        '124',
+        456,
+        {},
+        'summary',
+        'vw_fse_base'
+      ]
+      queryClient.setQueryData(ownList, { finalSupplyEquipments: [] })
+      queryClient.setQueryData(otherVersionList, { finalSupplyEquipments: [] })
+
+      const { result } = renderHook(() => useSaveFSEReporting(456, 123), {
+        wrapper: ({ children }) => (
+          <QueryClientProvider client={queryClient}>
+            {children}
+          </QueryClientProvider>
+        )
+      })
+      result.current.mutate({ chargingEquipmentComplianceId: 1, kwhUsage: 5 })
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+      expect(queryClient.getQueryState(ownList).isInvalidated).toBe(true)
+      expect(queryClient.getQueryState(otherVersionList).isInvalidated).toBe(
+        true
+      )
+    })
+
     it('should handle batch save operations', async () => {
       const mockResponse = { data: [] }
       mockApiService.post.mockResolvedValue(mockResponse)

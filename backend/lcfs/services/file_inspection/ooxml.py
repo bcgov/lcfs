@@ -3,7 +3,10 @@
 import posixpath
 import zipfile
 import zlib
+from collections.abc import Iterator
 from io import BytesIO
+from typing import IO
+from xml.etree.ElementTree import Element
 
 import structlog
 from defusedxml import DefusedXmlException
@@ -30,11 +33,11 @@ MAX_TOTAL_UNCOMPRESSED = 2 * 1024**3
 # Ratio check only applies to entries big enough to matter
 MAX_COMPRESSION_RATIO = 200
 RATIO_CHECK_MIN_SIZE = 10 * 1024 * 1024
-# Largest part read whole into memory
-MAX_PART_BYTES = 32 * 1024**2
 # Office only writes these. Older Python releases decompress a bzip2 or lzma
 # chunk with no bound on its output.
 ALLOWED_COMPRESSION = {zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED}
+# Office XML nests a few dozen elements deep
+MAX_XML_DEPTH = 256
 
 # Raised while reading a damaged or hostile package
 PACKAGE_ERRORS = (
@@ -226,25 +229,47 @@ def read_part(
     return data
 
 
+def iter_elements(stream: IO[bytes]) -> Iterator[Element]:
+    """
+    Parse a part as a stream and yield each element as it ends, then drop it
+    from its parent. Clearing an element still leaves it attached, so a part
+    made of millions of tiny elements would otherwise be held in memory
+    whole, at many times its size. The root element comes last.
+    """
+    open_elements = []
+    for event, el in ET.iterparse(stream, events=("start", "end")):
+        if event == "start":
+            open_elements.append(el)
+            if len(open_elements) > MAX_XML_DEPTH:
+                raise FileRejectedException(DAMAGED_MESSAGE)
+            continue
+        open_elements.pop()
+        yield el
+        if open_elements:
+            # The element that just ended is always its parent's last child
+            del open_elements[-1][-1]
+
+
 class _ContentTypes:
     def __init__(self, package: zipfile.ZipFile, parts: dict[str, zipfile.ZipInfo]):
         info = parts.get("[content_types].xml")
         if info is None:
             raise FileRejectedException(MISMATCH_MESSAGE)
-        root = ET.fromstring(read_part(package, info, MAX_PART_BYTES))
+        self.defaults = {}
+        self.overrides = {}
+        with package.open(info) as stream:
+            for el in iter_elements(stream):
+                content_type = el.get("ContentType", "").lower()
+                if el.tag == f"{CT_NS}Default":
+                    self.defaults[el.get("Extension", "").lower()] = content_type
+                elif el.tag == f"{CT_NS}Override":
+                    part_name = el.get("PartName", "").lstrip("/").lower()
+                    self.overrides[part_name] = content_type
+                root = el
+        # The root ends last. An empty part never gets here: the parser
+        # raises first.
         if root.tag != f"{CT_NS}Types":
             raise FileRejectedException(STRICT_MESSAGE)
-        self.defaults = {
-            el.get("Extension", "").lower(): el.get("ContentType", "").lower()
-            for el in root.iter(f"{CT_NS}Default")
-        }
-        self.overrides = {
-            el.get("PartName", "")
-            .lstrip("/")
-            .lower(): el.get("ContentType", "")
-            .lower()
-            for el in root.iter(f"{CT_NS}Override")
-        }
 
     def of(self, part_name: str) -> str:
         if part_name in self.overrides:
@@ -256,19 +281,21 @@ def _read_relationships(
     package: zipfile.ZipFile, info: zipfile.ZipInfo
 ) -> list[tuple[str, str, bool]]:
     """Returns (lower-case type, resolved lower-case target, is_external)."""
-    root = ET.fromstring(read_part(package, info, MAX_PART_BYTES))
     # "word/_rels/document.xml.rels" describes "word/document.xml"
     source_dir = posixpath.dirname(posixpath.dirname(info.filename))
     rels = []
-    for el in root.iter(f"{REL_NS}Relationship"):
-        external = el.get("TargetMode", "").lower() == "external"
-        target = el.get("Target", "")
-        if not external:
-            if target.startswith("/"):
-                target = target.lstrip("/")
-            else:
-                target = posixpath.normpath(posixpath.join(source_dir, target))
-        rels.append((el.get("Type", "").lower(), target.lower(), external))
+    with package.open(info) as stream:
+        for el in iter_elements(stream):
+            if el.tag != f"{REL_NS}Relationship":
+                continue
+            external = el.get("TargetMode", "").lower() == "external"
+            target = el.get("Target", "")
+            if not external:
+                if target.startswith("/"):
+                    target = target.lstrip("/")
+                else:
+                    target = posixpath.normpath(posixpath.join(source_dir, target))
+            rels.append((el.get("Type", "").lower(), target.lower(), external))
     return rels
 
 
@@ -282,10 +309,11 @@ def _main_part(root_rels: list[tuple[str, str, bool]]) -> str:
 
 
 def _has_dde_link(package: zipfile.ZipFile, info: zipfile.ZipInfo) -> bool:
-    root = ET.fromstring(read_part(package, info, MAX_PART_BYTES))
-    return any(
-        el.tag.endswith("}ddeLink") or el.tag.endswith("}oleLink") for el in root.iter()
-    )
+    with package.open(info) as stream:
+        return any(
+            el.tag.endswith("}ddeLink") or el.tag.endswith("}oleLink")
+            for el in iter_elements(stream)
+        )
 
 
 def _has_dde_field(package: zipfile.ZipFile, info: zipfile.ZipInfo) -> bool:
@@ -295,7 +323,7 @@ def _has_dde_field(package: zipfile.ZipFile, info: zipfile.ZipInfo) -> bool:
     """
     stack: list[list[str] | None] = []
     with package.open(info) as stream:
-        for _, el in ET.iterparse(stream, events=("end",)):
+        for el in iter_elements(stream):
             if el.tag == f"{W_NS}fldChar":
                 kind = el.get(f"{W_NS}fldCharType")
                 if kind == "begin":
@@ -312,7 +340,6 @@ def _has_dde_field(package: zipfile.ZipFile, info: zipfile.ZipInfo) -> bool:
                 stack[-1].append(el.text or "")
             elif el.tag == f"{W_NS}fldSimple" and _is_dde(el.get(f"{W_NS}instr", "")):
                 return True
-            el.clear()
     return False
 
 
