@@ -1,6 +1,6 @@
 import { screen, act } from '@testing-library/react'
 import '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, vi } from 'vite-plus/test'
+import { beforeEach, describe, expect, vi } from 'vite-plus/test'
 import { FinalSupplyEquipmentSummary } from '../FinalSupplyEquipmentSummary'
 import { test } from '@/tests/utils/fixtures'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
@@ -209,7 +209,7 @@ describe('FinalSupplyEquipmentSummary', () => {
           page: expect.any(Number),
           size: expect.any(Number)
         }),
-        { refetchInterval: expect.any(Function) },
+        {},
         undefined,
         'summary',
         undefined
@@ -244,59 +244,6 @@ describe('FinalSupplyEquipmentSummary', () => {
           expect(args[5]).toBe('vw_fse_base')
         })
       })
-    })
-  })
-
-  describe('Refresh polling', () => {
-    const getRefetchInterval = () => hookCalls.at(-1)[2].refetchInterval
-    const queryWith = (data) => ({ state: { data } })
-
-    afterEach(() => {
-      vi.useRealTimers()
-    })
-
-    it('does not poll when no refresh is pending', () => {
-      renderComponent()
-      const refetchInterval = getRefetchInterval()
-      expect(refetchInterval(queryWith({ refreshPending: false }))).toBe(false)
-      expect(refetchInterval(queryWith(undefined))).toBe(false)
-    })
-
-    it('polls every 2 seconds while a refresh is pending', () => {
-      renderComponent()
-      const refetchInterval = getRefetchInterval()
-      expect(refetchInterval(queryWith({ refreshPending: true }))).toBe(2000)
-      expect(refetchInterval(queryWith({ refreshPending: true }))).toBe(2000)
-      expect(refetchInterval(queryWith({ refreshPending: false }))).toBe(false)
-    })
-
-    it('stops polling after a minute of pending responses', () => {
-      vi.useFakeTimers()
-      vi.setSystemTime(new Date('2026-10-29T12:00:00Z'))
-      renderComponent()
-      const refetchInterval = getRefetchInterval()
-      const pending = queryWith({ refreshPending: true })
-
-      expect(refetchInterval(pending)).toBe(2000)
-      vi.setSystemTime(new Date('2026-10-29T12:00:59Z'))
-      expect(refetchInterval(pending)).toBe(2000)
-      vi.setSystemTime(new Date('2026-10-29T12:01:00Z'))
-      expect(refetchInterval(pending)).toBe(false)
-    })
-
-    it('restarts the one-minute window after a fresh response', () => {
-      vi.useFakeTimers()
-      vi.setSystemTime(new Date('2026-10-29T12:00:00Z'))
-      renderComponent()
-      const refetchInterval = getRefetchInterval()
-      const pending = queryWith({ refreshPending: true })
-
-      expect(refetchInterval(pending)).toBe(2000)
-      vi.setSystemTime(new Date('2026-10-29T12:00:50Z'))
-      expect(refetchInterval(queryWith({ refreshPending: false }))).toBe(false)
-      expect(refetchInterval(pending)).toBe(2000)
-      vi.setSystemTime(new Date('2026-10-29T12:01:30Z'))
-      expect(refetchInterval(pending)).toBe(2000)
     })
   })
 
