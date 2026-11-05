@@ -5,11 +5,12 @@
     "date": "2026-11-05",
     "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/v1.3.12",
     "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/v1.3.11...v1.3.12",
-    "summary": "This release includes 2 new features, 17 bug fixes, 1 security update, 6 dependency updates and 19 other changes. Highlights: Automate IA Credit Transactions on DA Approval; gate CI with Vite+ checks; apply open Dependabot security updates on Python 3.13.",
+    "summary": "This release includes 3 new features, 17 bug fixes, 1 security update, 6 dependency updates and 15 other changes. Highlights: Automate IA Credit Transactions on DA Approval; gate CI with Vite+ checks; Restrict BCeID Fuel Codes to Approved Status; apply open Dependabot security updates on Python 3.13.",
     "sections": {
       "features": [
         "Automate IA Credit Transactions on DA Approval - 5211",
-        "gate CI with Vite+ checks"
+        "gate CI with Vite+ checks",
+        "Restrict BCeID Fuel Codes to Approved Status - 5298"
       ],
       "fixes": [
         "Persist IA table preferences within session - 5032",
@@ -20,15 +21,15 @@
         "check record ownership and workflow status on writes",
         "Remove low-count suppression from public Credit Market data 5293",
         "show names in report history as plain text",
-        "exclude release notes JSON from format check",
         "exclude release notes JSON from format check (develop)",
         "Charging sites and FSE map crash after the Vite+ upgrade",
-        "Charging sites and FSE map crash after the Vite+ upgrade (release)",
         "show non-assessed years as Non-assessment in the credit ledger (#5304)",
         "commit the request's DB transaction before the response is sent",
         "support fuel code numbers above 999 (#5347)",
         "persist agreement date when saving transfer drafts",
-        "LCFS - Update Prod credit market snapshot"
+        "LCFS - Update Prod credit market snapshot",
+        "Initiative agreement and designated action tab navigation - 5323",
+        "save fuel code edits when a transport mode has no distance"
       ],
       "security": [
         "apply open Dependabot security updates on Python 3.13"
@@ -43,8 +44,6 @@
         "bump follow-redirects from 1.16.1 to 1.16.2 in /frontend in the npm-security group across 1 directory by @dependabot[bot] in https://github.com/bcgov/lcfs/pull/5463"
       ],
       "other": [
-        "Test Release v1.3.11",
-        "Test Release v1.3.11+1",
         "Start new initiative agreements Underway and add designated action index columns (#5186, #5203)",
         "Show the latest submitted FSE on Draft and older report versions (#5132)",
         "[Issue #5294] Upgrade backend runtime to Python 3.13",
@@ -52,9 +51,7 @@
         "[Issue #5098] LCFS - Migrate frontend tooling and configuration to Vite+",
         "adopt setup-vp and preserve test reports (#5100)",
         "Show saved FSE rows on the report page right after a save (#5132)",
-        "Test Release v1.3.12",
         "Extend Report opening controls to 2017",
-        "Show FSE rows as soon as a new report version is created (#5132) [release]",
         "Load the compliance report for government users on a direct page load",
         "TS migration PR 01/44: Shared constants and test foundations",
         "Read FSE reporting rows live instead of from the materialized view (#5132)",
