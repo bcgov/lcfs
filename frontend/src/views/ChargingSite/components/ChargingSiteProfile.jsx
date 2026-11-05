@@ -32,7 +32,9 @@ export const ChargingSiteProfile = ({
     },
     onError: (err) => {
       const message =
-        err?.response?.data?.detail || err?.message || t('messages.statusUpdateError')
+        err?.response?.data?.detail ||
+        err?.message ||
+        t('messages.statusUpdateError')
       alertRef?.current?.triggerAlert?.({ message, severity: 'error' })
     }
   })
@@ -153,7 +155,6 @@ export const ChargingSiteProfile = ({
           {data?.organization?.name || ''}
         </BCTypography>
       </Role>
-
 
       {(canSetValidated || canSubmitSite) && (
         <BCBox sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>

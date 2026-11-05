@@ -1,16 +1,16 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import Grid2 from '@mui/material/Grid2'
 import { v4 as uuid } from 'uuid'
 
 import BCBox from '@/components/BCBox'
-import '@/components/BCButton';
+import '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
-import '@/components/BCDataGrid/columns';
-import '@/components/BCDataGrid/components/Renderers/RequiredHeader';
+import '@/components/BCDataGrid/columns'
+import '@/components/BCDataGrid/components/Renderers/RequiredHeader'
 
 import {
   useOrganizationPenaltyLogs,
@@ -276,7 +276,7 @@ export const PenaltyLogManage = () => {
         orgID
       })
     )
-  }, [navigate, orgID]);
+  }, [navigate, orgID])
 
   if (compliancePeriodsLoading || penaltyLogsLoading) {
     return <Loading />

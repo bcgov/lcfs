@@ -1237,7 +1237,7 @@ async def test_update_agreement_rejects_a_code_longer_than_the_column(
     )
     response = await client.put(url, json={"iaCode": "X" * 51})
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 @pytest.mark.anyio

@@ -1,5 +1,8 @@
-START_YEAR = 2019
+START_YEAR = 2017
 END_YEAR = 2030
+
+# New report creation is initially closed for the two newly configurable years.
+DEFAULT_CLOSED_COMPLIANCE_REPORTING_YEARS = frozenset({2017, 2018})
 
 
 def configured_years() -> list[int]:

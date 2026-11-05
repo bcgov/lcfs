@@ -1,7 +1,7 @@
 import 'react'
 import { screen } from '@testing-library/react'
 
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 
 import { DesignatedActionsGrid } from '../DesignatedActionsGrid'
 import { test } from '@/tests/utils/fixtures'

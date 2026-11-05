@@ -1,4 +1,9 @@
-import type { ICellEditorParams, ICellRendererParams, RowClassParams, ColDef } from 'ag-grid-community'
+import type {
+  ICellEditorParams,
+  ICellRendererParams,
+  RowClassParams,
+  ColDef
+} from 'ag-grid-community'
 import type { GridErrors, GridWarnings, OptionsData } from '@/types/schema'
 import type { ApiServiceInstance } from '@/services/useApiService'
 import { actions, validation } from '@/components/BCDataGrid/columns'
@@ -782,7 +787,11 @@ export const changelogCommonColDefs = (
       field: 'allocationTransactionType.type',
       minWidth: 160,
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'allocationTransactionType')) as unknown as ReturnType<typeof changelogCellStyle>
+        (highlight &&
+          changelogCellStyle(
+            params,
+            'allocationTransactionType'
+          )) as unknown as ReturnType<typeof changelogCellStyle>
     },
     {
       headerName: i18n.t(
@@ -791,7 +800,11 @@ export const changelogCommonColDefs = (
       minWidth: 320,
       field: 'transactionPartner',
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'transactionPartner')) as unknown as ReturnType<typeof changelogCellStyle>
+        (highlight &&
+          changelogCellStyle(
+            params,
+            'transactionPartner'
+          )) as unknown as ReturnType<typeof changelogCellStyle>
     },
     {
       headerName: i18n.t(
@@ -800,7 +813,10 @@ export const changelogCommonColDefs = (
       minWidth: 400,
       field: 'postalAddress',
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'postalAddress')) as unknown as ReturnType<typeof changelogCellStyle>
+        (highlight &&
+          changelogCellStyle(params, 'postalAddress')) as unknown as ReturnType<
+          typeof changelogCellStyle
+        >
     },
     {
       headerName: i18n.t(
@@ -809,7 +825,11 @@ export const changelogCommonColDefs = (
       minWidth: 200,
       field: 'transactionPartnerEmail',
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'transactionPartnerEmail')) as unknown as ReturnType<typeof changelogCellStyle>
+        (highlight &&
+          changelogCellStyle(
+            params,
+            'transactionPartnerEmail'
+          )) as unknown as ReturnType<typeof changelogCellStyle>
     },
     {
       headerName: i18n.t(
@@ -818,7 +838,11 @@ export const changelogCommonColDefs = (
       minWidth: 150,
       field: 'transactionPartnerPhone',
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'transactionPartnerPhone')) as unknown as ReturnType<typeof changelogCellStyle>
+        (highlight &&
+          changelogCellStyle(
+            params,
+            'transactionPartnerPhone'
+          )) as unknown as ReturnType<typeof changelogCellStyle>
     },
     {
       headerName: i18n.t(
@@ -827,7 +851,10 @@ export const changelogCommonColDefs = (
       minWidth: 200,
       field: 'fuelType.fuelType',
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'fuelType')) as unknown as ReturnType<typeof changelogCellStyle>
+        (highlight &&
+          changelogCellStyle(params, 'fuelType')) as unknown as ReturnType<
+          typeof changelogCellStyle
+        >
     },
     {
       headerName: i18n.t(
@@ -836,7 +863,10 @@ export const changelogCommonColDefs = (
       minWidth: 250,
       field: 'fuelTypeOther',
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'fuelTypeOther')) as unknown as ReturnType<typeof changelogCellStyle>
+        (highlight &&
+          changelogCellStyle(params, 'fuelTypeOther')) as unknown as ReturnType<
+          typeof changelogCellStyle
+        >
     },
     {
       headerName: i18n.t(
@@ -845,7 +875,10 @@ export const changelogCommonColDefs = (
       minWidth: 150,
       field: 'fuelCategory.category',
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'fuelCategory')) as unknown as ReturnType<typeof changelogCellStyle>
+        (highlight &&
+          changelogCellStyle(params, 'fuelCategory')) as unknown as ReturnType<
+          typeof changelogCellStyle
+        >
     },
     {
       headerName: i18n.t(
@@ -854,7 +887,11 @@ export const changelogCommonColDefs = (
       minWidth: 370,
       field: 'provisionOfTheAct.name',
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'provisionOfTheAct')) as unknown as ReturnType<typeof changelogCellStyle>
+        (highlight &&
+          changelogCellStyle(
+            params,
+            'provisionOfTheAct'
+          )) as unknown as ReturnType<typeof changelogCellStyle>
     },
     {
       headerName: i18n.t(
@@ -863,7 +900,10 @@ export const changelogCommonColDefs = (
       minWidth: 175,
       field: 'fuelCode.fuelCode',
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'fuelCode')) as unknown as ReturnType<typeof changelogCellStyle>
+        (highlight &&
+          changelogCellStyle(params, 'fuelCode')) as unknown as ReturnType<
+          typeof changelogCellStyle
+        >
     },
     {
       headerName: i18n.t(
@@ -872,7 +912,10 @@ export const changelogCommonColDefs = (
       minWidth: 90,
       field: 'ciOfFuel',
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'ciOfFuel')) as unknown as ReturnType<typeof changelogCellStyle>
+        (highlight &&
+          changelogCellStyle(params, 'ciOfFuel')) as unknown as ReturnType<
+          typeof changelogCellStyle
+        >
     },
     {
       headerName: i18n.t(
@@ -881,7 +924,10 @@ export const changelogCommonColDefs = (
       minWidth: 185,
       field: 'quantity',
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'quantity')) as unknown as ReturnType<typeof changelogCellStyle>
+        (highlight &&
+          changelogCellStyle(params, 'quantity')) as unknown as ReturnType<
+          typeof changelogCellStyle
+        >
     },
     {
       headerName: i18n.t(
@@ -890,7 +936,10 @@ export const changelogCommonColDefs = (
       minWidth: 200,
       field: 'units',
       cellStyle: (params) =>
-        (highlight && changelogCellStyle(params, 'units')) as unknown as ReturnType<typeof changelogCellStyle>
+        (highlight &&
+          changelogCellStyle(params, 'units')) as unknown as ReturnType<
+          typeof changelogCellStyle
+        >
     }
   ]
   if (isEarlyIssuance) {
@@ -905,7 +954,11 @@ export const changelogCommonColDefs = (
             ),
             valueFormatter: valueFormatter as ColDef['valueFormatter'],
             cellStyle: (params) =>
-              (highlight && changelogCellStyle(params, 'q1Quantity')) as unknown as ReturnType<typeof changelogCellStyle>
+              (highlight &&
+                changelogCellStyle(
+                  params,
+                  'q1Quantity'
+                )) as unknown as ReturnType<typeof changelogCellStyle>
           },
           {
             field: 'q2Quantity',
@@ -915,7 +968,11 @@ export const changelogCommonColDefs = (
             ),
             valueFormatter: valueFormatter as ColDef['valueFormatter'],
             cellStyle: (params) =>
-              (highlight && changelogCellStyle(params, 'q2Quantity')) as unknown as ReturnType<typeof changelogCellStyle>
+              (highlight &&
+                changelogCellStyle(
+                  params,
+                  'q2Quantity'
+                )) as unknown as ReturnType<typeof changelogCellStyle>
           },
           {
             field: 'q3Quantity',
@@ -925,7 +982,11 @@ export const changelogCommonColDefs = (
             ),
             valueFormatter: valueFormatter as ColDef['valueFormatter'],
             cellStyle: (params) =>
-              (highlight && changelogCellStyle(params, 'q3Quantity')) as unknown as ReturnType<typeof changelogCellStyle>
+              (highlight &&
+                changelogCellStyle(
+                  params,
+                  'q3Quantity'
+                )) as unknown as ReturnType<typeof changelogCellStyle>
           },
           {
             field: 'q4Quantity',
@@ -935,7 +996,11 @@ export const changelogCommonColDefs = (
             ),
             valueFormatter: valueFormatter as ColDef['valueFormatter'],
             cellStyle: (params) =>
-              (highlight && changelogCellStyle(params, 'q4Quantity')) as unknown as ReturnType<typeof changelogCellStyle>
+              (highlight &&
+                changelogCellStyle(
+                  params,
+                  'q4Quantity'
+                )) as unknown as ReturnType<typeof changelogCellStyle>
           },
           {
             field: 'totalQuantity',
@@ -945,7 +1010,11 @@ export const changelogCommonColDefs = (
             ),
             valueFormatter: valueFormatter as ColDef['valueFormatter'],
             cellStyle: (params) =>
-              (highlight && changelogCellStyle(params, 'totalQuantity')) as unknown as ReturnType<typeof changelogCellStyle>,
+              (highlight &&
+                changelogCellStyle(
+                  params,
+                  'totalQuantity'
+                )) as unknown as ReturnType<typeof changelogCellStyle>,
             valueGetter: (params) => {
               const data = params.data
               return (

@@ -1,6 +1,6 @@
 import 'react'
 import { screen, fireEvent } from '@testing-library/react'
-import { vi, describe, expect, beforeEach } from 'vitest'
+import { vi, describe, expect, beforeEach } from 'vite-plus/test'
 import OrgComplianceReportsCard from '../OrgComplianceReportsCard'
 import { useOrgComplianceReportCounts } from '@/hooks/useDashboard'
 import { useOrganization } from '@/hooks/useOrganization'

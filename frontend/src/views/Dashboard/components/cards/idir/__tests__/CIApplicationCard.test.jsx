@@ -1,7 +1,7 @@
 import { test } from '@/tests/utils/fixtures'
 import 'react'
 import { screen, fireEvent } from '@testing-library/react'
-import { vi, describe, expect, beforeEach } from 'vitest'
+import { vi, describe, expect, beforeEach } from 'vite-plus/test'
 import { CIApplicationCard } from '../CIApplicationCard'
 import { useCIApplicationCounts } from '@/hooks/useDashboard'
 import { useNavigate } from 'react-router-dom'

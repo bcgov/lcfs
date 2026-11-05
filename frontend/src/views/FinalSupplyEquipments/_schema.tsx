@@ -1,4 +1,8 @@
-import type { ColDef, ValueSetterFunc, ValueSetterParams } from 'ag-grid-community'
+import type {
+  ColDef,
+  ValueSetterFunc,
+  ValueSetterParams
+} from 'ag-grid-community'
 import type { GridErrors, GridWarnings, OptionsData } from '@/types/schema'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import BCTypography from '@/components/BCTypography'
@@ -64,7 +68,7 @@ type AddressSuggestion = {
 }
 
 // Custom status renderer for FSE that handles flat status field
-const FSEStatusRenderer = createStatusRenderer(
+const fseStatusRenderer = createStatusRenderer(
   {
     Draft: 'info', // Grey
     Submitted: 'warning', // Blue
@@ -182,8 +186,7 @@ export const finalSupplyEquipmentColDefs = (
         }
         return false
       },
-      tooltipValueGetter: () =>
-        'Select the organization name from the list'
+      tooltipValueGetter: () => 'Select the organization name from the list'
     },
     {
       field: 'supplyFromDate',
@@ -559,7 +562,7 @@ export const finalSupplyEquipmentSummaryColDefs = (
           ),
           minWidth: 150,
           field: 'status',
-          cellRenderer: FSEStatusRenderer,
+          cellRenderer: fseStatusRenderer,
           filter: 'agTextColumnFilter',
           sortable: false
         }

@@ -77,6 +77,14 @@ async def get_async_db_session(
     """
     Create and get database session.
     Ensures user context is set for auditing within the transaction.
+
+    Always depend on it as Depends(get_async_db_session, scope="function").
+    With the default "request" scope, FastAPI runs the code after the yield
+    (the commit) only after the response has been sent. "function" scope
+    commits when the endpoint returns, before the response goes out. FastAPI
+    caches a dependency per scope, so a default-scope use would also open a
+    second session in the same request.
+
     :yield: database session.
     """
     async with AsyncSession(async_engine) as session:

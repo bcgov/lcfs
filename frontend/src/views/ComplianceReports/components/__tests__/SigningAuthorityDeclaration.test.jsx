@@ -1,5 +1,5 @@
 import { screen, fireEvent } from '@testing-library/react'
-import { describe, beforeEach, expect, vi } from 'vitest'
+import { describe, beforeEach, expect, vi } from 'vite-plus/test'
 import { useState } from 'react'
 import SigningAuthorityDeclaration from '../SigningAuthorityDeclaration'
 import { test } from '@/tests/utils/fixtures'

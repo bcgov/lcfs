@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { vi, beforeEach, describe, it, expect } from 'vitest'
+import { vi, beforeEach, describe, it, expect } from 'vite-plus/test'
 import { roles } from '@/constants/roles'
 import { NotificationSettings } from '../NotificationSettings'
 

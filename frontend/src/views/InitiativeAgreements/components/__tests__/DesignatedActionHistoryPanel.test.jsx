@@ -2,7 +2,7 @@ import 'react'
 import { fireEvent, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 
 import { DesignatedActionHistoryPanel } from '../DesignatedActionHistoryPanel'
 import { test } from '@/tests/utils/fixtures'
@@ -156,9 +156,9 @@ describe('DesignatedActionHistoryPanel', () => {
     expect(screen.getByTestId('history-entry-summary-41')).toHaveTextContent(
       'Permit verified.'
     )
-    expect(screen.getByTestId('history-entry-summary-41')).not.toHaveTextContent(
-      '<p>'
-    )
+    expect(
+      screen.getByTestId('history-entry-summary-41')
+    ).not.toHaveTextContent('<p>')
   })
 
   test('shows a recommendation of nought rather than treating it as absent', ({

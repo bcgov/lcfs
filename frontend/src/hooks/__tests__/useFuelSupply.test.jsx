@@ -1,5 +1,5 @@
 import { waitFor } from '@testing-library/react'
-import { vi, describe, expect, beforeEach, afterEach } from 'vitest'
+import { vi, describe, expect, beforeEach, afterEach } from 'vite-plus/test'
 import { test } from '@/tests/utils/fixtures'
 import {
   useFuelSupplyOptions,

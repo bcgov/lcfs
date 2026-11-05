@@ -1,5 +1,5 @@
 import 'react'
-import { afterEach, beforeEach, describe, expect, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, vi } from 'vite-plus/test'
 import { cleanup, fireEvent, screen } from '@testing-library/react'
 
 import { FuelCodesTabs } from '@/views/CarbonIntensity/components/FuelCodesTabs'

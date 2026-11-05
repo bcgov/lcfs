@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.jobstores.memory import MemoryJobStore
@@ -131,6 +131,36 @@ def start_scheduler(app: FastAPI):
                     "minute": settings.credit_market_report_minute,
                 },
             )
+
+
+FSE_REPORTING_MV_REFRESH_AFTER_WRITE_JOB_ID = (
+    "refresh_fse_reporting_materialized_views_after_write"
+)
+
+
+def schedule_fse_reporting_mv_refresh(app: FastAPI):
+    """
+    Refresh the FSE reporting materialized view shortly after an FSE write,
+    instead of waiting for the next interval run.
+
+    The delay lets the request's transaction commit first. Each call replaces
+    the pending run, so a burst of saves (one per edited cell) triggers a
+    single refresh after the last one. The interval job remains the fallback.
+    """
+    if not settings.fse_reporting_mv_refresh_enabled or not scheduler.running:
+        return
+
+    scheduler.add_job(
+        refresh_fse_reporting_materialized_views,
+        "date",
+        run_date=datetime.now(utc)
+        + timedelta(
+            seconds=settings.fse_reporting_mv_refresh_after_write_delay_seconds
+        ),
+        id=FSE_REPORTING_MV_REFRESH_AFTER_WRITE_JOB_ID,
+        replace_existing=True,
+        args=[app],
+    )
 
 
 def shutdown_scheduler():

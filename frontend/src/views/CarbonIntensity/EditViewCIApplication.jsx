@@ -30,9 +30,7 @@ import {
   useUpdateCIApplicationStep4
 } from '@/hooks/useCIApplication'
 
-import {
-  CIApplicationProgress
-} from './components/CIApplicationProgress'
+import { CIApplicationProgress } from './components/CIApplicationProgress'
 import { getCIResumeStep } from './ciResumeStep'
 import { ApplicationInformationStep } from './components/ApplicationInformationStep'
 import { ApplicationSummary } from './components/ApplicationSummary'

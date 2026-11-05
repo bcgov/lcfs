@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from 'vite-plus/test'
 import { validateFileMimeType, validateFile } from '../fileValidation'
 import {
   COMPLIANCE_REPORT_FILE_TYPES,
@@ -311,7 +311,10 @@ describe('fileValidation', () => {
 
     it('should include DESCRIPTION in error messages for SCHEDULE_IMPORT_FILE_TYPES', () => {
       const invalidFile = createMockFile('test.pdf', 'application/pdf')
-      const result = validateFileMimeType(invalidFile, SCHEDULE_IMPORT_FILE_TYPES)
+      const result = validateFileMimeType(
+        invalidFile,
+        SCHEDULE_IMPORT_FILE_TYPES
+      )
 
       expect(result.isValid).toBe(false)
       expect(result.errorMessage).toContain('Excel files (.xlsx)')

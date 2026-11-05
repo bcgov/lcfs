@@ -1,5 +1,5 @@
 import { createStatusRenderer } from '../grid/createStatusRenderer'
-import { describe, expect, vi } from 'vitest'
+import { describe, expect, vi } from 'vite-plus/test'
 import { screen } from '@testing-library/react'
 import {
   YesNoTextRenderer,

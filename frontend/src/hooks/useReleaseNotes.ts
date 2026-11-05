@@ -106,11 +106,22 @@ export const useReleaseNotes = (options: QueryOptions<Release[]> = {}) => {
   // Used by the edit form to restore individual fields to the true default.
   const baseReleases = baseQuery.data ?? []
 
-  return { ...baseQuery, data, isLoading, isError, overriddenVersions, baseReleases, ...options }
+  return {
+    ...baseQuery,
+    data,
+    isLoading,
+    isError,
+    overriddenVersions,
+    baseReleases,
+    ...options
+  }
 }
 
 export const useUpdateReleaseNote = (
-  options: ExtMutationOptions<ReleaseNoteOverride, { version: string; summary: string; sections: ReleaseSections }> = {}
+  options: ExtMutationOptions<
+    ReleaseNoteOverride,
+    { version: string; summary: string; sections: ReleaseSections }
+  > = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()

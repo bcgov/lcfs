@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi } from 'vite-plus/test'
 import {
   normalizeFormId,
   normalizeKeyData,
@@ -55,7 +55,7 @@ describe('linkKeyUtils', () => {
 
     expect(normalizeKeyData()).toEqual({
       formId: undefined,
-      formSlug: undefined, 
+      formSlug: undefined,
       linkKey: undefined,
       createDate: undefined
     })
@@ -63,7 +63,7 @@ describe('linkKeyUtils', () => {
     expect(normalizeKeyData({})).toEqual({
       formId: undefined,
       formSlug: undefined,
-      linkKey: undefined, 
+      linkKey: undefined,
       createDate: undefined
     })
   })
@@ -77,21 +77,19 @@ describe('linkKeyUtils', () => {
   it('generateFormLink uses window.location.origin when available', () => {
     const mockWindow = { location: { origin: 'https://test.com' } }
     vi.stubGlobal('window', mockWindow)
-    
+
     expect(generateFormLink('form-b', 'def')).toBe(
       'https://test.com/forms/form-b/def'
     )
-    
+
     vi.unstubAllGlobals()
   })
 
   it('generateFormLink handles missing window object', () => {
     vi.stubGlobal('window', undefined)
-    
-    expect(generateFormLink('form-c', 'ghi')).toBe(
-      '/forms/form-c/ghi'
-    )
-    
+
+    expect(generateFormLink('form-c', 'ghi')).toBe('/forms/form-c/ghi')
+
     vi.unstubAllGlobals()
   })
 
@@ -139,7 +137,7 @@ describe('linkKeyUtils', () => {
     })
 
     expect(buildCacheFromLinkKeys([])).toEqual({})
-    
+
     const cacheWithInvalid = buildCacheFromLinkKeys([
       { formId: 1, formSlug: 'a', linkKey: 'k1', createDate: 'd1' },
       { formId: null, formSlug: 'b', linkKey: 'k2', createDate: 'd2' },
@@ -164,7 +162,9 @@ describe('linkKeyUtils', () => {
     // Invalid id yields unchanged object
     expect(removeCacheEntry(updated, 'x')).toBe(updated)
     expect(updateCacheEntry(original, null, { linkKey: 'k3' })).toBe(original)
-    expect(updateCacheEntry(original, undefined, { linkKey: 'k4' })).toBe(original)
+    expect(updateCacheEntry(original, undefined, { linkKey: 'k4' })).toBe(
+      original
+    )
     expect(removeCacheEntry(updated, null)).toBe(updated)
     expect(removeCacheEntry(updated, undefined)).toBe(updated)
   })

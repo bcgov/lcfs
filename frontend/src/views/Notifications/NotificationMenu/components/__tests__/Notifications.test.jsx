@@ -1,7 +1,7 @@
 import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { vi } from 'vitest'
+import { vi } from 'vite-plus/test'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import { Notifications } from '../Notifications'
@@ -60,7 +60,9 @@ vi.mock('@/components/BCButton', () => ({
 
 vi.mock('@/components/ClearFiltersButton', () => ({
   ClearFiltersButton: ({ onClick }) => (
-    <button onClick={onClick} data-test="clear-filters">Clear Filters</button>
+    <button onClick={onClick} data-test="clear-filters">
+      Clear Filters
+    </button>
   )
 }))
 
@@ -68,7 +70,7 @@ const clearFiltersMock = vi.fn()
 const forEachNodeMock = vi.fn()
 const getSelectedNodesMock = vi.fn(() => [])
 const setSelectedMock = vi.fn()
-vi.fn(() => false);
+vi.fn(() => false)
 
 const mockGridApi = {
   forEachNodeAfterFilterAndSort: forEachNodeMock,
@@ -86,7 +88,13 @@ const createMockNode = (id, selected = false) => ({
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => {
   return {
     BCGridViewer: React.forwardRef(function NotificationsGridMock(props) {
-      const { gridRef, onGridReady, onSelectionChanged, onRowClicked, onCellClicked } = props
+      const {
+        gridRef,
+        onGridReady,
+        onSelectionChanged,
+        onRowClicked,
+        onCellClicked
+      } = props
       React.useEffect(() => {
         if (gridRef) {
           gridRef.current = {
@@ -106,22 +114,26 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => {
       return (
         <div data-test="bc-grid-viewer" data-testid="bc-grid-viewer">
           BCGridViewer
-          <div 
-            data-test="test-row" 
-            onClick={() => onRowClicked?.({
-              data: rowNotification,
-              event: { target: { dataset: {} } }
-            })}
+          <div
+            data-test="test-row"
+            onClick={() =>
+              onRowClicked?.({
+                data: rowNotification,
+                event: { target: { dataset: {} } }
+              })
+            }
           >
             Test Row
           </div>
-          <div 
-            data-test="test-cell" 
-            onClick={() => onCellClicked?.({
-              data: { notificationMessageId: 'test-id' },
-              column: { colId: 'action' },
-              event: { target: { dataset: { action: 'delete' } } }
-            })}
+          <div
+            data-test="test-cell"
+            onClick={() =>
+              onCellClicked?.({
+                data: { notificationMessageId: 'test-id' },
+                column: { colId: 'action' },
+                event: { target: { dataset: { action: 'delete' } } }
+              })
+            }
           >
             Test Cell
           </div>
@@ -181,8 +193,10 @@ describe('Notifications Component', () => {
       const selectAllButton = screen.getByTestId('select-all')
       const markAsReadButton = screen.getByTestId('mark-as-read')
       const deleteButton = screen.getByTestId('mark-as-unread')
-      
-      expect(selectAllButton).toHaveTextContent('notifications:buttonStack.selectAll')
+
+      expect(selectAllButton).toHaveTextContent(
+        'notifications:buttonStack.selectAll'
+      )
       expect(markAsReadButton).toBeDisabled()
       expect(deleteButton).toBeDisabled()
     })
@@ -221,7 +235,7 @@ describe('Notifications Component', () => {
       })
 
       render(<Notifications />, { wrapper: createWrapper() })
-      
+
       const selectAllButton = screen.getByTestId('select-all')
       await waitFor(() => {
         expect(selectAllButton).toBeInTheDocument()
@@ -240,7 +254,7 @@ describe('Notifications Component', () => {
       const selectAllButton = screen.getByTestId('select-all')
 
       fireEvent.click(selectAllButton)
-      
+
       await waitFor(() => {
         expect(forEachNodeMock).toHaveBeenCalled()
       })
@@ -249,7 +263,7 @@ describe('Notifications Component', () => {
     it('handles case when gridApi is not available', () => {
       render(<Notifications />, { wrapper: createWrapper() })
       const selectAllButton = screen.getByTestId('select-all')
-      
+
       expect(selectAllButton).toBeInTheDocument()
     })
   })
@@ -268,13 +282,15 @@ describe('Notifications Component', () => {
       forEachNodeMock.mockImplementation((callback) => {
         nodes.forEach(callback)
       })
-      getSelectedNodesMock.mockReturnValue([{ data: { notificationMessageId: 'n1' } }])
+      getSelectedNodesMock.mockReturnValue([
+        { data: { notificationMessageId: 'n1' } }
+      ])
       markAsReadMutateMock.mockImplementation((payload, { onSuccess }) => {
         onSuccess()
       })
 
       render(<Notifications />, { wrapper: createWrapper() })
-      
+
       await waitFor(() => {
         const markAsReadButton = screen.getByTestId('mark-as-read')
         expect(markAsReadButton).not.toBeDisabled()
@@ -294,14 +310,16 @@ describe('Notifications Component', () => {
       forEachNodeMock.mockImplementation((callback) => {
         nodes.forEach(callback)
       })
-      getSelectedNodesMock.mockReturnValue([{ data: { notificationMessageId: 'n1' } }])
+      getSelectedNodesMock.mockReturnValue([
+        { data: { notificationMessageId: 'n1' } }
+      ])
       const error = new Error('Test error')
       markAsReadMutateMock.mockImplementation((payload, { onError }) => {
         onError(error)
       })
 
       render(<Notifications />, { wrapper: createWrapper() })
-      
+
       await waitFor(() => {
         const markAsReadButton = screen.getByTestId('mark-as-read')
         expect(markAsReadButton).not.toBeDisabled()
@@ -322,10 +340,12 @@ describe('Notifications Component', () => {
       forEachNodeMock.mockImplementation((callback) => {
         nodes.forEach(callback)
       })
-      getSelectedNodesMock.mockReturnValue([{ data: { notificationMessageId: 'n1' } }])
+      getSelectedNodesMock.mockReturnValue([
+        { data: { notificationMessageId: 'n1' } }
+      ])
 
       render(<Notifications />, { wrapper: createWrapper() })
-      
+
       await waitFor(() => {
         const markAsReadButton = screen.getByTestId('mark-as-read')
         expect(markAsReadButton).not.toBeDisabled()
@@ -351,10 +371,12 @@ describe('Notifications Component', () => {
       forEachNodeMock.mockImplementation((callback) => {
         nodes.forEach(callback)
       })
-      getSelectedNodesMock.mockReturnValue([{ data: { notificationMessageId: 'n1' } }])
+      getSelectedNodesMock.mockReturnValue([
+        { data: { notificationMessageId: 'n1' } }
+      ])
 
       render(<Notifications />, { wrapper: createWrapper() })
-      
+
       await waitFor(() => {
         const deleteButton = screen.getByTestId('mark-as-unread')
         expect(deleteButton).not.toBeDisabled()
@@ -418,7 +440,7 @@ describe('Notifications Component', () => {
 
     it('does not navigate when delete action is clicked', () => {
       render(<Notifications />, { wrapper: createWrapper() })
-      
+
       expect(navigateMock).not.toHaveBeenCalled()
     })
 

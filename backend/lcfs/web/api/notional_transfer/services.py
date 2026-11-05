@@ -234,7 +234,9 @@ class NotionalTransferServices:
             == notional_transfer_data.compliance_report_id
         ):
             await self.repo.delete_notional_transfer(
-                notional_transfer_id=notional_transfer_data.notional_transfer_id
+                notional_transfer_id=notional_transfer_data.notional_transfer_id,
+                compliance_report_id=notional_transfer_data.compliance_report_id,
+                group_uuid=notional_transfer_data.group_uuid,
             )
             return DeleteNotionalTransferResponseSchema(message="Marked as deleted.")
         else:

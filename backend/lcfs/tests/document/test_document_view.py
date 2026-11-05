@@ -193,7 +193,7 @@ async def test_upload_file_missing_file(fastapi_app, client):
     )
     # Not sending a file triggers a validation error.
     response = await client.post(url, data={})
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 @pytest.mark.anyio

@@ -1,12 +1,17 @@
 import React from 'react'
-import { beforeEach, describe, it, expect, vi } from 'vitest'
+import { beforeEach, describe, it, expect, vi } from 'vite-plus/test'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { AddEditOrgForm } from '../AddEditOrgForm'
 import { useApiService } from '@/services/useApiService'
 import { useOrganization, useOrganizationTypes } from '@/hooks/useOrganization'
-import { useNavigate, useParams, useLocation , MemoryRouter } from 'react-router-dom'
-import '@/routes/routes';
+import {
+  useNavigate,
+  useParams,
+  useLocation,
+  MemoryRouter
+} from 'react-router-dom'
+import '@/routes/routes'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { I18nextProvider } from 'react-i18next'
 import i18n from '@/i18n'
@@ -62,9 +67,7 @@ vi.mock('react-i18next', async (importOriginal) => {
     ...actual,
     useTranslation: vi.fn(() => ({
       t: (key) =>
-        key === 'org:sameAsLegalNameLabel'
-          ? 'Same as legal name'
-          : key,
+        key === 'org:sameAsLegalNameLabel' ? 'Same as legal name' : key,
       i18n: { changeLanguage: vi.fn() }
     })),
     I18nextProvider: ({ children }) => children
@@ -90,17 +93,19 @@ vi.mock('react-hook-form', () => ({
     control: {}
   }),
   Controller: React.forwardRef(function ControllerMock({ name, render }, ref) {
-    return <div data-testid={`controller-${name}`} data-test={`controller-${name}`}>
-      {render({
-        field: {
-          onChange: vi.fn(),
-          value: '',
-          name,
-          ref: ref || vi.fn()
-        },
-        fieldState: {}
-      })}
-    </div>
+    return (
+      <div data-testid={`controller-${name}`} data-test={`controller-${name}`}>
+        {render({
+          field: {
+            onChange: vi.fn(),
+            value: '',
+            name,
+            ref: ref || vi.fn()
+          },
+          fieldState: {}
+        })}
+      </div>
+    )
   })
 }))
 
@@ -152,17 +157,19 @@ vi.mock('@/components/Loading', () => ({
 }))
 
 vi.mock('@/components/BCForm/AddressAutocomplete', () => ({
-  AddressAutocomplete: React.forwardRef(function AddressAutocompleteMock(props, ref) {
-    return (
-    <input
-      ref={ref}
-      data-test={`address-autocomplete-${props.name || 'default'}`}
-      data-testid="address-autocomplete"
-      value={props.value || ''}
-      onChange={(e) => props.onChange && props.onChange(e.target.value)}
-    />
-    )
-  }),
+  AddressAutocomplete: React.forwardRef(
+    function AddressAutocompleteMock(props, ref) {
+      return (
+        <input
+          ref={ref}
+          data-test={`address-autocomplete-${props.name || 'default'}`}
+          data-testid="address-autocomplete"
+          value={props.value || ''}
+          onChange={(e) => props.onChange && props.onChange(e.target.value)}
+        />
+      )
+    }
+  ),
   BCFormCheckbox: ({ name, label, options }) => (
     <div
       data-test={`${name}-checkbox-group`}
@@ -195,7 +202,7 @@ vi.mock('../ReferenceCompareBox', () => ({
 
 // Material UI simple mocks
 vi.mock('@mui/material/Box', () => ({
-    default: ({ children, component = 'div', flexWrap, ...props }) => {
+  default: ({ children, component = 'div', flexWrap, ...props }) => {
     const domProps = { ...props }
     if (flexWrap) domProps.style = { ...domProps.style, flexWrap }
     return React.createElement(component, domProps, children)
@@ -203,7 +210,7 @@ vi.mock('@mui/material/Box', () => ({
 }))
 
 vi.mock('@mui/material/Paper', () => ({
-    default: ({ children, ...props }) => (
+  default: ({ children, ...props }) => (
     <div data-test="addEditOrgContainer" {...props}>
       {children}
     </div>
@@ -236,23 +243,22 @@ vi.mock('@mui/material/Grid', () => ({
 }))
 
 vi.mock('@mui/material/TextField', () => ({
-    default: React.forwardRef(
-    function TextFieldMock(
-      {
-        id,
-        label,
-        error,
-        helperText,
-        fullWidth,
-        variant,
-        select,
-        children,
-        ...props
-      },
-      ref
-    ) {
-      delete props.SelectProps
-      return (
+  default: React.forwardRef(function TextFieldMock(
+    {
+      id,
+      label,
+      error,
+      helperText,
+      fullWidth,
+      variant,
+      select,
+      children,
+      ...props
+    },
+    ref
+  ) {
+    delete props.SelectProps
+    return (
       <div data-testid={id || 'text-field'}>
         {label && <label htmlFor={id}>{label}</label>}
         {select ? (
@@ -271,9 +277,8 @@ vi.mock('@mui/material/TextField', () => ({
         )}
         {error && <span>{helperText}</span>}
       </div>
-      )
-    }
-  )
+    )
+  })
 }))
 
 vi.mock('@mui/material/FormControl', () => ({
@@ -292,11 +297,11 @@ vi.mock('@mui/material/FormControlLabel', async (importOriginal) => {
 })
 
 vi.mock('@mui/material/FormLabel', () => ({
-    default: ({ children, ...props }) => <div {...props}>{children}</div>
+  default: ({ children, ...props }) => <div {...props}>{children}</div>
 }))
 
 vi.mock('@mui/material/InputLabel', () => ({
-    default: ({ children, ...props }) => <label {...props}>{children}</label>
+  default: ({ children, ...props }) => <label {...props}>{children}</label>
 }))
 
 vi.mock('@mui/material/RadioGroup', () => ({
@@ -310,18 +315,18 @@ vi.mock('@mui/material/RadioGroup', () => ({
 }))
 
 vi.mock('@mui/material/Radio', () => ({
-    default: React.forwardRef(function RadioMock(props, ref) {
-      return (
-    <input
-      ref={ref}
-      type="radio"
-      checked={props.checked}
-      value={props.value}
-      data-test={props['data-test'] || `radio-${props.value}`}
-      {...props}
-    />
-      )
-    })
+  default: React.forwardRef(function RadioMock(props, ref) {
+    return (
+      <input
+        ref={ref}
+        type="radio"
+        checked={props.checked}
+        value={props.value}
+        data-test={props['data-test'] || `radio-${props.value}`}
+        {...props}
+      />
+    )
+  })
 }))
 
 vi.mock('@mui/material/Checkbox', async (importOriginal) => {
@@ -628,7 +633,9 @@ describe('AddEditOrgForm Component', () => {
         </Wrapper>
       )
 
-      expect(screen.getByTestId('orgTypeIds-checkbox-group')).toBeInTheDocument()
+      expect(
+        screen.getByTestId('orgTypeIds-checkbox-group')
+      ).toBeInTheDocument()
       expect(screen.getByText('Fuel supplier')).toBeInTheDocument()
       expect(screen.getByText('Aggregator')).toBeInTheDocument()
     })
@@ -674,7 +681,9 @@ describe('AddEditOrgForm Component', () => {
       )
 
       // Should still render the (empty) checkbox group even when loading
-      expect(screen.getByTestId('orgTypeIds-checkbox-group')).toBeInTheDocument()
+      expect(
+        screen.getByTestId('orgTypeIds-checkbox-group')
+      ).toBeInTheDocument()
     })
 
     it('handles organization type error state', () => {
@@ -691,7 +700,9 @@ describe('AddEditOrgForm Component', () => {
       )
 
       // Should still render the checkbox group even when there's an error
-      expect(screen.getByTestId('orgTypeIds-checkbox-group')).toBeInTheDocument()
+      expect(
+        screen.getByTestId('orgTypeIds-checkbox-group')
+      ).toBeInTheDocument()
     })
 
     it('populates form correctly in edit mode with organization type', async () => {
@@ -824,7 +835,9 @@ describe('AddEditOrgForm Component', () => {
         </Wrapper>
       )
 
-      expect(screen.getByTestId('orgTypeIds-checkbox-group')).toBeInTheDocument()
+      expect(
+        screen.getByTestId('orgTypeIds-checkbox-group')
+      ).toBeInTheDocument()
       expect(
         screen.getByTestId('availableRoles-checkbox-group')
       ).toBeInTheDocument()

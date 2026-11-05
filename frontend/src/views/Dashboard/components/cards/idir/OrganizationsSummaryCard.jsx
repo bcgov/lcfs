@@ -100,10 +100,7 @@ const OrganizationsSummaryCard = () => {
       title="Summary"
       sx={styles.cardContent}
       content={
-        <Stack
-          alignItems="center"
-          sx={{ width: '100%' }}
-        >
+        <Stack alignItems="center" sx={{ width: '100%' }}>
           <BCTypography
             variant="body2"
             sx={{ color: 'primary.main', mb: '2px' }}
@@ -132,10 +129,7 @@ const OrganizationsSummaryCard = () => {
           >
             ({numberFormatter(selectedOrganization.reservedBalance)} in reserve)
           </BCTypography>
-          <BCTypography
-            variant="body3"
-            sx={{ color: 'primary.main', mt: 1 }}
-          >
+          <BCTypography variant="body3" sx={{ color: 'primary.main', mt: 1 }}>
             Show balance for:
           </BCTypography>
           <Select
