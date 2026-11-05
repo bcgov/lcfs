@@ -20,6 +20,7 @@ from lcfs.db.models.comment.InternalComment import (
     InternalComment,
     internal_comment_document_association,
 )
+from lcfs.db.models.comment.PenaltyLogInternalComment import PenaltyLogInternalComment
 from lcfs.db.models.comment.CommentCategory import CommentCategory
 from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
@@ -177,6 +178,11 @@ class InternalCommentRepository:
                 CIApplicationInternalComment,
             ),
             (
+                EntityTypeEnum.PENALTY_LOG,
+                PenaltyLogInternalComment.organization_id,
+                PenaltyLogInternalComment,
+            ),
+            (
                 EntityTypeEnum.ORGANIZATION,
                 OrganizationInternalComment.organization_id,
                 OrganizationInternalComment,
@@ -257,6 +263,11 @@ class InternalCommentRepository:
                 ci_application_id=entity_id,
                 internal_comment_id=internal_comment.internal_comment_id,
             )
+        elif entity_type == EntityTypeEnum.PENALTY_LOG:
+            association = PenaltyLogInternalComment(
+                organization_id=entity_id,
+                internal_comment_id=internal_comment.internal_comment_id,
+            )
         elif entity_type == EntityTypeEnum.ORGANIZATION:
             association = OrganizationInternalComment(
                 organization_id=entity_id,
@@ -328,6 +339,10 @@ class InternalCommentRepository:
             EntityTypeEnum.DESIGNATED_ACTION: (
                 DesignatedActionInternalComment,
                 DesignatedActionInternalComment.designated_action_id,
+            ),
+            EntityTypeEnum.PENALTY_LOG: (
+                PenaltyLogInternalComment,
+                PenaltyLogInternalComment.organization_id,
             ),
             EntityTypeEnum.ORGANIZATION: (
                 OrganizationInternalComment,
@@ -440,35 +455,39 @@ class InternalCommentRepository:
                 if username:
                     comment["update_full_name"] = full_name_by_username.get(username)
 
-        # Attach any document attachments in a single batched query to avoid
-        # an N+1 across the comment list.
-        comment_ids = [c["internal_comment_id"] for c in comments_with_user_info]
-        if comment_ids:
-            docs_result = await self.db.execute(
-                select(
-                    internal_comment_document_association.c.internal_comment_id,
-                    Document,
-                )
-                .join(
-                    Document,
-                    Document.document_id
-                    == internal_comment_document_association.c.document_id,
-                )
-                .where(
-                    internal_comment_document_association.c.internal_comment_id.in_(
-                        comment_ids
-                    )
-                )
-            )
-            documents_by_comment = {}
-            for comment_id, document in docs_result.all():
-                documents_by_comment.setdefault(comment_id, []).append(document)
-            for comment in comments_with_user_info:
-                comment["documents"] = documents_by_comment.get(
-                    comment["internal_comment_id"], []
-                )
-
+        await self._attach_documents(comments_with_user_info)
         return comments_with_user_info
+
+    async def _attach_documents(self, comments: List[dict]) -> None:
+        """Load attachments in one query, restricted to the visible comment rows."""
+        if not comments:
+            return
+
+        result = await self.db.execute(
+            select(
+                internal_comment_document_association.c.internal_comment_id,
+                Document,
+            )
+            .join(
+                Document,
+                Document.document_id
+                == internal_comment_document_association.c.document_id,
+            )
+            .where(
+                internal_comment_document_association.c.internal_comment_id.in_(
+                    [comment["internal_comment_id"] for comment in comments]
+                ),
+                Document.deleted_date.is_(None),
+            )
+            .order_by(Document.create_date, Document.document_id)
+        )
+        documents_by_comment: dict[int, list[Document]] = {}
+        for comment_id, document in result.all():
+            documents_by_comment.setdefault(comment_id, []).append(document)
+        for comment in comments:
+            comment["documents"] = documents_by_comment.get(
+                comment["internal_comment_id"], []
+            )
 
     @repo_handler
     async def get_internal_comment_by_id(
@@ -616,6 +635,10 @@ class InternalCommentRepository:
                 CIApplicationInternalComment,
                 CIApplicationInternalComment.ci_application_id,
             ),
+            EntityTypeEnum.PENALTY_LOG: (
+                PenaltyLogInternalComment,
+                PenaltyLogInternalComment.organization_id,
+            ),
             EntityTypeEnum.ORGANIZATION: (
                 OrganizationInternalComment,
                 OrganizationInternalComment.organization_id,
@@ -648,6 +671,16 @@ class InternalCommentRepository:
             )
         )
         return result.scalar_one_or_none()
+
+    @repo_handler
+    async def is_penalty_log_comment(self, internal_comment_id: int) -> bool:
+        """Check the authoritative entity link rather than the search category."""
+        result = await self.db.execute(
+            select(PenaltyLogInternalComment.internal_comment_id).where(
+                PenaltyLogInternalComment.internal_comment_id == internal_comment_id
+            )
+        )
+        return result.scalar_one_or_none() is not None
 
     @repo_handler
     async def is_organization_comment(self, internal_comment_id: int) -> bool:
@@ -787,6 +820,18 @@ class InternalCommentRepository:
 
         # Organization-scoped comments carry the organization id directly as the
         # entity id (e.g. Company Overview notes).
+        if entity_type == EntityTypeEnum.PENALTY_LOG:
+            organization_id = (
+                await self.db.execute(
+                    select(Organization.organization_id).where(
+                        Organization.organization_id == entity_id
+                    )
+                )
+            ).scalar_one_or_none()
+            if organization_id is None:
+                raise DataNotFoundException("Organization not found")
+            return (organization_id, None)
+
         if entity_type == EntityTypeEnum.ORGANIZATION:
             return (entity_id, None)
 
@@ -881,6 +926,10 @@ class InternalCommentRepository:
                         OrganizationInternalComment.organization_id.isnot(None),
                         EntityTypeEnum.ORGANIZATION.value,
                     ),
+                    (
+                        PenaltyLogInternalComment.organization_id.isnot(None),
+                        EntityTypeEnum.PENALTY_LOG.value,
+                    ),
                     else_=None,
                 ).label("entity_type"),
                 func.coalesce(
@@ -890,6 +939,7 @@ class InternalCommentRepository:
                     ComplianceReportInternalComment.compliance_report_id,
                     CIApplicationInternalComment.ci_application_id,
                     OrganizationInternalComment.organization_id,
+                    PenaltyLogInternalComment.organization_id,
                 ).label("entity_id"),
                 func.coalesce(
                     Transfer.to_organization_id,
@@ -898,6 +948,7 @@ class InternalCommentRepository:
                     ComplianceReport.organization_id,
                     CIApplication.organization_id,
                     OrganizationInternalComment.organization_id,
+                    PenaltyLogInternalComment.organization_id,
                 ).label("live_org_id"),
                 cp_year.label("live_year"),
             )
@@ -960,6 +1011,11 @@ class InternalCommentRepository:
                 OrganizationInternalComment.internal_comment_id
                 == InternalComment.internal_comment_id,
             )
+            .outerjoin(
+                PenaltyLogInternalComment,
+                PenaltyLogInternalComment.internal_comment_id
+                == InternalComment.internal_comment_id,
+            )
             .where(
                 *(
                     [
@@ -970,6 +1026,8 @@ class InternalCommentRepository:
                             ComplianceReport.organization_id == organization_id,
                             CIApplication.organization_id == organization_id,
                             OrganizationInternalComment.organization_id
+                            == organization_id,
+                            PenaltyLogInternalComment.organization_id
                             == organization_id,
                         )
                     ]
@@ -999,7 +1057,8 @@ class InternalCommentRepository:
                     ),
                     (CIApplicationInternalComment.ci_application_id.isnot(None), 5),
                     (OrganizationInternalComment.organization_id.isnot(None), 6),
-                    else_=7,
+                    (PenaltyLogInternalComment.organization_id.isnot(None), 7),
+                    else_=8,
                 ),
                 func.coalesce(
                     TransferInternalComment.transfer_id,
@@ -1008,6 +1067,7 @@ class InternalCommentRepository:
                     ComplianceReportInternalComment.compliance_report_id,
                     CIApplicationInternalComment.ci_application_id,
                     OrganizationInternalComment.organization_id,
+                    PenaltyLogInternalComment.organization_id,
                 ),
             )
             .subquery()
@@ -1286,4 +1346,17 @@ class InternalCommentRepository:
             for comment in comments:
                 comment["update_full_name"] = None
 
+        await self._attach_documents(comments)
         return (comments, int(total))
+
+    @repo_handler
+    async def delete_penalty_log_comment(self, internal_comment_id: int) -> None:
+        """Delete a comment after its document links have been cleaned up."""
+        # The penalty-log link and document links cascade; document storage is
+        # cleaned through DocumentService before deleting the comment.
+        await self.db.execute(
+            sa.delete(InternalComment).where(
+                InternalComment.internal_comment_id == internal_comment_id
+            )
+        )
+        await self.db.flush()
