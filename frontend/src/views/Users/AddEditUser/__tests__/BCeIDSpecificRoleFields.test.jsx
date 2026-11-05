@@ -8,7 +8,7 @@ import {
   lcjfipAdministratorOption
 } from '../_schema'
 
-// @/components/BCForm is globally mocked in testSetup.js:
+// @/components/BCForm is globally mocked in testSetup.ts:
 //   BCFormCheckbox → <div data-test="{name}-checkbox-group"> with child <input> per option
 // Our mock for CustomLabel and MUI components uses `data-test` (testIdAttribute config).
 
