@@ -5,7 +5,7 @@
     "date": "2026-11-05",
     "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/v1.3.12",
     "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/v1.3.11...v1.3.12",
-    "summary": "This release includes 2 new features, 16 bug fixes, 1 security update, 6 dependency updates and 17 other changes. Highlights: Automate IA Credit Transactions on DA Approval; gate CI with Vite+ checks; apply open Dependabot security updates on Python 3.13.",
+    "summary": "This release includes 2 new features, 17 bug fixes, 1 security update, 6 dependency updates and 19 other changes. Highlights: Automate IA Credit Transactions on DA Approval; gate CI with Vite+ checks; apply open Dependabot security updates on Python 3.13.",
     "sections": {
       "features": [
         "Automate IA Credit Transactions on DA Approval - 5211",
@@ -27,7 +27,8 @@
         "show non-assessed years as Non-assessment in the credit ledger (#5304)",
         "commit the request's DB transaction before the response is sent",
         "support fuel code numbers above 999 (#5347)",
-        "persist agreement date when saving transfer drafts"
+        "persist agreement date when saving transfer drafts",
+        "LCFS - Update Prod credit market snapshot"
       ],
       "security": [
         "apply open Dependabot security updates on Python 3.13"
@@ -58,7 +59,9 @@
         "TS migration PR 01/44: Shared constants and test foundations",
         "Read FSE reporting rows live instead of from the materialized view (#5132)",
         "TS migration PR 02/44: Theme foundations",
-        "Start new compliance reports in Draft"
+        "Start new compliance reports in Draft",
+        "Hotfix: Exclude Category D from Credit Market all-time totals",
+        "Clear the fuel code grid's loading overlay when a save finishes"
       ]
     },
     "contributors": []
