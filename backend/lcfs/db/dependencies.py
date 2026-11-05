@@ -37,12 +37,15 @@ async def extended_statement_timeout(request: Request) -> None:
     Route dependency for export/report endpoints: use the longer export timeout.
 
     Route-level dependencies resolve before ``get_async_db_session``, which reads
-    the value this sets. No-op when timeouts are disabled globally, so an export
-    never gets a tighter limit than a normal request.
+    the value this sets. No-op when timeouts are disabled globally or when the
+    export timeout is nonzero and no larger than the normal one, so an export
+    never gets a tighter limit than a normal request. ``0`` means unlimited.
     """
-    if settings.db_statement_timeout_ms <= 0:
+    normal_timeout = settings.db_statement_timeout_ms
+    export_timeout = settings.db_export_statement_timeout_ms
+    if normal_timeout <= 0 or 0 < export_timeout <= normal_timeout:
         return
-    request.state.db_statement_timeout_ms = settings.db_export_statement_timeout_ms
+    request.state.db_statement_timeout_ms = export_timeout
 
 
 async def set_statement_timeout(session: AsyncSession, timeout_ms: int) -> None:

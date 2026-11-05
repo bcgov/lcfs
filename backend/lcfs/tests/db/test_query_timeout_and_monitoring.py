@@ -38,8 +38,11 @@ class TestBuildConnectArgs:
         assert args["prepared_statement_cache_size"] == 0
 
     @pytest.mark.parametrize("value", [0, -1])
-    def test_zero_or_negative_disables_timeout(self, value):
-        assert "server_settings" not in build_connect_args(value)
+    def test_zero_or_negative_explicitly_disables_timeout(self, value):
+        """An explicit "0" overrides any inherited server/database/role timeout."""
+        assert build_connect_args(value)["server_settings"] == {
+            "statement_timeout": "0"
+        }
 
     def test_defaults(self):
         assert settings.db_statement_timeout_ms == 30_000
@@ -110,6 +113,23 @@ class TestExtendedStatementTimeout:
         request = SimpleNamespace(state=SimpleNamespace())
         await extended_statement_timeout(request)
         assert not hasattr(request.state, "db_statement_timeout_ms")
+
+    @pytest.mark.parametrize("export_ms", [300_000, 120_000])
+    async def test_is_noop_when_export_timeout_is_not_larger(
+        self, monkeypatch, export_ms
+    ):
+        monkeypatch.setattr(settings, "db_statement_timeout_ms", 300_000)
+        monkeypatch.setattr(settings, "db_export_statement_timeout_ms", export_ms)
+        request = SimpleNamespace(state=SimpleNamespace())
+        await extended_statement_timeout(request)
+        assert not hasattr(request.state, "db_statement_timeout_ms")
+
+    async def test_zero_export_timeout_means_unlimited(self, monkeypatch):
+        monkeypatch.setattr(settings, "db_statement_timeout_ms", 30_000)
+        monkeypatch.setattr(settings, "db_export_statement_timeout_ms", 0)
+        request = SimpleNamespace(state=SimpleNamespace())
+        await extended_statement_timeout(request)
+        assert request.state.db_statement_timeout_ms == 0
 
     async def test_set_statement_timeout_is_transaction_local(self):
         session = MagicMock()

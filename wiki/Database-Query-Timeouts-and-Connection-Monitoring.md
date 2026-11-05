@@ -28,7 +28,7 @@ There are two engines:
 | Export / report endpoints | 5 min | `LCFS_DB_EXPORT_STATEMENT_TIMEOUT_MS` | `SET LOCAL` for the request's transaction (see below) |
 | `lifetime` engine (auth + scheduled jobs) | unlimited (`0`) | `LCFS_DB_BACKGROUND_STATEMENT_TIMEOUT_MS` | asyncpg `server_settings` |
 
-A value of `0` disables the timeout. If `LCFS_DB_STATEMENT_TIMEOUT_MS=0` the export override is skipped as well, so an export can never get a *tighter* limit than a normal request. Invalid values (negative timeouts, a budget below 1, a warn ratio outside `(0, 1]`) are rejected at startup. When a statement exceeds the limit PostgreSQL cancels it (`canceling statement due to statement timeout`, SQLSTATE `57014`) and the request fails with a server error; the transaction is rolled back and the connection is released.
+A value of `0` disables the timeout; it is sent to PostgreSQL as an explicit `statement_timeout=0`, so it also overrides any server/database/role level default. The export override is skipped when `LCFS_DB_STATEMENT_TIMEOUT_MS=0`, or when the export value is nonzero and no larger than the normal one, so an export can never get a *tighter* limit than a normal request (an export value of `0` stays unlimited). Invalid values (negative timeouts, a budget below 1, a warn ratio outside `(0, 1]`) are rejected at startup. When a statement exceeds the limit PostgreSQL cancels it (`canceling statement due to statement timeout`, SQLSTATE `57014`) and the request fails with a server error; the transaction is rolled back and the connection is released.
 
 The `lifetime` engine is intentionally unlimited by default: scheduled maintenance jobs such as `REINDEX TABLE CONCURRENTLY` legitimately run for minutes. Set `LCFS_DB_BACKGROUND_STATEMENT_TIMEOUT_MS` only if you have measured your longest job.
 
@@ -91,6 +91,8 @@ Implemented in `backend/lcfs/db/pool_monitor.py`. Every connection checkout/chec
 | `LCFS_DB_POOL_STATS_LOG_INTERVAL_SECONDS` | `60` | Interval for periodic `Database connection stats` log (only emitted while connections are being used) |
 
 `LCFS_DB_CONNECTION_BUDGET` is only used to compute the ratio; with `NullPool` it is **not** a hard cap. If it is lower than real usage the ratio exceeds 1.0.
+
+Counts and metrics are **per Uvicorn worker process** (`LCFS_WORKERS_COUNT`, default 2), and a `/metrics` scrape only reports the worker that served it. The ratio compares one worker's connections to the budget, so set `LCFS_DB_CONNECTION_BUDGET` to the connections *each worker* may use (for example `40` for 2 workers sharing 80) and treat cluster-wide usage as the sum across workers.
 
 ### Log messages
 
