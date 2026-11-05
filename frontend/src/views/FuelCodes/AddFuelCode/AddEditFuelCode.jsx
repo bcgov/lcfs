@@ -419,22 +419,18 @@ const AddEditFuelCodeBase = () => {
           validationMsg: errMsg
         }
       } finally {
-        // Remove from pending updates
-        updatePendingUpdates((prev) => {
-          const newSet = new Set(prev)
+        // Remove from pending updates and clear the global updating state in
+        // one update. Setting state from inside another state updater can be
+        // lost and leave the grid's loading overlay up for good.
+        setState((prev) => {
+          const newSet = new Set(prev.pendingUpdates)
           newSet.delete(rowId)
-          return newSet
+          return {
+            ...prev,
+            pendingUpdates: newSet,
+            isUpdating: newSet.size > 0
+          }
         })
-
-        // Update global updating state
-        setTimeout(() => {
-          updatePendingUpdates((current) => {
-            if (current.size === 0) {
-              updateState({ isUpdating: false })
-            }
-            return current
-          })
-        }, 0)
       }
     },
     [fuelCodeMutation, t, handleError, updatePendingUpdates, updateState]
