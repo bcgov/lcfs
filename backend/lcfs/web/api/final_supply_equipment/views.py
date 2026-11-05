@@ -17,6 +17,7 @@ from fastapi import (
 from starlette.responses import StreamingResponse, JSONResponse
 
 from lcfs.db import dependencies
+from lcfs.db.dependencies import extended_statement_timeout
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
@@ -182,6 +183,7 @@ async def search_table_options(
     "/export/{report_id}",
     response_class=StreamingResponse,
     status_code=status.HTTP_200_OK,
+    dependencies=[Depends(extended_statement_timeout)],
 )
 @view_handler(
     [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
@@ -353,6 +355,7 @@ async def get_job_status(
     "/reporting/update-template/{report_id}",
     response_class=StreamingResponse,
     status_code=status.HTTP_200_OK,
+    dependencies=[Depends(extended_statement_timeout)],
 )
 @view_handler(
     [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]

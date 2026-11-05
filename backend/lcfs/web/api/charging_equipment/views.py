@@ -16,6 +16,7 @@ from fastapi import (
 from fastapi.responses import JSONResponse, StreamingResponse
 from typing import List, Optional
 
+from lcfs.db.dependencies import extended_statement_timeout
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
 from pydantic import Field
@@ -371,6 +372,7 @@ async def has_allocation_agreements(
     "/export/{organization_id}",
     response_class=StreamingResponse,
     status_code=status.HTTP_200_OK,
+    dependencies=[Depends(extended_statement_timeout)],
 )
 @view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
 async def export_charging_equipment(
@@ -401,6 +403,7 @@ async def export_charging_equipment(
     "/export",
     response_class=StreamingResponse,
     status_code=status.HTTP_200_OK,
+    dependencies=[Depends(extended_statement_timeout)],
 )
 @view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
 async def export_filtered_charging_equipment(
