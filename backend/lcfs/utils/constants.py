@@ -149,6 +149,12 @@ ALLOWED_MIME_TYPES = [
 ]
 ALLOWED_FILE_TYPES = "PDF, PNG, JPG/JPEG, Word Documents (.doc/.docx), Excel Spreadsheets (.xls/.xlsx), CSV, TXT"
 
+# Macro-enabled workbooks are accepted only for these parent types, behind
+# settings.feature_macro_uploads, and only after macro analysis
+MACRO_UPLOAD_PARENT_TYPES = {"ci_application"}
+MACRO_ENABLED_MIME_TYPES = ["application/vnd.ms-excel.sheet.macroEnabled.12"]
+MACRO_ENABLED_FILE_TYPES = "Macro-enabled Excel Spreadsheets (.xlsm)"
+
 # Schedule importers only read .xlsx workbooks
 SCHEDULE_IMPORT_MIME_TYPES = [
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

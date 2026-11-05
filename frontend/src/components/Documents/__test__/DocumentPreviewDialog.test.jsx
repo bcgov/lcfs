@@ -89,4 +89,50 @@ describe('DocumentPreviewDialog', () => {
     ).toBeInTheDocument()
     expect(document.querySelector('img[src="x"]')).toBeNull()
   })
+
+  test('previews a macro-enabled workbook without running it', async ({
+    render,
+    theme
+  }) => {
+    render(
+      <DocumentPreviewDialog
+        open
+        onClose={vi.fn()}
+        parentType="ci_application"
+        parentID={1}
+        document={{ documentId: 7, fileName: 'model.xlsm' }}
+      />,
+      [theme]
+    )
+
+    expect(await screen.findByText('Renewable diesel')).toBeInTheDocument()
+  })
+
+  test("shows the server's reason when the file is locked", async ({
+    render,
+    theme
+  }) => {
+    const detail =
+      'This file contains macros and is waiting for an administrator to approve it.'
+    fetchDocument.mockRejectedValue({
+      response: {
+        status: 409,
+        // Blob requests deliver the error body as a Blob
+        data: { text: async () => JSON.stringify({ detail }) }
+      }
+    })
+
+    render(
+      <DocumentPreviewDialog
+        open
+        onClose={vi.fn()}
+        parentType="ci_application"
+        parentID={1}
+        document={{ documentId: 7, fileName: 'model.xlsm' }}
+      />,
+      [theme]
+    )
+
+    expect(await screen.findByText(detail)).toBeInTheDocument()
+  })
 })

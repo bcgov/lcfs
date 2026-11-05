@@ -290,6 +290,8 @@ export const apiRoutes = {
   getDocuments: '/documents/:parentType/:parentID',
   uploadDocument: '/documents/:parentType/:parentID',
   getDocument: '/documents/:parentType/:parentID/:documentID',
+  reviewDocumentScan:
+    '/documents/:parentType/:parentID/:documentID/scan-review',
 
   // compliance_snapshot
   getOrganizationSnapshot: '/organization_snapshot/:reportID',

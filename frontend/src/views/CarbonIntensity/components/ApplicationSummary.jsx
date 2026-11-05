@@ -16,6 +16,7 @@ import BCBox from '@/components/BCBox'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import BCTypography from '@/components/BCTypography'
 import DocumentPreviewButton from '@/components/Documents/DocumentPreviewButton'
+import DocumentScanStatus from '@/components/Documents/DocumentScanStatus'
 import { useDownloadDocument } from '@/hooks/useDocuments'
 import colors from '@/themes/base/colors'
 import {
@@ -29,7 +30,7 @@ import { CIApplicationAssignmentHistory } from './CIApplicationAssignmentHistory
 import { CIApplicationStatusRenderer } from '@/utils/grid/cellRenderers'
 import { constructAddress } from '@/utils/constructAddress'
 import { exportRowsToXlsx } from './pathwayExport'
-import { getDocumentDisplayName } from '@/utils/documents'
+import { getDocumentDisplayName, isDocumentLocked } from '@/utils/documents'
 
 const formatDate = (value) => {
   if (!value) return ''
@@ -694,40 +695,64 @@ const ApplicationSummaryDetails = ({
                 }}
                 data-test="ci-summary-document-row"
               >
-                <Box
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    minWidth: 0
-                  }}
-                >
-                  <BCTypography
-                    component="span"
-                    variant="body2"
-                    sx={{ mr: 1, flexShrink: 0 }}
-                  >
-                    •
-                  </BCTypography>
-                  <BCTypography
-                    component="span"
-                    variant="body2"
-                    color="link"
-                    onClick={() => {
-                      downloadDocument(d.documentId, displayName)
-                    }}
+                <Box sx={{ minWidth: 0 }}>
+                  <Box
                     sx={{
-                      minWidth: 0,
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      textDecoration: 'underline',
-                      cursor: 'pointer',
-                      '&:hover': { color: 'info.main' }
+                      display: 'flex',
+                      alignItems: 'center',
+                      minWidth: 0
                     }}
-                    title={displayName}
                   >
-                    {displayName}
-                  </BCTypography>
+                    <BCTypography
+                      component="span"
+                      variant="body2"
+                      sx={{ mr: 1, flexShrink: 0 }}
+                    >
+                      •
+                    </BCTypography>
+                    {isDocumentLocked(d) ? (
+                      // Locked until an administrator approves the macros
+                      <BCTypography
+                        component="span"
+                        variant="body2"
+                        sx={{
+                          minWidth: 0,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}
+                        title={displayName}
+                      >
+                        {displayName}
+                      </BCTypography>
+                    ) : (
+                      <BCTypography
+                        component="span"
+                        variant="body2"
+                        color="link"
+                        onClick={() => {
+                          downloadDocument(d.documentId, displayName)
+                        }}
+                        sx={{
+                          minWidth: 0,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          textDecoration: 'underline',
+                          cursor: 'pointer',
+                          '&:hover': { color: 'info.main' }
+                        }}
+                        title={displayName}
+                      >
+                        {displayName}
+                      </BCTypography>
+                    )}
+                  </Box>
+                  <DocumentScanStatus
+                    document={d}
+                    parentType="ci_application"
+                    parentID={ciApplication?.ciApplicationId}
+                  />
                 </Box>
                 <BCTypography variant="body2" color="text.secondary">
                   {formatBytes(d.fileSize)}
