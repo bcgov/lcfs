@@ -9,9 +9,9 @@ const { Client } = pg
 
 export default defineConfig({
   e2e: {
-    supportFile: 'cypress/support/e2e.js',
+    supportFile: 'cypress/support/e2e.ts',
     testIsolation: false,
-    specPattern: ['**/*.feature', '**/*.cy.js'],
+    specPattern: ['**/*.feature', '**/*.cy.js', '**/*.cy.ts'],
     excludeSpecPattern: ['**/*.skip.feature'],
     screenshotsFolder: 'cypress/screenshots',
     videosFolder: 'cypress/videos',
@@ -42,33 +42,32 @@ export default defineConfig({
     baseUrl: process.env.CYPRESS_BASE_URL || 'http://localhost:3000',
     async setupNodeEvents(on, config) {
       on('task', {
-        log(message) {
+        log(message: unknown) {
           console.log(message)
 
           return null
         },
-        table(message) {
+        table(message: unknown) {
           console.table(message)
 
           return null
         },
-        clearComplianceReports() {
-          return new Promise((resolve, reject) => {
-            const client = new Client({
-              user: process.env.DB_CYPRESS_USER || 'lcfs',
-              host: process.env.DB_CYPRESS_HOST || 'localhost',
-              database: process.env.DB_CYPRESS_NAME || 'lcfs',
-              password: process.env.DB_CYPRESS_PASSWORD || 'development_only',
-              port: parseInt(process.env.DB_PORT || '5432')
-            })
-
-            client.connect()
-            client.query('truncate compliance_report cascade;', (err) => {
-              client.end()
-              if (err) reject(err)
-              else resolve('Compliance reports cleared')
-            })
+        async clearComplianceReports() {
+          const client = new Client({
+            user: process.env.DB_CYPRESS_USER || 'lcfs',
+            host: process.env.DB_CYPRESS_HOST || 'localhost',
+            database: process.env.DB_CYPRESS_NAME || 'lcfs',
+            password: process.env.DB_CYPRESS_PASSWORD || 'development_only',
+            port: Number.parseInt(process.env.DB_PORT || '5432', 10)
           })
+
+          await client.connect()
+          try {
+            await client.query('truncate compliance_report cascade;')
+            return 'Compliance reports cleared'
+          } finally {
+            await client.end()
+          }
         }
       })
 

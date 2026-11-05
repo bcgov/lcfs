@@ -49,7 +49,7 @@ class CreditLedgerRepository:
 
     def __init__(
         self,
-        db: AsyncSession = Depends(get_async_db_session),
+        db: AsyncSession = Depends(get_async_db_session, scope="function"),
     ):
         self.db = db
 
@@ -204,23 +204,33 @@ class CreditLedgerRepository:
         return [(row[0], row[1]) for row in result.all()]
 
     @repo_handler
-    async def get_assessed_line_22(
+    async def get_assessed_balance(
         self,
         *,
         organization_id: int,
         compliance_period: int,
-    ) -> Optional[int]:
+    ) -> tuple[Optional[int], bool]:
         """
         Line 22 (available compliance unit balance at period end) from the most
-        recent assessed report for this organization and compliance year (#4831).
+        recent assessed report for this organization and compliance year (#4831),
+        and whether that report was completed as a non-assessment (#5304).
 
         "Most recent" is the highest version in the report chain — a supplemental
-        supersedes the original regardless of when either was assessed. Returns
-        ``None`` when the year has no assessed report, so the ledger can leave
-        the balance blank instead of showing a misleading zero.
+        supersedes the original regardless of when either was assessed. A report
+        completed as a non-assessment creates no transaction, so its Line 22 is
+        not an assessed balance: a real assessment for the year is used ahead of
+        it, and when the year has only non-assessments the flag comes back
+        ``True`` for the ledger to label.
+
+        Returns ``(None, False)`` when the year has no assessed report, so the
+        ledger can leave the balance blank instead of showing a misleading zero.
         """
         stmt = (
-            select(ComplianceReportSummary.line_22_compliance_units_issued)
+            select(
+                ComplianceReportSummary.line_22_compliance_units_issued,
+                ComplianceReport.is_non_assessment,
+            )
+            .select_from(ComplianceReportSummary)
             .join(
                 ComplianceReport,
                 ComplianceReport.compliance_report_id
@@ -244,15 +254,20 @@ class CreditLedgerRepository:
                 # would raise before the query ever ran.
                 cast(ComplianceReportStatus.status, String).in_(_ASSESSED_STATUSES),
             )
-            # Version orders the supplemental chain. The id tiebreaker only
+            # Real assessments sort ahead of non-assessments (False < True).
+            # Version then orders the supplemental chain. The id tiebreaker only
             # matters if an organization somehow has two report chains for one
             # year, where equal versions would otherwise pick arbitrarily and
             # the displayed balance could change between requests.
             .order_by(
+                ComplianceReport.is_non_assessment,
                 desc(ComplianceReport.version),
                 desc(ComplianceReport.compliance_report_id),
             )
             .limit(1)
         )
-        line_22 = await self.db.scalar(stmt)
-        return None if line_22 is None else int(line_22)
+        row = (await self.db.execute(stmt)).first()
+        if row is None:
+            return None, False
+        line_22, is_non_assessment = row
+        return (None if line_22 is None else int(line_22)), bool(is_non_assessment)

@@ -262,6 +262,34 @@ describe('CreditLedgerPeriod (compliance-period ledger #4714)', () => {
     )
   })
 
+  it('labels a non-assessment year instead of showing a balance', () => {
+    // #5304: a non-assessment creates no transaction, so it has no assessed
+    // balance to show — the cell says so rather than showing a number.
+    mockPeriod.mockReturnValue({
+      data: {
+        ...PERIOD_PAYLOAD,
+        assessedBalance: {
+          previousYear: 2023,
+          previousBalance: 1000,
+          previousNonAssessment: false,
+          currentYear: 2024,
+          currentBalance: null,
+          currentNonAssessment: true
+        }
+      },
+      isLoading: false,
+      isError: false
+    })
+    renderComponent({ organizationId: 999 })
+    const section = screen.getByTestId('ledger-assessed-balance')
+    const current = within(section).getByTestId('assessed-current')
+    expect(current).toHaveTextContent('org:ledger.nonAssessment')
+    expect(current).not.toHaveTextContent(/\d/)
+    expect(within(section).getByTestId('assessed-previous')).toHaveTextContent(
+      '1,000'
+    )
+  })
+
   it('shows an empty state when the period has no transactions', () => {
     mockPeriod.mockReturnValue({
       data: {
