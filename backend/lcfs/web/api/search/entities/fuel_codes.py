@@ -1,6 +1,6 @@
 """Fuel-code search definition."""
 
-from sqlalchemy import String, cast, func, or_, select
+from sqlalchemy import BigInteger, Integer, String, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db.models.fuel.FuelCode import FuelCode
@@ -106,7 +106,9 @@ async def search_fuel_codes(
     if score is not None:
         statement = statement.order_by(score.desc())
     statement = statement.order_by(
-        relevance_rank(code, query).desc(), view.fuel_suffix
+        relevance_rank(code, query).desc(),
+        cast(func.split_part(view.fuel_suffix, ".", 1), BigInteger),
+        cast(func.split_part(view.fuel_suffix, ".", 2), Integer),
     ).limit(FUEL_CODE_RESULT_LIMIT)
 
     rows = (await db.execute(statement)).all()

@@ -137,6 +137,26 @@ vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
         Stop Edit Same
       </button>
       <button
+        onClick={() =>
+          onCellEditingStopped?.({
+            oldValue: '999.0',
+            newValue: '1000.0',
+            node: {
+              data: {
+                id: 'four-digit-row',
+                prefix: 'BCLCF',
+                prefixId: 1,
+                fuelSuffix: '1000.0',
+                modified: true
+              },
+              updateData: vi.fn()
+            }
+          })
+        }
+      >
+        Stop Edit Four Digit
+      </button>
+      <button
         onClick={() => onAction?.('duplicate', { data: { fuelCodeId: 123 } })}
       >
         Duplicate
@@ -493,6 +513,24 @@ describe('AddEditFuelCode', () => {
 
     await waitFor(() => {
       expect(mockMutation.mutateAsync).toHaveBeenCalled()
+    })
+  })
+
+  it('preserves a four-digit suffix when saving an Add/Edit grid row', async () => {
+    render(
+      <TestWrapper>
+        <AddEditFuelCode />
+      </TestWrapper>
+    )
+
+    fireEvent.click(await screen.findByText('Stop Edit Four Digit'))
+
+    await waitFor(() => {
+      expect(mockMutation.mutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ fuelSuffix: '1000.0' })
+        })
+      )
     })
   })
 
