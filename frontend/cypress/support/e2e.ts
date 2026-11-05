@@ -1,5 +1,5 @@
 // ***********************************************************
-// This example support/e2e.js is processed and
+// This support/e2e.ts file is processed and
 // loaded automatically before your test files.
 //
 // This is a great place to put global configuration and
@@ -13,6 +13,7 @@
 // https://on.cypress.io/configuration
 // ***********************************************************
 
+import type { Result as AxeResult } from 'axe-core'
 import 'cypress-axe'
 import 'cypress-real-events/support'
 import 'cypress-react-selector'
@@ -53,7 +54,7 @@ cy.on('fail', (error) => {
   throw error
 })
 
-export const terminalLog = (violations) => {
+export const terminalLog = (violations: AxeResult[]) => {
   cy.task(
     'log',
     `${violations.length} accessibility violation${

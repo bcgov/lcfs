@@ -1,4 +1,3 @@
-import { omitProperties } from '@/utils/omitProperties'
 import { roles } from '@/constants/roles'
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
@@ -182,13 +181,14 @@ export const useComplianceReportWithCache = (
   const cachedReport = getCachedReport(reportId)
   const needsFetch = shouldFetchReport(reportId)
   const { data: currentUser } = useCurrentUser()
+  // Wait for the current user: a supplier reads the report through its
+  // organization, a government user (no organization) reads it directly.
   const queryResult = useGetComplianceReport(
     currentUser?.organization?.organizationId,
     reportId,
     {
       ...options,
-      enabled:
-        needsFetch && !!reportId && !!currentUser?.organization?.organizationId
+      enabled: needsFetch && !!reportId && !!currentUser
     }
   )
 
@@ -314,9 +314,13 @@ export const useUpdateComplianceReportSummary = (
   const client = useApiService()
   const queryClient = useQueryClient()
 
-  const { onSuccess, onError, ...restOptions } = omitProperties(options, [
-    'clearCache'
-  ])
+  const {
+    onSuccess,
+    onError,
+    clearCache: ignoredClearCache,
+    ...restOptions
+  } = options
+  void ignoredClearCache
 
   return useMutation({
     mutationFn: async (data: Record<string, unknown>) => {
