@@ -403,7 +403,6 @@ class ComplianceReportReviewSummarySchema(BaseSchema):
 class ComplianceReportCreateSchema(BaseSchema):
     compliance_period: str
     organization_id: int
-    status: str
     nickname: Optional[str] = None
 
 

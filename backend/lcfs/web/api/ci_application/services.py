@@ -1200,6 +1200,7 @@ class CIApplicationServices:
             ci_application.proposed_fuel_code_effective_date or application_date
         )
         reserved_suffixes_by_prefix: Dict[str, set[str]] = {}
+        reserved_main_suffixes_by_sequence: Dict[str, set[str]] = {}
 
         associations: List[CIApplicationFuelCodeAssociation] = []
         current_pathways = _latest_active_pathways(
@@ -1211,12 +1212,25 @@ class CIApplicationServices:
                     pathway,
                     prefix_map,
                     ci_application.facility_country,
+                    reserved_suffixes_by_prefix,
                 )
             )
             if prefix_name:
-                reserved_suffixes = reserved_suffixes_by_prefix.setdefault(
-                    prefix_name, set()
+                source_suffix = getattr(pathway.fuel_code, "fuel_suffix", None)
+                is_new_main_number = (
+                    not source_suffix
+                    or not fuel_suffix
+                    or int(source_suffix.split(".", 1)[0])
+                    != int(fuel_suffix.split(".", 1)[0])
                 )
+                if is_new_main_number and prefix_name in {"BCLCF", "C-BCLCF"}:
+                    reserved_suffixes = reserved_main_suffixes_by_sequence.setdefault(
+                        "BCLCF_SEQUENCE", set()
+                    )
+                else:
+                    reserved_suffixes = reserved_suffixes_by_prefix.setdefault(
+                        prefix_name, set()
+                    )
                 fuel_suffix = _next_local_fuel_suffix(fuel_suffix, reserved_suffixes)
             if not prefix_id or not fuel_suffix:
                 raise HTTPException(
@@ -1525,6 +1539,7 @@ class CIApplicationServices:
         pathway: Pathway,
         prefix_map: Dict[str, Any],
         facility_country: Optional[str],
+        reserved_suffixes_by_prefix: Optional[Dict[str, set[str]]] = None,
     ) -> tuple[Optional[int], Optional[str], Optional[str]]:
         if pathway.fuel_code_id and pathway.fuel_code and pathway.fuel_code.prefix_id:
             prefix_id = pathway.fuel_code.prefix_id
@@ -1533,11 +1548,26 @@ class CIApplicationServices:
                 if pathway.fuel_code.fuel_code_prefix
                 else None
             )
+            if not prefix_name:
+                prefix_name = next(
+                    (
+                        name
+                        for name, prefix in prefix_map.items()
+                        if prefix.fuel_code_prefix_id == prefix_id
+                    ),
+                    None,
+                )
             fuel_suffix = pathway.fuel_code.fuel_suffix if pathway.fuel_code else None
             if prefix_id and fuel_suffix:
+                reserved_suffixes = (
+                    reserved_suffixes_by_prefix.setdefault(prefix_name, set())
+                    if prefix_name and reserved_suffixes_by_prefix is not None
+                    else None
+                )
                 next_suffix = await self.fuel_repo.get_next_available_sub_version_fuel_code_by_prefix(
                     fuel_suffix.split(".")[0],
                     prefix_id,
+                    reserved_suffixes=reserved_suffixes,
                 )
                 return prefix_id, prefix_name, next_suffix
 

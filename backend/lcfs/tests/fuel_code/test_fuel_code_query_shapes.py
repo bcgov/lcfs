@@ -1,6 +1,4 @@
-"""
-Query-shape tests for the fuel code repository (issue #4101).
-"""
+"""Query-shape tests for the fuel code repository."""
 
 from unittest.mock import MagicMock
 
@@ -26,7 +24,12 @@ class _CapturingSession:
     async def execute(self, statement, *args, **kwargs):
         self.statements.append(statement)
         result = MagicMock()
-        result.scalar_one_or_none.return_value = "101.0"
+        sql = str(statement).lower()
+        result.scalar_one_or_none.return_value = (
+            999
+            if "max(cast(split_part(fuel_code.fuel_suffix" in sql
+            else "101.0"
+        )
         result.unique.return_value.scalars.return_value.all.return_value = []
         return result
 
@@ -46,24 +49,30 @@ def repo(session):
 
 
 @pytest.mark.anyio
-@pytest.mark.parametrize(
-    "prefix, first_code", [("BCLCF", 101), ("C-BCLCF", 101), ("PROXY", 1)]
-)
-async def test_next_available_fuel_code_is_a_core_select(
-    repo, session, prefix, first_code
-):
+@pytest.mark.parametrize("prefix", ["BCLCF", "C-BCLCF", "PROXY", "C-PROXY"])
+async def test_next_available_fuel_code_is_a_core_select(repo, session, prefix):
     await repo.get_next_available_fuel_code_by_prefix(prefix)
 
     statement = session.statements[-1]
     assert isinstance(statement, Select)
     sql = _sql(statement, literal_binds=True)
-    assert f"generate_series({first_code}," in sql
-    assert "WITH parsed_codes AS" in sql
-    assert f"fuel_code_prefix.prefix = '{prefix}'" in sql
-    # string concatenation, not arithmetic, on the padded code
-    assert "lpad(" in sql
-    assert "|| '.0' AS next_fuel_code" in sql
-    assert "+ '.0'" not in sql
+    if prefix in {"BCLCF", "C-BCLCF"}:
+        assert (
+            "max(CAST(split_part(fuel_code.fuel_suffix, '.', 1) AS BIGINT))"
+            in sql
+        )
+        assert "fuel_code_prefix.prefix IN ('BCLCF', 'C-BCLCF')" in sql
+        assert "lpad(" not in sql
+        assert "generate_series(" not in sql
+    else:
+        assert "WITH parsed_codes AS" in sql
+        assert f"fuel_code_prefix.prefix = '{prefix}'" in sql
+        assert "UNION ALL" in sql
+        assert "lead(" in sql
+        assert "generate_series(" not in sql
+        assert "lpad(" not in sql
+        assert "|| '.0' AS next_fuel_code" in sql
+        assert "+ '.0'" not in sql
 
 
 @pytest.mark.anyio
@@ -75,7 +84,7 @@ async def test_next_available_sub_version_is_a_core_select(repo, session):
     sql = _sql(statement, literal_binds=True)
     assert "WITH sub_versions AS" in sql
     assert "fuel_code.prefix_id = 3" in sql
-    assert "split_part(fuel_code.fuel_suffix, '.', 1) AS INTEGER) = 101" in sql
+    assert "split_part(fuel_code.fuel_suffix, '.', 1) AS BIGINT) = 101" in sql
     assert "generate_series(0," in sql
     assert sql.startswith("WITH") and "'101' || '.'" in sql
 
