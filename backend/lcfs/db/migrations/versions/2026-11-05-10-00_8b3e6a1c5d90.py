@@ -1,15 +1,15 @@
 """Associate penalty log comments with their organization.
 
 Revision ID: 8b3e6a1c5d90
-Revises: 4f2a9c8d6e1b
-Create Date: 2026-10-22 10:00:00
+Revises: 4dab1d106b2b
+Create Date: 2026-11-05 10:00:00
 """
 
 from alembic import op
 import sqlalchemy as sa
 
 revision = "8b3e6a1c5d90"
-down_revision = "4f2a9c8d6e1b"
+down_revision = "4dab1d106b2b"
 branch_labels = None
 depends_on = None
 
