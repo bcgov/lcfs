@@ -357,8 +357,12 @@ export const useComments = (
         (oldData: CommentRecord[] | undefined) => {
           if (!oldData) return [newComment]
 
+          // A refetch after a partial upload failure may already have cached
+          // this comment, so drop it before inserting the retried result.
           const realComments = oldData.filter(
-            (comment: CommentRecord) => !comment.isOptimistic
+            (comment: CommentRecord) =>
+              !comment.isOptimistic &&
+              comment.internalCommentId !== newComment.internalCommentId
           )
 
           if (sortOrder === 'desc') {

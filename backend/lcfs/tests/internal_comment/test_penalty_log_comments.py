@@ -147,11 +147,19 @@ async def test_delete_cleans_up_comment_documents_before_comment(is_admin):
         documents=[SimpleNamespace(document_id=81), SimpleNamespace(document_id=82)]
     )
     documents = AsyncMock()
-    await service.delete_internal_comment(42, documents)
+    documents.delete_file.side_effect = ["key-81", None]
+    file_keys = await service.delete_internal_comment(42, documents)
     assert documents.delete_file.await_count == 2
-    documents.delete_file.assert_any_await(81, 42, "internal_comment")
-    documents.delete_file.assert_any_await(82, 42, "internal_comment")
+    documents.delete_file.assert_any_await(
+        81, 42, "internal_comment", defer_storage_delete=True
+    )
+    documents.delete_file.assert_any_await(
+        82, 42, "internal_comment", defer_storage_delete=True
+    )
     service.repo.delete_penalty_log_comment.assert_awaited_once_with(42)
+    # Storage is only deleted by the caller, after the transaction commits;
+    # a document still linked elsewhere has no key to delete.
+    assert file_keys == ["key-81"]
 
 
 @pytest.mark.anyio

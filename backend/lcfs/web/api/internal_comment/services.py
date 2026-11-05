@@ -856,19 +856,31 @@ class InternalCommentService:
     @service_handler
     async def delete_internal_comment(
         self, internal_comment_id: int, document_service: "DocumentService"
-    ) -> None:
-        """Delete an authorized penalty comment through the shared document lifecycle."""
+    ) -> List[str]:
+        """Delete an authorized penalty comment through the shared document lifecycle.
+
+        Returns the S3 keys of documents removed with the comment. Storage is
+        left untouched so the caller can delete those objects only after the
+        database transaction has committed.
+        """
         if not await self.repo.is_penalty_log_comment(internal_comment_id):
             raise HTTPException(
                 status_code=404, detail="Penalty log comment not found."
             )
         comment = await self.repo.get_internal_comment_by_id(internal_comment_id)
         self._require_penalty_comment_management(comment)
+        file_keys: List[str] = []
         for document in list(comment.documents):
-            await document_service.delete_file(
-                document.document_id, internal_comment_id, "internal_comment"
+            file_key = await document_service.delete_file(
+                document.document_id,
+                internal_comment_id,
+                "internal_comment",
+                defer_storage_delete=True,
             )
+            if file_key:
+                file_keys.append(file_key)
         await self.repo.delete_penalty_log_comment(internal_comment_id)
+        return file_keys
 
     def _require_penalty_comment_management(self, comment: InternalComment) -> None:
         if not can_manage_penalty_comment(self.request.user, comment):

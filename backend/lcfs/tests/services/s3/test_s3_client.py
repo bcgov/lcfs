@@ -501,6 +501,31 @@ async def test_delete_file_last_link(document_service, document_mock, db_mock):
 
 
 @pytest.mark.anyio
+async def test_delete_file_can_defer_storage_deletion(
+    document_service, document_mock, db_mock
+):
+    """The document row goes, but its S3 object is left for the caller to
+    remove once the transaction has committed."""
+    _link_document(db_mock, document_mock, [1] + [0] * (_TABLES - 1))
+
+    file_key = await document_service.delete_file(
+        1, 1, "compliance_report", defer_storage_delete=True
+    )
+
+    assert file_key == document_mock.file_key
+    document_service.s3_client.delete_object.assert_not_called()
+    db_mock.delete.assert_called_once_with(document_mock)
+
+
+def test_delete_storage_objects_continues_after_a_failure(document_service):
+    document_service.s3_client.delete_object.side_effect = [Exception("boom"), None]
+
+    document_service.delete_storage_objects(["a", "b"])
+
+    assert document_service.s3_client.delete_object.call_count == 2
+
+
+@pytest.mark.anyio
 async def test_delete_file_multiple_links(document_service, document_mock, db_mock):
     _link_document(db_mock, document_mock, [2] + [0] * (_TABLES - 1))
 

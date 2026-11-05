@@ -819,6 +819,27 @@ describe('penalty log comment attachments', () => {
     expect(result.current.attachments).toEqual([])
   })
 
+  it('does not duplicate a comment already in the cache after a retried save', async () => {
+    const saved = { internalCommentId: 42, comment: 'Payment evidence' }
+    mockApiService.get.mockResolvedValue({ data: [saved] })
+    mockApiService.post.mockResolvedValue({ data: saved })
+    const { result } = renderHook(() => useComments('penaltyLog', 7), {
+      wrapper: createWrapper()
+    })
+    await waitFor(() => expect(result.current.comments).toEqual([saved]))
+    await act(async () => {
+      result.current.handleCommentInputChange('Payment evidence')
+    })
+    // Hold any refetch so only the cache update is under test
+    mockApiService.get.mockReturnValue(new Promise(() => {}))
+    await act(async () => {
+      await result.current.addComment()
+    })
+    expect(
+      result.current.comments.filter((c) => c.internalCommentId === 42)
+    ).toHaveLength(1)
+  })
+
   it('keeps the original attachment when uploading a replacement fails', async () => {
     mockApiService.put.mockResolvedValue({
       data: { internalCommentId: 42, comment: 'Replaced' }

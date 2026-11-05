@@ -3,6 +3,9 @@ from io import UnsupportedOperation
 import os
 import re
 import uuid
+from typing import List, Optional
+
+import structlog
 
 from lcfs.utils.constants import ALLOWED_MIME_TYPES, ALLOWED_FILE_TYPES
 from lcfs.db.models.admin_adjustment.AdminAdjustment import (
@@ -61,6 +64,8 @@ from lcfs.db.models.compliance.ChargingSite import charging_site_document_associ
 from lcfs.web.core.decorators import repo_handler
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 from botocore.exceptions import ClientError
+
+logger = structlog.get_logger(__name__)
 
 BUCKET_NAME = settings.s3_bucket
 MAX_FILE_SIZE_MB = 50
@@ -657,7 +662,19 @@ class DocumentService:
         return presigned_url
 
     @repo_handler
-    async def delete_file(self, document_id: int, parent_id: int, parent_type: str):
+    async def delete_file(
+        self,
+        document_id: int,
+        parent_id: int,
+        parent_type: str,
+        defer_storage_delete: bool = False,
+    ) -> Optional[str]:
+        """Delete a document link, and the document itself when it is the last.
+
+        With ``defer_storage_delete`` the S3 object is left in place and its key
+        is returned so the caller can remove it once the database change has
+        been committed (see ``delete_storage_objects``).
+        """
         # The caller was authorized for the parent, so the document must hang
         # off that parent; one linked elsewhere reads as missing.
         document = await self._get_document_for_parent(
@@ -677,12 +694,15 @@ class DocumentService:
 
         # If last link, delete the whole document
         if link_count == 1:
-            # Delete the file from S3
-            self.s3_client.delete_object(Bucket=BUCKET_NAME, Key=document.file_key)
+            file_key = document.file_key
+            if not defer_storage_delete:
+                # Delete the file from S3
+                self.s3_client.delete_object(Bucket=BUCKET_NAME, Key=file_key)
 
             # Delete the entry from the database
             await self.db.delete(document)
             await self.db.flush()
+            return file_key if defer_storage_delete else None
         else:  # Delete the association
             await self.db.execute(
                 delete(association_table).where(
@@ -692,6 +712,20 @@ class DocumentService:
                     )
                 )
             )
+
+    def delete_storage_objects(self, file_keys: List[str]) -> None:
+        """Remove S3 objects after their documents were deleted and committed.
+
+        A failure leaves an orphaned object, which is safer than a retained
+        record that points to a file that is gone, so it is logged, not raised.
+        """
+        for file_key in file_keys:
+            try:
+                self.s3_client.delete_object(Bucket=BUCKET_NAME, Key=file_key)
+            except Exception:
+                logger.error(
+                    "Failed to delete S3 object", file_key=file_key, exc_info=True
+                )
 
     @repo_handler
     async def get_by_id_and_type(self, parent_id: int, parent_type="compliance_report"):
