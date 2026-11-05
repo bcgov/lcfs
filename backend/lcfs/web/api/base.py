@@ -399,8 +399,9 @@ class PaginatedQueryBuilder:
       - ``field_map``: incoming field name -> attribute name on ``model``.
       - ``custom_filters``: field name -> ``callable(FilterModel)`` returning
         a condition, or ``None`` to skip that filter.
-      - ``custom_sorts``: (mapped) field name -> a column, or
-        ``callable(SortOrder)`` returning a column or ``None`` to skip.
+      - ``custom_sorts``: (mapped) field name -> a column or list/tuple of
+        columns, or ``callable(SortOrder)`` returning one of those or ``None``
+        to skip.
       - ``default_filter``: ``callable(FilterModel)`` used instead of the
         standard field-lookup/date-handling for any field with no
         ``custom_filters`` entry - for repos where most fields need bespoke
@@ -507,7 +508,9 @@ class PaginatedQueryBuilder:
                     field = self._default_sort_field(mapped_field)
                 if field is None:
                     continue
-                query = query.order_by(sort_method(field))
+                fields = field if isinstance(field, (list, tuple)) else [field]
+                for sort_field in fields:
+                    query = query.order_by(sort_method(sort_field))
         elif default_field:
             sort_method = asc if default_direction == "asc" else desc
             query = query.order_by(sort_method(self._field(default_field)))
