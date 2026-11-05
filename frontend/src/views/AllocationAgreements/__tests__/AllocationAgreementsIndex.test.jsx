@@ -123,6 +123,7 @@ describe('AllocationAgreementsIndex', () => {
       organizationId: null
     })
     expect(lastOrgListProps.onlyRegistered).toBe(false)
+    expect(lastOrgListProps.orgFilter).toBe('all')
   })
 
   test('sends grid sorting, filtering and paging to the server', async ({

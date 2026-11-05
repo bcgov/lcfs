@@ -30,7 +30,12 @@ const textColumn = (
   field,
   headerName,
   minWidth,
-  filter: true,
+  filter: 'agTextColumnFilter',
+  filterParams: {
+    // The API ignores spaces and case when filtering text
+    textFormatter: (value: string | null) =>
+      value == null ? '' : value.replace(/\s+/g, '').toLowerCase()
+  },
   sortable: true
 })
 

@@ -121,6 +121,7 @@ export const AllocationAgreementsIndex = () => {
         selectedOrg={selectedOrg}
         onOrgChange={updateOrgFilter}
         onlyRegistered={false}
+        orgFilter="all"
         showSelectedLabel={false}
         label={`${t('allocationAgreement:allocationAgreementIndex.showAgreementsInvolve')}:`}
         placeholder={t(
