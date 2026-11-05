@@ -14,8 +14,9 @@ Filtering the view's own SQL by report instead takes seconds.
 
 Saved reporting for a piece of equipment: the latest revision for each of its
 versions, then, across its versions, the one saved on the latest report
-version. Revision numbers count per equipment version, so they cannot order
-rows saved against different versions.
+version, and on the same report version the one saved last. Revision numbers
+count per equipment version, so they cannot order rows saved against
+different versions.
 """
 
 import sqlalchemy as sa
@@ -213,7 +214,6 @@ matched_rows AS (
         ce.group_uuid,
         saved_report.version DESC NULLS LAST,
         CASE WHEN crce.is_active IS TRUE THEN 0 ELSE 1 END,
-        crce.version DESC,
         crce.charging_equipment_compliance_id DESC
 ),
 report_equipment AS (

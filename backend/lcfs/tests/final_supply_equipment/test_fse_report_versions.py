@@ -361,6 +361,21 @@ async def test_new_report_version_shows_rows_right_away(
             assert total == SUBMITTED_KWH
 
 
+async def _new_equipment_version(add_models, equipment):
+    edited_equipment = ChargingEquipment(
+        group_uuid=equipment.group_uuid,
+        version=equipment.version + 1,
+        charging_site_id=equipment.charging_site_id,
+        status_id=equipment.status_id,
+        equipment_number=equipment.equipment_number,
+        serial_number=SUBMITTED_SERIAL,
+        manufacturer=equipment.manufacturer,
+        level_of_equipment_id=equipment.level_of_equipment_id,
+    )
+    await add_models([edited_equipment])
+    return edited_equipment
+
+
 @pytest.mark.anyio
 async def test_edit_after_equipment_change_shows_on_the_draft(
     dbsession, add_models, report_versions
@@ -383,17 +398,7 @@ async def test_edit_after_equipment_change_shows_on_the_draft(
         ],
     )
     await add_models([original, supplemental, draft])
-    edited_equipment = ChargingEquipment(
-        group_uuid=equipment.group_uuid,
-        version=equipment.version + 1,
-        charging_site_id=equipment.charging_site_id,
-        status_id=equipment.status_id,
-        equipment_number=equipment.equipment_number,
-        serial_number=SUBMITTED_SERIAL,
-        manufacturer=equipment.manufacturer,
-        level_of_equipment_id=equipment.level_of_equipment_id,
-    )
-    await add_models([edited_equipment])
+    edited_equipment = await _new_equipment_version(add_models, equipment)
     await add_models(
         [
             _selection(equipment, original, 0, 1000.0, 2025),
@@ -401,6 +406,38 @@ async def test_edit_after_equipment_change_shows_on_the_draft(
             _selection(edited_equipment, draft, 0, 2000.0, 2025),
         ]
     )
+
+    assert await _draft_page_rows(
+        dbsession, organization_id, draft.compliance_report_id
+    ) == ([(SUBMITTED_SERIAL, 2000.0)], 2000.0)
+
+
+@pytest.mark.anyio
+async def test_save_after_equipment_change_on_the_same_draft_shows(
+    dbsession, add_models, report_versions
+):
+    """
+    An edit of carried-forward equipment on a Draft saves revision 1. Once the
+    equipment changes, an upload on the same Draft saves revision 0 for the new
+    equipment version. Both are on the Draft, so the one saved last shows.
+    """
+    organization_id = report_versions.organization_id
+    equipment = report_versions.submitted_equipment
+    original, draft = await _report_group(
+        dbsession,
+        organization_id,
+        "2025",
+        [ComplianceReportStatusEnum.Assessed, ComplianceReportStatusEnum.Draft],
+    )
+    await add_models([original, draft])
+    await add_models(
+        [
+            _selection(equipment, original, 0, 1000.0, 2025),
+            _selection(equipment, draft, 1, 1100.0, 2025),
+        ]
+    )
+    edited_equipment = await _new_equipment_version(add_models, equipment)
+    await add_models([_selection(edited_equipment, draft, 0, 2000.0, 2025)])
 
     assert await _draft_page_rows(
         dbsession, organization_id, draft.compliance_report_id
