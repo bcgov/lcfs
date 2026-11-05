@@ -155,14 +155,67 @@ const AccessibleChartSummary = ({
   )
 
   return (
-    <BCBox id={id}>
+    <BCBox id={id} sx={{ fontSize: '0.875rem' }}>
       <details>
         <summary>View data table for {title}</summary>
         <BCBox
           role="region"
           aria-label={`${title} data table`}
           tabIndex={0}
-          sx={{ maxWidth: '100%', overflowX: 'auto' }}
+          sx={{
+            maxWidth: '100%',
+            overflowX: 'auto',
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 1,
+            '&:focus-visible': {
+              outline: '2px solid',
+              outlineColor: 'primary.main',
+              outlineOffset: 2
+            },
+            '& table': {
+              width: 'max-content',
+              minWidth: '100%',
+              borderCollapse: 'collapse'
+            },
+            '& caption': {
+              captionSide: 'top',
+              padding: '0.75rem',
+              color: 'text.primary',
+              fontWeight: 600,
+              textAlign: 'left'
+            },
+            '& th, & td': {
+              border: '1px solid',
+              borderColor: 'divider',
+              padding: '0.625rem 0.75rem',
+              verticalAlign: 'top'
+            },
+            '& thead th': {
+              minWidth: '8rem',
+              backgroundColor: 'action.hover',
+              fontWeight: 600,
+              textAlign: 'left',
+              overflowWrap: 'anywhere'
+            },
+            '& thead th:first-of-type': {
+              minWidth: '12rem'
+            },
+            '& tbody th': {
+              minWidth: '12rem',
+              maxWidth: '24rem',
+              fontWeight: 600,
+              textAlign: 'left',
+              overflowWrap: 'anywhere'
+            },
+            '& tbody td': {
+              whiteSpace: 'nowrap',
+              fontVariantNumeric: 'tabular-nums'
+            },
+            '& tbody tr:nth-of-type(even)': {
+              backgroundColor: 'action.hover'
+            }
+          }}
         >
           <table>
             <caption>{title} data values</caption>

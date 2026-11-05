@@ -1,5 +1,6 @@
 import colors from './colors'
 import { rgba, pxToRem } from '../utils'
+import type { CSSObject } from '@mui/system'
 import BCSansRegularTTF from '@bcgov/bc-sans/fonts/BCSans-Regular.woff2'
 import BCSansBoldTTF from '@bcgov/bc-sans/fonts/BCSans-Bold.woff2'
 import BCSansBoldItalicTTF from '@bcgov/bc-sans/fonts/BCSans-BoldItalic.woff2'
@@ -332,6 +333,6 @@ const globals = {
     border: 0,
     whiteSpace: 'nowrap'
   }
-}
+} satisfies CSSObject
 
 export default globals
