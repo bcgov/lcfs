@@ -1,6 +1,19 @@
 # Use the official node image as the base image
 FROM node:24.21.0
 
+# Cypress needs these Linux libraries to launch its bundled Electron browser.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+    xvfb \
+    libnss3 \
+    libgtk-3-0 \
+    libgtk2.0-0 \
+    libgbm-dev \
+    libnotify-dev \
+    libxss1 \
+    libasound2 \
+  && rm -rf /var/lib/apt/lists/*
+
 # Set the working directory
 WORKDIR /app
 

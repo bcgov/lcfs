@@ -278,9 +278,10 @@ def test_zip_bomb_entry_is_rejected():
     assert "damaged" in rejected(data, "model.xlsx")
 
 
-def test_part_too_large_to_read_is_rejected(monkeypatch):
-    monkeypatch.setattr(ooxml_module, "MAX_PART_BYTES", 100)
-    assert "damaged" in rejected(xlsx_bytes(), "model.xlsx")
+def test_read_part_stops_at_its_limit():
+    package = zipfile.ZipFile(io.BytesIO(xlsx_bytes()))
+    with pytest.raises(FileRejectedException):
+        ooxml_module.read_part(package, "[Content_Types].xml", 10)
 
 
 def test_compression_office_never_writes_is_rejected():
@@ -290,6 +291,28 @@ def test_compression_office_never_writes_is_rejected():
         for info in source.infolist():
             target.writestr(info.filename, source.read(info))
     assert "damaged" in rejected(out.getvalue(), "model.xlsx")
+
+
+def test_deeply_nested_part_is_rejected():
+    nested = b"<x>" * 300 + b"</x>" * 300
+    data = rewrite_zip(
+        xlsx_bytes(),
+        {
+            "_rels/.rels": lambda c: c.replace(
+                b"</Relationships>", nested + b"</Relationships>"
+            )
+        },
+    )
+    assert "damaged" in rejected(data, "model.xlsx")
+
+
+def test_parsed_elements_are_released_as_they_end():
+    stream = io.BytesIO(b"<r><a/><b><c/></b><a/></r>")
+    elements = list(ooxml_module.iter_elements(stream))
+
+    assert [el.tag for el in elements] == ["a", "c", "b", "a", "r"]
+    # Nothing stays attached, so memory doesn't grow with the part
+    assert all(len(el) == 0 for el in elements)
 
 
 def test_too_many_entries_are_rejected(monkeypatch):
