@@ -94,8 +94,9 @@ export type ExtMutationOptions<
 
 // ─── Common destructured query-options shape ──────────────────────────────────
 
-export interface BaseQueryOptionsFields<TData = unknown>
-  extends QueryOptions<TData> {
+export interface BaseQueryOptionsFields<
+  TData = unknown
+> extends QueryOptions<TData> {
   gcTime?: number
 }
 

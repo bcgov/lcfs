@@ -10,8 +10,9 @@ from lcfs.db.models.compliance import (
     OtherUses,
 )
 import structlog
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 from sqlalchemy import (
+    BigInteger,
     and_,
     case,
     exists,
@@ -26,6 +27,7 @@ from sqlalchemy import (
     distinct,
     desc,
     asc,
+    union_all,
 )
 from sqlalchemy.sql.functions import coalesce
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -70,8 +72,10 @@ from lcfs.web.api.fuel_code.schema import (
 )
 from lcfs.web.core.decorators import repo_handler
 from lcfs.utils.constants import LCFS_Constants
+from lcfs.web.utils.schema_validators import MAX_FUEL_SUFFIX_MAIN_DIGITS
 
 logger = structlog.get_logger(__name__)
+MAX_FUEL_CODE_MAIN_NUMBER = 10**MAX_FUEL_SUFFIX_MAIN_DIGITS - 1
 
 
 @dataclass
@@ -87,8 +91,34 @@ def _row_mapping(row: Any) -> dict[str, Any]:
     return {key: value for key, value in row._mapping.items() if key != "_wf_total"}
 
 
+def _numeric_fuel_suffix_sort_fields(fuel_suffix):
+    """Return the main number and iteration as integer sort expressions."""
+    return [
+        cast(func.split_part(fuel_suffix, ".", 1), BigInteger),
+        cast(func.split_part(fuel_suffix, ".", 2), Integer),
+    ]
+
+
+def _format_main_fuel_suffix(
+    main_number: int, prefix: str, return_none_if_exhausted: bool = False
+) -> Optional[str]:
+    if main_number > MAX_FUEL_CODE_MAIN_NUMBER:
+        if return_none_if_exhausted:
+            return None
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"No further {prefix} fuel code numbers fit the supported "
+                "fuel suffix length."
+            ),
+        )
+    return f"{main_number:03d}.0"
+
+
 class FuelCodeRepository:
-    def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
+    def __init__(
+        self, db: AsyncSession = Depends(get_async_db_session, scope="function")
+    ):
         self.db = db
 
     def get_fuel_code_bulletin_pagination_params(
@@ -218,11 +248,16 @@ class FuelCodeRepository:
 
         # Apply sorting
         sort_map = {
-            "fuel_code": func.concat(
-                FuelCodeListView.prefix, cast(FuelCodeListView.fuel_suffix, String)
-            ),
-            "fuelCode": func.concat(
-                FuelCodeListView.prefix, cast(FuelCodeListView.fuel_suffix, String)
+            "fuel_code": [
+                FuelCodeListView.prefix,
+                *_numeric_fuel_suffix_sort_fields(FuelCodeListView.fuel_suffix),
+            ],
+            "fuelCode": [
+                FuelCodeListView.prefix,
+                *_numeric_fuel_suffix_sort_fields(FuelCodeListView.fuel_suffix),
+            ],
+            "fuel_suffix": _numeric_fuel_suffix_sort_fields(
+                FuelCodeListView.fuel_suffix
             ),
             "fuel": FuelCodeListView.fuel_type,
             "company": FuelCodeListView.company,
@@ -236,17 +271,18 @@ class FuelCodeRepository:
 
         order_by_clauses = []
         for sort in sort_orders or []:
-            column = sort_map.get(sort.field)
-            if not column:
+            sort_fields = sort_map.get(sort.field)
+            if not sort_fields:
                 continue
-            order_by_clauses.append(
-                asc(column) if sort.direction == "asc" else desc(column)
-            )
+            if not isinstance(sort_fields, (list, tuple)):
+                sort_fields = [sort_fields]
+            sort_method = asc if sort.direction == "asc" else desc
+            order_by_clauses.extend(sort_method(field) for field in sort_fields)
 
         if not order_by_clauses:
             order_by_clauses = [
                 asc(FuelCodeListView.prefix),
-                asc(FuelCodeListView.fuel_suffix),
+                *_numeric_fuel_suffix_sort_fields(FuelCodeListView.fuel_suffix),
                 desc(FuelCodeListView.effective_date),
             ]
 
@@ -346,7 +382,7 @@ class FuelCodeRepository:
 
         # Get all iterations from the view (sorted descending by suffix for latest first)
         fuel_suffix_main_version = cast(
-            func.split_part(FuelCodeListView.fuel_suffix, ".", 1), Integer
+            func.split_part(FuelCodeListView.fuel_suffix, ".", 1), BigInteger
         )
         fuel_suffix_sub_version = cast(
             func.split_part(FuelCodeListView.fuel_suffix, ".", 2), Integer
@@ -801,6 +837,14 @@ class FuelCodeRepository:
                 "feedstock_fuel_transport_modes": _transport_mode_filter,
                 "finished_fuel_transport_modes": _transport_mode_filter,
             },
+            custom_sorts={
+                "fuel_suffix": lambda _: _numeric_fuel_suffix_sort_fields(
+                    FuelCodeListView.fuel_suffix
+                ),
+                "fuelSuffix": lambda _: _numeric_fuel_suffix_sort_fields(
+                    FuelCodeListView.fuel_suffix
+                ),
+            },
         )
         conditions.extend(builder.build_conditions(pagination.filters))
 
@@ -1166,8 +1210,15 @@ class FuelCodeRepository:
     async def get_distinct_fuel_codes_by_code(
         self, fuel_code: str, prefix: str
     ) -> List[str]:
+        numeric_suffix_sort_fields = _numeric_fuel_suffix_sort_fields(
+            FuelCode.fuel_suffix
+        )
         query = (
-            select(distinct(FuelCode.fuel_suffix))
+            select(
+                FuelCode.fuel_suffix,
+                *numeric_suffix_sort_fields,
+            )
+            .distinct()
             .join(
                 FuelCodePrefix, FuelCodePrefix.fuel_code_prefix_id == FuelCode.prefix_id
             )
@@ -1178,7 +1229,7 @@ class FuelCodeRepository:
                     FuelCodeStatus.status != FuelCodeStatusEnum.Deleted,
                 )
             )
-            .order_by(FuelCode.fuel_suffix)
+            .order_by(*numeric_suffix_sort_fields)
             .limit(10)
         )
 
@@ -1246,7 +1297,7 @@ class FuelCodeRepository:
 
     def format_decimal(self, value):
         parts = str(value).split(".")
-        # Format the integer part to always have 3 digits
+        # Keep at least 3 digits without truncating larger code numbers.
         formatted_integer = f"{int(parts[0]):03d}"
         if len(parts) > 1:
             return f"{formatted_integer}.{parts[1]}"
@@ -1284,57 +1335,110 @@ class FuelCodeRepository:
             return suffix
 
     @repo_handler
-    async def get_next_available_fuel_code_by_prefix(self, prefix: str) -> str:
+    async def get_next_available_fuel_code_by_prefix(
+        self, prefix: str, return_none_if_exhausted: bool = False
+    ) -> Optional[str]:
         """
-        Lowest unused main version for a prefix, formatted as ``NNN.0``.
+        Next main version, formatted with at least three digits and ``.0``.
 
-        Main versions start at 1 for PROXY codes and 101 for everything else.
-        Gaps left by deleted codes are reused before a new high number is
-        issued.
+        BCLCF and C-BCLCF share an increasing sequence starting at 101. Other
+        prefixes retain their existing lowest-unused-number behavior.
+
+        When ``return_none_if_exhausted`` is true, return ``None`` instead of
+        raising when the next number cannot fit the fuel suffix column. This
+        is used for table options so one exhausted prefix doesn't block the
+        rest of the Add/Edit grid.
         """
-        base_code = cast(func.split_part(FuelCode.fuel_suffix, ".", 1), Integer)
+        base_code = cast(
+            func.split_part(FuelCode.fuel_suffix, ".", 1), BigInteger
+        )
+
+        if prefix in {"BCLCF", "C-BCLCF"}:
+            highest_used_query = (
+                select(func.coalesce(func.max(base_code), 100))
+                .select_from(FuelCode)
+                .join(
+                    FuelCodePrefix,
+                    FuelCodePrefix.fuel_code_prefix_id == FuelCode.prefix_id,
+                )
+                .where(FuelCodePrefix.prefix.in_(["BCLCF", "C-BCLCF"]))
+            )
+            highest_used = (
+                await self.db.execute(highest_used_query)
+            ).scalar_one_or_none()
+            next_base_code = max(int(highest_used or 100), 100) + 1
+            return _format_main_fuel_suffix(
+                next_base_code, prefix, return_none_if_exhausted
+            )
+
         parsed_codes = (
             select(base_code.label("base_code"))
             .join(
                 FuelCodePrefix, FuelCodePrefix.fuel_code_prefix_id == FuelCode.prefix_id
             )
-            .where(FuelCodePrefix.prefix == prefix)
+            .where(
+                FuelCodePrefix.prefix == prefix,
+                base_code >= (1 if prefix == "PROXY" else 101),
+            )
+            .distinct()
             .cte("parsed_codes")
         )
         min_code = 1 if prefix == "PROXY" else 101
-        highest_used = select(
-            func.coalesce(func.max(parsed_codes.c.base_code), 0)
-        ).scalar_subquery()
-        all_possible_codes = select(
-            func.generate_series(
-                min_code, func.greatest(min_code, highest_used + 1)
-            ).label("base_code")
-        ).cte("all_possible_codes")
-        available_codes = (
-            select(all_possible_codes.c.base_code)
-            .where(
-                all_possible_codes.c.base_code.not_in(select(parsed_codes.c.base_code))
+        codes_with_start = union_all(
+            select(literal(min_code - 1, type_=BigInteger).label("base_code")),
+            select(parsed_codes.c.base_code),
+        ).cte("codes_with_start")
+        ordered_codes = (
+            select(
+                codes_with_start.c.base_code,
+                func.lead(codes_with_start.c.base_code)
+                .over(order_by=codes_with_start.c.base_code)
+                .label("next_base_code"),
             )
-            .cte("available_codes")
+            .cte("ordered_codes")
         )
-        next_base_code = select(func.min(available_codes.c.base_code)).scalar_subquery()
-        # lpad is not one of SQLAlchemy's known functions, so give it a type;
-        # otherwise the string concatenation below relies on type coercion.
-        padded_code = func.lpad(cast(next_base_code, String), 3, "0", type_=String)
-        query = select((padded_code + ".0").label("next_fuel_code"))
+        first_gap = (
+            select(func.min(ordered_codes.c.base_code + 1))
+            .where(
+                ordered_codes.c.next_base_code > ordered_codes.c.base_code + 1
+            )
+            .scalar_subquery()
+        )
+        highest_used_plus_one = select(
+            func.coalesce(func.max(parsed_codes.c.base_code), min_code - 1) + 1
+        ).scalar_subquery()
+        next_base_code = func.coalesce(first_gap, highest_used_plus_one)
+        query = select(
+            (cast(next_base_code, String) + ".0").label("next_fuel_code")
+        )
         result = (await self.db.execute(query)).scalar_one_or_none()
-        return self.format_decimal(result)
+        next_base_number = int(str(result).split(".", 1)[0])
+        return _format_main_fuel_suffix(
+            next_base_number, prefix, return_none_if_exhausted
+        )
 
     async def get_next_available_sub_version_fuel_code_by_prefix(
-        self, input_version: str, prefix_id: int
+        self,
+        input_version: str,
+        prefix_id: int,
+        reserved_suffixes: Optional[set[str]] = None,
     ) -> str:
         """
-        Lowest unused sub version of ``input_version`` for a prefix, formatted
-        as ``NNN.M``. Gaps are reused; otherwise max + 1 is issued.
+        Lowest unused sub version of ``input_version`` for a prefix. Gaps are
+        reused while excluding suffixes already reserved by the current
+        generation batch; when the next iteration exceeds 9, start the next
+        main number.
         """
         main_version_int = int(input_version)
-        main_version = cast(func.split_part(FuelCode.fuel_suffix, ".", 1), Integer)
+        main_version = cast(
+            func.split_part(FuelCode.fuel_suffix, ".", 1), BigInteger
+        )
         sub_version = cast(func.split_part(FuelCode.fuel_suffix, ".", 2), Integer)
+        reserved_sub_versions = {
+            int(suffix.split(".", 1)[1])
+            for suffix in reserved_suffixes or set()
+            if suffix.split(".", 1)[0] == input_version
+        }
         sub_versions = (
             select(sub_version.label("sub_version"))
             .where(
@@ -1346,22 +1450,34 @@ class FuelCodeRepository:
         highest_used = select(
             func.coalesce(func.max(sub_versions.c.sub_version), -1)
         ).scalar_subquery()
+        highest_used_or_reserved = (
+            func.greatest(highest_used, max(reserved_sub_versions))
+            if reserved_sub_versions
+            else highest_used
+        )
         all_sub_versions = select(
-            func.generate_series(0, highest_used).label("sub_version")
+            func.generate_series(0, highest_used_or_reserved).label("sub_version")
         ).cte("all_sub_versions")
-        first_gap = (
+        first_gap_query = (
             select(all_sub_versions.c.sub_version)
             .outerjoin(
                 sub_versions,
                 all_sub_versions.c.sub_version == sub_versions.c.sub_version,
             )
             .where(sub_versions.c.sub_version.is_(None))
-            .order_by(all_sub_versions.c.sub_version)
+        )
+        if reserved_sub_versions:
+            first_gap_query = first_gap_query.where(
+                all_sub_versions.c.sub_version.not_in(reserved_sub_versions)
+            )
+        first_gap = (
+            first_gap_query.order_by(all_sub_versions.c.sub_version)
             .limit(1)
             .scalar_subquery()
         )
         next_sub_version = func.coalesce(
-            cast(first_gap, String), cast(highest_used + 1, String)
+            cast(first_gap, String),
+            cast(highest_used_or_reserved + 1, String),
         )
         query = select(
             (literal(str(main_version_int)) + "." + next_sub_version).label(
@@ -1369,7 +1485,16 @@ class FuelCodeRepository:
             )
         )
         result = (await self.db.execute(query)).scalar_one_or_none()
-        return self.format_decimal(result)
+        next_suffix = self.format_decimal(result)
+        if int(next_suffix.split(".")[1]) > 9:
+            prefix = await self.db.scalar(
+                select(FuelCodePrefix.prefix).where(
+                    FuelCodePrefix.fuel_code_prefix_id == prefix_id
+                )
+            )
+            if prefix in {"BCLCF", "C-BCLCF"}:
+                return await self.get_next_available_fuel_code_by_prefix(prefix)
+        return next_suffix
 
     async def get_latest_fuel_codes(self) -> List[FuelCodeSchema]:
         subquery = (

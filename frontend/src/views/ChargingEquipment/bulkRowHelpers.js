@@ -3,11 +3,11 @@ import { v4 as uuid } from 'uuid'
 export const isRowValid = (row) =>
   Boolean(
     row.chargingSiteId &&
-      row.serialNumber &&
-      row.manufacturer &&
-      row.levelOfEquipmentId &&
-      row.intendedUseIds?.length > 0 &&
-      row.intendedUserIds?.length > 0
+    row.serialNumber &&
+    row.manufacturer &&
+    row.levelOfEquipmentId &&
+    row.intendedUseIds?.length > 0 &&
+    row.intendedUserIds?.length > 0
   )
 
 const parseRegistrationNumber = (value) => {

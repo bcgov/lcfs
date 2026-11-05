@@ -217,7 +217,10 @@ export const useUpdateUser = ({
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ userID, payload }: {
+    mutationFn: async ({
+      userID,
+      payload
+    }: {
       userID: number | string
       payload: Record<string, unknown>
       meta?: { admin?: boolean; role?: string }

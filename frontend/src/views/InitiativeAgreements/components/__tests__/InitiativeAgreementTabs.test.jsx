@@ -1,5 +1,5 @@
-import 'react';
-import { afterEach, beforeEach, describe, expect, vi } from 'vitest'
+import 'react'
+import { afterEach, beforeEach, describe, expect, vi } from 'vite-plus/test'
 
 import { cleanup, fireEvent, screen } from '@testing-library/react'
 
@@ -126,5 +126,76 @@ describe('InitiativeAgreementTabs', () => {
     expect(mockNavigate).toHaveBeenCalledWith(
       ROUTES.INITIATIVE_AGREEMENTS.ACTIONS_LIST
     )
+  })
+
+  describe('from subpages below the index pages', () => {
+    const AGREEMENT_PAGE = '/initiative-agreements/7'
+    const ACTION_PAGE = '/initiative-agreements/7/designated-actions/12'
+    const click = (key) =>
+      fireEvent.click(screen.getByTestId(`initiative-agreements-tab-${key}`))
+
+    test.for([
+      ['an agreement page', AGREEMENT_PAGE],
+      ['a designated action page', ACTION_PAGE]
+    ])(
+      'agreements tab returns to the agreements index from %s',
+      ([, pathname], { render, app }) => {
+        mockLocation = { pathname, search: '' }
+        render(<InitiativeAgreementTabs />, app)
+
+        click('initiativeAgreements')
+
+        expect(mockNavigate).toHaveBeenCalledWith(
+          ROUTES.INITIATIVE_AGREEMENTS.LIST
+        )
+      }
+    )
+
+    test.for([
+      ['an agreement page', AGREEMENT_PAGE],
+      ['a designated action page', ACTION_PAGE]
+    ])(
+      'designated actions tab returns to the actions index from %s',
+      ([, pathname], { render, app }) => {
+        mockLocation = { pathname, search: '' }
+        render(<InitiativeAgreementTabs />, app)
+
+        click('designatedActions')
+
+        expect(mockNavigate).toHaveBeenCalledWith(
+          ROUTES.INITIATIVE_AGREEMENTS.ACTIONS_LIST
+        )
+      }
+    )
+
+    test.for([
+      ['initiativeAgreements', ROUTES.INITIATIVE_AGREEMENTS.LIST],
+      ['designatedActions', ROUTES.INITIATIVE_AGREEMENTS.ACTIONS_LIST]
+    ])(
+      'the %s tab does not navigate to the index already being viewed',
+      ([key, pathname], { render, app }) => {
+        mockLocation = { pathname, search: '?page=2' }
+        render(<InitiativeAgreementTabs />, app)
+
+        click(key)
+
+        expect(mockNavigate).not.toHaveBeenCalled()
+      }
+    )
+
+    test('treats a trailing slash as the same index page', ({
+      render,
+      app
+    }) => {
+      mockLocation = {
+        pathname: `${ROUTES.INITIATIVE_AGREEMENTS.LIST}/`,
+        search: ''
+      }
+      render(<InitiativeAgreementTabs />, app)
+
+      click('initiativeAgreements')
+
+      expect(mockNavigate).not.toHaveBeenCalled()
+    })
   })
 })

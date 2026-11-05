@@ -54,7 +54,9 @@ export const OrgUserSettingsCard = () => {
           </BCTypography>
 
           <List component="nav" sx={{ maxWidth: '100%', mt: 1 }}>
-            <UserSettingsLink onClick={() => navigate(ROUTES.NOTIFICATIONS.LIST)}>
+            <UserSettingsLink
+              onClick={() => navigate(ROUTES.NOTIFICATIONS.LIST)}
+            >
               {t('dashboard:orgUserSettings.notifications')}
             </UserSettingsLink>
 
@@ -94,9 +96,6 @@ export const OrgUserSettingsCard = () => {
   )
 }
 
-const OrgUserSettingsCardWithRole = withRole(
-  OrgUserSettingsCard,
-  nonGovRoles
-)
+const OrgUserSettingsCardWithRole = withRole(OrgUserSettingsCard, nonGovRoles)
 
 export default OrgUserSettingsCardWithRole

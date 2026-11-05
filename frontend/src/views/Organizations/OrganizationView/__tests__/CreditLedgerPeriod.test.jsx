@@ -5,7 +5,7 @@ import {
   fireEvent,
   within
 } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import theme from '@/themes'
@@ -257,6 +257,34 @@ describe('CreditLedgerPeriod (compliance-period ledger #4714)', () => {
       within(section).getByTestId('assessed-current')
     ).not.toHaveTextContent('0')
     // The year that does have an assessed report still shows its value.
+    expect(within(section).getByTestId('assessed-previous')).toHaveTextContent(
+      '1,000'
+    )
+  })
+
+  it('labels a non-assessment year instead of showing a balance', () => {
+    // #5304: a non-assessment creates no transaction, so it has no assessed
+    // balance to show — the cell says so rather than showing a number.
+    mockPeriod.mockReturnValue({
+      data: {
+        ...PERIOD_PAYLOAD,
+        assessedBalance: {
+          previousYear: 2023,
+          previousBalance: 1000,
+          previousNonAssessment: false,
+          currentYear: 2024,
+          currentBalance: null,
+          currentNonAssessment: true
+        }
+      },
+      isLoading: false,
+      isError: false
+    })
+    renderComponent({ organizationId: 999 })
+    const section = screen.getByTestId('ledger-assessed-balance')
+    const current = within(section).getByTestId('assessed-current')
+    expect(current).toHaveTextContent('org:ledger.nonAssessment')
+    expect(current).not.toHaveTextContent(/\d/)
     expect(within(section).getByTestId('assessed-previous')).toHaveTextContent(
       '1,000'
     )

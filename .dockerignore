@@ -17,7 +17,6 @@
 **/*.sqllite
 **/*.swp
 **/.terser-plugin-cache/
-**/.storybook/
 **/node_modules/
 
 tests/

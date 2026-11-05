@@ -1,4 +1,10 @@
-import type { ICellEditorParams, ICellRendererParams, RowClassParams, ValueGetterParams, ColDef } from 'ag-grid-community'
+import type {
+  ICellEditorParams,
+  ICellRendererParams,
+  RowClassParams,
+  ValueGetterParams,
+  ColDef
+} from 'ag-grid-community'
 import type { GridErrors, GridWarnings, OptionsData } from '@/types/schema'
 import type { ApiServiceInstance } from '@/services/useApiService'
 import { actions, validation } from '@/components/BCDataGrid/columns'
@@ -60,7 +66,7 @@ export const fuelExportColDefs = (
   errors: GridErrors,
   warnings: GridWarnings,
   gridReady: boolean,
-  isSupplemental: boolean,
+  isSupplemental: boolean
 ): ColDef[] => [
   validation,
   actions((params: ICellRendererParams) => {
@@ -243,7 +249,10 @@ export const fuelExportColDefs = (
       const fuelType = optionsData?.fuelTypes?.find(
         (obj) => params.data!.fuelType === obj.fuelType
       )
-      return (fuelType?.fuelCategories.map((item) => item.fuelCategory).length as number) > 1
+      return (
+        (fuelType?.fuelCategories.map((item) => item.fuelCategory)
+          .length as number) > 1
+      )
     },
     tooltipValueGetter: () => 'Select the fuel category from the list'
   },
@@ -437,9 +446,11 @@ export const fuelExportColDefs = (
       const isEditable =
         params.colDef!.editable &&
         (typeof params.colDef!.editable === 'function'
-          ? (params.colDef!.editable as (params: ICellRendererParams) => boolean)(
-              params
-            )
+          ? (
+              params.colDef!.editable as (
+                params: ICellRendererParams
+              ) => boolean
+            )(params)
           : true)
 
       return (
@@ -586,9 +597,7 @@ export const fuelExportColDefs = (
         }
         // Otherwise pick the minimum carbon intensity
         const minCI = Math.min(
-          ...validCodes.map(
-            (fc) => fc.fuelCodeCarbonIntensity as number
-          )
+          ...validCodes.map((fc) => fc.fuelCodeCarbonIntensity as number)
         )
         return minCI
       }
@@ -703,7 +712,7 @@ export const fuelExportSummaryColDefs = (
     headerName: i18n.t('fuelExport:fuelExportColLabels.complianceUnits'),
     field: 'complianceUnits',
     minWidth: 180,
-    valueFormatter: formatNumberWithCommas as NumberCellFormatter,
+    valueFormatter: formatNumberWithCommas as NumberCellFormatter
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelTypeId'),
@@ -752,7 +761,7 @@ export const fuelExportSummaryColDefs = (
     headerName: i18n.t('fuelExport:fuelExportColLabels.quantity'),
     field: 'quantity',
     minWidth: 185,
-    valueFormatter: formatNumberWithCommas as NumberCellFormatter,
+    valueFormatter: formatNumberWithCommas as NumberCellFormatter
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.units'),
@@ -824,28 +833,40 @@ export const changelogCommonColDefs = (highlight: boolean = true): ColDef[] => [
     minWidth: 180,
     valueFormatter: formatNumberWithCommas as NumberCellFormatter,
     cellStyle: (params) =>
-      (highlight && changelogCellStyle(params, 'complianceUnits')) as unknown as ReturnType<typeof changelogCellStyle>
+      (highlight &&
+        changelogCellStyle(params, 'complianceUnits')) as unknown as ReturnType<
+        typeof changelogCellStyle
+      >
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelTypeId'),
     field: 'fuelType.fuelType',
     minWidth: 200,
     cellStyle: (params) =>
-      (highlight && changelogCellStyle(params, 'fuelType')) as unknown as ReturnType<typeof changelogCellStyle>
+      (highlight &&
+        changelogCellStyle(params, 'fuelType')) as unknown as ReturnType<
+        typeof changelogCellStyle
+      >
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategory'),
     field: 'fuelCategory.category',
     minWidth: 150,
     cellStyle: (params) =>
-      (highlight && changelogCellStyle(params, 'fuelCategory')) as unknown as ReturnType<typeof changelogCellStyle>
+      (highlight &&
+        changelogCellStyle(params, 'fuelCategory')) as unknown as ReturnType<
+        typeof changelogCellStyle
+      >
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.endUseId'),
     field: 'endUseType.type',
     minWidth: 200,
     cellStyle: (params) =>
-      (highlight && changelogCellStyle(params, 'endUseType')) as unknown as ReturnType<typeof changelogCellStyle>
+      (highlight &&
+        changelogCellStyle(params, 'endUseType')) as unknown as ReturnType<
+        typeof changelogCellStyle
+      >
   },
   {
     headerName: i18n.t(
@@ -854,21 +875,31 @@ export const changelogCommonColDefs = (highlight: boolean = true): ColDef[] => [
     field: 'provisionOfTheAct.name',
     minWidth: 370,
     cellStyle: (params) =>
-      (highlight && changelogCellStyle(params, 'provisionOfTheAct')) as unknown as ReturnType<typeof changelogCellStyle>
+      (highlight &&
+        changelogCellStyle(
+          params,
+          'provisionOfTheAct'
+        )) as unknown as ReturnType<typeof changelogCellStyle>
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCode'),
     field: 'fuelCode.fuelCode',
     minWidth: 175,
     cellStyle: (params) =>
-      (highlight && changelogCellStyle(params, 'fuelCode')) as unknown as ReturnType<typeof changelogCellStyle>
+      (highlight &&
+        changelogCellStyle(params, 'fuelCode')) as unknown as ReturnType<
+        typeof changelogCellStyle
+      >
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.exportDate'),
     field: 'exportDate',
     minWidth: 160,
     cellStyle: (params) =>
-      (highlight && changelogCellStyle(params, 'exportDate')) as unknown as ReturnType<typeof changelogCellStyle>
+      (highlight &&
+        changelogCellStyle(params, 'exportDate')) as unknown as ReturnType<
+        typeof changelogCellStyle
+      >
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.quantity'),
@@ -876,28 +907,40 @@ export const changelogCommonColDefs = (highlight: boolean = true): ColDef[] => [
     minWidth: 185,
     valueFormatter: formatNumberWithCommas as NumberCellFormatter,
     cellStyle: (params) =>
-      (highlight && changelogCellStyle(params, 'quantity')) as unknown as ReturnType<typeof changelogCellStyle>
+      (highlight &&
+        changelogCellStyle(params, 'quantity')) as unknown as ReturnType<
+        typeof changelogCellStyle
+      >
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.units'),
     field: 'units',
     minWidth: 200,
     cellStyle: (params) =>
-      (highlight && changelogCellStyle(params, 'units')) as unknown as ReturnType<typeof changelogCellStyle>
+      (highlight &&
+        changelogCellStyle(params, 'units')) as unknown as ReturnType<
+        typeof changelogCellStyle
+      >
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.targetCI'),
     field: 'targetCi',
     minWidth: 135,
     cellStyle: (params) =>
-      (highlight && changelogCellStyle(params, 'targetCi')) as unknown as ReturnType<typeof changelogCellStyle>
+      (highlight &&
+        changelogCellStyle(params, 'targetCi')) as unknown as ReturnType<
+        typeof changelogCellStyle
+      >
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.ciOfFuel'),
     field: 'ciOfFuel',
     minWidth: 90,
     cellStyle: (params) =>
-      (highlight && changelogCellStyle(params, 'ciOfFuel')) as unknown as ReturnType<typeof changelogCellStyle>
+      (highlight &&
+        changelogCellStyle(params, 'ciOfFuel')) as unknown as ReturnType<
+        typeof changelogCellStyle
+      >
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.uci'),
@@ -905,14 +948,19 @@ export const changelogCommonColDefs = (highlight: boolean = true): ColDef[] => [
     minWidth: 90,
 
     cellStyle: (params) =>
-      (highlight && changelogCellStyle(params, 'uci')) as unknown as ReturnType<typeof changelogCellStyle>
+      (highlight && changelogCellStyle(params, 'uci')) as unknown as ReturnType<
+        typeof changelogCellStyle
+      >
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.energyDensity'),
     field: 'energyDensity',
     minWidth: 160,
     cellStyle: (params) =>
-      (highlight && changelogCellStyle(params, 'energyDensity')) as unknown as ReturnType<typeof changelogCellStyle>
+      (highlight &&
+        changelogCellStyle(params, 'energyDensity')) as unknown as ReturnType<
+        typeof changelogCellStyle
+      >
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.eer'),
@@ -920,7 +968,9 @@ export const changelogCommonColDefs = (highlight: boolean = true): ColDef[] => [
     minWidth: 80,
     valueFormatter: (params) => formatNumberWithDecimals(params, 2),
     cellStyle: (params) =>
-      (highlight && changelogCellStyle(params, 'eer')) as unknown as ReturnType<typeof changelogCellStyle>
+      (highlight && changelogCellStyle(params, 'eer')) as unknown as ReturnType<
+        typeof changelogCellStyle
+      >
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.energy'),
@@ -928,7 +978,10 @@ export const changelogCommonColDefs = (highlight: boolean = true): ColDef[] => [
     minWidth: 170,
     valueFormatter: formatNumberWithCommas as NumberCellFormatter,
     cellStyle: (params) =>
-      (highlight && changelogCellStyle(params, 'energy')) as unknown as ReturnType<typeof changelogCellStyle>
+      (highlight &&
+        changelogCellStyle(params, 'energy')) as unknown as ReturnType<
+        typeof changelogCellStyle
+      >
   }
 ]
 

@@ -1,4 +1,10 @@
-import { CI_APPLICATION_STEPS, formatDate, getSupplierRequestDate, buildCIWorkflowSteps, getCIWorkflowConnectorStyle } from './ciWorkflowHelpers'
+import {
+  CI_APPLICATION_STEPS,
+  formatDate,
+  getSupplierRequestDate,
+  buildCIWorkflowSteps,
+  getCIWorkflowConnectorStyle
+} from './ciWorkflowHelpers'
 import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
 import Tooltip from '@mui/material/Tooltip'

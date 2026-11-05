@@ -1,5 +1,5 @@
 import { screen, fireEvent, waitFor } from '@testing-library/react'
-import { vi, describe, expect, beforeEach } from 'vitest';
+import { vi, describe, expect, beforeEach } from 'vite-plus/test'
 import ImportDialog from '../ImportDialog'
 import { test } from '@/tests/utils/fixtures'
 import { validateFile } from '@/utils/fileValidation'
@@ -40,9 +40,7 @@ vi.mock('react-i18next', () => ({
 }))
 
 describe('LinearProgressWithLabel', () => {
-  test('should render progress bar with correct percentage', ({
-  render
-}) => {
+  test('should render progress bar with correct percentage', ({ render }) => {
     const LinearProgressWithLabel = ({ value }) => {
       return (
         <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -460,7 +458,7 @@ describe('ImportDialog', () => {
         getJobStatusHook={mockGetJobStatusHook}
       />,
       [query, theme, localization, router]
-    );
+    )
 
     // Simulate file upload to trigger uploading state
     const file = new File(['test'], 'test.xlsx', {

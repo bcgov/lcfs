@@ -1,6 +1,6 @@
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach } from 'vite-plus/test'
 import {
   useFinalSupplyEquipmentOptions,
   useGetFinalSupplyEquipments,
@@ -584,6 +584,45 @@ describe('useFinalSupplyEquipment', () => {
       expect(mockApiService.put).toHaveBeenCalledWith(
         '/final-supply-equipments/reporting/1',
         reportData
+      )
+    })
+
+    it('marks the FSE lists of every report version stale after a save', async () => {
+      mockApiService.put.mockResolvedValue({ data: { id: 1 } })
+      const queryClient = new QueryClient({
+        defaultOptions: {
+          queries: { retry: false },
+          mutations: { retry: false }
+        }
+      })
+      // The edited report's grid, and another version's report page table.
+      const ownList = ['fse-reporting-list', 123, 456, {}, 'all', undefined]
+      const otherVersionList = [
+        'fse-reporting-list',
+        '124',
+        456,
+        {},
+        'summary',
+        'vw_fse_base'
+      ]
+      queryClient.setQueryData(ownList, { finalSupplyEquipments: [] })
+      queryClient.setQueryData(otherVersionList, { finalSupplyEquipments: [] })
+
+      const { result } = renderHook(() => useSaveFSEReporting(456, 123), {
+        wrapper: ({ children }) => (
+          <QueryClientProvider client={queryClient}>
+            {children}
+          </QueryClientProvider>
+        )
+      })
+      result.current.mutate({ chargingEquipmentComplianceId: 1, kwhUsage: 5 })
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+      expect(queryClient.getQueryState(ownList).isInvalidated).toBe(true)
+      expect(queryClient.getQueryState(otherVersionList).isInvalidated).toBe(
+        true
       )
     })
 

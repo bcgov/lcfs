@@ -1,5 +1,9 @@
-import { describe, it, expect, vi } from 'vitest'
-import { fixLeafletIcons, createMarkerIcon, markerIcons } from '../../components/utils'
+import { describe, it, expect, vi } from 'vite-plus/test'
+import {
+  fixLeafletIcons,
+  createMarkerIcon,
+  markerIcons
+} from '../../components/utils'
 
 // Mock Leaflet
 vi.mock('leaflet', () => {
@@ -9,14 +13,14 @@ vi.mock('leaflet', () => {
     }
   }
   MockIconDefault.mergeOptions = vi.fn()
-  
+
   const MockIcon = class {
     constructor(options) {
       this.options = options
     }
   }
   MockIcon.Default = MockIconDefault
-  
+
   return {
     default: {
       Icon: MockIcon

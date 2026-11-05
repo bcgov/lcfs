@@ -24,42 +24,43 @@ interface BCAlertOwnerState {
   color?: AlertSeverity | null
 }
 
-const BCAlertRoot = styled(Box)<{ ownerState: BCAlertOwnerState }>(
-  ({ theme, ownerState }) => {
-    const { palette, typography, borders, functions } =
-      theme as unknown as BCAlertTheme
-    const { color } = ownerState
+const BCAlertRoot = styled(Box)<{ ownerState: BCAlertOwnerState }>(({
+  theme,
+  ownerState
+}) => {
+  const { palette, typography, borders, functions } =
+    theme as unknown as BCAlertTheme
+  const { color } = ownerState
 
-    const { gradients, alerts } = palette
-    const { fontSizeMD, fontWeightMedium } = typography
-    const { borderRadius } = borders
-    const { pxToRem, linearGradient } = functions
+  const { gradients, alerts } = palette
+  const { fontSizeMD, fontWeightMedium } = typography
+  const { borderRadius } = borders
+  const { pxToRem, linearGradient } = functions
 
-    const resolvedColor: AlertSeverity = color ?? 'info'
+  const resolvedColor: AlertSeverity = color ?? 'info'
 
-    // backgroundImage value
-    const backgroundImageValue = alerts[resolvedColor].background
-      ? linearGradient(
-          alerts[resolvedColor].background,
-          alerts[resolvedColor].background
-        )
-      : linearGradient(gradients.info.main, gradients.info.state)
+  // backgroundImage value
+  const backgroundImageValue = alerts[resolvedColor].background
+    ? linearGradient(
+        alerts[resolvedColor].background,
+        alerts[resolvedColor].background
+      )
+    : linearGradient(gradients.info.main, gradients.info.state)
 
-    return {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      minHeight: pxToRem(40),
-      backgroundImage: backgroundImageValue,
-      color: alerts[resolvedColor].color,
-      position: 'relative',
-      padding: pxToRem(8),
-      marginBottom: pxToRem(8),
-      borderRadius: borderRadius.md,
-      fontSize: fontSizeMD,
-      fontWeight: fontWeightMedium
-    }
+  return {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    minHeight: pxToRem(40),
+    backgroundImage: backgroundImageValue,
+    color: alerts[resolvedColor].color,
+    position: 'relative',
+    padding: pxToRem(8),
+    marginBottom: pxToRem(8),
+    borderRadius: borderRadius.md,
+    fontSize: fontSizeMD,
+    fontWeight: fontWeightMedium
   }
-)
+})
 
 export default BCAlertRoot

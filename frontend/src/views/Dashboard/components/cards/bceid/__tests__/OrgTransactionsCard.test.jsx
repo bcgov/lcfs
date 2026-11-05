@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react'
-import { vi } from 'vitest'
+import { vi } from 'vite-plus/test'
 import OrgTransactionsCard from '../OrgTransactionsCard'
 
 // Mock all hooks
@@ -33,7 +33,7 @@ vi.mock('react-router-dom', () => ({
 
 // Mock Material-UI components
 vi.mock('@mui/material/Stack', () => ({
-    default: ({ children, ...props }) => (
+  default: ({ children, ...props }) => (
     <div data-test="stack" {...props}>
       {children}
     </div>
@@ -41,7 +41,7 @@ vi.mock('@mui/material/Stack', () => ({
 }))
 
 vi.mock('@mui/material/List', () => ({
-    default: ({ children, ...props }) => (
+  default: ({ children, ...props }) => (
     <div data-test="list" {...props}>
       {children}
     </div>
@@ -49,7 +49,7 @@ vi.mock('@mui/material/List', () => ({
 }))
 
 vi.mock('@mui/material/ListItemButton', () => ({
-    default: ({ children, onClick, ...props }) => (
+  default: ({ children, onClick, ...props }) => (
     <div data-test="list-item-button" onClick={onClick} {...props}>
       {children}
     </div>

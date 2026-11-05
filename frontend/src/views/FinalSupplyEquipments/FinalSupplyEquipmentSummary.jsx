@@ -16,10 +16,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { govRoles } from '@/constants/roles'
 import { ComplianceUnitsTotal } from '@/views/ComplianceReports/components/ComplianceUnitsTotal'
 
-export const FinalSupplyEquipmentSummary = ({
-  status,
-  organizationId
-}) => {
+export const FinalSupplyEquipmentSummary = ({ status, organizationId }) => {
   const [showMap, setShowMap] = useState(false)
   const { complianceReportId } = useParams()
   const { hasAnyRole } = useCurrentUser()
@@ -34,11 +31,11 @@ export const FinalSupplyEquipmentSummary = ({
     {},
     organizationId,
     'summary',
-    'vw_fse_base'
+    // A Draft shows its own saved rows, as its FSE reporting page does.
+    // vw_fse_base holds only the latest submitted version of each report.
+    status === COMPLIANCE_REPORT_STATUSES.DRAFT ? undefined : 'vw_fse_base'
   )
-  const {
-  data: fseData
-} = queryData
+  const { data: fseData } = queryData
 
   const gridRef = useRef()
   const { t } = useTranslation(['common', 'finalSupplyEquipment'])

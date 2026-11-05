@@ -20,13 +20,18 @@ export interface BCDateFloatingFilterProps {
     dateFrom?: string
     dateTo?: string
   } | null
-  onModelChange: (model: {
-    type?: string
-    filter?: string
-    filterType?: string
-    dateFrom?: string
-    dateTo?: string
-  } | null | undefined) => void
+  onModelChange: (
+    model:
+      | {
+          type?: string
+          filter?: string
+          filterType?: string
+          dateFrom?: string
+          dateTo?: string
+        }
+      | null
+      | undefined
+  ) => void
   disabled?: boolean
   minDate?: string
   maxDate?: string

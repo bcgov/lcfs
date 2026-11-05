@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'vite-plus/test'
 import { routesMapping } from '../routeMapping'
 import { ROUTES } from '@/routes/routes'
 
@@ -10,7 +10,7 @@ describe('Fuel Code Notification Logic', () => {
       // For fuel codes, use the notification type since they don't have a service field
       const serviceKey = service || params.data.type
       const routeTemplate = routesMapping(currentUser)[serviceKey]
-      
+
       if (routeTemplate && params.event.target.dataset.action !== 'delete') {
         // Simulate navigation
         return routeTemplate
@@ -40,7 +40,7 @@ describe('Fuel Code Notification Logic', () => {
 
       const currentUser = { isGovernmentUser: true }
       const result = simulateHandleRowClicked(params, currentUser)
-      
+
       expect(result).toBe('/fuel-codes/123')
     })
 
@@ -61,7 +61,7 @@ describe('Fuel Code Notification Logic', () => {
 
       const currentUser = { isGovernmentUser: true }
       const result = simulateHandleRowClicked(params, currentUser)
-      
+
       expect(result).toBe('/fuel-codes/456')
     })
 
@@ -83,7 +83,7 @@ describe('Fuel Code Notification Logic', () => {
 
       const currentUser = { isGovernmentUser: true }
       const result = simulateHandleRowClicked(params, currentUser)
-      
+
       expect(result).toBe('/fuel-codes/789')
     })
 
@@ -103,7 +103,7 @@ describe('Fuel Code Notification Logic', () => {
 
       const currentUser = { isGovernmentUser: true }
       const result = simulateHandleRowClicked(params, currentUser)
-      
+
       expect(result).toBe('/transfers/999')
     })
 
@@ -122,7 +122,7 @@ describe('Fuel Code Notification Logic', () => {
 
       const currentUser = { isGovernmentUser: true }
       const result = simulateHandleRowClicked(params, currentUser)
-      
+
       expect(result).toBe(null)
     })
 
@@ -141,7 +141,7 @@ describe('Fuel Code Notification Logic', () => {
 
       const currentUser = { isGovernmentUser: true }
       const result = simulateHandleRowClicked(params, currentUser)
-      
+
       expect(result).toBe(null)
     })
 
@@ -161,7 +161,7 @@ describe('Fuel Code Notification Logic', () => {
 
       const currentUser = { isGovernmentUser: true }
       const result = simulateHandleRowClicked(params, currentUser)
-      
+
       expect(result).toBe('/fuel-codes/undefined')
     })
   })
@@ -170,7 +170,7 @@ describe('Fuel Code Notification Logic', () => {
     it('all fuel code status types map to the same edit route', () => {
       const currentUser = { isGovernmentUser: true }
       const mapping = routesMapping(currentUser)
-      
+
       const fuelCodeTypes = [
         'Fuel Code',
         'Fuel Code Status Update',
@@ -180,7 +180,7 @@ describe('Fuel Code Notification Logic', () => {
         'Fuel Code Returned'
       ]
 
-      const uniqueRoutes = new Set(fuelCodeTypes.map(type => mapping[type]))
+      const uniqueRoutes = new Set(fuelCodeTypes.map((type) => mapping[type]))
       expect(uniqueRoutes.size).toBe(1)
       expect([...uniqueRoutes][0]).toBe(ROUTES.FUEL_CODES.EDIT)
     })
@@ -190,28 +190,28 @@ describe('Fuel Code Notification Logic', () => {
     it('correctly replaces all possible parameters', () => {
       const routeTemplate = '/fuel-codes/:fuelCodeID'
       const id = '12345'
-      
+
       const result = routeTemplate
         .replace(':transactionId', id)
         .replace(':transferId', id)
         .replace(':compliancePeriod', id)
         .replace(':complianceReportId', id)
         .replace(':fuelCodeID', id)
-      
+
       expect(result).toBe('/fuel-codes/12345')
     })
 
     it('leaves unmatched parameters unchanged', () => {
       const routeTemplate = '/some-route/:unknownParam'
       const id = '12345'
-      
+
       const result = routeTemplate
         .replace(':transactionId', id)
         .replace(':transferId', id)
         .replace(':compliancePeriod', id)
         .replace(':complianceReportId', id)
         .replace(':fuelCodeID', id)
-      
+
       expect(result).toBe('/some-route/:unknownParam')
     })
   })
@@ -227,11 +227,13 @@ describe('Fuel Code Notification Logic', () => {
           },
           event: { target: { dataset: {} } }
         }
-        
-        const { id, service, compliancePeriod } = JSON.parse(params.data.message)
+
+        const { id, service, compliancePeriod } = JSON.parse(
+          params.data.message
+        )
         return { id, service, compliancePeriod }
       }
-      
+
       const result = simulateWithEmptyMessage()
       expect(result.id).toBeUndefined()
       expect(result.service).toBeUndefined()
@@ -248,10 +250,10 @@ describe('Fuel Code Notification Logic', () => {
           },
           event: { target: { dataset: {} } }
         }
-        
+
         JSON.parse(params.data.message)
       }
-      
+
       expect(simulateWithMalformedJSON).toThrow()
     })
   })
@@ -264,10 +266,10 @@ describe('Fuel Code Notification Logic', () => {
           message: JSON.stringify({ service: 'Transfer' })
         }
       }
-      
+
       const { service } = JSON.parse(params.data.message)
       const serviceKey = service || params.data.type
-      
+
       expect(serviceKey).toBe('Transfer')
     })
 
@@ -278,10 +280,10 @@ describe('Fuel Code Notification Logic', () => {
           message: JSON.stringify({ id: 123 })
         }
       }
-      
+
       const { service } = JSON.parse(params.data.message)
       const serviceKey = service || params.data.type
-      
+
       expect(serviceKey).toBe('Fuel Code Approved')
     })
 
@@ -292,10 +294,10 @@ describe('Fuel Code Notification Logic', () => {
           message: JSON.stringify({ service: '' })
         }
       }
-      
+
       const { service } = JSON.parse(params.data.message)
       const serviceKey = service || params.data.type
-      
+
       expect(serviceKey).toBe('Fuel Code Approved') // Because empty string is falsy
     })
   })

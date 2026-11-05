@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { vi } from 'vitest'
+import { vi } from 'vite-plus/test'
 import IDIRComplianceManagerNotificationSettings from '../IDIRComplianceManagerNotificationSettings'
 
 // Mock the NotificationSettingsForm component
@@ -46,9 +46,8 @@ describe('IDIRComplianceManagerNotificationSettings', () => {
       'idirComplianceManager.categories.complianceReports'
     )
 
-    const complianceReportsCategory = categories[
-      'idirComplianceManager.categories.complianceReports'
-    ]
+    const complianceReportsCategory =
+      categories['idirComplianceManager.categories.complianceReports']
 
     // Test category has title property
     expect(complianceReportsCategory).toHaveProperty('title')
@@ -69,9 +68,10 @@ describe('IDIRComplianceManagerNotificationSettings', () => {
     render(<IDIRComplianceManagerNotificationSettings />)
 
     const passedProps = mockNotificationSettingsForm.mock.calls[0][0]
-    const complianceReportsCategory = passedProps.categories[
-      'idirComplianceManager.categories.complianceReports'
-    ]
+    const complianceReportsCategory =
+      passedProps.categories[
+        'idirComplianceManager.categories.complianceReports'
+      ]
 
     // Test all property values are correct
     expect(complianceReportsCategory.title).toBe(
@@ -98,7 +98,7 @@ describe('IDIRComplianceManagerNotificationSettings', () => {
     // Test that the component can be imported and used
     expect(IDIRComplianceManagerNotificationSettings).toBeDefined()
     expect(typeof IDIRComplianceManagerNotificationSettings).toBe('function')
-    
+
     // Test that component returns JSX
     const result = IDIRComplianceManagerNotificationSettings()
     expect(result).toBeTruthy()

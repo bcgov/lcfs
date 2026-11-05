@@ -1,5 +1,5 @@
 import { render, fireEvent, act } from '@testing-library/react'
-import { vi } from 'vitest'
+import { vi } from 'vite-plus/test'
 import userEvent from '@testing-library/user-event'
 import { AdminMenu } from '../Menu'
 
@@ -48,7 +48,7 @@ vi.mock('@/components/BCBox', () => ({
 }))
 
 vi.mock('@mui/material/AppBar', () => ({
-    default: vi.fn(({ children, ...props }) => (
+  default: vi.fn(({ children, ...props }) => (
     <div data-test="app-bar" {...props}>
       {children}
     </div>
@@ -56,7 +56,7 @@ vi.mock('@mui/material/AppBar', () => ({
 }))
 
 vi.mock('@mui/material/Tabs', () => ({
-    default: vi.fn(({ children, onChange, ...props }) => (
+  default: vi.fn(({ children, onChange, ...props }) => (
     <div
       data-test="tabs"
       data-orientation={props.orientation}
@@ -70,7 +70,7 @@ vi.mock('@mui/material/Tabs', () => ({
 }))
 
 vi.mock('@mui/material/Tab', () => ({
-    default: vi.fn(({ label, wrapped, ...props }) => (
+  default: vi.fn(({ label, wrapped, ...props }) => (
     <button data-test="tab" data-wrapped={wrapped} {...props}>
       {label}
     </button>

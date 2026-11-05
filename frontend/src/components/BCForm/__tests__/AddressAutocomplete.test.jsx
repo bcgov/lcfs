@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, expect, vi, beforeEach, afterEach } from 'vite-plus/test'
 import { cleanup, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { AddressAutocomplete } from '@/components/BCForm/AddressAutocomplete'
@@ -97,7 +97,7 @@ vi.mock('autosuggest-highlight/match', () => ({
   }
 }))
 
-describe.sequential('AddressAutocomplete', () => {
+describe('AddressAutocomplete', { concurrent: false }, () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
@@ -178,9 +178,9 @@ describe.sequential('AddressAutocomplete', () => {
 
   describe('Basic Rendering', () => {
     test('renders autocomplete input with correct structure', ({
-  render,
-  theme
-}) => {
+      render,
+      theme
+    }) => {
       renderAddressAutocomplete({
         render,
         theme

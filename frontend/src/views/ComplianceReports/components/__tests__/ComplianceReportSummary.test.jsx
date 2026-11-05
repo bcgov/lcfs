@@ -1,7 +1,7 @@
 import { test } from '@/tests/utils/fixtures'
 import 'react'
 import { fireEvent, screen, waitFor } from '@testing-library/react'
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 
 import ComplianceReportSummary from '../ComplianceReportSummary'
 import {
@@ -42,13 +42,10 @@ vi.mock('../_schema', () => ({
 
 // Mock components with proper test attributes
 vi.mock('../SummaryTable', () => ({
-  default: ({
-  onCellEditStopped,
-  data,
-  title,
-  ...props
-}) => {
-delete props.useParenthesis; delete props.columns; delete props.width;
+  default: ({ onCellEditStopped, data, title, ...props }) => {
+    delete props.useParenthesis
+    delete props.columns
+    delete props.width
 
     // Filter out non-DOM props
     const { 'data-test': dataTest, ...domProps } = props
@@ -147,7 +144,7 @@ vi.mock('@/components/Loading', () => ({
 
 // Mock MUI components
 vi.mock('@mui/material/Accordion', () => ({
-    default: ({ children, defaultExpanded }) => (
+  default: ({ children, defaultExpanded }) => (
     <div data-test="accordion" data-expanded={defaultExpanded}>
       {children}
     </div>
@@ -155,7 +152,7 @@ vi.mock('@mui/material/Accordion', () => ({
 }))
 
 vi.mock('@mui/material/AccordionSummary', () => ({
-    default: ({ children, expandIcon }) => (
+  default: ({ children, expandIcon }) => (
     <div data-test="accordion-summary">
       {children}
       <div data-test="expand-icon">{expandIcon}</div>
@@ -164,13 +161,11 @@ vi.mock('@mui/material/AccordionSummary', () => ({
 }))
 
 vi.mock('@mui/material/AccordionDetails', () => ({
-    default: ({ children }) => (
-    <div data-test="accordion-details">{children}</div>
-  )
+  default: ({ children }) => <div data-test="accordion-details">{children}</div>
 }))
 
 vi.mock('@mui/material/Stack', () => ({
-    default: ({ children, direction, justifyContent, mt, gap }) => (
+  default: ({ children, direction, justifyContent, mt, gap }) => (
     <div
       data-test="stack"
       data-direction={direction}
@@ -183,7 +178,7 @@ vi.mock('@mui/material/Stack', () => ({
 }))
 
 vi.mock('@mui/material/FormControlLabel', () => ({
-    default: ({ control, label, ...props }) => (
+  default: ({ control, label, ...props }) => (
     <label data-test="form-control-label" {...props}>
       {control}
       <span>{label}</span>
@@ -192,26 +187,28 @@ vi.mock('@mui/material/FormControlLabel', () => ({
 }))
 
 vi.mock('@mui/material/Checkbox', () => ({
-    default: ({ checked, onChange, ...props }) => (
+  default: ({ checked, onChange, ...props }) => (
     <input type="checkbox" checked={checked} onChange={onChange} {...props} />
   )
 }))
 
 vi.mock('@mui/material/Box', () => ({
-    default: ({
-  children,
-  ...props
-}) => { delete props.sx; return <div data-test="box" {...props}>
-      {children}
-    </div>; }
+  default: ({ children, ...props }) => {
+    delete props.sx
+    return (
+      <div data-test="box" {...props}>
+        {children}
+      </div>
+    )
+  }
 }))
 
 vi.mock('@mui/material/TextField', () => ({
-    default: (props) => <input {...props} />
+  default: (props) => <input {...props} />
 }))
 
 vi.mock('@mui/icons-material/ExpandMore', () => ({
-    default: (props) => (
+  default: (props) => (
     <div data-test="expand-more-icon" {...props}>
       ExpandMore
     </div>
@@ -219,7 +216,7 @@ vi.mock('@mui/icons-material/ExpandMore', () => ({
 }))
 
 vi.mock('@mui/icons-material/CheckBox', () => ({
-    default: (props) => (
+  default: (props) => (
     <div data-test="checkbox-icon" {...props}>
       CheckBox
     </div>
@@ -227,7 +224,7 @@ vi.mock('@mui/icons-material/CheckBox', () => ({
 }))
 
 vi.mock('@mui/icons-material/CheckBoxOutlineBlank', () => ({
-    default: (props) => (
+  default: (props) => (
     <div data-test="checkbox-outline-blank-icon" {...props}>
       CheckBoxOutlineBlank
     </div>

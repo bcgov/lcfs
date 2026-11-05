@@ -1,5 +1,5 @@
 import 'react'
-import { describe, expect, vi } from 'vitest'
+import { describe, expect, vi } from 'vite-plus/test'
 import { screen } from '@testing-library/react'
 import { Introduction } from '../Introduction'
 import { test } from '@/tests/utils/fixtures'
@@ -39,9 +39,7 @@ vi.mock('react-i18next', () => {
         return key
       }
     }),
-    Trans: ({
-  i18nKey
-}) => {
+    Trans: ({ i18nKey }) => {
       // Simple implementation to handle Trans component
       if (i18nKey === 'report:contact') {
         return <p>Contact us at email@example.com</p>

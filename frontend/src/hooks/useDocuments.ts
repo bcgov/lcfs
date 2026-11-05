@@ -49,7 +49,10 @@ export const useDocuments = (
 export const useUploadDocument = (
   parentType: string,
   parentID: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, File | Blob | { file: File | Blob; documentCategory?: string }> = {}
+  options: ExtMutationOptions<
+    unknown,
+    File | Blob | { file: File | Blob; documentCategory?: string }
+  > = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -64,7 +67,9 @@ export const useUploadDocument = (
   } = options
 
   return useMutation({
-    mutationFn: async (input: File | Blob | { file: File | Blob; documentCategory?: string }) => {
+    mutationFn: async (
+      input: File | Blob | { file: File | Blob; documentCategory?: string }
+    ) => {
       // Backwards compatible: callers can either pass a File directly
       // (legacy signature) or a { file, documentCategory } object so
       // CI applications can route uploads to a specific category bucket
@@ -330,7 +335,10 @@ export const useGetDocumentInfo = (
 export const useUpdateDocument = (
   parentType: string,
   parentID: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, { documentID: number | string; data: Record<string, unknown> }> = {}
+  options: ExtMutationOptions<
+    unknown,
+    { documentID: number | string; data: Record<string, unknown> }
+  > = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -344,7 +352,13 @@ export const useUpdateDocument = (
   } = options
 
   return useMutation({
-    mutationFn: async ({ documentID, data }: { documentID: number | string; data: Record<string, unknown> }) => {
+    mutationFn: async ({
+      documentID,
+      data
+    }: {
+      documentID: number | string
+      data: Record<string, unknown>
+    }) => {
       if (!documentID) {
         throw new Error('Document ID is required for update')
       }

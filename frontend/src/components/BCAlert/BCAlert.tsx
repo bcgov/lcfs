@@ -15,7 +15,9 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import CloseIcon from '@mui/icons-material/Close'
 import ExpandMore from '@mui/icons-material/ExpandMore'
 import BCBox from '@/components/BCBox'
-import BCAlertRoot, { type AlertSeverity } from '@/components/BCAlert/BCAlertRoot'
+import BCAlertRoot, {
+  type AlertSeverity
+} from '@/components/BCAlert/BCAlertRoot'
 import CircularProgress from '@mui/material/CircularProgress'
 import type { BoxProps } from '@mui/material/Box'
 

@@ -17,10 +17,9 @@ import { useOtherUsesOptions } from '@/hooks/useOtherUses'
 export const OtherUsesChangelog = () => {
   const { t } = useTranslation(['common', 'otherUses', 'report'])
   const { complianceReportId, compliancePeriod } = useParams()
-  const {
-  data: optionsData,
-  isLoading: optionsLoading
-} = useOtherUsesOptions({ compliancePeriod })
+  const { data: optionsData, isLoading: optionsLoading } = useOtherUsesOptions({
+    compliancePeriod
+  })
   const { data: currentReport, isLoading: currentReportLoading } =
     useComplianceReportWithCache(complianceReportId)
 

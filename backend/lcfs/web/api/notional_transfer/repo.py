@@ -17,6 +17,7 @@ from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.notional_transfer.schema import NotionalTransferSchema
 from lcfs.web.api.versioning_query_helper import VersioningQueryHelper
 from lcfs.web.core.decorators import repo_handler
+from lcfs.web.core.ownership import delete_one
 
 logger = structlog.get_logger(__name__)
 
@@ -24,7 +25,7 @@ logger = structlog.get_logger(__name__)
 class NotionalTransferRepository:
     def __init__(
         self,
-        db: AsyncSession = Depends(get_async_db_session),
+        db: AsyncSession = Depends(get_async_db_session, scope="function"),
         fuel_repo: FuelCodeRepository = Depends(),
     ):
         self.db = db
@@ -291,9 +292,14 @@ class NotionalTransferRepository:
         result = await self.db.execute(query)
         return result.scalars().first()
 
-    async def delete_notional_transfer(self, notional_transfer_id):
-        await self.db.execute(
-            delete(NotionalTransfer).where(
-                NotionalTransfer.notional_transfer_id == notional_transfer_id
-            )
+    async def delete_notional_transfer(
+        self, notional_transfer_id, compliance_report_id, group_uuid
+    ):
+        """Delete the row only if it is in this report and this group."""
+        await delete_one(
+            self.db,
+            NotionalTransfer,
+            notional_transfer_id=notional_transfer_id,
+            compliance_report_id=compliance_report_id,
+            group_uuid=group_uuid,
         )

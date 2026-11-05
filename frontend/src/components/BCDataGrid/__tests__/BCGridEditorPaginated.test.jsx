@@ -1,5 +1,5 @@
-import { render, screen, fireEvent, act } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { render, screen, fireEvent, act } from '@testing-library/react'
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vite-plus/test'
 import React, { createRef } from 'react'
 import { BCGridEditorPaginated } from '../BCGridEditorPaginated'
 
@@ -62,19 +62,22 @@ vi.mock('@/components/BCModal', () => ({
 }))
 
 vi.mock('@/components/BCDataGrid/components/Renderers/RequiredHeader', () => ({
-    RequiredHeader: function MockRequiredHeader() {
-      return <div data-test="required-header">Required</div>
-    }
+  RequiredHeader: function MockRequiredHeader() {
+    return <div data-test="required-header">Required</div>
+  }
 }))
 
-vi.mock('@/components/BCDataGrid/components/Renderers/AccessibleHeader', () => ({
+vi.mock(
+  '@/components/BCDataGrid/components/Renderers/AccessibleHeader',
+  () => ({
     AccessibleHeader: function MockAccessibleHeader() {
       return <div data-test="accessible-header">Accessible</div>
     }
-}))
+  })
+)
 
 vi.mock('@/components/BCDataGrid/components/StatusBar/BCPagination', () => ({
-    BCPagination: ({ handleChangePage, handleChangeRowsPerPage }) => {
+  BCPagination: ({ handleChangePage, handleChangeRowsPerPage }) => {
     return (
       <div data-test="bc-pagination">
         <button

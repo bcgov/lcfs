@@ -2,88 +2,97 @@
  * @vitest-environment jsdom
  */
 import { render, screen, fireEvent, act } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vite-plus/test'
 import { createRef } from 'react'
 import { BCColumnSetFilter } from '../BCColumnSetFilter'
 
 // Mock MUI components
 vi.mock('@mui/material/Autocomplete', () => ({
-    default: vi.fn(({
-  onChange,
-  isOptionEqualToValue,
-  getOptionLabel,
-  renderOption,
-  renderInput,
-  multiple,
-  loading,
-  ...props
-}) => {
-delete props.options;
+  default: vi.fn(
+    ({
+      onChange,
+      isOptionEqualToValue,
+      getOptionLabel,
+      renderOption,
+      renderInput,
+      multiple,
+      loading,
+      ...props
+    }) => {
+      delete props.options
 
-    // Test isOptionEqualToValue function
-    if (isOptionEqualToValue) {
-      isOptionEqualToValue({ name: 'test' }, { name: 'test' })
-    }
+      // Test isOptionEqualToValue function
+      if (isOptionEqualToValue) {
+        isOptionEqualToValue({ name: 'test' }, { name: 'test' })
+      }
 
-    // Test getOptionLabel function
-    if (getOptionLabel) {
-      getOptionLabel({ name: 'test' })
-    }
+      // Test getOptionLabel function
+      if (getOptionLabel) {
+        getOptionLabel({ name: 'test' })
+      }
 
-    return (
-      <div
-        data-test="autocomplete"
-        onClick={() => {
-          if (onChange) {
-            const mockEvent = { target: { value: 'test' } }
-            if (multiple) {
-              onChange(mockEvent, [{ name: 'Option 1' }, { name: 'Option 2' }])
-            } else {
-              onChange(mockEvent, { name: 'Option 1' })
+      return (
+        <div
+          data-test="autocomplete"
+          onClick={() => {
+            if (onChange) {
+              const mockEvent = { target: { value: 'test' } }
+              if (multiple) {
+                onChange(mockEvent, [
+                  { name: 'Option 1' },
+                  { name: 'Option 2' }
+                ])
+              } else {
+                onChange(mockEvent, { name: 'Option 1' })
+              }
             }
-          }
-        }}
-        {...props}
-      >
-        {renderInput && renderInput({ inputProps: {} })}
-        {renderOption && renderOption({}, { name: 'test' }, { selected: true })}
-        {renderOption && renderOption({}, { name: 'test2' }, { selected: false })}
-        Autocomplete Mock
-        {loading && <span data-test="loading">Loading...</span>}
+          }}
+          {...props}
+        >
+          {renderInput && renderInput({ inputProps: {} })}
+          {renderOption &&
+            renderOption({}, { name: 'test' }, { selected: true })}
+          {renderOption &&
+            renderOption({}, { name: 'test2' }, { selected: false })}
+          Autocomplete Mock
+          {loading && <span data-test="loading">Loading...</span>}
+        </div>
+      )
+    }
+  )
+}))
+
+vi.mock('@mui/material/TextField', () => ({
+  default: vi.fn(({ value, ...props }) => (
+    <input data-test="textfield" value={value || ''} {...props} />
+  ))
+}))
+
+vi.mock('@mui/material/Box', () => ({
+  default: vi.fn(({ children, ...props }) => {
+    delete props.component
+    return (
+      <div data-test="box" {...props}>
+        {children}
       </div>
     )
   })
 }))
 
-vi.mock('@mui/material/TextField', () => ({
-    default: vi.fn(({ value, ...props }) => (
-    <input
-      data-test="textfield"
-      value={value || ''}
-      {...props}
-    />
-  ))
-}))
-
-vi.mock('@mui/material/Box', () => ({
-    default: vi.fn(({
-  children,
-  ...props
-}) => { delete props.component; return <div data-test="box" {...props}>{children}</div>; })
-}))
-
 vi.mock('@mui/material/Checkbox', () => ({
-    default: vi.fn(({ checked, ...props }) => (
+  default: vi.fn(({ checked, ...props }) => (
     <input type="checkbox" data-test="checkbox" checked={checked} {...props} />
   ))
 }))
 
 vi.mock('@mui/icons-material/CheckBox', () => ({
-    default: vi.fn(() => <span data-test="checkbox-icon">CheckBox</span>)
+  default: vi.fn(() => <span data-test="checkbox-icon">CheckBox</span>)
 }))
 
 vi.mock('@mui/icons-material/CheckBoxOutlineBlank', () => ({
-    default: vi.fn(() => <span data-test="checkbox-outline-icon">CheckBoxOutlineBlank</span>)
+  default: vi.fn(() => (
+    <span data-test="checkbox-outline-icon">CheckBoxOutlineBlank</span>
+  ))
 }))
 
 describe('BCColumnSetFilter Component', () => {
@@ -110,11 +119,7 @@ describe('BCColumnSetFilter Component', () => {
 
     // Default API response
     mockApiQuery.mockReturnValue({
-      data: [
-        { name: 'Option 1' },
-        { name: 'Option 2' },
-        { name: 'Option 3' }
-      ],
+      data: [{ name: 'Option 1' }, { name: 'Option 2' }, { name: 'Option 3' }],
       isLoading: false
     })
   })
@@ -189,7 +194,9 @@ describe('BCColumnSetFilter Component', () => {
       const mockInstance = {
         onFloatingFilterChanged: vi.fn()
       }
-      mockParentFilterInstance.mockImplementation((callback) => callback(mockInstance))
+      mockParentFilterInstance.mockImplementation((callback) =>
+        callback(mockInstance)
+      )
 
       const autocomplete = screen.getByTestId('autocomplete')
 
@@ -209,7 +216,9 @@ describe('BCColumnSetFilter Component', () => {
       const mockInstance = {
         onFloatingFilterChanged: vi.fn()
       }
-      mockParentFilterInstance.mockImplementation((callback) => callback(mockInstance))
+      mockParentFilterInstance.mockImplementation((callback) =>
+        callback(mockInstance)
+      )
 
       const autocomplete = screen.getByTestId('autocomplete')
       fireEvent.click(autocomplete)
@@ -224,7 +233,9 @@ describe('BCColumnSetFilter Component', () => {
       const mockInstance = {
         onFloatingFilterChanged: vi.fn()
       }
-      mockParentFilterInstance.mockImplementation((callback) => callback(mockInstance))
+      mockParentFilterInstance.mockImplementation((callback) =>
+        callback(mockInstance)
+      )
 
       const autocomplete = screen.getByTestId('autocomplete')
       fireEvent.click(autocomplete)
@@ -253,7 +264,9 @@ describe('BCColumnSetFilter Component', () => {
         isLoading: false
       })
 
-      const { rerender } = render(<BCColumnSetFilter {...mockProps} ref={mockRef} />)
+      const { rerender } = render(
+        <BCColumnSetFilter {...mockProps} ref={mockRef} />
+      )
 
       // Re-render with same data
       rerender(<BCColumnSetFilter {...mockProps} ref={mockRef} />)
@@ -263,10 +276,7 @@ describe('BCColumnSetFilter Component', () => {
 
     it('processes new optionsData correctly with default name field', () => {
       mockApiQuery.mockReturnValue({
-        data: [
-          { name: 'New Option 1' },
-          { name: 'New Option 2' }
-        ],
+        data: [{ name: 'New Option 1' }, { name: 'New Option 2' }],
         isLoading: false
       })
 

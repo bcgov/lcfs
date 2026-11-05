@@ -1,5 +1,5 @@
 import type { ColumnState } from 'ag-grid-community'
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vite-plus/test'
 import { useFuelSupplyColumnStore } from '../useFuelSupplyColumnStore'
 
 const getStoreResult = () => ({

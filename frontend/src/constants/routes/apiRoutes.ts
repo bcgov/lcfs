@@ -1,0 +1,364 @@
+/**
+ * This file contains all the API routes used in the application.
+ */
+
+type ApiRouteValue = string | Readonly<Record<string, string>>
+
+export const apiRoutes = {
+  // OpenAPI
+  openapi: '/openapi.json/',
+
+  // roles
+  roles: '/roles/',
+
+  // users
+  currentUser: '/users/current',
+  exportUsers: '/users/export?format=xlsx',
+  listUsers: '/users/list',
+  seededTestUsers: '/users/seeded-test-users',
+  resolveOrgName: '/users/anonymizer/resolve-org-name',
+  getUserActivities: '/users/:userID/activity',
+  getUserAssignedWork: '/users/:userID/assigned-work',
+  getAllUserActivities: '/users/activities/all',
+  trackUserLogin: '/users/logged-in',
+  getUserLoginHistories: '/users/login-history',
+  updateNotificationsEmail: '/users/update-email',
+  deleteUser: '/users/:userID',
+
+  // organization
+  orgUsers: '/organization/:orgID/users/list',
+  orgTransactions: '/organization/transactions',
+  exportOrgTransactions: '/organization/transactions/export',
+  createComplianceReport: '/organization/:orgID/reports',
+  deleteSupplementalReport: '/organization/:orgID/:reportID/supplemental',
+  getOrgComplianceReport: '/organization/:orgID/reports/:reportID',
+  getOrgComplianceReports: '/organization/:orgID/reports/list',
+  getOrgComplianceReportReportedYears:
+    '/organization/:orgID/reports/reported-years',
+
+  // Credit‑ledger
+  creditLedger: '/credit-ledger/organization/:orgID',
+  creditLedgerPeriod: '/credit-ledger/organization/:orgID/period/:year',
+  creditLedgerYears: '/credit-ledger/organization/:orgID/years',
+  exportCreditLedger: '/credit-ledger/organization/:orgID/export',
+  exportCreditLedgerPeriod:
+    '/credit-ledger/organization/:orgID/period/:year/export',
+
+  // organizations
+  organizationSearch: '/organizations/search?',
+  organizationExport: '/organizations/export',
+  organizationPenaltyLogsList: '/organizations/:orgID/penalties/logs/list',
+  organizationPenaltyLogs: '/organizations/:orgID/penalties/logs',
+  organizationPenaltyLog: '/organizations/:orgID/penalties/logs/:penaltyLogId',
+  organizationAllocationAgreementAnalytics:
+    '/organizations/:orgID/allocation-agreements/analytics',
+  organizationComments: '/organizations/:orgID/comments',
+  commentCategories: '/internal_comments/categories',
+  internalComment: '/internal_comments/:commentId',
+  creditMarketAuditLogsList: '/organizations/credit-market-audit-logs/list',
+
+  // transactions
+  transactions: '/transactions/',
+  exportTransactions: '/transactions/export',
+  filteredTransactionsByOrg: '/transactions/:orgID',
+  exportFilteredTransactionsByOrg: '/transactions/:orgID/export',
+
+  // transfers
+  updateCategory: '/transfers/:transferId/category',
+  getTransfer: '/transfers/:transferId',
+
+  // admin-adjustments
+  adminAdjustments: '/admin-adjustments/',
+
+  // initiative-agreements
+  initiativeAgreements: '/initiative-agreements/',
+  // Agreement-management endpoints (Initiative Agreements module);
+  // consumed by hooks/useInitiativeAgreements.ts
+  getInitiativeAgreementsList: '/initiative-agreements/list',
+  createAgreement: '/initiative-agreements/agreements',
+  updateAgreement: '/initiative-agreements/agreements/:initiativeAgreementId',
+  getInitiativeAgreementStatuses: '/initiative-agreements/statuses',
+  getInitiativeAgreement:
+    '/initiative-agreements/:initiativeAgreementId/profile',
+  getInitiativeAgreementAnalysts: '/initiative-agreements/analysts',
+  getDesignatedActionsList:
+    '/initiative-agreements/:initiativeAgreementId/designated-actions/list',
+  getAllDesignatedActionsList: '/initiative-agreements/designated-actions/list',
+  createDesignatedAction:
+    '/initiative-agreements/:initiativeAgreementId/designated-actions',
+  updateDesignatedAction:
+    '/initiative-agreements/designated-actions/:designatedActionId',
+  assignDesignatedActionAnalyst:
+    '/initiative-agreements/designated-actions/:designatedActionId/assign',
+  getDesignatedActionProfile:
+    '/initiative-agreements/designated-actions/:designatedActionId/profile',
+  evidenceRequirements:
+    '/initiative-agreements/designated-actions/:designatedActionId/evidence-requirements',
+  evidenceRequirement:
+    '/initiative-agreements/evidence-requirements/:evidenceRequirementId',
+  designatedActionWorkflow:
+    '/initiative-agreements/designated-actions/:designatedActionId/workflow',
+  designatedActionRecommendedCredits:
+    '/initiative-agreements/designated-actions/:designatedActionId/recommended-credits',
+  designatedActionHistory:
+    '/initiative-agreements/designated-actions/:designatedActionId/history',
+  documentFolderTree: '/document-folders/:parentType/:parentID',
+  documentFolderUpdate: '/document-folders/:parentType/:parentID/:folderId',
+  documentFolderItems: '/document-folders/:parentType/:parentID/items',
+  documentFolderDeleted: '/document-folders/:parentType/:parentID/deleted',
+  documentFolderDeleteDocument:
+    '/document-folders/:parentType/:parentID/documents/:documentId',
+  documentFolderRestoreDocument:
+    '/document-folders/:parentType/:parentID/documents/:documentId/restore',
+  documentFolderRestoreFolder:
+    '/document-folders/:parentType/:parentID/:folderId/restore',
+
+  // fuel-type
+  getFuelTypeOthers: '/fuel-type/others/list',
+
+  // fuel-codes
+  getFuelCode: '/fuel-codes/:fuelCodeId',
+  updateFuelCodeStatus: '/fuel-codes/:fuelCodeId',
+  saveFuelCode: '/fuel-codes',
+  deleteFuelCode: '/fuel-codes/:fuelCodeId',
+  getFuelCodeGroup: '/fuel-codes/:fuelCodeId/group',
+  fuelCodeOptions: '/fuel-codes/table-options',
+  fuelCodeSearch: '/fuel-codes/search?',
+  getFuelCodes: '/fuel-codes/list',
+  getMyFuelCodes: '/fuel-codes/my-list',
+  exportFuelCodes: '/fuel-codes/export',
+  fuelCodeBulletins: '/fuel-codes/bulletins',
+  exportFuelCodeBulletins: '/fuel-codes/bulletins/export',
+
+  // ci-applications (Carbon Intensity)
+  ciApplicationOptions: '/ci-applications/table-options',
+  ciApplicationFuelCodeFieldSearch: '/ci-applications/fuel-code-field-search?',
+  ciApplicationLocationSearch: '/ci-applications/location-search?',
+  getCIApplications: '/ci-applications/list',
+  getCIApplication: '/ci-applications/:ciApplicationId',
+  createCIApplication: '/ci-applications',
+  updateCIApplicationStep1: '/ci-applications/:ciApplicationId/step1',
+  updateCIApplicationStep2: '/ci-applications/:ciApplicationId/step2',
+  updateCIApplicationStep3: '/ci-applications/:ciApplicationId/step3',
+  updateCIApplicationStep4: '/ci-applications/:ciApplicationId/step4',
+  submitCIApplication: '/ci-applications/:ciApplicationId/submit',
+  ciApplicationDecision: '/ci-applications/:ciApplicationId/decision',
+  ciApplicationAnalysts: '/ci-applications/analysts',
+  assignCIApplicationAnalyst: '/ci-applications/:ciApplicationId/assign',
+  updateCIApplicationRiskAssessment:
+    '/ci-applications/:ciApplicationId/risk-assessment',
+  completeCIApplicationVerification1:
+    '/ci-applications/:ciApplicationId/verification-1',
+  completeCIApplicationVerification2:
+    '/ci-applications/:ciApplicationId/verification-2',
+  recommendCIApplication: '/ci-applications/:ciApplicationId/recommend',
+  requestCIApplicationPathwayChanges:
+    '/ci-applications/:ciApplicationId/request-pathway-changes',
+  requestCIApplicationDocumentation:
+    '/ci-applications/:ciApplicationId/request-documentation',
+  generateCIApplicationFuelCodes:
+    '/ci-applications/:ciApplicationId/fuel-codes/generate',
+  updateCIApplicationGeneratedFuelCode:
+    '/ci-applications/:ciApplicationId/fuel-codes/:generatedFuelCodeId',
+  ciApplicationGHGeniusTemplate: '/ci-applications/ghgenius-template',
+  deleteCIApplication: '/ci-applications/:ciApplicationId',
+
+  // reports
+  getCompliancePeriods: '/reports/compliance-periods',
+  getComplianceReports: '/reports/list',
+  getComplianceReportStatuses: '/reports/statuses',
+  getComplianceReport: '/reports/:reportID',
+  getComplianceReportScheduleOverview: '/reports/:reportID/schedule-overview',
+  updateComplianceReport: '/reports/:reportID',
+  deleteComplianceReport: '/reports/:reportID',
+  getComplianceReportNavigation: '/reports/:reportID/navigation',
+  getComplianceReportSummary: '/reports/:reportID/summary',
+  getComplianceReportReviewSummary: '/reports/:reportID/review-summary',
+  updateComplianceReportSummary: '/reports/:reportID/summary',
+  updateComplianceReportPenaltyStatus:
+    '/reports/:reportID/summary/penalty-status',
+  exportComplianceReport: '/reports/:reportID/export',
+  createSupplementalReport: '/reports/:reportID/supplemental',
+  createAnalystAdjustment: '/reports/:reportID/adjustment',
+  createIdirSupplementalReport: '/reports/:reportID/idir-supplemental',
+  getChangelog: '/reports/:complianceReportGroupUuid/changelog/:dataType',
+  getAvailableAnalysts: '/reports/analysts',
+  assignAnalyst: '/reports/:reportId/assign',
+  reportOpenings: '/report-openings',
+
+  // notional-transfers
+  notionalTransferOptions: '/notional-transfers/table-options',
+  getNotionalTransfer: '/notional-transfers/:notionalTransferId',
+  getNotionalTransfers: '/notional-transfers/list',
+  getAllNotionalTransfers: '/notional-transfers/list-all',
+  saveNotionalTransfer: '/notional-transfers/save',
+  importNotionalTransfers: '/notional-transfers/import',
+
+  // other-uses
+  saveOtherUses: '/other-uses/save',
+  getOtherUses: '/other-uses/list',
+  getAllOtherUses: '/other-uses/list-all',
+  otherUsesOptions: '/other-uses/table-options?',
+
+  // final-supply-equipments
+  finalSupplyEquipmentOptions: '/final-supply-equipments/table-options',
+  getAllFinalSupplyEquipments: '/final-supply-equipments/list-all',
+  saveFinalSupplyEquipments: '/final-supply-equipments/save',
+  exportFinalSupplyEquipments: '/final-supply-equipments/export/:reportID',
+  importFinalSupplyEquipments: '/final-supply-equipments/import/:reportID',
+  getImportFinalSupplyEquipmentsJobStatus:
+    '/final-supply-equipments/status/:jobID',
+  downloadFinalSupplyEquipmentsTemplate:
+    '/final-supply-equipments/template/:reportID',
+  searchFinalSupplyEquipments: '/final-supply-equipments/search?',
+  saveFSEReportingBatch: '/final-supply-equipments/reporting/batch',
+  updateFSEReportingActiveStatus:
+    '/final-supply-equipments/reporting/active-status',
+  fseReportingUpdateTemplate:
+    '/final-supply-equipments/reporting/update-template/:reportID',
+  fseReportingBulkUpdate:
+    '/final-supply-equipments/reporting/bulk-update/:reportID',
+  fseReportingBulkUpdateStatus:
+    '/final-supply-equipments/reporting/bulk-update/status/:jobID',
+  // charging sites
+  getSiteStatuses: '/charging-sites/statuses',
+  getEquipmentStatuses: '/charging-sites/equipment/statuses',
+  intendedUsers: '/charging-sites/intended-users',
+  allocationOrganizationsSearch:
+    '/charging-sites/allocation-organizations/search?',
+
+  // charging-equipment (new FSE system)
+  chargingEquipment: {
+    list: '/charging-equipment/list',
+    get: '/charging-equipment/:id',
+    create: '/charging-equipment/',
+    update: '/charging-equipment/:id',
+    delete: '/charging-equipment/:id',
+    bulkSubmit: '/charging-equipment/bulk/submit',
+    bulkDecommission: '/charging-equipment/bulk/decommission',
+    statuses: '/charging-equipment/statuses/list',
+    levels: '/charging-equipment/levels/list',
+    endUseTypes: '/charging-equipment/end-use-types/list',
+    endUserTypes: '/charging-equipment/end-user-types/list',
+    chargingSites: '/charging-equipment/charging-sites/list',
+    organizations: '/charging-equipment/organizations/list',
+    hasAllocationAgreements:
+      '/charging-equipment/organizations/has-allocation-agreements',
+    export: '/charging-equipment/export',
+    template: '/charging-equipment/template/:organizationId',
+    import: '/charging-equipment/import/:organizationId',
+    importJobStatus: '/charging-equipment/status/:jobId'
+  },
+  getChargingSite: '/charging-sites/:siteId',
+  updateChargingSiteStatus: '/charging-sites/:siteId/status',
+  getAllChargingSites: '/charging-sites/list-all',
+  getAllChargingSitesByOrg: '/charging-sites/organization/:orgID/list-all',
+  saveChargingSite: '/charging-sites/organization/:orgID/save', // create, update or delete
+  // Charging-site specific equipment endpoints
+  // Backend: POST /charging-sites/{site_id}/equipment/list-all
+  getChargingSiteEquipmentPaginated:
+    '/charging-sites/:siteId/equipment/list-all',
+  bulkUpdateEquipmentStatus:
+    '/charging-sites/:siteId/equipment/bulk-status-update',
+  exportChargingSites: '/charging-sites/export/:orgID',
+  importChargingSites: '/charging-sites/import',
+  getImportChargingSitesJobStatus: '/charging-sites/status/:jobID',
+  downloadChargingSitesTemplate: '/charging-sites/template/:orgID',
+
+  // fuel-supplies
+  fuelSupplyOptions: '/fuel-supply/table-options?',
+  getAllFuelSupplies: '/fuel-supply/list-all',
+  saveFuelSupplies: '/fuel-supply/save',
+  getOrganizationFuelSupply: '/fuel-supply/organization/:orgID',
+
+  // fuel-exports
+  fuelExportOptions: '/fuel-exports/table-options?',
+  getAllFuelExports: '/fuel-exports/list-all',
+  saveFuelExports: '/fuel-exports/save',
+
+  // allocation-agreement
+  getAllAllocationAgreements: '/allocation-agreement/list-all',
+  getAllocationAgreements: '/allocation-agreement/list',
+  allocationAgreementOptions: '/allocation-agreement/table-options?',
+  saveAllocationAgreements: '/allocation-agreement/save',
+  allocationAgreementSearch: '/allocation-agreement/search?',
+  exportAllocationAgreements: '/allocation-agreement/export/:reportID',
+  importAllocationAgreements: '/allocation-agreement/import/:reportID',
+  getImportAllocationAgreementsJobStatus: '/allocation-agreement/status/:jobID',
+  downloadAllocationAgreementsTemplate:
+    '/allocation-agreement/template/:reportID',
+
+  // documents
+  getDocuments: '/documents/:parentType/:parentID',
+  uploadDocument: '/documents/:parentType/:parentID',
+  getDocument: '/documents/:parentType/:parentID/:documentID',
+
+  // compliance_snapshot
+  getOrganizationSnapshot: '/organization_snapshot/:reportID',
+
+  // dashboard
+  directorReviewCounts: '/dashboard/director-review-counts',
+  TransactionCounts: '/dashboard/transaction-counts',
+  OrgTransactionCounts: '/dashboard/org-transaction-counts',
+  OrgComplianceReportCounts: '/dashboard/org-compliance-report-counts',
+  complianceReportCounts: '/dashboard/compliance-report-counts',
+  fuelCodeCounts: '/dashboard/fuel-code-counts',
+  orgFuelCodeCounts: '/dashboard/org-fuel-code-counts',
+  ciApplicationCounts: '/dashboard/ci-application-counts',
+  initiativeAgreementCounts: '/dashboard/initiative-agreement-counts',
+  orgInitiativeAgreementCounts: '/dashboard/org-initiative-agreement-counts',
+
+  // credit market
+  creditMarketOverview: '/credit-market/overview',
+  creditMarketPublicOverview: '/credit-market/public-overview',
+  creditMarketPublicReport: '/credit-market/public-report',
+
+  // audit-logs
+  getAuditLogs: '/audit-log/list',
+  getAuditLog: '/audit-log/:auditLogId',
+
+  // notifications
+  notifications: '/notifications/',
+  getNotifications: '/notifications/list',
+  getNotificationsCount: '/notifications/count',
+  getNotificationSubscriptions: '/notifications/subscriptions',
+  getUserNotificationSubscriptions: '/notifications/subscriptions/user',
+  saveNotificationSubscriptions: '/notifications/subscriptions/save',
+
+  // government notifications
+  currentGovernmentNotification: '/government-notifications/current',
+  updateGovernmentNotification: '/government-notifications/',
+  deleteGovernmentNotification: '/government-notifications/',
+
+  // calculator endpoints
+  getCalculatorCompliancePeriods: '/calculator/compliance-periods',
+  getCalculatorFuelTypes: '/calculator/:complianceYear/',
+  getCalculatorFuelTypeOptions:
+    '/calculator/:complianceYear/fuel-type-options/',
+  getCalculatedComplianceUnits: '/calculator/:complianceYear/calculate/',
+  getCalculatorQuantityFromComplianceUnits:
+    '/calculator/:complianceYear/calculate/quantity/',
+  getLookupTableData: '/calculator/:complianceYear/lookup-table/',
+
+  // geocoder endpoints
+  geocoderValidate: '/geocoder/validate',
+  geocoderForward: '/geocoder/forward',
+  geocoderReverse: '/geocoder/reverse',
+  geocoderBatch: '/geocoder/batch',
+  geocoderBoundaryCheck: '/geocoder/boundary-check',
+  geocoderAutocomplete: '/geocoder/autocomplete',
+  geocoderHealth: '/geocoder/health',
+  geocoderClearCache: '/geocoder/cache',
+
+  // login background image endpoints
+  loginBgImages: '/login-bg-images/',
+  loginBgImageActive: '/login-bg-images/active',
+  loginBgImage: '/login-bg-images/:imageId',
+  loginBgImageActivate: '/login-bg-images/:imageId/activate',
+  loginBgImageStream: '/login-bg-images/:imageId/stream',
+
+  // release notes (System Admin overrides on top of auto-generated content)
+  releaseNoteOverrides: '/release-notes/overrides',
+  updateReleaseNote: '/release-notes/:version',
+  resetReleaseNote: '/release-notes/:version'
+} as const satisfies Record<string, ApiRouteValue>

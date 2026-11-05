@@ -442,7 +442,7 @@ async def test_create_charging_equipment_fails_with_empty_intended_use_ids(
         },
     )
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     data = response.json()
     assert "intendedUseIds" in str(data) or "intended_use_ids" in str(data)
 
@@ -466,7 +466,7 @@ async def test_create_charging_equipment_fails_with_empty_intended_user_ids(
         },
     )
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     data = response.json()
     assert "intendedUserIds" in str(data) or "intended_user_ids" in str(data)
 
@@ -485,7 +485,7 @@ async def test_update_charging_equipment_fails_with_empty_intended_use_ids(
         },
     )
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     data = response.json()
     assert "intendedUseIds" in str(data) or "intended_use_ids" in str(data)
 
@@ -504,7 +504,7 @@ async def test_update_charging_equipment_fails_with_empty_intended_user_ids(
         },
     )
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     data = response.json()
     assert "intendedUserIds" in str(data) or "intended_user_ids" in str(data)
 

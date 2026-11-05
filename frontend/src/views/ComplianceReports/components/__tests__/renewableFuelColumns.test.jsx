@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 import { renewableFuelColumns } from '../_schema'
 import { SUMMARY } from '@/constants/common'
 
@@ -85,21 +85,31 @@ describe('renewableFuelColumns line 7 behaviour', () => {
     const jetFuelColumn = columns.find((column) => column.id === 'jetFuel')
 
     expect(gasolineColumn.editableCells).toContain(SUMMARY.LINE_7)
-    expect(gasolineColumn.cellConstraints[SUMMARY.LINE_7]).not.toHaveProperty('max')
+    expect(gasolineColumn.cellConstraints[SUMMARY.LINE_7]).not.toHaveProperty(
+      'max'
+    )
     expect(gasolineColumn.cellConstraints[SUMMARY.LINE_7].min).toBe(0)
 
     expect(dieselColumn.editableCells).toContain(SUMMARY.LINE_7)
-    expect(dieselColumn.cellConstraints[SUMMARY.LINE_7]).not.toHaveProperty('max')
+    expect(dieselColumn.cellConstraints[SUMMARY.LINE_7]).not.toHaveProperty(
+      'max'
+    )
     expect(dieselColumn.cellConstraints[SUMMARY.LINE_7].min).toBe(0)
 
-    expect(jetFuelColumn.cellConstraints[SUMMARY.LINE_7]).not.toHaveProperty('max')
+    expect(jetFuelColumn.cellConstraints[SUMMARY.LINE_7]).not.toHaveProperty(
+      'max'
+    )
     expect(jetFuelColumn.cellConstraints[SUMMARY.LINE_7].min).toBe(0)
 
     // Line 6 (retention): Only when there's excess (renewable > required)
     // Gasoline: renewable=1,000,000, required=150,000 -> excess=850,000
     // Max = min(excess, 5% of Line 4) = min(850,000, 7,500) = 7,500
-    const expectedGasLine6Max = Math.round(0.05 * summaryData[SUMMARY.LINE_4].gasoline)
-    expect(gasolineColumn.cellConstraints[SUMMARY.LINE_6].max).toBe(expectedGasLine6Max)
+    const expectedGasLine6Max = Math.round(
+      0.05 * summaryData[SUMMARY.LINE_4].gasoline
+    )
+    expect(gasolineColumn.cellConstraints[SUMMARY.LINE_6].max).toBe(
+      expectedGasLine6Max
+    )
 
     // Diesel: renewable=0, required=10,000 -> deficiency (not excess)
     // Since there's no excess, Line 6 max should be 0
@@ -111,8 +121,12 @@ describe('renewableFuelColumns line 7 behaviour', () => {
 
     // Diesel: renewable=0, required=10,000 -> deficiency=10,000
     // Max = min(deficiency, 5% of Line 4) = min(10,000, 500) = 500
-    const expectedDieselLine8Max = Math.round(0.05 * summaryData[SUMMARY.LINE_4].diesel)
-    expect(dieselColumn.cellConstraints[SUMMARY.LINE_8].max).toBe(expectedDieselLine8Max)
+    const expectedDieselLine8Max = Math.round(
+      0.05 * summaryData[SUMMARY.LINE_4].diesel
+    )
+    expect(dieselColumn.cellConstraints[SUMMARY.LINE_8].max).toBe(
+      expectedDieselLine8Max
+    )
   })
 
   it('locks line 7 editing and honours previous caps when prior year data exists', () => {
@@ -153,8 +167,12 @@ describe('renewableFuelColumns line 7 behaviour', () => {
 
     // Line 6 (retention): Gasoline has excess (renewable=1,000,000 > required=150,000)
     // Max = min(excess, 5% of Line 4) = min(850,000, 7,500) = 7,500
-    const expectedLine6Max = Math.round(0.05 * summaryData[SUMMARY.LINE_4].gasoline)
-    expect(gasolineColumn.cellConstraints[SUMMARY.LINE_6].max).toBe(expectedLine6Max)
+    const expectedLine6Max = Math.round(
+      0.05 * summaryData[SUMMARY.LINE_4].gasoline
+    )
+    expect(gasolineColumn.cellConstraints[SUMMARY.LINE_6].max).toBe(
+      expectedLine6Max
+    )
 
     // Line 8 (deferral): Gasoline has excess (not deficiency), so Line 8 max should be 0
     expect(gasolineColumn.cellConstraints[SUMMARY.LINE_8].max).toBe(0)

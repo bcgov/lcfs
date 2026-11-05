@@ -6,6 +6,11 @@ An official online application designed for fuel and electricity suppliers in Br
 
 Check out our [wiki docs](https://github.com/bcgov/lcfs/wiki) for documentation!
 
+## Python
+
+The application Python version is defined in [backend/.python-version](backend/.python-version).
+See the [backend setup instructions](backend/README.md#python-version) for local setup and version updates.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
