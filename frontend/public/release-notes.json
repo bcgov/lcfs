@@ -2,10 +2,10 @@
   {
     "version": "1.3.12",
     "tag": "v1.3.12",
-    "date": "2026-11-03",
+    "date": "2026-11-05",
     "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/v1.3.12",
     "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/v1.3.11...v1.3.12",
-    "summary": "This release includes 2 new features, 10 bug fixes, 1 security update, 5 dependency updates and 11 other changes. Highlights: Automate IA Credit Transactions on DA Approval; gate CI with Vite+ checks; apply open Dependabot security updates on Python 3.13.",
+    "summary": "This release includes 2 new features, 14 bug fixes, 1 security update, 6 dependency updates and 15 other changes. Highlights: Automate IA Credit Transactions on DA Approval; gate CI with Vite+ checks; apply open Dependabot security updates on Python 3.13.",
     "sections": {
       "features": [
         "Automate IA Credit Transactions on DA Approval - 5211",
@@ -21,7 +21,11 @@
         "Remove low-count suppression from public Credit Market data 5293",
         "show names in report history as plain text",
         "exclude release notes JSON from format check",
-        "Charging sites and FSE map crash after the Vite+ upgrade (release)"
+        "exclude release notes JSON from format check (develop)",
+        "Charging sites and FSE map crash after the Vite+ upgrade",
+        "Charging sites and FSE map crash after the Vite+ upgrade (release)",
+        "show non-assessed years as Non-assessment in the credit ledger (#5304)",
+        "commit the request's DB transaction before the response is sent"
       ],
       "security": [
         "apply open Dependabot security updates on Python 3.13"
@@ -32,7 +36,8 @@
         "bump the pip-security group across 1 directory with 4 updates by @dependabot[bot] in https://github.com/bcgov/lcfs/pull/5316",
         "bump undici from 6.29.0 to 6.29.1 in /frontend by @dependabot[bot] in https://github.com/bcgov/lcfs/pull/5329",
         "bump setuptools from 80.10.2 to 84.1.0 in /backend in the pip-security group across 1 directory by @dependabot[bot] in https://github.com/bcgov/lcfs/pull/5333",
-        "bump the npm-security group across 1 directory with 5 updates by @dependabot[bot] in https://github.com/bcgov/lcfs/pull/5335"
+        "bump the npm-security group across 1 directory with 5 updates by @dependabot[bot] in https://github.com/bcgov/lcfs/pull/5335",
+        "bump follow-redirects from 1.16.1 to 1.16.2 in /frontend in the npm-security group across 1 directory by @dependabot[bot] in https://github.com/bcgov/lcfs/pull/5463"
       ],
       "other": [
         "Test Release v1.3.11",
@@ -45,7 +50,11 @@
         "adopt setup-vp and preserve test reports (#5100)",
         "Show saved FSE rows on the report page right after a save (#5132)",
         "Test Release v1.3.12",
-        "Show FSE rows as soon as a new report version is created (#5132) [release]"
+        "Extend Report opening controls to 2017",
+        "Show FSE rows as soon as a new report version is created (#5132) [release]",
+        "Load the compliance report for government users on a direct page load",
+        "TS migration PR 01/44: Shared constants and test foundations",
+        "Read FSE reporting rows live instead of from the materialized view (#5132)"
       ]
     },
     "contributors": []
