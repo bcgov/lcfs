@@ -129,7 +129,9 @@ describe('CI application document cache refresh', () => {
 
     await waitFor(() => {
       expect(result.current.documents.data).toEqual([renamedDocument])
-      expect(result.current.application.data.documents).toEqual([renamedDocument])
+      expect(result.current.application.data.documents).toEqual([
+        renamedDocument
+      ])
     })
   })
 
