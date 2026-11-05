@@ -18,19 +18,9 @@ interface ExtendedTheme extends Theme {
     primary: ColorToken
     light: ColorToken
   }
-  functions: {
-    boxShadow: (
-      offset: [number, number],
-      blur: [number, number],
-      color: string,
-      opacity: number
-    ) => string
-    linearGradient: (main: string, state: string) => string
-    pxToRem: (value: number) => string
-    rgba: (color: string, opacity: number) => string
+  boxShadows: Theme['boxShadows'] & {
+    colored: Record<string, string>
   }
-  borders: { borderRadius: { section: string } }
-  boxShadows: { colored: Record<string, string> }
 }
 
 // Define the ownerState interface for BCButton
