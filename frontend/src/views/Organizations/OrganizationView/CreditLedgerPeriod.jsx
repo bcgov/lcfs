@@ -100,6 +100,27 @@ const assessedCellSx = {
   borderColor: 'grey.400'
 }
 
+// A year completed as a non-assessment has no assessed balance (#5304). It is
+// labelled rather than left blank, which would read as "not assessed yet".
+const AssessedBalanceCell = ({ balance, nonAssessment, label, dataTest }) =>
+  nonAssessment ? (
+    <TableCell
+      align="right"
+      data-test={dataTest}
+      sx={{ ...cellSx, fontWeight: 700, ...assessedCellSx }}
+    >
+      {label}
+    </TableCell>
+  ) : (
+    <NumberCell
+      value={balance}
+      bold
+      blankIfNull
+      sx={assessedCellSx}
+      dataTest={dataTest}
+    />
+  )
+
 export const CreditLedgerPeriod = ({ organizationId }) => {
   const { t } = useTranslation(['org', 'common'])
 
@@ -379,11 +400,10 @@ export const CreditLedgerPeriod = ({ organizationId }) => {
                       year: assessed.previousYear
                     })}
                   </TableCell>
-                  <NumberCell
-                    value={assessed.previousBalance}
-                    bold
-                    blankIfNull
-                    sx={assessedCellSx}
+                  <AssessedBalanceCell
+                    balance={assessed.previousBalance}
+                    nonAssessment={assessed.previousNonAssessment}
+                    label={t('org:ledger.nonAssessment')}
                     dataTest="assessed-previous"
                   />
                 </TableRow>
@@ -393,11 +413,10 @@ export const CreditLedgerPeriod = ({ organizationId }) => {
                       year: assessed.currentYear
                     })}
                   </TableCell>
-                  <NumberCell
-                    value={assessed.currentBalance}
-                    bold
-                    blankIfNull
-                    sx={assessedCellSx}
+                  <AssessedBalanceCell
+                    balance={assessed.currentBalance}
+                    nonAssessment={assessed.currentNonAssessment}
+                    label={t('org:ledger.nonAssessment')}
                     dataTest="assessed-current"
                   />
                 </TableRow>

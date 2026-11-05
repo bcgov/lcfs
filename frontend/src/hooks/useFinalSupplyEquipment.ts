@@ -1,6 +1,11 @@
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  type QueryClient,
+  useMutation,
+  useQuery,
+  useQueryClient
+} from '@tanstack/react-query'
 import { invalidateComplianceReportRelatedQueries } from './reportQueryInvalidation'
 import type {
   QueryOptions,
@@ -486,6 +491,11 @@ export const useGetFSEReportingList = (
   })
 }
 
+// A report's versions share FSE reporting rows: the report page of every
+// version can show a change saved on one of them. Refresh all the lists.
+export const invalidateFseReportingLists = (queryClient: QueryClient) =>
+  queryClient.invalidateQueries({ queryKey: ['fse-reporting-list'] })
+
 export const useSaveFSEReporting = (
   organizationId: number | string | undefined | null,
   complianceReportId: number | string | undefined | null,
@@ -545,15 +555,7 @@ export const useSaveFSEReporting = (
           queryKey: ['fse-reporting-list']
         })
       } else {
-        // Invalidate FSE reporting list queries for this compliance report
-        queryClient.invalidateQueries({
-          predicate: (query) => {
-            return (
-              query.queryKey[0] === 'fse-reporting-list' &&
-              query.queryKey[1] === complianceReportId
-            )
-          }
-        })
+        invalidateFseReportingLists(queryClient)
       }
 
       if (invalidateRelatedQueries) {
@@ -571,14 +573,7 @@ export const useSaveFSEReporting = (
     },
     onError: (error, variables, context) => {
       // Invalidate on error to ensure fresh data on retry
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          return (
-            query.queryKey[0] === 'fse-reporting-list' &&
-            query.queryKey[1] === complianceReportId
-          )
-        }
-      })
+      invalidateFseReportingLists(queryClient)
 
       onError?.(error, variables, context)
     },
@@ -613,15 +608,7 @@ export const useDeleteFSEReportingBatch = (
       })
     },
     onSuccess: (data, variables, context) => {
-      // Invalidate FSE reporting list queries for this compliance report
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          return (
-            query.queryKey[0] === 'fse-reporting-list' &&
-            query.queryKey[1] === complianceReportId
-          )
-        }
-      })
+      invalidateFseReportingLists(queryClient)
 
       if (invalidateRelatedQueries) {
         // Invalidate compliance report related queries
@@ -638,14 +625,7 @@ export const useDeleteFSEReportingBatch = (
     },
     onError: (error, variables, context) => {
       // Invalidate on error to ensure fresh data on retry
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          return (
-            query.queryKey[0] === 'fse-reporting-list' &&
-            query.queryKey[1] === complianceReportId
-          )
-        }
-      })
+      invalidateFseReportingLists(queryClient)
 
       onError?.(error, variables, context)
     },
@@ -685,14 +665,7 @@ export const useUpdateFSEReportingActiveStatus = (
       })
     },
     onSuccess: (data, variables, context) => {
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          return (
-            query.queryKey[0] === 'fse-reporting-list' &&
-            query.queryKey[1] === complianceReportId
-          )
-        }
-      })
+      invalidateFseReportingLists(queryClient)
 
       if (invalidateRelatedQueries) {
         invalidateComplianceReportRelatedQueries(
@@ -704,14 +677,7 @@ export const useUpdateFSEReportingActiveStatus = (
       onSuccess?.(data, variables, context)
     },
     onError: (error, variables, context) => {
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          return (
-            query.queryKey[0] === 'fse-reporting-list' &&
-            query.queryKey[1] === complianceReportId
-          )
-        }
-      })
+      invalidateFseReportingLists(queryClient)
       onError?.(error, variables, context)
     },
     ...restOptions
@@ -740,15 +706,7 @@ export const useSetFSEReportingDefaultDates = (
       )
     },
     onSuccess: (data, variables, context) => {
-      // Invalidate FSE reporting list queries for this compliance report
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          return (
-            query.queryKey[0] === 'fse-reporting-list' &&
-            query.queryKey[1] === complianceReportId
-          )
-        }
-      })
+      invalidateFseReportingLists(queryClient)
 
       if (invalidateRelatedQueries) {
         invalidateComplianceReportRelatedQueries(

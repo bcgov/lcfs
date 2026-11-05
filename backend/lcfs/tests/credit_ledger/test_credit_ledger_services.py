@@ -23,7 +23,7 @@ def mock_repo():
     repo.get_rows_paginated = AsyncMock(return_value=([], 0))
     repo.get_distinct_years = AsyncMock(return_value=[])
     repo.get_period_rows = AsyncMock(return_value=[])
-    repo.get_assessed_line_22 = AsyncMock(return_value=None)
+    repo.get_assessed_balance = AsyncMock(return_value=(None, False))
     repo.get_first_assessed_year = AsyncMock(return_value=None)
     return repo
 
@@ -304,7 +304,10 @@ async def test_period_ledger_running_balance_and_units(
             version=0,
         ),
     ]
-    mock_repo.get_assessed_line_22.side_effect = [1850, 1000]  # current, prev
+    mock_repo.get_assessed_balance.side_effect = [
+        (1850, False),
+        (1000, False),
+    ]  # current, prev
 
     data = await credit_ledger_service.get_period_ledger(
         organization_id=1, compliance_period=2024
@@ -442,7 +445,10 @@ async def test_period_ledger_assessed_balance_prev_and_current(
     credit_ledger_service, mock_repo
 ):
     mock_repo.get_period_rows.return_value = []
-    mock_repo.get_assessed_line_22.side_effect = [750, 1850]  # current, prev
+    mock_repo.get_assessed_balance.side_effect = [
+        (750, False),
+        (1850, False),
+    ]  # current, prev
 
     data = await credit_ledger_service.get_period_ledger(
         organization_id=1, compliance_period=2025
@@ -451,10 +457,10 @@ async def test_period_ledger_assessed_balance_prev_and_current(
     assert data.assessed_balance.current_balance == 750
     assert data.assessed_balance.previous_year == 2024
     assert data.assessed_balance.previous_balance == 1850
-    mock_repo.get_assessed_line_22.assert_any_await(
+    mock_repo.get_assessed_balance.assert_any_await(
         organization_id=1, compliance_period=2025
     )
-    mock_repo.get_assessed_line_22.assert_any_await(
+    mock_repo.get_assessed_balance.assert_any_await(
         organization_id=1, compliance_period=2024
     )
 
@@ -548,13 +554,43 @@ async def test_period_ledger_blank_assessed_balance_when_no_assessed_report(
     organization ended the year at nil.
     """
     mock_repo.get_period_rows.return_value = []
-    mock_repo.get_assessed_line_22.side_effect = [None, 1200]  # current, prev
+    mock_repo.get_assessed_balance.side_effect = [
+        (None, False),
+        (1200, False),
+    ]  # current, prev
 
     data = await credit_ledger_service.get_period_ledger(
         organization_id=1, compliance_period=2025
     )
 
     assert data.assessed_balance.current_balance is None
+    assert data.assessed_balance.previous_balance == 1200
+    assert data.assessed_balance.current_non_assessment is False
+    assert data.assessed_balance.previous_non_assessment is False
+
+
+@pytest.mark.anyio
+async def test_period_ledger_non_assessment_has_no_assessed_balance(
+    credit_ledger_service, mock_repo
+):
+    """
+    A report completed as a non-assessment creates no transaction, so its
+    Line 22 is not an assessed balance (#5304). The year is flagged as a
+    non-assessment and its balance is withheld; the other year is unaffected.
+    """
+    mock_repo.get_period_rows.return_value = []
+    mock_repo.get_assessed_balance.side_effect = [
+        (640, True),
+        (1200, False),
+    ]  # current, prev
+
+    data = await credit_ledger_service.get_period_ledger(
+        organization_id=1, compliance_period=2025
+    )
+
+    assert data.assessed_balance.current_non_assessment is True
+    assert data.assessed_balance.current_balance is None
+    assert data.assessed_balance.previous_non_assessment is False
     assert data.assessed_balance.previous_balance == 1200
 
 

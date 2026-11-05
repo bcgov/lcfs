@@ -3,26 +3,58 @@ from typing import List, Sequence
 
 from fastapi import Depends
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.compliance.ReportOpening import ReportOpening
-from lcfs.web.api.report_opening.constants import configured_years
+from lcfs.web.api.report_opening.constants import (
+    DEFAULT_CLOSED_COMPLIANCE_REPORTING_YEARS,
+    configured_years,
+)
 from lcfs.web.core.decorators import repo_handler
 
 
 class ReportOpeningRepository:
-    def __init__(self, db: AsyncSession = Depends(get_async_db_session)) -> None:
+    def __init__(
+        self, db: AsyncSession = Depends(get_async_db_session, scope="function")
+    ) -> None:
         self.db = db
 
     def _build_default_record(self, year: int) -> ReportOpening:
         current_year = datetime.utcnow().year
         return ReportOpening(
             compliance_year=year,
-            compliance_reporting_enabled=year <= current_year,
+            compliance_reporting_enabled=(
+                year <= current_year
+                and year not in DEFAULT_CLOSED_COMPLIANCE_REPORTING_YEARS
+            ),
             early_issuance_enabled=False,
             create_supplemental_enabled=year >= current_year,
         )
+
+    async def _insert_default_records(self, years: Sequence[int]) -> None:
+        """Create missing opening rows safely when requests race on first access."""
+        if not years:
+            return
+
+        records = [self._build_default_record(year) for year in years]
+        statement = (
+            pg_insert(ReportOpening)
+            .values(
+                [
+                    {
+                        "compliance_year": record.compliance_year,
+                        "compliance_reporting_enabled": record.compliance_reporting_enabled,
+                        "early_issuance_enabled": record.early_issuance_enabled,
+                        "create_supplemental_enabled": record.create_supplemental_enabled,
+                    }
+                    for record in records
+                ]
+            )
+            .on_conflict_do_nothing(index_elements=[ReportOpening.compliance_year])
+        )
+        await self.db.execute(statement)
 
     @repo_handler
     async def list_all(self) -> Sequence[ReportOpening]:
@@ -40,10 +72,11 @@ class ReportOpeningRepository:
         if record:
             return record
 
-        record = self._build_default_record(year)
-        self.db.add(record)
-        await self.db.flush()
-        return record
+        await self._insert_default_records([year])
+        result = await self.db.execute(
+            select(ReportOpening).where(ReportOpening.compliance_year == year)
+        )
+        return result.scalars().one()
 
     @repo_handler
     async def sync_configured_years(self) -> List[ReportOpening]:
@@ -59,11 +92,11 @@ class ReportOpeningRepository:
         missing_years = [year for year in years if year not in existing_years]
 
         if missing_years:
-            for year in missing_years:
-                new_record = self._build_default_record(year)
-                self.db.add(new_record)
-                records.append(new_record)
-            await self.db.flush()
+            await self._insert_default_records(missing_years)
+            result = await self.db.execute(
+                select(ReportOpening).where(ReportOpening.compliance_year.in_(years))
+            )
+            records = result.scalars().all()
 
         return sorted(records, key=lambda record: record.compliance_year)
 
@@ -81,8 +114,11 @@ class ReportOpeningRepository:
         )
         record = result.scalars().first()
         if not record:
-            record = self._build_default_record(year)
-            self.db.add(record)
+            await self._insert_default_records([year])
+            result = await self.db.execute(
+                select(ReportOpening).where(ReportOpening.compliance_year == year)
+            )
+            record = result.scalars().one()
 
         if compliance_reporting_enabled is not None:
             record.compliance_reporting_enabled = compliance_reporting_enabled

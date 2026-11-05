@@ -12,9 +12,6 @@ from fastapi import (
 )
 from fastapi.responses import StreamingResponse
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
-from lcfs.web.api.final_supply_equipment.mv_refresh import (
-    schedule_fse_reporting_mv_refresh,
-)
 from typing import List
 
 from lcfs.db import dependencies
@@ -275,11 +272,9 @@ async def create_compliance_report(
     validate: OrganizationValidation = Depends(),
 ):
     await validate.create_compliance_report(organization_id, report_data)
-    report = await report_service.create_compliance_report(
+    return await report_service.create_compliance_report(
         organization_id, report_data, request.user
     )
-    schedule_fse_reporting_mv_refresh(request)
-    return report
 
 
 @router.post(

@@ -27,7 +27,6 @@ import {
   useComplianceReportWithCache
 } from '@/hooks/useComplianceReports'
 import { useGetFSEReportingList } from '@/hooks/useFinalSupplyEquipment'
-import { useFseRefreshPolling } from '@/hooks/useFseRefreshPolling'
 import { useGetFuelExports } from '@/hooks/useFuelExport'
 import { useGetFuelSupplies } from '@/hooks/useFuelSupply'
 import { useGetAllNotionalTransfers } from '@/hooks/useNotionalTransfer'
@@ -95,7 +94,6 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
     isLoading: scheduleOverviewLoading,
     error: scheduleOverviewError
   } = useComplianceReportScheduleOverview(complianceReportId)
-  const fseRefetchInterval = useFseRefreshPolling()
   const [isFileDialogOpen, setFileDialogOpen] = useState(false)
   const [expanded, setExpanded] = useState([])
   const [hasAutoExpanded, setHasAutoExpanded] = useState(false)
@@ -451,12 +449,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
               changelog: reportInfo.isSupplemental
             },
             {
-              enabled: shouldFetchActivityData(activity, index),
-              // The FSE table renders only once this list has rows. A new
-              // report version has none until the backend's view refresh.
-              ...(activity.key === 'finalSupplyEquipments' && {
-                refetchInterval: fseRefetchInterval
-              })
+              enabled: shouldFetchActivityData(activity, index)
             },
             complianceReportData?.report?.organizationId
           )
