@@ -666,7 +666,7 @@ const EditViewCIApplicationBase = () => {
                         ? handleSupplementalDocumentsSubmit
                         : async () => {}
                     }
-                    isSaving={false}
+                    isSaving={isUpdatingStep3}
                     readOnly={false}
                     showTitle={false}
                     showSaveControls={canSupplementallyEditDocuments}
