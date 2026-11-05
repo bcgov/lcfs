@@ -6,7 +6,7 @@
  *   - TODO: Add more tests for other pages
  */
 
-import { terminalLog } from '../support/e2e.js'
+import { terminalLog } from '../support/e2e'
 
 describe('Accessibility Tests for LCFS', () => {
   // Test for Login Page Accessibility
