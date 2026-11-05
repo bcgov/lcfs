@@ -19,7 +19,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from sqlalchemy import select, update
+from sqlalchemy import select, text, update
 
 from lcfs.db.models import Organization
 from lcfs.db.models.compliance import (
@@ -37,10 +37,16 @@ from lcfs.db.models.compliance.ComplianceReport import ReportingFrequency
 from lcfs.db.models.compliance.ComplianceReportStatus import (
     ComplianceReportStatusEnum,
 )
+from lcfs.db.models.compliance.FSEReportingBasePrefView import (
+    FSEReportingBasePrefView,
+)
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.compliance_report.schema import FSE_EXPORT_COLUMNS
 from lcfs.web.api.compliance_report.sheet_exporters.fse import FSESheetExporter
 from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
+from lcfs.web.api.final_supply_equipment.reporting_rows import (
+    fse_reporting_rows_sql,
+)
 
 SUBMITTED_SERIAL = "SN-5132-SUBMITTED"
 DRAFT_ONLY_SERIAL = "SN-5132-DRAFT-ONLY"
@@ -442,6 +448,20 @@ async def test_save_after_equipment_change_on_the_same_draft_shows(
     assert await _draft_page_rows(
         dbsession, organization_id, draft.compliance_report_id
     ) == ([(SUBMITTED_SERIAL, 2000.0)], 2000.0)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("source", ["base_pref", "vw_fse_base"])
+async def test_rows_have_the_view_columns_in_order(dbsession, report_versions, source):
+    """text().columns() matches the declared columns by position."""
+    result = await dbsession.execute(
+        text(fse_reporting_rows_sql(source)),
+        {"compliance_report_id": report_versions.reports[2].compliance_report_id},
+    )
+
+    assert list(result.keys()) == [
+        column.name for column in FSEReportingBasePrefView.__table__.columns
+    ]
 
 
 @pytest.mark.anyio

@@ -221,12 +221,16 @@ report_equipment AS (
     UNION
     SELECT charging_equipment_group_uuid FROM matched_rows
 )
+-- Columns in the order of FSEReportingBasePrefView: text().columns() matches
+-- them by position.
 SELECT
-    rc.organization_id,
     rc.compliance_report_id,
-    rc.compliance_report_group_uuid,
     COALESCE(mr.charging_equipment_id, fr.charging_equipment_id)
         AS charging_equipment_id,
+    COALESCE(mr.charging_equipment_version, fr.charging_equipment_version)
+        AS charging_equipment_version,
+    rc.organization_id,
+    rc.compliance_report_group_uuid,
     COALESCE(mr.serial_number, fr.serial_number) AS serial_number,
     COALESCE(mr.manufacturer, fr.manufacturer) AS manufacturer,
     COALESCE(mr.model, fr.model) AS model,
@@ -243,8 +247,6 @@ SELECT
     mr.is_active,
     mr.version,
     mr.action_type,
-    COALESCE(mr.charging_equipment_version, fr.charging_equipment_version)
-        AS charging_equipment_version,
     COALESCE(mr.street_address, fr.street_address) AS street_address,
     COALESCE(mr.city, fr.city) AS city,
     COALESCE(mr.postal_code, fr.postal_code) AS postal_code,
