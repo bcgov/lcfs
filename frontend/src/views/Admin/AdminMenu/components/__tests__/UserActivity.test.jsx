@@ -1,6 +1,6 @@
 import 'react'
 import { screen, act } from '@testing-library/react'
-import { vi, describe, expect, beforeEach, afterEach } from 'vitest'
+import { vi, describe, expect, beforeEach, afterEach } from 'vite-plus/test'
 import { UserActivity } from '../UserActivity'
 import { test } from '@/tests/utils/fixtures'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'

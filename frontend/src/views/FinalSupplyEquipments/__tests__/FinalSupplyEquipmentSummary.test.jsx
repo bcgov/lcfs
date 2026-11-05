@@ -1,6 +1,6 @@
 import { screen, act } from '@testing-library/react'
 import '@testing-library/user-event'
-import { beforeEach, describe, expect, vi } from 'vitest'
+import { beforeEach, describe, expect, vi } from 'vite-plus/test'
 import { FinalSupplyEquipmentSummary } from '../FinalSupplyEquipmentSummary'
 import { test } from '@/tests/utils/fixtures'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
@@ -212,13 +212,38 @@ describe('FinalSupplyEquipmentSummary', () => {
         {},
         undefined,
         'summary',
-        'vw_fse_base'
+        undefined
       )
     })
 
     it('renders with different status', () => {
       renderComponent({ status: COMPLIANCE_REPORT_STATUSES.SUBMITTED })
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+    })
+  })
+
+  describe('Row source', () => {
+    it("reads a Draft's own rows (base_pref source)", () => {
+      renderComponent({ status: COMPLIANCE_REPORT_STATUSES.DRAFT })
+      expect(hookCalls.length).toBeGreaterThan(0)
+      hookCalls.forEach((args) => {
+        expect(args[4]).toBe('summary')
+        expect(args[5]).toBeUndefined()
+      })
+    })
+    ;[
+      COMPLIANCE_REPORT_STATUSES.SUBMITTED,
+      COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT,
+      COMPLIANCE_REPORT_STATUSES.ASSESSED
+    ].forEach((status) => {
+      it(`reads vw_fse_base for a ${status} report`, () => {
+        renderComponent({ status })
+        expect(hookCalls.length).toBeGreaterThan(0)
+        hookCalls.forEach((args) => {
+          expect(args[4]).toBe('summary')
+          expect(args[5]).toBe('vw_fse_base')
+        })
+      })
     })
   })
 

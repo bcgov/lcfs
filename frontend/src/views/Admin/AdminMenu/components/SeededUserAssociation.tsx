@@ -149,10 +149,7 @@ export const SeededUserAssociation = () => {
     onError: (error: Error) => {
       const detail = (error as AxiosError<{ detail?: string }>)?.response?.data
         ?.detail
-      showAlert(
-        'error',
-        detail || t('common:submitError')
-      )
+      showAlert('error', detail || t('common:submitError'))
     }
   })
 
@@ -171,12 +168,9 @@ export const SeededUserAssociation = () => {
       },
       onError: (error: Error) => {
         setResolverResult(null)
-        const detail = (error as AxiosError<{ detail?: string }>)?.response?.data
-          ?.detail
-        showAlert(
-          'error',
-          detail || t('common:submitError')
-        )
+        const detail = (error as AxiosError<{ detail?: string }>)?.response
+          ?.data?.detail
+        showAlert('error', detail || t('common:submitError'))
       }
     })
 
@@ -235,8 +229,7 @@ export const SeededUserAssociation = () => {
 
   useEffect(() => {
     const user = seededUsersForSelection.find(
-      (candidate) =>
-        String(candidate.userProfileId) === selectedUserId
+      (candidate) => String(candidate.userProfileId) === selectedUserId
     )
 
     if (!user) {
@@ -246,8 +239,7 @@ export const SeededUserAssociation = () => {
     }
 
     const userRoles = sanitizeOrgRoles(
-      user?.roles?.map((role) => role.name?.toLowerCase() as string) ||
-        []
+      user?.roles?.map((role) => role.name?.toLowerCase() as string) || []
     )
     setValue('selectedRoles', userRoles)
     setValue(

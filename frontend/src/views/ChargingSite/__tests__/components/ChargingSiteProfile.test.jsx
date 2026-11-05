@@ -1,5 +1,5 @@
 import 'react'
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import { screen, fireEvent } from '@testing-library/react'
 import { ChargingSiteProfile } from '../../components/ChargingSiteProfile'
 import { test } from '@/tests/utils/fixtures'

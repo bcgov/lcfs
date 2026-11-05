@@ -1,5 +1,5 @@
 import React from 'react'
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import { screen, fireEvent } from '@testing-library/react'
 import { ChargingSiteFSEGrid } from '../../components/ChargingSiteFSEGrid'
 import { test } from '@/tests/utils/fixtures'
@@ -41,25 +41,29 @@ vi.mock('@/components/BCButton', () => ({
 
 vi.mock('@/hooks/useChargingSite')
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  BCGridViewer: React.forwardRef(
-    function BCGridViewerMock(props) {
-  return <div data-testid="bc-grid-viewer">
-          <button onClick={() => props.onCellClicked?.({
-      data: {
-        chargingEquipmentId: 456
-      }
-    })}>
-            Row Click
-          </button>
-        </div>;
-}
-  )
+  BCGridViewer: React.forwardRef(function BCGridViewerMock(props) {
+    return (
+      <div data-testid="bc-grid-viewer">
+        <button
+          onClick={() =>
+            props.onCellClicked?.({
+              data: {
+                chargingEquipmentId: 456
+              }
+            })
+          }
+        >
+          Row Click
+        </button>
+      </div>
+    )
+  })
 }))
 
 vi.mock('@/components/BCAlert', () => ({
   BCAlert2: React.forwardRef(function BCAlert2Mock() {
-  return <div data-testid="bc-alert">Alert</div>;
-})
+    return <div data-testid="bc-alert">Alert</div>
+  })
 }))
 
 describe('ChargingSiteFSEGrid', () => {

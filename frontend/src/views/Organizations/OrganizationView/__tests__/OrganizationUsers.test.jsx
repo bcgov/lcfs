@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
+import 'react'
 import { OrganizationUsers } from '../OrganizationUsers'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import ThemeProvider from '@mui/material/styles/ThemeProvider'
@@ -68,11 +68,13 @@ vi.mock('@/hooks/useOrganizations', () => ({
 
 // ✅ FIXED: Mock BCGridViewer instead of BCDataGridServer
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  BCGridViewer: ({
-  gridRef,
-  ...otherProps
-}) => {
-delete otherProps.onPaginationChange; delete otherProps.queryData; delete otherProps.getRowId; delete otherProps.gridOptions; delete otherProps.defaultColDef; delete otherProps.handleGridKey;
+  BCGridViewer: ({ gridRef, ...otherProps }) => {
+    delete otherProps.onPaginationChange
+    delete otherProps.queryData
+    delete otherProps.getRowId
+    delete otherProps.gridOptions
+    delete otherProps.defaultColDef
+    delete otherProps.handleGridKey
 
     // Set up gridRef with clearFilters method
     if (gridRef) {
@@ -125,9 +127,7 @@ vi.mock('@/components/Role', () => ({
 
 // Mock FontAwesome
 vi.mock('@fortawesome/react-fontawesome', () => ({
-  FontAwesomeIcon: ({
-  className
-}) => (
+  FontAwesomeIcon: ({ className }) => (
     <i data-test="font-awesome-icon" className={className} />
   )
 }))
@@ -224,7 +224,7 @@ describe('OrganizationUsers Component Tests', () => {
   describe('Component Rendering', () => {
     it('renders basic component structure', () => {
       renderComponent()
-      
+
       expect(screen.getByTestId('grid')).toBeInTheDocument()
     })
 

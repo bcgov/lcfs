@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vite-plus/test'
 import { render, act } from '@testing-library/react'
 import 'react-dom'
 import { useMap, Marker, TileLayer } from 'react-leaflet'
@@ -39,11 +39,11 @@ vi.mock('leaflet', () => ({
 }))
 
 vi.mock('@mui/material/Paper', () => ({
-    default: ({ children }) => <div data-test="paper">{children}</div>
+  default: ({ children }) => <div data-test="paper">{children}</div>
 }))
 
 vi.mock('@mui/material/CircularProgress', () => ({
-    default: () => <div data-test="circular-progress" />
+  default: () => <div data-test="circular-progress" />
 }))
 
 vi.mock('@/components/BCTypography', () => ({
@@ -66,7 +66,7 @@ describe('MapComponents', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    
+
     mockSection = document.createElement('div')
     mockControl = {
       onAdd: vi.fn(),
@@ -93,7 +93,7 @@ describe('MapComponents', () => {
 
     it('renders with default props', async () => {
       const TestChild = () => <div data-test="child">Test Child</div>
-      
+
       await act(async () => {
         render(
           <MapControl>
@@ -108,7 +108,7 @@ describe('MapComponents', () => {
 
     it('renders with custom position prop', async () => {
       const TestChild = () => <div data-test="child">Test Child</div>
-      
+
       await act(async () => {
         render(
           <MapControl position="bottomleft">
@@ -136,7 +136,9 @@ describe('MapComponents', () => {
       })
 
       expect(DomEvent.disableClickPropagation).toHaveBeenCalledWith(mockSection)
-      expect(DomEvent.disableScrollPropagation).toHaveBeenCalledWith(mockSection)
+      expect(DomEvent.disableScrollPropagation).toHaveBeenCalledWith(
+        mockSection
+      )
     })
 
     it('does not disable click propagation when disableClickPropagation is false', async () => {
@@ -174,7 +176,7 @@ describe('MapComponents', () => {
 
     it('handles container creation properly', () => {
       const TestChild = () => <div data-test="child">Test Child</div>
-      
+
       render(
         <MapControl>
           <TestChild />
@@ -186,7 +188,7 @@ describe('MapComponents', () => {
 
     it('cleans up control on unmount', async () => {
       const TestChild = () => <div data-test="child">Test Child</div>
-      
+
       const { unmount } = await act(async () => {
         return render(
           <MapControl>
@@ -206,8 +208,8 @@ describe('MapComponents', () => {
   describe('MapBoundsHandler', () => {
     it('fits bounds when groupedLocations has data', async () => {
       const groupedLocations = {
-        'coord1': [{ lat: 49.2827, lng: -123.1207 }],
-        'coord2': [{ lat: 49.2847, lng: -123.1247 }]
+        coord1: [{ lat: 49.2827, lng: -123.1207 }],
+        coord2: [{ lat: 49.2847, lng: -123.1247 }]
       }
 
       await act(async () => {
@@ -244,20 +246,24 @@ describe('MapComponents', () => {
   describe('MapLegend', () => {
     it('renders with loading status', () => {
       const { container } = render(<MapLegend geofencingStatus="loading" />)
-      
+
       expect(container).toBeTruthy()
     })
 
     it('renders with completed status', () => {
       const { container } = render(<MapLegend geofencingStatus="completed" />)
-      
+
       expect(container).toBeTruthy()
     })
 
     it('handles different geofencing statuses', () => {
-      const { container: loadingContainer } = render(<MapLegend geofencingStatus="loading" />)
-      const { container: completedContainer } = render(<MapLegend geofencingStatus="completed" />)
-      
+      const { container: loadingContainer } = render(
+        <MapLegend geofencingStatus="loading" />
+      )
+      const { container: completedContainer } = render(
+        <MapLegend geofencingStatus="completed" />
+      )
+
       expect(loadingContainer).toBeTruthy()
       expect(completedContainer).toBeTruthy()
     })
@@ -265,13 +271,15 @@ describe('MapComponents', () => {
 
   describe('MapMarkers', () => {
     const mockGroupedLocations = {
-      'coord1': [{ 
-        id: 'loc1',
-        uniqueId: 'unique1',
-        lat: 49.2827, 
-        lng: -123.1207,
-        name: 'Location 1' 
-      }]
+      coord1: [
+        {
+          id: 'loc1',
+          uniqueId: 'unique1',
+          lat: 49.2827,
+          lng: -123.1207,
+          name: 'Location 1'
+        }
+      ]
     }
 
     const mockGeneratePopupContent = vi.fn(() => <div>Popup Content</div>)
@@ -296,7 +304,7 @@ describe('MapComponents', () => {
     })
 
     it('uses red icon when not in BC', () => {
-      const geofencingResults = { 'coord1': false }
+      const geofencingResults = { coord1: false }
 
       render(
         <MapMarkers
@@ -317,8 +325,8 @@ describe('MapComponents', () => {
     })
 
     it('uses orange icon when has overlaps in BC', () => {
-      const geofencingResults = { 'coord1': true }
-      const overlapMap = { 'unique1': ['overlap1'] }
+      const geofencingResults = { coord1: true }
+      const overlapMap = { unique1: ['overlap1'] }
 
       render(
         <MapMarkers
@@ -339,8 +347,8 @@ describe('MapComponents', () => {
     })
 
     it('uses default icon when in BC with no overlaps', () => {
-      const geofencingResults = { 'coord1': true }
-      const overlapMap = { 'unique1': [] }
+      const geofencingResults = { coord1: true }
+      const overlapMap = { unique1: [] }
 
       render(
         <MapMarkers
@@ -389,7 +397,7 @@ describe('MapComponents', () => {
         <MapMarkers
           groupedLocations={mockGroupedLocations}
           geofencingStatus="completed"
-          geofencingResults={{ 'loc1': false }}
+          geofencingResults={{ loc1: false }}
           overlapMap={{}}
           generatePopupContent={mockGeneratePopupContent}
         />
@@ -414,7 +422,9 @@ describe('MapComponents', () => {
         />
       )
 
-      expect(container.querySelector('[data-test="circular-progress"]')).toBeTruthy()
+      expect(
+        container.querySelector('[data-test="circular-progress"]')
+      ).toBeTruthy()
     })
 
     it('shows generated popup content when geofencingStatus is completed', () => {
@@ -428,7 +438,10 @@ describe('MapComponents', () => {
         />
       )
 
-      expect(mockGeneratePopupContent).toHaveBeenCalledWith('coord1', mockGroupedLocations.coord1)
+      expect(mockGeneratePopupContent).toHaveBeenCalledWith(
+        'coord1',
+        mockGroupedLocations.coord1
+      )
     })
 
     it('handles empty groupedLocations', () => {
@@ -471,7 +484,8 @@ describe('MapComponents', () => {
 
       expect(TileLayer).toHaveBeenCalledWith(
         expect.objectContaining({
-          attribution: 'Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+          attribution:
+            'Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
           url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
         }),
         {}

@@ -1,6 +1,6 @@
 import 'react'
 import { screen, fireEvent } from '@testing-library/react'
-import { vi, describe, expect, beforeEach, afterAll } from 'vitest'
+import { vi, describe, expect, beforeEach, afterAll } from 'vite-plus/test'
 import OrgFuelCodeCard from '../OrgFuelCodeCard'
 import { useOrgFuelCodeCounts } from '@/hooks/useDashboard'
 import { test } from '@/tests/utils/fixtures'
@@ -45,7 +45,7 @@ vi.mock('@/components/Loading', () => ({
 }))
 
 vi.mock('@mui/material/Stack', () => ({
-    default: ({ children, ...props }) => (
+  default: ({ children, ...props }) => (
     <div data-test="stack" {...props}>
       {children}
     </div>
@@ -53,7 +53,7 @@ vi.mock('@mui/material/Stack', () => ({
 }))
 
 vi.mock('@mui/material/List', () => ({
-    default: ({ children, ...props }) => (
+  default: ({ children, ...props }) => (
     <div data-test="list" {...props}>
       {children}
     </div>
@@ -61,7 +61,7 @@ vi.mock('@mui/material/List', () => ({
 }))
 
 vi.mock('@mui/material/ListItemButton', () => ({
-    default: ({ children, onClick, ...props }) => (
+  default: ({ children, onClick, ...props }) => (
     <button data-test="list-item-button" onClick={onClick} {...props}>
       {children}
     </button>

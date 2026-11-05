@@ -330,13 +330,11 @@ const AddEditFuelCodeBase = () => {
     [pendingUpdates]
   )
 
-  const onGridReady = useCallback(
-    (params) => {
-      updateState({ isGridReady: true })
-      params.api.sizeColumnsToFit()
-    },
-    [updateState]
-  )
+  // BCGridEditor sizes columns (fit when they fit, else scroll); calling
+  // sizeColumnsToFit() here squeezed every column into the viewport.
+  const onGridReady = useCallback(() => {
+    updateState({ isGridReady: true })
+  }, [updateState])
 
   const handleError = useCallback((error, message, severity = 'error') => {
     console.error('Error:', error)
@@ -421,22 +419,18 @@ const AddEditFuelCodeBase = () => {
           validationMsg: errMsg
         }
       } finally {
-        // Remove from pending updates
-        updatePendingUpdates((prev) => {
-          const newSet = new Set(prev)
+        // Remove from pending updates and clear the global updating state in
+        // one update. Setting state from inside another state updater can be
+        // lost and leave the grid's loading overlay up for good.
+        setState((prev) => {
+          const newSet = new Set(prev.pendingUpdates)
           newSet.delete(rowId)
-          return newSet
+          return {
+            ...prev,
+            pendingUpdates: newSet,
+            isUpdating: newSet.size > 0
+          }
         })
-
-        // Update global updating state
-        setTimeout(() => {
-          updatePendingUpdates((current) => {
-            if (current.size === 0) {
-              updateState({ isUpdating: false })
-            }
-            return current
-          })
-        }, 0)
       }
     },
     [fuelCodeMutation, t, handleError, updatePendingUpdates, updateState]

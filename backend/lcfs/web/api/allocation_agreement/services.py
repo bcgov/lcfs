@@ -560,7 +560,9 @@ class AllocationAgreementServices:
             == allocation_agreement_data.compliance_report_id
         ):
             await self.repo.delete_allocation_agreement(
-                allocation_agreement_data.allocation_agreement_id
+                allocation_agreement_data.allocation_agreement_id,
+                allocation_agreement_data.compliance_report_id,
+                allocation_agreement_data.group_uuid,
             )
             return DeleteAllocationAgreementResponseSchema(
                 success=True, message="Marked as deleted."

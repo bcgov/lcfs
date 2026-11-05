@@ -1,6 +1,6 @@
 import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach } from 'vite-plus/test'
 import { ThemeProvider } from '@mui/material/styles'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import theme from '@/themes'
@@ -21,7 +21,7 @@ vi.mock('@/utils/formatters', () => ({
 
 // Mock Material-UI components for simplified testing
 vi.mock('@mui/material/Paper', () => ({
-    default: ({ children, ...props }) => (
+  default: ({ children, ...props }) => (
     <div data-test="paper" {...props}>
       {children}
     </div>
@@ -29,7 +29,7 @@ vi.mock('@mui/material/Paper', () => ({
 }))
 
 vi.mock('@mui/material/Table', () => ({
-    default: ({ children, ...props }) => (
+  default: ({ children, ...props }) => (
     <table data-test="table" {...props}>
       {children}
     </table>
@@ -37,7 +37,7 @@ vi.mock('@mui/material/Table', () => ({
 }))
 
 vi.mock('@mui/material/TableBody', () => ({
-    default: ({ children, ...props }) => (
+  default: ({ children, ...props }) => (
     <tbody data-test="table-body" {...props}>
       {children}
     </tbody>
@@ -45,7 +45,7 @@ vi.mock('@mui/material/TableBody', () => ({
 }))
 
 vi.mock('@mui/material/TableCell', () => ({
-    default: ({ children, ...props }) => (
+  default: ({ children, ...props }) => (
     <td data-test="table-cell" {...props}>
       {children}
     </td>
@@ -53,7 +53,7 @@ vi.mock('@mui/material/TableCell', () => ({
 }))
 
 vi.mock('@mui/material/TableContainer', () => ({
-    default: ({ children, ...props }) => (
+  default: ({ children, ...props }) => (
     <div data-test="table-container" {...props}>
       {children}
     </div>
@@ -61,7 +61,7 @@ vi.mock('@mui/material/TableContainer', () => ({
 }))
 
 vi.mock('@mui/material/TableHead', () => ({
-    default: ({ children, ...props }) => (
+  default: ({ children, ...props }) => (
     <thead data-test="table-head" {...props}>
       {children}
     </thead>
@@ -69,7 +69,7 @@ vi.mock('@mui/material/TableHead', () => ({
 }))
 
 vi.mock('@mui/material/TableRow', () => ({
-    default: ({ children, ...props }) => (
+  default: ({ children, ...props }) => (
     <tr data-test="table-row" {...props}>
       {children}
     </tr>
@@ -77,7 +77,16 @@ vi.mock('@mui/material/TableRow', () => ({
 }))
 
 vi.mock('@mui/material/Input', () => ({
-    default: ({ value, onChange, onBlur, onFocus, onKeyDown, inputProps, startAdornment, ...props }) => (
+  default: ({
+    value,
+    onChange,
+    onBlur,
+    onFocus,
+    onKeyDown,
+    inputProps,
+    startAdornment,
+    ...props
+  }) => (
     <div data-test="input-wrapper">
       {startAdornment}
       <input
@@ -95,7 +104,7 @@ vi.mock('@mui/material/Input', () => ({
 }))
 
 vi.mock('@mui/material/TextField', () => ({
-    default: ({ value, onChange, onBlur, slotProps, ...props }) => (
+  default: ({ value, onChange, onBlur, slotProps, ...props }) => (
     <div data-test="input-wrapper">
       {slotProps?.input?.startAdornment}
       <input
@@ -125,19 +134,19 @@ vi.mock('@mui/material/Radio', () => ({
 }))
 
 vi.mock('@mui/material/RadioGroup', () => ({
-  default: ({
-  children,
-  value,
-  onChange,
-  ...props
-}) => { delete props.row; return <div
-      data-test="radio-group"
-      data-value={value}
-      onChange={onChange}
-      {...props}
-    >
-      {children}
-    </div>; }
+  default: ({ children, value, onChange, ...props }) => {
+    delete props.row
+    return (
+      <div
+        data-test="radio-group"
+        data-value={value}
+        onChange={onChange}
+        {...props}
+      >
+        {children}
+      </div>
+    )
+  }
 }))
 
 vi.mock('@mui/material/FormControlLabel', () => ({
@@ -160,16 +169,18 @@ vi.mock('@mui/material/Tooltip', () => ({
 // Mock react-number-format
 vi.mock('react-number-format', () => ({
   NumericFormat: ({
-  customInput: CustomInput,
-  value,
-  onValueChange,
-  onBlur,
-  onFocus,
-  onKeyDown,
-  slotProps,
-  ...props
-}) => {
-delete props.thousandSeparator; delete props.decimalScale; delete props.allowNegative;
+    customInput: CustomInput,
+    value,
+    onValueChange,
+    onBlur,
+    onFocus,
+    onKeyDown,
+    slotProps,
+    ...props
+  }) => {
+    delete props.thousandSeparator
+    delete props.decimalScale
+    delete props.allowNegative
 
     const handleChange = (e) => {
       const rawValue = e.target.value.replace(/,/g, '')
@@ -743,7 +754,7 @@ describe('SummaryTable', () => {
         editableCells: [0, 1], // Line 6 at index 0, Line 8 at index 1
         cellConstraints: {
           0: { min: 0, max: 20000 }, // Line 6 max of 20,000
-          1: { min: 0, max: 15000 }  // Line 8 max of 15,000
+          1: { min: 0, max: 15000 } // Line 8 max of 15,000
         }
       },
       {
@@ -754,7 +765,7 @@ describe('SummaryTable', () => {
         editableCells: [0, 1],
         cellConstraints: {
           0: { min: 0, max: 10000 }, // Line 6 diesel max
-          1: { min: 0, max: 8000 }   // Line 8 diesel max
+          1: { min: 0, max: 8000 } // Line 8 diesel max
         }
       }
     ]

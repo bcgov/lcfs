@@ -1,6 +1,6 @@
-import 'react';
-import { screen } from '@testing-library/react';
-import { describe, expect, beforeEach, vi } from 'vitest'
+import 'react'
+import { screen } from '@testing-library/react'
+import { describe, expect, beforeEach, vi } from 'vite-plus/test'
 import { NotionalTransferChangelog } from '../NotionalTransferChangelog'
 import { test } from '@/tests/utils/fixtures'
 
@@ -97,7 +97,7 @@ vi.mock('@/components/Loading', () => ({
 
 // Mock Material-UI components
 vi.mock('@mui/material/Box', () => ({
-    default: ({ children, mb, ...props }) => (
+  default: ({ children, mb, ...props }) => (
     <div data-test="mui-box" data-mb={mb} {...props}>
       {children}
     </div>
@@ -105,7 +105,7 @@ vi.mock('@mui/material/Box', () => ({
 }))
 
 vi.mock('@mui/material/TextField', () => ({
-    default: ({ children, ...props }) => (
+  default: ({ children, ...props }) => (
     <div data-test="text-field" {...props}>
       {children}
     </div>
@@ -113,7 +113,7 @@ vi.mock('@mui/material/TextField', () => ({
 }))
 
 vi.mock('@mui/material/Button', () => ({
-    default: ({ children, ...props }) => (
+  default: ({ children, ...props }) => (
     <div data-test="button" {...props}>
       {children}
     </div>
@@ -121,7 +121,7 @@ vi.mock('@mui/material/Button', () => ({
 }))
 
 vi.mock('@mui/material/Typography', () => ({
-    default: ({ children, ...props }) => (
+  default: ({ children, ...props }) => (
     <div data-test="typography" {...props}>
       {children}
     </div>
@@ -129,7 +129,7 @@ vi.mock('@mui/material/Typography', () => ({
 }))
 
 vi.mock('@mui/material/Paper', () => ({
-    default: ({ children, ...props }) => (
+  default: ({ children, ...props }) => (
     <div data-test="paper" {...props}>
       {children}
     </div>
@@ -138,13 +138,12 @@ vi.mock('@mui/material/Paper', () => ({
 
 // Mock Material-UI styles
 vi.mock('@mui/material/styles', () => ({
-  styled:
-    () =>
-    () => function StyledMock({ children, ...props }) {
+  styled: () => () =>
+    function StyledMock({ children, ...props }) {
       return (
-      <div data-test="styled-component" {...props}>
-        {children}
-      </div>
+        <div data-test="styled-component" {...props}>
+          {children}
+        </div>
       )
     },
   useTheme: () => ({

@@ -1,4 +1,4 @@
-/* eslint-disable cypress/unsafe-to-chain-command */
+/* oxlint-disable cypress/unsafe-to-chain-command */
 import { When, Then } from '@badeball/cypress-cucumber-preprocessor'
 
 const SELECTORS = {
@@ -14,7 +14,10 @@ const FUEL_EXPORT_CHANGELOG_GROUP_UUID = 'mock-fuel-export-group'
  */
 const saveAndReturn = () => {
   cy.get(SELECTORS.saveButton).click()
-  cy.url({ timeout: 30000 }).should('match', /\/compliance-reporting\/\d+\/\d+$/)
+  cy.url({ timeout: 30000 }).should(
+    'match',
+    /\/compliance-reporting\/\d+\/\d+$/
+  )
 }
 
 /**
@@ -228,9 +231,13 @@ When(
       // Edit the existing row created in the previous step.
       // Use :not(.ag-cell-inline-editing) to avoid matching the auto-opened
       // fuelTypeId dropdown on the empty new row.
-      cy.contains('div.ag-cell[col-id="fuelTypeId"]:not(.ag-cell-inline-editing)', fuelType, {
-        timeout: 30000
-      })
+      cy.contains(
+        'div.ag-cell[col-id="fuelTypeId"]:not(.ag-cell-inline-editing)',
+        fuelType,
+        {
+          timeout: 30000
+        }
+      )
         .closest('div.ag-row')
         .invoke('attr', 'row-index')
         .then((rowIndex) => {
@@ -296,7 +303,9 @@ When(
 // ---------------------------------------------------------------------------
 
 Then('the fuel export summary includes fuel type {string}', (fuelType) => {
-  cy.get(SELECTORS.scheduleLink, { timeout: 20000 }).should('be.visible').click()
+  cy.get(SELECTORS.scheduleLink, { timeout: 20000 })
+    .should('be.visible')
+    .click()
   // onGridReady auto-starts editing the last (empty) row's fuelTypeId cell.
   // Target only cells NOT in inline-editing mode so the dropdown option text
   // does not confuse cy.contains.
@@ -341,11 +350,9 @@ Then(
       // the grid has loaded its data before we assert.
       cy.wait('@fuelExportListFinal', { timeout: 30000 })
 
-      cy.contains(
-        'div.ag-cell[col-id="quantity"]',
-        formattedQuantity,
-        { timeout: 15000 }
-      ).should('exist')
+      cy.contains('div.ag-cell[col-id="quantity"]', formattedQuantity, {
+        timeout: 15000
+      }).should('exist')
     })
   }
 )

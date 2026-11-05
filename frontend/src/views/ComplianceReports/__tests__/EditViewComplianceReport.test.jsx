@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vite-plus/test'
 import { render, screen, act, waitFor } from '@testing-library/react'
 import { forwardRef } from 'react'
 import userEvent from '@testing-library/user-event'
@@ -190,7 +190,7 @@ vi.mock('../buttonConfigs', () => ({
 
 // Mock Material-UI components
 vi.mock('@mui/material/Fab', () => ({
-    default: ({ children, onClick }) => (
+  default: ({ children, onClick }) => (
     <button data-test="fab" onClick={onClick}>
       {children}
     </button>
@@ -198,11 +198,11 @@ vi.mock('@mui/material/Fab', () => ({
 }))
 
 vi.mock('@mui/material/Stack', () => ({
-    default: ({ children }) => <div data-test="stack">{children}</div>
+  default: ({ children }) => <div data-test="stack">{children}</div>
 }))
 
 vi.mock('@mui/material/Tooltip', () => ({
-    default: ({ children, title }) => (
+  default: ({ children, title }) => (
     <div data-test="tooltip" title={title}>
       {children}
     </div>
@@ -210,7 +210,7 @@ vi.mock('@mui/material/Tooltip', () => ({
 }))
 
 vi.mock('@mui/material/Alert', () => ({
-    default: ({ children, severity }) => (
+  default: ({ children, severity }) => (
     <div data-test="alert" data-severity={severity}>
       {children}
     </div>
@@ -218,59 +218,59 @@ vi.mock('@mui/material/Alert', () => ({
 }))
 
 vi.mock('@mui/material/AlertTitle', () => ({
-    default: ({ children }) => <div data-test="alert-title">{children}</div>
+  default: ({ children }) => <div data-test="alert-title">{children}</div>
 }))
 
 vi.mock('@mui/icons-material/AutoAwesome', () => ({
-    default: () => <div data-test="auto-awesome-icon" />
+  default: () => <div data-test="auto-awesome-icon" />
 }))
 
 vi.mock('@mui/icons-material/Description', () => ({
-    default: () => <div data-test="description-icon" />
+  default: () => <div data-test="description-icon" />
 }))
 
 vi.mock('@mui/icons-material/ElectricBolt', () => ({
-    default: () => <div data-test="electric-bolt-icon" />
+  default: () => <div data-test="electric-bolt-icon" />
 }))
 
 vi.mock('@mui/icons-material/FactCheck', () => ({
-    default: () => <div data-test="fact-check-icon" />
+  default: () => <div data-test="fact-check-icon" />
 }))
 
 vi.mock('@mui/icons-material/Gavel', () => ({
-    default: () => <div data-test="gavel-icon" />
+  default: () => <div data-test="gavel-icon" />
 }))
 
 vi.mock('@mui/icons-material/Handshake', () => ({
-    default: () => <div data-test="handshake-icon" />
+  default: () => <div data-test="handshake-icon" />
 }))
 
 vi.mock('@mui/icons-material/KeyboardArrowDown', () => ({
-    default: () => <div data-test="arrow-down" />
+  default: () => <div data-test="arrow-down" />
 }))
 
 vi.mock('@mui/icons-material/KeyboardArrowUp', () => ({
-    default: () => <div data-test="arrow-up" />
+  default: () => <div data-test="arrow-up" />
 }))
 
 vi.mock('@mui/icons-material/LocalGasStation', () => ({
-    default: () => <div data-test="local-gas-station-icon" />
+  default: () => <div data-test="local-gas-station-icon" />
 }))
 
 vi.mock('@mui/icons-material/Recycling', () => ({
-    default: () => <div data-test="recycling-icon" />
+  default: () => <div data-test="recycling-icon" />
 }))
 
 vi.mock('@mui/icons-material/Summarize', () => ({
-    default: () => <div data-test="summarize-icon" />
+  default: () => <div data-test="summarize-icon" />
 }))
 
 vi.mock('@mui/icons-material/SwapHoriz', () => ({
-    default: () => <div data-test="swap-horiz-icon" />
+  default: () => <div data-test="swap-horiz-icon" />
 }))
 
 vi.mock('@mui/icons-material/UploadFile', () => ({
-    default: () => <div data-test="upload-file-icon" />
+  default: () => <div data-test="upload-file-icon" />
 }))
 
 vi.mock('@fortawesome/react-fontawesome', () => ({

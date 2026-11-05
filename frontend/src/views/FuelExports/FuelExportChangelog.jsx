@@ -16,9 +16,7 @@ import { useParams } from 'react-router-dom'
 
 export const FuelExportChangelog = () => {
   const { t } = useTranslation(['common', 'fuelExport', 'report'])
-  const {
-  complianceReportId
-} = useParams()
+  const { complianceReportId } = useParams()
   const { data: currentReport, isLoading: currentReportLoading } =
     useComplianceReportWithCache(complianceReportId)
 

@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vite-plus/test'
 
 import {
   GeofencingStatus,
@@ -16,14 +16,14 @@ vi.mock('@/components/BCButton', () => ({
 }))
 
 vi.mock('@/components/BCTypography', () => ({
-  default: ({
-  children,
-  ...rest
-}) => { delete rest.gutterBottom; return <div {...rest}>{children}</div>; }
+  default: ({ children, ...rest }) => {
+    delete rest.gutterBottom
+    return <div {...rest}>{children}</div>
+  }
 }))
 
 vi.mock('@mui/material/Alert', () => ({
-    default: ({ children, severity, ...rest }) => (
+  default: ({ children, severity, ...rest }) => (
     <div data-test="alert" data-severity={severity} {...rest}>
       {children}
     </div>
@@ -31,9 +31,7 @@ vi.mock('@mui/material/Alert', () => ({
 }))
 
 vi.mock('@mui/material/CircularProgress', () => ({
-    default: ({ size }) => (
-    <div data-test="progress" data-size={size} />
-  )
+  default: ({ size }) => <div data-test="progress" data-size={size} />
 }))
 
 describe('StatusComponent', () => {
@@ -44,18 +42,26 @@ describe('StatusComponent', () => {
   describe('GeofencingStatus', () => {
     it('renders loading state correctly', () => {
       render(<GeofencingStatus status="loading" />)
-      
-      expect(screen.getByTestId('alert')).toHaveAttribute('data-severity', 'info')
+
+      expect(screen.getByTestId('alert')).toHaveAttribute(
+        'data-severity',
+        'info'
+      )
       expect(screen.getByText('Geofencing in progress...')).toBeInTheDocument()
       expect(
-        screen.getByText(/Checking each location to determine if it's inside BC's boundaries/)
+        screen.getByText(
+          /Checking each location to determine if it's inside BC's boundaries/
+        )
       ).toBeInTheDocument()
     })
 
     it('renders error state correctly', () => {
       render(<GeofencingStatus status="error" />)
-      
-      expect(screen.getByTestId('alert')).toHaveAttribute('data-severity', 'error')
+
+      expect(screen.getByTestId('alert')).toHaveAttribute(
+        'data-severity',
+        'error'
+      )
       expect(screen.getByText('Geofencing error')).toBeInTheDocument()
       expect(
         screen.getByText(/There was an error checking location boundaries/)
@@ -97,21 +103,27 @@ describe('StatusComponent', () => {
 
     it('renders warning severity when overlaps exist', () => {
       render(<OverlapSummary overlapStats={mockOverlapStatsWithOverlaps} />)
-      
-      expect(screen.getByTestId('alert')).toHaveAttribute('data-severity', 'warning')
+
+      expect(screen.getByTestId('alert')).toHaveAttribute(
+        'data-severity',
+        'warning'
+      )
       expect(screen.getByText('Period overlaps detected')).toBeInTheDocument()
     })
 
     it('renders success severity when no overlaps exist', () => {
       render(<OverlapSummary overlapStats={mockOverlapStatsNoOverlaps} />)
-      
-      expect(screen.getByTestId('alert')).toHaveAttribute('data-severity', 'success')
+
+      expect(screen.getByTestId('alert')).toHaveAttribute(
+        'data-severity',
+        'success'
+      )
       expect(screen.getByText('No period overlaps')).toBeInTheDocument()
     })
 
     it('displays all statistics correctly with overlaps', () => {
       render(<OverlapSummary overlapStats={mockOverlapStatsWithOverlaps} />)
-      
+
       expect(screen.getByText('Total supply units:')).toBeInTheDocument()
       expect(screen.getByText('10')).toBeInTheDocument()
       expect(screen.getByText('Units with overlaps:')).toBeInTheDocument()
@@ -126,7 +138,7 @@ describe('StatusComponent', () => {
 
     it('displays all statistics correctly without overlaps', () => {
       render(<OverlapSummary overlapStats={mockOverlapStatsNoOverlaps} />)
-      
+
       expect(screen.getByText('Total supply units:')).toBeInTheDocument()
       expect(screen.getAllByText('5')).toHaveLength(2) // total and nonOverlapping are both 5
       expect(screen.getByText('Units with overlaps:')).toBeInTheDocument()
@@ -143,8 +155,11 @@ describe('StatusComponent', () => {
         nonBcOverlapping: 0
       }
       render(<OverlapSummary overlapStats={zeroStats} />)
-      
-      expect(screen.getByTestId('alert')).toHaveAttribute('data-severity', 'success')
+
+      expect(screen.getByTestId('alert')).toHaveAttribute(
+        'data-severity',
+        'success'
+      )
       expect(screen.getAllByText('0')).toHaveLength(5) // All 5 stats are 0
     })
   })
@@ -152,8 +167,11 @@ describe('StatusComponent', () => {
   describe('LoadingState', () => {
     it('renders loading alert with progress indicator', () => {
       render(<LoadingState />)
-      
-      expect(screen.getByTestId('alert')).toHaveAttribute('data-severity', 'info')
+
+      expect(screen.getByTestId('alert')).toHaveAttribute(
+        'data-severity',
+        'info'
+      )
       expect(screen.getByText('Loading map data...')).toBeInTheDocument()
     })
   })
@@ -176,9 +194,14 @@ describe('StatusComponent', () => {
           resetGeofencing={mockResetGeofencing}
         />
       )
-      
-      expect(screen.getByTestId('alert')).toHaveAttribute('data-severity', 'error')
-      expect(screen.getByText('Error: Network error occurred')).toBeInTheDocument()
+
+      expect(screen.getByTestId('alert')).toHaveAttribute(
+        'data-severity',
+        'error'
+      )
+      expect(
+        screen.getByText('Error: Network error occurred')
+      ).toBeInTheDocument()
       expect(
         screen.getByText(/Please ensure the API provides location data/)
       ).toBeInTheDocument()
@@ -193,7 +216,7 @@ describe('StatusComponent', () => {
           resetGeofencing={mockResetGeofencing}
         />
       )
-      
+
       expect(screen.getByText('Error: Failed to load data')).toBeInTheDocument()
     })
 
@@ -205,7 +228,7 @@ describe('StatusComponent', () => {
           resetGeofencing={mockResetGeofencing}
         />
       )
-      
+
       expect(screen.getByText('Error: Failed to load data')).toBeInTheDocument()
     })
 
@@ -216,7 +239,7 @@ describe('StatusComponent', () => {
           resetGeofencing={mockResetGeofencing}
         />
       )
-      
+
       expect(screen.getByText('Error: Failed to load data')).toBeInTheDocument()
     })
 
@@ -228,10 +251,10 @@ describe('StatusComponent', () => {
           resetGeofencing={mockResetGeofencing}
         />
       )
-      
+
       const button = screen.getByRole('button', { name: /Refresh map data/i })
       await userEvent.click(button)
-      
+
       expect(mockRefetch).toHaveBeenCalledTimes(1)
       expect(mockResetGeofencing).toHaveBeenCalledTimes(1)
     })
@@ -253,20 +276,29 @@ describe('StatusComponent', () => {
           resetGeofencing={mockResetGeofencing}
         />
       )
-      
-      expect(screen.getByTestId('alert')).toHaveAttribute('data-severity', 'warning')
+
+      expect(screen.getByTestId('alert')).toHaveAttribute(
+        'data-severity',
+        'warning'
+      )
       expect(screen.getByText('No location data found')).toBeInTheDocument()
       expect(
         screen.getByText('API should return data with the following fields:')
       ).toBeInTheDocument()
-      
+
       // Check all required fields are listed
-      expect(screen.getByText(/serialNbr \(for ID creation\)/)).toBeInTheDocument()
       expect(
-        screen.getByText(/streetAddress, city, postalCode \(for location name\)/)
+        screen.getByText(/serialNbr \(for ID creation\)/)
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(
+          /streetAddress, city, postalCode \(for location name\)/
+        )
       ).toBeInTheDocument()
       expect(screen.getByText(/latitude and longitude/)).toBeInTheDocument()
-      expect(screen.getByText(/supplyFromDate and supplyToDate/)).toBeInTheDocument()
+      expect(
+        screen.getByText(/supplyFromDate and supplyToDate/)
+      ).toBeInTheDocument()
     })
 
     it('calls both refetch and resetGeofencing when button clicked', async () => {
@@ -276,10 +308,10 @@ describe('StatusComponent', () => {
           resetGeofencing={mockResetGeofencing}
         />
       )
-      
+
       const button = screen.getByRole('button', { name: /Refresh map data/i })
       await userEvent.click(button)
-      
+
       expect(mockRefetch).toHaveBeenCalledTimes(1)
       expect(mockResetGeofencing).toHaveBeenCalledTimes(1)
     })
@@ -291,7 +323,7 @@ describe('StatusComponent', () => {
           resetGeofencing={mockResetGeofencing}
         />
       )
-      
+
       const button = screen.getByRole('button', { name: /Refresh map data/i })
       expect(button).toHaveAttribute('variant', 'outlined')
       expect(button).toHaveAttribute('color', 'dark')

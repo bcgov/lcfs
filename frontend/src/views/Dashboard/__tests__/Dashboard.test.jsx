@@ -1,7 +1,7 @@
 import { test } from '@/tests/utils/fixtures'
 import 'react'
 import { screen } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach } from 'vite-plus/test'
 import { Dashboard } from '../Dashboard'
 import { Dashboard as DashboardFromIndex } from '../index'
 import { useCurrentUser } from '@/hooks/useCurrentUser'

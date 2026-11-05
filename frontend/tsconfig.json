@@ -15,14 +15,14 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     },
     "allowJs": true,
     "checkJs": false,
-    "types": ["vitest/globals"]
+    "types": ["vitest/globals", "node"]
   },
-  "include": ["src", "**/*.js", "**/*.jsx"],
+  "include": ["src", "testSetup.ts", "**/*.js", "**/*.jsx"],
+  "exclude": ["cypress", "cypress.config.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

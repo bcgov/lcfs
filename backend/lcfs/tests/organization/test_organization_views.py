@@ -1,6 +1,6 @@
 from unittest import mock
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from datetime import date
@@ -10,6 +10,7 @@ from lcfs.db.models.compliance.ComplianceReport import (
     ComplianceReport,
 )
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.db.models.user.UserProfile import UserProfile
 from httpx import AsyncClient
 from fastapi import FastAPI
 
@@ -103,7 +104,7 @@ async def test_create_user_success(
     set_mock_user,
     mock_user_services,
 ):
-    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+    set_mock_user(fastapi_app, [RoleEnum.MANAGE_USERS])
 
     url = fastapi_app.url_path_for("create_user", organization_id=1)
 
@@ -126,6 +127,65 @@ async def test_create_user_success(
     )
 
     assert response.status_code == 201
+    mock_user_services.create_user.assert_awaited_once()
+    assert mock_user_services.create_user.call_args[0][0].organization_id == 1
+
+
+_CREATE_USER_PAYLOAD = {
+    "title": "testuser",
+    "keycloak_username": "testuser",
+    "keycloak_email": "testuser@example.com",
+    "first_name": "test",
+    "last_name": "test",
+    "is_active": True,
+    "roles": ["supplier", "manage_users", "signing_authority"],
+}
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "roles",
+    [
+        [RoleEnum.SUPPLIER],
+        [RoleEnum.READ_ONLY],
+        [RoleEnum.COMPLIANCE_REPORTING],
+        [RoleEnum.SIGNING_AUTHORITY, RoleEnum.TRANSFER],
+    ],
+)
+async def test_create_user_without_manage_users_forbidden(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    mock_user_services,
+    roles,
+):
+    """Only Manage Users holders can create users in their organization."""
+    set_mock_user(fastapi_app, roles, {"organization_id": 1})
+    fastapi_app.dependency_overrides[UserServices] = lambda: mock_user_services
+
+    url = fastapi_app.url_path_for("create_user", organization_id=1)
+    response = await client.post(url, json=_CREATE_USER_PAYLOAD)
+
+    assert response.status_code == 403
+    mock_user_services.create_user.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_create_user_manage_users_other_org_forbidden(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    mock_user_services,
+):
+    """Manage Users cannot create users in a different organization."""
+    set_mock_user(fastapi_app, [RoleEnum.MANAGE_USERS], {"organization_id": 99})
+    fastapi_app.dependency_overrides[UserServices] = lambda: mock_user_services
+
+    url = fastapi_app.url_path_for("create_user", organization_id=1)
+    response = await client.post(url, json=_CREATE_USER_PAYLOAD)
+
+    assert response.status_code == 403
+    mock_user_services.create_user.assert_not_awaited()
 
 
 @pytest.mark.anyio
@@ -543,3 +603,93 @@ async def test_update_user_supplier_no_organization_forbidden(
     response = await client.put(url, json=_UPDATE_USER_PAYLOAD)
 
     assert response.status_code == 403
+
+
+async def _org_user(add_models):
+    """A user profile in organization 1 that has not signed in yet."""
+    user = UserProfile(
+        keycloak_username="org.member",
+        keycloak_email="org.member@example.com",
+        email="org.member@example.com",
+        first_name="Org",
+        last_name="Member",
+        title="Analyst",
+        is_active=True,
+        organization_id=1,
+    )
+    await add_models([user])
+    return user
+
+
+def _org_user_payload(user, **changes):
+    return {
+        "title": user.title,
+        "keycloak_username": user.keycloak_username,
+        "keycloak_email": user.keycloak_email,
+        "email": user.email,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "is_active": True,
+        "roles": [],
+        **changes,
+    }
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"keycloak_username": "someone.else"},
+        {"keycloak_email": "someone.else@example.com"},
+    ],
+)
+async def test_update_user_supplier_cannot_change_login_identity(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    add_models,
+    dbsession,
+    changes,
+):
+    """Manage Users cannot change a same-org user's login username or email."""
+    set_mock_user(fastapi_app, [RoleEnum.MANAGE_USERS], {"organization_id": 1})
+    user = await _org_user(add_models)
+
+    url = fastapi_app.url_path_for(
+        "update_user", organization_id=1, user_id=user.user_profile_id
+    )
+    response = await client.put(url, json=_org_user_payload(user, **changes))
+
+    assert response.status_code == 403
+    await dbsession.refresh(user)
+    assert user.keycloak_username == "org.member"
+    assert user.keycloak_email == "org.member@example.com"
+
+
+@pytest.mark.anyio
+async def test_update_user_supplier_keeps_login_identity_on_edit(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    add_models,
+    dbsession,
+):
+    """Resubmitting the stored identity (any case) still saves other fields."""
+    set_mock_user(fastapi_app, [RoleEnum.MANAGE_USERS], {"organization_id": 1})
+    user = await _org_user(add_models)
+
+    url = fastapi_app.url_path_for(
+        "update_user", organization_id=1, user_id=user.user_profile_id
+    )
+    payload = _org_user_payload(
+        user,
+        keycloak_username="Org.Member",
+        first_name="Renamed",
+    )
+    with patch("lcfs.web.api.user.services.FastAPICache.clear", AsyncMock()):
+        response = await client.put(url, json=payload)
+
+    assert response.status_code == 200
+    await dbsession.refresh(user)
+    assert user.first_name == "Renamed"
+    assert user.keycloak_username == "org.member"

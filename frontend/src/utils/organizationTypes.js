@@ -17,10 +17,7 @@ const normalizeOrgTypeKey = (orgType) => {
 
 // Joined label for an organization's full type list (#4565 multi-type orgs)
 export const getOrgTypesDisplayLabel = (orgTypes) =>
-  (orgTypes || [])
-    .map(getOrgTypeDisplayLabel)
-    .filter(Boolean)
-    .join(', ')
+  (orgTypes || []).map(getOrgTypeDisplayLabel).filter(Boolean).join(', ')
 
 export const getOrgTypeDisplayLabel = (orgType) => {
   const key = normalizeOrgTypeKey(orgType)

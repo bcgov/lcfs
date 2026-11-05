@@ -133,6 +133,7 @@
     "typeTotal": "{{type}} total",
     "totalInOut": "Total in/out",
     "assessedBalance": "{{year}} Assessed balance",
+    "nonAssessment": "Non-assessment",
     "errorLoading": "Unable to load the credit ledger for this period."
   },
   "availableCreditBalanceFootnote": "* The Available Compliance Unit Balance is the number of compliance units in an organization's balance that are available for use in achieving compliance within a specific period. It reflects the compliance units the organization had in their balance as of the March 31st reporting deadline. Compliance units generated in future periods cannot be used for prior years, and future debit obligations (such as transfers out or debit obligations from future compliance reports) will be subtracted from available balances in prior years.",
@@ -182,8 +183,8 @@
       "deliberate": "Whether contravention was deliberate",
       "effortsToCorrect": "Efforts taken to correct",
       "economicBenefitDerived": "Economic benefit derived from contravention",
-      "effortsToPreventRecurrence": "Efforts to prevent reccurrence",
-      "notes": "Any additonal factors (notes)",
+      "effortsToPreventRecurrence": "Efforts to prevent recurrence",
+      "notes": "Any additional factors (notes)",
       "penaltyAmount": "Amount ($CAD)",
       "dueDate": "Due date",
       "invoiced": "Invoiced",

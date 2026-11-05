@@ -1,5 +1,5 @@
 import { act, screen, fireEvent } from '@testing-library/react'
-import { describe, expect, beforeEach, vi } from 'vitest'
+import { describe, expect, beforeEach, vi } from 'vite-plus/test'
 import { FuelSupplySummary } from '../FuelSupplySummary'
 import { test } from '@/tests/utils/fixtures'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'

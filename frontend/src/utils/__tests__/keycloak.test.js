@@ -1,5 +1,5 @@
 // utils/__tests__/keycloak.test.js
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vite-plus/test'
 
 // Mock Keycloak class first
 vi.mock('keycloak-js', () => {
@@ -27,7 +27,7 @@ vi.mock('keycloak-js', () => {
 })
 
 // Import the module after the mocks are set up
-// eslint-disable-next-line import/first
+// oxlint-disable-next-line import/first
 import { getKeycloak, logout } from '../keycloak'
 
 describe('Keycloak Utils', () => {
@@ -50,7 +50,7 @@ describe('Keycloak Utils', () => {
     mockClearTimeout = vi.fn()
     vi.spyOn(global, 'setTimeout').mockImplementation(mockSetTimeout)
     vi.spyOn(global, 'clearTimeout').mockImplementation(mockClearTimeout)
-    // eslint-disable-next-line no-proto
+    // oxlint-disable-next-line no-proto
     vi.spyOn(window.localStorage.__proto__, 'removeItem').mockImplementation(
       () => {}
     )

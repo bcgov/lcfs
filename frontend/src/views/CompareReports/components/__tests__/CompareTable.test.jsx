@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { vi } from 'vitest'
+import { vi } from 'vite-plus/test'
 import CompareTable from '@/views/CompareReports/components/CompareTable'
 import { test } from '@/tests/utils/fixtures'
 
@@ -539,7 +539,7 @@ describe('CompareTable Component', () => {
       // must NOT appear as '0' in the DOM (unlike ungreyed null cells which show '0')
       const cells = screen.getAllByRole('cell')
       // Collect all cell text content
-      cells.map((c) => c.textContent);
+      cells.map((c) => c.textContent)
       // The only '0' values come from non-greyed row nulls; the greyed row has 3 empty cells
       const emptyCells = cells.filter((c) => c.textContent === '')
       expect(emptyCells.length).toBeGreaterThan(0)

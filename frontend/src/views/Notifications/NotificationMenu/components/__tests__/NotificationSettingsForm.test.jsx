@@ -1,5 +1,5 @@
-import { vi, describe, it, expect, beforeEach } from 'vitest'
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { vi, describe, it, expect, beforeEach } from 'vite-plus/test'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import NotificationSettingsForm from '../NotificationSettingsForm'
 import { ThemeProvider } from '@mui/material/styles'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -35,8 +35,7 @@ vi.mock('@/constants/notificationTypes', () => ({
   notificationTypes: {
     notificationType1: 'NOTIFICATION_TYPE_1',
     notificationType2: 'NOTIFICATION_TYPE_2',
-    PUBLIC__CREDIT_MARKET_MONTHLY_REPORT:
-      'PUBLIC__CREDIT_MARKET_MONTHLY_REPORT'
+    PUBLIC__CREDIT_MARKET_MONTHLY_REPORT: 'PUBLIC__CREDIT_MARKET_MONTHLY_REPORT'
   },
   notificationChannels: {
     EMAIL: 'EMAIL',
@@ -94,7 +93,7 @@ describe('NotificationSettingsForm Component', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    
+
     // Reset mock implementations
     mockCreateSubscription.mockResolvedValue()
     mockDeleteSubscription.mockResolvedValue()
@@ -109,7 +108,10 @@ describe('NotificationSettingsForm Component', () => {
       ...overrides
     }
 
-    vi.spyOn(useNotificationsHook, 'useNotificationSubscriptions').mockReturnValue({
+    vi.spyOn(
+      useNotificationsHook,
+      'useNotificationSubscriptions'
+    ).mockReturnValue({
       data: defaults.subscriptionsData,
       isLoading: defaults.isLoading
     })
@@ -122,7 +124,10 @@ describe('NotificationSettingsForm Component', () => {
       mutateAsync: mockDeleteSubscription
     })
 
-    vi.spyOn(useNotificationsHook, 'useUpdateNotificationsEmail').mockReturnValue({
+    vi.spyOn(
+      useNotificationsHook,
+      'useUpdateNotificationsEmail'
+    ).mockReturnValue({
       mutateAsync: mockUpdateEmail
     })
   }
@@ -130,7 +135,7 @@ describe('NotificationSettingsForm Component', () => {
   describe('Basic Rendering Tests', () => {
     it('renders correctly with required props', () => {
       setupDefaultMocks()
-      
+
       customRender(<NotificationSettingsForm categories={mockCategories} />)
 
       expect(screen.getByText('Configure Notifications')).toBeInTheDocument()
@@ -143,20 +148,24 @@ describe('NotificationSettingsForm Component', () => {
 
     it('shows loading state when subscriptions are loading', () => {
       setupDefaultMocks({ isLoading: true })
-      
+
       customRender(<NotificationSettingsForm categories={mockCategories} />)
 
-      expect(screen.getByText('Loading notification settings...')).toBeInTheDocument()
-      expect(screen.queryByText('Configure Notifications')).not.toBeInTheDocument()
+      expect(
+        screen.getByText('Loading notification settings...')
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByText('Configure Notifications')
+      ).not.toBeInTheDocument()
     })
 
     it('renders without email field when showEmailField is false', () => {
       setupDefaultMocks()
-      
+
       customRender(
-        <NotificationSettingsForm 
-          categories={mockCategories} 
-          showEmailField={false} 
+        <NotificationSettingsForm
+          categories={mockCategories}
+          showEmailField={false}
         />
       )
 
@@ -166,18 +175,18 @@ describe('NotificationSettingsForm Component', () => {
 
     it('renders checkboxes with correct initial states from subscription data', () => {
       setupDefaultMocks()
-      
+
       customRender(<NotificationSettingsForm categories={mockCategories} />)
 
       const checkboxes = screen.getAllByRole('checkbox')
-      
+
       // Should have 4 checkboxes (2 types × 2 channels)
       expect(checkboxes).toHaveLength(4)
     })
 
     it('handles empty subscription data', () => {
       setupDefaultMocks({ subscriptionsData: [] })
-      
+
       customRender(<NotificationSettingsForm categories={mockCategories} />)
 
       expect(screen.getByText('Configure Notifications')).toBeInTheDocument()
@@ -186,7 +195,7 @@ describe('NotificationSettingsForm Component', () => {
 
     it('handles null subscription data', () => {
       setupDefaultMocks({ subscriptionsData: null })
-      
+
       customRender(<NotificationSettingsForm categories={mockCategories} />)
 
       expect(screen.getByText('Configure Notifications')).toBeInTheDocument()
@@ -197,13 +206,13 @@ describe('NotificationSettingsForm Component', () => {
   describe('Interaction Tests', () => {
     it('can interact with checkboxes', async () => {
       setupDefaultMocks({ subscriptionsData: [] })
-      
+
       await act(async () => {
         customRender(<NotificationSettingsForm categories={mockCategories} />)
       })
 
       const checkboxes = screen.getAllByRole('checkbox')
-      
+
       // Should be able to click checkbox without error
       await act(async () => {
         fireEvent.click(checkboxes[0])
@@ -212,11 +221,11 @@ describe('NotificationSettingsForm Component', () => {
 
     it('can interact with email form when present', async () => {
       setupDefaultMocks()
-      
+
       await act(async () => {
         customRender(
-          <NotificationSettingsForm 
-            categories={mockCategories} 
+          <NotificationSettingsForm
+            categories={mockCategories}
             showEmailField={true}
             initialEmail="test@example.com"
           />
@@ -224,7 +233,7 @@ describe('NotificationSettingsForm Component', () => {
       })
 
       const saveButton = screen.getByText('Save')
-      
+
       // Should be able to click save button without error
       await act(async () => {
         fireEvent.click(saveButton)
@@ -236,7 +245,7 @@ describe('NotificationSettingsForm Component', () => {
     it('handles categories with no notifications', () => {
       const emptyCat = { empty: { title: 'empty.title' } }
       setupDefaultMocks()
-      
+
       customRender(<NotificationSettingsForm categories={emptyCat} />)
 
       expect(screen.getByText('Configure Notifications')).toBeInTheDocument()
@@ -250,7 +259,7 @@ describe('NotificationSettingsForm Component', () => {
         }
       }
       setupDefaultMocks()
-      
+
       customRender(<NotificationSettingsForm categories={invalidCategories} />)
 
       expect(screen.getByText('Configure Notifications')).toBeInTheDocument()
@@ -258,11 +267,11 @@ describe('NotificationSettingsForm Component', () => {
 
     it('handles different notification types and channels', () => {
       setupDefaultMocks({ subscriptionsData: [] })
-      
+
       customRender(<NotificationSettingsForm categories={mockCategories} />)
 
       const checkboxes = screen.getAllByRole('checkbox')
-      
+
       // Should have checkboxes for different combinations
       expect(checkboxes).toHaveLength(4)
     })

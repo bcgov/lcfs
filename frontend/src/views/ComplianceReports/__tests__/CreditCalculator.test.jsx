@@ -1,6 +1,6 @@
 import 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { afterEach, vi } from 'vitest'
+import { afterEach, vi } from 'vite-plus/test'
 import {
   Controller,
   FormProvider,
@@ -74,11 +74,7 @@ vi.mock('@/hooks/useCalculator', () => ({
 
 vi.mock('@/components/BCForm/BCFormRadio', async () => {
   const actual = await vi.importActual('@/components/BCForm/BCFormRadio')
-  const MockRadio = ({
-  name,
-  label,
-  options = []
-}) => {
+  const MockRadio = ({ name, label, options = [] }) => {
     const { control, getValues } = useFormContext()
 
     const getTestId = (option, index) => {
@@ -99,10 +95,7 @@ vi.mock('@/components/BCForm/BCFormRadio', async () => {
         control={control}
         defaultValue={getValues(name) ?? ''}
         render={({ field: { value, onChange } }) => (
-          <div
-            data-test={`${name}-radio-group`}
-            className="MuiRadioGroup-root"
-          >
+          <div data-test={`${name}-radio-group`} className="MuiRadioGroup-root">
             {label && (
               <span data-test={`${name}-label`} data-testid={`${name}-label`}>
                 {label}
@@ -621,9 +614,7 @@ describe('CreditCalculator', () => {
     it('displays Hydrogen energy density per kilogram', async () => {
       vi.mocked(useGetFuelTypeList).mockReturnValue({
         data: {
-          data: [
-            { fuelType: 'Hydrogen', fuelCategoryId: 1, fuelTypeId: 3 }
-          ]
+          data: [{ fuelType: 'Hydrogen', fuelCategoryId: 1, fuelTypeId: 3 }]
         },
         isLoading: false
       })
@@ -734,12 +725,18 @@ describe('CreditCalculator', () => {
         data: fuelTypeId === 1 ? gasolineOptions : mockFuelOptions,
         isLoading: false
       }))
-      vi.mocked(useCalculateComplianceUnits).mockImplementation(({ fuelTypeId }) => ({
-        data: fuelTypeId === 1 ? gasolineResults : dieselResults.current,
-        refetch
-      }))
+      vi.mocked(useCalculateComplianceUnits).mockImplementation(
+        ({ fuelTypeId }) => ({
+          data: fuelTypeId === 1 ? gasolineResults : dieselResults.current,
+          refetch
+        })
+      )
 
-      const calculator = <TestWrapper><CreditCalculator /></TestWrapper>
+      const calculator = (
+        <TestWrapper>
+          <CreditCalculator />
+        </TestWrapper>
+      )
       const { rerender } = render(calculator)
       fireEvent.click(screen.getByTestId('fuelCategory1'))
       fireEvent.click(screen.getByTestId('Gasoline'))
@@ -752,7 +749,9 @@ describe('CreditCalculator', () => {
       refetch.mockClear()
       fireEvent.click(screen.getByTestId('Diesel'))
 
-      const energyContentValue = screen.getByText('EC - Energy content:').nextElementSibling
+      const energyContentValue = screen.getByText(
+        'EC - Energy content:'
+      ).nextElementSibling
       expect(energyContentValue).toBeEmptyDOMElement()
       expect(document.getElementById('complianceUnits')).toHaveValue('')
       expect(screen.queryByText('1,000,000 MJ')).not.toBeInTheDocument()
@@ -763,7 +762,11 @@ describe('CreditCalculator', () => {
       dieselResults.current = {
         data: { complianceUnits: 250, energyContent: 2000000 }
       }
-      rerender(<TestWrapper><CreditCalculator /></TestWrapper>)
+      rerender(
+        <TestWrapper>
+          <CreditCalculator />
+        </TestWrapper>
+      )
       expect(energyContentValue).toBeEmptyDOMElement()
       expect(document.getElementById('complianceUnits')).toHaveValue('')
 

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vite-plus/test'
 import { suppressKeyboardEvent, isEqual } from '../eventHandlers'
 
 // Helper to build a basic ag-cell DOM structure

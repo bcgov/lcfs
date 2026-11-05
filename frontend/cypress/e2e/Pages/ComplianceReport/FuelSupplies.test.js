@@ -1,4 +1,4 @@
-/* eslint-disable cypress/unsafe-to-chain-command */
+/* oxlint-disable cypress/unsafe-to-chain-command */
 import { When, Then } from '@badeball/cypress-cucumber-preprocessor'
 
 const SELECTORS = {
@@ -14,7 +14,10 @@ const FUEL_SUPPLY_CHANGELOG_GROUP_UUID = 'mock-fuel-supply-group'
  */
 const saveAndReturn = () => {
   cy.get(SELECTORS.saveButton).click()
-  cy.url({ timeout: 30000 }).should('match', /\/compliance-reporting\/\d+\/\d+$/)
+  cy.url({ timeout: 30000 }).should(
+    'match',
+    /\/compliance-reporting\/\d+\/\d+$/
+  )
 }
 
 /**
@@ -235,27 +238,34 @@ When(
 // ---------------------------------------------------------------------------
 
 Then('the fuel supply summary includes fuel type {string}', (fuelType) => {
-  cy.get(SELECTORS.scheduleLink, { timeout: 20000 }).should('be.visible').click()
+  cy.get(SELECTORS.scheduleLink, { timeout: 20000 })
+    .should('be.visible')
+    .click()
   cy.contains('[col-id="fuelType"]', fuelType, { timeout: 30000 })
     .scrollIntoView()
     .should('exist')
 })
 
-Then('the fuel supply summary includes quantity {string}', (formattedQuantity) => {
-  cy.get(SELECTORS.scheduleLink, { timeout: 20000 }).should('be.visible').click()
-  // Assert quantity on the same row as the created fuel type.
-  cy.get('@lastFuelSupplyFuelType').then((fuelType) => {
-    cy.contains('div.ag-cell[col-id="fuelType"]', fuelType, {
-      timeout: 30000
-    })
-      .closest('div.ag-row')
-      .within(() => {
-        cy.contains('[col-id="quantity"]', formattedQuantity, {
-          timeout: 30000
-        }).should('exist')
+Then(
+  'the fuel supply summary includes quantity {string}',
+  (formattedQuantity) => {
+    cy.get(SELECTORS.scheduleLink, { timeout: 20000 })
+      .should('be.visible')
+      .click()
+    // Assert quantity on the same row as the created fuel type.
+    cy.get('@lastFuelSupplyFuelType').then((fuelType) => {
+      cy.contains('div.ag-cell[col-id="fuelType"]', fuelType, {
+        timeout: 30000
       })
-  })
-})
+        .closest('div.ag-row')
+        .within(() => {
+          cy.contains('[col-id="quantity"]', formattedQuantity, {
+            timeout: 30000
+          }).should('exist')
+        })
+    })
+  }
+)
 
 Then('the fuel supply changelog is shown', () => {
   cy.wait('@mockFuelSupplyChangelog', { timeout: 30000 })

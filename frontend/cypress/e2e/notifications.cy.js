@@ -92,22 +92,18 @@ describe('Notifications view flows', () => {
 
     cy.get(emailToggleSelector).should('be.checked')
     cy.get(emailToggleSelector).uncheck({ force: true })
-    cy.wait('@mutateSubscription')
-      .its('request.body')
-      .should('deep.equal', {
-        notificationChannelSubscriptionId: 456,
-        deleted: true
-      })
+    cy.wait('@mutateSubscription').its('request.body').should('deep.equal', {
+      notificationChannelSubscriptionId: 456,
+      deleted: true
+    })
     cy.wait('@getSubscriptions')
 
     cy.get(emailToggleSelector).check({ force: true })
-    cy.wait('@mutateSubscription')
-      .its('request.body')
-      .should('deep.equal', {
-        notificationTypeName: 'IDIR_ANALYST__TRANSFER__SUBMITTED_FOR_REVIEW',
-        notificationChannelName: 'EMAIL',
-        isEnabled: true
-      })
+    cy.wait('@mutateSubscription').its('request.body').should('deep.equal', {
+      notificationTypeName: 'IDIR_ANALYST__TRANSFER__SUBMITTED_FOR_REVIEW',
+      notificationChannelName: 'EMAIL',
+      isEnabled: true
+    })
     cy.wait('@getSubscriptions')
   })
 })

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vite-plus/test'
 import { useUserStore, type User } from '../useUserStore'
 import {
   useLoadingStore,
@@ -66,7 +66,7 @@ describe('Store Integration Tests', () => {
     it('should coordinate user login with loading states', () => {
       const userHook = getStoreResult(useUserStore)
       const loadingHook = getStoreResult(useLoadingStore)
-      
+
       const mockUser = {
         id: 1,
         name: 'Test User',
@@ -78,10 +78,10 @@ describe('Store Integration Tests', () => {
       run(() => {
         // Start loading during login
         loadingHook.result.current.setLoading(true)
-        
+
         // Set user after "authentication"
         userHook.result.current.setUser(mockUser)
-        
+
         // Stop loading after login complete
         loadingHook.result.current.setLoading(false)
       })
@@ -93,7 +93,7 @@ describe('Store Integration Tests', () => {
     it('should handle logout flow with loading coordination', () => {
       const userHook = getStoreResult(useUserStore)
       const loadingHook = getStoreResult(useLoadingStore)
-      
+
       const mockUser = {
         id: 1,
         name: 'Test User',
@@ -110,10 +110,10 @@ describe('Store Integration Tests', () => {
       run(() => {
         // Start loading during logout
         loadingHook.result.current.setLoading(true)
-        
+
         // Clear user
         userHook.result.current.setUser(null)
-        
+
         // Stop loading after logout complete
         loadingHook.result.current.setLoading(false)
       })
@@ -127,14 +127,14 @@ describe('Store Integration Tests', () => {
     it('should associate current user with report operations', () => {
       const userHook = getStoreResult(useUserStore)
       const reportHook = getStoreResult(useComplianceReportStore)
-      
+
       const mockUser = {
         id: 1,
         name: 'Report Author',
         email: 'author@example.com',
         role: 'ANALYST'
       }
-      
+
       const mockReport = {
         report: {
           id: 1,
@@ -151,7 +151,7 @@ describe('Store Integration Tests', () => {
       run(() => {
         // Set current user
         userHook.result.current.setUser(mockUser)
-        
+
         // Set report associated with user
         reportHook.result.current.setCurrentReport(mockReport)
         reportHook.result.current.cacheReport(1, mockReport)
@@ -172,10 +172,10 @@ describe('Store Integration Tests', () => {
     it('should handle user switching with report context preservation', () => {
       const userHook = getStoreResult(useUserStore)
       const reportHook = getStoreResult(useComplianceReportStore)
-      
+
       const user1 = { id: 1, name: 'User 1', role: 'ANALYST' }
       const user2 = { id: 2, name: 'User 2', role: 'GOVERNMENT' }
-      
+
       const report1 = {
         report: { id: 1, title: 'Report 1', authorId: user1.id }
       }
@@ -212,7 +212,7 @@ describe('Store Integration Tests', () => {
     it('should coordinate loading states with report operations', () => {
       const loadingHook = getStoreResult(useLoadingStore)
       const reportHook = getStoreResult(useComplianceReportStore)
-      
+
       const mockReport = {
         report: { id: 1, title: 'Loading Report', status: 'DRAFT' }
       }
@@ -230,7 +230,7 @@ describe('Store Integration Tests', () => {
         // "Fetch" and set report
         reportHook.result.current.setCurrentReport(mockReport)
         reportHook.result.current.cacheReport(1, mockReport)
-        
+
         // Stop loading
         loadingHook.result.current.setLoading(false)
       })
@@ -243,7 +243,7 @@ describe('Store Integration Tests', () => {
     it('should handle complex loading states for multiple report operations', () => {
       const loadingHook = getStoreResult(useLoadingStore)
       const reportHook = getStoreResult(useComplianceReportStore)
-      
+
       const reports = [
         { report: { id: 1, title: 'Report 1' } },
         { report: { id: 2, title: 'Report 2' } },
@@ -264,7 +264,7 @@ describe('Store Integration Tests', () => {
       reports.forEach((report, index) => {
         run(() => {
           reportHook.result.current.cacheReport(report.report.id, report)
-          
+
           // Update loading progress
           loadingHook.result.current.setLoading({
             isLoading: index < 2,
@@ -282,8 +282,10 @@ describe('Store Integration Tests', () => {
       expect(loadingDetails.isLoading).toBe(false)
       expect(loadingDetails.completed).toBe(3)
       expect(reportHook.result.current.reportCache.size).toBe(3)
-      reports.forEach(report => {
-        expect(reportHook.result.current.isReportCached(report.report.id)).toBe(true)
+      reports.forEach((report) => {
+        expect(reportHook.result.current.isReportCached(report.report.id)).toBe(
+          true
+        )
       })
     })
   })
@@ -293,14 +295,14 @@ describe('Store Integration Tests', () => {
       const userHook = getStoreResult(useUserStore)
       const loadingHook = getStoreResult(useLoadingStore)
       const reportHook = getStoreResult(useComplianceReportStore)
-      
+
       const mockUser = {
         id: 1,
         name: 'Integrated User',
         email: 'integrated@example.com',
         role: 'ANALYST'
       }
-      
+
       const userReports = [
         { report: { id: 1, title: 'User Report 1', authorId: 1 } },
         { report: { id: 2, title: 'User Report 2', authorId: 1 } }
@@ -328,13 +330,13 @@ describe('Store Integration Tests', () => {
 
       run(() => {
         // Load user's reports
-        userReports.forEach(report => {
+        userReports.forEach((report) => {
           reportHook.result.current.cacheReport(report.report.id, report)
         })
-        
+
         // Set first report as current
         reportHook.result.current.setCurrentReport(userReports[0])
-        
+
         // Stop loading
         loadingHook.result.current.setLoading(false)
       })
@@ -345,9 +347,9 @@ describe('Store Integration Tests', () => {
       expect(loadingHook.result.current.loading).toBe(false)
       expect(reportHook.result.current.getCurrentReportId()).toBe(1)
       expect(reportHook.result.current.reportCache.size).toBe(2)
-      
+
       // Verify user owns the reports
-      userReports.forEach(report => {
+      userReports.forEach((report) => {
         const cachedReport = getCachedReport(
           reportHook.result.current.getCachedReport(report.report.id)
         )
@@ -359,7 +361,7 @@ describe('Store Integration Tests', () => {
       const userHook = getStoreResult(useUserStore)
       const loadingHook = getStoreResult(useLoadingStore)
       const reportHook = getStoreResult(useComplianceReportStore)
-      
+
       // Set up authenticated state with reports
       const mockUser = { id: 1, name: 'Test User', role: 'ANALYST' }
       const mockReport = { report: { id: 1, title: 'User Report' } }
@@ -374,13 +376,13 @@ describe('Store Integration Tests', () => {
       run(() => {
         // Start logout loading
         loadingHook.result.current.setLoading(true)
-        
+
         // Clear user
         userHook.result.current.setUser(null)
-        
+
         // Clear current report (but keep cache for demo)
         reportHook.result.current.clearCurrentReport()
-        
+
         // Complete logout
         loadingHook.result.current.setLoading(false)
       })
@@ -401,7 +403,7 @@ describe('Store Integration Tests', () => {
       run(() => {
         // Set user first
         userHook.result.current.setUser({ id: 1, name: 'User' })
-        
+
         // Start loading reports
         loadingHook.result.current.setLoading(true)
       })
@@ -438,7 +440,7 @@ describe('Store Integration Tests', () => {
         for (let i = 0; i < 50; i++) {
           userHook.result.current.setUser({ id: i, name: `User ${i}` })
           loadingHook.result.current.setLoading(i % 2 === 0)
-          
+
           if (i % 5 === 0) {
             const report = { report: { id: i, title: `Report ${i}` } }
             reportHook.result.current.cacheReport(i, report)
@@ -452,7 +454,7 @@ describe('Store Integration Tests', () => {
 
       // Should complete rapidly
       expect(duration).toBeLessThan(100)
-      
+
       // Final state should be consistent
       const storedUser = getUser(userHook.result.current.user)
       expect(storedUser.id).toBe(49)
@@ -479,7 +481,7 @@ describe('Store Integration Tests', () => {
       })
 
       // All hook instances should see the same state
-      hooks.forEach(hook => {
+      hooks.forEach((hook) => {
         expect(hook.user.result.current.user).toEqual(testUser)
         expect(hook.loading.result.current.loading).toBe(true)
         expect(hook.report.result.current.currentReport).toEqual(testReport)

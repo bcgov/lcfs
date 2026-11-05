@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 import { sanitizeCommentHtml } from '../sanitizeCommentHtml'
 
 describe('sanitizeCommentHtml', () => {
   it('keeps the rich text the comment editor produces', () => {
-    const html = '<p><strong>bold</strong> and <em>italic</em></p><ul><li>item</li></ul>'
+    const html =
+      '<p><strong>bold</strong> and <em>italic</em></p><ul><li>item</li></ul>'
     expect(sanitizeCommentHtml(html)).toContain('<strong>bold</strong>')
     expect(sanitizeCommentHtml(html)).toContain('<li>item</li>')
   })

@@ -1,5 +1,5 @@
 import { screen, fireEvent, act, waitFor } from '@testing-library/react'
-import { describe, expect, vi } from 'vitest'
+import { describe, expect, vi } from 'vite-plus/test'
 import { RoleSwitcher } from '../RoleSwitcher'
 import { useUpdateUser } from '@/hooks/useUser'
 import { idirRoleOptions } from '@/views/Users/AddEditUser/_schema'
@@ -282,7 +282,8 @@ describe('RoleSwitcher', () => {
 
     const onSuccess = hookOptions?.onSuccess
     expect(onSuccess).toBeDefined()
-    if (!onSuccess) throw new Error('useUpdateUser onSuccess option was missing')
+    if (!onSuccess)
+      throw new Error('useUpdateUser onSuccess option was missing')
     act(() => {
       onSuccess(
         {},

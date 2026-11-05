@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, vi } from 'vitest'
+import { describe, expect, it, beforeEach, vi } from 'vite-plus/test'
 import {
   isEligibleRenewableFuel,
   isFuelCodeCanadian,
@@ -66,15 +66,15 @@ describe('renewableClaimEligibility utilities', () => {
 
   describe('isFuelCodeCanadian', () => {
     it('returns true when fuel code matches Canadian production', () => {
-      expect(
-        isFuelCodeCanadian('Biodiesel', 'C-123', mockOptionsData)
-      ).toBe(true)
+      expect(isFuelCodeCanadian('Biodiesel', 'C-123', mockOptionsData)).toBe(
+        true
+      )
     })
 
     it('returns false when production country is not Canadian', () => {
-      expect(
-        isFuelCodeCanadian('Biodiesel', 'C-999', mockOptionsData)
-      ).toBe(false)
+      expect(isFuelCodeCanadian('Biodiesel', 'C-999', mockOptionsData)).toBe(
+        false
+      )
     })
   })
 
@@ -179,10 +179,7 @@ describe('renewableClaimEligibility utilities', () => {
         shouldShowIsQ1Supplied: false
       })
 
-      expect(setColumnsVisible).toHaveBeenCalledWith(
-        ['isCanadaProduced'],
-        true
-      )
+      expect(setColumnsVisible).toHaveBeenCalledWith(['isCanadaProduced'], true)
       expect(columnVisibilityState.isCanadaProduced).toBe(true)
 
       applyRenewableClaimColumnVisibility(gridRef, {
@@ -190,10 +187,7 @@ describe('renewableClaimEligibility utilities', () => {
         shouldShowIsQ1Supplied: true
       })
 
-      expect(setColumnsVisible).toHaveBeenCalledWith(
-        ['isQ1Supplied'],
-        true
-      )
+      expect(setColumnsVisible).toHaveBeenCalledWith(['isQ1Supplied'], true)
       expect(columnVisibilityState.isQ1Supplied).toBe(true)
     })
 

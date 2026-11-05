@@ -47,12 +47,12 @@ export const UserDetailsCard = ({ addMode = false, userType = 'idir' }) => {
   const { data: currentUser, hasRoles } = useCurrentUser()
 
   const { data, isLoading, isError, error, refetch } = hasRoles(roles.supplier)
-    ? // eslint-disable-next-line react-hooks/rules-of-hooks
+    ? // oxlint-disable-next-line react/rules-of-hooks
       useOrganizationUser(
         orgID || currentUser?.organization.organizationId,
         userID
       )
-    : // eslint-disable-next-line react-hooks/rules-of-hooks
+    : // oxlint-disable-next-line react/rules-of-hooks
       useUser(parseInt(userID))
 
   const canEdit = hasRoles(roles.administrator) || hasRoles(roles.manage_users)

@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react'
-import { describe, expect, vi, beforeEach } from 'vitest'
+import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 
 import { AgreementEditForm } from '../AgreementEditForm'
 import { test } from '@/tests/utils/fixtures'
@@ -20,6 +20,20 @@ vi.mock('@/hooks/useInitiativeAgreements', () => ({
   }
 }))
 
+const mockUseOrganizationNames = vi.fn()
+vi.mock('@/hooks/useOrganizations', () => ({
+  useOrganizationNames: (...args) => {
+    mockUseOrganizationNames(...args)
+    return {
+      data: [
+        { organizationId: 7, name: 'Second Org' },
+        { organizationId: 3, name: 'First Org' }
+      ],
+      isLoading: false
+    }
+  }
+}))
+
 const agreement = {
   initiativeAgreementId: 7,
   iaCode: 'IA-26001',
@@ -36,6 +50,12 @@ const field = (name) => screen.getByTestId(name)
 const change = (name, value) =>
   fireEvent.change(field(name), { target: { value } })
 const save = () => fireEvent.click(screen.getByTestId('save-agreement'))
+const pickOrganization = (name) => {
+  const input = field('agreement-organization-picker')
+  fireEvent.mouseDown(input)
+  fireEvent.change(input, { target: { value: name.split(' ')[0] } })
+  fireEvent.click(screen.getByText(name))
+}
 
 describe('AgreementEditForm', () => {
   const onCancel = vi.fn()
@@ -76,6 +96,49 @@ describe('AgreementEditForm', () => {
     expect(screen.getByTestId('agreement-organization')).toHaveTextContent(
       'LCFS Org 1'
     )
+    // Once set, the organization stays: no picker, and no list is fetched.
+    expect(
+      screen.queryByTestId('agreement-organization-picker')
+    ).not.toBeInTheDocument()
+    expect(mockUseOrganizationNames).not.toHaveBeenCalled()
+  })
+
+  test('fills in an organization the agreement was saved without (#5186)', async ({
+    render,
+    app
+  }) => {
+    mockUpdate.mockImplementation((_payload, handlers) => handlers.onSuccess())
+    renderForm(render, app, { agreement: { ...agreement, organization: null } })
+
+    expect(
+      screen.queryByTestId('agreement-organization')
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByText('initiativeAgreement:edit.organizationHint')
+    ).toBeInTheDocument()
+    expect(mockUseOrganizationNames).toHaveBeenCalledWith(null, {
+      orgFilter: 'all'
+    })
+    pickOrganization('First Org')
+    save()
+
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith('IA-26001'))
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ organizationId: 3 }),
+      expect.anything()
+    )
+  })
+
+  test('leaves the organization unset when none is picked', async ({
+    render,
+    app
+  }) => {
+    renderForm(render, app, { agreement: { ...agreement, organization: null } })
+
+    save()
+
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalled())
+    expect(mockUpdate.mock.calls[0][0]).not.toHaveProperty('organizationId')
   })
 
   test('saves the edited agreement and reports the code', async ({

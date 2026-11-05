@@ -4,7 +4,11 @@ import BCButton from '@/components/BCButton'
 import { DownloadButton } from '@/components/DownloadButton'
 import BCTypography from '@/components/BCTypography'
 import { ROUTES } from '@/routes/routes'
-import { faCheck, faBan, faSquareCheck } from '@fortawesome/free-solid-svg-icons'
+import {
+  faCheck,
+  faBan,
+  faSquareCheck
+} from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import Box from '@mui/material/Box'
 import Grid from '@mui/material/Grid'
@@ -31,8 +35,6 @@ import {
 
 const defaultSortModel = [{ field: 'updateDate', direction: 'desc' }]
 
-
-
 const initialPaginationOptions = {
   page: 1,
   size: 25,
@@ -53,9 +55,7 @@ export const ChargingEquipment = () => {
   const gridRef = useRef()
   const alertRef = useRef(null)
   const isProgrammaticSelection = useRef(false)
-  const {
-  hasAnyRole
-} = useCurrentUser()
+  const { hasAnyRole } = useCurrentUser()
   const isIDIR = hasAnyRole(...govRoles)
 
   const [searchParams] = useSearchParams()
@@ -98,9 +98,7 @@ export const ChargingEquipment = () => {
         // Multi-type orgs (#4565): include the org if any of its types is
         // not excluded; fall back to the legacy single type.
         const orgTypeKeys = (
-          org?.orgTypes?.length
-            ? org.orgTypes
-            : [org?.orgType || org?.org_type]
+          org?.orgTypes?.length ? org.orgTypes : [org?.orgType || org?.org_type]
         )
           .filter(Boolean)
           .map((key) => String(key).toLowerCase())
@@ -228,11 +226,9 @@ export const ChargingEquipment = () => {
   }, [paginationOptions, isIDIR, selectedOrg.id])
 
   const equipmentQuery = useChargingEquipment(enhancedPaginationOptions)
-  const {
-  isError,
-  refetch
-} = equipmentQuery
-  const { mutateAsync: downloadChargingEquipment } = useDownloadChargingEquipment()
+  const { isError, refetch } = equipmentQuery
+  const { mutateAsync: downloadChargingEquipment } =
+    useDownloadChargingEquipment()
 
   const {
     submitEquipment,
@@ -648,7 +644,6 @@ export const ChargingEquipment = () => {
               ) : (
                 <Box />
               )}
-
             </Box>
 
             <BCBox sx={{ width: '100%' }}>

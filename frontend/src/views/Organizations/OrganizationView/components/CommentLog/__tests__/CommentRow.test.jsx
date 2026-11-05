@@ -1,7 +1,7 @@
 import { test } from '@/tests/utils/fixtures'
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, vi } from 'vitest'
+import { beforeEach, describe, expect, vi } from 'vite-plus/test'
 import { useDownloadDocument } from '@/hooks/useDocuments'
 
 import { CommentRow } from '../CommentRow'

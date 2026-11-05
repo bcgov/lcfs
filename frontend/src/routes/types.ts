@@ -8,8 +8,10 @@ export interface RouteHandle {
   maxWidth?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | false
 }
 
-export interface AppRouteObject
-  extends Omit<RouteObject, 'handle' | 'children'> {
+export interface AppRouteObject extends Omit<
+  RouteObject,
+  'handle' | 'children'
+> {
   name?: string
   key?: string
   handle?: RouteHandle

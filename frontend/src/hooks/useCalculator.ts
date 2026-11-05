@@ -120,7 +120,8 @@ export const useCalculateComplianceUnits = ({
       !!fuelCategoryId &&
       !!fuelTypeId &&
       !!(
-        endUseId || parseInt(compliancePeriod as string) >= LEGISLATION_TRANSITION_YEAR
+        endUseId ||
+        parseInt(compliancePeriod as string) >= LEGISLATION_TRANSITION_YEAR
       ) &&
       !!quantity
   })
@@ -185,7 +186,8 @@ export const useCalculateQuantityFromComplianceUnits = ({
       !!fuelCategoryId &&
       !!fuelTypeId &&
       !!(
-        endUseId || parseInt(compliancePeriod as string) >= LEGISLATION_TRANSITION_YEAR
+        endUseId ||
+        parseInt(compliancePeriod as string) >= LEGISLATION_TRANSITION_YEAR
       ) &&
       !!complianceUnits
   })

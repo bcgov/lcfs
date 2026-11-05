@@ -400,7 +400,12 @@ async def test_delete_fuel_supply_success(
     mock_repo.get_latest_fuel_supply_by_group_uuid.assert_awaited_once_with(
         fe_data.group_uuid
     )
-    mock_repo.delete_fuel_supply.assert_awaited_once()
+    # The row is deleted only within the validated report and its group.
+    mock_repo.delete_fuel_supply.assert_awaited_once_with(
+        fuel_supply_id=fe_data.fuel_supply_id,
+        compliance_report_id=fe_data.compliance_report_id,
+        group_uuid=fe_data.group_uuid,
+    )
 
 
 @pytest.mark.anyio

@@ -1,4 +1,4 @@
-import { expect, vi } from 'vitest'
+import { expect, vi } from 'vite-plus/test'
 import { makeProvider, test, type ProviderValue } from '../fixtures'
 
 const mswNodeLoaded = vi.hoisted(() => vi.fn())
@@ -102,4 +102,15 @@ test('does not initialize MSW unless the server fixture is requested', () => {
 test('initializes MSW when the server fixture is requested', ({ server }) => {
   expect(server).toBeDefined()
   expect(mswNodeLoaded).toHaveBeenCalledTimes(1)
+  for (const method of ['head', 'options', 'all'] as const) {
+    server.httpOverwrite(method, '/fixture-method', () => undefined)
+    expect(setupServer.mock.results[0].value.use).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        info: expect.objectContaining({
+          method: method === 'all' ? expect.any(RegExp) : method.toUpperCase(),
+          path: 'http://localhost:8000/api/fixture-method'
+        })
+      })
+    )
+  }
 })

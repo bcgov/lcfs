@@ -1,7 +1,7 @@
 import { test } from '@/tests/utils/fixtures'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, vi } from 'vitest'
+import { beforeEach, describe, expect, vi } from 'vite-plus/test'
 import type { ComponentType } from 'react'
 import FuelCodeBulletins from '../FuelCodeBulletins'
 import { CurrentFuelCodes } from '../components/CurrentFuelCodes'
@@ -44,9 +44,8 @@ vi.mock('@/hooks/useCurrentUser', () => ({
 }))
 
 vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual<typeof import('react-router-dom')>(
-    'react-router-dom'
-  )
+  const actual =
+    await vi.importActual<typeof import('react-router-dom')>('react-router-dom')
   return {
     ...actual,
     useSearchParams: () => [new URLSearchParams(mockSearch), vi.fn()]

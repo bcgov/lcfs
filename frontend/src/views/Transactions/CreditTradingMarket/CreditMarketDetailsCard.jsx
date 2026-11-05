@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import TextField from '@mui/material/TextField'
-import '@mui/material/Grid';
+import '@mui/material/Grid'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Checkbox from '@mui/material/Checkbox'
 import InputLabel from '@mui/material/InputLabel'
@@ -517,9 +517,9 @@ export const CreditMarketDetailsCard = ({
                           const displayRoles = []
                           if (
                             getOrgValue(
-                                'creditMarketIsSeller',
-                                'credit_market_is_seller'
-                              )
+                              'creditMarketIsSeller',
+                              'credit_market_is_seller'
+                            )
                           ) {
                             displayRoles.push(
                               t('creditMarket:seller', 'Seller')
@@ -527,9 +527,9 @@ export const CreditMarketDetailsCard = ({
                           }
                           if (
                             getOrgValue(
-                                'creditMarketIsBuyer',
-                                'credit_market_is_buyer'
-                              )
+                              'creditMarketIsBuyer',
+                              'credit_market_is_buyer'
+                            )
                           ) {
                             displayRoles.push(t('creditMarket:buyer', 'Buyer'))
                           }
@@ -548,9 +548,9 @@ export const CreditMarketDetailsCard = ({
                           :
                         </strong>{' '}
                         {getOrgValue(
-                            'displayInCreditMarket',
-                            'display_in_credit_market'
-                          )
+                          'displayInCreditMarket',
+                          'display_in_credit_market'
+                        )
                           ? t('common:yes')
                           : t('common:no')}
                       </BCTypography>

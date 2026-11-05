@@ -2,7 +2,12 @@ import BCTypography from '@/components/BCTypography'
 import BCButton from '@/components/BCButton'
 import BCBox from '@/components/BCBox'
 import { ROUTES } from '@/routes/routes'
-import { useNavigate, useLocation, useOutletContext , Outlet } from 'react-router-dom'
+import {
+  useNavigate,
+  useLocation,
+  useOutletContext,
+  Outlet
+} from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { govRoles } from '@/constants/roles'
@@ -106,9 +111,7 @@ export const ChargingSitesList = () => {
         // Multi-type orgs (#4565): include the org if any of its types is
         // not excluded; fall back to the legacy single type.
         const orgTypeKeys = (
-          org?.orgTypes?.length
-            ? org.orgTypes
-            : [org?.orgType || org?.org_type]
+          org?.orgTypes?.length ? org.orgTypes : [org?.orgType || org?.org_type]
         )
           .filter(Boolean)
           .map((key) => String(key).toLowerCase())

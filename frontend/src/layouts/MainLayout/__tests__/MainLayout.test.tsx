@@ -1,5 +1,5 @@
 import { screen } from '@testing-library/react'
-import { describe, expect, vi, type Mock } from 'vitest'
+import { describe, expect, vi, type Mock } from 'vite-plus/test'
 import { useLocation } from 'react-router-dom'
 import { MainLayout } from '../MainLayout'
 import { isFeatureEnabled } from '@/constants/config'

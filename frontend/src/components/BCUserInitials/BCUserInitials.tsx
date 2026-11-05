@@ -3,8 +3,7 @@ import Tooltip from '@mui/material/Tooltip'
 import type { ChipProps } from '@mui/material/Chip'
 import type { SxProps, Theme } from '@mui/material/styles'
 
-export interface BCUserInitialsProps
-  extends Omit<ChipProps, 'label' | 'size'> {
+export interface BCUserInitialsProps extends Omit<ChipProps, 'label' | 'size'> {
   fullName: string
   tooltipText?: string
   maxLength?: number
@@ -58,8 +57,8 @@ const BCUserInitials = ({
   const combinedSx: SxProps<Theme> = Array.isArray(sx)
     ? [baseStyles, ...sx]
     : sx
-    ? [baseStyles, sx]
-    : baseStyles
+      ? [baseStyles, sx]
+      : baseStyles
 
   const pill = (
     <Chip
