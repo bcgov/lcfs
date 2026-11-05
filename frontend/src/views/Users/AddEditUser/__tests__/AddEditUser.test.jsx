@@ -597,10 +597,7 @@ describe('AddEditUser', () => {
         keycloakUsername: 'sample.user',
         phone: '250-555-0100',
         email: null,
-        roles: [
-          { name: roles.supplier },
-          { name: roles.lcjfip_administrator }
-        ],
+        roles: [{ name: roles.supplier }, { name: roles.lcjfip_administrator }],
         isActive: true,
         isGovernmentUser: false,
         organization: { organizationId: 42, name: 'Example Organization' }

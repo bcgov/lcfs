@@ -329,7 +329,9 @@ describe('BCeIDSpecificRoleFields', () => {
         availableRoles={['LCJFIP Applicant']}
       />
     )
-    expect(screen.getByTestId('lcjfip-administrator-checkbox')).not.toBeDisabled()
+    expect(
+      screen.getByTestId('lcjfip-administrator-checkbox')
+    ).not.toBeDisabled()
   })
 
   it('preserves a checked LCJFIP Administrator without a user Applicant assignment', () => {
@@ -343,7 +345,9 @@ describe('BCeIDSpecificRoleFields', () => {
       />
     )
     expect(screen.getByTestId('lcjfip-administrator-checkbox')).toBeChecked()
-    expect(screen.getByTestId('lcjfip-administrator-checkbox')).not.toBeDisabled()
+    expect(
+      screen.getByTestId('lcjfip-administrator-checkbox')
+    ).not.toBeDisabled()
   })
 
   it('disables LCJFIP Administrator when the form is disabled', () => {
