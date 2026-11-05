@@ -56,7 +56,6 @@ COMPLIANCE_REINDEX_TABLES = (
 COMPLIANCE_REINDEX_LOCK_ID = 60271451
 CREDIT_MARKET_REPORT_LOCK_ID = 60271452
 FSE_REPORTING_MV_REFRESH_LOCK_ID = 60271453
-FSE_REPORTING_MV_REFRESH_MAX_PASSES = 3
 CREDIT_MARKET_REPORT_MAX_ATTEMPTS = 3
 CREDIT_MARKET_REPORT_RETRY_DELAY_SECONDS = 60
 
@@ -288,10 +287,7 @@ async def refresh_fse_reporting_materialized_views(app: FastAPI):
     Source-table triggers only increment dirty_generation. This job refreshes
     the materialized views when dirty_generation is ahead of refreshed_generation.
     The captured generation prevents losing changes made while a refresh is
-    running. Those changes are picked up by another pass while the lock is
-    still held, so a run that skipped on the lock does not leave them waiting
-    for the next interval. Passes are capped; anything left stays dirty for
-    the next scheduler run.
+    running; those changes remain dirty for the next scheduler pass.
     """
     conn = await app.state.db_engine.connect()
     lock_acquired = False
@@ -326,51 +322,46 @@ async def refresh_fse_reporting_materialized_views(app: FastAPI):
             )
             return False
 
-        refreshed = False
-        for _ in range(FSE_REPORTING_MV_REFRESH_MAX_PASSES):
-            dirty_generation = await conn.scalar(
-                text(
-                    """
-                    SELECT dirty_generation
-                    FROM fse_reporting_mv_refresh_state
-                    WHERE id = 1
-                      AND dirty_generation > refreshed_generation;
-                    """
-                )
+        dirty_generation = await conn.scalar(
+            text(
+                """
+                SELECT dirty_generation
+                FROM fse_reporting_mv_refresh_state
+                WHERE id = 1
+                  AND dirty_generation > refreshed_generation;
+                """
             )
+        )
 
-            if dirty_generation is None:
-                break
+        if dirty_generation is None:
+            return False
 
-            logger.info(
-                "Refreshing FSE reporting preferred materialized view",
-                extra={"dirty_generation": dirty_generation},
-            )
-            await conn.execute(
-                text(
-                    "REFRESH MATERIALIZED VIEW CONCURRENTLY mv_fse_reporting_base_pref"
-                )
-            )
-            await conn.execute(
-                text(
-                    """
-                    UPDATE fse_reporting_mv_refresh_state
-                    SET refreshed_generation = GREATEST(
-                            refreshed_generation,
-                            :dirty_generation
-                        ),
-                        update_date = now()
-                    WHERE id = 1;
-                    """
-                ),
-                {"dirty_generation": dirty_generation},
-            )
-            logger.info(
-                "Finished FSE reporting materialized view refresh",
-                extra={"refreshed_generation": dirty_generation},
-            )
-            refreshed = True
-        return refreshed
+        logger.info(
+            "Refreshing FSE reporting preferred materialized view",
+            extra={"dirty_generation": dirty_generation},
+        )
+        await conn.execute(
+            text("REFRESH MATERIALIZED VIEW CONCURRENTLY mv_fse_reporting_base_pref")
+        )
+        await conn.execute(
+            text(
+                """
+                UPDATE fse_reporting_mv_refresh_state
+                SET refreshed_generation = GREATEST(
+                        refreshed_generation,
+                        :dirty_generation
+                    ),
+                    update_date = now()
+                WHERE id = 1;
+                """
+            ),
+            {"dirty_generation": dirty_generation},
+        )
+        logger.info(
+            "Finished FSE reporting materialized view refresh",
+            extra={"refreshed_generation": dirty_generation},
+        )
+        return True
     except Exception:
         logger.exception("FSE reporting materialized view refresh job failed")
         raise
