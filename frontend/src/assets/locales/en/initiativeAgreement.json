@@ -22,12 +22,12 @@
   "columns": {
     "status": "Status",
     "organization": "Organization",
-    "contact": "Contact",
     "iaName": "IA name",
     "startDate": "Start date",
     "endDate": "End date",
-    "lastUpdated": "Last updated",
-    "comments": "Comments"
+    "comments": "Comments",
+    "awardedCredits": "Awarded credits",
+    "totalCredits": "Total credits"
   },
   "detail": {
     "title": "Initiative agreement",
