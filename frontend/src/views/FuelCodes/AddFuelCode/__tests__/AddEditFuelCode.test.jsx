@@ -1,4 +1,5 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { useState } from 'react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vite-plus/test'
 import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -80,9 +81,10 @@ vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
     onCellValueChanged,
     onCellEditingStopped,
     onAction,
-    handlePaste
+    handlePaste,
+    loading
   }) => (
-    <div data-testid="grid">
+    <div data-testid="grid" data-loading={String(Boolean(loading))}>
       <button onClick={() => onGridReady?.({ api: mockGridApi })}>Ready</button>
       <button
         onClick={() =>
@@ -135,6 +137,26 @@ vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
         }
       >
         Stop Edit Same
+      </button>
+      <button
+        onClick={() =>
+          onCellEditingStopped?.({
+            oldValue: '999.0',
+            newValue: '1000.0',
+            node: {
+              data: {
+                id: 'four-digit-row',
+                prefix: 'BCLCF',
+                prefixId: 1,
+                fuelSuffix: '1000.0',
+                modified: true
+              },
+              updateData: vi.fn()
+            }
+          })
+        }
+      >
+        Stop Edit Four Digit
       </button>
       <button
         onClick={() => onAction?.('duplicate', { data: { fuelCodeId: 123 } })}
@@ -493,6 +515,77 @@ describe('AddEditFuelCode', () => {
 
     await waitFor(() => {
       expect(mockMutation.mutateAsync).toHaveBeenCalled()
+    })
+  })
+
+  it('clears the grid loading overlay when the page re-renders as a save finishes', async () => {
+    let resolveSave
+    mockMutation.mutateAsync.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveSave = resolve
+        })
+    )
+    let rerenderParent
+    const Parent = () => {
+      const [tick, setTick] = useState(0)
+      rerenderParent = () => setTick((value) => value + 1)
+      return <AddEditFuelCode tick={tick} />
+    }
+
+    render(
+      <TestWrapper>
+        <Parent />
+      </TestWrapper>
+    )
+
+    fireEvent.click(await screen.findByText('Stop Edit'))
+    const grid = () => document.querySelector('[data-testid="grid"]')
+    await waitFor(() => {
+      expect(grid()).toHaveAttribute('data-loading', 'true')
+    })
+
+    // Hold zero-delay timers so a parent re-render lands between the save
+    // finishing and those timers running.
+    const heldTimers = []
+    const realSetTimeout = globalThis.setTimeout
+    const setTimeoutSpy = vi
+      .spyOn(globalThis, 'setTimeout')
+      .mockImplementation((callback, delay, ...args) => {
+        if (!delay) {
+          heldTimers.push(() => callback(...args))
+          return 0
+        }
+        return realSetTimeout(callback, delay, ...args)
+      })
+    try {
+      await act(async () => {
+        resolveSave({ data: { fuelCodeId: 123, fuelSuffix: 'BCLCF001' } })
+      })
+      act(() => rerenderParent())
+      act(() => heldTimers.splice(0).forEach((run) => run()))
+    } finally {
+      setTimeoutSpy.mockRestore()
+    }
+
+    expect(grid()).toHaveAttribute('data-loading', 'false')
+  })
+
+  it('preserves a four-digit suffix when saving an Add/Edit grid row', async () => {
+    render(
+      <TestWrapper>
+        <AddEditFuelCode />
+      </TestWrapper>
+    )
+
+    fireEvent.click(await screen.findByText('Stop Edit Four Digit'))
+
+    await waitFor(() => {
+      expect(mockMutation.mutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ fuelSuffix: '1000.0' })
+        })
+      )
     })
   })
 

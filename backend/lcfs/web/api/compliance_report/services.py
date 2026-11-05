@@ -45,6 +45,7 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportYearNavigationSchema,
     ChainedComplianceReportSchema,
 )
+from lcfs.web.api.compliance_report.workflow import ensure_report_transition
 from lcfs.web.api.final_supply_equipment.services import FinalSupplyEquipmentServices
 from lcfs.web.api.organization_snapshot.services import OrganizationSnapshotService
 from lcfs.web.api.organizations.repo import OrganizationsRepository
@@ -231,15 +232,18 @@ class ComplianceReportServices:
         user: UserProfile,
     ) -> ComplianceReportBaseSchema:
         """Creates a new compliance report."""
+        draft_status_name = ComplianceReportStatusEnum.Draft.value
+        ensure_report_transition(user, None, draft_status_name)
+
         period = await self.repo.get_compliance_period(report_data.compliance_period)
         if not period:
             raise DataNotFoundException("Compliance period not found.")
 
         draft_status = await self.repo.get_compliance_report_status_by_desc(
-            report_data.status
+            draft_status_name
         )
         if not draft_status:
-            raise DataNotFoundException(f"Status '{report_data.status}' not found.")
+            raise DataNotFoundException(f"Status '{draft_status_name}' not found.")
 
         # Determine reporting frequency based on early issuance setting for the compliance period
         early_issuance_record = await self.org_repo.get_early_issuance_by_year(
