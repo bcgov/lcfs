@@ -1,7 +1,7 @@
 """Add LCJFIP organization type and BCeID roles.
 
 Revision ID: a6f1c2d3e4b5
-Revises: ba06f9f3360c
+Revises: 4dab1d106b2b
 Create Date: 2026-10-30 09:00:00.000000
 """
 
@@ -9,7 +9,7 @@ from alembic import op
 
 
 revision = "a6f1c2d3e4b5"
-down_revision = "ba06f9f3360c"
+down_revision = "4dab1d106b2b"
 branch_labels = None
 depends_on = None
 
