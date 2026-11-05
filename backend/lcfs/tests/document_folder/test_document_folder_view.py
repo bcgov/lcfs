@@ -599,7 +599,21 @@ async def test_another_action_cannot_bin_this_ones_document(
 async def test_the_bin_is_available_to_bceid_and_scoped_to_the_current_user(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
-    action = await _seed_da(dbsession, "IA-26DEL8")
+    org_id, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(dbsession, org_id, "IA-26DEL8")
+    action = await _seed_action(dbsession, agreement, 1, "Visible deleted files")
+    await _seed_action(dbsession, agreement, 2, "Empty action")
+    live_only_action = await _seed_action(dbsession, agreement, 3, "Live files only")
+    await _seed_document(
+        dbsession, live_only_action, "live.pdf", create_user="bceid-user"
+    )
+    unrelated_action = await _seed_action(
+        dbsession, agreement, 4, "Unrelated deleted files"
+    )
+    unrelated_document = await _seed_document(
+        dbsession, unrelated_action, "unrelated.pdf", create_user="another-user"
+    )
+    await _legacy_bin(dbsession, documents=[unrelated_document], by="another-user")
     document = await _seed_document(
         dbsession, action, "bceid-file.pdf", create_user="bceid-user"
     )
@@ -639,6 +653,14 @@ async def test_the_bin_is_available_to_bceid_and_scoped_to_the_current_user(
     response = await client.get(_deleted_url(fastapi_app, action))
     assert response.status_code == status.HTTP_200_OK
     assert response.json()["documents"] == []
+    targets = await client.get(
+        fastapi_app.url_path_for(
+            "get_designated_action_document_targets",
+            initiative_agreement_id=action.initiative_agreement_id,
+        )
+    )
+    assert targets.status_code == status.HTTP_200_OK
+    assert targets.json() == []
 
 
 @pytest.mark.anyio

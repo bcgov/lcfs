@@ -320,6 +320,12 @@ const useBinMutation = (
       queryClient.invalidateQueries({
         queryKey: deletedKey(parentType, parentID)
       })
+      queryClient.invalidateQueries({
+        queryKey: ['documents', parentType]
+      })
+      queryClient.invalidateQueries({
+        queryKey: ['initiative-agreements', 'document-restore-targets']
+      })
     }
   })
 }

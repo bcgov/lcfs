@@ -384,7 +384,7 @@ async def get_designated_action_document_targets(
     """Action identifiers needed to show an agreement's user-scoped bins."""
     await validate.validate_organization_access(initiative_agreement_id)
     targets = await service.get_designated_action_document_targets(
-        initiative_agreement_id
+        initiative_agreement_id, request.user
     )
     return [
         {
