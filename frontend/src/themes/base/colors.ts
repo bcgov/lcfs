@@ -1,6 +1,6 @@
 // Some of the references from https://developer.gov.bc.ca/Design-System/Colour-Palette
 const colors = {
-  mode: 'light',
+  mode: 'light' as const,
   common: {
     black: '#000',
     white: '#fff'

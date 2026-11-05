@@ -242,7 +242,7 @@ class FuelCodeServices:
         fuel_code_prefixes_with_next = []
         for prefix in fuel_code_prefixes:
             next_code = await self.repo.get_next_available_fuel_code_by_prefix(
-                prefix.prefix
+                prefix.prefix, return_none_if_exhausted=True
             )
             schema = FuelCodePrefixSchema.model_validate(prefix)
             schema.next_fuel_code = next_code

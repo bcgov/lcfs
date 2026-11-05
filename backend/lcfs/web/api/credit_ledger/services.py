@@ -330,15 +330,23 @@ class CreditLedgerService:
         # 5. Assessed balances, taken straight from Line 22 of the most recent
         #    assessed report for each year (#4831). A year with no assessed
         #    report has no assessed balance — None, not zero, so the UI leaves
-        #    it blank rather than implying the org ended the year at nil.
-        current_balance = await self.repo.get_assessed_line_22(
+        #    it blank rather than implying the org ended the year at nil. A
+        #    non-assessment creates no transaction, so its Line 22 is not an
+        #    assessed balance either: the year is flagged instead (#5304).
+        current_balance, current_non_assessment = await self.repo.get_assessed_balance(
             organization_id=organization_id,
             compliance_period=compliance_period,
         )
-        previous_balance = await self.repo.get_assessed_line_22(
-            organization_id=organization_id,
-            compliance_period=compliance_period - 1,
+        previous_balance, previous_non_assessment = (
+            await self.repo.get_assessed_balance(
+                organization_id=organization_id,
+                compliance_period=compliance_period - 1,
+            )
         )
+        if current_non_assessment:
+            current_balance = None
+        if previous_non_assessment:
+            previous_balance = None
 
         return PeriodLedgerSchema(
             organization_id=organization_id,
@@ -352,8 +360,10 @@ class CreditLedgerService:
             assessed_balance=AssessedBalanceSchema(
                 previous_year=compliance_period - 1,
                 previous_balance=previous_balance,
+                previous_non_assessment=previous_non_assessment,
                 current_year=compliance_period,
                 current_balance=current_balance,
+                current_non_assessment=current_non_assessment,
             ),
         )
 
