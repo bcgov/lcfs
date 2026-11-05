@@ -58,6 +58,31 @@ async def test_get_transactions(transactions_service):
 
 
 @pytest.mark.anyio
+async def test_get_transactions_filters_by_aggregator_issuance(transactions_service):
+    pagination_request = PaginationRequestSchema(
+        page=1,
+        size=10,
+        filters=[
+            FilterModel(
+                field="transactionType",
+                filter="AggregatorIssuance",
+                type="equals",
+                filter_type="text",
+            )
+        ],
+        sort_orders=[],
+    )
+
+    await transactions_service.get_transactions_paginated(pagination=pagination_request)
+
+    conditions = transactions_service.repo.get_transactions_paginated.call_args.args[2]
+    type_condition = next(
+        condition for condition in conditions if "transaction_type" in str(condition)
+    )
+    assert "aggregatorissuance" in type_condition.compile().params.values()
+
+
+@pytest.mark.anyio
 @pytest.mark.parametrize(
     "filter_value",
     [
@@ -399,6 +424,32 @@ async def test_export_shows_a1_category_and_agreement_date(transactions_service)
     assert row["Category"] == "A1"
     assert row["Agreement Date"] == "2026-03-02"
     assert row["Effective Date"] == "2026-03-20"
+
+
+@pytest.mark.anyio
+async def test_export_uses_display_names_for_aggregator_and_legacy_transactions(
+    transactions_service,
+):
+    reader = await _export_csv(
+        transactions_service,
+        [
+            _view_row(
+                transaction_type="AggregatorIssuance",
+                transaction_id=12,
+            ),
+            _view_row(
+                transaction_type="StandaloneTransaction",
+                transaction_id=91,
+            ),
+        ],
+        {},
+    )
+
+    rows = list(reader)
+    assert [(row["ID"], row["Type"]) for row in rows] == [
+        ("AG12", "Aggregator Issuance"),
+        ("ST91", "Legacy Transaction"),
+    ]
 
 
 @pytest.mark.anyio
