@@ -1,5 +1,5 @@
 import { screen } from '@testing-library/react'
-import { expect, vi } from 'vitest'
+import { expect, vi } from 'vite-plus/test'
 import { test } from '@/tests/utils/fixtures'
 import Comments from '../index'
 

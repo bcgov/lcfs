@@ -36,7 +36,7 @@ async def delete_comment(
     request: Request,
     internal_comment_id: int,
     service: InternalCommentService = Depends(),
-    db: AsyncSession = Depends(get_async_db),
+    db: AsyncSession = Depends(get_async_db, scope="function"),
     s3_client: BaseClient = Depends(get_s3_client),
 ) -> None:
     # Import lazily because DocumentService's parent services import this router.

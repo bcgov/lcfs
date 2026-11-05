@@ -1,6 +1,6 @@
 import { fireEvent, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, vi } from 'vitest'
+import { describe, expect, vi } from 'vite-plus/test'
 import { test } from '@/tests/utils/fixtures'
 import { MAX_FILE_SIZE_BYTES } from '@/constants/common'
 import CommentForm from '../CommentForm'
