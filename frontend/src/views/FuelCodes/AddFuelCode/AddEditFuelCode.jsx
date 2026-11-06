@@ -140,7 +140,10 @@ const AddEditFuelCodeBase = () => {
 
   // state setters
   const updateState = useCallback((updates) => {
-    setState((prev) => ({ ...prev, ...updates }))
+    setState((prev) => ({
+      ...prev,
+      ...(typeof updates === 'function' ? updates(prev) : updates)
+    }))
   }, [])
 
   const updatePendingUpdates = useCallback((updater) => {
@@ -402,11 +405,13 @@ const AddEditFuelCodeBase = () => {
           }`
         }
 
-        // Update errors state
+        // Mark the row as unsaved (an empty list when the API names no
+        // fields), so Save stays disabled until the row saves.
         updateState((prev) => ({
           errors: {
             ...prev.errors,
-            [rowId]: error.response?.data?.errors?.[0]?.fields
+            [rowId]:
+              error.response?.data?.errors?.flatMap((e) => e.fields ?? []) ?? []
           }
         }))
 
@@ -419,22 +424,18 @@ const AddEditFuelCodeBase = () => {
           validationMsg: errMsg
         }
       } finally {
-        // Remove from pending updates
-        updatePendingUpdates((prev) => {
-          const newSet = new Set(prev)
+        // Remove from pending updates and clear the global updating state in
+        // one update. Setting state from inside another state updater can be
+        // lost and leave the grid's loading overlay up for good.
+        setState((prev) => {
+          const newSet = new Set(prev.pendingUpdates)
           newSet.delete(rowId)
-          return newSet
+          return {
+            ...prev,
+            pendingUpdates: newSet,
+            isUpdating: newSet.size > 0
+          }
         })
-
-        // Update global updating state
-        setTimeout(() => {
-          updatePendingUpdates((current) => {
-            if (current.size === 0) {
-              updateState({ isUpdating: false })
-            }
-            return current
-          })
-        }, 0)
       }
     },
     [fuelCodeMutation, t, handleError, updatePendingUpdates, updateState]
@@ -531,7 +532,10 @@ const AddEditFuelCodeBase = () => {
       }
 
       params.api.applyTransaction({ remove: [params.node.data] })
-      updateState({ modalData: null })
+      updateState((prev) => ({
+        modalData: null,
+        errors: { ...prev.errors, [params.node.data.id]: undefined }
+      }))
     },
     [fuelCodeMutation, handleError, updateState]
   )
@@ -882,7 +886,7 @@ const AddEditFuelCodeBase = () => {
       ...baseHandlers,
       hasChanges: rowData.some((row) => row.modified),
       hasValidationErrors:
-        Object.keys(errors).length > 0 ||
+        Object.values(errors).some(Boolean) ||
         computedValues.hasNotesValidationError,
       isComplete: !!existingFuelCode,
       canEdit: computedValues.isEditable && !isUpdating,
