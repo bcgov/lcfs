@@ -42,6 +42,7 @@ This wiki is organized into the following main sections, broadly covering System
 *   **[Integration Points and APIs](Integration-Points-and-APIs.md)**: Information on internal and external APIs, including Keycloak and TFRS integration.
 *   **[Deployment Architecture](Deployment-Architecture.md)**: Details on local Docker setup and OpenShift deployment.
 *   **[Database Schema Overview](Database-Schema-Overview.md)**: Description of the PostgreSQL database structure and Alembic migrations.
+*   **[Activity Timeline Design Spike](Activity-Timeline-Design-Spike.md)**: Research findings on a reusable cross-app activity timeline, with compliance reports as the first use case.
 *   **[Caching Strategy](Caching-Strategy.md)**: How Redis caching is implemented and used.
 *   **[Security Architecture](Security-Architecture.md)**: Overview of security measures, protocols, and Keycloak integration.
 *   **[Performance Considerations](Performance-Considerations.md)**: Notes on system performance and load testing with Locust.
