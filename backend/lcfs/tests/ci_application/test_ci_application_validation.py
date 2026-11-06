@@ -17,6 +17,20 @@ def _user(roles, organization_id=1):
     """Build a request.user-style mock with role_names + organization."""
     user = MagicMock()
     user.role_names = roles
+    government_roles = {
+        RoleEnum.SYSTEM_ADMIN,
+        RoleEnum.GOVERNMENT,
+        RoleEnum.ADMINISTRATOR,
+        RoleEnum.ANALYST,
+        RoleEnum.COMPLIANCE_MANAGER,
+        RoleEnum.DIRECTOR,
+    }
+    user.user_roles = [
+        SimpleNamespace(
+            role=SimpleNamespace(is_government_role=role in government_roles)
+        )
+        for role in roles
+    ]
     user.organization = (
         SimpleNamespace(organization_id=organization_id) if organization_id else None
     )
@@ -117,9 +131,10 @@ def _application_in(status_name, organization_id=1):
 
 
 @pytest.mark.anyio
-async def test_validate_access_government_cannot_open_a_draft(repo):
+@pytest.mark.parametrize("role", [RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
+async def test_validate_access_government_cannot_open_a_draft(repo, role):
     repo.get_by_id.return_value = _application_in("Draft", organization_id=99)
-    v = _validation(_user([RoleEnum.GOVERNMENT], organization_id=None), repo)
+    v = _validation(_user([role], organization_id=None), repo)
 
     with pytest.raises(HTTPException) as exc:
         await v.validate_access(10)
@@ -141,12 +156,66 @@ async def test_validate_access_government_opens_a_submitted_application(
 
 
 @pytest.mark.anyio
+async def test_validate_access_analyst_can_open_a_submitted_application(repo):
+    ci = _application_in("Submitted", organization_id=99)
+    repo.get_by_id.return_value = ci
+    v = _validation(_user([RoleEnum.ANALYST], organization_id=None), repo)
+
+    assert await v.validate_access(10) is ci
+
+
+@pytest.mark.anyio
 async def test_validate_access_the_applicant_opens_its_own_draft(repo):
     ci = _application_in("Draft", organization_id=1)
     repo.get_by_id.return_value = ci
     v = _validation(_user([RoleEnum.SUPPLIER], organization_id=1), repo)
 
     assert await v.validate_access(10) is ci
+
+
+# ---------------------------------------------------------------------------
+# validate_facility_access
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_validate_facility_access_supplier_same_org_allowed(repo):
+    facility = SimpleNamespace(organization_id=1)
+    repo.get_facility_by_id.return_value = facility
+    v = _validation(_user([RoleEnum.CI_APPLICANT], organization_id=1), repo)
+
+    assert await v.validate_facility_access(12) is facility
+
+
+@pytest.mark.anyio
+async def test_validate_facility_access_supplier_other_org_not_found(repo):
+    repo.get_facility_by_id.return_value = SimpleNamespace(organization_id=2)
+    v = _validation(_user([RoleEnum.CI_APPLICANT], organization_id=1), repo)
+
+    with pytest.raises(HTTPException) as exc:
+        await v.validate_facility_access(12)
+
+    assert exc.value.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.anyio
+async def test_validate_facility_access_government_cannot_write(repo):
+    repo.get_facility_by_id.return_value = SimpleNamespace(organization_id=1)
+    v = _validation(_user([RoleEnum.GOVERNMENT], organization_id=None), repo)
+
+    with pytest.raises(HTTPException) as exc:
+        await v.validate_facility_access(12, write=True)
+
+    assert exc.value.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.anyio
+async def test_validate_facility_access_analyst_can_read(repo):
+    facility = SimpleNamespace(organization_id=1)
+    repo.get_facility_by_id.return_value = facility
+    v = _validation(_user([RoleEnum.ANALYST], organization_id=None), repo)
+
+    assert await v.validate_facility_access(12) is facility
 
 
 # ---------------------------------------------------------------------------

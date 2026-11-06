@@ -88,6 +88,10 @@ async def validate_parent_access(
         await cs_validate.validate_organization_access(parent_id)
     elif parent_type == "ci_application":
         await ci_validate.validate_access(parent_id)
+    elif parent_type == "fuel_production_facility":
+        await ci_validate.validate_facility_access(
+            parent_id, write=write or request.method != "GET"
+        )
     elif parent_type == "internal_comment":
         await document_service.verify_internal_comment_access(
             parent_id, request.user, write=write
@@ -193,6 +197,8 @@ async def upload_file(
 
     if parent_type == "ci_application":
         await ci_validate.validate_access(parent_id)
+    elif parent_type == "fuel_production_facility":
+        await ci_validate.validate_facility_access(parent_id, write=True)
 
     document = await document_service.upload_file(
         file,

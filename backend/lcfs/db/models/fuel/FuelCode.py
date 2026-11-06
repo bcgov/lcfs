@@ -78,6 +78,16 @@ class FuelCode(BaseModel, Auditable, EffectiveDates, Versioning):
         index=True,
         comment="Owning organisation; NULL for non-registered producers.",
     )
+    fuel_production_facility_id = Column(
+        Integer,
+        ForeignKey(
+            "fuel_production_facility.fuel_production_facility_id",
+            ondelete="SET NULL",
+        ),
+        nullable=True,
+        index=True,
+        comment="Production facility associated with this fuel code",
+    )
     feedstock = Column(String(255), nullable=False, comment="Feedstock")
     feedstock_location = Column(
         String(1000), nullable=False, comment="Feedstock location"
@@ -123,6 +133,9 @@ class FuelCode(BaseModel, Auditable, EffectiveDates, Versioning):
     )
     fuel_type = relationship("FuelType", back_populates="fuel_codes", lazy="selectin")
     organization = relationship("Organization", lazy="selectin")
+    fuel_production_facility = relationship(
+        "FuelProductionFacility", back_populates="fuel_codes", lazy="selectin"
+    )
     ci_application_associations = relationship(
         "CIApplicationFuelCodeAssociation",
         back_populates="fuel_code",

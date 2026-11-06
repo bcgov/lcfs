@@ -56,6 +56,10 @@ from lcfs.settings import settings
 from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
 from lcfs.web.api.charging_site.repo import ChargingSiteRepository
 from lcfs.db.models.compliance.ChargingSite import charging_site_document_association
+from lcfs.db.models.fuel.FuelProductionFacility import (
+    FuelProductionFacility,
+    fuel_production_facility_document_association,
+)
 from lcfs.web.core.decorators import repo_handler
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 from botocore.exceptions import ClientError
@@ -90,6 +94,10 @@ DOCUMENT_PARENT_ASSOCIATIONS = {
     "ci_application": (
         ci_application_document_association,
         "ci_application_id",
+    ),
+    "fuel_production_facility": (
+        fuel_production_facility_document_association,
+        "fuel_production_facility_id",
     ),
     "internal_comment": (
         internal_comment_document_association,
@@ -181,6 +189,10 @@ class DocumentService:
                     status_code=400,
                     detail=f"Invalid document_category '{document_category}'.",
                 )
+        elif parent_type == "fuel_production_facility":
+            facility = await self.db.get(FuelProductionFacility, parent_id)
+            if not facility:
+                raise DataNotFoundException("Fuel production facility not found.")
         else:
             raise ServiceException(f"Unknown parent type {parent_type} in upload_file")
 
@@ -337,6 +349,14 @@ class DocumentService:
                 ci_application_id=ci_application.ci_application_id,
                 document_id=document.document_id,
                 document_category=document_category or CI_DOC_CATEGORY_SUPPORTING,
+            )
+            await self.db.execute(stmt)
+        elif parent_type == "fuel_production_facility":
+            self.db.add(document)
+            await self.db.flush()
+            stmt = fuel_production_facility_document_association.insert().values(
+                fuel_production_facility_id=parent_id,
+                document_id=document.document_id,
             )
             await self.db.execute(stmt)
         elif parent_type == "internal_comment":

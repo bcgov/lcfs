@@ -1,7 +1,13 @@
 import { test } from '@/tests/utils/fixtures'
 import 'react'
 import { afterEach, beforeEach, describe, expect, vi } from 'vite-plus/test'
-import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+  within
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { ApplicationInformationStep } from '@/views/CarbonIntensity/components/ApplicationInformationStep'
@@ -23,6 +29,32 @@ vi.mock('lodash', async (importOriginal) => {
 })
 
 vi.mock('@/hooks/useCIApplication', () => ({
+  useGetCIApplicationFacilities: vi.fn(() => ({
+    data: [
+      {
+        fuelProductionFacilityId: 1,
+        name: 'Test facility',
+        city: '',
+        provinceState: '',
+        country: '',
+        nameplateCapacity: null,
+        nameplateCapacityUnit: '',
+        contactName: '',
+        contactEmail: '',
+        documents: []
+      }
+    ],
+    isLoading: false,
+    isError: false
+  })),
+  useCreateCIApplicationFacility: vi.fn(() => ({
+    mutateAsync: vi.fn(async (facility) => ({
+      ...facility,
+      fuelProductionFacilityId: 2,
+      documents: []
+    })),
+    isPending: false
+  })),
   useCIFacilityLocationSearch: vi.fn(({ city, province, country } = {}) => {
     if (city?.toLowerCase().includes('coquit')) {
       return { data: ['Coquitlam, British Columbia, Canada'] }
@@ -52,6 +84,11 @@ const baseProps = {
 const selectUnit = async (user, unit = 'kg') => {
   await user.click(document.getElementById('facilityNameplateCapacityUnit'))
   await user.click(await screen.findByRole('option', { name: unit }))
+}
+
+const selectFacility = async (user) => {
+  await user.click(document.getElementById('fuelProductionFacilityId'))
+  await user.click(await screen.findByRole('option', { name: 'Test facility' }))
 }
 
 describe('ApplicationInformationStep', () => {
@@ -145,6 +182,73 @@ describe('ApplicationInformationStep', () => {
     expect(screen.getByTestId('ci-step1-delete-btn')).toBeInTheDocument()
   })
 
+  test('creates a facility and applies its details to Step 1', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    const user = userEvent.setup()
+    render(<ApplicationInformationStep {...baseProps} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
+
+    await user.click(screen.getByTestId('ci-step1-add-facility'))
+    const dialog = await screen.findByRole('dialog')
+    await user.type(
+      within(dialog).getByRole('textbox', {
+        name: /carbonIntensity:step1\.facilityName\b/
+      }),
+      'New production facility'
+    )
+    await user.type(
+      within(dialog).getByRole('textbox', {
+        name: /carbonIntensity:step1.city/
+      }),
+      'New Town'
+    )
+    await user.type(
+      within(dialog).getByRole('textbox', {
+        name: /carbonIntensity:step1.provinceState/
+      }),
+      'New Province'
+    )
+    await user.type(
+      within(dialog).getByRole('textbox', {
+        name: /carbonIntensity:step1.country/
+      }),
+      'New Country'
+    )
+    await user.type(
+      within(dialog).getByRole('textbox', {
+        name: /carbonIntensity:step1.facilityNameplate/
+      }),
+      '2000'
+    )
+    await user.click(
+      within(dialog).getByRole('combobox', {
+        name: /carbonIntensity:step1.unitOfMeasure/
+      })
+    )
+    await user.click(await screen.findByRole('option', { name: 'L' }))
+    await user.click(
+      within(dialog).getByRole('button', {
+        name: 'carbonIntensity:step1.saveFacility'
+      })
+    )
+
+    await waitFor(() => {
+      expect(document.getElementById('facilityCity').value).toBe('New Town')
+      expect(document.getElementById('facilityCountry').value).toBe(
+        'New Country'
+      )
+    })
+  }, 15000)
+
   test('blocks submission when required fields are missing', async ({
     render,
     query,
@@ -153,6 +257,7 @@ describe('ApplicationInformationStep', () => {
     router
   }) => {
     const onSave = vi.fn()
+    const user = userEvent.setup()
     render(<ApplicationInformationStep {...baseProps} onSave={onSave} />, [
       query,
       theme,
@@ -160,6 +265,7 @@ describe('ApplicationInformationStep', () => {
       router
     ])
 
+    await selectFacility(user)
     fireEvent.click(screen.getByTestId('ci-step1-save-btn'))
 
     await waitFor(() => {
@@ -186,6 +292,7 @@ describe('ApplicationInformationStep', () => {
       router
     ])
 
+    await selectFacility(user)
     await user.click(document.getElementById('facilityCountry'))
     await user.type(document.getElementById('facilityCountry'), 'Canada')
     await user.type(
@@ -225,6 +332,7 @@ describe('ApplicationInformationStep', () => {
       router
     ])
 
+    await selectFacility(user)
     await user.click(document.getElementById('facilityCountry'))
     await user.type(document.getElementById('facilityCountry'), 'Argentina')
     const capacity = document.getElementById('facilityNameplateCapacity')
@@ -257,6 +365,7 @@ describe('ApplicationInformationStep', () => {
       router
     ])
 
+    await selectFacility(user)
     await user.click(document.getElementById('facilityCity'))
     await user.type(document.getElementById('facilityCity'), 'Vancouver')
     await user.click(document.getElementById('facilityProvinceState'))
@@ -278,6 +387,7 @@ describe('ApplicationInformationStep', () => {
     await waitFor(() => expect(onSave).toHaveBeenCalled())
     const payload = onSave.mock.calls[0][0]
     expect(payload).toMatchObject({
+      fuelProductionFacilityId: 1,
       facilityCity: 'Vancouver',
       facilityProvinceState: 'BC',
       facilityCountry: 'Canada',
@@ -415,6 +525,7 @@ describe('ApplicationInformationStep', () => {
   }) => {
     const existing = {
       ciApplicationId: 8,
+      fuelProductionFacilityId: 1,
       facilityCity: 'San Martin',
       facilityProvinceState: 'Santa Fe',
       facilityCountry: 'Argentina',

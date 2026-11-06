@@ -11,6 +11,7 @@ import type { PaginationParams, QueryOptions } from './types'
 
 const QUERY_KEYS = {
   options: ['ci-application-options'],
+  facilities: ['ci-application-facilities'],
   list: (pagination: unknown) => ['ci-applications', pagination],
   detail: (id: unknown) => ['ci-application', String(id)],
   locationSearch: (params: {
@@ -18,6 +19,26 @@ const QUERY_KEYS = {
     province?: string
     country?: string
   }) => ['ci-facility-location-search', params]
+}
+
+export type CIFuelProductionFacility = {
+  fuelProductionFacilityId: number
+  organizationId?: number | null
+  name?: string | null
+  city?: string | null
+  provinceState?: string | null
+  country?: string | null
+  iso?: string | null
+  nameplateCapacity?: number | null
+  nameplateCapacityUnit?: string | null
+  contactName?: string | null
+  contactEmail?: string | null
+  documents?: Array<{
+    documentId: number
+    fileName: string
+    fileSize: number
+    mimeType: string
+  }>
 }
 
 type CIApplicationCacheRecord = Record<string, unknown> & {
@@ -74,6 +95,34 @@ export const useCIApplicationOptions = (
     staleTime: 60 * 60 * 1000, // 1 hour — lookup data
     gcTime: 60 * 60 * 1000,
     ...options
+  })
+}
+
+export const useGetCIApplicationFacilities = (
+  options: QueryOptions<CIFuelProductionFacility[]> = {}
+) => {
+  const client = useApiService()
+  return useQuery({
+    queryKey: QUERY_KEYS.facilities,
+    queryFn: async () =>
+      (await client.get(apiRoutes.ciApplicationFacilities))
+        .data as CIFuelProductionFacility[],
+    staleTime: 60 * 1000,
+    ...options
+  })
+}
+
+export const useCreateCIApplicationFacility = () => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: unknown) =>
+      (
+        await client.post(apiRoutes.createCIApplicationFacility, payload)
+      ).data as CIFuelProductionFacility,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.facilities })
+    }
   })
 }
 

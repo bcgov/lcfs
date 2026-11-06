@@ -29,6 +29,12 @@ function DocumentUploadDialog({ open, close, parentType, parentID }) {
           documentLabel: t('carbonIntensity:documents.documentLabel'),
           returnButton: t('carbonIntensity:documents.returnButton')
         }
+      case 'fuel_production_facility':
+        return {
+          title: t('carbonIntensity:step1.processFlowUploadTitle'),
+          documentLabel: t('carbonIntensity:step1.processFlowDocumentLabel'),
+          returnButton: t('carbonIntensity:documents.returnButton')
+        }
       case 'initiativeAgreement':
         return {
           title: t('initiativeAgreement:documents.uploadTitle'),
