@@ -28,11 +28,8 @@ const analystSubscriptionFixture = [
 ]
 
 describe('Notifications view flows', () => {
-  const idirUsername = Cypress.env('ADMIN_IDIR_USERNAME')
-  const idirPassword = Cypress.env('ADMIN_IDIR_PASSWORD')
-
   beforeEach(() => {
-    cy.loginWith('idir', idirUsername, idirPassword)
+    cy.loginWithEnv('idir')
   })
 
   afterEach(() => {

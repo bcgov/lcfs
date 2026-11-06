@@ -110,7 +110,9 @@ const assertDescription = (paragraphs, nextContentSelector) => {
     .should('be.visible')
     .within(() => {
       cy.get('p').should('have.length', 2)
-      paragraphs.forEach((paragraph) => cy.contains('p', paragraph))
+      paragraphs.forEach((paragraph, index) => {
+        cy.get('p').eq(index).should('contain.text', paragraph)
+      })
     })
 
   cy.getByDataTest('public-calculator-description').then(($description) => {
@@ -173,188 +175,225 @@ const stubCalculatorApi = () => {
 
 // Drive the cascading selections up to the point where end use + provision
 // auto-select and the calculator is ready to compute.
-const selectDieselBiodiesel = () => {
-  cy.get('input[type="radio"][value="Diesel"]').check({ force: true })
+const selectDieselBiodiesel = ({ clickFuelCategoryLabel = false } = {}) => {
+  if (clickFuelCategoryLabel) {
+    cy.contains(/^Diesel$/).click()
+  } else {
+    cy.get('input[type="radio"][value="Diesel"]').check({ force: true })
+  }
+  cy.get('input[type="radio"][value="Diesel"]').should('be.checked')
   cy.wait('@fuelTypes')
-  cy.get('input[type="radio"][value="Biodiesel"]', { timeout: 15000 })
+  cy.get('input[type="radio"][value="Biodiesel"]', { timeout: 20000 })
     .should('exist')
     .check({ force: true })
+  cy.get('input[type="radio"][value="Biodiesel"]').should('be.checked')
   cy.wait('@fuelTypeOptions')
   // Single end use + single base provision auto-select.
-  cy.get('input[type="radio"][value="Any"]', { timeout: 15000 }).should(
+  cy.get('input[type="radio"][value="Any"]', { timeout: 20000 }).should(
     'be.checked'
   )
+  cy.get(
+    'input[type="radio"][value="Default carbon intensity - section 19 (b) (ii)"]'
+  ).should('be.checked')
+  // Supply the same quantity explicitly in both runners.
+  if (!clickFuelCategoryLabel) {
+    cy.getByDataTest('quantity').clear({ force: true })
+    cy.getByDataTest('quantity').should('have.value', '')
+    cy.getByDataTest('quantity').type('100000', { force: true, delay: 0 })
+    cy.getByDataTest('quantity').blur()
+  }
 }
 
-describe('Public Credit Calculator and Calculation Data (#4089)', () => {
-  context('Compliance unit calculator', () => {
-    beforeEach(() => {
-      // Public page; swallow unrelated app-shell init errors.
-      cy.on('uncaught:exception', () => false)
-      stubCalculatorApi()
-      cy.visit('/credit-calculator')
-      cy.wait('@compliancePeriods')
-    })
-
-    it('loads without authentication', () => {
-      cy.url().should('include', '/credit-calculator')
-      // The protected login screen must never appear on a public page.
-      cy.getByDataTest('login-container').should('not.exist')
-      cy.contains('Compliance unit calculator').should('be.visible')
-      assertDescription(calculatorDescription, '#compliance-year')
-      checkDescriptionAccessibility()
-      cy.get('#compliance-year').should('exist')
-      cy.getByDataTest('quantity').should('exist')
-    })
-
-    it('reflows the description at 200% and 400% zoom-equivalent widths', () => {
-      for (const width of [640, 320]) {
-        cy.viewport(width, 800)
-        cy.getByDataTest('public-calculator-description')
-          .should('be.visible')
-          .then(($description) => {
-            expect($description[0].scrollWidth).to.be.at.most(
-              $description[0].clientWidth
-            )
-          })
-      }
-    })
-
-    it('cascades dropdowns: compliance year → fuel category → fuel type → end use/provision', () => {
-      // Choose a compliance year via the MUI select.
-      cy.get('#compliance-year').click()
-      cy.get('li[data-value="2025"]', { timeout: 10000 }).click()
-      cy.get('#compliance-year').should('contain', '2025')
-
-      // Fuel type is not available until a category is chosen.
-      cy.get('input[type="radio"][value="Biodiesel"]').should('not.exist')
-      cy.get('input[type="radio"][value="Diesel"]').check({ force: true })
-      cy.wait('@fuelTypes')
-
-      // Category → fuel type now populated.
-      cy.get('input[type="radio"][value="Biodiesel"]', { timeout: 15000 })
-        .should('exist')
-        .check({ force: true })
-      cy.wait('@fuelTypeOptions')
-
-      // Fuel type → end use + provision now populated (and auto-selected).
-      cy.get('input[type="radio"][value="Any"]', { timeout: 15000 }).should(
-        'exist'
-      )
-      cy.get(
-        'input[type="radio"][value="Default carbon intensity - section 19 (b) (ii)"]'
-      ).should('be.checked')
-    })
-
-    it('calculates compliance units from a supplied quantity', () => {
-      selectDieselBiodiesel()
-      // Default quantity (100,000) drives the forward calculation.
-      cy.wait('@calculate')
-      cy.getByDataTest('quantity').should('have.value', '100,000')
-      cy.getByDataTest('complianceUnits', { timeout: 15000 }).should(
-        'have.value',
-        '1,234'
-      )
-    })
-
-    it('reverse-calculates quantity from compliance units', () => {
-      selectDieselBiodiesel()
-      cy.wait('@calculate')
-
-      // Typing into compliance units switches to reverse mode.
-      cy.getByDataTest('complianceUnits').clear({ force: true })
-      cy.getByDataTest('complianceUnits').type('500', { force: true })
-      cy.wait('@calculateQuantity')
-      cy.getByDataTest('quantity', { timeout: 15000 }).should(
-        'have.value',
-        '42,000'
-      )
-    })
-
-    it('accepts a custom carbon intensity for applicable provisions', () => {
-      selectDieselBiodiesel()
-
-      // A request carrying useCustomCi=true gets a distinct response so we can
-      // assert both the request shape and the rendered result.
-      cy.intercept(
-        {
-          method: 'GET',
-          pathname: /\/calculator\/[^/]+\/calculate\/$/,
-          query: { useCustomCi: 'true' }
-        },
-        { body: { ...calculateFixture, complianceUnits: 999 } }
-      ).as('customCalculate')
-
-      // Switch the provision to the "custom CI" option.
-      cy.get('input[type="radio"][value="customCi"]').check({ force: true })
-
-      // The custom CI input becomes editable.
-      cy.get('#carbon-intensity-input', { timeout: 15000 })
-        .should('exist')
-        .should('not.be.disabled')
-        .clear({ force: true })
-      cy.get('#carbon-intensity-input').type('85.50', { force: true })
-
-      cy.wait('@customCalculate')
-        .its('request.query.useCustomCi')
-        .should('eq', 'true')
-      cy.getByDataTest('complianceUnits', { timeout: 15000 }).should(
-        'have.value',
-        '999'
-      )
-    })
-  })
-
-  context('Calculation data lookup table', () => {
-    beforeEach(() => {
-      cy.on('uncaught:exception', () => false)
-      stubCalculatorApi()
-      cy.visit('/calculation-data')
-      cy.wait('@lookupTable')
-    })
-
-    it('loads the lookup table with reference data', () => {
-      cy.url().should('include', '/calculation-data')
-      cy.getByDataTest('login-container').should('not.exist')
-      cy.contains('Calculation data').should('be.visible')
-      assertDescription(calculationDataDescription, '.ag-root')
-      checkDescriptionAccessibility()
-
-      // Both stubbed reference rows render in the grid.
-      cy.get('.ag-center-cols-container .ag-row', { timeout: 15000 }).should(
-        'have.length',
-        2
-      )
-      cy.contains('.ag-cell', 'Biodiesel').should('exist')
-      cy.contains('.ag-cell', 'Ethanol').should('exist')
-    })
-
-    it('reflows the description at 200% and 400% zoom-equivalent widths', () => {
-      for (const width of [640, 320]) {
-        cy.viewport(width, 800)
-        cy.getByDataTest('public-calculator-description')
-          .should('be.visible')
-          .then(($description) => {
-            expect($description[0].scrollWidth).to.be.at.most(
-              $description[0].clientWidth
-            )
-          })
-      }
-    })
-
-    it('displays the expected reference columns (CI, TCI, EER, energy density)', () => {
-      // The CI-related columns cluster on the right; scroll the grid so they
-      // render past AG Grid's column virtualisation.
-      cy.get('.ag-center-cols-viewport', { timeout: 15000 }).scrollTo('right', {
-        ensureScrollable: false
+describe(
+  'Public Credit Calculator and Calculation Data (#4089)',
+  { testIsolation: true },
+  () => {
+    context('Compliance unit calculator', () => {
+      beforeEach(() => {
+        stubCalculatorApi()
+        cy.visit('/credit-calculator')
+        cy.wait('@compliancePeriods')
       })
 
-      cy.contains('.ag-header-cell-text', 'Target CI', {
-        timeout: 10000
-      }).should('be.visible') // TCI
-      cy.contains('.ag-header-cell-text', 'CI of fuel').should('be.visible') // CI
-      cy.contains('.ag-header-cell-text', 'EER').should('be.visible')
-      cy.contains('.ag-header-cell-text', 'Energy density').should('be.visible')
+      it('loads without authentication', () => {
+        cy.location('pathname').should('eq', '/credit-calculator')
+        // The protected login screen must never appear on a public page.
+        cy.getByDataTest('login-container').should('not.exist')
+        cy.contains('[role="tab"]', 'Compliance unit calculator').should(
+          'be.visible'
+        )
+        assertDescription(calculatorDescription, '#compliance-year')
+        checkDescriptionAccessibility()
+        cy.get('#compliance-year').should('be.visible')
+        cy.getByDataTest('quantity').should('be.visible')
+      })
+
+      it('reflows the description at 200% and 400% zoom-equivalent widths', () => {
+        for (const width of [640, 320]) {
+          cy.viewport(width, 800)
+          cy.getByDataTest('public-calculator-description')
+            .should('be.visible')
+            .then(($description) => {
+              expect($description[0].scrollWidth).to.be.at.most(
+                $description[0].clientWidth
+              )
+            })
+        }
+      })
+
+      it('cascades dropdowns: compliance year → fuel category → fuel type → end use/provision', () => {
+        // Choose a compliance year via the MUI select.
+        cy.get('#compliance-year').click()
+        cy.get('li[data-value="2025"]', { timeout: 20000 }).click()
+        cy.get('#compliance-year').should('contain', '2025')
+
+        // Fuel type is not available until a category is chosen.
+        cy.get('input[type="radio"][value="Biodiesel"]').should('not.exist')
+        selectDieselBiodiesel({ clickFuelCategoryLabel: true })
+
+        // Fuel type → end use + provision now populated (and auto-selected).
+        cy.get('input[type="radio"][value="Any"]', { timeout: 20000 }).should(
+          'be.checked'
+        )
+        cy.get(
+          'input[type="radio"][value="Default carbon intensity - section 19 (b) (ii)"]'
+        ).should('be.checked')
+      })
+
+      it('calculates compliance units from a supplied quantity', () => {
+        selectDieselBiodiesel()
+        // Default quantity (100,000) drives the forward calculation.
+        cy.wait('@calculate')
+        cy.getByDataTest('quantity').should('have.value', '100,000')
+        cy.getByDataTest('complianceUnits', { timeout: 20000 }).should(
+          'have.value',
+          '1,234'
+        )
+      })
+
+      it('reverse-calculates quantity from compliance units', () => {
+        selectDieselBiodiesel()
+        cy.wait('@calculate')
+
+        // Typing into compliance units switches to reverse mode.
+        cy.getByDataTest('complianceUnits').should('have.value', '1,234')
+        cy.getByDataTest('complianceUnits').clear({ force: true })
+        cy.getByDataTest('complianceUnits').should('have.value', '')
+        cy.getByDataTest('complianceUnits').type('500', {
+          force: true,
+          delay: 0
+        })
+        cy.getByDataTest('complianceUnits').blur()
+        cy.wait('@calculateQuantity')
+        cy.getByDataTest('quantity', { timeout: 20000 }).should(
+          'have.value',
+          '42,000'
+        )
+      })
+
+      it('accepts a custom carbon intensity for applicable provisions', () => {
+        selectDieselBiodiesel()
+        cy.wait('@calculate')
+        cy.getByDataTest('complianceUnits').should('have.value', '1,234')
+
+        // A request carrying useCustomCi=true gets a distinct response so we can
+        // assert both the request shape and the rendered result.
+        cy.intercept(
+          {
+            method: 'GET',
+            pathname: /\/calculator\/[^/]+\/calculate\/$/,
+            query: { useCustomCi: 'true' }
+          },
+          (request) => {
+            if (Number(request.query.customCiValue) === 85.5) {
+              request.alias = 'customCalculate'
+            }
+            request.reply({
+              body: { ...calculateFixture, complianceUnits: 999 }
+            })
+          }
+        )
+
+        // Switch the provision to the "custom CI" option.
+        cy.get('input[type="radio"][value="customCi"]').check({ force: true })
+
+        // The custom CI input becomes editable.
+        cy.get('#carbon-intensity-input', { timeout: 20000 })
+          .should('exist')
+          .should('not.be.disabled')
+          .clear({ force: true })
+        cy.get('#carbon-intensity-input').should('have.value', '')
+        cy.get('#carbon-intensity-input').type('85.50', {
+          force: true,
+          delay: 0
+        })
+        cy.get('#carbon-intensity-input').blur()
+
+        cy.wait('@customCalculate')
+          .its('request.query.useCustomCi')
+          .should('eq', 'true')
+        cy.getByDataTest('complianceUnits', { timeout: 20000 }).should(
+          'have.value',
+          '999'
+        )
+      })
     })
-  })
-})
+
+    context('Calculation data lookup table', () => {
+      beforeEach(() => {
+        stubCalculatorApi()
+        cy.visit('/calculation-data')
+        cy.wait('@lookupTable')
+      })
+
+      it('loads the lookup table with reference data', () => {
+        cy.location('pathname').should('eq', '/calculation-data')
+        cy.getByDataTest('login-container').should('not.exist')
+        cy.contains('[role="tab"]', 'Calculation data').should('be.visible')
+        assertDescription(calculationDataDescription, '.ag-root')
+        checkDescriptionAccessibility()
+
+        // Both stubbed reference rows render in the grid.
+        cy.get('.ag-center-cols-container .ag-row', { timeout: 20000 }).should(
+          'have.length',
+          2
+        )
+        cy.contains('.ag-cell', 'Biodiesel').should('be.visible')
+        cy.contains('.ag-cell', 'Ethanol').should('be.visible')
+      })
+
+      it('reflows the description at 200% and 400% zoom-equivalent widths', () => {
+        for (const width of [640, 320]) {
+          cy.viewport(width, 800)
+          cy.getByDataTest('public-calculator-description')
+            .should('be.visible')
+            .then(($description) => {
+              expect($description[0].scrollWidth).to.be.at.most(
+                $description[0].clientWidth
+              )
+            })
+        }
+      })
+
+      it('displays the expected reference columns (CI, TCI, EER, energy density)', () => {
+        // The CI-related columns cluster on the right; scroll the grid so they
+        // render past AG Grid's column virtualisation.
+        cy.get('.ag-center-cols-viewport', { timeout: 20000 }).scrollTo(
+          'right',
+          {
+            ensureScrollable: false
+          }
+        )
+
+        cy.contains('.ag-header-cell-text', 'Target CI', {
+          timeout: 20000
+        }).should('be.visible') // TCI
+        cy.contains('.ag-header-cell-text', 'CI of fuel').should('be.visible') // CI
+        cy.contains('.ag-header-cell-text', 'EER').should('be.visible')
+        cy.contains('.ag-header-cell-text', 'Energy density').should(
+          'be.visible'
+        )
+      })
+    })
+  }
+)
