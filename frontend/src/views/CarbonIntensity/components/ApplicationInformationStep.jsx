@@ -1,5 +1,6 @@
 import {
   forwardRef,
+  useCallback,
   useEffect,
   useImperativeHandle,
   useMemo,
@@ -10,6 +11,10 @@ import { Controller, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import Autocomplete from '@mui/material/Autocomplete'
 import Box from '@mui/material/Box'
+import Dialog from '@mui/material/Dialog'
+import DialogActions from '@mui/material/DialogActions'
+import DialogContent from '@mui/material/DialogContent'
+import DialogTitle from '@mui/material/DialogTitle'
 import InputLabel from '@mui/material/InputLabel'
 import MenuItem from '@mui/material/MenuItem'
 import Stack from '@mui/material/Stack'
@@ -29,7 +34,13 @@ import InfoIcon from '@mui/icons-material/Info'
 import BCAlertRoot from '@/components/BCAlert/BCAlertRoot'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
-import { useCIFacilityLocationSearch } from '@/hooks/useCIApplication'
+import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
+import DocumentPreviewButton from '@/components/Documents/DocumentPreviewButton'
+import {
+  useCIFacilityLocationSearch,
+  useCreateCIApplicationFacility,
+  useGetCIApplicationFacilities
+} from '@/hooks/useCIApplication'
 import colors from '@/themes/base/colors'
 
 const DATE_FORMAT = 'yyyy-MM-dd'
@@ -171,6 +182,9 @@ const splitLocationParts = (value) =>
 
 const buildValidationSchema = (t) =>
   Yup.object({
+    fuelProductionFacilityId: Yup.number()
+      .typeError(t('carbonIntensity:step1.validation.facilityRequired'))
+      .required(t('carbonIntensity:step1.validation.facilityRequired')),
     facilityCity: Yup.string()
       .trim()
       .required(t('carbonIntensity:step1.validation.cityRequired')),
@@ -192,6 +206,7 @@ const buildValidationSchema = (t) =>
   })
 
 const toFormValues = (data) => ({
+  fuelProductionFacilityId: data?.fuelProductionFacilityId ?? '',
   facilityCity: data?.facilityCity ?? '',
   facilityProvinceState: data?.facilityProvinceState ?? '',
   facilityCountry: data?.facilityCountry ?? '',
@@ -201,6 +216,7 @@ const toFormValues = (data) => ({
 })
 
 const toApiPayload = (values) => ({
+  fuelProductionFacilityId: Number(values.fuelProductionFacilityId),
   facilityCity: values.facilityCity?.trim(),
   facilityProvinceState: values.facilityProvinceState?.trim(),
   facilityCountry: values.facilityCountry?.trim(),
@@ -225,6 +241,29 @@ export const ApplicationInformationStep = forwardRef(
   ) => {
     const { t } = useTranslation(['common', 'carbonIntensity'])
     const autofillTrapRef = useRef(null)
+    const [facilityDialogOpen, setFacilityDialogOpen] = useState(false)
+    const [documentDialogOpen, setDocumentDialogOpen] = useState(false)
+    const [facilityCreateError, setFacilityCreateError] = useState('')
+    const [newFacility, setNewFacility] = useState({
+      name: '',
+      city: '',
+      provinceState: '',
+      country: '',
+      nameplateCapacity: '',
+      nameplateCapacityUnit: '',
+      contactName: '',
+      contactEmail: ''
+    })
+    const {
+      data: facilities = [],
+      isLoading: isLoadingFacilities,
+      isError: isFacilityListError
+    } =
+      useGetCIApplicationFacilities({
+        enabled: !readOnly
+      })
+    const { mutateAsync: createFacility, isPending: isCreatingFacility } =
+      useCreateCIApplicationFacility()
 
     const validationSchema = buildValidationSchema(t)
     const form = useForm({
@@ -233,11 +272,49 @@ export const ApplicationInformationStep = forwardRef(
       defaultValues: toFormValues(ciApplication)
     })
 
-    const { control, handleSubmit, reset, setValue, formState } = form
+    const { control, handleSubmit, reset, setValue, watch, formState } = form
+    const selectedFacilityId = Number(watch('fuelProductionFacilityId') || 0)
+    const selectedFacility = facilities.find(
+      (facility) =>
+        facility.fuelProductionFacilityId === selectedFacilityId
+    ) || ciApplication?.fuelProductionFacility
+
+    const applyFacility = useCallback(
+      (facility) => {
+        setValue('fuelProductionFacilityId', facility.fuelProductionFacilityId, {
+          shouldDirty: true,
+          shouldValidate: true
+        })
+        setValue('facilityCity', facility.city || '')
+        setValue('facilityProvinceState', facility.provinceState || '')
+        setValue('facilityCountry', facility.country || '')
+        setValue('facilityNameplateCapacity', facility.nameplateCapacity || '')
+        setValue(
+          'facilityNameplateCapacityUnit',
+          facility.nameplateCapacityUnit || ''
+        )
+      },
+      [setValue]
+    )
 
     useEffect(() => {
       reset(toFormValues(ciApplication))
     }, [ciApplication, reset])
+
+    useEffect(() => {
+      if (
+        !ciApplication?.fuelProductionFacilityId &&
+        !watch('fuelProductionFacilityId') &&
+        facilities.length === 1
+      ) {
+        applyFacility(facilities[0])
+      }
+    }, [
+      applyFacility,
+      ciApplication?.fuelProductionFacilityId,
+      facilities,
+      watch
+    ])
 
     useImperativeHandle(ref, () => ({
       submit: () =>
@@ -251,6 +328,33 @@ export const ApplicationInformationStep = forwardRef(
     }))
 
     const onSubmit = (values) => onSave?.(toApiPayload(values))
+
+    const handleCreateFacility = async (event) => {
+      event.preventDefault()
+      setFacilityCreateError('')
+      try {
+        const facility = await createFacility({
+          ...newFacility,
+          nameplateCapacity: Number(newFacility.nameplateCapacity)
+        })
+        applyFacility(facility)
+        setFacilityDialogOpen(false)
+        setNewFacility({
+          name: '',
+          city: '',
+          provinceState: '',
+          country: '',
+          nameplateCapacity: '',
+          nameplateCapacityUnit: '',
+          contactName: '',
+          contactEmail: ''
+        })
+      } catch {
+        setFacilityCreateError(
+          t('carbonIntensity:step1.facilityCreateFailed')
+        )
+      }
+    }
 
     const applyCitySuggestion = (suggestion) => {
       const [city = '', province = '', country = ''] =
@@ -355,6 +459,91 @@ export const ApplicationInformationStep = forwardRef(
         <BCTypography variant="h6" sx={{ pb: 2, color: colors.primary.main }}>
           {t('carbonIntensity:step1.facilityLocationLabel')}
         </BCTypography>
+
+        <Grid2 container spacing={2} sx={{ mb: 2 }}>
+          <Grid2 size={{ xs: 12, md: 8 }}>
+            <InputLabel htmlFor="fuelProductionFacilityId" sx={{ pb: 1 }}>
+              {t('carbonIntensity:step1.facility')}
+              {requiredSuffix}:
+            </InputLabel>
+            <TextField
+              id="fuelProductionFacilityId"
+              select
+              fullWidth
+              required
+              value={selectedFacilityId || ''}
+              disabled={readOnly || isLoadingFacilities}
+              error={
+                !!formState.errors.fuelProductionFacilityId ||
+                (!facilities.length && !isLoadingFacilities)
+              }
+              helperText={
+                isFacilityListError
+                  ? t('carbonIntensity:step1.facilityListFailed')
+                  : !facilities.length && !isLoadingFacilities
+                    ? t('carbonIntensity:step1.noFacilities')
+                    : formState.errors.fuelProductionFacilityId?.message || ''
+              }
+              onChange={(event) => {
+                const facility = facilities.find(
+                  (item) =>
+                    item.fuelProductionFacilityId === Number(event.target.value)
+                )
+                if (facility) applyFacility(facility)
+              }}
+            >
+              {facilities.map((facility) => (
+                <MenuItem
+                  key={facility.fuelProductionFacilityId}
+                  value={facility.fuelProductionFacilityId}
+                >
+                  {facility.name || t('carbonIntensity:step1.unnamedFacility')}
+                  {facility.city ? ` — ${facility.city}` : ''}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Grid2>
+          <Grid2 size={{ xs: 12, md: 4 }} sx={{ display: 'flex', alignItems: 'end' }}>
+            <BCButton
+              type="button"
+              variant="outlined"
+              onClick={() => setFacilityDialogOpen(true)}
+              disabled={readOnly}
+              data-test="ci-step1-add-facility"
+            >
+              {t('carbonIntensity:step1.addFacility')}
+            </BCButton>
+          </Grid2>
+        </Grid2>
+
+        {selectedFacility && (
+          <Box sx={{ mb: 2 }}>
+            <BCTypography variant="body2">
+              {t('carbonIntensity:step1.facilityContact')}:&nbsp;
+              {selectedFacility.contactName || '—'}
+              {selectedFacility.contactEmail
+                ? ` (${selectedFacility.contactEmail})`
+                : ''}
+            </BCTypography>
+            <BCButton
+              type="button"
+              variant="text"
+              onClick={() => setDocumentDialogOpen(true)}
+              disabled={readOnly}
+              data-test="ci-step1-process-flow-upload"
+            >
+              {t('carbonIntensity:step1.processFlowDiagram')}
+            </BCButton>
+            {(selectedFacility.documents || []).map((document) => (
+              <DocumentPreviewButton
+                key={document.documentId}
+                parentType="fuel_production_facility"
+                parentID={selectedFacilityId}
+                document={document}
+              />
+            ))}
+          </Box>
+        )}
 
         <Grid2 container spacing={2}>
           <Grid2 size={{ xs: 12, md: 4 }}>
@@ -466,6 +655,7 @@ export const ApplicationInformationStep = forwardRef(
                       id="facilityNameplateCapacity"
                       data-test="facilityNameplateCapacity"
                       type="text"
+                      disabled={readOnly}
                       inputMode="numeric"
                       name={field.name}
                       inputRef={field.ref}
@@ -480,7 +670,6 @@ export const ApplicationInformationStep = forwardRef(
                       fullWidth
                       error={!!fieldState.error}
                       helperText={fieldState.error?.message}
-                      disabled={readOnly}
                     />
                   </Box>
                 )
@@ -504,6 +693,7 @@ export const ApplicationInformationStep = forwardRef(
                   <TextField
                     {...field}
                     select
+                    disabled={readOnly}
                     id="facilityNameplateCapacityUnit"
                     data-test="facilityNameplateCapacityUnit"
                     value={field.value ?? ''}
@@ -512,7 +702,6 @@ export const ApplicationInformationStep = forwardRef(
                     fullWidth
                     error={!!fieldState.error}
                     helperText={fieldState.error?.message}
-                    disabled={readOnly}
                     SelectProps={{ displayEmpty: true }}
                     sx={{
                       '& .MuiSelect-select.MuiOutlinedInput-input': {
@@ -655,6 +844,90 @@ export const ApplicationInformationStep = forwardRef(
             </BCButton>
           )}
         </Stack>
+
+        <Dialog
+          open={facilityDialogOpen}
+          onClose={() => setFacilityDialogOpen(false)}
+          fullWidth
+          maxWidth="md"
+        >
+          <DialogTitle>{t('carbonIntensity:step1.addFacilityTitle')}</DialogTitle>
+          <Box component="form" onSubmit={handleCreateFacility}>
+            <DialogContent>
+              <Grid2 container spacing={2}>
+                {[
+                  ['name', 'facilityName'],
+                  ['city', 'city'],
+                  ['provinceState', 'provinceState'],
+                  ['country', 'country'],
+                  ['nameplateCapacity', 'facilityNameplate'],
+                  ['contactName', 'contactName'],
+                  ['contactEmail', 'contactEmail']
+                ].map(([field, label]) => (
+                  <Grid2 key={field} size={{ xs: 12, md: 6 }}>
+                    <TextField
+                      fullWidth
+                      required={!['contactName', 'contactEmail'].includes(field)}
+                      type={field === 'contactEmail' ? 'email' : 'text'}
+                      label={t(`carbonIntensity:step1.${label}`)}
+                      value={newFacility[field]}
+                      onChange={(event) =>
+                        setNewFacility((current) => ({
+                          ...current,
+                          [field]: event.target.value
+                        }))
+                      }
+                    />
+                  </Grid2>
+                ))}
+                <Grid2 size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    select
+                    fullWidth
+                    required
+                    label={t('carbonIntensity:step1.unitOfMeasure')}
+                    value={newFacility.nameplateCapacityUnit}
+                    onChange={(event) =>
+                      setNewFacility((current) => ({
+                        ...current,
+                        nameplateCapacityUnit: event.target.value
+                      }))
+                    }
+                  >
+                    {unitsOfMeasure.map((unit) => (
+                      <MenuItem key={unit} value={unit}>
+                        {unit}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Grid2>
+              </Grid2>
+              {facilityCreateError && (
+                <BCTypography color="error" sx={{ mt: 2 }}>
+                  {facilityCreateError}
+                </BCTypography>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <BCButton
+                type="button"
+                variant="text"
+                onClick={() => setFacilityDialogOpen(false)}
+              >
+                {t('common:cancelBtn')}
+              </BCButton>
+              <BCButton type="submit" disabled={isCreatingFacility}>
+                {t('carbonIntensity:step1.saveFacility')}
+              </BCButton>
+            </DialogActions>
+          </Box>
+        </Dialog>
+        <DocumentUploadDialog
+          open={documentDialogOpen}
+          close={() => setDocumentDialogOpen(false)}
+          parentType="fuel_production_facility"
+          parentID={selectedFacilityId}
+        />
       </Box>
     )
   }
