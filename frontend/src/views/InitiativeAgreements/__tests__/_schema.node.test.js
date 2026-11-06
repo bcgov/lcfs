@@ -21,13 +21,32 @@ describe('initiativeAgreementColDefs', () => {
     expect(fields).toEqual([
       'lifecycleStatus.status',
       'organization.name',
-      'contactName',
       'iaCode',
+      'lastComment',
+      'awardedCredits',
+      'totalCredits',
       'agreementStartDate',
-      'agreementEndDate',
-      'updateDate',
-      'lastComment'
+      'agreementEndDate'
     ])
+  })
+
+  it('no longer shows the contact or last updated columns (#5339)', () => {
+    const fields = initiativeAgreementColDefs(t).map((colDef) => colDef.field)
+    expect(fields).not.toContain('contactName')
+    expect(fields).not.toContain('updateDate')
+  })
+
+  it('formats credits as right-aligned whole numbers and filters them as numbers (#5339)', () => {
+    const columns = initiativeAgreementColDefs(t)
+    for (const field of ['awardedCredits', 'totalCredits']) {
+      const column = columns.find((colDef) => colDef.field === field)
+      expect(column.type).toBe('numericColumn')
+      expect(column.filter).toBe('agNumberColumnFilter')
+      expect(column.filterParams.filterOptions).not.toContain('inRange')
+      expect(column.sortable).not.toBe(false)
+      expect(column.valueFormatter({ value: 1234567 })).toBe('1,234,567')
+      expect(column.valueFormatter({ value: 0 })).toBe('0')
+    }
   })
 
   it('uses translation keys for every header', () => {
@@ -39,10 +58,8 @@ describe('initiativeAgreementColDefs', () => {
     })
   })
 
-  it('sorts by last updated descending by default', () => {
-    expect(defaultSortModel).toEqual([
-      { field: 'updateDate', direction: 'desc' }
-    ])
+  it('leaves the default order to the server, newest update first', () => {
+    expect(defaultSortModel).toEqual([])
   })
 })
 
