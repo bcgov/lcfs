@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 import Divider from '@mui/material/Divider'
@@ -25,14 +26,23 @@ import { constructAddress } from '@/utils/constructAddress'
 import { dateFormatter } from '@/utils/formatters'
 import withRole from '@/utils/withRole'
 
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useGetInitiativeAgreement } from '@/hooks/useInitiativeAgreements'
 import { useInitiativeAgreementPageStore } from '@/stores/useInitiativeAgreementPageStore'
 import { DesignatedActionsGrid } from './components/DesignatedActionsGrid'
 import { AddDesignatedAction } from './components/AddDesignatedAction'
 import { AgreementEditForm } from './components/AgreementEditForm'
+import { DocumentTree } from './components/DocumentTree'
 
 // The shared document machinery keys on this string for initiative agreements.
 const PARENT_TYPE = 'initiativeAgreement'
+
+// The roles the folder API serves; everyone else on this page is a proponent.
+const DOCUMENT_MANAGER_ROLES = [
+  roles.ia_analyst,
+  roles.ia_manager,
+  roles.director
+]
 
 const LabelValue = ({ label, value }) => (
   <BCTypography variant="body4">
@@ -54,10 +64,20 @@ const InitiativeAgreementDetailBase = () => {
     error
   } = useGetInitiativeAgreement(initiativeAgreementId)
 
-  const { data: documents, refetch: refetchDocuments } = useDocuments(
-    PARENT_TYPE,
-    initiativeAgreementId
-  )
+  // IDIR staff get the same folder tree and bin as a designated action
+  // (#5337). The folder API is IDIR-only, so a proponent keeps the flat
+  // list until the BCeID story; it already leaves out binned files.
+  const { hasAnyRole } = useCurrentUser()
+  const managesDocuments = hasAnyRole?.(...DOCUMENT_MANAGER_ROLES) ?? false
+  const { data: documents } = useDocuments(PARENT_TYPE, initiativeAgreementId, {
+    enabled: !managesDocuments
+  })
+  // Only the tree offers upload, so only the tree needs refreshing after.
+  const queryClient = useQueryClient()
+  const refreshTree = () =>
+    queryClient.invalidateQueries({
+      queryKey: ['document-tree', PARENT_TYPE, String(initiativeAgreementId)]
+    })
 
   // Surface the agreement code in the breadcrumb while this page is open.
   const setAgreementCrumb = useInitiativeAgreementPageStore(
@@ -238,65 +258,78 @@ const InitiativeAgreementDetailBase = () => {
               </>
             )}
 
-            <Paper
-              variant="outlined"
-              sx={{ p: 2, mt: 3 }}
-              data-test="initiative-agreement-documents-section"
-            >
+            {managesDocuments ? (
+              // The tree draws its own card, title and actions, as on the
+              // designated action page.
               <BCBox
-                sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}
+                sx={{ mt: 3 }}
+                data-test="initiative-agreement-documents-section"
               >
-                <BCTypography variant="h6" color="primary">
+                <DocumentTree
+                  parentType={PARENT_TYPE}
+                  parentID={initiativeAgreementId}
+                  enablePreview
+                  allowSubfolders
+                  title={t('initiativeAgreement:detail.documents')}
+                  headerAction={
+                    // Upload stays IDIR-side; the shared upload endpoint's
+                    // role list is broader than this module.
+                    <BCTypography
+                      component="button"
+                      variant="body4"
+                      color="link"
+                      data-test="upload-documents-button"
+                      onClick={() => setUploadOpen(true)}
+                      sx={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        textDecoration: 'underline'
+                      }}
+                    >
+                      {t('initiativeAgreement:detail.manageDocuments')}
+                    </BCTypography>
+                  }
+                />
+              </BCBox>
+            ) : (
+              <Paper
+                variant="outlined"
+                sx={{ p: 2, mt: 3 }}
+                data-test="initiative-agreement-documents-section"
+              >
+                <BCTypography variant="h6" color="primary" mb={1}>
                   {t('initiativeAgreement:detail.documents')}
                 </BCTypography>
-                {/* Upload is IDIR-only for this story; the shared upload
-                    endpoint's role list is broader than this module. */}
-                <Role
-                  roles={[roles.ia_analyst, roles.ia_manager, roles.director]}
-                >
-                  <BCTypography
-                    component="button"
-                    variant="body4"
-                    color="link"
-                    data-test="upload-documents-button"
-                    onClick={() => setUploadOpen(true)}
-                    sx={{
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      textDecoration: 'underline'
-                    }}
-                  >
-                    {t('initiativeAgreement:detail.manageDocuments')}
+                {documents?.length ? (
+                  <SupportingDocumentSummary
+                    parentID={initiativeAgreementId}
+                    parentType={PARENT_TYPE}
+                    data={documents}
+                    detailed
+                  />
+                ) : (
+                  <BCTypography variant="body4" color="text.secondary">
+                    {t('initiativeAgreement:detail.noDocuments')}
                   </BCTypography>
-                </Role>
-              </BCBox>
-              {documents?.length ? (
-                <SupportingDocumentSummary
-                  parentID={initiativeAgreementId}
-                  parentType={PARENT_TYPE}
-                  data={documents}
-                  detailed
-                />
-              ) : (
-                <BCTypography variant="body4" color="text.secondary">
-                  {t('initiativeAgreement:detail.noDocuments')}
-                </BCTypography>
-              )}
-            </Paper>
+                )}
+              </Paper>
+            )}
           </BCBox>
         }
       />
 
-      <DocumentUploadDialog
-        open={uploadOpen}
-        close={() => {
-          setUploadOpen(false)
-          refetchDocuments()
-        }}
-        parentType={PARENT_TYPE}
-        parentID={initiativeAgreementId}
-      />
+      {managesDocuments && (
+        <DocumentUploadDialog
+          open={uploadOpen}
+          close={() => {
+            setUploadOpen(false)
+            refreshTree()
+          }}
+          parentType={PARENT_TYPE}
+          parentID={initiativeAgreementId}
+        />
+      )}
 
       {/* The designated-action grid is the IDIR story (#4896); the
           proponent's view arrives with the BCeID story. */}
