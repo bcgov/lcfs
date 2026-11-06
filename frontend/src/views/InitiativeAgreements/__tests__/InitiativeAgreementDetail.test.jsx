@@ -39,8 +39,12 @@ vi.mock('@/hooks/useInitiativeAgreements', () => ({
 }))
 
 const mockDocuments = vi.fn()
+const documentsArgs = vi.fn()
 vi.mock('@/hooks/useDocuments', () => ({
-  useDocuments: () => mockDocuments(),
+  useDocuments: (...args) => {
+    documentsArgs(...args)
+    return mockDocuments()
+  },
   useDownloadDocument: () => vi.fn(),
   // The document list's preview button (from develop) fetches through this.
   useFetchDocument: () => vi.fn()
@@ -69,6 +73,21 @@ vi.mock('../components/DesignatedActionsGrid', () => ({
 
 vi.mock('@/components/Documents/DocumentUploadDialog', () => ({
   default: ({ open }) => (open ? <div data-test="upload-dialog" /> : null)
+}))
+
+const treeProps = vi.fn()
+vi.mock('../components/DocumentTree', () => ({
+  // The tree owns the section's card and header, so the page's own
+  // controls reach the screen through it.
+  DocumentTree: (props) => {
+    treeProps(props)
+    return (
+      <div data-test="document-tree">
+        <span>{props.title}</span>
+        {props.headerAction}
+      </div>
+    )
+  }
 }))
 
 const agreement = {
@@ -196,6 +215,7 @@ describe('InitiativeAgreementDetail', () => {
     render,
     app
   }) => {
+    mockRoles = [{ name: roles.ia_proponent }]
     render(<InitiativeAgreementDetail />, app)
     expect(
       screen.getByText('initiativeAgreement:detail.noDocuments')
@@ -238,6 +258,7 @@ describe('InitiativeAgreementDetail', () => {
       ],
       refetch: vi.fn()
     })
+    mockRoles = [{ name: roles.ia_proponent }]
     render(<InitiativeAgreementDetail />, app)
 
     expect(screen.getByText('signed-agreement.pdf')).toBeInTheDocument()
@@ -245,6 +266,57 @@ describe('InitiativeAgreementDetail', () => {
     expect(screen.getByText(/BETZ/)).toBeInTheDocument()
     // Government upload falls back to the government label.
     expect(screen.getByText(/gov/)).toBeInTheDocument()
+  })
+
+  test.for([roles.ia_analyst, roles.ia_manager, roles.director])(
+    'gives %s the folder tree the designated action page uses (#5337)',
+    (role, { render, app }) => {
+      mockRoles = [{ name: role }]
+      render(<InitiativeAgreementDetail />, app)
+
+      expect(screen.getByTestId('document-tree')).toBeInTheDocument()
+      expect(treeProps).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          parentType: 'initiativeAgreement',
+          parentID: '5',
+          allowSubfolders: true,
+          enablePreview: true,
+          title: 'initiativeAgreement:detail.documents'
+        })
+      )
+      // The tree replaces the flat list, so the list is not fetched too.
+      expect(documentsArgs).toHaveBeenLastCalledWith(
+        'initiativeAgreement',
+        '5',
+        { enabled: false }
+      )
+    }
+  )
+
+  test('opens the upload dialog from the tree header', ({ render, app }) => {
+    render(<InitiativeAgreementDetail />, app)
+    expect(screen.queryByTestId('upload-dialog')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('upload-documents-button'))
+
+    expect(screen.getByTestId('upload-dialog')).toBeInTheDocument()
+  })
+
+  test('keeps a BCeID proponent on the flat list, without folders', ({
+    render,
+    app
+  }) => {
+    // The folder API is IDIR-only, like the designated action page.
+    mockRoles = [{ name: roles.ia_proponent }]
+    render(<InitiativeAgreementDetail />, app)
+
+    expect(screen.queryByTestId('document-tree')).not.toBeInTheDocument()
+    expect(
+      screen.getByTestId('initiative-agreement-documents-section')
+    ).toBeInTheDocument()
+    expect(documentsArgs).toHaveBeenLastCalledWith('initiativeAgreement', '5', {
+      enabled: true
+    })
   })
 
   test('publishes the agreement code to the breadcrumb store', ({

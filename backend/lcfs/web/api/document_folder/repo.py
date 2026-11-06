@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional, Sequence, Set, Tuple
 
 from fastapi import Depends
-from sqlalchemy import delete, desc, func, select
+from sqlalchemy import Column, Table, delete, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db.dependencies import get_async_db_session
@@ -11,7 +11,30 @@ from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.initiative_agreement.DesignatedAction import (
     designated_action_document_association,
 )
+from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
+    initiative_agreement_document_association,
+)
 from lcfs.web.core.decorators import repo_handler
+
+# How each folder-enabled parent links to its documents. Keyed like
+# FOLDER_ENABLED_PARENT_TYPES, which the views check before any of this
+# runs, so a missing entry is a programming error rather than a request
+# to refuse.
+FOLDER_PARENT_ASSOCIATIONS: Dict[str, Tuple[Table, str]] = {
+    "designatedAction": (
+        designated_action_document_association,
+        "designated_action_id",
+    ),
+    "initiativeAgreement": (
+        initiative_agreement_document_association,
+        "initiative_agreement_id",
+    ),
+}
+
+
+def _association(parent_type: str) -> Tuple[Table, Column]:
+    table, column_name = FOLDER_PARENT_ASSOCIATIONS[parent_type]
+    return table, table.c[column_name]
 
 
 class DocumentFolderRepository:
@@ -56,27 +79,22 @@ class DocumentFolderRepository:
         await self.db.flush()
 
     @repo_handler
-    async def get_parent_documents(self, parent_id: int) -> List[Document]:
-        """Documents associated with the designated action."""
+    async def get_parent_documents(
+        self, parent_type: str, parent_id: int
+    ) -> List[Document]:
+        """Live documents associated with the parent."""
+        table, parent_column = _association(parent_type)
         result = await self.db.execute(
             select(Document)
-            .join(
-                designated_action_document_association,
-                designated_action_document_association.c.document_id
-                == Document.document_id,
-            )
-            .where(
-                designated_action_document_association.c.designated_action_id
-                == parent_id,
-                Document.deleted_date.is_(None),
-            )
+            .join(table, table.c.document_id == Document.document_id)
+            .where(parent_column == parent_id, Document.deleted_date.is_(None))
             .order_by(Document.file_name)
         )
         return list(result.scalars().all())
 
     @repo_handler
     async def get_deleted_documents(
-        self, parent_id: int, limit: int = 50, offset: int = 0
+        self, parent_type: str, parent_id: int, limit: int = 50, offset: int = 0
     ) -> Tuple[List[Document], int]:
         """The bin for one parent, newest deletion first.
 
@@ -84,18 +102,11 @@ class DocumentFolderRepository:
         only grows and the screen will need paging eventually even though
         it does not today.
         """
+        table, parent_column = _association(parent_type)
         base = (
             select(Document)
-            .join(
-                designated_action_document_association,
-                designated_action_document_association.c.document_id
-                == Document.document_id,
-            )
-            .where(
-                designated_action_document_association.c.designated_action_id
-                == parent_id,
-                Document.deleted_date.isnot(None),
-            )
+            .join(table, table.c.document_id == Document.document_id)
+            .where(parent_column == parent_id, Document.deleted_date.isnot(None))
         )
         total = (
             await self.db.execute(
@@ -111,21 +122,14 @@ class DocumentFolderRepository:
 
     @repo_handler
     async def get_document_for_parent(
-        self, document_id: int, parent_id: int
+        self, parent_type: str, document_id: int, parent_id: int
     ) -> Optional[Document]:
         """A document, but only if it belongs to this parent."""
+        table, parent_column = _association(parent_type)
         result = await self.db.execute(
             select(Document)
-            .join(
-                designated_action_document_association,
-                designated_action_document_association.c.document_id
-                == Document.document_id,
-            )
-            .where(
-                Document.document_id == document_id,
-                designated_action_document_association.c.designated_action_id
-                == parent_id,
-            )
+            .join(table, table.c.document_id == Document.document_id)
+            .where(Document.document_id == document_id, parent_column == parent_id)
             .execution_options(populate_existing=True)
         )
         return result.scalars().first()
@@ -159,12 +163,12 @@ class DocumentFolderRepository:
         return resolved
 
     @repo_handler
-    async def get_associated_document_ids(self, parent_id: int) -> Set[int]:
+    async def get_associated_document_ids(
+        self, parent_type: str, parent_id: int
+    ) -> Set[int]:
+        table, parent_column = _association(parent_type)
         result = await self.db.execute(
-            select(designated_action_document_association.c.document_id).where(
-                designated_action_document_association.c.designated_action_id
-                == parent_id
-            )
+            select(table.c.document_id).where(parent_column == parent_id)
         )
         return set(result.scalars().all())
 

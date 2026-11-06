@@ -129,7 +129,9 @@ class DocumentFolderServices:
     async def soft_delete_document(
         self, parent_type: str, parent_id: int, document_id: int, user
     ) -> None:
-        document = await self.repo.get_document_for_parent(document_id, parent_id)
+        document = await self.repo.get_document_for_parent(
+            parent_type, document_id, parent_id
+        )
         if document is None:
             raise DataNotFoundException(f"Document {document_id} not found")
         if document.deleted_date is not None:
@@ -154,7 +156,9 @@ class DocumentFolderServices:
     async def restore_document(
         self, parent_type: str, parent_id: int, document_id: int, user=None
     ) -> None:
-        document = await self.repo.get_document_for_parent(document_id, parent_id)
+        document = await self.repo.get_document_for_parent(
+            parent_type, document_id, parent_id
+        )
         if document is None:
             raise DataNotFoundException(f"Document {document_id} not found")
         if document.deleted_date is None:
@@ -337,7 +341,7 @@ class DocumentFolderServices:
         self, parent_type: str, parent_id: int, limit: int = 50, offset: int = 0
     ) -> DeletedDocumentsSchema:
         documents, total = await self.repo.get_deleted_documents(
-            parent_id, limit=limit, offset=offset
+            parent_type, parent_id, limit=limit, offset=offset
         )
         all_folders_for_names = await self.repo.get_all_folders_including_deleted(
             parent_type, parent_id
@@ -469,7 +473,7 @@ class DocumentFolderServices:
         self, parent_type: str, parent_id: int
     ) -> DocumentFolderTreeSchema:
         folders = await self.repo.get_folders(parent_type, parent_id)
-        documents = await self.repo.get_parent_documents(parent_id)
+        documents = await self.repo.get_parent_documents(parent_type, parent_id)
         placements = await self.repo.get_placements([f.folder_id for f in folders])
         org_codes = await self.repo.get_uploading_organization_codes(
             [d.create_user for d in documents]
@@ -648,7 +652,7 @@ class DocumentFolderServices:
             return
         if data.folder_id is not None:
             await self._get_scoped_folder(data.folder_id, parent_type, parent_id)
-        associated = await self.repo.get_associated_document_ids(parent_id)
+        associated = await self.repo.get_associated_document_ids(parent_type, parent_id)
         strays = [d for d in data.document_ids if d not in associated]
         if strays:
             raise HTTPException(

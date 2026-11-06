@@ -1,4 +1,5 @@
-"""Folder layer for designated action documents (#4925, phase 1).
+"""Folder layer for designated action and initiative agreement documents
+(#4925, phase 1; agreements joined in #5337).
 
 The isolation guarantee comes first: folders exist only for the surfaces
 in FOLDER_ENABLED_PARENT_TYPES, and every other parent type is refused
@@ -14,6 +15,11 @@ from sqlalchemy import select
 from lcfs.db.models.document import Document, DocumentFolder, DocumentFolderItem
 from lcfs.db.models.initiative_agreement.DesignatedAction import (
     designated_action_document_association,
+)
+from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
+    RECORD_KIND_LEGACY_AWARD,
+    InitiativeAgreement,
+    initiative_agreement_document_association,
 )
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.tests.initiative_agreement.test_designated_actions_api import (
@@ -78,7 +84,6 @@ async def _create_folder(client, fastapi_app, action, name, parent_folder_id=Non
         "charging_site",
         "administrativeAdjustment",
         "internal_comment",
-        "initiativeAgreement",
     ],
 )
 @pytest.mark.anyio
@@ -940,3 +945,308 @@ async def test_the_bin_shows_one_row_per_deleted_folder_with_its_contents(
     ]
     # Those files come back with the folder, so they are not listed twice.
     assert deleted["documents"] == []
+
+
+# ---------------------------------------------------------------------------
+# Initiative agreements (#5337). The same tree and bin as a designated
+# action, reached through the agreement's own document association.
+# ---------------------------------------------------------------------------
+
+
+async def _seed_ia(dbsession, code, **overrides):
+    org_id, _ = await _two_org_ids(dbsession)
+    return await _seed_agreement(dbsession, org_id, code, **overrides)
+
+
+async def _seed_ia_document(dbsession, agreement, name="agreement.pdf"):
+    document = Document(
+        file_key=f"ia/{name}",
+        file_name=name,
+        file_size=4096,
+        mime_type="application/pdf",
+    )
+    dbsession.add(document)
+    await dbsession.flush()
+    await dbsession.execute(
+        initiative_agreement_document_association.insert().values(
+            initiative_agreement_id=agreement.initiative_agreement_id,
+            document_id=document.document_id,
+        )
+    )
+    return document
+
+
+def _ia_url(fastapi_app, name, agreement, **params):
+    return fastapi_app.url_path_for(
+        name,
+        parent_type="initiativeAgreement",
+        parent_id=agreement.initiative_agreement_id,
+        **params,
+    )
+
+
+@pytest.mark.anyio
+async def test_agreement_documents_file_into_folders(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """Existing agreement documents need no backfill: with no placement
+    row they sit at the top level, and filing one is a single move."""
+    agreement = await _seed_ia(dbsession, "IA-26IAF1")
+    signed = await _seed_ia_document(dbsession, agreement, "signed-agreement.pdf")
+    await _seed_ia_document(dbsession, agreement, "schedule-a.pdf")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    tree = (
+        await client.get(_ia_url(fastapi_app, "get_document_folder_tree", agreement))
+    ).json()
+    assert tree["folders"] == []
+    assert sorted(d["fileName"] for d in tree["rootDocuments"]) == [
+        "schedule-a.pdf",
+        "signed-agreement.pdf",
+    ]
+
+    created = await client.post(
+        _ia_url(fastapi_app, "create_document_folder", agreement),
+        json={"name": "Signed"},
+    )
+    assert created.status_code == status.HTTP_201_CREATED
+    folder_id = created.json()["folderId"]
+    sub = await client.post(
+        _ia_url(fastapi_app, "create_document_folder", agreement),
+        json={"name": "Amendments", "parentFolderId": folder_id},
+    )
+    assert sub.status_code == status.HTTP_201_CREATED
+
+    moved = await client.put(
+        _ia_url(fastapi_app, "move_document_folder_items", agreement),
+        json={"documentIds": [signed.document_id], "folderId": folder_id},
+    )
+    assert moved.status_code == status.HTTP_204_NO_CONTENT
+
+    renamed = await client.put(
+        _ia_url(fastapi_app, "update_document_folder", agreement, folder_id=folder_id),
+        json={"name": "Signed copies"},
+    )
+    assert renamed.status_code == status.HTTP_200_OK
+
+    tree = (
+        await client.get(_ia_url(fastapi_app, "get_document_folder_tree", agreement))
+    ).json()
+    assert [f["name"] for f in tree["folders"]] == ["Signed copies"]
+    assert [c["name"] for c in tree["folders"][0]["children"]] == ["Amendments"]
+    assert [d["fileName"] for d in tree["folders"][0]["documents"]] == [
+        "signed-agreement.pdf"
+    ]
+    assert [d["fileName"] for d in tree["rootDocuments"]] == ["schedule-a.pdf"]
+
+
+@pytest.mark.anyio
+async def test_agreement_documents_go_to_the_bin_and_come_back(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    agreement = await _seed_ia(dbsession, "IA-26IAF2")
+    document = await _seed_ia_document(dbsession, agreement, "permit.pdf")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+    folder = (
+        await client.post(
+            _ia_url(fastapi_app, "create_document_folder", agreement),
+            json={"name": "Permits"},
+        )
+    ).json()
+    await client.put(
+        _ia_url(fastapi_app, "move_document_folder_items", agreement),
+        json={"documentIds": [document.document_id], "folderId": folder["folderId"]},
+    )
+    shared_list = fastapi_app.url_path_for(
+        "get_all_documents",
+        parent_type="initiativeAgreement",
+        parent_id=agreement.initiative_agreement_id,
+    )
+
+    removed = await client.delete(
+        _ia_url(
+            fastapi_app,
+            "soft_delete_document",
+            agreement,
+            document_id=document.document_id,
+        )
+    )
+    assert removed.status_code == status.HTTP_204_NO_CONTENT
+
+    # Out of the tree and the shared list, kept in the bin.
+    tree = (
+        await client.get(_ia_url(fastapi_app, "get_document_folder_tree", agreement))
+    ).json()
+    assert tree["folders"][0]["documents"] == []
+    assert (await client.get(shared_list)).json() == []
+    binned = (
+        await client.get(_ia_url(fastapi_app, "get_deleted_documents", agreement))
+    ).json()
+    assert [d["fileName"] for d in binned["documents"]] == ["permit.pdf"]
+    assert binned["documents"][0]["restoreFolderName"] == "Permits"
+
+    restored = await client.put(
+        _ia_url(
+            fastapi_app,
+            "restore_document",
+            agreement,
+            document_id=document.document_id,
+        )
+    )
+    assert restored.status_code == status.HTTP_204_NO_CONTENT
+    tree = (
+        await client.get(_ia_url(fastapi_app, "get_document_folder_tree", agreement))
+    ).json()
+    assert [d["fileName"] for d in tree["folders"][0]["documents"]] == ["permit.pdf"]
+    assert [d["fileName"] for d in (await client.get(shared_list)).json()] == [
+        "permit.pdf"
+    ]
+
+
+@pytest.mark.anyio
+async def test_an_agreement_folder_restores_with_its_files(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    agreement = await _seed_ia(dbsession, "IA-26IAF3")
+    document = await _seed_ia_document(dbsession, agreement, "report.pdf")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+    folder = (
+        await client.post(
+            _ia_url(fastapi_app, "create_document_folder", agreement),
+            json={"name": "Reports"},
+        )
+    ).json()
+    await client.put(
+        _ia_url(fastapi_app, "move_document_folder_items", agreement),
+        json={"documentIds": [document.document_id], "folderId": folder["folderId"]},
+    )
+    folder_url = _ia_url(
+        fastapi_app,
+        "delete_document_folder",
+        agreement,
+        folder_id=folder["folderId"],
+    )
+
+    await client.delete(f"{folder_url}?strategy=cascade")
+
+    tree = (
+        await client.get(_ia_url(fastapi_app, "get_document_folder_tree", agreement))
+    ).json()
+    assert tree["folders"] == []
+    assert tree["rootDocuments"] == []
+    binned = (
+        await client.get(_ia_url(fastapi_app, "get_deleted_documents", agreement))
+    ).json()
+    assert [f["name"] for f in binned["folders"]] == ["Reports"]
+
+    await client.put(
+        _ia_url(
+            fastapi_app,
+            "restore_document_folder",
+            agreement,
+            folder_id=folder["folderId"],
+        )
+    )
+
+    tree = (
+        await client.get(_ia_url(fastapi_app, "get_document_folder_tree", agreement))
+    ).json()
+    assert [f["name"] for f in tree["folders"]] == ["Reports"]
+    assert [d["fileName"] for d in tree["folders"][0]["documents"]] == ["report.pdf"]
+
+
+@pytest.mark.anyio
+async def test_agreement_and_action_documents_stay_apart(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """Each parent type reads its own association: an action's file is
+    not the agreement's to file or to bin, even on the same agreement."""
+    action = await _seed_da(dbsession, "IA-26IAF4")
+    agreement = await dbsession.get(InitiativeAgreement, action.initiative_agreement_id)
+    action_document = await _seed_document(dbsession, action, "evidence.pdf")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+    folder = (
+        await client.post(
+            _ia_url(fastapi_app, "create_document_folder", agreement),
+            json={"name": "Agreement only"},
+        )
+    ).json()
+
+    tree = (
+        await client.get(_ia_url(fastapi_app, "get_document_folder_tree", agreement))
+    ).json()
+    assert tree["rootDocuments"] == []
+
+    placed = await client.put(
+        _ia_url(fastapi_app, "move_document_folder_items", agreement),
+        json={
+            "documentIds": [action_document.document_id],
+            "folderId": folder["folderId"],
+        },
+    )
+    assert placed.status_code == status.HTTP_400_BAD_REQUEST
+
+    binned = await client.delete(
+        _ia_url(
+            fastapi_app,
+            "soft_delete_document",
+            agreement,
+            document_id=action_document.document_id,
+        )
+    )
+    assert binned.status_code == status.HTTP_404_NOT_FOUND
+
+    # And the agreement's folder is not the action's.
+    action_tree = (await client.get(_tree_url(fastapi_app, action))).json()
+    assert action_tree["folders"] == []
+
+
+@pytest.mark.anyio
+async def test_agreement_folders_are_idir_only(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    agreement = await _seed_ia(dbsession, "IA-26IAF5")
+    set_mock_user(fastapi_app, [RoleEnum.IA_PROPONENT])
+
+    tree = await client.get(_ia_url(fastapi_app, "get_document_folder_tree", agreement))
+    bin_ = await client.get(_ia_url(fastapi_app, "get_deleted_documents", agreement))
+
+    assert tree.status_code == status.HTTP_403_FORBIDDEN
+    assert bin_.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.anyio
+async def test_legacy_credit_awards_get_no_folders(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """Awards live on the transaction pages, which have no bin to restore
+    from, so the folder routes leave them alone."""
+    award = await _seed_ia(
+        dbsession,
+        None,
+        title=None,
+        record_kind=RECORD_KIND_LEGACY_AWARD,
+        lifecycle_status_id=None,
+        compliance_units=1500,
+    )
+    document = await _seed_ia_document(dbsession, award, "award-letter.pdf")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    tree = await client.get(_ia_url(fastapi_app, "get_document_folder_tree", award))
+    removed = await client.delete(
+        _ia_url(
+            fastapi_app,
+            "soft_delete_document",
+            award,
+            document_id=document.document_id,
+        )
+    )
+
+    assert tree.status_code == status.HTTP_400_BAD_REQUEST
+    assert removed.status_code == status.HTTP_400_BAD_REQUEST
+    row = (
+        await dbsession.execute(
+            select(Document).where(Document.document_id == document.document_id)
+        )
+    ).scalar_one()
+    assert row.deleted_date is None
