@@ -134,7 +134,9 @@ class DocumentFolderServices:
     async def soft_delete_document(
         self, parent_type: str, parent_id: int, document_id: int, user
     ) -> None:
-        document = await self.repo.get_document_for_parent(document_id, parent_id)
+        document = await self.repo.get_document_for_parent(
+            document_id, parent_id, for_update=True
+        )
         if document is None:
             raise DataNotFoundException(f"Document {document_id} not found")
         if document.deleted_date is not None:
@@ -159,7 +161,9 @@ class DocumentFolderServices:
     async def restore_document(
         self, parent_type: str, parent_id: int, document_id: int, user=None
     ) -> None:
-        document = await self.repo.get_document_for_parent(document_id, parent_id)
+        document = await self.repo.get_document_for_parent(
+            document_id, parent_id, for_update=True
+        )
         username = self._current_username(user)
         if (
             document is None
@@ -215,7 +219,9 @@ class DocumentFolderServices:
         user,
         document_service,
     ) -> None:
-        document = await self.repo.get_document_for_parent(document_id, parent_id)
+        document = await self.repo.get_document_for_parent(
+            document_id, parent_id, for_update=True
+        )
         username = self._current_username(user)
         if (
             document is None
@@ -550,22 +556,24 @@ class DocumentFolderServices:
             for document in all_documents
             if document.document_id in all_placements
         }
-        live_folder_ids = {folder.folder_id for folder in folders}
-        subtree_ids = {
-            folder.folder_id: set(self._subtree_ids(folder.folder_id, all_folders))
-            for folder in folders
-        }
+        by_id = {folder.folder_id: folder for folder in all_folders}
+        blocked_folder_ids = set(occupied_folder_ids)
+        for folder in all_folders:
+            if (
+                folder.deleted_date is not None
+                and folder.folder_id not in occupied_folder_ids
+            ):
+                continue
+            ancestor_id = folder.parent_folder_id
+            while ancestor_id in by_id:
+                blocked_folder_ids.add(ancestor_id)
+                ancestor_id = by_id[ancestor_id].parent_folder_id
 
         def can_delete(folder: DocumentFolder) -> bool:
             # Mirrors delete_folder: a live descendant or any file beneath
             # it, binned or not, keeps the folder; empty deleted descendants
             # do not.
-            subtree = subtree_ids[folder.folder_id]
-            return (
-                not folder.is_system
-                and not (subtree - {folder.folder_id}) & live_folder_ids
-                and not subtree & occupied_folder_ids
-            )
+            return not folder.is_system and folder.folder_id not in blocked_folder_ids
 
         docs_by_folder: Dict[int, List[FolderDocumentSchema]] = {}
         root_documents: List[FolderDocumentSchema] = []

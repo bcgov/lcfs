@@ -113,10 +113,10 @@ class DocumentFolderRepository:
 
     @repo_handler
     async def get_document_for_parent(
-        self, document_id: int, parent_id: int
+        self, document_id: int, parent_id: int, *, for_update: bool = False
     ) -> Optional[Document]:
         """A document, but only if it belongs to this parent."""
-        result = await self.db.execute(
+        query = (
             select(Document)
             .join(
                 designated_action_document_association,
@@ -130,6 +130,9 @@ class DocumentFolderRepository:
             )
             .execution_options(populate_existing=True)
         )
+        if for_update:
+            query = query.with_for_update(of=Document)
+        result = await self.db.execute(query)
         return result.scalars().first()
 
     @repo_handler
