@@ -9,9 +9,11 @@ from lcfs.db.models.document import Document, DocumentFolder, DocumentFolderItem
 from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.initiative_agreement.DesignatedAction import (
+    DesignatedAction,
     designated_action_document_association,
 )
 from lcfs.web.core.decorators import repo_handler
+from lcfs.web.exception.exceptions import DataNotFoundException
 
 
 class DocumentFolderRepository:
@@ -19,6 +21,17 @@ class DocumentFolderRepository:
         self, db: AsyncSession = Depends(get_async_db_session, scope="function")
     ):
         self.db = db
+
+    @repo_handler
+    async def lock_parent(self, parent_id: int) -> None:
+        """Serialize folder mutations until the shared request transaction ends."""
+        result = await self.db.execute(
+            select(DesignatedAction.designated_action_id)
+            .where(DesignatedAction.designated_action_id == parent_id)
+            .with_for_update(of=DesignatedAction)
+        )
+        if result.scalar_one_or_none() is None:
+            raise DataNotFoundException(f"Designated action {parent_id} not found")
 
     @repo_handler
     async def get_folders(

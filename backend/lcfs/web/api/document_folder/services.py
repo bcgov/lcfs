@@ -134,6 +134,7 @@ class DocumentFolderServices:
     async def soft_delete_document(
         self, parent_type: str, parent_id: int, document_id: int, user
     ) -> None:
+        await self.repo.lock_parent(parent_id)
         document = await self.repo.get_document_for_parent(
             document_id, parent_id, for_update=True
         )
@@ -161,6 +162,7 @@ class DocumentFolderServices:
     async def restore_document(
         self, parent_type: str, parent_id: int, document_id: int, user=None
     ) -> None:
+        await self.repo.lock_parent(parent_id)
         document = await self.repo.get_document_for_parent(
             document_id, parent_id, for_update=True
         )
@@ -219,6 +221,7 @@ class DocumentFolderServices:
         user,
         document_service,
     ) -> None:
+        await self.repo.lock_parent(parent_id)
         document = await self.repo.get_document_for_parent(
             document_id, parent_id, for_update=True
         )
@@ -334,6 +337,7 @@ class DocumentFolderServices:
         hold something costs nobody anything, while bringing back its
         contents would restore what nobody asked for.
         """
+        await self.repo.lock_parent(parent_id)
         folder = await self._get_scoped_folder(
             folder_id, parent_type, parent_id, include_deleted=True
         )
@@ -630,6 +634,7 @@ class DocumentFolderServices:
     async def create_folder(
         self, parent_type: str, parent_id: int, data: FolderCreateSchema
     ) -> FolderSchema:
+        await self.repo.lock_parent(parent_id)
         name = data.name.strip()
         if not name:
             raise HTTPException(status_code=400, detail="Folder name is required.")
@@ -657,6 +662,7 @@ class DocumentFolderServices:
         folder_id: int,
         data: FolderUpdateSchema,
     ) -> FolderSchema:
+        await self.repo.lock_parent(parent_id)
         folder = await self._get_scoped_folder(folder_id, parent_type, parent_id)
         if folder.is_system:
             raise HTTPException(
@@ -686,6 +692,7 @@ class DocumentFolderServices:
     async def delete_folder(
         self, parent_type: str, parent_id: int, folder_id: int, user=None
     ) -> None:
+        await self.repo.lock_parent(parent_id)
         folder = await self._get_scoped_folder(folder_id, parent_type, parent_id)
         if folder.is_system:
             raise HTTPException(
@@ -726,6 +733,7 @@ class DocumentFolderServices:
     ) -> None:
         if not data.document_ids:
             return
+        await self.repo.lock_parent(parent_id)
         if data.folder_id is not None:
             await self._get_scoped_folder(data.folder_id, parent_type, parent_id)
         associated = await self.repo.get_associated_document_ids(parent_id)
