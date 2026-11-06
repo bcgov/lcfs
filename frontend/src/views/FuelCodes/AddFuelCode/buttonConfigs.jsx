@@ -246,8 +246,10 @@ export const fuelCodeButtonConfigFn = (context) => {
   const userType = getUserType(context)
   const currentStatus = context.currentStatus
 
-  // If user type is unknown, return empty buttons array
-  if (!userType) {
+  // No buttons for an unknown user type, or for a fuel code the legacy pages
+  // can no longer process (#5308): a CI application's draft, or any other
+  // fuel code that isn't approved and wasn't started on these pages.
+  if (!userType || context.isLocked) {
     return {
       [currentStatus]: []
     }
@@ -303,7 +305,8 @@ export const buildFuelCodeButtonContext = ({
   isInEditMode = false,
   isUpdating = false,
   isButtonOperationInProgress = false,
-  currentButtonOperation = null
+  currentButtonOperation = null,
+  isLocked = false
 }) => ({
   currentStatus: fuelCode?.fuelCodeStatus?.status || FUEL_CODE_STATUSES.DRAFT,
   hasRoles,
@@ -326,5 +329,6 @@ export const buildFuelCodeButtonContext = ({
   isUpdating,
   isButtonOperationInProgress,
   currentButtonOperation,
+  isLocked,
   status: fuelCode?.fuelCodeStatus?.status
 })
