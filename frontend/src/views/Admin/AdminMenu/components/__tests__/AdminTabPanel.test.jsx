@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vite-plus/test'
 import { render, screen } from '@testing-library/react'
 import { ThemeProvider } from '@mui/material/styles'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import theme from '@/themes/index.js'
+import theme from '@/themes'
 import { AdminTabPanel } from '../AdminTabPanel.jsx'
 
 // Custom render function with all necessary providers
