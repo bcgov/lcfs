@@ -237,3 +237,55 @@ class OrganizationDetailsSchema(BaseSchema):
 
 class AllocationAgreementOptionsSchema(FuelTypeOptionsResponse):
     allocation_transaction_types: List[AllocationTransactionTypeSchema]
+
+
+class AllocationAgreementIndexRequestSchema(BaseSchema):
+    """
+    Request for the cross-report allocation agreements index (IDIR).
+
+    ``organization_id`` is the Organization select-list filter: it matches an
+    allocation agreement when the organization is the reporting organization
+    of the associated compliance report *or* its legal name is the agreement's
+    transaction partner.
+    """
+
+    page: int = Field(default=1, ge=1)
+    size: int = Field(default=25, ge=1, le=500)
+    sort_orders: List[SortOrder] = Field(default_factory=list)
+    filters: List[FilterModel] = Field(default_factory=list)
+    organization_id: Optional[int] = None
+
+
+class AllocationAgreementIndexItemSchema(BaseSchema):
+    allocation_agreement_id: int
+    group_uuid: str
+    version: int
+    # Source: the compliance report version the agreement belongs to
+    compliance_report_id: int
+    compliance_period: str
+    status: str
+    reporting_organization: str
+    # Allocation agreement grid columns
+    allocation_transaction_type: str
+    transaction_partner: Optional[str] = None
+    postal_address: Optional[str] = None
+    transaction_partner_email: Optional[str] = None
+    transaction_partner_phone: Optional[str] = None
+    fuel_type: str
+    fuel_type_other: Optional[str] = None
+    fuel_category: Optional[str] = None
+    provision_of_the_act: Optional[str] = None
+    fuel_code: Optional[str] = None
+    ci_of_fuel: Optional[float] = None
+    quantity: Optional[int] = None
+    q1_quantity: Optional[int] = None
+    q2_quantity: Optional[int] = None
+    q3_quantity: Optional[int] = None
+    q4_quantity: Optional[int] = None
+    total_quantity: Optional[int] = None
+    units: str
+
+
+class AllocationAgreementIndexResponseSchema(BaseSchema):
+    allocation_agreements: List[AllocationAgreementIndexItemSchema]
+    pagination: PaginationResponseSchema

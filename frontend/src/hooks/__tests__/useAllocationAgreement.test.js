@@ -5,6 +5,7 @@ import {
   useGetAllocationAgreements,
   useGetAllAllocationAgreements,
   useGetAllocationAgreementsList,
+  useGetAllocationAgreementsIndex,
   useSaveAllocationAgreement,
   useUpdateAllocationAgreement,
   useDeleteAllocationAgreement,
@@ -567,5 +568,79 @@ describe('useGetAllocationAgreementImportJobStatus', () => {
       timeout: 2000
     })
     expect(result.current.error).toEqual(mockError)
+  })
+})
+
+describe('useGetAllocationAgreementsIndex', () => {
+  const mockPost = vi.fn()
+
+  beforeEach(() => {
+    vi.resetAllMocks()
+    vi.mocked(useApiService).mockReturnValue({ post: mockPost })
+  })
+
+  test('posts paging, sorting, filters and the organization to the index endpoint', async ({
+    renderHook,
+    query
+  }) => {
+    const response = {
+      allocationAgreements: [],
+      pagination: { total: 0, page: 2, size: 25, totalPages: 0 }
+    }
+    mockPost.mockResolvedValueOnce({ data: response })
+    const sortOrders = [{ field: 'compliancePeriod', direction: 'desc' }]
+    const filters = [
+      {
+        field: 'status',
+        filterType: 'text',
+        type: 'equals',
+        filter: 'Assessed'
+      }
+    ]
+
+    const { result } = renderHook(
+      () =>
+        useGetAllocationAgreementsIndex({
+          page: 2,
+          size: 25,
+          sortOrders,
+          filters,
+          organizationId: 7
+        }),
+      [query]
+    )
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(result.current.data).toEqual(response)
+    expect(mockPost).toHaveBeenCalledWith('/allocation-agreement/index', {
+      page: 2,
+      size: 25,
+      sortOrders,
+      filters,
+      organizationId: 7
+    })
+  })
+
+  test('defaults to the first page of 25 with no organization when cleared', async ({
+    renderHook,
+    query
+  }) => {
+    mockPost.mockResolvedValueOnce({ data: { allocationAgreements: [] } })
+
+    const { result } = renderHook(
+      () => useGetAllocationAgreementsIndex({ organizationId: null }),
+      [query]
+    )
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(mockPost).toHaveBeenCalledWith('/allocation-agreement/index', {
+      page: 1,
+      size: 25,
+      sortOrders: [],
+      filters: [],
+      organizationId: null
+    })
   })
 })
