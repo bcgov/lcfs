@@ -35,6 +35,11 @@ from sqlalchemy.orm import joinedload, contains_eager, selectinload
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
+from lcfs.db.models.ci_application import (
+    CIApplication,
+    CIApplicationFuelCodeAssociation,
+    CIApplicationStatus,
+)
 from lcfs.db.models.fuel import (
     CategoryCarbonIntensity,
     DefaultCarbonIntensity,
@@ -1921,6 +1926,33 @@ class FuelCodeRepository:
         )
         result = await self.db.execute(exists_query)
         return result.scalar()
+
+    @repo_handler
+    async def get_open_ci_application_id(self, fuel_code_id: int) -> Optional[int]:
+        """
+        Return the CI application that generated this fuel code and hasn't been
+        completed yet, or None. A completed application has approved its
+        generated fuel codes; until then they belong to the application.
+        """
+        return await self.db.scalar(
+            select(CIApplicationFuelCodeAssociation.ci_application_id)
+            .join(
+                CIApplication,
+                CIApplication.ci_application_id
+                == CIApplicationFuelCodeAssociation.ci_application_id,
+            )
+            .join(
+                CIApplicationStatus,
+                CIApplicationStatus.ci_application_status_id
+                == CIApplication.status_id,
+            )
+            .where(
+                CIApplicationFuelCodeAssociation.fuel_code_id == fuel_code_id,
+                CIApplicationStatus.status != "Completed",
+            )
+            .order_by(CIApplicationFuelCodeAssociation.ci_application_id.desc())
+            .limit(1)
+        )
 
     @repo_handler
     async def get_expiring_fuel_codes(self) -> List[FuelCode]:
