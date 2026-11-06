@@ -39,6 +39,15 @@ class ReportTransition:
 _ANALYST = (RoleEnum.ANALYST, RoleEnum.DIRECTOR)
 _MANAGER = (RoleEnum.COMPLIANCE_MANAGER, RoleEnum.DIRECTOR)
 _DIRECTOR = (RoleEnum.DIRECTOR,)
+NEW = None
+
+# Creating a report is a workflow edge too: a Compliance Reporting user may
+# create it in Draft, but no request may choose a later workflow status.
+CREATE_TRANSITIONS = {
+    (NEW, Status.Draft.value): ReportTransition(
+        roles=(RoleEnum.COMPLIANCE_REPORTING,), from_statuses=(NEW,)
+    ),
+}
 
 # Keyed by the status the request names. A Return status names the action;
 # RETURN_STATUS_MAPPER (and the reassessment rule) says where it lands.
@@ -119,7 +128,18 @@ def _forbidden(detail):
 def ensure_report_transition(user, report, requested_status: str) -> None:
     """Refuse a status request the workflow does not allow from where the
     stored report stands. A request for the current status is a save."""
-    current = report.current_status.status if report.current_status else None
+    if report is None:
+        transition = CREATE_TRANSITIONS.get((NEW, requested_status))
+        if (
+            transition is None
+            or NEW not in transition.from_statuses
+            or not _holds_any(user, transition.roles)
+        ):
+            raise _forbidden("This report cannot be created in that status.")
+        return
+
+    current_status = report.current_status
+    current = current_status.status if current_status else None
 
     if requested_status == getattr(current, "value", None):
         savers = SAVERS.get(current)
