@@ -23,6 +23,7 @@ export interface KeycloakConfig {
   AUTH_URL?: string
   POST_LOGOUT_URL?: string
   SM_LOGOUT_URL?: string
+  LOCAL_AUTH?: boolean
 }
 
 export interface LcfsWindowConfig {
@@ -131,15 +132,36 @@ const getAnalystReviewAssistantName = (): string => {
 
 const getKeycloakConfig = (
   config: KeycloakConfig
-): Required<KeycloakConfig> => ({
-  REALM: config.REALM ?? 'standard',
-  CLIENT_ID: config.CLIENT_ID ?? 'low-carbon-fuel-standard-5147',
-  AUTH_URL: config.AUTH_URL ?? 'https://dev.loginproxy.gov.bc.ca/auth',
-  POST_LOGOUT_URL: config.POST_LOGOUT_URL ?? 'http://localhost:3000/',
-  SM_LOGOUT_URL:
-    config.SM_LOGOUT_URL ??
-    'https://logontest7.gov.bc.ca/clp-cgi/logoff.cgi?retnow=1&returl='
-})
+): Required<KeycloakConfig> => {
+  const viteEnv = (
+    import.meta as ImportMeta & {
+      env?: Record<string, string | undefined>
+    }
+  ).env
+  const localAuth =
+    window.location.hostname === 'localhost' &&
+    viteEnv?.VITE_LOCAL_KEYCLOAK === 'true'
+
+  return {
+    REALM: localAuth
+      ? (viteEnv?.VITE_KEYCLOAK_REALM ?? 'lcfs-local')
+      : (config.REALM ?? 'standard'),
+    CLIENT_ID: localAuth
+      ? (viteEnv?.VITE_KEYCLOAK_CLIENT_ID ?? 'low-carbon-fuel-standard-5147')
+      : (config.CLIENT_ID ?? 'low-carbon-fuel-standard-5147'),
+    AUTH_URL: localAuth
+      ? (viteEnv?.VITE_KEYCLOAK_AUTH_URL ?? 'http://localhost:8180')
+      : (config.AUTH_URL ?? 'https://dev.loginproxy.gov.bc.ca/auth'),
+    POST_LOGOUT_URL: localAuth
+      ? `${window.location.origin}/`
+      : (config.POST_LOGOUT_URL ?? 'http://localhost:3000/'),
+    SM_LOGOUT_URL: localAuth
+      ? ''
+      : (config.SM_LOGOUT_URL ??
+        'https://logontest7.gov.bc.ca/clp-cgi/logoff.cgi?retnow=1&returl='),
+    LOCAL_AUTH: localAuth
+  }
+}
 
 export const CONFIG: AppConfig = {
   API_BASE: getApiBaseUrl(),

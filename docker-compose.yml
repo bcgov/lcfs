@@ -130,6 +130,8 @@ services:
     command: npm run dev --force
     environment:
       VITE_API_BASE_URL: "http://localhost:${LCFS_BACKEND_PUBLISHED_PORT:-8000}/api"
+      # Browsers connect through the published port; Vite listens on 3000 inside the container.
+      VITE_HMR_CLIENT_PORT: "${LCFS_FRONTEND_PUBLISHED_PORT:-3000}"
     ports:
       - "${LCFS_FRONTEND_PUBLISHED_PORT:-3000}:3000"
     volumes:

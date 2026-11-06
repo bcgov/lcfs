@@ -1,12 +1,14 @@
 import { test } from '@/tests/utils/fixtures'
 import { screen, fireEvent } from '@testing-library/react'
 import { describe, expect, vi, beforeEach } from 'vite-plus/test'
+import { CONFIG } from '@/constants/config'
 import { ROUTES } from '@/routes/routes'
 import common from '@/assets/locales/en/common.json'
 import { PublicDashboard } from '../PublicDashboard'
 
 const loginMock = vi.fn()
 const navigateMock = vi.fn()
+const isLocalKeycloak = CONFIG.KEYCLOAK.LOCAL_AUTH
 
 vi.mock('echarts-for-react', () => ({ default: () => null }))
 
@@ -200,10 +202,19 @@ describe('PublicDashboard', () => {
     router
   }) => {
     render(<PublicDashboard />, [theme, router])
-    fireEvent.click(screen.getAllByTestId('public-login-bceid')[0])
-    expect(loginMock).toHaveBeenCalledWith(
-      expect.objectContaining({ idpHint: 'bceidbusiness' })
-    )
+    const buttonTestId = isLocalKeycloak
+      ? 'public-login-local'
+      : 'public-login-bceid'
+    fireEvent.click(screen.getAllByTestId(buttonTestId)[0])
+    if (isLocalKeycloak) {
+      expect(loginMock).toHaveBeenCalledWith({
+        redirectUri: window.location.origin
+      })
+    } else {
+      expect(loginMock).toHaveBeenCalledWith(
+        expect.objectContaining({ idpHint: 'bceidbusiness' })
+      )
+    }
   })
 
   test('renders a "Trouble logging in?" link pointing to the CMS Lite support page', ({

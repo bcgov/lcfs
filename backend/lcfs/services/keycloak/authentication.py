@@ -57,7 +57,10 @@ class UserAuthentication(AuthenticationBackend):
             async with httpx.AsyncClient() as client:
                 oidc_response = await client.get(self.settings.well_known_endpoint)
                 oidc_response.raise_for_status()
-                jwks_uri = oidc_response.json().get("jwks_uri")
+                jwks_uri = (
+                    self.settings.keycloak_jwks_endpoint
+                    or oidc_response.json().get("jwks_uri")
+                )
 
                 if not jwks_uri:
                     raise ValueError(
@@ -151,6 +154,7 @@ class UserAuthentication(AuthenticationBackend):
                     signing_key,
                     algorithms=["RS256"],
                     audience=self.settings.keycloak_audience,
+                    issuer=self.settings.keycloak_issuer,
                     options={"verify_exp": True},
                     leeway=5,  # Allows for 5 seconds of clock skew
                 )
