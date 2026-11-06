@@ -5,6 +5,7 @@ from io import BytesIO
 from fastapi import HTTPException, UploadFile
 
 from lcfs.db.models.login_bg_image.LoginBgImage import LoginBgImage
+from lcfs.services.file_inspection import FileRejectedException
 from lcfs.web.api.login_bg_image.schema import LoginBgImageUpdateSchema
 
 
@@ -73,13 +74,14 @@ async def test_get_active_returns_none_when_no_active(
 async def test_upload_success(
     login_bg_image_service, mock_login_bg_image_repo, sample_image
 ):
-    file_content = b"fake-image-bytes"
+    file_content = b"\xff\xd8\xff\xe0fake-jpeg-bytes"
     mock_file = MagicMock(spec=UploadFile)
     mock_file.content_type = "image/jpeg"
     mock_file.filename = "photo.jpg"
     mock_file.file = MagicMock()
     mock_file.file.fileno.return_value = 0
     mock_file.file.seek = MagicMock()
+    mock_file.file.read = MagicMock(return_value=file_content)
 
     mock_login_bg_image_repo.create = AsyncMock(return_value=sample_image)
 
@@ -93,6 +95,24 @@ async def test_upload_success(
     mock_login_bg_image_repo.create.assert_called_once()
     assert result.display_name == sample_image.display_name
 
+
+
+@pytest.mark.anyio
+async def test_upload_rejects_non_image_contents(login_bg_image_service):
+    """These images are public, so a page renamed to .png must not get through."""
+    mock_file = MagicMock(spec=UploadFile)
+    mock_file.content_type = "image/png"
+    mock_file.filename = "banner.png"
+    mock_file.file = MagicMock()
+    mock_file.file.fileno.return_value = 0
+    mock_file.file.read = MagicMock(return_value=b"<html><script></script></html>")
+
+    with patch("os.fstat") as mock_fstat:
+        mock_fstat.return_value.st_size = 1024
+        with pytest.raises(FileRejectedException):
+            await login_bg_image_service.upload(mock_file, "Name", None)
+
+    login_bg_image_service.s3_client.upload_fileobj.assert_not_called()
 
 @pytest.mark.anyio
 async def test_upload_rejects_invalid_content_type(login_bg_image_service):

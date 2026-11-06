@@ -14,6 +14,7 @@ from lcfs.web.api.charging_site.services import ChargingSiteService
 from lcfs.web.api.charging_site.schema import ChargingSiteCreateSchema
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.services.clamav.client import ClamAVService
+from lcfs.tests.services.file_inspection.builders import xlsx_bytes
 
 
 @pytest.fixture
@@ -70,7 +71,7 @@ class MockUploadFile:
 
 @pytest.fixture
 def mock_upload_file():
-    content = b"test file content"
+    content = xlsx_bytes()
     return MockUploadFile(
         filename="test.xlsx",
         file=BytesIO(content),

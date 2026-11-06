@@ -100,6 +100,7 @@ class Settings(BaseSettings):
     clamav_enabled: bool = False
     clamav_host: str = "clamav"
     clamav_port: int = 3310
+    clamav_timeout_seconds: int = 60
 
     ches_enabled: bool = False
     ches_auth_url: str = ""
@@ -112,6 +113,8 @@ class Settings(BaseSettings):
     # Feature flags
     feature_credit_market_notifications: bool = True
     feature_fuel_code_expiry_email: bool = True
+    # Accept .xlsm uploads on CI applications, held for admin approval
+    feature_macro_uploads: bool = False
 
     # Public API rate limiting settings
     rate_limit_enabled: bool = True

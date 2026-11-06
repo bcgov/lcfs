@@ -14,13 +14,14 @@ from typing import List
 
 from lcfs.db.dependencies import db_url, set_user_context
 from lcfs.db.models import UserProfile
-from lcfs.services.clamav.client import ClamAVService
+from lcfs.services.clamav.client import ClamAVService, FileScanException
+from lcfs.services.file_inspection import inspect_upload
 from lcfs.services.redis.dependency import get_redis_client
 from lcfs.settings import settings
 from lcfs.utils.constants import (
     POSTAL_REGEX,
-    ALLOWED_MIME_TYPES,
-    ALLOWED_FILE_TYPES,
+    SCHEDULE_IMPORT_MIME_TYPES,
+    SCHEDULE_IMPORT_FILE_TYPES,
     MAX_FILE_SIZE_BYTES,
     MAX_FILE_SIZE_MB,
 )
@@ -72,13 +73,6 @@ class ChargingSiteImporter:
         # Read file into memory once to enable scanning and openpyxl parsing
         file_contents = await file.read()
 
-        # Validate MIME type
-        if file.content_type not in ALLOWED_MIME_TYPES:
-            raise HTTPException(
-                status_code=400,
-                detail=f"File type '{file.content_type or 'unknown'}' is not allowed. Please upload files of the following types: {ALLOWED_FILE_TYPES}",
-            )
-
         # Validate file size
         file_size = len(file_contents)
         if file_size > MAX_FILE_SIZE_BYTES:
@@ -86,6 +80,14 @@ class ChargingSiteImporter:
                 status_code=400,
                 detail=f"File size exceeds the maximum limit of {MAX_FILE_SIZE_MB} MB.",
             )
+
+        # Validate the file's real type, not the type the browser claimed
+        inspect_upload(
+            file_contents,
+            file.filename,
+            SCHEDULE_IMPORT_MIME_TYPES,
+            SCHEDULE_IMPORT_FILE_TYPES,
+        )
 
         # Create an in-memory buffer and attach it to a new UploadFile
         buffer = io.BytesIO(file_contents)
@@ -172,12 +174,19 @@ async def import_async(
                 )
                 logger.debug(f"Progress updated for job {job_id}")
 
-                # Optional: Scan the file with ClamAV if enabled
+                # Scan before touching any data, so a rejected file changes nothing
                 if settings.clamav_enabled:
                     await _update_progress(
                         redis_client, job_id, 15, "Scanning file with ClamAV..."
                     )
-                    clamav_service.scan_file(file)
+                    try:
+                        await clamav_service.scan_file_async(file)
+                    except FileScanException as e:
+                        await _update_progress(
+                            redis_client, job_id, 100, e.detail, errors=[e.detail]
+                        )
+                        await redis_client.close()
+                        return
 
                 await _update_progress(
                     redis_client, job_id, 20, "Loading Excel sheet..."

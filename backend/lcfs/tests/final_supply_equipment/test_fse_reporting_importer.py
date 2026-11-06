@@ -41,6 +41,8 @@ from lcfs.web.api.final_supply_equipment.fse_reporting_importer import (
     _load_sheet,
 )
 from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
+from lcfs.services.file_inspection import FileRejectedException
+from lcfs.tests.services.file_inspection.builders import xlsx_bytes
 
 
 # ---------------------------------------------------------------------------
@@ -100,7 +102,7 @@ def _xlsx_file(filename: str = "update.xlsx"):
     mock.content_type = (
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-    mock.read = AsyncMock(return_value=b"fake-excel-bytes")
+    mock.read = AsyncMock(return_value=xlsx_bytes())
     return mock
 
 
@@ -147,15 +149,15 @@ async def test_import_data_report_not_found_raises(importer, mock_compliance_rep
 
 @pytest.mark.anyio
 async def test_import_data_invalid_mime_raises(importer):
-    """HTTPException 400 for disallowed MIME type."""
+    """400 when the contents aren't an .xlsx workbook, whatever the claimed type."""
     bad_file = _xlsx_file()
-    bad_file.content_type = "text/html"
+    bad_file.read = AsyncMock(return_value=b"<html></html>")
 
     with patch(
         "lcfs.web.api.final_supply_equipment.fse_reporting_importer._import_async",
         new=AsyncMock(return_value=None),
     ):
-        with pytest.raises(HTTPException) as exc:
+        with pytest.raises(FileRejectedException) as exc:
             await importer.import_data(
                 compliance_report_id=1,
                 user=MagicMock(),

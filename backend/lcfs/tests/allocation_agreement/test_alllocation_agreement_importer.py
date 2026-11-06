@@ -9,6 +9,8 @@ from lcfs.web.api.allocation_agreement.services import AllocationAgreementServic
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from lcfs.services.clamav.client import ClamAVService
 from redis.asyncio import Redis
+from lcfs.services.file_inspection import FileRejectedException
+from lcfs.tests.services.file_inspection.builders import xlsx_bytes
 
 
 @pytest.fixture
@@ -77,7 +79,7 @@ async def test_import_data_success(importer_instance, mock_redis):
     file_mock = MagicMock()
     file_mock.filename = "test.xlsx"
     file_mock.content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    file_mock.read = AsyncMock(return_value=b"fake-excel-contents")
+    file_mock.read = AsyncMock(return_value=xlsx_bytes())
 
     user_mock = MagicMock()
     user_mock.organization.organization_code = "TEST-ORG"
@@ -110,7 +112,7 @@ async def test_import_data_with_clamav(importer_instance, mock_clamav, mock_redi
         file_mock = MagicMock()
         file_mock.filename = "test.xlsx"
         file_mock.content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        file_mock.read = AsyncMock(return_value=b"excel-data")
+        file_mock.read = AsyncMock(return_value=xlsx_bytes())
         user_mock = MagicMock()
         org_code = "TEST-ORG"
 
@@ -178,13 +180,14 @@ async def test_import_data_invalid_mime_type(importer_instance):
     from fastapi import HTTPException
     
     file_mock = MagicMock()
-    file_mock.filename = "test.txt"
-    file_mock.content_type = "text/html"  # Not allowed MIME type
+    file_mock.filename = "test.xlsx"
+    file_mock.content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    # A text file named .xlsx: its contents decide, not the claimed type
     file_mock.read = AsyncMock(return_value=b"some-content")
     
     user_mock = MagicMock()
     
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(FileRejectedException) as exc_info:
         await importer_instance.import_data(
             compliance_report_id=123,
             user=user_mock,
