@@ -167,6 +167,25 @@ async def create_fuel_production_facility(
     return await service.create_facility(organization_id, data, request.user)
 
 
+@router.delete(
+    "/facilities/{facility_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+@view_handler([RoleEnum.CI_APPLICANT, RoleEnum.SIGNING_AUTHORITY])
+async def delete_fuel_production_facility(
+    request: Request,
+    facility_id: int,
+    ci_application_id: Optional[int] = Query(
+        default=None,
+        description="Application being edited; it is detached rather than blocking.",
+    ),
+    service: CIApplicationServices = Depends(),
+    validate: CIApplicationValidation = Depends(),
+) -> None:
+    organization_id = validate.require_supplier_organization()
+    await service.delete_facility(organization_id, facility_id, ci_application_id)
+
+
 @router.get(
     "/analysts",
     response_model=list[CIApplicationUserSchema],

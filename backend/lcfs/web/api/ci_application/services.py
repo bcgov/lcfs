@@ -39,6 +39,7 @@ from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.services.geocoder.client import Address, BCGeocoderService
 from lcfs.services.geocoder.dependency import get_geocoder_service_async
+from lcfs.services.s3.client import DocumentService
 from lcfs.services.s3.schema import FileResponseSchema
 from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.ci_application.repo import CIApplicationRepository
@@ -206,6 +207,28 @@ def _update_facility_from_step1(
         fuel_code.facility_nameplate_capacity_unit = facility.nameplate_capacity_unit
         fuel_code.contact_name = facility.contact_name
         fuel_code.contact_email = facility.contact_email
+
+
+def _facility_ci_application_ids(facility: FuelProductionFacility) -> set:
+    ids = {
+        application.ci_application_id
+        for application in (facility.ci_applications or [])
+    }
+    ids.update(
+        pathway.ci_application_id
+        for pathway in (facility.pathways or [])
+        if pathway.ci_application_id is not None
+    )
+    return ids
+
+
+def _to_facility_schema(
+    facility: FuelProductionFacility,
+) -> FuelProductionFacilitySchema:
+    schema = FuelProductionFacilitySchema.model_validate(facility)
+    schema.linked_fuel_code_count = len(facility.fuel_codes or [])
+    schema.linked_ci_application_ids = sorted(_facility_ci_application_ids(facility))
+    return schema
 
 
 def _to_pathway_schema(pathway: Pathway) -> PathwaySchema:
@@ -793,9 +816,7 @@ def _to_full_schema(
         organization=_to_org_info(ci.organization),
         status=CIApplicationStatusSchema.model_validate(ci.ci_application_status),
         fuel_production_facility_id=getattr(ci, "fuel_production_facility_id", None),
-        fuel_production_facility=(
-            FuelProductionFacilitySchema.model_validate(facility) if facility else None
-        ),
+        fuel_production_facility=(_to_facility_schema(facility) if facility else None),
         facility_city=ci.facility_city,
         facility_province_state=ci.facility_province_state,
         facility_country=ci.facility_country,
@@ -1108,12 +1129,14 @@ class CIApplicationServices:
         fuel_repo: FuelCodeRepository = Depends(FuelCodeRepository),
         geocoder: BCGeocoderService = Depends(get_geocoder_service_async),
         notification_service: NotificationService = Depends(NotificationService),
+        document_service: DocumentService = Depends(),
     ) -> None:
         self.repo = repo
         self.user_repo = user_repo
         self.fuel_repo = fuel_repo
         self.geocoder = geocoder
         self.notification_service = notification_service
+        self.document_service = document_service
 
     async def _to_full_schema_with_user(
         self, ci: CIApplication, requesting_user: Optional[UserProfile] = None
@@ -2295,10 +2318,7 @@ class CIApplicationServices:
         self, organization_id: int
     ) -> List[FuelProductionFacilitySchema]:
         facilities = await self.repo.get_facilities_for_organization(organization_id)
-        return [
-            FuelProductionFacilitySchema.model_validate(facility)
-            for facility in facilities
-        ]
+        return [_to_facility_schema(facility) for facility in facilities]
 
     @service_handler
     async def create_facility(
@@ -2322,7 +2342,55 @@ class CIApplicationServices:
             update_user=user.keycloak_username,
         )
         facility = await self.repo.create_facility(facility)
-        return FuelProductionFacilitySchema.model_validate(facility)
+        return _to_facility_schema(facility)
+
+    @service_handler
+    async def delete_facility(
+        self,
+        organization_id: int,
+        facility_id: int,
+        ci_application_id: Optional[int] = None,
+    ) -> None:
+        """
+        Remove an organization's facility when nothing else depends on it.
+        Fuel codes and other CI applications (directly or via pathways) block
+        deletion; the application being edited is detached instead.
+        """
+        facility = await self.repo.get_facility_for_organization(
+            facility_id, organization_id
+        )
+        if not facility:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Fuel production facility not found for this organization.",
+            )
+
+        linked_ci_application_ids = _facility_ci_application_ids(facility)
+        other_ci_application_ids = linked_ci_application_ids - {ci_application_id}
+        if facility.fuel_codes or other_ci_application_ids:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    "This facility is used by existing fuel codes or other CI "
+                    "applications and cannot be deleted."
+                ),
+            )
+
+        for application in list(facility.ci_applications or []):
+            application.fuel_production_facility_id = None
+            application.facility_city = None
+            application.facility_province_state = None
+            application.facility_country = None
+            application.facility_iso = None
+            application.facility_nameplate_capacity = None
+            application.facility_nameplate_capacity_unit = None
+        for pathway in list(facility.pathways or []):
+            pathway.fuel_production_facility_id = None
+        for document in list(facility.documents or []):
+            await self.document_service.delete_file(
+                document.document_id, facility_id, "fuel_production_facility"
+            )
+        await self.repo.delete_facility(facility)
 
     @service_handler
     async def delete_draft(self, ci_application: CIApplication) -> None:

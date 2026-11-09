@@ -5,6 +5,10 @@ import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { ApplicationInformationStep } from '@/views/CarbonIntensity/components/ApplicationInformationStep'
+import {
+  useDeleteCIApplicationFacility,
+  useGetCIApplicationFacilities
+} from '@/hooks/useCIApplication'
 import carbonIntensityEn from '@/assets/locales/en/carbonIntensity.json'
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
@@ -22,36 +26,53 @@ vi.mock('lodash', async (importOriginal) => {
   }
 })
 
+const { defaultFacilities } = vi.hoisted(() => ({
+  defaultFacilities: [
+    {
+      fuelProductionFacilityId: 1,
+      name: 'Test facility',
+      city: '',
+      provinceState: '',
+      country: '',
+      nameplateCapacity: null,
+      nameplateCapacityUnit: '',
+      contactName: '',
+      contactEmail: '',
+      documents: []
+    },
+    {
+      fuelProductionFacilityId: 3,
+      name: 'Filled facility',
+      city: 'Mock City',
+      provinceState: 'Mock Province',
+      country: 'Mock Country',
+      nameplateCapacity: 4200,
+      nameplateCapacityUnit: 'kg',
+      contactName: 'Pat Example',
+      contactEmail: 'pat@example.com',
+      documents: []
+    }
+  ]
+}))
+
+vi.mock('@/components/Documents/DocumentPreviewButton', () => ({
+  __esModule: true,
+  default: () => (
+    <button type="button" data-test="document-preview-button">
+      Preview document
+    </button>
+  )
+}))
+
 vi.mock('@/hooks/useCIApplication', () => ({
   useGetCIApplicationFacilities: vi.fn(() => ({
-    data: [
-      {
-        fuelProductionFacilityId: 1,
-        name: 'Test facility',
-        city: '',
-        provinceState: '',
-        country: '',
-        nameplateCapacity: null,
-        nameplateCapacityUnit: '',
-        contactName: '',
-        contactEmail: '',
-        documents: []
-      },
-      {
-        fuelProductionFacilityId: 3,
-        name: 'Filled facility',
-        city: 'Mock City',
-        provinceState: 'Mock Province',
-        country: 'Mock Country',
-        nameplateCapacity: 4200,
-        nameplateCapacityUnit: 'kg',
-        contactName: 'Pat Example',
-        contactEmail: 'pat@example.com',
-        documents: []
-      }
-    ],
+    data: defaultFacilities,
     isLoading: false,
     isError: false
+  })),
+  useDeleteCIApplicationFacility: vi.fn(() => ({
+    mutateAsync: vi.fn(async () => undefined),
+    isPending: false
   })),
   useCIFacilityLocationSearch: vi.fn(({ city, province, country } = {}) => {
     if (city?.toLowerCase().includes('coquit')) {
@@ -84,9 +105,33 @@ const selectUnit = async (user, unit = 'kg') => {
   await user.click(await screen.findByRole('option', { name: unit }))
 }
 
+// New applications with existing org facilities start in select mode, so
+// tests that work with the fields open the blank form via "Add new".
+const openNewFacilityForm = () => {
+  fireEvent.click(screen.getByTestId('ci-step1-add-facility'))
+}
+
 const selectFacility = async (user, name = 'Test facility') => {
-  await user.click(document.getElementById('facilityName'))
+  await user.click(document.getElementById('fuelProductionFacilityId'))
   await user.click(await screen.findByRole('option', { name }))
+}
+
+const savedFacilityApplication = {
+  ciApplicationId: 8,
+  fuelProductionFacilityId: 1,
+  fuelProductionFacility: {
+    fuelProductionFacilityId: 1,
+    name: 'Test facility',
+    contactName: 'Pat Example',
+    contactEmail: 'pat@example.com',
+    documents: []
+  },
+  facilityCity: 'San Martin',
+  facilityProvinceState: 'Santa Fe',
+  facilityCountry: 'Argentina',
+  facilityNameplateCapacity: 1500,
+  facilityNameplateCapacityUnit: 'L',
+  proposedFuelCodeEffectiveDate: '2026-06-01'
 }
 
 const fillContact = async (user) => {
@@ -100,6 +145,11 @@ const fillContact = async (user) => {
 describe('ApplicationInformationStep', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    useGetCIApplicationFacilities.mockReturnValue({
+      data: defaultFacilities,
+      isLoading: false,
+      isError: false
+    })
   })
   afterEach(cleanup)
 
@@ -120,6 +170,7 @@ describe('ApplicationInformationStep', () => {
       <ApplicationInformationStep {...baseProps} ciApplication={application} />,
       [query, theme, localization, router]
     )
+    openNewFacilityForm()
     fireEvent.change(document.getElementById('facilityCity'), {
       target: { value: 'Unsaved city' }
     })
@@ -152,7 +203,9 @@ describe('ApplicationInformationStep', () => {
         }}
       />
     )
-    expect(document.getElementById('facilityCity')).toHaveValue('Next city')
+    // A different application resets the section to the default (select) mode.
+    expect(screen.getByTestId('ci-step1-add-facility')).toBeInTheDocument()
+    expect(document.getElementById('facilityCity')).toBeNull()
   })
 
   test('renders the organization summary block when provided', ({
@@ -188,6 +241,7 @@ describe('ApplicationInformationStep', () => {
       localization,
       router
     ])
+    openNewFacilityForm()
     expect(document.getElementById('facilityName')).toBeInTheDocument()
     expect(document.getElementById('facilityCity')).toBeInTheDocument()
     expect(document.getElementById('facilityProvinceState')).toBeInTheDocument()
@@ -249,7 +303,88 @@ describe('ApplicationInformationStep', () => {
     expect(screen.getByTestId('ci-step1-delete-btn')).toBeInTheDocument()
   })
 
-  test('selecting an existing facility fills its saved details', async ({
+  test('starts in select mode when the organization has facilities', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<ApplicationInformationStep {...baseProps} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
+    expect(
+      document.getElementById('fuelProductionFacilityId')
+    ).toBeInTheDocument()
+    expect(screen.getByTestId('ci-step1-add-facility')).toBeInTheDocument()
+    expect(document.getElementById('facilityName')).toBeNull()
+    expect(screen.queryByTestId('ci-step1-facility-summary')).toBeNull()
+  })
+
+  test('starts in the blank form when the organization has no facilities', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    useGetCIApplicationFacilities.mockReturnValue({
+      data: [],
+      isLoading: false,
+      isError: false
+    })
+    render(<ApplicationInformationStep {...baseProps} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
+    expect(document.getElementById('fuelProductionFacilityId')).toBeNull()
+    expect(document.getElementById('facilityName')).toBeInTheDocument()
+  })
+
+  test('selecting a complete facility stays in select mode and saves its id', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    const onSave = vi.fn()
+    const user = userEvent.setup()
+    render(<ApplicationInformationStep {...baseProps} onSave={onSave} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
+
+    await selectFacility(user, 'Filled facility — Mock City')
+
+    expect(document.getElementById('facilityName')).toBeNull()
+    expect(screen.queryByTestId('ci-step1-facility-summary')).toBeNull()
+    expect(
+      document.getElementById('fuelProductionFacilityId')
+    ).toHaveTextContent('Filled facility')
+
+    fireEvent.click(screen.getByTestId('ci-step1-save-btn'))
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled())
+    expect(onSave.mock.calls[0][0]).toMatchObject({
+      fuelProductionFacilityId: 3,
+      facilityName: 'Filled facility',
+      facilityCity: 'Mock City',
+      facilityNameplateCapacity: 4200,
+      facilityNameplateCapacityUnit: 'kg',
+      facilityContactName: 'Pat Example',
+      facilityContactEmail: 'pat@example.com'
+    })
+  })
+
+  test('selecting an incomplete facility opens the pre-filled form', async ({
     render,
     query,
     theme,
@@ -264,30 +399,347 @@ describe('ApplicationInformationStep', () => {
       router
     ])
 
-    await selectFacility(user, 'Filled facility — Mock City')
+    await selectFacility(user, 'Test facility')
 
-    await waitFor(() => {
-      expect(document.getElementById('facilityName').value).toBe(
-        'Filled facility'
+    await waitFor(() =>
+      expect(document.getElementById('facilityName')).toBeInTheDocument()
+    )
+    expect(document.getElementById('facilityName').value).toBe('Test facility')
+    expect(document.getElementById('facilityCity').value).toBe('')
+    expect(screen.getByTestId('ci-step1-process-flow-upload')).toBeEnabled()
+  })
+
+  test('saving in select mode without a selection shows a facility error', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    const onSave = vi.fn()
+    render(<ApplicationInformationStep {...baseProps} onSave={onSave} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
+
+    fireEvent.click(screen.getByTestId('ci-step1-save-btn'))
+
+    await waitFor(() =>
+      expect(
+        screen.getByText('carbonIntensity:step1.validation.facilityRequired')
+      ).toBeInTheDocument()
+    )
+    expect(onSave).not.toHaveBeenCalled()
+    expect(document.getElementById('facilityName')).toBeNull()
+  })
+
+  test('shows the saved facility as a summary with edit pencils and no upload button', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(
+      <ApplicationInformationStep
+        {...baseProps}
+        ciApplication={savedFacilityApplication}
+      />,
+      [query, theme, localization, router]
+    )
+
+    const summary = screen.getByTestId('ci-step1-facility-summary')
+    expect(summary).toHaveTextContent('Test facility')
+    expect(summary).toHaveTextContent('San Martin, Santa Fe, Argentina')
+    expect(summary).toHaveTextContent('1,500 L')
+    expect(summary).toHaveTextContent('Pat Example')
+    expect(summary).toHaveTextContent('pat@example.com')
+    expect(screen.getByTestId('ci-step1-edit-facility')).toBeInTheDocument()
+    expect(screen.getByTestId('ci-step1-add-facility')).toBeInTheDocument()
+    expect(
+      screen.queryByText('carbonIntensity:step1.processFlowDiagram')
+    ).toBeNull()
+    expect(document.getElementById('facilityCity')).toBeNull()
+  })
+
+  test('"Add new fuel production facility" clears the saved facility and opens a blank form', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    const user = userEvent.setup()
+    render(
+      <ApplicationInformationStep
+        {...baseProps}
+        ciApplication={savedFacilityApplication}
+      />,
+      [query, theme, localization, router]
+    )
+
+    await user.click(screen.getByTestId('ci-step1-add-facility'))
+
+    await waitFor(() =>
+      expect(document.getElementById('facilityName').value).toBe('')
+    )
+    expect(document.getElementById('facilityCity').value).toBe('')
+    expect(document.getElementById('facilityContactName').value).toBe('')
+    expect(screen.queryByTestId('ci-step1-facility-summary')).toBeNull()
+  })
+
+  test('returns to the summary after a successful save even if nothing changed', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    const onSave = vi.fn(async () => true)
+    const user = userEvent.setup()
+    render(
+      <ApplicationInformationStep
+        {...baseProps}
+        ciApplication={savedFacilityApplication}
+        onSave={onSave}
+      />,
+      [query, theme, localization, router]
+    )
+
+    await user.click(screen.getByTestId('ci-step1-edit-facility'))
+    await waitFor(() =>
+      expect(document.getElementById('facilityName')).toBeInTheDocument()
+    )
+
+    fireEvent.click(screen.getByTestId('ci-step1-save-btn'))
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled())
+    await waitFor(() =>
+      expect(
+        screen.getByTestId('ci-step1-facility-summary')
+      ).toBeInTheDocument()
+    )
+    expect(document.getElementById('facilityName')).toBeNull()
+  })
+
+  test('stays in the form when the save fails', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    const onSave = vi.fn(async () => false)
+    const user = userEvent.setup()
+    render(
+      <ApplicationInformationStep
+        {...baseProps}
+        ciApplication={savedFacilityApplication}
+        onSave={onSave}
+      />,
+      [query, theme, localization, router]
+    )
+
+    await user.click(screen.getByTestId('ci-step1-edit-facility'))
+    await waitFor(() =>
+      expect(document.getElementById('facilityName')).toBeInTheDocument()
+    )
+
+    fireEvent.click(screen.getByTestId('ci-step1-save-btn'))
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled())
+    expect(document.getElementById('facilityName')).toBeInTheDocument()
+    expect(screen.queryByTestId('ci-step1-facility-summary')).toBeNull()
+  })
+
+  describe('uploaded process flow diagram placement', () => {
+    const withDocument = {
+      ...savedFacilityApplication,
+      fuelProductionFacility: {
+        ...savedFacilityApplication.fuelProductionFacility,
+        documents: [{ documentId: 7, fileName: 'process-flow.pdf' }]
+      }
+    }
+    const isBefore = (a, b) =>
+      Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
+
+    test('summary lists the file directly above the Add new button with a replace pencil', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(
+        <ApplicationInformationStep
+          {...baseProps}
+          ciApplication={withDocument}
+        />,
+        [query, theme, localization, router]
       )
-      expect(document.getElementById('facilityCity').value).toBe('Mock City')
-      expect(document.getElementById('facilityProvinceState').value).toBe(
-        'Mock Province'
+
+      const docs = screen.getByTestId('ci-step1-facility-documents')
+      expect(docs).toHaveTextContent('process-flow.pdf')
+      expect(
+        screen.getByTestId('ci-step1-process-flow-replace')
+      ).toBeInTheDocument()
+      const summary = screen.getByTestId('ci-step1-facility-summary')
+      const addNew = screen.getByTestId('ci-step1-add-facility')
+      expect(isBefore(summary, docs)).toBe(true)
+      expect(isBefore(docs, addNew)).toBe(true)
+    })
+
+    test('form shows the file directly above the Upload button without a replace pencil', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      const user = userEvent.setup()
+      render(
+        <ApplicationInformationStep
+          {...baseProps}
+          ciApplication={withDocument}
+        />,
+        [query, theme, localization, router]
       )
-      expect(document.getElementById('facilityCountry').value).toBe(
-        'Mock Country'
+      await user.click(screen.getByTestId('ci-step1-edit-facility'))
+
+      const docs = await screen.findByTestId('ci-step1-facility-documents')
+      const upload = screen.getByTestId('ci-step1-process-flow-upload')
+      expect(docs).toHaveTextContent('process-flow.pdf')
+      expect(screen.queryByTestId('ci-step1-process-flow-replace')).toBeNull()
+      expect(isBefore(docs, upload)).toBe(true)
+      expect(
+        isBefore(document.getElementById('facilityContactEmail'), docs)
+      ).toBe(true)
+    })
+  })
+
+  describe('deleting an unshared facility', () => {
+    const unsharedSaved = {
+      ...savedFacilityApplication,
+      fuelProductionFacility: {
+        ...savedFacilityApplication.fuelProductionFacility,
+        linkedFuelCodeCount: 0,
+        linkedCiApplicationIds: [8]
+      }
+    }
+
+    test('summary offers deletion when no fuel code or other application uses it', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      const mutateAsync = vi.fn(async () => undefined)
+      useDeleteCIApplicationFacility.mockReturnValue({
+        mutateAsync,
+        isPending: false
+      })
+      const user = userEvent.setup()
+      render(
+        <ApplicationInformationStep
+          {...baseProps}
+          ciApplication={unsharedSaved}
+        />,
+        [query, theme, localization, router]
       )
-      expect(document.getElementById('facilityNameplateCapacity').value).toBe(
-        '4,200'
-      )
-      expect(document.getElementById('facilityContactName').value).toBe(
-        'Pat Example'
-      )
-      expect(document.getElementById('facilityContactEmail').value).toBe(
-        'pat@example.com'
+
+      await user.click(screen.getByTestId('ci-step1-delete-facility'))
+      expect(
+        screen.getByText('carbonIntensity:step1.deleteFacilityConfirmTitle')
+      ).toBeInTheDocument()
+      await user.click(screen.getByRole('button', { name: 'common:deleteBtn' }))
+
+      await waitFor(() =>
+        expect(mutateAsync).toHaveBeenCalledWith({
+          facilityId: 1,
+          ciApplicationId: 8
+        })
       )
     })
-    expect(screen.getByTestId('ci-step1-process-flow-upload')).toBeEnabled()
+
+    test('hides deletion when the facility is used by a fuel code', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(
+        <ApplicationInformationStep
+          {...baseProps}
+          ciApplication={{
+            ...unsharedSaved,
+            fuelProductionFacility: {
+              ...unsharedSaved.fuelProductionFacility,
+              linkedFuelCodeCount: 2
+            }
+          }}
+        />,
+        [query, theme, localization, router]
+      )
+      expect(screen.queryByTestId('ci-step1-delete-facility')).toBeNull()
+    })
+
+    test('hides deletion when another application is linked', ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      render(
+        <ApplicationInformationStep
+          {...baseProps}
+          ciApplication={{
+            ...unsharedSaved,
+            fuelProductionFacility: {
+              ...unsharedSaved.fuelProductionFacility,
+              linkedCiApplicationIds: [8, 12]
+            }
+          }}
+        />,
+        [query, theme, localization, router]
+      )
+      expect(screen.queryByTestId('ci-step1-delete-facility')).toBeNull()
+    })
+
+    test('select mode shows deletion for an unshared selected facility', async ({
+      render,
+      query,
+      theme,
+      localization,
+      router
+    }) => {
+      useGetCIApplicationFacilities.mockReturnValue({
+        data: [
+          {
+            ...defaultFacilities[1],
+            linkedFuelCodeCount: 0,
+            linkedCiApplicationIds: []
+          }
+        ],
+        isLoading: false,
+        isError: false
+      })
+      const user = userEvent.setup()
+      render(<ApplicationInformationStep {...baseProps} />, [
+        query,
+        theme,
+        localization,
+        router
+      ])
+
+      expect(screen.queryByTestId('ci-step1-delete-facility')).toBeNull()
+      await selectFacility(user, 'Filled facility — Mock City')
+      expect(screen.getByTestId('ci-step1-delete-facility')).toBeInTheDocument()
+    })
   })
 
   test('typing a new facility name saves without an existing facility id', async ({
@@ -305,6 +757,7 @@ describe('ApplicationInformationStep', () => {
       localization,
       router
     ])
+    openNewFacilityForm()
 
     await user.type(
       document.getElementById('facilityName'),
@@ -339,34 +792,6 @@ describe('ApplicationInformationStep', () => {
       facilityNameplateCapacityUnit: 'L',
       facilityContactName: 'Pat Example',
       facilityContactEmail: 'pat@example.com'
-    })
-  }, 15000)
-
-  test('editing a selected facility name unlinks the existing facility', async ({
-    render,
-    query,
-    theme,
-    localization,
-    router
-  }) => {
-    const onSave = vi.fn()
-    const user = userEvent.setup()
-    render(<ApplicationInformationStep {...baseProps} onSave={onSave} />, [
-      query,
-      theme,
-      localization,
-      router
-    ])
-
-    await selectFacility(user, 'Filled facility — Mock City')
-    await user.type(document.getElementById('facilityName'), ' West')
-
-    fireEvent.click(screen.getByTestId('ci-step1-save-btn'))
-
-    await waitFor(() => expect(onSave).toHaveBeenCalled())
-    expect(onSave.mock.calls[0][0]).toMatchObject({
-      fuelProductionFacilityId: null,
-      facilityName: 'Filled facility West'
     })
   }, 15000)
 
@@ -536,6 +961,7 @@ describe('ApplicationInformationStep', () => {
       localization,
       router
     ])
+    openNewFacilityForm()
 
     await user.click(document.getElementById('facilityCity'))
     await user.type(document.getElementById('facilityCity'), 'coquit')
@@ -568,6 +994,7 @@ describe('ApplicationInformationStep', () => {
       localization,
       router
     ])
+    openNewFacilityForm()
 
     await user.click(document.getElementById('facilityProvinceState'))
     await user.type(document.getElementById('facilityProvinceState'), 'alb')
@@ -600,6 +1027,7 @@ describe('ApplicationInformationStep', () => {
       localization,
       router
     ])
+    openNewFacilityForm()
 
     await user.click(document.getElementById('facilityCountry'))
     await user.type(document.getElementById('facilityCountry'), 'can')
@@ -627,6 +1055,7 @@ describe('ApplicationInformationStep', () => {
       localization,
       router
     ])
+    openNewFacilityForm()
     expect(document.getElementById('facilityCity')).toHaveAttribute(
       'autocomplete',
       'lcfs-no-autofill-facilityCity'
@@ -648,31 +1077,25 @@ describe('ApplicationInformationStep', () => {
     localization,
     router
   }) => {
-    const existing = {
-      ciApplicationId: 8,
-      fuelProductionFacilityId: 1,
-      fuelProductionFacility: {
-        fuelProductionFacilityId: 1,
-        name: 'Test facility',
-        contactName: 'Pat Example',
-        contactEmail: 'pat@example.com',
-        documents: []
-      },
-      facilityCity: 'San Martin',
-      facilityProvinceState: 'Santa Fe',
-      facilityCountry: 'Argentina',
-      facilityNameplateCapacity: 1500,
-      facilityNameplateCapacityUnit: 'L',
-      proposedFuelCodeEffectiveDate: '2026-06-01'
-    }
     render(
       <ApplicationInformationStep
         {...baseProps}
-        ciApplication={existing}
+        ciApplication={savedFacilityApplication}
         onDelete={vi.fn()}
       />,
       [query, theme, localization, router]
     )
+
+    const summary = screen.getByTestId('ci-step1-facility-summary')
+    expect(summary).toHaveTextContent('Test facility')
+    expect(summary).toHaveTextContent('San Martin, Santa Fe, Argentina')
+    expect(summary).toHaveTextContent('1,500 L')
+    expect(summary).toHaveTextContent('pat@example.com')
+    expect(document.getElementById('proposedFuelCodeEffectiveDate').value).toBe(
+      '2026-06-01'
+    )
+
+    fireEvent.click(screen.getByTestId('ci-step1-edit-facility'))
 
     expect(document.getElementById('facilityName').value).toBe('Test facility')
     expect(document.getElementById('facilityCity').value).toBe('San Martin')
@@ -683,8 +1106,8 @@ describe('ApplicationInformationStep', () => {
     expect(document.getElementById('facilityNameplateCapacity').value).toBe(
       '1,500'
     )
-    expect(document.getElementById('proposedFuelCodeEffectiveDate').value).toBe(
-      '2026-06-01'
+    expect(document.getElementById('facilityContactName').value).toBe(
+      'Pat Example'
     )
   })
 

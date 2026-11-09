@@ -405,6 +405,11 @@ class CIApplicationRepository:
         return result.scalar_one_or_none()
 
     @repo_handler
+    async def delete_facility(self, facility: FuelProductionFacility) -> None:
+        await self.db.delete(facility)
+        await self.db.flush()
+
+    @repo_handler
     async def create_facility(
         self, facility: FuelProductionFacility
     ) -> FuelProductionFacility:

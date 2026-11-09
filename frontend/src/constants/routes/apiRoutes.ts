@@ -138,6 +138,7 @@ export const apiRoutes = {
   ciApplicationOptions: '/ci-applications/table-options',
   ciApplicationFacilities: '/ci-applications/facilities',
   createCIApplicationFacility: '/ci-applications/facilities',
+  deleteCIApplicationFacility: '/ci-applications/facilities/:facilityId',
   ciApplicationFuelCodeFieldSearch: '/ci-applications/fuel-code-field-search?',
   ciApplicationLocationSearch: '/ci-applications/location-search?',
   getCIApplications: '/ci-applications/list',

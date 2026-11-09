@@ -886,6 +886,7 @@ async def test_create_draft_persists_with_draft_status(service, repo, mock_user)
     repo.create.side_effect = lambda ci: ci  # echo
     repo.add_history.return_value = MagicMock()
     repo.get_by_id.return_value = _ci_application(status=draft_status)
+    repo.create_facility = AsyncMock(side_effect=lambda facility: facility)
 
     result = await service.create_draft(
         organization_id=1,
@@ -923,8 +924,11 @@ async def test_create_draft_raises_when_no_draft_status(service, repo, mock_user
 @pytest.mark.anyio
 async def test_update_step1_writes_fields_and_marks_update(service, repo, mock_user):
     ci = _ci_application()
+    ci.pathways = []
     repo.update.side_effect = lambda obj: obj
     repo.get_by_id.return_value = ci
+    # No facility id in the payload: a facility is created inline for the org.
+    repo.create_facility = AsyncMock(side_effect=lambda facility: facility)
 
     payload = _step1_payload(
         facility_city="Vancouver",
@@ -942,6 +946,10 @@ async def test_update_step1_writes_fields_and_marks_update(service, repo, mock_u
     assert ci.facility_country == "Canada"
     assert ci.facility_nameplate_capacity == 2500
     assert ci.facility_nameplate_capacity_unit == QuantityUnitsEnum.Kilograms
+    created_facility = repo.create_facility.await_args.args[0]
+    assert created_facility.organization_id == ci.organization_id
+    assert created_facility.name == "Test facility"
+    assert created_facility.city == "Vancouver"
     assert ci.action_type == ActionTypeEnum.UPDATE
     assert ci.update_user == "ci_applicant_user"
     assert isinstance(result, CIApplicationSchema)
@@ -949,9 +957,7 @@ async def test_update_step1_writes_fields_and_marks_update(service, repo, mock_u
 
 
 @pytest.mark.anyio
-async def test_update_step1_writes_facility_name_and_contact(
-    service, repo, mock_user
-):
+async def test_update_step1_writes_facility_name_and_contact(service, repo, mock_user):
     ci = _ci_application()
     ci.pathways = []
     fuel_code = SimpleNamespace(contact_name=None, contact_email=None)
@@ -981,9 +987,7 @@ async def test_update_step1_writes_facility_name_and_contact(
 
     await service.update_step1(ci, payload, mock_user)
 
-    repo.get_facility_for_organization.assert_awaited_once_with(
-        4, ci.organization_id
-    )
+    repo.get_facility_for_organization.assert_awaited_once_with(4, ci.organization_id)
     assert facility.name == "Renamed facility"
     assert facility.contact_name == "Pat Example"
     assert facility.contact_email == "pat@example.com"
@@ -996,6 +1000,121 @@ async def test_update_step1_writes_facility_name_and_contact(
 def test_step1_schema_blank_contact_email_is_null():
     payload = _step1_payload(facility_contact_email="   ")
     assert payload.facility_contact_email is None
+
+
+def _facility(**overrides):
+    base = dict(
+        fuel_production_facility_id=4,
+        organization_id=1,
+        name="Facility",
+        city="San Martin",
+        province_state="Santa Fe",
+        country="Argentina",
+        iso="AR",
+        nameplate_capacity=1000,
+        nameplate_capacity_unit=QuantityUnitsEnum.Litres,
+        contact_name=None,
+        contact_email=None,
+        documents=[],
+        fuel_codes=[],
+        ci_applications=[],
+        pathways=[],
+    )
+    base.update(overrides)
+    return SimpleNamespace(**base)
+
+
+@pytest.mark.anyio
+async def test_get_facilities_reports_sharing(service, repo):
+    facility = _facility(
+        fuel_codes=[SimpleNamespace(fuel_code_id=1)],
+        ci_applications=[SimpleNamespace(ci_application_id=10)],
+        pathways=[
+            SimpleNamespace(ci_application_id=10),
+            SimpleNamespace(ci_application_id=12),
+        ],
+    )
+    repo.get_facilities_for_organization = AsyncMock(return_value=[facility])
+
+    [result] = await service.get_facilities(1)
+
+    assert result.linked_fuel_code_count == 1
+    assert result.linked_ci_application_ids == [10, 12]
+
+
+@pytest.mark.anyio
+async def test_delete_facility_blocked_when_used_by_fuel_codes(service, repo):
+    facility = _facility(fuel_codes=[SimpleNamespace(fuel_code_id=1)])
+    repo.get_facility_for_organization = AsyncMock(return_value=facility)
+    repo.delete_facility = AsyncMock()
+
+    with pytest.raises(HTTPException) as exc:
+        await service.delete_facility(1, 4, ci_application_id=10)
+
+    assert exc.value.status_code == status.HTTP_409_CONFLICT
+    repo.delete_facility.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_delete_facility_blocked_when_shared_with_other_application(
+    service, repo
+):
+    facility = _facility(pathways=[SimpleNamespace(ci_application_id=12)])
+    repo.get_facility_for_organization = AsyncMock(return_value=facility)
+    repo.delete_facility = AsyncMock()
+
+    with pytest.raises(HTTPException) as exc:
+        await service.delete_facility(1, 4, ci_application_id=10)
+
+    assert exc.value.status_code == status.HTTP_409_CONFLICT
+    repo.delete_facility.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_delete_facility_detaches_current_application_and_documents(
+    service, repo
+):
+    application = SimpleNamespace(
+        ci_application_id=10,
+        fuel_production_facility_id=4,
+        facility_city="San Martin",
+        facility_province_state="Santa Fe",
+        facility_country="Argentina",
+        facility_iso="AR",
+        facility_nameplate_capacity=1000,
+        facility_nameplate_capacity_unit=QuantityUnitsEnum.Litres,
+    )
+    pathway = SimpleNamespace(ci_application_id=10, fuel_production_facility_id=4)
+    facility = _facility(
+        ci_applications=[application],
+        pathways=[pathway],
+        documents=[SimpleNamespace(document_id=7)],
+    )
+    repo.get_facility_for_organization = AsyncMock(return_value=facility)
+    repo.delete_facility = AsyncMock()
+    service.document_service = SimpleNamespace(delete_file=AsyncMock())
+
+    await service.delete_facility(1, 4, ci_application_id=10)
+
+    repo.get_facility_for_organization.assert_awaited_once_with(4, 1)
+    assert application.fuel_production_facility_id is None
+    assert application.facility_city is None
+    assert application.facility_nameplate_capacity is None
+    assert pathway.fuel_production_facility_id is None
+    service.document_service.delete_file.assert_awaited_once_with(
+        7, 4, "fuel_production_facility"
+    )
+    repo.delete_facility.assert_awaited_once_with(facility)
+
+
+@pytest.mark.anyio
+async def test_delete_facility_not_found_for_organization(service, repo):
+    repo.get_facility_for_organization = AsyncMock(return_value=None)
+
+    with pytest.raises(HTTPException) as exc:
+        await service.delete_facility(1, 99)
+
+    assert exc.value.status_code == status.HTTP_404_NOT_FOUND
 
 
 # ---------------------------------------------------------------------------

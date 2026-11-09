@@ -5,54 +5,82 @@ import {
   useImperativeHandle,
   useMemo,
   useRef,
-  useState,
-} from "react";
-import { Controller, useForm } from "react-hook-form";
-import { useTranslation } from "react-i18next";
-import Autocomplete from "@mui/material/Autocomplete";
-import Box from "@mui/material/Box";
-import InputLabel from "@mui/material/InputLabel";
-import MenuItem from "@mui/material/MenuItem";
-import Stack from "@mui/material/Stack";
-import TextField from "@mui/material/TextField";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+  useState
+} from 'react'
+import { Controller, useForm } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
+import Autocomplete from '@mui/material/Autocomplete'
+import Box from '@mui/material/Box'
+import IconButton from '@mui/material/IconButton'
+import InputLabel from '@mui/material/InputLabel'
+import MenuItem from '@mui/material/MenuItem'
+import Stack from '@mui/material/Stack'
+import TextField from '@mui/material/TextField'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import {
   format as formatDate,
   isValid as isValidDate,
-  parseISO,
-} from "date-fns";
-import { debounce } from "lodash";
-import isEqual from "lodash/isEqual";
-import * as Yup from "yup";
-import { yupResolver } from "@hookform/resolvers/yup";
-import Grid2 from "@mui/material/Grid2";
-import InfoIcon from "@mui/icons-material/Info";
-import UploadFileIcon from "@mui/icons-material/UploadFile";
+  parseISO
+} from 'date-fns'
+import { debounce } from 'lodash'
+import isEqual from 'lodash/isEqual'
+import * as Yup from 'yup'
+import { yupResolver } from '@hookform/resolvers/yup'
+import Grid2 from '@mui/material/Grid2'
+import DeleteIcon from '@mui/icons-material/Delete'
+import EditIcon from '@mui/icons-material/Edit'
+import InfoIcon from '@mui/icons-material/Info'
+import UploadFileIcon from '@mui/icons-material/UploadFile'
 
-import BCAlertRoot from "@/components/BCAlert/BCAlertRoot";
-import BCButton from "@/components/BCButton";
-import BCTypography from "@/components/BCTypography";
-import DocumentUploadDialog from "@/components/Documents/DocumentUploadDialog";
-import DocumentPreviewButton from "@/components/Documents/DocumentPreviewButton";
+import BCAlertRoot from '@/components/BCAlert/BCAlertRoot'
+import BCButton from '@/components/BCButton'
+import BCModal from '@/components/BCModal'
+import BCTypography from '@/components/BCTypography'
+import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
+import DocumentPreviewButton from '@/components/Documents/DocumentPreviewButton'
 import {
   useCIFacilityLocationSearch,
-  useGetCIApplicationFacilities,
-} from "@/hooks/useCIApplication";
-import colors from "@/themes/base/colors";
+  useDeleteCIApplicationFacility,
+  useGetCIApplicationFacilities
+} from '@/hooks/useCIApplication'
+import colors from '@/themes/base/colors'
+import { getDocumentDisplayName } from '@/utils/documents'
 
-const DATE_FORMAT = "yyyy-MM-dd";
-const EFFECTIVE_DATE_NOTICE_ID = "proposedFuelCodeEffectiveDateNotice";
-const FILL_OPTIONS = { shouldDirty: true, shouldValidate: true };
+const DATE_FORMAT = 'yyyy-MM-dd'
+const EFFECTIVE_DATE_NOTICE_ID = 'proposedFuelCodeEffectiveDateNotice'
+const FILL_OPTIONS = { shouldDirty: true, shouldValidate: true }
+const FACILITY_FIELDS = [
+  'facilityName',
+  'facilityCity',
+  'facilityProvinceState',
+  'facilityCountry',
+  'facilityNameplateCapacity',
+  'facilityNameplateCapacityUnit',
+  'facilityContactName',
+  'facilityContactEmail'
+]
+
+const isFacilityComplete = (facility) =>
+  Boolean(
+    facility?.name?.trim() &&
+    facility?.city?.trim() &&
+    facility?.provinceState?.trim() &&
+    facility?.country?.trim() &&
+    Number(facility?.nameplateCapacity) > 0 &&
+    facility?.nameplateCapacityUnit &&
+    facility?.contactName?.trim() &&
+    facility?.contactEmail?.trim()
+  )
 
 // Match plain TextField padding
 const LOCATION_AUTOCOMPLETE_SX = {
-  "& .MuiOutlinedInput-root": {
-    padding: "0 !important",
+  '& .MuiOutlinedInput-root': {
+    padding: '0 !important'
   },
-  "& .MuiAutocomplete-input": {
-    padding: "12px !important",
-  },
-};
+  '& .MuiAutocomplete-input': {
+    padding: '12px !important'
+  }
+}
 
 // Fetches suggestions from the backend as user types; cascade-fills on select.
 const FacilityLocationAutocomplete = ({
@@ -65,26 +93,26 @@ const FacilityLocationAutocomplete = ({
   helperText,
   disabled,
   searchType, // 'city' | 'province' | 'country'
-  inputRef,
+  inputRef
 }) => {
-  const [debouncedSearch, setDebouncedSearch] = useState(value || "");
-  const autofillToken = `lcfs-no-autofill-${id}`;
+  const [debouncedSearch, setDebouncedSearch] = useState(value || '')
+  const autofillToken = `lcfs-no-autofill-${id}`
 
   const debouncedSetSearch = useMemo(
     () => debounce((v) => setDebouncedSearch(v), 500),
-    [],
-  );
+    []
+  )
 
   const searchParams = useMemo(
     () => ({
-      city: searchType === "city" ? debouncedSearch : undefined,
-      province: searchType === "province" ? debouncedSearch : undefined,
-      country: searchType === "country" ? debouncedSearch : undefined,
+      city: searchType === 'city' ? debouncedSearch : undefined,
+      province: searchType === 'province' ? debouncedSearch : undefined,
+      country: searchType === 'country' ? debouncedSearch : undefined
     }),
-    [searchType, debouncedSearch],
-  );
+    [searchType, debouncedSearch]
+  )
 
-  const { data: options = [] } = useCIFacilityLocationSearch(searchParams);
+  const { data: options = [] } = useCIFacilityLocationSearch(searchParams)
 
   return (
     <Autocomplete
@@ -96,30 +124,30 @@ const FacilityLocationAutocomplete = ({
       forcePopupIcon={false}
       disableClearable
       disabled={disabled}
-      inputValue={value ?? ""}
+      inputValue={value ?? ''}
       value={null}
       sx={LOCATION_AUTOCOMPLETE_SX}
       ListboxProps={{ style: { maxHeight: 320 } }}
       noOptionsText={null}
       componentsProps={{
-        paper: { sx: { display: options.length === 0 ? "none" : "block" } },
+        paper: { sx: { display: options.length === 0 ? 'none' : 'block' } }
       }}
       onInputChange={(_event, newInputValue, reason) => {
-        if (reason === "input") {
-          onChange(newInputValue);
-          debouncedSetSearch(newInputValue);
-        } else if (reason === "clear") {
-          onChange("");
-          setDebouncedSearch("");
+        if (reason === 'input') {
+          onChange(newInputValue)
+          debouncedSetSearch(newInputValue)
+        } else if (reason === 'clear') {
+          onChange('')
+          setDebouncedSearch('')
         }
       }}
       onChange={(_event, newValue, reason) => {
-        if (reason === "selectOption" && typeof newValue === "string") {
-          onSelectSuggestion?.(newValue);
-        } else if (reason === "clear") {
-          onChange("");
-        } else if (typeof newValue === "string") {
-          onChange(newValue);
+        if (reason === 'selectOption' && typeof newValue === 'string') {
+          onSelectSuggestion?.(newValue)
+        } else if (reason === 'clear') {
+          onChange('')
+        } else if (typeof newValue === 'string') {
+          onChange(newValue)
         }
       }}
       onBlur={onBlur}
@@ -136,98 +164,98 @@ const FacilityLocationAutocomplete = ({
           helperText={helperText}
           autoComplete={autofillToken}
           onFocus={(event) => {
-            event.target.setAttribute("autocomplete", autofillToken);
-            const term = (value || "").trim();
-            if (term && term !== debouncedSearch) setDebouncedSearch(term);
-            params.inputProps?.onFocus?.(event);
+            event.target.setAttribute('autocomplete', autofillToken)
+            const term = (value || '').trim()
+            if (term && term !== debouncedSearch) setDebouncedSearch(term)
+            params.inputProps?.onFocus?.(event)
           }}
           inputProps={{
             ...params.inputProps,
             id,
             name: autofillToken,
-            "data-test": id,
+            'data-test': id,
             autoComplete: autofillToken,
-            autoCorrect: "off",
-            autoCapitalize: "off",
+            autoCorrect: 'off',
+            autoCapitalize: 'off',
             spellCheck: false,
-            "data-lpignore": "true",
-            "data-1p-ignore": "true",
-            "data-form-type": "other",
+            'data-lpignore': 'true',
+            'data-1p-ignore': 'true',
+            'data-form-type': 'other'
           }}
         />
       )}
     />
-  );
-};
+  )
+}
 
 const stringToDate = (value) => {
-  if (!value) return null;
-  if (value instanceof Date) return isValidDate(value) ? value : null;
-  const parsed = parseISO(value);
-  return isValidDate(parsed) ? parsed : null;
-};
+  if (!value) return null
+  if (value instanceof Date) return isValidDate(value) ? value : null
+  const parsed = parseISO(value)
+  return isValidDate(parsed) ? parsed : null
+}
 
 const dateToString = (value) => {
-  if (!value) return "";
-  if (typeof value === "string") return value;
-  return isValidDate(value) ? formatDate(value, DATE_FORMAT) : "";
-};
+  if (!value) return ''
+  if (typeof value === 'string') return value
+  return isValidDate(value) ? formatDate(value, DATE_FORMAT) : ''
+}
 
 const splitLocationParts = (value) =>
-  String(value ?? "")
-    .split(",")
-    .map((part) => part.trim());
+  String(value ?? '')
+    .split(',')
+    .map((part) => part.trim())
 
 const buildValidationSchema = (t) =>
   Yup.object({
     fuelProductionFacilityId: Yup.mixed().nullable(),
     facilityName: Yup.string()
       .trim()
-      .required(t("carbonIntensity:step1.validation.facilityNameRequired")),
+      .required(t('carbonIntensity:step1.validation.facilityNameRequired')),
     facilityCity: Yup.string()
       .trim()
-      .required(t("carbonIntensity:step1.validation.cityRequired")),
+      .required(t('carbonIntensity:step1.validation.cityRequired')),
     facilityProvinceState: Yup.string()
       .trim()
-      .required(t("carbonIntensity:step1.validation.provinceStateRequired")),
+      .required(t('carbonIntensity:step1.validation.provinceStateRequired')),
     facilityCountry: Yup.string()
       .trim()
-      .required(t("carbonIntensity:step1.validation.countryRequired")),
+      .required(t('carbonIntensity:step1.validation.countryRequired')),
     facilityNameplateCapacity: Yup.number()
-      .typeError(t("carbonIntensity:step1.validation.capacityRequired"))
-      .required(t("carbonIntensity:step1.validation.capacityRequired"))
-      .positive(t("carbonIntensity:step1.validation.capacityPositive"))
-      .integer(t("carbonIntensity:step1.validation.capacityPositive")),
+      .typeError(t('carbonIntensity:step1.validation.capacityRequired'))
+      .required(t('carbonIntensity:step1.validation.capacityRequired'))
+      .positive(t('carbonIntensity:step1.validation.capacityPositive'))
+      .integer(t('carbonIntensity:step1.validation.capacityPositive')),
     facilityNameplateCapacityUnit: Yup.string().required(
-      t("carbonIntensity:step1.validation.uomRequired"),
+      t('carbonIntensity:step1.validation.uomRequired')
     ),
     facilityContactName: Yup.string()
       .trim()
-      .required(t("carbonIntensity:step1.validation.contactNameRequired")),
+      .required(t('carbonIntensity:step1.validation.contactNameRequired')),
     facilityContactEmail: Yup.string()
       .trim()
-      .required(t("carbonIntensity:step1.validation.contactEmailRequired"))
-      .email(t("carbonIntensity:step1.validation.contactEmailInvalid")),
-    proposedFuelCodeEffectiveDate: Yup.string().nullable(),
-  });
+      .required(t('carbonIntensity:step1.validation.contactEmailRequired'))
+      .email(t('carbonIntensity:step1.validation.contactEmailInvalid')),
+    proposedFuelCodeEffectiveDate: Yup.string().nullable()
+  })
 
 const toFormValues = (data) => {
-  const facility = data?.fuelProductionFacility;
+  const facility = data?.fuelProductionFacility
   return {
-    fuelProductionFacilityId: data?.fuelProductionFacilityId ?? "",
-    facilityName: facility?.name ?? data?.facilityName ?? "",
-    facilityCity: data?.facilityCity ?? "",
-    facilityProvinceState: data?.facilityProvinceState ?? "",
-    facilityCountry: data?.facilityCountry ?? "",
-    facilityNameplateCapacity: data?.facilityNameplateCapacity ?? "",
-    facilityNameplateCapacityUnit: data?.facilityNameplateCapacityUnit ?? "",
+    fuelProductionFacilityId: data?.fuelProductionFacilityId ?? '',
+    facilityName: facility?.name ?? data?.facilityName ?? '',
+    facilityCity: data?.facilityCity ?? '',
+    facilityProvinceState: data?.facilityProvinceState ?? '',
+    facilityCountry: data?.facilityCountry ?? '',
+    facilityNameplateCapacity: data?.facilityNameplateCapacity ?? '',
+    facilityNameplateCapacityUnit: data?.facilityNameplateCapacityUnit ?? '',
     facilityContactName:
-      facility?.contactName ?? data?.facilityContactName ?? "",
+      facility?.contactName ?? data?.facilityContactName ?? '',
     facilityContactEmail:
-      facility?.contactEmail ?? data?.facilityContactEmail ?? "",
-    proposedFuelCodeEffectiveDate: data?.proposedFuelCodeEffectiveDate ?? "",
-  };
-};
+      facility?.contactEmail ?? data?.facilityContactEmail ?? '',
+    proposedFuelCodeEffectiveDate: data?.proposedFuelCodeEffectiveDate ?? ''
+  }
+}
 
 const toApiPayload = (values) => ({
   fuelProductionFacilityId: values.fuelProductionFacilityId
@@ -241,8 +269,8 @@ const toApiPayload = (values) => ({
   facilityNameplateCapacityUnit: values.facilityNameplateCapacityUnit || null,
   facilityContactName: values.facilityContactName?.trim(),
   facilityContactEmail: values.facilityContactEmail?.trim(),
-  proposedFuelCodeEffectiveDate: values.proposedFuelCodeEffectiveDate || null,
-});
+  proposedFuelCodeEffectiveDate: values.proposedFuelCodeEffectiveDate || null
+})
 
 export const ApplicationInformationStep = forwardRef(
   (
@@ -254,171 +282,318 @@ export const ApplicationInformationStep = forwardRef(
       onDelete,
       isSaving = false,
       readOnly = false,
-      showEffectiveDateNotice = false,
+      showEffectiveDateNotice = false
     },
-    ref,
+    ref
   ) => {
-    const { t } = useTranslation(["common", "carbonIntensity"]);
-    const autofillTrapRef = useRef(null);
-    const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
+    const { t } = useTranslation(['common', 'carbonIntensity'])
+    const autofillTrapRef = useRef(null)
+    const [documentDialogOpen, setDocumentDialogOpen] = useState(false)
+    // Facility section modes: 'select' (pick an existing facility),
+    // 'form' (edit an incomplete/selected facility or add a new one) and
+    // 'summary' (facility saved on the application). User actions override
+    // the default until the application is saved again.
+    const [modeOverride, setModeOverride] = useState(null)
+    const [selectError, setSelectError] = useState('')
+    const [facilityDeleteOpen, setFacilityDeleteOpen] = useState(false)
+    const [facilityDeleteError, setFacilityDeleteError] = useState('')
+    const { mutateAsync: deleteFacility, isPending: isDeletingFacility } =
+      useDeleteCIApplicationFacility()
     // Facilities are already scoped to the caller's organization by the API.
-    const { data: facilities = [], isError: isFacilityListError } =
-      useGetCIApplicationFacilities({
-        enabled: !readOnly,
-      });
+    const {
+      data: facilities = [],
+      isLoading: isLoadingFacilities,
+      isError: isFacilityListError
+    } = useGetCIApplicationFacilities({
+      enabled: !readOnly
+    })
 
-    const validationSchema = buildValidationSchema(t);
+    const validationSchema = buildValidationSchema(t)
     const form = useForm({
       resolver: yupResolver(validationSchema),
-      mode: "onTouched",
-      defaultValues: toFormValues(ciApplication),
-    });
+      mode: 'onTouched',
+      defaultValues: toFormValues(ciApplication)
+    })
 
-    const { control, handleSubmit, reset, setValue, watch, formState } = form;
-    const previousSeed = useRef(null);
-    const selectedFacilityId = Number(watch("fuelProductionFacilityId") || 0);
+    const { control, handleSubmit, reset, setValue, watch, formState } = form
+    const previousSeed = useRef(null)
+    const selectedFacilityId = Number(watch('fuelProductionFacilityId') || 0)
+    // The application's embedded facility is the freshest source for the
+    // saved facility (e.g. documents); fall back to the org list otherwise.
+    const savedFacility = ciApplication?.fuelProductionFacility
     const selectedFacility =
+      (savedFacility?.fuelProductionFacilityId === selectedFacilityId
+        ? savedFacility
+        : null) ||
       facilities.find(
-        (facility) => facility.fuelProductionFacilityId === selectedFacilityId,
-      ) || ciApplication?.fuelProductionFacility;
+        (facility) => facility.fuelProductionFacilityId === selectedFacilityId
+      ) ||
+      null
 
     // Selecting an existing facility links it and fills its saved details.
     const applyFacility = useCallback(
       (facility) => {
         setValue(
-          "fuelProductionFacilityId",
+          'fuelProductionFacilityId',
           facility.fuelProductionFacilityId,
-          FILL_OPTIONS,
-        );
-        setValue("facilityName", facility.name || "", FILL_OPTIONS);
-        setValue("facilityCity", facility.city || "", FILL_OPTIONS);
+          FILL_OPTIONS
+        )
+        setValue('facilityName', facility.name || '', FILL_OPTIONS)
+        setValue('facilityCity', facility.city || '', FILL_OPTIONS)
         setValue(
-          "facilityProvinceState",
-          facility.provinceState || "",
-          FILL_OPTIONS,
-        );
-        setValue("facilityCountry", facility.country || "", FILL_OPTIONS);
+          'facilityProvinceState',
+          facility.provinceState || '',
+          FILL_OPTIONS
+        )
+        setValue('facilityCountry', facility.country || '', FILL_OPTIONS)
         setValue(
-          "facilityNameplateCapacity",
-          facility.nameplateCapacity || "",
-          FILL_OPTIONS,
-        );
+          'facilityNameplateCapacity',
+          facility.nameplateCapacity || '',
+          FILL_OPTIONS
+        )
         setValue(
-          "facilityNameplateCapacityUnit",
-          facility.nameplateCapacityUnit || "",
-          FILL_OPTIONS,
-        );
+          'facilityNameplateCapacityUnit',
+          facility.nameplateCapacityUnit || '',
+          FILL_OPTIONS
+        )
         setValue(
-          "facilityContactName",
-          facility.contactName || "",
-          FILL_OPTIONS,
-        );
+          'facilityContactName',
+          facility.contactName || '',
+          FILL_OPTIONS
+        )
         setValue(
-          "facilityContactEmail",
-          facility.contactEmail || "",
-          FILL_OPTIONS,
-        );
+          'facilityContactEmail',
+          facility.contactEmail || '',
+          FILL_OPTIONS
+        )
       },
-      [setValue],
-    );
+      [setValue]
+    )
 
-    // Typing a name that is not an existing facility means a new facility
-    // will be created on save, so drop any previously linked id.
-    const handleFacilityNameInput = useCallback(
-      (name) => {
-        setValue("facilityName", name, { shouldDirty: true });
-        const match = facilities.find(
-          (facility) =>
-            (facility.name || "").trim().toLowerCase() ===
-            name.trim().toLowerCase(),
-        );
-        setValue(
-          "fuelProductionFacilityId",
-          match ? match.fuelProductionFacilityId : "",
-          { shouldDirty: true },
-        );
+    const handleSelectFacility = useCallback(
+      (facility) => {
+        setSelectError('')
+        applyFacility(facility)
+        // Complete facilities stay in select mode until save; incomplete
+        // ones open the form so the gaps can be filled in.
+        setModeOverride(isFacilityComplete(facility) ? 'select' : 'form')
       },
-      [facilities, setValue],
-    );
+      [applyFacility]
+    )
+
+    const handleAddNewFacility = useCallback(() => {
+      setSelectError('')
+      setValue('fuelProductionFacilityId', '', { shouldDirty: true })
+      for (const name of FACILITY_FIELDS) {
+        setValue(name, '', { shouldDirty: true })
+      }
+      setModeOverride('form')
+    }, [setValue])
 
     useEffect(() => {
       const seed = {
         id: ciApplication?.ciApplicationId,
-        values: toFormValues(ciApplication),
-      };
-      if (!isEqual(previousSeed.current, seed)) {
-        previousSeed.current = seed;
-        reset(seed.values);
+        values: toFormValues(ciApplication)
       }
-    }, [ciApplication, reset]);
+      if (!isEqual(previousSeed.current, seed)) {
+        previousSeed.current = seed
+        reset(seed.values)
+        setModeOverride(null)
+        setSelectError('')
+      }
+    }, [ciApplication, reset])
+
+    const defaultMode = ciApplication?.fuelProductionFacilityId
+      ? 'summary'
+      : !readOnly && (isLoadingFacilities || facilities.length > 0)
+        ? 'select'
+        : 'form'
+    const facilityMode = modeOverride ?? defaultMode
+
+    const summaryValues = watch()
+    const facilityDocuments = selectedFacility?.documents || []
+    const facilityLocation = [
+      summaryValues.facilityCity,
+      summaryValues.facilityProvinceState,
+      summaryValues.facilityCountry
+    ]
+      .filter(Boolean)
+      .join(', ')
+
+    // Uploaded process flow diagram(s) for the selected facility; shown above
+    // the Upload button in the form and above "Add new" in the summary.
+    const renderFacilityDocuments = ({ allowReplace }) =>
+      facilityDocuments.length > 0 ? (
+        <Box sx={{ mb: 2 }} data-test="ci-step1-facility-documents">
+          {facilityDocuments.map((document) => (
+            <Stack
+              key={document.documentId}
+              direction="row"
+              alignItems="center"
+              spacing={0.5}
+            >
+              <BCTypography
+                variant="body2"
+                sx={{
+                  color: colors.primary.main,
+                  textDecoration: 'underline'
+                }}
+              >
+                {getDocumentDisplayName(document)}
+              </BCTypography>
+              <DocumentPreviewButton
+                parentType="fuel_production_facility"
+                parentID={selectedFacilityId}
+                document={document}
+              />
+              {allowReplace && !readOnly && (
+                <IconButton
+                  size="small"
+                  color="primary"
+                  aria-label={t('carbonIntensity:step1.replaceProcessFlow')}
+                  onClick={() => setDocumentDialogOpen(true)}
+                  data-test="ci-step1-process-flow-replace"
+                >
+                  <EditIcon fontSize="small" />
+                </IconButton>
+              )}
+            </Stack>
+          ))}
+        </Box>
+      ) : null
+
+    // A facility can be removed only when no fuel code uses it and no other
+    // CI application (directly or via its pathways) is linked to it.
+    const canDeleteFacility =
+      !readOnly &&
+      !!selectedFacility &&
+      !(selectedFacility.linkedFuelCodeCount > 0) &&
+      (selectedFacility.linkedCiApplicationIds || []).every(
+        (id) => id === ciApplication?.ciApplicationId
+      )
+
+    const handleConfirmDeleteFacility = async () => {
+      setFacilityDeleteError('')
+      try {
+        await deleteFacility({
+          facilityId: selectedFacilityId,
+          ciApplicationId: ciApplication?.ciApplicationId
+        })
+        setFacilityDeleteOpen(false)
+        setValue('fuelProductionFacilityId', '', { shouldDirty: true })
+        for (const name of FACILITY_FIELDS) {
+          setValue(name, '', { shouldDirty: true })
+        }
+        setModeOverride(null)
+      } catch (error) {
+        setFacilityDeleteError(
+          error?.response?.data?.detail ||
+            t('carbonIntensity:step1.deleteFacilityFailed')
+        )
+      }
+    }
+
+    const renderDeleteFacilityButton = () =>
+      canDeleteFacility ? (
+        <IconButton
+          size="small"
+          color="error"
+          aria-label={t('carbonIntensity:step1.deleteFacility')}
+          onClick={() => setFacilityDeleteOpen(true)}
+          data-test="ci-step1-delete-facility"
+        >
+          <DeleteIcon fontSize="small" />
+        </IconButton>
+      ) : null
+
+    // Validation errors on hidden fields: prompt for a selection in select
+    // mode, otherwise open the form so the errors are visible.
+    const onInvalid = () => {
+      if (facilityMode === 'select' && !selectedFacilityId) {
+        setSelectError(t('carbonIntensity:step1.validation.facilityRequired'))
+        return
+      }
+      setModeOverride('form')
+    }
 
     useImperativeHandle(ref, () => ({
       submit: () =>
         new Promise((resolve, reject) => {
           handleSubmit(
             (values) => resolve(toApiPayload(values)),
-            (errors) => reject(errors),
-          )();
+            (errors) => {
+              onInvalid()
+              reject(errors)
+            }
+          )()
         }),
-      isDirty: formState.isDirty,
-    }));
+      isDirty: formState.isDirty
+    }))
 
-    const onSubmit = (values) => onSave?.(toApiPayload(values));
+    // The parent resolves false when the save failed; anything else (including
+    // an undefined return) returns the section to its default view.
+    const onSubmit = async (values) => {
+      const saved = await onSave?.(toApiPayload(values))
+      if (saved !== false) {
+        setModeOverride(null)
+        setSelectError('')
+      }
+    }
 
     const applyCitySuggestion = (suggestion) => {
-      const [city = "", province = "", country = ""] =
-        splitLocationParts(suggestion);
-      setValue("facilityCity", city, {
+      const [city = '', province = '', country = ''] =
+        splitLocationParts(suggestion)
+      setValue('facilityCity', city, {
         shouldDirty: true,
         shouldValidate: true,
-        shouldTouch: true,
-      });
-      setValue("facilityProvinceState", province, {
+        shouldTouch: true
+      })
+      setValue('facilityProvinceState', province, {
         shouldDirty: true,
         shouldValidate: true,
-        shouldTouch: true,
-      });
-      setValue("facilityCountry", country, {
+        shouldTouch: true
+      })
+      setValue('facilityCountry', country, {
         shouldDirty: true,
         shouldValidate: true,
-        shouldTouch: true,
-      });
-    };
+        shouldTouch: true
+      })
+    }
 
     const applyProvinceSuggestion = (suggestion) => {
-      const [province = "", country = ""] = splitLocationParts(suggestion);
-      setValue("facilityProvinceState", province, {
+      const [province = '', country = ''] = splitLocationParts(suggestion)
+      setValue('facilityProvinceState', province, {
         shouldDirty: true,
         shouldValidate: true,
-        shouldTouch: true,
-      });
-      setValue("facilityCountry", country, {
+        shouldTouch: true
+      })
+      setValue('facilityCountry', country, {
         shouldDirty: true,
         shouldValidate: true,
-        shouldTouch: true,
-      });
-    };
+        shouldTouch: true
+      })
+    }
 
-    const requiredSuffix = ` ${t("carbonIntensity:labels.required")}`;
+    const requiredSuffix = ` ${t('carbonIntensity:labels.required')}`
 
     return (
       <Box
         component="form"
         noValidate
         autoComplete="off"
-        onSubmit={handleSubmit(onSubmit)}
+        onSubmit={handleSubmit(onSubmit, onInvalid)}
       >
         {/* Autofill honeypots */}
         <Box
           ref={autofillTrapRef}
           aria-hidden="true"
           sx={{
-            position: "absolute",
-            left: "-10000px",
-            top: "auto",
+            position: 'absolute',
+            left: '-10000px',
+            top: 'auto',
             width: 1,
             height: 1,
-            overflow: "hidden",
+            overflow: 'hidden'
           }}
         >
           <input
@@ -453,11 +628,11 @@ export const ApplicationInformationStep = forwardRef(
                 sx={{ mt: 1 }}
                 data-test="ci-step1-org-info-confirmation"
               >
-                {t("carbonIntensity:step1.orgInfoConfirmationPrefix")}{" "}
+                {t('carbonIntensity:step1.orgInfoConfirmationPrefix')}{' '}
                 <a
-                  href={`mailto:${t("carbonIntensity:step1.orgInfoConfirmationEmail")}?subject=${encodeURIComponent(t("carbonIntensity:step1.orgInfoConfirmationEmailSubject"))}`}
+                  href={`mailto:${t('carbonIntensity:step1.orgInfoConfirmationEmail')}?subject=${encodeURIComponent(t('carbonIntensity:step1.orgInfoConfirmationEmailSubject'))}`}
                 >
-                  {t("carbonIntensity:step1.orgInfoConfirmationEmail")}
+                  {t('carbonIntensity:step1.orgInfoConfirmationEmail')}
                 </a>
                 .
               </BCTypography>
@@ -466,368 +641,453 @@ export const ApplicationInformationStep = forwardRef(
         )}
 
         <BCTypography variant="h6" sx={{ pb: 2, color: colors.primary.main }}>
-          {t("carbonIntensity:step1.facilitySectionLabel")}
+          {t('carbonIntensity:step1.facilitySectionLabel')}
         </BCTypography>
 
-        <Grid2 container spacing={2}>
-          <Grid2 size={{ xs: 12, md: 4 }}>
-            <Controller
-              name="facilityName"
-              control={control}
-              render={({ field, fieldState }) => (
-                <Box mb={2}>
-                  <InputLabel htmlFor="facilityName" sx={{ pb: 1 }}>
-                    {t("carbonIntensity:step1.facilityName")}
-                    {requiredSuffix}
-                  </InputLabel>
-                  {/* Pick an existing facility for this organization or type a
-                      new name; a new facility is created on save. */}
-                  <Autocomplete
-                    id="facilityName"
-                    freeSolo
-                    openOnFocus
-                    disableClearable
-                    disabled={readOnly}
-                    options={facilities}
-                    getOptionLabel={(option) =>
-                      typeof option === "string"
-                        ? option
-                        : option.name ||
-                          t("carbonIntensity:step1.unnamedFacility")
+        {facilityMode === 'summary' ? (
+          <>
+            <Box sx={{ mb: 3 }} data-test="ci-step1-facility-summary">
+              <Stack direction="row" alignItems="center" spacing={0.5}>
+                <BCTypography variant="body2" sx={{ fontWeight: 700 }}>
+                  {summaryValues.facilityName ||
+                    t('carbonIntensity:step1.unnamedFacility')}
+                </BCTypography>
+                {!readOnly && (
+                  <IconButton
+                    size="small"
+                    color="primary"
+                    aria-label={t('carbonIntensity:step1.editFacility')}
+                    onClick={() => setModeOverride('form')}
+                    data-test="ci-step1-edit-facility"
+                  >
+                    <EditIcon fontSize="small" />
+                  </IconButton>
+                )}
+                {renderDeleteFacilityButton()}
+              </Stack>
+              {facilityLocation && (
+                <BCTypography variant="body2">{facilityLocation}</BCTypography>
+              )}
+              {summaryValues.facilityNameplateCapacity !== '' &&
+                summaryValues.facilityNameplateCapacity != null && (
+                  <BCTypography variant="body2">
+                    {Number(
+                      summaryValues.facilityNameplateCapacity
+                    ).toLocaleString('en-CA')}
+                    {summaryValues.facilityNameplateCapacityUnit
+                      ? ` ${summaryValues.facilityNameplateCapacityUnit}`
+                      : ''}
+                  </BCTypography>
+                )}
+              {summaryValues.facilityContactName && (
+                <BCTypography variant="body2">
+                  {summaryValues.facilityContactName}
+                </BCTypography>
+              )}
+              {summaryValues.facilityContactEmail && (
+                <BCTypography variant="body2">
+                  {summaryValues.facilityContactEmail}
+                </BCTypography>
+              )}
+            </Box>
+            {renderFacilityDocuments({ allowReplace: true })}
+            {!readOnly && (
+              <Box sx={{ mb: 3 }}>
+                <BCButton
+                  type="button"
+                  variant="outlined"
+                  color="primary"
+                  onClick={handleAddNewFacility}
+                  data-test="ci-step1-add-facility"
+                >
+                  {t('carbonIntensity:step1.addFacility')}
+                </BCButton>
+              </Box>
+            )}
+          </>
+        ) : facilityMode === 'select' ? (
+          <>
+            <Box sx={{ mb: 2, maxWidth: { xs: '100%', md: 360 } }}>
+              <InputLabel htmlFor="fuelProductionFacilityId" sx={{ pb: 1 }}>
+                {t('carbonIntensity:step1.selectFacility')}
+              </InputLabel>
+              <Stack direction="row" alignItems="flex-start" spacing={0.5}>
+                <TextField
+                  id="fuelProductionFacilityId"
+                  select
+                  fullWidth
+                  value={selectedFacilityId || ''}
+                  disabled={isLoadingFacilities}
+                  error={!!selectError}
+                  helperText={
+                    selectError ||
+                    (isFacilityListError
+                      ? t('carbonIntensity:step1.facilityListFailed')
+                      : '')
+                  }
+                  onChange={(event) => {
+                    const facility = facilities.find(
+                      (item) =>
+                        item.fuelProductionFacilityId ===
+                        Number(event.target.value)
+                    )
+                    if (facility) handleSelectFacility(facility)
+                  }}
+                  SelectProps={{
+                    displayEmpty: true,
+                    inputProps: { 'data-test': 'fuelProductionFacilityId' }
+                  }}
+                  sx={{
+                    '& .MuiSelect-select.MuiOutlinedInput-input': {
+                      padding: '12px !important',
+                      minHeight: '1.4375em'
                     }
-                    isOptionEqualToValue={(option, value) =>
-                      option.fuelProductionFacilityId ===
-                      value?.fuelProductionFacilityId
-                    }
-                    inputValue={field.value ?? ""}
-                    value={selectedFacility ?? null}
-                    sx={LOCATION_AUTOCOMPLETE_SX}
-                    onInputChange={(_event, newInputValue, reason) => {
-                      if (reason === "input") {
-                        handleFacilityNameInput(newInputValue);
-                      }
-                    }}
-                    onChange={(_event, newValue, reason) => {
-                      if (
-                        reason === "selectOption" &&
-                        newValue &&
-                        typeof newValue === "object"
-                      ) {
-                        applyFacility(newValue);
-                      }
-                    }}
-                    onBlur={field.onBlur}
-                    renderOption={(props, option) => (
-                      <li {...props} key={option.fuelProductionFacilityId}>
-                        {option.name ||
-                          t("carbonIntensity:step1.unnamedFacility")}
-                        {option.city ? ` — ${option.city}` : ""}
-                      </li>
-                    )}
-                    renderInput={(params) => (
+                  }}
+                >
+                  <MenuItem value="">
+                    <em>{t('carbonIntensity:labels.selectPlaceholder')}</em>
+                  </MenuItem>
+                  {facilities.map((facility) => (
+                    <MenuItem
+                      key={facility.fuelProductionFacilityId}
+                      value={facility.fuelProductionFacilityId}
+                    >
+                      {facility.name ||
+                        t('carbonIntensity:step1.unnamedFacility')}
+                      {facility.city ? ` — ${facility.city}` : ''}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <Box sx={{ pt: '6px' }}>{renderDeleteFacilityButton()}</Box>
+              </Stack>
+            </Box>
+            <Box sx={{ mb: 3 }}>
+              <BCButton
+                type="button"
+                variant="outlined"
+                color="primary"
+                onClick={handleAddNewFacility}
+                data-test="ci-step1-add-facility"
+              >
+                {t('carbonIntensity:step1.addFacility')}
+              </BCButton>
+            </Box>
+          </>
+        ) : (
+          <>
+            <Grid2 container spacing={2}>
+              <Grid2 size={{ xs: 12, md: 4 }}>
+                <Controller
+                  name="facilityName"
+                  control={control}
+                  render={({ field, fieldState }) => (
+                    <Box mb={2}>
+                      <InputLabel htmlFor="facilityName" sx={{ pb: 1 }}>
+                        {t('carbonIntensity:step1.facilityName')}
+                        {requiredSuffix}
+                      </InputLabel>
                       <TextField
-                        {...params}
-                        inputRef={field.ref}
+                        {...field}
+                        id="facilityName"
+                        data-test="facilityName"
+                        value={field.value ?? ''}
+                        disabled={readOnly}
                         required
                         variant="outlined"
                         fullWidth
                         error={!!fieldState.error}
-                        helperText={
-                          fieldState.error?.message ||
-                          (isFacilityListError
-                            ? t("carbonIntensity:step1.facilityListFailed")
-                            : "")
-                        }
-                        inputProps={{
-                          ...params.inputProps,
-                          "data-test": "facilityName",
-                        }}
+                        helperText={fieldState.error?.message}
                       />
-                    )}
-                  />
-                </Box>
-              )}
-            />
-          </Grid2>
-        </Grid2>
+                    </Box>
+                  )}
+                />
+              </Grid2>
+            </Grid2>
 
-        <Grid2 container spacing={2}>
-          <Grid2 size={{ xs: 12, md: 4 }}>
-            <Controller
-              name="facilityCity"
-              control={control}
-              render={({ field, fieldState }) => (
-                <Box mb={2}>
-                  <InputLabel htmlFor="facilityCity" sx={{ pb: 1 }}>
-                    {t("carbonIntensity:step1.city")}
-                    {requiredSuffix}:
-                  </InputLabel>
-                  <FacilityLocationAutocomplete
-                    id="facilityCity"
-                    value={field.value}
-                    onChange={field.onChange}
-                    onBlur={field.onBlur}
-                    inputRef={field.ref}
-                    onSelectSuggestion={applyCitySuggestion}
-                    searchType="city"
-                    error={!!fieldState.error}
-                    helperText={fieldState.error?.message}
-                    disabled={readOnly}
-                  />
-                </Box>
-              )}
-            />
-          </Grid2>
+            <Grid2 container spacing={2}>
+              <Grid2 size={{ xs: 12, md: 4 }}>
+                <Controller
+                  name="facilityCity"
+                  control={control}
+                  render={({ field, fieldState }) => (
+                    <Box mb={2}>
+                      <InputLabel htmlFor="facilityCity" sx={{ pb: 1 }}>
+                        {t('carbonIntensity:step1.city')}
+                        {requiredSuffix}:
+                      </InputLabel>
+                      <FacilityLocationAutocomplete
+                        id="facilityCity"
+                        value={field.value}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        inputRef={field.ref}
+                        onSelectSuggestion={applyCitySuggestion}
+                        searchType="city"
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message}
+                        disabled={readOnly}
+                      />
+                    </Box>
+                  )}
+                />
+              </Grid2>
 
-          <Grid2 size={{ xs: 12, md: 4 }}>
-            <Controller
-              name="facilityProvinceState"
-              control={control}
-              render={({ field, fieldState }) => (
-                <Box mb={2}>
-                  <InputLabel htmlFor="facilityProvinceState" sx={{ pb: 1 }}>
-                    {t("carbonIntensity:step1.provinceState")}
-                    {requiredSuffix}:
-                  </InputLabel>
-                  <FacilityLocationAutocomplete
-                    id="facilityProvinceState"
-                    value={field.value}
-                    onChange={field.onChange}
-                    onBlur={field.onBlur}
-                    inputRef={field.ref}
-                    onSelectSuggestion={applyProvinceSuggestion}
-                    searchType="province"
-                    error={!!fieldState.error}
-                    helperText={fieldState.error?.message}
-                    disabled={readOnly}
-                  />
-                </Box>
-              )}
-            />
-          </Grid2>
+              <Grid2 size={{ xs: 12, md: 4 }}>
+                <Controller
+                  name="facilityProvinceState"
+                  control={control}
+                  render={({ field, fieldState }) => (
+                    <Box mb={2}>
+                      <InputLabel
+                        htmlFor="facilityProvinceState"
+                        sx={{ pb: 1 }}
+                      >
+                        {t('carbonIntensity:step1.provinceState')}
+                        {requiredSuffix}:
+                      </InputLabel>
+                      <FacilityLocationAutocomplete
+                        id="facilityProvinceState"
+                        value={field.value}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        inputRef={field.ref}
+                        onSelectSuggestion={applyProvinceSuggestion}
+                        searchType="province"
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message}
+                        disabled={readOnly}
+                      />
+                    </Box>
+                  )}
+                />
+              </Grid2>
 
-          <Grid2 size={{ xs: 12, md: 4 }}>
-            <Controller
-              name="facilityCountry"
-              control={control}
-              render={({ field, fieldState }) => (
-                <Box mb={2}>
-                  <InputLabel htmlFor="facilityCountry" sx={{ pb: 1 }}>
-                    {t("carbonIntensity:step1.country")}
-                    {requiredSuffix}:
-                  </InputLabel>
-                  <FacilityLocationAutocomplete
-                    id="facilityCountry"
-                    value={field.value}
-                    onChange={field.onChange}
-                    onBlur={field.onBlur}
-                    inputRef={field.ref}
-                    onSelectSuggestion={(suggestion) =>
-                      field.onChange(splitLocationParts(suggestion)[0] ?? "")
-                    }
-                    searchType="country"
-                    error={!!fieldState.error}
-                    helperText={fieldState.error?.message}
-                    disabled={readOnly}
-                  />
-                </Box>
-              )}
-            />
-          </Grid2>
-        </Grid2>
+              <Grid2 size={{ xs: 12, md: 4 }}>
+                <Controller
+                  name="facilityCountry"
+                  control={control}
+                  render={({ field, fieldState }) => (
+                    <Box mb={2}>
+                      <InputLabel htmlFor="facilityCountry" sx={{ pb: 1 }}>
+                        {t('carbonIntensity:step1.country')}
+                        {requiredSuffix}:
+                      </InputLabel>
+                      <FacilityLocationAutocomplete
+                        id="facilityCountry"
+                        value={field.value}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        inputRef={field.ref}
+                        onSelectSuggestion={(suggestion) =>
+                          field.onChange(
+                            splitLocationParts(suggestion)[0] ?? ''
+                          )
+                        }
+                        searchType="country"
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message}
+                        disabled={readOnly}
+                      />
+                    </Box>
+                  )}
+                />
+              </Grid2>
+            </Grid2>
 
-        <Grid2 container spacing={2}>
-          <Grid2 size={{ xs: 12, md: 4 }}>
-            <Controller
-              name="facilityNameplateCapacity"
-              control={control}
-              render={({ field, fieldState }) => {
-                const displayValue =
-                  field.value === "" ||
-                  field.value === null ||
-                  field.value === undefined
-                    ? ""
-                    : Number(field.value).toLocaleString("en-CA");
-                return (
-                  <Box mb={2}>
-                    <InputLabel
-                      htmlFor="facilityNameplateCapacity"
-                      sx={{ pb: 1 }}
-                    >
-                      {t("carbonIntensity:step1.facilityNameplate")}
-                      {requiredSuffix}:
-                    </InputLabel>
-                    <TextField
-                      id="facilityNameplateCapacity"
-                      data-test="facilityNameplateCapacity"
-                      type="text"
-                      disabled={readOnly}
-                      inputMode="numeric"
-                      name={field.name}
-                      inputRef={field.ref}
-                      onBlur={field.onBlur}
-                      value={displayValue}
-                      onChange={(e) => {
-                        const digits = e.target.value.replace(/[^\d]/g, "");
-                        field.onChange(digits === "" ? "" : Number(digits));
-                      }}
-                      required
-                      variant="outlined"
-                      fullWidth
-                      error={!!fieldState.error}
-                      helperText={fieldState.error?.message}
-                    />
-                  </Box>
-                );
-              }}
-            />
-          </Grid2>
+            <Grid2 container spacing={2}>
+              <Grid2 size={{ xs: 12, md: 4 }}>
+                <Controller
+                  name="facilityNameplateCapacity"
+                  control={control}
+                  render={({ field, fieldState }) => {
+                    const displayValue =
+                      field.value === '' ||
+                      field.value === null ||
+                      field.value === undefined
+                        ? ''
+                        : Number(field.value).toLocaleString('en-CA')
+                    return (
+                      <Box mb={2}>
+                        <InputLabel
+                          htmlFor="facilityNameplateCapacity"
+                          sx={{ pb: 1 }}
+                        >
+                          {t('carbonIntensity:step1.facilityNameplate')}
+                          {requiredSuffix}:
+                        </InputLabel>
+                        <TextField
+                          id="facilityNameplateCapacity"
+                          data-test="facilityNameplateCapacity"
+                          type="text"
+                          disabled={readOnly}
+                          inputMode="numeric"
+                          name={field.name}
+                          inputRef={field.ref}
+                          onBlur={field.onBlur}
+                          value={displayValue}
+                          onChange={(e) => {
+                            const digits = e.target.value.replace(/[^\d]/g, '')
+                            field.onChange(digits === '' ? '' : Number(digits))
+                          }}
+                          required
+                          variant="outlined"
+                          fullWidth
+                          error={!!fieldState.error}
+                          helperText={fieldState.error?.message}
+                        />
+                      </Box>
+                    )
+                  }}
+                />
+              </Grid2>
 
-          <Grid2 size={{ xs: 12, md: 2 }}>
-            <Controller
-              name="facilityNameplateCapacityUnit"
-              control={control}
-              render={({ field, fieldState }) => (
-                <Box mb={2}>
-                  <InputLabel
-                    htmlFor="facilityNameplateCapacityUnit"
-                    sx={{ pb: 1 }}
-                  >
-                    {t("carbonIntensity:step1.unitOfMeasure")}
-                    {requiredSuffix}:
-                  </InputLabel>
-                  <TextField
-                    {...field}
-                    select
-                    disabled={readOnly}
-                    id="facilityNameplateCapacityUnit"
-                    data-test="facilityNameplateCapacityUnit"
-                    value={field.value ?? ""}
-                    required
-                    variant="outlined"
-                    fullWidth
-                    error={!!fieldState.error}
-                    helperText={fieldState.error?.message}
-                    SelectProps={{ displayEmpty: true }}
-                    sx={{
-                      "& .MuiSelect-select.MuiOutlinedInput-input": {
-                        padding: "12px !important",
-                        minHeight: "1.4375em",
-                        boxSizing: "content-box",
-                      },
-                    }}
-                  >
-                    <MenuItem value="">
-                      <em>{t("carbonIntensity:labels.selectPlaceholder")}</em>
-                    </MenuItem>
-                    {unitsOfMeasure.map((u) => (
-                      <MenuItem key={u} value={u}>
-                        {u}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </Box>
-              )}
-            />
-          </Grid2>
-        </Grid2>
+              <Grid2 size={{ xs: 12, md: 2 }}>
+                <Controller
+                  name="facilityNameplateCapacityUnit"
+                  control={control}
+                  render={({ field, fieldState }) => (
+                    <Box mb={2}>
+                      <InputLabel
+                        htmlFor="facilityNameplateCapacityUnit"
+                        sx={{ pb: 1 }}
+                      >
+                        {t('carbonIntensity:step1.unitOfMeasure')}
+                        {requiredSuffix}:
+                      </InputLabel>
+                      <TextField
+                        {...field}
+                        select
+                        disabled={readOnly}
+                        id="facilityNameplateCapacityUnit"
+                        data-test="facilityNameplateCapacityUnit"
+                        value={field.value ?? ''}
+                        required
+                        variant="outlined"
+                        fullWidth
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message}
+                        SelectProps={{ displayEmpty: true }}
+                        sx={{
+                          '& .MuiSelect-select.MuiOutlinedInput-input': {
+                            padding: '12px !important',
+                            minHeight: '1.4375em',
+                            boxSizing: 'content-box'
+                          }
+                        }}
+                      >
+                        <MenuItem value="">
+                          <em>
+                            {t('carbonIntensity:labels.selectPlaceholder')}
+                          </em>
+                        </MenuItem>
+                        {unitsOfMeasure.map((u) => (
+                          <MenuItem key={u} value={u}>
+                            {u}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    </Box>
+                  )}
+                />
+              </Grid2>
+            </Grid2>
 
-        <Grid2 container spacing={2}>
-          <Grid2 size={{ xs: 12, md: 4 }}>
-            <Controller
-              name="facilityContactName"
-              control={control}
-              render={({ field, fieldState }) => (
-                <Box mb={2}>
-                  <InputLabel htmlFor="facilityContactName" sx={{ pb: 1 }}>
-                    {t("carbonIntensity:step1.contactName")}
-                    {requiredSuffix}
-                  </InputLabel>
-                  <TextField
-                    {...field}
-                    id="facilityContactName"
-                    data-test="facilityContactName"
-                    value={field.value ?? ""}
-                    disabled={readOnly}
-                    required
-                    variant="outlined"
-                    fullWidth
-                    error={!!fieldState.error}
-                    helperText={fieldState.error?.message}
-                  />
-                </Box>
-              )}
-            />
-          </Grid2>
+            <Grid2 container spacing={2}>
+              <Grid2 size={{ xs: 12, md: 4 }}>
+                <Controller
+                  name="facilityContactName"
+                  control={control}
+                  render={({ field, fieldState }) => (
+                    <Box mb={2}>
+                      <InputLabel htmlFor="facilityContactName" sx={{ pb: 1 }}>
+                        {t('carbonIntensity:step1.contactName')}
+                        {requiredSuffix}
+                      </InputLabel>
+                      <TextField
+                        {...field}
+                        id="facilityContactName"
+                        data-test="facilityContactName"
+                        value={field.value ?? ''}
+                        disabled={readOnly}
+                        required
+                        variant="outlined"
+                        fullWidth
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message}
+                      />
+                    </Box>
+                  )}
+                />
+              </Grid2>
 
-          <Grid2 size={{ xs: 12, md: 4 }}>
-            <Controller
-              name="facilityContactEmail"
-              control={control}
-              render={({ field, fieldState }) => (
-                <Box mb={2}>
-                  <InputLabel htmlFor="facilityContactEmail" sx={{ pb: 1 }}>
-                    {t("carbonIntensity:step1.contactEmail")}
-                    {requiredSuffix}
-                  </InputLabel>
-                  <TextField
-                    {...field}
-                    id="facilityContactEmail"
-                    data-test="facilityContactEmail"
-                    type="email"
-                    value={field.value ?? ""}
-                    disabled={readOnly}
-                    required
-                    variant="outlined"
-                    fullWidth
-                    error={!!fieldState.error}
-                    helperText={fieldState.error?.message}
-                  />
-                </Box>
-              )}
-            />
-          </Grid2>
-        </Grid2>
+              <Grid2 size={{ xs: 12, md: 4 }}>
+                <Controller
+                  name="facilityContactEmail"
+                  control={control}
+                  render={({ field, fieldState }) => (
+                    <Box mb={2}>
+                      <InputLabel htmlFor="facilityContactEmail" sx={{ pb: 1 }}>
+                        {t('carbonIntensity:step1.contactEmail')}
+                        {requiredSuffix}
+                      </InputLabel>
+                      <TextField
+                        {...field}
+                        id="facilityContactEmail"
+                        data-test="facilityContactEmail"
+                        type="email"
+                        value={field.value ?? ''}
+                        disabled={readOnly}
+                        required
+                        variant="outlined"
+                        fullWidth
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message}
+                      />
+                    </Box>
+                  )}
+                />
+              </Grid2>
+            </Grid2>
 
-        {/* Documents attach to a saved facility, so uploads wait until an
+            {renderFacilityDocuments({ allowReplace: false })}
+            {/* Documents attach to a saved facility, so uploads wait until an
             existing facility is linked (new ones link on save). */}
-        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 3 }}>
-          <BCButton
-            type="button"
-            variant="outlined"
-            color="primary"
-            startIcon={
-              <UploadFileIcon
-                sx={{
-                  width: "1rem",
-                  height: "1rem",
-                }}
-              />
-            }
-            onClick={() => setDocumentDialogOpen(true)}
-            disabled={readOnly || !selectedFacilityId}
-            data-test="ci-step1-process-flow-upload"
-          >
-            {t("carbonIntensity:step1.processFlowDiagram")}
-          </BCButton>
-          {(selectedFacility?.documents || []).map((document) => (
-            <DocumentPreviewButton
-              key={document.documentId}
-              parentType="fuel_production_facility"
-              parentID={selectedFacilityId}
-              document={document}
-            />
-          ))}
-        </Stack>
-        {!selectedFacilityId && !readOnly && (
-          <BCTypography
-            variant="caption"
-            color="text.secondary"
-            component="p"
-            sx={{ mt: -2, mb: 3 }}
-          >
-            {t("carbonIntensity:step1.processFlowSaveFirst")}
-          </BCTypography>
+            <Stack
+              direction="row"
+              spacing={1}
+              alignItems="center"
+              sx={{ mb: 3 }}
+            >
+              <BCButton
+                type="button"
+                variant="outlined"
+                color="primary"
+                startIcon={
+                  <UploadFileIcon
+                    sx={{
+                      width: '1rem',
+                      height: '1rem'
+                    }}
+                  />
+                }
+                onClick={() => setDocumentDialogOpen(true)}
+                disabled={readOnly || !selectedFacilityId}
+                data-test="ci-step1-process-flow-upload"
+              >
+                {t('carbonIntensity:step1.processFlowDiagram')}
+              </BCButton>
+            </Stack>
+            {!selectedFacilityId && !readOnly && (
+              <BCTypography
+                variant="caption"
+                color="text.secondary"
+                component="p"
+                sx={{ mt: -2, mb: 3 }}
+              >
+                {t('carbonIntensity:step1.processFlowSaveFirst')}
+              </BCTypography>
+            )}
+          </>
         )}
 
         <Grid2 container spacing={2}>
@@ -841,24 +1101,24 @@ export const ApplicationInformationStep = forwardRef(
                       references it so screen readers read it on focus. */}
                   {showEffectiveDateNotice && (
                     <BCAlertRoot
-                      ownerState={{ color: "info" }}
+                      ownerState={{ color: 'info' }}
                       id={EFFECTIVE_DATE_NOTICE_ID}
                       role="note"
                       data-test={EFFECTIVE_DATE_NOTICE_ID}
                       sx={{
-                        justifyContent: "flex-start",
-                        alignItems: "flex-start",
+                        justifyContent: 'flex-start',
+                        alignItems: 'flex-start',
                         gap: 1,
-                        mb: 2,
+                        mb: 2
                       }}
                     >
                       <InfoIcon
                         aria-hidden="true"
-                        sx={{ flexShrink: 0, mt: "3px" }}
+                        sx={{ flexShrink: 0, mt: '3px' }}
                       />
                       <BCTypography variant="body2" component="p">
                         {t(
-                          "carbonIntensity:step1.proposedFuelCodeEffectiveNotice",
+                          'carbonIntensity:step1.proposedFuelCodeEffectiveNotice'
                         )}
                       </BCTypography>
                     </BCAlertRoot>
@@ -867,13 +1127,13 @@ export const ApplicationInformationStep = forwardRef(
                     htmlFor="proposedFuelCodeEffectiveDate"
                     sx={{ pb: 1 }}
                   >
-                    {t("carbonIntensity:step1.proposedFuelCodeEffective")}{" "}
+                    {t('carbonIntensity:step1.proposedFuelCodeEffective')}{' '}
                     <BCTypography
                       variant="caption"
                       component="span"
                       color="text.secondary"
                     >
-                      {t("carbonIntensity:step1.proposedFuelCodeEffectiveHelp")}
+                      {t('carbonIntensity:step1.proposedFuelCodeEffectiveHelp')}
                     </BCTypography>
                   </InputLabel>
                   <DatePicker
@@ -885,31 +1145,31 @@ export const ApplicationInformationStep = forwardRef(
                     disablePast
                     slotProps={{
                       textField: {
-                        id: "proposedFuelCodeEffectiveDate",
+                        id: 'proposedFuelCodeEffectiveDate',
                         name: field.name,
                         inputRef: field.ref,
                         onBlur: field.onBlur,
-                        variant: "outlined",
+                        variant: 'outlined',
                         error: !!fieldState.error,
                         helperText: fieldState.error?.message,
                         InputLabelProps: { shrink: true },
                         inputProps: {
-                          "data-test": "proposedFuelCodeEffectiveDate",
-                          placeholder: "yyyy-mm-dd",
+                          'data-test': 'proposedFuelCodeEffectiveDate',
+                          placeholder: 'yyyy-mm-dd',
                           // inputProps replaces the helper-text reference
                           // MUI adds, so keep it alongside the notice
-                          "aria-describedby":
+                          'aria-describedby':
                             [
                               showEffectiveDateNotice &&
                                 EFFECTIVE_DATE_NOTICE_ID,
                               fieldState.error &&
-                                "proposedFuelCodeEffectiveDate-helper-text",
+                                'proposedFuelCodeEffectiveDate-helper-text'
                             ]
                               .filter(Boolean)
-                              .join(" ") || undefined,
+                              .join(' ') || undefined
                         },
-                        sx: { width: { xs: "100%", sm: 240 } },
-                      },
+                        sx: { width: { xs: '100%', sm: 240 } }
+                      }
                     }}
                   />
                 </Box>
@@ -933,7 +1193,7 @@ export const ApplicationInformationStep = forwardRef(
             data-test="ci-step1-save-btn"
             disabled={readOnly || isSaving}
           >
-            {t("carbonIntensity:step1.saveAndProceed")}
+            {t('carbonIntensity:step1.saveAndProceed')}
           </BCButton>
           {ciApplication?.ciApplicationId && onDelete && (
             <BCButton
@@ -944,20 +1204,55 @@ export const ApplicationInformationStep = forwardRef(
               onClick={onDelete}
               disabled={readOnly || isSaving}
             >
-              {t("carbonIntensity:step1.deleteDraft")}
+              {t('carbonIntensity:step1.deleteDraft')}
             </BCButton>
           )}
         </Stack>
 
+        <BCModal
+          open={facilityDeleteOpen}
+          onClose={() => setFacilityDeleteOpen(false)}
+          data={{
+            title: t('carbonIntensity:step1.deleteFacilityConfirmTitle'),
+            content: (
+              <Box>
+                <BCTypography variant="body2">
+                  {t('carbonIntensity:step1.deleteFacilityConfirmText', {
+                    name:
+                      selectedFacility?.name ||
+                      t('carbonIntensity:step1.unnamedFacility')
+                  })}
+                </BCTypography>
+                {facilityDeleteError && (
+                  <BCTypography
+                    variant="body2"
+                    color="error"
+                    sx={{ mt: 1 }}
+                    data-test="ci-step1-delete-facility-error"
+                  >
+                    {facilityDeleteError}
+                  </BCTypography>
+                )}
+              </Box>
+            ),
+            primaryButtonText: t('common:deleteBtn'),
+            primaryButtonAction: handleConfirmDeleteFacility,
+            primaryButtonColor: 'error',
+            primaryButtonDisabled: isDeletingFacility,
+            secondaryButtonText: t('common:cancelBtn'),
+            secondaryButtonAction: () => setFacilityDeleteOpen(false)
+          }}
+        />
         <DocumentUploadDialog
           open={documentDialogOpen}
           close={() => setDocumentDialogOpen(false)}
           parentType="fuel_production_facility"
           parentID={selectedFacilityId}
+          maxFiles={1}
         />
       </Box>
-    );
-  },
-);
+    )
+  }
+)
 
-ApplicationInformationStep.displayName = "ApplicationInformationStep";
+ApplicationInformationStep.displayName = 'ApplicationInformationStep'

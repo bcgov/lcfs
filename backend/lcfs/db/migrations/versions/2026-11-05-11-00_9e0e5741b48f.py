@@ -96,56 +96,112 @@ def upgrade() -> None:
             ondelete="SET NULL",
         )
 
-    # Keep one facility row per legacy record instead of guessing that rows
-    # sharing a location belong to the same physical facility.
-    op.add_column(
-        "fuel_production_facility",
-        sa.Column("legacy_ci_application_id", sa.Integer(), nullable=True),
-    )
-    op.execute("""
-        INSERT INTO fuel_production_facility (
-            organization_id, city, province_state, country, iso,
-            nameplate_capacity, nameplate_capacity_unit, legacy_ci_application_id,
-            create_date, create_user
-        )
-        SELECT organization_id, facility_city, facility_province_state,
-               facility_country, facility_iso, facility_nameplate_capacity,
-               facility_nameplate_capacity_unit, ci_application_id,
-               COALESCE(create_date, now()), create_user
+    # Backfill facilities from legacy ci_application / fuel_code columns.
+    # Rows describing the same facility (same organization, location,
+    # nameplate capacity + unit and contact details, compared trimmed and
+    # case-insensitively, NULL-safe) collapse into a single facility row.
+    # ISO is not part of the key because it is derived from the country and
+    # only CI applications record it; the first non-null value is kept.
+    op.execute(
+        """
+        CREATE TEMP TABLE tmp_fpf_source AS
+        SELECT 'ci_application' AS source_type,
+               ci_application_id AS source_id,
+               organization_id,
+               facility_city AS city,
+               facility_province_state AS province_state,
+               facility_country AS country,
+               facility_iso AS iso,
+               facility_nameplate_capacity AS nameplate_capacity,
+               facility_nameplate_capacity_unit AS nameplate_capacity_unit,
+               NULL::varchar AS contact_name,
+               NULL::varchar AS contact_email,
+               COALESCE(create_date, now()) AS create_date,
+               create_user
         FROM ci_application
-        """)
-    op.execute("""
-        UPDATE ci_application AS application
-        SET fuel_production_facility_id = facility.fuel_production_facility_id
-        FROM fuel_production_facility AS facility
-        WHERE facility.legacy_ci_application_id = application.ci_application_id
-        """)
-    op.drop_column("fuel_production_facility", "legacy_ci_application_id")
-
-    op.add_column(
-        "fuel_production_facility",
-        sa.Column("legacy_fuel_code_id", sa.Integer(), nullable=True),
-    )
-    op.execute("""
-        INSERT INTO fuel_production_facility (
-            organization_id, city, province_state, country,
-            nameplate_capacity, nameplate_capacity_unit, contact_name, contact_email,
-            legacy_fuel_code_id, create_date, create_user
-        )
-        SELECT organization_id, fuel_production_facility_city,
+        UNION ALL
+        SELECT 'fuel_code',
+               fuel_code_id,
+               organization_id,
+               fuel_production_facility_city,
                fuel_production_facility_province_state,
-               fuel_production_facility_country, facility_nameplate_capacity,
-               facility_nameplate_capacity_unit, contact_name, contact_email,
-               fuel_code_id, COALESCE(create_date, now()), create_user
+               fuel_production_facility_country,
+               NULL,
+               facility_nameplate_capacity,
+               facility_nameplate_capacity_unit,
+               contact_name,
+               contact_email,
+               COALESCE(create_date, now()),
+               create_user
         FROM fuel_code
-        """)
-    op.execute("""
+        """
+    )
+    # Records with no facility data at all get no facility row.
+    op.execute(
+        """
+        DELETE FROM tmp_fpf_source
+        WHERE city IS NULL AND province_state IS NULL AND country IS NULL
+          AND nameplate_capacity IS NULL AND nameplate_capacity_unit IS NULL
+          AND contact_name IS NULL AND contact_email IS NULL
+        """
+    )
+
+    _insert_missing_facilities("src.source_type = 'ci_application'")
+    _link_facilities(
+        "ci_application", "ci_application_id", "src.source_type = 'ci_application'"
+    )
+
+    # Fuel codes generated from a CI application share its facility when the
+    # location and capacity still match; their contact details then complete
+    # the facility record (CI applications never captured contacts).
+    op.execute(
+        f"""
         UPDATE fuel_code AS code
-        SET fuel_production_facility_id = facility.fuel_production_facility_id
-        FROM fuel_production_facility AS facility
-        WHERE facility.legacy_fuel_code_id = code.fuel_code_id
-        """)
-    op.drop_column("fuel_production_facility", "legacy_fuel_code_id")
+        SET fuel_production_facility_id = application.fuel_production_facility_id
+        FROM ci_application_fuel_code_association AS assoc
+        JOIN ci_application AS application
+          ON application.ci_application_id = assoc.ci_application_id
+        WHERE code.fuel_code_id = assoc.fuel_code_id
+          AND application.fuel_production_facility_id IS NOT NULL
+          AND {_same_text("code.fuel_production_facility_city", "application.facility_city")}
+          AND {_same_text("code.fuel_production_facility_province_state", "application.facility_province_state")}
+          AND {_same_text("code.fuel_production_facility_country", "application.facility_country")}
+          AND code.facility_nameplate_capacity
+              IS NOT DISTINCT FROM application.facility_nameplate_capacity
+          AND code.facility_nameplate_capacity_unit
+              IS NOT DISTINCT FROM application.facility_nameplate_capacity_unit
+        """
+    )
+    op.execute(
+        """
+        UPDATE fuel_production_facility AS facility
+        SET contact_name = contacts.contact_name,
+            contact_email = contacts.contact_email
+        FROM (
+            SELECT DISTINCT ON (fuel_production_facility_id)
+                   fuel_production_facility_id, contact_name, contact_email
+            FROM fuel_code
+            WHERE fuel_production_facility_id IS NOT NULL
+              AND (contact_name IS NOT NULL OR contact_email IS NOT NULL)
+            ORDER BY fuel_production_facility_id, fuel_code_id
+        ) AS contacts
+        WHERE facility.fuel_production_facility_id = contacts.fuel_production_facility_id
+          AND facility.contact_name IS NULL
+          AND facility.contact_email IS NULL
+        """
+    )
+
+    remaining_fuel_codes = """
+        src.source_type = 'fuel_code'
+        AND src.source_id IN (
+            SELECT fuel_code_id FROM fuel_code
+            WHERE fuel_production_facility_id IS NULL
+        )
+    """
+    _insert_missing_facilities(remaining_fuel_codes)
+    _link_facilities("fuel_code", "fuel_code_id", remaining_fuel_codes)
+
+    op.execute("DROP TABLE tmp_fpf_source")
 
     op.execute("""
         UPDATE pathway
@@ -159,6 +215,78 @@ def upgrade() -> None:
         )
         """)
 
+
+def _same_text(left: str, right: str) -> str:
+    return f"lower(btrim({left})) IS NOT DISTINCT FROM lower(btrim({right}))"
+
+
+def _facility_key_match(facility: str, source: str) -> str:
+    """SQL predicate: facility row describes the same facility as a source row."""
+    return " AND ".join(
+        [
+            f"{facility}.organization_id IS NOT DISTINCT FROM {source}.organization_id",
+            _same_text(f"{facility}.city", f"{source}.city"),
+            _same_text(f"{facility}.province_state", f"{source}.province_state"),
+            _same_text(f"{facility}.country", f"{source}.country"),
+            f"{facility}.nameplate_capacity IS NOT DISTINCT FROM {source}.nameplate_capacity",
+            f"{facility}.nameplate_capacity_unit IS NOT DISTINCT FROM {source}.nameplate_capacity_unit",
+            _same_text(f"{facility}.contact_name", f"{source}.contact_name"),
+            _same_text(f"{facility}.contact_email", f"{source}.contact_email"),
+        ]
+    )
+
+
+_SOURCE_KEY_EXPRESSIONS = """
+    src.organization_id,
+    lower(btrim(src.city)),
+    lower(btrim(src.province_state)),
+    lower(btrim(src.country)),
+    src.nameplate_capacity,
+    src.nameplate_capacity_unit,
+    lower(btrim(src.contact_name)),
+    lower(btrim(src.contact_email))
+"""
+
+
+def _insert_missing_facilities(source_filter: str) -> None:
+    """Create one facility per distinct key among the filtered source rows
+    that does not already have a matching facility."""
+    op.execute(
+        f"""
+        INSERT INTO fuel_production_facility (
+            organization_id, city, province_state, country, iso,
+            nameplate_capacity, nameplate_capacity_unit, contact_name, contact_email,
+            create_date, create_user
+        )
+        SELECT DISTINCT ON ({_SOURCE_KEY_EXPRESSIONS})
+               src.organization_id, src.city, src.province_state, src.country, src.iso,
+               src.nameplate_capacity, src.nameplate_capacity_unit,
+               src.contact_name, src.contact_email,
+               src.create_date, src.create_user
+        FROM tmp_fpf_source AS src
+        WHERE ({source_filter})
+          AND NOT EXISTS (
+              SELECT 1 FROM fuel_production_facility AS facility
+              WHERE {_facility_key_match("facility", "src")}
+          )
+        ORDER BY {_SOURCE_KEY_EXPRESSIONS},
+                 src.iso IS NULL, src.create_date, src.source_id
+        """
+    )
+
+
+def _link_facilities(table: str, primary_key: str, source_filter: str) -> None:
+    op.execute(
+        f"""
+        UPDATE {table} AS target
+        SET fuel_production_facility_id = facility.fuel_production_facility_id
+        FROM tmp_fpf_source AS src
+        JOIN fuel_production_facility AS facility
+          ON {_facility_key_match("facility", "src")}
+        WHERE ({source_filter})
+          AND target.{primary_key} = src.source_id
+        """
+    )
 
 def downgrade() -> None:
     for table in ("pathway", "fuel_code", "ci_application"):

@@ -66,13 +66,17 @@ const TableCell = styled(Box)({
   overflow: 'hidden'
 })
 
-function DocumentTable({ parentType, parentID }) {
+// maxFiles limits how many documents a parent may hold; when the limit is
+// reached a new upload replaces the existing document after confirmation.
+function DocumentTable({ parentType, parentID, maxFiles }) {
   const { t } = useTranslation(['report', 'common'])
   const [, setIsDragActive] = useState(false)
   const fileInputRef = useRef(null)
   const [files, setFiles] = useState([])
   const [errorMessage, setErrorMessage] = useState(null)
   const [documentPendingDelete, setDocumentPendingDelete] = useState(null)
+  const [pendingReplace, setPendingReplace] = useState(null)
+  const singleFile = maxFiles === 1
   const { data: currentUser, hasRoles } = useCurrentUser()
 
   const { data: loadedFiles } = useDocuments(parentType, parentID)
@@ -134,13 +138,60 @@ function DocumentTable({ parentType, parentID }) {
   // applied to each file independently so a range/multi-select uploads them
   // all in a single action (#4739). Single-file selection is the N=1 case.
   const handleFiles = (fileList) => {
-    const selected = Array.from(fileList || [])
+    let selected = Array.from(fileList || [])
     if (selected.length === 0) {
       return
     }
     // Clear any existing error message before processing a new batch.
     setErrorMessage(null)
+    if (singleFile) {
+      selected = selected.slice(0, 1)
+      const existing = files.find(
+        (file) =>
+          !file.scanning &&
+          !file.virus &&
+          !file.oversize &&
+          !file.error &&
+          !file.deleting
+      )
+      if (existing) {
+        setPendingReplace({ file: selected[0], existing })
+        return
+      }
+    }
     selected.forEach((file, index) => handleFileUpload(file, index))
+  }
+
+  const handleCancelReplace = () => setPendingReplace(null)
+
+  const handleConfirmReplace = async () => {
+    if (!pendingReplace) return
+    const { file, existing } = pendingReplace
+    setPendingReplace(null)
+    try {
+      setFiles((current) =>
+        current.map((item) => ({
+          ...item,
+          deleting: item.documentId === existing.documentId
+        }))
+      )
+      await deleteFile(existing.documentId)
+    } catch (error) {
+      setFiles((current) =>
+        current.map((item) =>
+          item.documentId === existing.documentId
+            ? { ...item, deleting: false }
+            : item
+        )
+      )
+      setErrorMessage(
+        error?.response?.data?.detail ||
+          error?.message ||
+          t('common:errorPage.genericMessage')
+      )
+      return
+    }
+    handleFileUpload(file)
   }
 
   const handleFileUpload = async (file, index = 0) => {
@@ -292,7 +343,7 @@ function DocumentTable({ parentType, parentID }) {
       <input
         id="file"
         type="file"
-        multiple
+        multiple={!singleFile}
         data-test="file-input"
         ref={fileInputRef}
         style={{ display: 'none' }}
@@ -310,7 +361,9 @@ function DocumentTable({ parentType, parentID }) {
           <IconButton aria-label="upload" size="medium">
             <CloudUpload style={{ fontSize: '40px', color: '#999' }} />
           </IconButton>
-          <BCTypography variant="body2">{t('report:clickDrag')}</BCTypography>
+          <BCTypography variant="body2">
+            {t(singleFile ? 'report:singleFileClickDrag' : 'report:clickDrag')}
+          </BCTypography>
         </CardContent>
       </StyledCard>
       <FileTable>
@@ -489,6 +542,30 @@ function DocumentTable({ parentType, parentID }) {
           )
         })}
       </FileTable>
+      {pendingReplace && (
+        <BCModal
+          open={!!pendingReplace}
+          onClose={handleCancelReplace}
+          data={{
+            title: t('report:replaceDocumentConfirmTitle'),
+            content: (
+              <BCTypography variant="body2" data-test="replace-document-text">
+                {t('report:replaceDocumentConfirmText', {
+                  newFileName: pendingReplace.file.name,
+                  existingFileName: getDocumentDisplayName(
+                    pendingReplace.existing
+                  )
+                })}
+              </BCTypography>
+            ),
+            primaryButtonText: t('report:replaceDocumentBtn'),
+            primaryButtonAction: handleConfirmReplace,
+            primaryButtonColor: 'primary',
+            secondaryButtonText: t('common:cancelBtn'),
+            secondaryButtonAction: handleCancelReplace
+          }}
+        />
+      )}
       {documentPendingDelete && (
         <BCModal
           open={!!documentPendingDelete}
