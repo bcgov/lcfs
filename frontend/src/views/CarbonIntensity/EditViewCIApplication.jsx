@@ -397,8 +397,9 @@ const EditViewCIApplicationBase = () => {
         onSave={handleStep1Save}
         onDelete={canDelete ? openDeleteConfirmation : null}
         isSaving={isSaving || isDeleting}
-        readOnly={!isAdd && !isDraft}
+        readOnly={isGovernment || (!isAdd && !isDraft)}
         showEffectiveDateNotice={!isGovernment}
+        showOrgInfoConfirmation={!isGovernment}
       />
     ),
     step2: ciApplicationId ? (
@@ -590,6 +591,7 @@ const EditViewCIApplicationBase = () => {
                   }
                   onEditDocuments={() => setIsDocumentEditorOpen(true)}
                   canEditPathways={canSupplementallyEditPathways}
+                  showOrgInfoConfirmation={!isGovernment}
                   pathwayEditorOptionsData={tableOptions}
                   onSavePathways={handleStep2Save}
                   onPathwayValidationError={(message) =>

@@ -221,6 +221,31 @@ describe('ApplicationInformationStep', () => {
     expect(screen.getByText('Zimmerman@fuelproducerltd.ar')).toBeInTheDocument()
   })
 
+  test('shows the organization confirmation note only for BCeID users', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    const { unmount } = render(
+      <ApplicationInformationStep {...baseProps} showOrgInfoConfirmation />,
+      [query, theme, localization, router]
+    )
+    expect(
+      screen.getByTestId('ci-step1-org-info-confirmation')
+    ).toHaveTextContent('carbonIntensity:step1.orgInfoConfirmationPrefix')
+    unmount()
+
+    render(<ApplicationInformationStep {...baseProps} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
+    expect(screen.queryByTestId('ci-step1-org-info-confirmation')).toBeNull()
+  })
+
   test('renders all Step 1 form fields', ({
     render,
     query,
@@ -978,6 +1003,80 @@ describe('ApplicationInformationStep', () => {
     )
     expect(document.getElementById('facilityContactName').value).toBe(
       'Pat Example'
+    )
+  })
+
+  test('read-only viewers see the facility summary without edit, select or add controls', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(
+      <ApplicationInformationStep
+        {...baseProps}
+        ciApplication={savedFacilityApplication}
+        readOnly
+      />,
+      [query, theme, localization, router]
+    )
+    const summary = screen.getByTestId('ci-step1-facility-summary')
+    expect(summary).toHaveTextContent('Test facility')
+    expect(summary).toHaveTextContent('San Martin, Santa Fe, Argentina')
+    expect(summary).toHaveTextContent('1,500 L')
+    expect(screen.queryByTestId('ci-step1-edit-facility')).toBeNull()
+    expect(screen.queryByTestId('ci-step1-add-facility')).toBeNull()
+    expect(document.getElementById('fuelProductionFacilityId')).toBeNull()
+    expect(document.getElementById('facilityName')).toBeNull()
+    expect(screen.queryByTestId('ci-step1-org-info-confirmation')).toBeNull()
+  })
+
+  test('read-only view shows legacy facility columns even without a linked facility', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(
+      <ApplicationInformationStep
+        {...baseProps}
+        ciApplication={{
+          ciApplicationId: 3,
+          facilityCity: 'Victoria',
+          facilityProvinceState: 'British Columbia',
+          facilityCountry: 'Canada',
+          facilityNameplateCapacity: 100000,
+          facilityNameplateCapacityUnit: 'L'
+        }}
+        readOnly
+      />,
+      [query, theme, localization, router]
+    )
+    const summary = screen.getByTestId('ci-step1-facility-summary')
+    expect(summary).toHaveTextContent('Victoria, British Columbia, Canada')
+    expect(summary).toHaveTextContent('100,000 L')
+    expect(document.getElementById('facilityName')).toBeNull()
+  })
+
+  test('read-only view explains when no facility information exists', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(
+      <ApplicationInformationStep
+        {...baseProps}
+        ciApplication={{ ciApplicationId: 3 }}
+        readOnly
+      />,
+      [query, theme, localization, router]
+    )
+    expect(screen.getByTestId('ci-step1-facility-summary')).toHaveTextContent(
+      'carbonIntensity:step1.noFacilityOnFile'
     )
   })
 

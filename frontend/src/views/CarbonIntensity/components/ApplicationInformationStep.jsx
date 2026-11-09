@@ -279,7 +279,10 @@ export const ApplicationInformationStep = forwardRef(
       onDelete,
       isSaving = false,
       readOnly = false,
-      showEffectiveDateNotice = false
+      showEffectiveDateNotice = false,
+      // The "confirm your organization details" note is for BCeID
+      // (supplier) users; IDIR reviewers are not confirming anything.
+      showOrgInfoConfirmation = false
     },
     ref
   ) => {
@@ -396,14 +399,23 @@ export const ApplicationInformationStep = forwardRef(
       }
     }, [ciApplication, reset])
 
-    const defaultMode = ciApplication?.fuelProductionFacilityId
-      ? 'summary'
-      : !readOnly && (isLoadingFacilities || facilities.length > 0)
-        ? 'select'
-        : 'form'
-    const facilityMode = modeOverride ?? defaultMode
+    // Read-only viewers (IDIR reviewers, submitted applications) always get
+    // the summary card; there is nothing for them to select or edit.
+    const defaultMode =
+      readOnly || ciApplication?.fuelProductionFacilityId
+        ? 'summary'
+        : isLoadingFacilities || facilities.length > 0
+          ? 'select'
+          : 'form'
+    const facilityMode = readOnly ? 'summary' : (modeOverride ?? defaultMode)
 
     const summaryValues = watch()
+    const hasFacilityDetails = FACILITY_FIELDS.some(
+      (name) =>
+        summaryValues[name] !== '' &&
+        summaryValues[name] !== null &&
+        summaryValues[name] !== undefined
+    )
     const facilityDocuments = selectedFacility?.documents || []
     const facilityLocation = [
       summaryValues.facilityCity,
@@ -571,7 +583,7 @@ export const ApplicationInformationStep = forwardRef(
             {organization.email && (
               <BCTypography variant="body2">{organization.email}</BCTypography>
             )}
-            {organization.addressLine && (
+            {showOrgInfoConfirmation && organization.addressLine && (
               <BCTypography
                 variant="body2"
                 sx={{ mt: 1 }}
@@ -593,7 +605,15 @@ export const ApplicationInformationStep = forwardRef(
           {t('carbonIntensity:step1.facilitySectionLabel')}
         </BCTypography>
 
-        {facilityMode === 'summary' ? (
+        {facilityMode === 'summary' && !hasFacilityDetails ? (
+          <BCTypography
+            variant="body2"
+            sx={{ mb: 3 }}
+            data-test="ci-step1-facility-summary"
+          >
+            {t('carbonIntensity:step1.noFacilityOnFile')}
+          </BCTypography>
+        ) : facilityMode === 'summary' ? (
           <>
             <Box sx={{ mb: 3 }} data-test="ci-step1-facility-summary">
               <Stack direction="row" alignItems="center" spacing={0.5}>

@@ -254,7 +254,9 @@ const ApplicationSummaryDetails = ({
   pathwayEditorOptionsData,
   onSavePathways,
   onPathwayValidationError,
-  isSavingPathways = false
+  isSavingPathways = false,
+  // BCeID applicants confirm their organization details; IDIR viewers do not.
+  showOrgInfoConfirmation = false
 }) => {
   const { t } = useTranslation(['common', 'carbonIntensity'])
   const pathwayGridRef = useRef(null)
@@ -263,6 +265,11 @@ const ApplicationSummaryDetails = ({
   const downloadDocument = useDownloadDocument(
     'ci_application',
     ciApplication?.ciApplicationId
+  )
+  const facilityId = ciApplication?.fuelProductionFacilityId
+  const downloadFacilityDocument = useDownloadDocument(
+    'fuel_production_facility',
+    facilityId
   )
 
   const org = ciApplication.organization || {}
@@ -291,6 +298,10 @@ const ApplicationSummaryDetails = ({
       : ''
 
   const documents = ciApplication.documents || []
+  // Process flow diagram(s) are attached to the facility, not the application.
+  const facilityDocuments = facilityId
+    ? ciApplication.fuelProductionFacility?.documents || []
+    : []
   const pathways = ciApplication.pathways || EMPTY_PATHWAYS
   const pathwayDescription = ciApplication.pathwayDescription?.trim()
   const pathwayChangeLogs = [
@@ -482,6 +493,77 @@ const ApplicationSummaryDetails = ({
     setIsEditingPathways(false)
   }
 
+  const renderDocumentRow = (d, { parentType, parentID, download, testId }) => {
+    const displayName = getDocumentDisplayName(d)
+    return (
+      <Box
+        key={d.documentId}
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 2fr) 96px 140px 120px 48px',
+          alignItems: 'center',
+          gap: 2,
+          py: 0.75,
+          '&:not(:last-child)': {
+            borderBottom: 1,
+            borderColor: 'divider'
+          }
+        }}
+        data-test={testId}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            minWidth: 0
+          }}
+        >
+          <BCTypography
+            component="span"
+            variant="body2"
+            sx={{ mr: 1, flexShrink: 0 }}
+          >
+            •
+          </BCTypography>
+          <BCTypography
+            component="span"
+            variant="body2"
+            color="link"
+            onClick={() => {
+              download(d.documentId, displayName)
+            }}
+            sx={{
+              minWidth: 0,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              textDecoration: 'underline',
+              cursor: 'pointer',
+              '&:hover': { color: 'info.main' }
+            }}
+            title={displayName}
+          >
+            {displayName}
+          </BCTypography>
+        </Box>
+        <BCTypography variant="body2" color="text.secondary">
+          {formatBytes(d.fileSize)}
+        </BCTypography>
+        <BCTypography variant="body2" color="text.secondary">
+          {d.createUser || ''}
+        </BCTypography>
+        <BCTypography variant="body2" color="text.secondary">
+          {formatDate(d.createDate)}
+        </BCTypography>
+        <DocumentPreviewButton
+          parentType={parentType}
+          parentID={parentID}
+          document={d}
+        />
+      </Box>
+    )
+  }
+
   return (
     <BCBox data-test="ci-application-summary">
       {/* Org + facility */}
@@ -514,7 +596,7 @@ const ApplicationSummaryDetails = ({
           {org.email && (
             <BCTypography variant="body2">{org.email}</BCTypography>
           )}
-          {organizationAddress && (
+          {showOrgInfoConfirmation && organizationAddress && (
             <BCTypography
               variant="body2"
               sx={{ mt: 1 }}
@@ -676,76 +758,34 @@ const ApplicationSummaryDetails = ({
             </BCTypography>
           </Box>
         ) : (
-          documents.map((d) => {
-            const displayName = getDocumentDisplayName(d)
-            return (
-              <Box
-                key={d.documentId}
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: 'minmax(0, 2fr) 96px 140px 120px 48px',
-                  alignItems: 'center',
-                  gap: 2,
-                  py: 0.75,
-                  '&:not(:last-child)': {
-                    borderBottom: 1,
-                    borderColor: 'divider'
-                  }
-                }}
-                data-test="ci-summary-document-row"
-              >
-                <Box
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    minWidth: 0
-                  }}
-                >
-                  <BCTypography
-                    component="span"
-                    variant="body2"
-                    sx={{ mr: 1, flexShrink: 0 }}
-                  >
-                    •
-                  </BCTypography>
-                  <BCTypography
-                    component="span"
-                    variant="body2"
-                    color="link"
-                    onClick={() => {
-                      downloadDocument(d.documentId, displayName)
-                    }}
-                    sx={{
-                      minWidth: 0,
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      textDecoration: 'underline',
-                      cursor: 'pointer',
-                      '&:hover': { color: 'info.main' }
-                    }}
-                    title={displayName}
-                  >
-                    {displayName}
-                  </BCTypography>
-                </Box>
-                <BCTypography variant="body2" color="text.secondary">
-                  {formatBytes(d.fileSize)}
-                </BCTypography>
-                <BCTypography variant="body2" color="text.secondary">
-                  {d.createUser || ''}
-                </BCTypography>
-                <BCTypography variant="body2" color="text.secondary">
-                  {formatDate(d.createDate)}
-                </BCTypography>
-                <DocumentPreviewButton
-                  parentType="ci_application"
-                  parentID={ciApplication?.ciApplicationId}
-                  document={d}
-                />
-              </Box>
-            )
-          })
+          documents.map((d) =>
+            renderDocumentRow(d, {
+              parentType: 'ci_application',
+              parentID: ciApplication?.ciApplicationId,
+              download: downloadDocument,
+              testId: 'ci-summary-document-row'
+            })
+          )
+        )}
+        {facilityDocuments.length > 0 && (
+          <>
+            <BCTypography
+              variant="body2"
+              color="primary"
+              sx={{ fontWeight: 600, mt: 2, mb: 1.5 }}
+              data-test="ci-summary-facility-documents-header"
+            >
+              {t('carbonIntensity:summary.processFlowDiagramHeader')}
+            </BCTypography>
+            {facilityDocuments.map((d) =>
+              renderDocumentRow(d, {
+                parentType: 'fuel_production_facility',
+                parentID: facilityId,
+                download: downloadFacilityDocument,
+                testId: 'ci-summary-facility-document-row'
+              })
+            )}
+          </>
         )}
       </BCBox>
 

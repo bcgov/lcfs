@@ -102,12 +102,21 @@ def upgrade() -> None:
     # case-insensitively, NULL-safe) collapse into a single facility row.
     # ISO is not part of the key because it is derived from the country and
     # only CI applications record it; the first non-null value is kept.
+    # Fuel codes without an organization (unmatched historical producers) are
+    # identified by their company name instead, so two producers sharing a
+    # location never share a facility. The company key only exists during
+    # the migration and is dropped once linking is complete.
+    op.add_column(
+        "fuel_production_facility",
+        sa.Column("legacy_company_key", sa.String(length=1000), nullable=True),
+    )
     op.execute(
         """
         CREATE TEMP TABLE tmp_fpf_source AS
         SELECT 'ci_application' AS source_type,
                ci_application_id AS source_id,
                organization_id,
+               NULL::varchar AS company_key,
                facility_city AS city,
                facility_province_state AS province_state,
                facility_country AS country,
@@ -123,6 +132,9 @@ def upgrade() -> None:
         SELECT 'fuel_code',
                fuel_code_id,
                organization_id,
+               CASE
+                   WHEN organization_id IS NULL THEN lower(btrim(company))
+               END,
                fuel_production_facility_city,
                fuel_production_facility_province_state,
                fuel_production_facility_country,
@@ -202,6 +214,7 @@ def upgrade() -> None:
     _link_facilities("fuel_code", "fuel_code_id", remaining_fuel_codes)
 
     op.execute("DROP TABLE tmp_fpf_source")
+    op.drop_column("fuel_production_facility", "legacy_company_key")
 
     op.execute("""
         UPDATE pathway
@@ -225,6 +238,7 @@ def _facility_key_match(facility: str, source: str) -> str:
     return " AND ".join(
         [
             f"{facility}.organization_id IS NOT DISTINCT FROM {source}.organization_id",
+            f"{facility}.legacy_company_key IS NOT DISTINCT FROM {source}.company_key",
             _same_text(f"{facility}.city", f"{source}.city"),
             _same_text(f"{facility}.province_state", f"{source}.province_state"),
             _same_text(f"{facility}.country", f"{source}.country"),
@@ -238,6 +252,7 @@ def _facility_key_match(facility: str, source: str) -> str:
 
 _SOURCE_KEY_EXPRESSIONS = """
     src.organization_id,
+    src.company_key,
     lower(btrim(src.city)),
     lower(btrim(src.province_state)),
     lower(btrim(src.country)),
@@ -254,12 +269,13 @@ def _insert_missing_facilities(source_filter: str) -> None:
     op.execute(
         f"""
         INSERT INTO fuel_production_facility (
-            organization_id, city, province_state, country, iso,
+            organization_id, legacy_company_key, city, province_state, country, iso,
             nameplate_capacity, nameplate_capacity_unit, contact_name, contact_email,
             create_date, create_user
         )
         SELECT DISTINCT ON ({_SOURCE_KEY_EXPRESSIONS})
-               src.organization_id, src.city, src.province_state, src.country, src.iso,
+               src.organization_id, src.company_key,
+               src.city, src.province_state, src.country, src.iso,
                src.nameplate_capacity, src.nameplate_capacity_unit,
                src.contact_name, src.contact_email,
                src.create_date, src.create_user
