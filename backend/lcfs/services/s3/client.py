@@ -662,7 +662,17 @@ class DocumentService:
         return presigned_url
 
     @repo_handler
-    async def delete_file(self, document_id: int, parent_id: int, parent_type: str):
+    async def delete_file(
+        self,
+        document_id: int,
+        parent_id: int,
+        parent_type: str,
+        require_physical_delete: bool = False,
+    ) -> bool:
+        """Remove *parent_id*'s link to the document, and the document itself
+        when that was its last link. Returns whether the file was physically
+        deleted. With *require_physical_delete*, a document still linked
+        elsewhere is left untouched and ``False`` is returned instead."""
         # The caller was authorized for the parent, so the document must hang
         # off that parent; one linked elsewhere reads as missing.
         document = await self._get_document_for_parent(
@@ -679,16 +689,19 @@ class DocumentService:
                 .select_from(table)
                 .where(table.c.document_id == document_id)
             )
+        has_other_links = link_count > 1
 
-        # If last link, delete the whole document
-        if link_count == 1:
+        if has_other_links and require_physical_delete:
+            return False
+
+        if not has_other_links:
             # Delete the file from S3
             self.s3_client.delete_object(Bucket=BUCKET_NAME, Key=document.file_key)
 
             # Delete the entry from the database
             await self.db.delete(document)
             await self.db.flush()
-        else:  # Delete the association
+        else:
             await self.db.execute(
                 delete(association_table).where(
                     and_(
@@ -697,6 +710,7 @@ class DocumentService:
                     )
                 )
             )
+        return not has_other_links
 
     @repo_handler
     async def get_by_id_and_type(self, parent_id: int, parent_type="compliance_report"):
