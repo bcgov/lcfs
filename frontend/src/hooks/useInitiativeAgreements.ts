@@ -64,6 +64,31 @@ export const useGetInitiativeAgreement = (
   })
 }
 
+export const useInitiativeAgreementDocumentRestoreTargets = (
+  initiativeAgreementId: number | string,
+  options: QueryOptions<unknown> = {}
+) => {
+  const client = useApiService()
+  return useQuery({
+    enabled: !!initiativeAgreementId,
+    queryKey: [
+      'initiative-agreements',
+      'document-restore-targets',
+      String(initiativeAgreementId)
+    ],
+    queryFn: async () =>
+      (
+        await client.get(
+          apiRoutes.getInitiativeAgreementDocumentRestoreTargets.replace(
+            ':initiativeAgreementId',
+            String(initiativeAgreementId)
+          )
+        )
+      ).data,
+    ...options
+  })
+}
+
 /** Lifecycle statuses for the index grid's status filter. */
 export const useInitiativeAgreementStatuses = (
   options: QueryOptions<unknown> = {}

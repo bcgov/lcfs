@@ -140,7 +140,10 @@ const AddEditFuelCodeBase = () => {
 
   // state setters
   const updateState = useCallback((updates) => {
-    setState((prev) => ({ ...prev, ...updates }))
+    setState((prev) => ({
+      ...prev,
+      ...(typeof updates === 'function' ? updates(prev) : updates)
+    }))
   }, [])
 
   const updatePendingUpdates = useCallback((updater) => {
@@ -402,11 +405,13 @@ const AddEditFuelCodeBase = () => {
           }`
         }
 
-        // Update errors state
+        // Mark the row as unsaved (an empty list when the API names no
+        // fields), so Save stays disabled until the row saves.
         updateState((prev) => ({
           errors: {
             ...prev.errors,
-            [rowId]: error.response?.data?.errors?.[0]?.fields
+            [rowId]:
+              error.response?.data?.errors?.flatMap((e) => e.fields ?? []) ?? []
           }
         }))
 
@@ -527,7 +532,10 @@ const AddEditFuelCodeBase = () => {
       }
 
       params.api.applyTransaction({ remove: [params.node.data] })
-      updateState({ modalData: null })
+      updateState((prev) => ({
+        modalData: null,
+        errors: { ...prev.errors, [params.node.data.id]: undefined }
+      }))
     },
     [fuelCodeMutation, handleError, updateState]
   )
@@ -878,7 +886,7 @@ const AddEditFuelCodeBase = () => {
       ...baseHandlers,
       hasChanges: rowData.some((row) => row.modified),
       hasValidationErrors:
-        Object.keys(errors).length > 0 ||
+        Object.values(errors).some(Boolean) ||
         computedValues.hasNotesValidationError,
       isComplete: !!existingFuelCode,
       canEdit: computedValues.isEditable && !isUpdating,
