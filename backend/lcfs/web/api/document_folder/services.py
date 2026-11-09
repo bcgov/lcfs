@@ -1,5 +1,4 @@
 import structlog
-import uuid
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Set
 
@@ -50,6 +49,13 @@ class DocumentFolderServices:
                 status_code=400,
                 detail=f"Folders are not enabled for parent type '{parent_type}'.",
             )
+
+    @staticmethod
+    def _current_username(user) -> str:
+        username = getattr(user, "keycloak_username", None)
+        if not username:
+            raise HTTPException(status_code=403, detail="User identity is required.")
+        return username
 
     async def _get_scoped_folder(
         self,
@@ -121,15 +127,17 @@ class DocumentFolderServices:
         return depth
 
     # ------------------------------------------------------------------
-    # Deletion. Nothing is ever destroyed: removing a document stamps it
-    # and it moves to the bin, where it stays. The shared hard-delete path
-    # is never called for these parents.
+    # Document deletion is reversible by default. Permanent deletion is a
+    # separate, explicitly authorized operation from the bin.
     # ------------------------------------------------------------------
     @service_handler
     async def soft_delete_document(
         self, parent_type: str, parent_id: int, document_id: int, user
     ) -> None:
-        document = await self.repo.get_document_for_parent(document_id, parent_id)
+        await self.repo.lock_parent(parent_id)
+        document = await self.repo.get_document_for_parent(
+            document_id, parent_id, for_update=True
+        )
         if document is None:
             raise DataNotFoundException(f"Document {document_id} not found")
         if document.deleted_date is not None:
@@ -154,11 +162,17 @@ class DocumentFolderServices:
     async def restore_document(
         self, parent_type: str, parent_id: int, document_id: int, user=None
     ) -> None:
-        document = await self.repo.get_document_for_parent(document_id, parent_id)
-        if document is None:
+        await self.repo.lock_parent(parent_id)
+        document = await self.repo.get_document_for_parent(
+            document_id, parent_id, for_update=True
+        )
+        username = self._current_username(user)
+        if (
+            document is None
+            or document.deleted_date is None
+            or username not in {document.create_user, document.deleted_by}
+        ):
             raise DataNotFoundException(f"Document {document_id} not found")
-        if document.deleted_date is None:
-            return
         placement = await self.repo.get_placement(document_id)
         if placement is not None:
             folder = await self.repo.get_folder(placement.folder_id)
@@ -185,7 +199,6 @@ class DocumentFolderServices:
                 folder.deleted_date = None
                 folder.deleted_by = None
                 folder.deleted_group_uuid = None
-        username = getattr(user, "keycloak_username", None)
         document.deleted_date = None
         document.deleted_by = None
         document.deleted_group_uuid = None
@@ -193,6 +206,48 @@ class DocumentFolderServices:
         await self.repo.db.flush()
         logger.info(
             "document_restored",
+            document_id=document_id,
+            parent_type=parent_type,
+            parent_id=parent_id,
+            by=username,
+        )
+
+    @service_handler
+    async def hard_delete_document(
+        self,
+        parent_type: str,
+        parent_id: int,
+        document_id: int,
+        user,
+        document_service,
+    ) -> None:
+        await self.repo.lock_parent(parent_id)
+        document = await self.repo.get_document_for_parent(
+            document_id, parent_id, for_update=True
+        )
+        username = self._current_username(user)
+        if (
+            document is None
+            or document.deleted_date is None
+            or document.create_user != username
+            or document.deleted_by != username
+        ):
+            raise DataNotFoundException(f"Document {document_id} not found")
+
+        physically_deleted = await document_service.delete_file(
+            document_id,
+            parent_id,
+            parent_type,
+            require_physical_delete=True,
+        )
+        if not physically_deleted:
+            raise HTTPException(
+                status_code=409,
+                detail="This file is linked to another record and cannot be permanently deleted.",
+            )
+        await self.repo.db.flush()
+        logger.info(
+            "document_hard_deleted",
             document_id=document_id,
             parent_type=parent_type,
             parent_id=parent_id,
@@ -282,11 +337,13 @@ class DocumentFolderServices:
         hold something costs nobody anything, while bringing back its
         contents would restore what nobody asked for.
         """
+        await self.repo.lock_parent(parent_id)
         folder = await self._get_scoped_folder(
             folder_id, parent_type, parent_id, include_deleted=True
         )
-        if folder.deleted_date is None:
-            return
+        username = self._current_username(user)
+        if folder.deleted_date is None or folder.deleted_by != username:
+            raise DataNotFoundException(f"Folder {folder_id} not found")
 
         folders = await self.repo.get_all_folders_including_deleted(
             parent_type, parent_id
@@ -329,22 +386,33 @@ class DocumentFolderServices:
             parent_id=parent_id,
             folders_restored=len(restoring),
             documents_restored=len(documents),
-            by=getattr(user, "keycloak_username", None),
+            by=username,
         )
 
     @service_handler
     async def get_deleted_documents(
-        self, parent_type: str, parent_id: int, limit: int = 50, offset: int = 0
+        self,
+        parent_type: str,
+        parent_id: int,
+        user,
+        limit: int = 50,
+        offset: int = 0,
     ) -> DeletedDocumentsSchema:
+        username = self._current_username(user)
         documents, total = await self.repo.get_deleted_documents(
-            parent_id, limit=limit, offset=offset
+            parent_id, username=username, limit=limit, offset=offset
         )
         all_folders_for_names = await self.repo.get_all_folders_including_deleted(
             parent_type, parent_id
         )
+        visible_binned_folders = [
+            folder
+            for folder in all_folders_for_names
+            if folder.deleted_date is not None and folder.deleted_by == username
+        ]
         names = await self.repo.get_user_display_names(
             [d.deleted_by for d in documents]
-            + [f.deleted_by for f in all_folders_for_names if f.deleted_date]
+            + [f.deleted_by for f in visible_binned_folders]
         )
 
         # One row per thing somebody deleted: the root folder of each
@@ -358,7 +426,7 @@ class DocumentFolderServices:
             parent_type, parent_id
         )
         by_id = {f.folder_id: f for f in folders}
-        binned = [f for f in folders if f.deleted_date is not None]
+        binned = [f for f in visible_binned_folders]
         folder_rows = []
         listed_folder_ids = set()
         for folder in binned:
@@ -396,6 +464,9 @@ class DocumentFolderServices:
                         file_name=d.display_name or d.file_name,
                         file_size=d.file_size,
                         relative_path=relative_path(d.document_id),
+                        can_hard_delete=(
+                            d.create_user == username and d.deleted_by == username
+                        ),
                     )
                     for d in docs
                 ),
@@ -455,6 +526,10 @@ class DocumentFolderServices:
                     deleted_by_name=names.get(document.deleted_by),
                     restore_folder_id=folder.folder_id if folder else None,
                     restore_folder_name=folder.name if folder else None,
+                    can_hard_delete=(
+                        document.create_user == username
+                        and document.deleted_by == username
+                    ),
                 )
             )
         return DeletedDocumentsSchema(
@@ -469,11 +544,40 @@ class DocumentFolderServices:
         self, parent_type: str, parent_id: int
     ) -> DocumentFolderTreeSchema:
         folders = await self.repo.get_folders(parent_type, parent_id)
+        all_folders = await self.repo.get_all_folders_including_deleted(
+            parent_type, parent_id
+        )
+        all_folder_ids = [folder.folder_id for folder in all_folders]
         documents = await self.repo.get_parent_documents(parent_id)
         placements = await self.repo.get_placements([f.folder_id for f in folders])
+        all_placements = await self.repo.get_placements(all_folder_ids)
+        all_documents = await self.repo.get_documents_in_folders(all_folder_ids)
         org_codes = await self.repo.get_uploading_organization_codes(
             [d.create_user for d in documents]
         )
+        occupied_folder_ids = {
+            all_placements[document.document_id]
+            for document in all_documents
+            if document.document_id in all_placements
+        }
+        by_id = {folder.folder_id: folder for folder in all_folders}
+        blocked_folder_ids = set(occupied_folder_ids)
+        for folder in all_folders:
+            if (
+                folder.deleted_date is not None
+                and folder.folder_id not in occupied_folder_ids
+            ):
+                continue
+            ancestor_id = folder.parent_folder_id
+            while ancestor_id in by_id:
+                blocked_folder_ids.add(ancestor_id)
+                ancestor_id = by_id[ancestor_id].parent_folder_id
+
+        def can_delete(folder: DocumentFolder) -> bool:
+            # Mirrors delete_folder: a live descendant or any file beneath
+            # it, binned or not, keeps the folder; empty deleted descendants
+            # do not.
+            return not folder.is_system and folder.folder_id not in blocked_folder_ids
 
         docs_by_folder: Dict[int, List[FolderDocumentSchema]] = {}
         root_documents: List[FolderDocumentSchema] = []
@@ -502,6 +606,7 @@ class DocumentFolderServices:
                 parent_folder_id=folder.parent_folder_id,
                 sort_order=folder.sort_order,
                 is_system=folder.is_system,
+                can_delete=can_delete(folder),
                 document_count=len(documents_in_folder),
                 documents=documents_in_folder,
             )
@@ -529,6 +634,7 @@ class DocumentFolderServices:
     async def create_folder(
         self, parent_type: str, parent_id: int, data: FolderCreateSchema
     ) -> FolderSchema:
+        await self.repo.lock_parent(parent_id)
         name = data.name.strip()
         if not name:
             raise HTTPException(status_code=400, detail="Folder name is required.")
@@ -556,6 +662,7 @@ class DocumentFolderServices:
         folder_id: int,
         data: FolderUpdateSchema,
     ) -> FolderSchema:
+        await self.repo.lock_parent(parent_id)
         folder = await self._get_scoped_folder(folder_id, parent_type, parent_id)
         if folder.is_system:
             raise HTTPException(
@@ -583,62 +690,42 @@ class DocumentFolderServices:
 
     @service_handler
     async def delete_folder(
-        self, parent_type: str, parent_id: int, folder_id: int, strategy: str, user=None
+        self, parent_type: str, parent_id: int, folder_id: int, user=None
     ) -> None:
+        await self.repo.lock_parent(parent_id)
         folder = await self._get_scoped_folder(folder_id, parent_type, parent_id)
         if folder.is_system:
             raise HTTPException(
                 status_code=400, detail="System folders cannot be deleted."
             )
-        if strategy == "reparent":
-            # Contents move up one level; only the folder disappears.
-            await self.repo.reparent_contents(folder_id, folder.parent_folder_id)
-            await self.repo.delete_folders([folder_id])
-        elif strategy == "cascade":
-            # The subtree and everything filed in it go to the bin
-            # together, sharing one group so a restore can bring back
-            # exactly what went down. Placement rows are left alone —
-            # they are the only record of where each file lived.
-            all_folders = await self.repo.get_all_folders_including_deleted(
-                parent_type, parent_id
-            )
-            subtree = self._subtree_ids(folder_id, all_folders)
-            documents = await self.repo.get_documents_in_folders(subtree)
-
-            group_uuid = str(uuid.uuid4())
-            now = datetime.now(timezone.utc)
-            username = getattr(user, "keycloak_username", None)
-            by_id = {f.folder_id: f for f in all_folders}
-            for fid in subtree:
-                folder = by_id.get(fid)
-                if folder is None or folder.deleted_date is not None:
-                    # Already in the bin from an earlier delete. Leaving it
-                    # on its own group is what keeps restoring this folder
-                    # from resurrecting it.
-                    continue
-                folder.deleted_date = now
-                folder.deleted_by = username
-                folder.deleted_group_uuid = group_uuid
-            for document in documents:
-                document.deleted_date = now
-                document.deleted_by = username
-                document.deleted_group_uuid = group_uuid
-                document.update_user = username
-            await self.repo.db.flush()
-            logger.info(
-                "folder_cascade_deleted",
-                folder_id=folder_id,
-                parent_type=parent_type,
-                parent_id=parent_id,
-                group_uuid=group_uuid,
-                documents_deleted=len(documents),
-                by=username,
-            )
-        else:
+        folders = await self.repo.get_all_folders_including_deleted(
+            parent_type, parent_id
+        )
+        subtree = self._subtree_ids(folder_id, folders)
+        by_id = {f.folder_id: f for f in folders}
+        live_descendants = [
+            fid
+            for fid in subtree
+            if fid != folder_id and by_id[fid].deleted_date is None
+        ]
+        documents = await self.repo.get_documents_in_folders(subtree)
+        if live_descendants or documents:
             raise HTTPException(
                 status_code=400,
-                detail="strategy must be 'reparent' or 'cascade'.",
+                detail="Only empty folders can be deleted.",
             )
+        # Descendants still sitting in the bin with nothing left in them
+        # go too: once their last file is permanently deleted they drop
+        # out of the bin listing, so this is the only way to clear them.
+        await self.repo.delete_folders(subtree)
+        logger.info(
+            "empty_document_folder_deleted",
+            folder_id=folder_id,
+            swept_deleted_descendants=[fid for fid in subtree if fid != folder_id],
+            parent_type=parent_type,
+            parent_id=parent_id,
+            by=getattr(user, "keycloak_username", None),
+        )
 
     @service_handler
     async def move_items(
@@ -646,6 +733,7 @@ class DocumentFolderServices:
     ) -> None:
         if not data.document_ids:
             return
+        await self.repo.lock_parent(parent_id)
         if data.folder_id is not None:
             await self._get_scoped_folder(data.folder_id, parent_type, parent_id)
         associated = await self.repo.get_associated_document_ids(parent_id)

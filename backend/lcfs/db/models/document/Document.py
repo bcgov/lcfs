@@ -44,7 +44,7 @@ class Document(BaseModel, Auditable):
     mime_type = Column(String, nullable=False)
     display_name = Column(String, nullable=True)
 
-    # --- Soft deletion (nothing is ever purged) ------------------------
+    # --- Soft deletion; authorized hard deletes remove the document row ---
     # Only folder-enabled parents have a route that sets these; for every
     # other surface they stay NULL and the read filter is inert.
     deleted_date = Column(

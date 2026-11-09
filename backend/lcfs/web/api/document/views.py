@@ -14,6 +14,7 @@ from lcfs.db.models.user.Role import RoleEnum
 from lcfs.services.s3.client import DocumentService
 from lcfs.services.s3.schema import DocumentRenameSchema, FileResponseSchema
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
+from lcfs.web.api.document_folder.constants import FOLDER_ENABLED_PARENT_TYPES
 from lcfs.web.api.initiative_agreement.validation import InitiativeAgreementValidation
 from lcfs.web.api.charging_site.validation import ChargingSiteValidation
 from lcfs.web.core.decorators import view_handler
@@ -316,6 +317,19 @@ async def delete_file(
     cs_validate: ChargingSiteValidation = Depends(),
     ci_validate=Depends(ci_application_validator),
 ):
+    # Parents with folders delete through the bin (document_folder routes),
+    # which soft-deletes first and lets only the file's owner destroy it.
+    # This route destroys the S3 object outright on nothing more than
+    # parent access, so it must not be reachable for those parents at all.
+    if parent_type in FOLDER_ENABLED_PARENT_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                f"Documents for '{parent_type}' must be deleted through the "
+                "document bin."
+            ),
+        )
+
     # The one dispatch, rather than a fourth copy of it: the inline
     # copies here had already drifted, and neither knew about
     # designatedAction.
