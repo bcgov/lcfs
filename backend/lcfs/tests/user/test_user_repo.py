@@ -255,6 +255,28 @@ async def test_bceid_ia_signer_added_with_proponent():
 
 
 @pytest.mark.anyio
+async def test_bceid_lcjfip_roles_can_be_assigned_to_bceid_user():
+    repo = _make_repo_with_find(None)
+    user = MagicMock()
+    user.user_roles = [_user_role(RoleEnum.SUPPLIER)]
+    existing = {RoleEnum.SUPPLIER}
+
+    await repo.update_bceid_roles(
+        user,
+        [
+            RoleEnum.LCJFIP_APPLICANT,
+            RoleEnum.LCJFIP_ADMINISTRATOR,
+            RoleEnum.SUPPLIER,
+        ],
+        existing,
+    )
+
+    names = {ur.role.name for ur in user.user_roles}
+    assert RoleEnum.LCJFIP_APPLICANT in names
+    assert RoleEnum.LCJFIP_ADMINISTRATOR in names
+
+
+@pytest.mark.anyio
 async def test_bceid_ia_signer_preserved_when_proponent_removed_by_services_layer():
     """
     When services.py adds IA Signer back for a BCeID caller (who had it already),
