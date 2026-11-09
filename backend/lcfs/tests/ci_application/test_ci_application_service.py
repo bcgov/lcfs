@@ -947,6 +947,26 @@ async def test_update_step1_writes_fields_and_marks_update(service, repo, mock_u
     repo.update.assert_awaited_once_with(ci)
 
 
+SUBMITTED_OR_LATER = ["Submitted", "Recommended", "Completed", "Withdrawn"]
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("status_name", SUBMITTED_OR_LATER)
+async def test_update_step1_rejects_application_after_draft(
+    service, repo, mock_user, status_name
+):
+    ci = _ci_application(status=_status(status_name, 2))
+
+    with pytest.raises(HTTPException) as exc:
+        await service.update_step1(
+            ci, _step1_payload(facility_city="Vancouver"), mock_user
+        )
+
+    assert exc.value.status_code == status.HTTP_403_FORBIDDEN
+    assert ci.facility_city == "San Martin"
+    repo.update.assert_not_awaited()
+
+
 # ---------------------------------------------------------------------------
 # Delete
 # ---------------------------------------------------------------------------
@@ -957,6 +977,18 @@ async def test_delete_draft_calls_repo(service, repo):
     ci = _ci_application()
     await service.delete_draft(ci)
     repo.delete.assert_awaited_once_with(ci)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("status_name", SUBMITTED_OR_LATER)
+async def test_delete_draft_rejects_application_after_draft(service, repo, status_name):
+    ci = _ci_application(status=_status(status_name, 2))
+
+    with pytest.raises(HTTPException) as exc:
+        await service.delete_draft(ci)
+
+    assert exc.value.status_code == status.HTTP_403_FORBIDDEN
+    repo.delete.assert_not_awaited()
 
 
 # ---------------------------------------------------------------------------
@@ -1622,6 +1654,48 @@ async def test_update_step3_closes_documentation_request(service, repo, mock_use
     assert ci.document_changes_requested_at is None
     assert ci.document_changes_requested_by is None
     assert isinstance(result, CIApplicationSchema)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("status_name", SUBMITTED_OR_LATER)
+async def test_update_step3_rejects_application_after_draft_without_request(
+    service, repo, mock_user, status_name
+):
+    from lcfs.web.api.ci_application.schema import CIApplicationStep3Schema
+
+    ci = _ci_application(status=_status(status_name, 2))
+    ci.document_upload_enabled = False
+
+    with pytest.raises(HTTPException) as exc:
+        await service.update_step3(
+            ci, CIApplicationStep3Schema(supporting_document_other="X"), mock_user
+        )
+
+    assert exc.value.status_code == status.HTTP_403_FORBIDDEN
+    assert ci.supporting_document_other is None
+    repo.update.assert_not_awaited()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("status_name", ["Recommended", "Completed", "Withdrawn"])
+async def test_update_step3_only_closes_request_on_submitted_application(
+    service, repo, mock_user, status_name
+):
+    """Documentation is only ever requested on a Submitted application; a
+    flag left set past that cannot be used to edit or to clear it."""
+    from lcfs.web.api.ci_application.schema import CIApplicationStep3Schema
+
+    ci = _ci_application(status=_status(status_name, 2))
+    ci.document_upload_enabled = True
+
+    with pytest.raises(HTTPException) as exc:
+        await service.update_step3(
+            ci, CIApplicationStep3Schema(supporting_document_other="X"), mock_user
+        )
+
+    assert exc.value.status_code == status.HTTP_403_FORBIDDEN
+    assert ci.document_upload_enabled is True
+    repo.update.assert_not_awaited()
 
 
 # ---------------------------------------------------------------------------
