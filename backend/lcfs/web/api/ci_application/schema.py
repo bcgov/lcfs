@@ -207,11 +207,6 @@ class FuelProductionFacilitySchema(BaseSchema):
     contact_name: Optional[str] = None
     contact_email: Optional[str] = None
     documents: List[FileResponseSchema] = Field(default_factory=list)
-    # Sharing indicators so the UI can offer deletion only for unshared
-    # facilities: fuel codes using it, and CI applications linked directly or
-    # through their pathways.
-    linked_fuel_code_count: int = 0
-    linked_ci_application_ids: List[int] = Field(default_factory=list)
 
 
 class FuelProductionFacilityCreateSchema(BaseSchema):

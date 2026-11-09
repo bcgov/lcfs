@@ -356,16 +356,27 @@ class CIApplicationRepository:
         )
         return result.scalar_one_or_none()
 
+    # Relationships read when serializing or syncing a facility. Loaded
+    # explicitly so no lazy load can fire under asyncpg, including on
+    # facilities created earlier in the same request.
+    FACILITY_RELATIONSHIPS = ("documents", "fuel_codes")
+
+    @staticmethod
+    def _facility_load_options():
+        # Built per call: evaluating relationship attributes at import time
+        # would configure mappers before all models are loaded.
+        return [
+            selectinload(getattr(FuelProductionFacility, name))
+            for name in CIApplicationRepository.FACILITY_RELATIONSHIPS
+        ]
+
     @repo_handler
     async def get_facility_for_organization(
         self, facility_id: int, organization_id: int
     ) -> Optional[FuelProductionFacility]:
         result = await self.db.execute(
             select(FuelProductionFacility)
-            .options(
-                selectinload(FuelProductionFacility.documents),
-                selectinload(FuelProductionFacility.fuel_codes),
-            )
+            .options(*self._facility_load_options())
             .where(
                 FuelProductionFacility.fuel_production_facility_id == facility_id,
                 FuelProductionFacility.organization_id == organization_id,
@@ -379,7 +390,7 @@ class CIApplicationRepository:
     ) -> List[FuelProductionFacility]:
         result = await self.db.execute(
             select(FuelProductionFacility)
-            .options(selectinload(FuelProductionFacility.documents))
+            .options(*self._facility_load_options())
             .where(FuelProductionFacility.organization_id == organization_id)
             .order_by(
                 FuelProductionFacility.name,
@@ -394,10 +405,7 @@ class CIApplicationRepository:
     ) -> Optional[FuelProductionFacility]:
         result = await self.db.execute(
             select(FuelProductionFacility)
-            .options(
-                selectinload(FuelProductionFacility.documents),
-                selectinload(FuelProductionFacility.fuel_codes),
-            )
+            .options(*self._facility_load_options())
             .where(
                 FuelProductionFacility.fuel_production_facility_id == facility_id
             )
@@ -405,17 +413,15 @@ class CIApplicationRepository:
         return result.scalar_one_or_none()
 
     @repo_handler
-    async def delete_facility(self, facility: FuelProductionFacility) -> None:
-        await self.db.delete(facility)
-        await self.db.flush()
-
-    @repo_handler
     async def create_facility(
         self, facility: FuelProductionFacility
     ) -> FuelProductionFacility:
         self.db.add(facility)
         await self.db.flush()
-        return await self.get_facility_by_id(facility.fuel_production_facility_id)
+        # A freshly flushed instance has no loaded collections; refresh them
+        # here (inside the greenlet) so later attribute reads do no IO.
+        await self.db.refresh(facility, list(self.FACILITY_RELATIONSHIPS))
+        return facility
 
     @repo_handler
     async def create(self, ci_application: CIApplication) -> CIApplication:

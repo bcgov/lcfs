@@ -5,10 +5,7 @@ import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { ApplicationInformationStep } from '@/views/CarbonIntensity/components/ApplicationInformationStep'
-import {
-  useDeleteCIApplicationFacility,
-  useGetCIApplicationFacilities
-} from '@/hooks/useCIApplication'
+import { useGetCIApplicationFacilities } from '@/hooks/useCIApplication'
 import carbonIntensityEn from '@/assets/locales/en/carbonIntensity.json'
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
@@ -69,10 +66,6 @@ vi.mock('@/hooks/useCIApplication', () => ({
     data: defaultFacilities,
     isLoading: false,
     isError: false
-  })),
-  useDeleteCIApplicationFacility: vi.fn(() => ({
-    mutateAsync: vi.fn(async () => undefined),
-    isPending: false
   })),
   useCIFacilityLocationSearch: vi.fn(({ city, province, country } = {}) => {
     if (city?.toLowerCase().includes('coquit')) {
@@ -616,129 +609,6 @@ describe('ApplicationInformationStep', () => {
       expect(
         isBefore(document.getElementById('facilityContactEmail'), docs)
       ).toBe(true)
-    })
-  })
-
-  describe('deleting an unshared facility', () => {
-    const unsharedSaved = {
-      ...savedFacilityApplication,
-      fuelProductionFacility: {
-        ...savedFacilityApplication.fuelProductionFacility,
-        linkedFuelCodeCount: 0,
-        linkedCiApplicationIds: [8]
-      }
-    }
-
-    test('summary offers deletion when no fuel code or other application uses it', async ({
-      render,
-      query,
-      theme,
-      localization,
-      router
-    }) => {
-      const mutateAsync = vi.fn(async () => undefined)
-      useDeleteCIApplicationFacility.mockReturnValue({
-        mutateAsync,
-        isPending: false
-      })
-      const user = userEvent.setup()
-      render(
-        <ApplicationInformationStep
-          {...baseProps}
-          ciApplication={unsharedSaved}
-        />,
-        [query, theme, localization, router]
-      )
-
-      await user.click(screen.getByTestId('ci-step1-delete-facility'))
-      expect(
-        screen.getByText('carbonIntensity:step1.deleteFacilityConfirmTitle')
-      ).toBeInTheDocument()
-      await user.click(screen.getByRole('button', { name: 'common:deleteBtn' }))
-
-      await waitFor(() =>
-        expect(mutateAsync).toHaveBeenCalledWith({
-          facilityId: 1,
-          ciApplicationId: 8
-        })
-      )
-    })
-
-    test('hides deletion when the facility is used by a fuel code', ({
-      render,
-      query,
-      theme,
-      localization,
-      router
-    }) => {
-      render(
-        <ApplicationInformationStep
-          {...baseProps}
-          ciApplication={{
-            ...unsharedSaved,
-            fuelProductionFacility: {
-              ...unsharedSaved.fuelProductionFacility,
-              linkedFuelCodeCount: 2
-            }
-          }}
-        />,
-        [query, theme, localization, router]
-      )
-      expect(screen.queryByTestId('ci-step1-delete-facility')).toBeNull()
-    })
-
-    test('hides deletion when another application is linked', ({
-      render,
-      query,
-      theme,
-      localization,
-      router
-    }) => {
-      render(
-        <ApplicationInformationStep
-          {...baseProps}
-          ciApplication={{
-            ...unsharedSaved,
-            fuelProductionFacility: {
-              ...unsharedSaved.fuelProductionFacility,
-              linkedCiApplicationIds: [8, 12]
-            }
-          }}
-        />,
-        [query, theme, localization, router]
-      )
-      expect(screen.queryByTestId('ci-step1-delete-facility')).toBeNull()
-    })
-
-    test('select mode shows deletion for an unshared selected facility', async ({
-      render,
-      query,
-      theme,
-      localization,
-      router
-    }) => {
-      useGetCIApplicationFacilities.mockReturnValue({
-        data: [
-          {
-            ...defaultFacilities[1],
-            linkedFuelCodeCount: 0,
-            linkedCiApplicationIds: []
-          }
-        ],
-        isLoading: false,
-        isError: false
-      })
-      const user = userEvent.setup()
-      render(<ApplicationInformationStep {...baseProps} />, [
-        query,
-        theme,
-        localization,
-        router
-      ])
-
-      expect(screen.queryByTestId('ci-step1-delete-facility')).toBeNull()
-      await selectFacility(user, 'Filled facility — Mock City')
-      expect(screen.getByTestId('ci-step1-delete-facility')).toBeInTheDocument()
     })
   })
 

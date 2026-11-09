@@ -33,8 +33,6 @@ export type CIFuelProductionFacility = {
   nameplateCapacityUnit?: string | null
   contactName?: string | null
   contactEmail?: string | null
-  linkedFuelCodeCount?: number
-  linkedCiApplicationIds?: number[]
   documents?: Array<{
     documentId: number
     fileName: string
@@ -123,41 +121,6 @@ export const useCreateCIApplicationFacility = () => {
         .data as CIFuelProductionFacility,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.facilities })
-    }
-  })
-}
-
-/** Deletes an unshared facility; the edited application is detached instead
- *  of blocking the deletion. */
-export const useDeleteCIApplicationFacility = () => {
-  const client = useApiService()
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async ({
-      facilityId,
-      ciApplicationId
-    }: {
-      facilityId: number
-      ciApplicationId?: number | string | null
-    }) => {
-      const query = ciApplicationId
-        ? `?ci_application_id=${encodeURIComponent(String(ciApplicationId))}`
-        : ''
-      await client.delete(
-        `${apiRoutes.deleteCIApplicationFacility.replace(
-          ':facilityId',
-          String(facilityId)
-        )}${query}`
-      )
-      return ciApplicationId
-    },
-    onSuccess: (ciApplicationId) => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.facilities })
-      if (ciApplicationId) {
-        queryClient.invalidateQueries({
-          queryKey: QUERY_KEYS.detail(ciApplicationId)
-        })
-      }
     }
   })
 }

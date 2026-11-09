@@ -27,20 +27,17 @@ import isEqual from 'lodash/isEqual'
 import * as Yup from 'yup'
 import { yupResolver } from '@hookform/resolvers/yup'
 import Grid2 from '@mui/material/Grid2'
-import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
 import InfoIcon from '@mui/icons-material/Info'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
 
 import BCAlertRoot from '@/components/BCAlert/BCAlertRoot'
 import BCButton from '@/components/BCButton'
-import BCModal from '@/components/BCModal'
 import BCTypography from '@/components/BCTypography'
 import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
 import DocumentPreviewButton from '@/components/Documents/DocumentPreviewButton'
 import {
   useCIFacilityLocationSearch,
-  useDeleteCIApplicationFacility,
   useGetCIApplicationFacilities
 } from '@/hooks/useCIApplication'
 import colors from '@/themes/base/colors'
@@ -295,10 +292,6 @@ export const ApplicationInformationStep = forwardRef(
     // the default until the application is saved again.
     const [modeOverride, setModeOverride] = useState(null)
     const [selectError, setSelectError] = useState('')
-    const [facilityDeleteOpen, setFacilityDeleteOpen] = useState(false)
-    const [facilityDeleteError, setFacilityDeleteError] = useState('')
-    const { mutateAsync: deleteFacility, isPending: isDeletingFacility } =
-      useDeleteCIApplicationFacility()
     // Facilities are already scoped to the caller's organization by the API.
     const {
       data: facilities = [],
@@ -462,50 +455,6 @@ export const ApplicationInformationStep = forwardRef(
         </Box>
       ) : null
 
-    // A facility can be removed only when no fuel code uses it and no other
-    // CI application (directly or via its pathways) is linked to it.
-    const canDeleteFacility =
-      !readOnly &&
-      !!selectedFacility &&
-      !(selectedFacility.linkedFuelCodeCount > 0) &&
-      (selectedFacility.linkedCiApplicationIds || []).every(
-        (id) => id === ciApplication?.ciApplicationId
-      )
-
-    const handleConfirmDeleteFacility = async () => {
-      setFacilityDeleteError('')
-      try {
-        await deleteFacility({
-          facilityId: selectedFacilityId,
-          ciApplicationId: ciApplication?.ciApplicationId
-        })
-        setFacilityDeleteOpen(false)
-        setValue('fuelProductionFacilityId', '', { shouldDirty: true })
-        for (const name of FACILITY_FIELDS) {
-          setValue(name, '', { shouldDirty: true })
-        }
-        setModeOverride(null)
-      } catch (error) {
-        setFacilityDeleteError(
-          error?.response?.data?.detail ||
-            t('carbonIntensity:step1.deleteFacilityFailed')
-        )
-      }
-    }
-
-    const renderDeleteFacilityButton = () =>
-      canDeleteFacility ? (
-        <IconButton
-          size="small"
-          color="error"
-          aria-label={t('carbonIntensity:step1.deleteFacility')}
-          onClick={() => setFacilityDeleteOpen(true)}
-          data-test="ci-step1-delete-facility"
-        >
-          <DeleteIcon fontSize="small" />
-        </IconButton>
-      ) : null
-
     // Validation errors on hidden fields: prompt for a selection in select
     // mode, otherwise open the form so the errors are visible.
     const onInvalid = () => {
@@ -663,7 +612,6 @@ export const ApplicationInformationStep = forwardRef(
                     <EditIcon fontSize="small" />
                   </IconButton>
                 )}
-                {renderDeleteFacilityButton()}
               </Stack>
               {facilityLocation && (
                 <BCTypography variant="body2">{facilityLocation}</BCTypography>
@@ -707,59 +655,56 @@ export const ApplicationInformationStep = forwardRef(
           </>
         ) : facilityMode === 'select' ? (
           <>
-            <Box sx={{ mb: 2, maxWidth: { xs: '100%', md: 360 } }}>
+            <Box sx={{ mb: 2, maxWidth: { xs: '100%', md: 320 } }}>
               <InputLabel htmlFor="fuelProductionFacilityId" sx={{ pb: 1 }}>
                 {t('carbonIntensity:step1.selectFacility')}
               </InputLabel>
-              <Stack direction="row" alignItems="flex-start" spacing={0.5}>
-                <TextField
-                  id="fuelProductionFacilityId"
-                  select
-                  fullWidth
-                  value={selectedFacilityId || ''}
-                  disabled={isLoadingFacilities}
-                  error={!!selectError}
-                  helperText={
-                    selectError ||
-                    (isFacilityListError
-                      ? t('carbonIntensity:step1.facilityListFailed')
-                      : '')
+              <TextField
+                id="fuelProductionFacilityId"
+                select
+                fullWidth
+                value={selectedFacilityId || ''}
+                disabled={isLoadingFacilities}
+                error={!!selectError}
+                helperText={
+                  selectError ||
+                  (isFacilityListError
+                    ? t('carbonIntensity:step1.facilityListFailed')
+                    : '')
+                }
+                onChange={(event) => {
+                  const facility = facilities.find(
+                    (item) =>
+                      item.fuelProductionFacilityId ===
+                      Number(event.target.value)
+                  )
+                  if (facility) handleSelectFacility(facility)
+                }}
+                SelectProps={{
+                  displayEmpty: true,
+                  inputProps: { 'data-test': 'fuelProductionFacilityId' }
+                }}
+                sx={{
+                  '& .MuiSelect-select.MuiOutlinedInput-input': {
+                    padding: '12px !important',
+                    minHeight: '1.4375em'
                   }
-                  onChange={(event) => {
-                    const facility = facilities.find(
-                      (item) =>
-                        item.fuelProductionFacilityId ===
-                        Number(event.target.value)
-                    )
-                    if (facility) handleSelectFacility(facility)
-                  }}
-                  SelectProps={{
-                    displayEmpty: true,
-                    inputProps: { 'data-test': 'fuelProductionFacilityId' }
-                  }}
-                  sx={{
-                    '& .MuiSelect-select.MuiOutlinedInput-input': {
-                      padding: '12px !important',
-                      minHeight: '1.4375em'
-                    }
-                  }}
-                >
-                  <MenuItem value="">
-                    <em>{t('carbonIntensity:labels.selectPlaceholder')}</em>
+                }}
+              >
+                <MenuItem value="">
+                  <em>{t('carbonIntensity:labels.selectPlaceholder')}</em>
+                </MenuItem>
+                {facilities.map((facility) => (
+                  <MenuItem
+                    key={facility.fuelProductionFacilityId}
+                    value={facility.fuelProductionFacilityId}
+                  >
+                    {facility.name ||
+                      t('carbonIntensity:step1.unnamedFacility')}
+                    {facility.city ? ` — ${facility.city}` : ''}
                   </MenuItem>
-                  {facilities.map((facility) => (
-                    <MenuItem
-                      key={facility.fuelProductionFacilityId}
-                      value={facility.fuelProductionFacilityId}
-                    >
-                      {facility.name ||
-                        t('carbonIntensity:step1.unnamedFacility')}
-                      {facility.city ? ` — ${facility.city}` : ''}
-                    </MenuItem>
-                  ))}
-                </TextField>
-                <Box sx={{ pt: '6px' }}>{renderDeleteFacilityButton()}</Box>
-              </Stack>
+                ))}
+              </TextField>
             </Box>
             <Box sx={{ mb: 3 }}>
               <BCButton
@@ -1209,40 +1154,6 @@ export const ApplicationInformationStep = forwardRef(
           )}
         </Stack>
 
-        <BCModal
-          open={facilityDeleteOpen}
-          onClose={() => setFacilityDeleteOpen(false)}
-          data={{
-            title: t('carbonIntensity:step1.deleteFacilityConfirmTitle'),
-            content: (
-              <Box>
-                <BCTypography variant="body2">
-                  {t('carbonIntensity:step1.deleteFacilityConfirmText', {
-                    name:
-                      selectedFacility?.name ||
-                      t('carbonIntensity:step1.unnamedFacility')
-                  })}
-                </BCTypography>
-                {facilityDeleteError && (
-                  <BCTypography
-                    variant="body2"
-                    color="error"
-                    sx={{ mt: 1 }}
-                    data-test="ci-step1-delete-facility-error"
-                  >
-                    {facilityDeleteError}
-                  </BCTypography>
-                )}
-              </Box>
-            ),
-            primaryButtonText: t('common:deleteBtn'),
-            primaryButtonAction: handleConfirmDeleteFacility,
-            primaryButtonColor: 'error',
-            primaryButtonDisabled: isDeletingFacility,
-            secondaryButtonText: t('common:cancelBtn'),
-            secondaryButtonAction: () => setFacilityDeleteOpen(false)
-          }}
-        />
         <DocumentUploadDialog
           open={documentDialogOpen}
           close={() => setDocumentDialogOpen(false)}
