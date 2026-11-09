@@ -129,6 +129,7 @@ export const apiRoutes = {
   exportFuelCodes: '/fuel-codes/export',
   fuelCodeBulletins: '/fuel-codes/bulletins',
   exportFuelCodeBulletins: '/fuel-codes/bulletins/export',
+  exportGovernmentFuelCodeBulletins: '/fuel-codes/government/bulletins/export',
 
   // ci-applications (Carbon Intensity)
   ciApplicationOptions: '/ci-applications/table-options',

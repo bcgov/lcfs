@@ -34,6 +34,7 @@ from lcfs.web.api.fuel_code.schema import (
     FuelCodeStatusSchema,
     TransportModeSchema,
     FuelCodeBulletinsSchema,
+    GovernmentFuelCodeBulletinsSchema,
     FuelCodeGroupDetailSchema,
 )
 from lcfs.web.api.fuel_code.services import FuelCodeServices
@@ -278,16 +279,49 @@ async def export_fuel_code_bulletins(
     bulletin_type_snake: Optional[str] = Query(
         None, alias="bulletin_type", description="Type: 'current' or 'archived'"
     ),
-    idir: bool = Query(
-        default=False,
-        description="If true, export the full IDIR column set.",
-    ),
+    pagination: PaginationRequestSchema | None = Body(None),
+    exporter: FuelCodeBulletinExporter = Depends(),
+):
+    resolved_bulletin_type = resolve_bulletin_type(bulletin_type, bulletin_type_snake)
+    return await exporter.export(resolved_bulletin_type, format, pagination)
+
+
+@router.post(
+    "/government/bulletins",
+    response_model=GovernmentFuelCodeBulletinsSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def get_government_fuel_code_bulletins(
+    request: Request,
+    bulletin_type: Optional[str] = Query(None, alias="bulletinType"),
+    bulletin_type_snake: Optional[str] = Query(None, alias="bulletin_type"),
+    pagination: PaginationRequestSchema = Body(PaginationRequestSchema(), embed=False),
+    service: FuelCodeServices = Depends(),
+):
+    resolved_bulletin_type = resolve_bulletin_type(bulletin_type, bulletin_type_snake)
+    return await service.get_fuel_code_bulletins(
+        resolved_bulletin_type, pagination, include_internal=True
+    )
+
+
+@router.post(
+    "/government/bulletins/export",
+    response_class=StreamingResponse,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def export_government_fuel_code_bulletins(
+    request: Request,
+    format: str = Query(default="xlsx", description="File export format"),
+    bulletin_type: Optional[str] = Query(None, alias="bulletinType"),
+    bulletin_type_snake: Optional[str] = Query(None, alias="bulletin_type"),
     pagination: PaginationRequestSchema | None = Body(None),
     exporter: FuelCodeBulletinExporter = Depends(),
 ):
     resolved_bulletin_type = resolve_bulletin_type(bulletin_type, bulletin_type_snake)
     return await exporter.export(
-        resolved_bulletin_type, format, pagination, is_idir=idir
+        resolved_bulletin_type, format, pagination, is_idir=True
     )
 
 

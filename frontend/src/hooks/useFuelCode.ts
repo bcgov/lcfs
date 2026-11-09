@@ -144,14 +144,20 @@ export const useFuelCodeStatuses = (options: QueryOptions<unknown>) => {
 export const useFuelCodeBulletins = (
   bulletinType: unknown,
   paginationOptions: PaginationParams,
-  options: QueryOptions<unknown> = {}
+  options: QueryOptions<unknown> = {},
+  isGovernment = false
 ) => {
   const client = useApiService()
   return useQuery({
-    queryKey: ['fuel-code-bulletins', bulletinType, paginationOptions],
+    queryKey: [
+      'fuel-code-bulletins',
+      bulletinType,
+      paginationOptions,
+      isGovernment
+    ],
     queryFn: async () => {
       const response = await client.post(
-        `/fuel-codes/bulletins?bulletinType=${bulletinType}`,
+        `/fuel-codes/${isGovernment ? 'government/' : ''}bulletins?bulletinType=${bulletinType}`,
         {
           page: paginationOptions.page || 1,
           size: paginationOptions.size || 25,
@@ -197,9 +203,11 @@ export const useDownloadFuelCodeBulletins = (
       }
 
       return await client.download({
-        url: apiRoutes.exportFuelCodeBulletins,
+        url: idir
+          ? apiRoutes.exportGovernmentFuelCodeBulletins
+          : apiRoutes.exportFuelCodeBulletins,
         method: 'post',
-        params: { bulletinType, format, ...(idir ? { idir: true } : {}) },
+        params: { bulletinType, format },
         data: body
       })
     },

@@ -1439,3 +1439,38 @@ async def test_mark_fuel_codes_notified_empty_list(fuel_code_repo, mock_db):
     await fuel_code_repo.mark_fuel_codes_notified([])
 
     mock_db.execute.assert_not_called()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("bulletin_type", ["current", "archived"])
+async def test_public_bulletin_query_selects_only_public_projection(
+    fuel_code_repo, mock_db, bulletin_type
+):
+    result = MagicMock()
+    result.all.return_value = []
+    mock_db.execute.return_value = result
+    mock_db.scalar.return_value = 0
+    await fuel_code_repo.get_fuel_code_bulletin_rows(date(2025, 3, 31), bulletin_type)
+    statement = mock_db.execute.await_args.args[0]
+    assert set(statement.selected_columns.keys()) == {
+        "fuel_code",
+        "fuel",
+        "company",
+        "carbon_intensity",
+        "effective_date",
+        "expiry_date",
+    }
+
+
+@pytest.mark.parametrize(
+    "field", ["edrms", "contactEmail", "notes", "feedstock", "fuelCodeId"]
+)
+def test_public_bulletin_cannot_filter_on_internal_fields(fuel_code_repo, field):
+    from fastapi import HTTPException
+
+    pagination = PaginationRequestSchema(
+        filters=[{"field": field, "filter": "private"}]
+    )
+    with pytest.raises(HTTPException) as exc:
+        fuel_code_repo.get_fuel_code_bulletin_pagination_params(pagination)
+    assert exc.value.status_code == 400
