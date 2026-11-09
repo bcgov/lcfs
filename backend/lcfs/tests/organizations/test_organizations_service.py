@@ -971,6 +971,35 @@ async def test_apply_available_role_changes_ia_proponent_cascades_ia_signer(
 
 
 @pytest.mark.anyio
+async def test_apply_available_role_changes_lcjfip_applicant_cascades_administrator(
+    organizations_service, mock_repo
+):
+    """Withdrawing LCJFIP Applicant also strips LCJFIP Administrator."""
+    from lcfs.db.models.user.Role import RoleEnum
+
+    mock_repo.get_role_ids_by_enums = AsyncMock(
+        return_value={
+            RoleEnum.TRANSFER: 8,
+            RoleEnum.COMPLIANCE_REPORTING: 9,
+            RoleEnum.CI_APPLICANT: 12,
+            RoleEnum.IA_PROPONENT: 13,
+            RoleEnum.IA_SIGNER: 17,
+            RoleEnum.LCJFIP_APPLICANT: 18,
+            RoleEnum.LCJFIP_ADMINISTRATOR: 19,
+        }
+    )
+    mock_repo.get_available_role_ids = AsyncMock(return_value={8, 18})
+    mock_repo.set_available_roles = AsyncMock()
+    mock_repo.delete_user_roles_for_org = AsyncMock(return_value=[])
+
+    await organizations_service._apply_available_role_changes(1, ["Transfer"])
+
+    mock_repo.set_available_roles.assert_awaited_once_with(1, [8])
+    deleted_role_ids = mock_repo.delete_user_roles_for_org.call_args[0][1]
+    assert sorted(deleted_role_ids) == [18, 19]
+
+
+@pytest.mark.anyio
 async def test_apply_available_role_changes_no_removal_when_unchanged(
     organizations_service, mock_repo
 ):
