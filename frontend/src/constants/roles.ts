@@ -15,7 +15,9 @@ export const roles = {
   ia_proponent: 'IA Proponent',
   ia_analyst: 'IA Analyst',
   ia_manager: 'IA Manager',
-  ia_signer: 'IA Signer'
+  ia_signer: 'IA Signer',
+  lcjfip_applicant: 'LCJFIP Applicant',
+  lcjfip_administrator: 'LCJFIP Administrator'
 } as const
 
 export type RoleName = (typeof roles)[keyof typeof roles]
@@ -40,7 +42,9 @@ export const nonGovRoles: RoleName[] = [
   roles.read_only,
   roles.ci_applicant,
   roles.ia_proponent,
-  roles.ia_signer
+  roles.ia_signer,
+  roles.lcjfip_applicant,
+  roles.lcjfip_administrator
 ]
 
 export const formatDelegatedRoleLabel = (role: string): string => {

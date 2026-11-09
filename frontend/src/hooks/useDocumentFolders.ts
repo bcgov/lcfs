@@ -142,19 +142,12 @@ export const useDeleteFolder = (
   const queryClient = useQueryClient()
   const invalidate = useInvalidateTree(parentType, parentID)
   return useMutation({
-    mutationFn: async ({
-      folderId,
-      strategy = 'reparent'
-    }: {
-      folderId: number
-      strategy?: 'reparent' | 'cascade'
-    }) =>
+    mutationFn: async (folderId: number) =>
       client.delete(
-        `${fillPath(
-          apiRoutes.documentFolderUpdate,
-          parentType,
-          parentID
-        ).replace(':folderId', String(folderId))}?strategy=${strategy}`
+        fillPath(apiRoutes.documentFolderUpdate, parentType, parentID).replace(
+          ':folderId',
+          String(folderId)
+        )
       ),
     onSuccess: () => {
       invalidate()
@@ -286,8 +279,8 @@ export const useFolderUpload = (
   })
 }
 
-// The bin (#deleted items). Nothing ever leaves it, so the endpoint is
-// paginated from the start even though the panel does not page yet.
+// The bin (#deleted items). The endpoint is paginated from the start even
+// though the panel does not page yet.
 const deletedKey = (parentType: string, parentID: number | string) => [
   'document-tree-deleted',
   parentType,
@@ -327,6 +320,12 @@ const useBinMutation = (
       queryClient.invalidateQueries({
         queryKey: deletedKey(parentType, parentID)
       })
+      queryClient.invalidateQueries({
+        queryKey: ['documents', parentType]
+      })
+      queryClient.invalidateQueries({
+        queryKey: ['initiative-agreements', 'document-restore-targets']
+      })
     }
   })
 }
@@ -359,6 +358,23 @@ export const useRestoreDocument = (
       client.put(
         fillPath(
           apiRoutes.documentFolderRestoreDocument,
+          parentType,
+          parentID
+        ).replace(':documentId', String(documentId))
+      )
+  )
+
+export const useHardDeleteDocument = (
+  parentType: string,
+  parentID: number | string
+) =>
+  useBinMutation(
+    parentType,
+    parentID,
+    (client) => async (documentId: number) =>
+      client.delete(
+        fillPath(
+          apiRoutes.documentFolderHardDeleteDocument,
           parentType,
           parentID
         ).replace(':documentId', String(documentId))

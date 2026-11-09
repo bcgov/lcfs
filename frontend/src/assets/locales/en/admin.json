@@ -90,6 +90,8 @@
     "ia_analyst": "can make recommendations on initiative agreements and designated actions.",
     "ia_manager": "can make recommendations on initiative agreements and designated actions.",
     "ia_signer": "can sign and submit IA submissions, designated actions and evidence to government. This role can only be assigned by government users.",
+    "lcjfip_applicant": "can submit applications for the Low Carbon Jet Fuel Incentive Program.",
+    "lcjfip_administrator": "can sign award letters. This role can only be assigned by government users.",
     "system_admin": "control report opening and login screen background.",
     "optional": "optional",
     "selectRolePrompt": "Select a role before saving.",
