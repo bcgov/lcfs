@@ -156,8 +156,11 @@ export const useFuelCodeBulletins = (
       isGovernment
     ],
     queryFn: async () => {
+      const url = isGovernment
+        ? apiRoutes.governmentFuelCodeBulletins
+        : apiRoutes.fuelCodeBulletins
       const response = await client.post(
-        `/fuel-codes/${isGovernment ? 'government/' : ''}bulletins?bulletinType=${bulletinType}`,
+        `${url}?bulletinType=${bulletinType}`,
         {
           page: paginationOptions.page || 1,
           size: paginationOptions.size || 25,

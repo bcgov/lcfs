@@ -132,6 +132,7 @@ export const apiRoutes = {
   getMyFuelCodes: '/fuel-codes/my-list',
   exportFuelCodes: '/fuel-codes/export',
   fuelCodeBulletins: '/fuel-codes/bulletins',
+  governmentFuelCodeBulletins: '/fuel-codes/government/bulletins',
   exportFuelCodeBulletins: '/fuel-codes/bulletins/export',
   exportGovernmentFuelCodeBulletins: '/fuel-codes/government/bulletins/export',
 
