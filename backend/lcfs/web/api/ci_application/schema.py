@@ -242,6 +242,7 @@ class CIApplicationStep1Schema(BaseSchema):
     model_config = ConfigDict(str_strip_whitespace=True)
 
     fuel_production_facility_id: Optional[int] = Field(default=None, gt=0)
+    facility_name: Optional[str] = Field(default=None, min_length=1, max_length=500)
     facility_city: Optional[str] = Field(default=None, min_length=1, max_length=500)
     facility_province_state: Optional[str] = Field(
         default=None, min_length=1, max_length=500
@@ -250,7 +251,14 @@ class CIApplicationStep1Schema(BaseSchema):
     facility_iso: Optional[str] = Field(default=None, max_length=10)
     facility_nameplate_capacity: Optional[int] = Field(default=None, gt=0)
     facility_nameplate_capacity_unit: Optional[FuelTypeQuantityUnitsEnumSchema] = None
+    facility_contact_name: Optional[str] = Field(default=None, max_length=500)
+    facility_contact_email: Optional[EmailStr] = Field(default=None, max_length=500)
     proposed_fuel_code_effective_date: Optional[date] = None
+
+    @field_validator("facility_contact_email", mode="before")
+    @classmethod
+    def _empty_facility_contact_email_is_null(cls, value):
+        return None if isinstance(value, str) and not value.strip() else value
 
     @model_validator(mode="before")
     @classmethod
@@ -276,6 +284,7 @@ class CIApplicationStep1Schema(BaseSchema):
             return data
 
         string_fields = [
+            ("facilityName", "facility_name", "Fuel production facility name"),
             ("facilityCity", "facility_city", "City/Town"),
             ("facilityProvinceState", "facility_province_state", "Province/State"),
             ("facilityCountry", "facility_country", "Country"),

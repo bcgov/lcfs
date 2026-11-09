@@ -1,7 +1,7 @@
 """Add organization-linked fuel production facilities.
 
-Revision ID: b5287facility01
-Revises: 4dab1d106b2b
+Revision ID: 9e0e5741b48f
+Revises: a6f1c2d3e4b5
 Create Date: 2026-11-05 11:00:00.000000
 """
 
@@ -9,8 +9,8 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
-revision = "b5287facility01"
-down_revision = "4dab1d106b2b"
+revision = "9e0e5741b48f"
+down_revision = "a6f1c2d3e4b5"
 branch_labels = None
 depends_on = None
 

@@ -111,6 +111,7 @@ def set_user_role(fastapi_app, set_mock_user):
 
 def _step1_payload():
     return {
+        "facilityName": "Test facility",
         "facilityCity": "San Martin",
         "facilityProvinceState": "Santa Fe",
         "facilityCountry": "Argentina",

@@ -611,8 +611,8 @@ const EditViewCIApplicationBase = () => {
             data-test={`ci-step-accordion-${step.key}`}
             sx={{ mb: 1, scrollMarginTop: 96 }}
           >
-            <AccordionSummary expandIcon={<ExpandMore />}>
-              <BCTypography variant="subtitle1" sx={{ fontWeight: 600 }}>
+            <AccordionSummary expandIcon={<ExpandMore sx={{ width: '2rem', height: '2rem' }}/>}>
+              <BCTypography variant="subtitle1" sx={{ fontWeight: 600 }} color="primary">
                 {`${index + 1}. ${t(step.labelKey)}`}
               </BCTypography>
             </AccordionSummary>

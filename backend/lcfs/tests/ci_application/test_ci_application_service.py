@@ -435,6 +435,7 @@ def _ci_application(
 
 def _step1_payload(**overrides):
     base = dict(
+        facility_name="Test facility",
         facility_city="San Martin",
         facility_province_state="Santa Fe",
         facility_country="Argentina",
@@ -945,6 +946,56 @@ async def test_update_step1_writes_fields_and_marks_update(service, repo, mock_u
     assert ci.update_user == "ci_applicant_user"
     assert isinstance(result, CIApplicationSchema)
     repo.update.assert_awaited_once_with(ci)
+
+
+@pytest.mark.anyio
+async def test_update_step1_writes_facility_name_and_contact(
+    service, repo, mock_user
+):
+    ci = _ci_application()
+    ci.pathways = []
+    fuel_code = SimpleNamespace(contact_name=None, contact_email=None)
+    facility = SimpleNamespace(
+        fuel_production_facility_id=4,
+        name="Old name",
+        city="Old city",
+        province_state="Old province",
+        country="Old country",
+        iso=None,
+        nameplate_capacity=1,
+        nameplate_capacity_unit=QuantityUnitsEnum.Litres,
+        contact_name=None,
+        contact_email=None,
+        fuel_codes=[fuel_code],
+    )
+    repo.get_facility_for_organization = AsyncMock(return_value=facility)
+    repo.update.side_effect = lambda obj: obj
+    repo.get_by_id.return_value = ci
+
+    payload = _step1_payload(
+        fuel_production_facility_id=4,
+        facility_name="Renamed facility",
+        facility_contact_name="Pat Example",
+        facility_contact_email="pat@example.com",
+    )
+
+    await service.update_step1(ci, payload, mock_user)
+
+    repo.get_facility_for_organization.assert_awaited_once_with(
+        4, ci.organization_id
+    )
+    assert facility.name == "Renamed facility"
+    assert facility.contact_name == "Pat Example"
+    assert facility.contact_email == "pat@example.com"
+    assert facility.city == "San Martin"
+    assert fuel_code.contact_name == "Pat Example"
+    assert fuel_code.contact_email == "pat@example.com"
+    assert ci.fuel_production_facility_id == 4
+
+
+def test_step1_schema_blank_contact_email_is_null():
+    payload = _step1_payload(facility_contact_email="   ")
+    assert payload.facility_contact_email is None
 
 
 # ---------------------------------------------------------------------------

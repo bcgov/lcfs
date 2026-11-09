@@ -167,10 +167,14 @@ def _to_fuel_code_option(fc: FuelCode) -> FuelCodeOptionSchema:
 def _update_facility_from_step1(
     facility: FuelProductionFacility, data: CIApplicationStep1Schema
 ) -> None:
-    for field in ("city", "province_state", "country", "iso"):
+    for field in ("name", "city", "province_state", "country", "iso"):
         value = getattr(data, f"facility_{field}", None)
         if value is not None:
             setattr(facility, field, value)
+    if data.facility_contact_name is not None:
+        facility.contact_name = data.facility_contact_name
+    if data.facility_contact_email is not None:
+        facility.contact_email = str(data.facility_contact_email)
     if data.facility_nameplate_capacity is not None:
         facility.nameplate_capacity = data.facility_nameplate_capacity
     if data.facility_nameplate_capacity_unit is not None:
@@ -200,6 +204,8 @@ def _update_facility_from_step1(
         fuel_code.fuel_production_facility_country = facility.country
         fuel_code.facility_nameplate_capacity = facility.nameplate_capacity
         fuel_code.facility_nameplate_capacity_unit = facility.nameplate_capacity_unit
+        fuel_code.contact_name = facility.contact_name
+        fuel_code.contact_email = facility.contact_email
 
 
 def _to_pathway_schema(pathway: Pathway) -> PathwaySchema:
@@ -2138,6 +2144,54 @@ class CIApplicationServices:
     # Step 1 — create / update / delete draft
     # ------------------------------------------------------------------
 
+    async def _resolve_step1_facility(
+        self,
+        organization_id: int,
+        data: CIApplicationStep1Schema,
+        user: UserProfile,
+    ) -> Optional[FuelProductionFacility]:
+        """
+        Selecting an existing facility (always scoped to the caller's
+        organization) syncs its details from Step 1; typing a new facility
+        name creates one for the organization inline.
+        """
+        if data.fuel_production_facility_id:
+            facility = await self.repo.get_facility_for_organization(
+                data.fuel_production_facility_id, organization_id
+            )
+            if not facility:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Fuel production facility not found for this organization.",
+                )
+            _update_facility_from_step1(facility, data)
+            return facility
+
+        if not data.facility_name:
+            return None
+
+        facility = FuelProductionFacility(
+            organization_id=organization_id,
+            name=data.facility_name,
+            city=data.facility_city,
+            province_state=data.facility_province_state,
+            country=data.facility_country,
+            iso=data.facility_iso,
+            nameplate_capacity=data.facility_nameplate_capacity,
+            nameplate_capacity_unit=QuantityUnitsEnum(
+                data.facility_nameplate_capacity_unit
+            ),
+            contact_name=data.facility_contact_name,
+            contact_email=(
+                str(data.facility_contact_email)
+                if data.facility_contact_email
+                else None
+            ),
+            create_user=user.keycloak_username,
+            update_user=user.keycloak_username,
+        )
+        return await self.repo.create_facility(facility)
+
     @service_handler
     async def create_draft(
         self,
@@ -2151,20 +2205,7 @@ class CIApplicationServices:
         if not draft_status:
             raise DataNotFoundException("Draft status is not configured.")
 
-        facility = (
-            await self.repo.get_facility_for_organization(
-                data.fuel_production_facility_id, organization_id
-            )
-            if data.fuel_production_facility_id
-            else None
-        )
-        if data.fuel_production_facility_id and not facility:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Fuel production facility not found for this organization.",
-            )
-        if facility:
-            _update_facility_from_step1(facility, data)
+        facility = await self._resolve_step1_facility(organization_id, data, user)
 
         ci = CIApplication(
             status_id=draft_status.ci_application_status_id,
@@ -2208,20 +2249,9 @@ class CIApplicationServices:
         data: CIApplicationStep1Schema,
         user: UserProfile,
     ) -> CIApplicationSchema:
-        facility = (
-            await self.repo.get_facility_for_organization(
-                data.fuel_production_facility_id, ci_application.organization_id
-            )
-            if data.fuel_production_facility_id
-            else None
+        facility = await self._resolve_step1_facility(
+            ci_application.organization_id, data, user
         )
-        if data.fuel_production_facility_id and not facility:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Fuel production facility not found for this organization.",
-            )
-        if facility:
-            _update_facility_from_step1(facility, data)
 
         ci_application.fuel_production_facility_id = (
             facility.fuel_production_facility_id if facility else None
