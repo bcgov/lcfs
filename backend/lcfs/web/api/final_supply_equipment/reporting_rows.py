@@ -16,7 +16,8 @@ Saved reporting for a piece of equipment: the latest revision for each of its
 versions, then, across its versions, the one saved on the latest report
 version, and on the same report version the one saved last. Revision numbers
 count per equipment version, so they cannot order rows saved against
-different versions.
+different versions. An unchecked row is a save too: it wins over an older
+active row, so the equipment stays excluded.
 """
 
 import sqlalchemy as sa
@@ -213,7 +214,6 @@ matched_rows AS (
     ORDER BY
         ce.group_uuid,
         saved_report.version DESC NULLS LAST,
-        CASE WHEN crce.is_active IS TRUE THEN 0 ELSE 1 END,
         crce.charging_equipment_compliance_id DESC
 ),
 report_equipment AS (
