@@ -1,11 +1,13 @@
-export const normalizeYear = (value) => {
+type YearValue = string | number | null | undefined
+
+export const normalizeYear = (value: YearValue): string => {
   if (value === null || value === undefined || value === '') {
     return 'N/A'
   }
   return String(value)
 }
 
-export const compareYears = (a, b) => {
+export const compareYears = (a: YearValue, b: YearValue): number => {
   const numA = Number(a)
   const numB = Number(b)
   const isNumA = !Number.isNaN(numA)

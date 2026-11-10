@@ -1,4 +1,20 @@
-export const getOrganization = ({ data }, type) => {
+interface TransactionHistoryData {
+  transactionType: { type: string }
+  transferHistoryRecord: {
+    toOrganization: { name: string }
+    fromOrganization: { name: string }
+  }
+  issuanceHistoryRecord: { organization: { name: string } }
+}
+
+interface TransactionHistoryParams {
+  data: TransactionHistoryData
+}
+
+export const getOrganization = (
+  { data }: TransactionHistoryParams,
+  type: string
+): string | undefined => {
   switch (data.transactionType.type) {
     case 'Transfer':
       if (type === 'to') {

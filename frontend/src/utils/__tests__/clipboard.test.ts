@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vite-plus/test'
 import { copyToClipboard, isClipboardSupported } from '@/utils/clipboard'
 
-const setSecure = (secure) => {
+const setSecure = (secure: boolean): void => {
   Object.defineProperty(window, 'isSecureContext', {
     value: secure,
     writable: true
@@ -29,7 +29,7 @@ describe('clipboard utils', () => {
 
   it('uses modern clipboard API when available', async () => {
     setSecure(true)
-    const writeText = vi.fn().mockResolvedValue()
+    const writeText = vi.fn().mockResolvedValue(undefined)
     Object.assign(navigator, { clipboard: { writeText } })
 
     const ok = await copyToClipboard('hello')
