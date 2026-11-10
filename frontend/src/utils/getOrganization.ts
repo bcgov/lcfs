@@ -3,34 +3,23 @@ interface OrganizationName {
 }
 
 type TransferOrganizationHistory<Direction extends string> =
-  string extends Direction
-    ? { toOrganization: OrganizationName; fromOrganization: OrganizationName }
-    : [Direction] extends ['to']
-      ? { toOrganization: OrganizationName }
-      : [Direction] extends ['from']
-        ? { fromOrganization: OrganizationName }
-        : [Direction] extends ['to' | 'from']
-          ? {
-              toOrganization: OrganizationName
-              fromOrganization: OrganizationName
-            }
-          : {}
+  ('to' extends Direction ? { toOrganization: OrganizationName } : {}) &
+    ('from' extends Direction ? { fromOrganization: OrganizationName } : {})
 
 type IssuanceOrganizationHistory<Direction extends string> =
-  string extends Direction
+  'to' extends Direction
     ? { issuanceHistoryRecord: { organization: OrganizationName } }
-    : [Direction] extends ['to']
-      ? { issuanceHistoryRecord: { organization: OrganizationName } }
-      : {}
+    : {}
 
-type TransactionOrganizationData<
+export type TransactionOrganizationData<
   TransactionType extends string,
   Direction extends string
 > = {
   transactionType: { type: TransactionType }
-} & (TransactionType extends 'Transfer'
+} & ('Transfer' extends TransactionType
   ? { transferHistoryRecord: TransferOrganizationHistory<Direction> }
-  : TransactionType extends 'Issuance'
+  : {}) &
+  ('Issuance' extends TransactionType
     ? IssuanceOrganizationHistory<Direction>
     : {})
 
