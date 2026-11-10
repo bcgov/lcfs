@@ -4,7 +4,8 @@ export const ORG_TYPE_LABELS = {
   fuel_producer: 'Producer',
   exempted_supplier: 'Exempted',
   initiative_agreement_holder: 'IA Holder',
-  credit_trader: 'Credit Transfer'
+  credit_trader: 'Credit Transfer',
+  lcjfip: 'LCJFIP'
 }
 
 const normalizeOrgTypeKey = (orgType) => {

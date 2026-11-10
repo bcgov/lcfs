@@ -83,7 +83,7 @@ function DocumentTable({ parentType, parentID }) {
   }, [loadedFiles])
 
   const { mutate: uploadFile } = useUploadDocument(parentType, parentID)
-  const { mutate: deleteFile } = useDeleteDocument(parentType, parentID)
+  const { mutateAsync: deleteFile } = useDeleteDocument(parentType, parentID)
   const { mutateAsync: updateDocument } = useUpdateDocument(
     parentType,
     parentID
@@ -222,16 +222,26 @@ function DocumentTable({ parentType, parentID }) {
   }
 
   const handleDeleteFile = async (documentId) => {
+    setErrorMessage(null)
     try {
-      setFiles(
-        files.map((file) => ({
+      setFiles((current) =>
+        current.map((file) => ({
           ...file,
           deleting: file.documentId === documentId
         }))
       )
       await deleteFile(documentId)
     } catch (error) {
-      console.error('Error uploading file:', error)
+      setFiles((current) =>
+        current.map((file) =>
+          file.documentId === documentId ? { ...file, deleting: false } : file
+        )
+      )
+      setErrorMessage(
+        error?.response?.data?.detail ||
+          error?.message ||
+          t('common:errorPage.genericMessage')
+      )
     }
   }
 
