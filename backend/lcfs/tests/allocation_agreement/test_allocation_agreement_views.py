@@ -261,7 +261,9 @@ async def test_import_allocation_agreements_view(
     with patch.object(
         ComplianceReportValidation,
         "validate_organization_access",
-        new=AsyncMock(return_value=True),
+        new=AsyncMock(return_value=MagicMock(
+            current_status=MagicMock(status="Submitted"), supplemental_initiator=None
+        )),
     ), patch.object(
         ComplianceReportServices, "get_compliance_report_by_id", new=AsyncMock()
     ) as mock_get_report, patch.object(
@@ -311,7 +313,9 @@ async def test_import_allocation_agreements_overwrite_not_allowed(
     with patch.object(
         ComplianceReportValidation,
         "validate_organization_access",
-        new=AsyncMock(return_value=True),
+        new=AsyncMock(return_value=MagicMock(
+            current_status=MagicMock(status="Submitted"), supplemental_initiator=None
+        )),
     ), patch.object(
         ComplianceReportServices, "get_compliance_report_by_id", new=AsyncMock()
     ) as mock_get_report, patch.object(
@@ -506,3 +510,45 @@ async def test_save_allocation_agreement_submitted_status_blocked(
         assert response.status_code == 403
         assert "Forbidden resource" in response.json()["detail"]
         mock_validate_editable.assert_called_once()
+
+
+
+@pytest.mark.anyio
+async def test_import_allocation_agreements_checks_report_access(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """The import checks the caller may see the report's version before it
+    reads the file, as the row save does."""
+    from fastapi import HTTPException
+
+    set_mock_user(fastapi_app, [RoleEnum.ANALYST])
+    report = MagicMock()
+
+    with patch.object(
+        ComplianceReportValidation,
+        "validate_organization_access",
+        new=AsyncMock(return_value=report),
+    ), patch.object(
+        ComplianceReportValidation,
+        "validate_compliance_report_access",
+        new=AsyncMock(side_effect=HTTPException(status_code=403, detail="No access")),
+    ) as mock_access, patch.object(
+        AllocationAgreementImporter,
+        "import_data",
+        new=AsyncMock(return_value="fake-job-id"),
+    ) as mock_import:
+        response = await client.post(
+            fastapi_app.url_path_for("import_allocation_agreements", report_id=999),
+            files={
+                "file": (
+                    "test.xlsx",
+                    b"fake-excel-content",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                )
+            },
+            data={"overwrite": "false"},
+        )
+
+    assert response.status_code == 403
+    mock_access.assert_awaited_once_with(report)
+    mock_import.assert_not_called()

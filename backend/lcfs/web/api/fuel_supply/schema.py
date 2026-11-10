@@ -142,11 +142,11 @@ class FuelSupplyCreateUpdateSchema(BaseSchema):
     fuel_category_id: int
     end_use_id: Optional[int] = None
     provision_of_the_act_id: int
-    quantity: Optional[int] = None
-    q1_quantity: Optional[int] = None
-    q2_quantity: Optional[int] = None
-    q3_quantity: Optional[int] = None
-    q4_quantity: Optional[int] = None
+    quantity: Optional[int] = Field(default=None, ge=0)
+    q1_quantity: Optional[int] = Field(default=None, ge=0)
+    q2_quantity: Optional[int] = Field(default=None, ge=0)
+    q3_quantity: Optional[int] = Field(default=None, ge=0)
+    q4_quantity: Optional[int] = Field(default=None, ge=0)
     units: str
     fuel_type_other: Optional[str] = None
     fuel_code_id: Optional[int] = None

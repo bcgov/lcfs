@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Numeric, BigInteger
+from sqlalchemy import CheckConstraint, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from lcfs.db.base import BaseModel, Auditable, DisplayOrder, Versioning
@@ -6,9 +7,19 @@ from lcfs.db.base import BaseModel, Auditable, DisplayOrder, Versioning
 
 class AllocationAgreement(BaseModel, Auditable, Versioning, DisplayOrder):
     __tablename__ = "allocation_agreement"
-    __table_args__ = {
-        "comment": "Records allocation agreements where the reporting obligation is passed from one party to another. Each party must report their end of the transaction."
-    }
+    __table_args__ = (
+        UniqueConstraint(
+            "group_uuid", "version", name="uq_allocation_agreement_group_uuid_version"
+        ),
+        CheckConstraint(
+            "quantity >= 0 AND q1_quantity >= 0 AND q2_quantity >= 0"
+            " AND q3_quantity >= 0 AND q4_quantity >= 0",
+            name="quantities_non_negative",
+        ),
+        {
+            "comment": "Records allocation agreements where the reporting obligation is passed from one party to another. Each party must report their end of the transaction."
+        },
+    )
 
     allocation_agreement_id = Column(
         Integer,

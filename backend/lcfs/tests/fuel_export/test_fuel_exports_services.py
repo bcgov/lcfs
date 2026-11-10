@@ -3,6 +3,7 @@ from datetime import date
 from types import SimpleNamespace
 from unittest.mock import MagicMock, AsyncMock
 
+from lcfs.web.api.fuel_code.repo import CarbonIntensityResult
 from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.compliance.FuelExport import FuelExport
 from lcfs.db.models.user.Role import RoleEnum
@@ -149,6 +150,9 @@ async def test_action_create_fuel_export_success(fuel_export_action_service, moc
             self.target_ci = 90.0
             self.eer = 1.0
             self.uci = 0.0
+            self.unrecognized = False
+
+        reported_energy_density = CarbonIntensityResult.reported_energy_density
 
     mock_fuel_data = MockFuelData()
 
@@ -207,6 +211,9 @@ async def test_action_update_fuel_export_success(fuel_export_action_service, moc
             self.target_ci = 90.0
             self.eer = 1.0
             self.uci = 0.0
+            self.unrecognized = False
+
+        reported_energy_density = CarbonIntensityResult.reported_energy_density
 
     mock_fuel_data = MockFuelData()
 
@@ -359,6 +366,9 @@ async def test_action_create_fuel_export_energy_too_high(
             self.target_ci = 90.0
             self.eer = 1.0
             self.uci = 0.0
+            self.unrecognized = False
+
+        reported_energy_density = CarbonIntensityResult.reported_energy_density
 
     mock_fuel_data = MockFuelData()
 

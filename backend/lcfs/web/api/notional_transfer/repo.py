@@ -256,15 +256,21 @@ class NotionalTransferRepository:
 
     @repo_handler
     async def get_latest_notional_transfer_by_group_uuid(
-        self, group_uuid: str
+        self, group_uuid: str, compliance_report_id: int
     ) -> Optional[NotionalTransfer]:
         """
-        Retrieve the latest NotionalTransfer record for a given group UUID.
+        Retrieve the latest NotionalTransfer record for a given group UUID,
+        from the chain of the given compliance report only.
         """
         query = (
             select(NotionalTransfer)
             .options(joinedload(NotionalTransfer.fuel_category))
-            .where(NotionalTransfer.group_uuid == group_uuid)
+            .where(
+                NotionalTransfer.group_uuid == group_uuid,
+                NotionalTransfer.compliance_report_id.in_(
+                    VersioningQueryHelper.report_chain_ids(compliance_report_id)
+                ),
+            )
             .order_by(
                 NotionalTransfer.version.desc(),
             )
@@ -275,16 +281,20 @@ class NotionalTransferRepository:
 
     @repo_handler
     async def get_notional_transfer_version(
-        self, group_uuid: str, version: int
+        self, group_uuid: str, version: int, compliance_report_id: int
     ) -> Optional[NotionalTransfer]:
         """
-        Retrieve a specific NotionalTransfer record by group UUID and version.
+        Retrieve a specific NotionalTransfer record by group UUID and version,
+        from the chain of the given compliance report only.
         """
         query = (
             select(NotionalTransfer)
             .where(
                 NotionalTransfer.group_uuid == group_uuid,
                 NotionalTransfer.version == version,
+                NotionalTransfer.compliance_report_id.in_(
+                    VersioningQueryHelper.report_chain_ids(compliance_report_id)
+                ),
             )
             .options(joinedload(NotionalTransfer.fuel_category))
         )

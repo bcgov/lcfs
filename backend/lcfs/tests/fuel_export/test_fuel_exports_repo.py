@@ -113,7 +113,7 @@ async def test_get_fuel_export_by_id_success(fuel_export_repo, mock_db):
     )
     mock_db.execute.return_value = mock_result
 
-    result = await fuel_export_repo.get_fuel_export_by_id(fuel_export_id)
+    result = await fuel_export_repo.get_fuel_export_by_id(fuel_export_id, 1)
 
     mock_db.execute.assert_called_once()
     mock_result.unique.assert_called_once()
@@ -131,7 +131,9 @@ async def test_get_latest_fuel_export_by_group_uuid_success(fuel_export_repo, mo
     mock_result.scalars.return_value.first.return_value = expected_export
     mock_db.execute.return_value = mock_result
 
-    result = await fuel_export_repo.get_latest_fuel_export_by_group_uuid(group_uuid)
+    result = await fuel_export_repo.get_latest_fuel_export_by_group_uuid(
+        group_uuid, 1
+    )
 
     assert result == expected_export
     mock_db.execute.assert_called_once()

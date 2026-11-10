@@ -288,7 +288,10 @@ async def import_allocation_agreements(
             status_code=400, detail="Invalid compliance report id. Must be an integer."
         )
 
-    await validate.validate_organization_access(compliance_report_id)
+    compliance_report = await validate.validate_organization_access(
+        compliance_report_id
+    )
+    await validate.validate_compliance_report_access(compliance_report)
 
     # Check if overwrite is allowed
     compliance_report = await compliance_report_services.get_compliance_report_by_id(

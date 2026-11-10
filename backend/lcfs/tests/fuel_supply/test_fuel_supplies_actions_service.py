@@ -308,6 +308,7 @@ async def test_update_fuel_supply_success_existing_report(
     mock_repo.get_fuel_supply_by_group_version.assert_awaited_once_with(
         fe_data.group_uuid,
         fe_data.version,
+        fe_data.compliance_report_id,
     )
     mock_repo.update_fuel_supply.assert_awaited_once()
     mock_fuel_code_repo.get_standardized_fuel_data.assert_awaited_once()
@@ -353,7 +354,7 @@ async def test_update_fuel_supply_create_new_version(
     result = await assign_schema_fields(result, fe_data)
 
     mock_repo.get_fuel_supply_by_group_version.assert_awaited_once_with(
-        fe_data.group_uuid, fe_data.version
+        fe_data.group_uuid, fe_data.version, fe_data.compliance_report_id
     )
     mock_repo.create_fuel_supply.assert_awaited_once()
     mock_fuel_code_repo.get_standardized_fuel_data.assert_awaited_once()
@@ -398,7 +399,7 @@ async def test_delete_fuel_supply_success(
     assert result.success is True
     assert result.message == "Marked as deleted."
     mock_repo.get_latest_fuel_supply_by_group_uuid.assert_awaited_once_with(
-        fe_data.group_uuid
+        fe_data.group_uuid, fe_data.compliance_report_id
     )
     # The row is deleted only within the validated report and its group.
     mock_repo.delete_fuel_supply.assert_awaited_once_with(
@@ -452,7 +453,7 @@ async def test_delete_fuel_supply_changelog(
     assert result.success is True
     assert result.message == "Marked as deleted."
     mock_repo.get_latest_fuel_supply_by_group_uuid.assert_awaited_once_with(
-        fe_data.group_uuid
+        fe_data.group_uuid, fe_data.compliance_report_id
     )
     mock_repo.create_fuel_supply.assert_awaited_once()
 
@@ -470,6 +471,7 @@ async def test_populate_fuel_supply_fields(
         eer=1.0,
         energy_density=None,
         uci=None,
+        unrecognized=True,
     )
     populated_supply = (
         await fuel_supply_action_service_with_mocks._populate_fuel_supply_fields(

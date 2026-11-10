@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Date, Integer, ForeignKey, Enum, String, Numeric, BigInteger
+from sqlalchemy import CheckConstraint, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import text
 
@@ -11,9 +12,15 @@ from lcfs.db.models.compliance.ComplianceReport import (
 
 class FuelExport(BaseModel, Auditable, Versioning):
     __tablename__ = "fuel_export"
-    __table_args__ = {
-        "comment": "Records the supply of fuel for compliance purposes, including changes in supplemental reports"
-    }
+    __table_args__ = (
+        UniqueConstraint(
+            "group_uuid", "version", name="uq_fuel_export_group_uuid_version"
+        ),
+        CheckConstraint("quantity >= 0", name="quantities_non_negative"),
+        {
+            "comment": "Records the supply of fuel for compliance purposes, including changes in supplemental reports"
+        },
+    )
 
     fuel_export_id = Column(
         Integer,

@@ -1,4 +1,5 @@
 import pytest
+from fastapi import HTTPException
 from unittest.mock import MagicMock, AsyncMock
 
 from lcfs.db.base import ActionTypeEnum
@@ -196,8 +197,9 @@ async def test_update_other_use_not_found(other_uses_service):
 
     mock_repo.get_other_use = AsyncMock(return_value=None)
 
-    with pytest.raises(ValueError, match="Other use not found"):
+    with pytest.raises(HTTPException) as exc_info:
         await service.update_other_use(other_use_data)
+    assert exc_info.value.status_code == 404
 
 
 @pytest.mark.anyio

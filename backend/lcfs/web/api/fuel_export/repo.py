@@ -308,11 +308,19 @@ class FuelExportRepository:
         return paginated_exports, total_count
 
     @repo_handler
-    async def get_fuel_export_by_id(self, fuel_export_id: int) -> FuelExport:
+    async def get_fuel_export_by_id(
+        self, fuel_export_id: int, compliance_report_id: int
+    ) -> FuelExport:
         """
-        Retrieve a fuel supply row from the database
+        Retrieve a fuel export row from the chain of the given compliance
+        report only.
         """
-        query = self.query.where(FuelExport.fuel_export_id == fuel_export_id)
+        query = self.query.where(
+            FuelExport.fuel_export_id == fuel_export_id,
+            FuelExport.compliance_report_id.in_(
+                VersioningQueryHelper.report_chain_ids(compliance_report_id)
+            ),
+        )
         result = await self.db.execute(query)
         return result.unique().scalar_one_or_none()
 
@@ -355,15 +363,20 @@ class FuelExportRepository:
 
     @repo_handler
     async def get_latest_fuel_export_by_group_uuid(
-        self, group_uuid: str
+        self, group_uuid: str, compliance_report_id: int
     ) -> Optional[FuelExport]:
         """
-        Retrieve the latest FuelExport record for a given group UUID.
-        Government records are prioritized over supplier records.
+        Retrieve the latest FuelExport record for a given group UUID, from the
+        chain of the given compliance report only.
         """
         query = (
             select(FuelExport)
-            .where(FuelExport.group_uuid == group_uuid)
+            .where(
+                FuelExport.group_uuid == group_uuid,
+                FuelExport.compliance_report_id.in_(
+                    VersioningQueryHelper.report_chain_ids(compliance_report_id)
+                ),
+            )
             .order_by(
                 FuelExport.version.desc(),
             )

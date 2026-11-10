@@ -20,7 +20,10 @@ from lcfs.web.api.allocation_agreement.schema import (
 )
 from lcfs.web.api.base import calculate_total_pages, PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
-from lcfs.web.api.fuel_code.repo import FuelCodeRepository
+from lcfs.web.api.fuel_code.repo import (
+    FuelCodeRepository,
+    fuel_code_validation_error,
+)
 from lcfs.web.api.fuel_supply.services import FuelSupplyServices
 from lcfs.web.core.decorators import service_handler
 from lcfs.db.models.fuel.FuelCode import FuelCode
@@ -58,8 +61,36 @@ class AllocationAgreementServices:
         self.fuel_supply_service = fuel_supply_service
         self.compliance_report_repo = compliance_report_repo
 
+    async def _resolve_fuel_code(
+        self,
+        fuel_code_name: Optional[str],
+        *,
+        fuel_type_id: int,
+        compliance_report_id: int,
+        previous_fuel_code_id: Optional[int] = None,
+    ) -> Optional[FuelCode]:
+        """Look up the fuel code named on a row and check the row may use it.
+
+        Its effective dates are checked only when the row takes a code it did
+        not have before (see FuelCodeRepository.ensure_fuel_code_reportable).
+        """
+        if not fuel_code_name:
+            return None
+        fuel_code = await self.fuel_repo.get_fuel_code_by_name(fuel_code_name)
+        if fuel_code is None:
+            raise fuel_code_validation_error("must be an approved fuel code")
+        await self.fuel_repo.ensure_fuel_code_reportable(
+            fuel_code.fuel_code_id,
+            fuel_type_id=fuel_type_id,
+            compliance_report_id=compliance_report_id,
+            check_effective_dates=fuel_code.fuel_code_id != previous_fuel_code_id,
+        )
+        return fuel_code
+
     async def convert_to_model(
-        self, allocation_agreement: AllocationAgreementCreateSchema
+        self,
+        allocation_agreement: AllocationAgreementCreateSchema,
+        previous_fuel_code_id: Optional[int] = None,
     ) -> AllocationAgreement:
         """
         Converts data from AllocationAgreementCreateSchema to AllocationAgreement data model to store into the database.
@@ -80,14 +111,13 @@ class AllocationAgreementServices:
         )
 
         # Fetch fuel code only if provided, else set it to None
-        fuel_code_id = None
-        fuel_code = None
-        if allocation_agreement.fuel_code:
-            fuel_code_obj = await self.fuel_repo.get_fuel_code_by_name(
-                allocation_agreement.fuel_code
-            )
-            fuel_code_id = fuel_code_obj.fuel_code_id
-            fuel_code = fuel_code_obj
+        fuel_code = await self._resolve_fuel_code(
+            allocation_agreement.fuel_code,
+            fuel_type_id=fuel_type.fuel_type_id,
+            compliance_report_id=allocation_agreement.compliance_report_id,
+            previous_fuel_code_id=previous_fuel_code_id,
+        )
+        fuel_code_id = fuel_code.fuel_code_id if fuel_code else None
 
         result = AllocationAgreement(
             **allocation_agreement.model_dump(
@@ -299,11 +329,15 @@ class AllocationAgreementServices:
         """Update an existing Allocation agreement"""
         existing_allocation_agreement = (
             await self.repo.get_latest_allocation_agreement_by_group_uuid(
-                allocation_agreement_data.group_uuid
+                allocation_agreement_data.group_uuid,
+                allocation_agreement_data.compliance_report_id,
             )
         )
         if not existing_allocation_agreement:
-            raise ValueError("Allocation agreement not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Allocation agreement not found",
+            )
 
         if (
             existing_allocation_agreement.compliance_report_id
@@ -350,18 +384,12 @@ class AllocationAgreementServices:
                     )
                 )
 
-            if (
-                existing_allocation_agreement.fuel_code is None
-                or allocation_agreement_data.fuel_code is None
-                or existing_allocation_agreement.fuel_code.fuel_code
-                != allocation_agreement_data.fuel_code
-            ):
-
-                existing_allocation_agreement.fuel_code = (
-                    await self.fuel_repo.get_fuel_code_by_name(
-                        allocation_agreement_data.fuel_code
-                    )
-                )
+            existing_allocation_agreement.fuel_code = await self._resolve_fuel_code(
+                allocation_agreement_data.fuel_code,
+                fuel_type_id=existing_allocation_agreement.fuel_type.fuel_type_id,
+                compliance_report_id=allocation_agreement_data.compliance_report_id,
+                previous_fuel_code_id=existing_allocation_agreement.fuel_code_id,
+            )
 
             existing_allocation_agreement.transaction_partner = (
                 allocation_agreement_data.transaction_partner
@@ -404,15 +432,6 @@ class AllocationAgreementServices:
             )
             existing_allocation_agreement.fuel_type_other = (
                 allocation_agreement_data.fuel_type_other
-            )
-            existing_allocation_agreement.group_uuid = (
-                allocation_agreement_data.group_uuid
-            )
-            existing_allocation_agreement.version = (
-                existing_allocation_agreement.version
-            )
-            existing_allocation_agreement.action_type = (
-                existing_allocation_agreement.action_type
             )
 
             updated_allocation_agreement = await self.repo.update_allocation_agreement(
@@ -467,7 +486,12 @@ class AllocationAgreementServices:
         existing_record: Optional[AllocationAgreement] = None,
     ) -> AllocationAgreementSchema:
         """Create a new Allocation agreement"""
-        allocation_agreement = await self.convert_to_model(allocation_agreement_data)
+        allocation_agreement = await self.convert_to_model(
+            allocation_agreement_data,
+            previous_fuel_code_id=(
+                existing_record.fuel_code_id if existing_record else None
+            ),
+        )
 
         new_group_uuid = str(uuid.uuid4())
         allocation_agreement.group_uuid = (
@@ -547,7 +571,8 @@ class AllocationAgreementServices:
         """Delete an allocation agreement"""
         existing_allocation_agreement = (
             await self.repo.get_latest_allocation_agreement_by_group_uuid(
-                allocation_agreement_data.group_uuid
+                allocation_agreement_data.group_uuid,
+                allocation_agreement_data.compliance_report_id,
             )
         )
         if not existing_allocation_agreement:
@@ -574,7 +599,7 @@ class AllocationAgreementServices:
         # Create a deletion record
         deleted_entity = AllocationAgreement(
             compliance_report_id=allocation_agreement_data.compliance_report_id,
-            group_uuid=allocation_agreement_data.group_uuid,
+            group_uuid=existing_allocation_agreement.group_uuid,
             version=existing_allocation_agreement.version + 1,
             action_type=ActionTypeEnum.DELETE,
         )

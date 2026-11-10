@@ -92,10 +92,8 @@ class FuelSupplyActionService:
         fuel_supply.target_ci = fuel_data.target_ci
         fuel_supply.eer = fuel_data.eer
         fuel_supply.uci = fuel_data.uci
-        fuel_supply.energy_density = (
-            fuel_data.energy_density
-            if fuel_data.energy_density
-            else fs_data.energy_density
+        fuel_supply.energy_density = fuel_data.reported_energy_density(
+            fs_data.energy_density
         )
 
         total_quantity = (
@@ -145,6 +143,12 @@ class FuelSupplyActionService:
         Returns:
             FuelSupplyResponseSchema: The newly created fuel supply record as a response schema.
         """
+        await self.fuel_repo.ensure_fuel_code_reportable(
+            fs_data.fuel_code_id,
+            fuel_type_id=fs_data.fuel_type_id,
+            compliance_report_id=fs_data.compliance_report_id,
+        )
+
         # Assign a unique group UUID for the new fuel supply
         new_group_uuid = str(uuid.uuid4())
         fuel_supply = FuelSupply(
@@ -188,11 +192,20 @@ class FuelSupplyActionService:
             HTTPException: If the fuel supply record is not found.
         """
         existing_fuel_supply = await self.repo.get_fuel_supply_by_group_version(
-            fs_data.group_uuid, fs_data.version
+            fs_data.group_uuid, fs_data.version, fs_data.compliance_report_id
         )
 
         if not existing_fuel_supply:
             raise HTTPException(status_code=404, detail="Fuel supply record not found.")
+
+        await self.fuel_repo.ensure_fuel_code_reportable(
+            fs_data.fuel_code_id,
+            fuel_type_id=fs_data.fuel_type_id,
+            compliance_report_id=fs_data.compliance_report_id,
+            check_effective_dates=(
+                fs_data.fuel_code_id != existing_fuel_supply.fuel_code_id
+            ),
+        )
 
         if (
             existing_fuel_supply
@@ -217,7 +230,7 @@ class FuelSupplyActionService:
             # Create a new version if compliance report ID differs
             fuel_supply = FuelSupply(
                 compliance_report_id=fs_data.compliance_report_id,
-                group_uuid=fs_data.group_uuid,
+                group_uuid=existing_fuel_supply.group_uuid,
                 version=existing_fuel_supply.version + 1,
                 action_type=ActionTypeEnum.UPDATE,
             )
@@ -259,7 +272,7 @@ class FuelSupplyActionService:
             DeleteFuelSupplyResponseSchema: A response schema confirming deletion.
         """
         existing_fuel_supply = await self.repo.get_latest_fuel_supply_by_group_uuid(
-            fs_data.group_uuid
+            fs_data.group_uuid, fs_data.compliance_report_id
         )
 
         if not existing_fuel_supply:
@@ -278,7 +291,7 @@ class FuelSupplyActionService:
             # Create a new version with action_type DELETE
             delete_supply = FuelSupply(
                 compliance_report_id=fs_data.compliance_report_id,
-                group_uuid=fs_data.group_uuid,
+                group_uuid=existing_fuel_supply.group_uuid,
                 version=existing_fuel_supply.version + 1,
                 action_type=ActionTypeEnum.DELETE,
             )

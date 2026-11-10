@@ -86,7 +86,7 @@ async def test_get_latest_notional_transfer_by_group_uuid(
     ]
 
     result = await notional_transfer_repo.get_latest_notional_transfer_by_group_uuid(
-        group_uuid
+        group_uuid, 1
     )
 
     assert result.version == 2

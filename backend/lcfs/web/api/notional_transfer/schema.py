@@ -56,11 +56,11 @@ class NotionalTransferCreateSchema(BaseSchema):
     is_canada_produced: Optional[bool] = False
     is_q1_supplied: Optional[bool] = False
     received_or_transferred: ReceivedOrTransferredEnumSchema
-    quantity: Optional[int] = None
-    q1_quantity: Optional[int] = None
-    q2_quantity: Optional[int] = None
-    q3_quantity: Optional[int] = None
-    q4_quantity: Optional[int] = None
+    quantity: Optional[int] = Field(default=None, ge=0)
+    q1_quantity: Optional[int] = Field(default=None, ge=0)
+    q2_quantity: Optional[int] = Field(default=None, ge=0)
+    q3_quantity: Optional[int] = Field(default=None, ge=0)
+    q4_quantity: Optional[int] = Field(default=None, ge=0)
     notional_transfer_id: Optional[int] = None
     compliance_report_id: int
     deleted: Optional[bool] = None

@@ -74,8 +74,8 @@ class FuelExportActionService:
         fuel_export.ci_of_fuel = fuel_data.effective_carbon_intensity
         fuel_export.target_ci = fuel_data.target_ci
         fuel_export.eer = fuel_data.eer
-        fuel_export.energy_density = (
-            fuel_export.energy_density or fuel_data.energy_density
+        fuel_export.energy_density = fuel_data.reported_energy_density(
+            fe_data.energy_density
         )
         fuel_export.uci = fuel_data.uci
 
@@ -133,6 +133,12 @@ class FuelExportActionService:
 
         Returns the newly created fuel export record as a response schema.
         """
+        await self.fuel_repo.ensure_fuel_code_reportable(
+            fe_data.fuel_code_id,
+            fuel_type_id=fe_data.fuel_type_id,
+            compliance_report_id=fe_data.compliance_report_id,
+        )
+
         # Assign a unique group UUID for the new fuel export
         new_group_uuid = str(uuid.uuid4())
         fuel_export = FuelExport(
@@ -167,12 +173,20 @@ class FuelExportActionService:
 
         Returns the updated or new version of the fuel export record.
         """
-        existing_export = await self.repo.get_fuel_export_by_id(fe_data.fuel_export_id)
+        existing_export = await self.repo.get_fuel_export_by_id(
+            fe_data.fuel_export_id, fe_data.compliance_report_id
+        )
+        if not existing_export:
+            raise HTTPException(status_code=404, detail="Fuel export record not found.")
 
-        if (
-            existing_export
-            and existing_export.compliance_report_id == fe_data.compliance_report_id
-        ):
+        await self.fuel_repo.ensure_fuel_code_reportable(
+            fe_data.fuel_code_id,
+            fuel_type_id=fe_data.fuel_type_id,
+            compliance_report_id=fe_data.compliance_report_id,
+            check_effective_dates=fe_data.fuel_code_id != existing_export.fuel_code_id,
+        )
+
+        if existing_export.compliance_report_id == fe_data.compliance_report_id:
             # Update existing record if compliance report ID matches
             for field, value in fe_data.model_dump(
                 exclude=FUEL_EXPORT_EXCLUDE_FIELDS
@@ -187,11 +201,11 @@ class FuelExportActionService:
             updated_export = await self.repo.update_fuel_export(existing_export)
             return FuelExportSchema.model_validate(updated_export)
 
-        elif existing_export:
+        else:
             # Create a new version if compliance report ID differs
             fuel_export = FuelExport(
                 compliance_report_id=fe_data.compliance_report_id,
-                group_uuid=fe_data.group_uuid,
+                group_uuid=existing_export.group_uuid,
                 version=existing_export.version + 1,
                 action_type=ActionTypeEnum.UPDATE,
             )
@@ -215,8 +229,6 @@ class FuelExportActionService:
             new_export = await self.repo.create_fuel_export(fuel_export)
             return FuelExportSchema.model_validate(new_export)
 
-        raise HTTPException(status_code=404, detail="Fuel export record not found.")
-
     @service_handler
     async def delete_fuel_export(
         self, fe_data: FuelExportCreateUpdateSchema
@@ -227,8 +239,10 @@ class FuelExportActionService:
         Returns a response schema confirming deletion.
         """
         existing_export = await self.repo.get_latest_fuel_export_by_group_uuid(
-            fe_data.group_uuid
+            fe_data.group_uuid, fe_data.compliance_report_id
         )
+        if not existing_export:
+            raise HTTPException(status_code=404, detail="Fuel export record not found.")
 
         if existing_export.compliance_report_id == fe_data.compliance_report_id:
             await self.repo.delete_fuel_export(
@@ -238,8 +252,8 @@ class FuelExportActionService:
         else:
             delete_export = FuelExport(
                 compliance_report_id=fe_data.compliance_report_id,
-                group_uuid=fe_data.group_uuid,
-                version=(existing_export.version + 1) if existing_export else 0,
+                group_uuid=existing_export.group_uuid,
+                version=existing_export.version + 1,
                 action_type=ActionTypeEnum.DELETE,
             )
 
