@@ -80,6 +80,7 @@ export const ROUTES = {
     VIEW: '/compliance-reporting/:compliancePeriod/:complianceReportId',
     COMPARE: '/compare-reporting',
     REPORT_OPENINGS: '/compliance-reporting/report-openings',
+    ALLOCATION_AGREEMENTS_INDEX: '/compliance-reporting/allocation-agreements',
     CHARGING_SITE: {
       INDEX: '/compliance-reporting/charging-sites',
       VIEW: '/compliance-reporting/charging-sites/:siteId',

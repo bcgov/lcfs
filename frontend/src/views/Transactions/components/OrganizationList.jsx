@@ -13,6 +13,7 @@ const OrganizationList = ({
   selectedOrg,
   onOrgChange,
   onlyRegistered = true,
+  orgFilter,
   includeAllOption = true,
   label,
   placeholder,
@@ -20,7 +21,10 @@ const OrganizationList = ({
 }) => {
   const { t } = useTranslation(['transaction'])
   const statuses = onlyRegistered ? ['Registered'] : null
-  const { data, isLoading } = useOrganizationNames(statuses)
+  const { data, isLoading } = useOrganizationNames(
+    statuses,
+    orgFilter ? { orgFilter } : {}
+  )
   const [optionsList, setOptionsList] = useState([])
 
   useEffect(() => {
@@ -125,6 +129,7 @@ OrganizationList.propTypes = {
   }),
   onOrgChange: PropTypes.func.isRequired,
   onlyRegistered: PropTypes.bool,
+  orgFilter: PropTypes.string,
   includeAllOption: PropTypes.bool,
   label: PropTypes.string,
   placeholder: PropTypes.string,

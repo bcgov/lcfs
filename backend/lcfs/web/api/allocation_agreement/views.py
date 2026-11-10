@@ -28,6 +28,8 @@ from lcfs.web.api.allocation_agreement.schema import (
     DeleteAllocationAgreementResponseSchema,
     PaginatedAllocationAgreementRequestSchema,
     AllocationAgreementAllSchema,
+    AllocationAgreementIndexRequestSchema,
+    AllocationAgreementIndexResponseSchema,
     OrganizationDetailsSchema,
 )
 from lcfs.web.api.allocation_agreement.services import AllocationAgreementServices
@@ -131,6 +133,25 @@ async def get_allocation_agreements_paginated(
     return await service.get_allocation_agreements_paginated(
         pagination, compliance_report_id
     )
+
+
+@router.post(
+    "/index",
+    response_model=AllocationAgreementIndexResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def get_allocation_agreements_index(
+    request: Request,
+    request_data: AllocationAgreementIndexRequestSchema = Body(...),
+    service: AllocationAgreementServices = Depends(),
+) -> AllocationAgreementIndexResponseSchema:
+    """
+    IDIR index of allocation agreements across all non-Draft compliance report
+    versions, with filtering, sorting, paging and an organization filter that
+    matches the reporting organization or the transaction partner. Read-only.
+    """
+    return await service.get_allocation_agreements_index(request_data)
 
 
 @router.post(
