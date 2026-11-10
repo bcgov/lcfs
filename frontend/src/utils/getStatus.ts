@@ -6,11 +6,12 @@ interface IssuanceStatusHistory {
   issuanceStatus: { status: string }
 }
 
-type TransactionStatusData<T extends string> = {
-  transactionType: { type: T }
-} & (T extends 'Transfer'
+export type TransactionStatusData<TransactionType extends string> = {
+  transactionType: { type: TransactionType }
+} & ('Transfer' extends TransactionType
   ? { transferHistoryRecord: TransferStatusHistory }
-  : T extends 'Issuance'
+  : {}) &
+  ('Issuance' extends TransactionType
     ? { issuanceHistoryRecord: IssuanceStatusHistory }
     : {})
 

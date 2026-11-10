@@ -1,5 +1,51 @@
 import { describe, it, expect } from 'vite-plus/test'
-import { getStatus } from '../getStatus'
+import { getStatus, type TransactionStatusData } from '../getStatus'
+
+type IsAssignable<Source, Target> = [Source] extends [Target] ? true : false
+type Assert<T extends true> = T
+type IsNotAssignable<Source, Target> =
+  IsAssignable<Source, Target> extends true ? false : true
+
+type StatusTypeChecks = [
+  Assert<
+    IsAssignable<
+      { transactionType: { type: 'Assessment' } },
+      TransactionStatusData<'Assessment'>
+    >
+  >,
+  Assert<
+    IsNotAssignable<
+      { transactionType: { type: string } },
+      TransactionStatusData<string>
+    >
+  >,
+  Assert<
+    IsNotAssignable<
+      { transactionType: { type: 'Transfer' | 'Assessment' } },
+      TransactionStatusData<'Transfer' | 'Assessment'>
+    >
+  >,
+  Assert<
+    IsNotAssignable<
+      {
+        transactionType: { type: 'Transfer' | 'Assessment' }
+        issuanceHistoryRecord: { issuanceStatus: { status: string } }
+      },
+      TransactionStatusData<'Transfer' | 'Assessment'>
+    >
+  >,
+  Assert<
+    IsAssignable<
+      {
+        transactionType: { type: 'Transfer' | 'Assessment' }
+        transferHistoryRecord: { transferStatus: { status: string } }
+      },
+      TransactionStatusData<'Transfer' | 'Assessment'>
+    >
+  >
+]
+
+export type GetStatusCompileTimeChecks = StatusTypeChecks
 
 describe('getStatus', () => {
   it('returns transfer status with only the transfer history', () => {
