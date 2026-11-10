@@ -1,12 +1,16 @@
 """
-FSE rows on the report page and in the Excel FSE sheet, read from the real
-views for each version of a report (#5132).
+FSE rows on the report page and in the Excel FSE sheet for each version of a
+report, read from the database (#5132).
 
-vw_fse_base holds only the latest non-Draft version of each report group. Read
-from it, a Draft or an older version shows that latest submitted version's
+The vw_fse_base source gives the rows of the latest non-Draft version of the
+report group: a Draft or an older version shows that latest submitted version's
 rows, and a report with no submitted version shows none. The Excel sheet always
 reads it. The report page reads it for every status except Draft, which shows
-its own rows from mv_fse_reporting_base_pref, as its FSE reporting page does.
+its own rows (base_pref source), as its FSE reporting page does.
+
+The rows are read from the tables, never from the materialized view, so
+nothing here refreshes it: a save or a new report version shows on the next
+read.
 """
 
 import uuid
@@ -33,10 +37,16 @@ from lcfs.db.models.compliance.ComplianceReport import ReportingFrequency
 from lcfs.db.models.compliance.ComplianceReportStatus import (
     ComplianceReportStatusEnum,
 )
+from lcfs.db.models.compliance.FSEReportingBasePrefView import (
+    FSEReportingBasePrefView,
+)
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.compliance_report.schema import FSE_EXPORT_COLUMNS
 from lcfs.web.api.compliance_report.sheet_exporters.fse import FSESheetExporter
 from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
+from lcfs.web.api.final_supply_equipment.reporting_rows import (
+    fse_reporting_rows_sql,
+)
 
 SUBMITTED_SERIAL = "SN-5132-SUBMITTED"
 DRAFT_ONLY_SERIAL = "SN-5132-DRAFT-ONLY"
@@ -163,14 +173,12 @@ async def report_versions(dbsession, add_models):
             _selection(draft_only_equipment, draft_only_report, 0, 500.0, 2025),
         ]
     )
-    await dbsession.execute(
-        text("REFRESH MATERIALIZED VIEW mv_fse_reporting_base_pref")
-    )
 
     return SimpleNamespace(
         organization_id=organization_id,
         reports=reports,
         draft_only_report=draft_only_report,
+        submitted_equipment=submitted_equipment,
     )
 
 
@@ -274,19 +282,6 @@ async def _draft_page_rows(dbsession, organization_id, report_id):
     return [(row.serial_number, row.kwh_usage) for row in rows], total
 
 
-async def _refresh_like_the_job(dbsession):
-    """The refresh job's statements, run inside the test transaction."""
-    await dbsession.execute(
-        text("REFRESH MATERIALIZED VIEW mv_fse_reporting_base_pref")
-    )
-    await dbsession.execute(
-        text(
-            "UPDATE fse_reporting_mv_refresh_state "
-            "SET refreshed_generation = dirty_generation WHERE id = 1"
-        )
-    )
-
-
 @pytest.mark.anyio
 async def test_never_submitted_draft_page_shows_its_own_rows(
     dbsession, report_versions
@@ -302,32 +297,235 @@ async def test_never_submitted_draft_page_shows_its_own_rows(
 
 
 @pytest.mark.anyio
-async def test_refresh_pending_until_the_view_has_the_saved_kwh(
-    dbsession, report_versions
-):
-    repo = FinalSupplyEquipmentRepository(db=dbsession)
+async def test_saved_kwh_shows_on_the_next_read(dbsession, report_versions):
     organization_id = report_versions.organization_id
     report_id = report_versions.draft_only_report.compliance_report_id
-    await _refresh_like_the_job(dbsession)
-    assert await repo.is_fse_reporting_refresh_pending() is False
 
-    # A save: the source-table trigger marks the view dirty.
     await dbsession.execute(
         update(ComplianceReportChargingEquipment)
         .where(ComplianceReportChargingEquipment.compliance_report_id == report_id)
         .values(kwh_usage=750.0)
     )
 
-    assert await repo.is_fse_reporting_refresh_pending() is True
-    assert await _draft_page_rows(dbsession, organization_id, report_id) == (
-        [(DRAFT_ONLY_SERIAL, 500.0)],
-        500.0,
-    )
-
-    await _refresh_like_the_job(dbsession)
-
-    assert await repo.is_fse_reporting_refresh_pending() is False
     assert await _draft_page_rows(dbsession, organization_id, report_id) == (
         [(DRAFT_ONLY_SERIAL, 750.0)],
         750.0,
     )
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "original_status, new_status",
+    [
+        (
+            ComplianceReportStatusEnum.Submitted,
+            ComplianceReportStatusEnum.Analyst_adjustment,
+        ),
+        (ComplianceReportStatusEnum.Assessed, ComplianceReportStatusEnum.Draft),
+    ],
+    ids=["government-adjustment", "supplemental"],
+)
+async def test_new_report_version_shows_rows_right_away(
+    dbsession, add_models, report_versions, original_status, new_status
+):
+    """
+    A new version carries the group's saved rows from the moment it exists. A
+    government adjustment becomes the latest non-Draft version, so every
+    version of the report shows its rows.
+    """
+    organization_id = report_versions.organization_id
+    original, new_version = await _report_group(
+        dbsession, organization_id, "2025", [original_status, new_status]
+    )
+    await add_models([original])
+    await add_models(
+        [
+            _selection(
+                report_versions.submitted_equipment,
+                original,
+                0,
+                SUBMITTED_KWH,
+                2025,
+            )
+        ]
+    )
+
+    await add_models([new_version])
+
+    if new_status == ComplianceReportStatusEnum.Draft:
+        assert await _draft_page_rows(
+            dbsession, organization_id, new_version.compliance_report_id
+        ) == ([(SUBMITTED_SERIAL, SUBMITTED_KWH)], SUBMITTED_KWH)
+    else:
+        for report in (original, new_version):
+            rows, total = await _summary_rows(
+                dbsession, organization_id, report.compliance_report_id
+            )
+            assert [(row.serial_number, row.compliance_report_id) for row in rows] == [
+                (SUBMITTED_SERIAL, new_version.compliance_report_id)
+            ]
+            assert total == SUBMITTED_KWH
+
+
+async def _new_equipment_version(add_models, equipment):
+    edited_equipment = ChargingEquipment(
+        group_uuid=equipment.group_uuid,
+        version=equipment.version + 1,
+        charging_site_id=equipment.charging_site_id,
+        status_id=equipment.status_id,
+        equipment_number=equipment.equipment_number,
+        serial_number=SUBMITTED_SERIAL,
+        manufacturer=equipment.manufacturer,
+        level_of_equipment_id=equipment.level_of_equipment_id,
+    )
+    await add_models([edited_equipment])
+    return edited_equipment
+
+
+@pytest.mark.anyio
+async def test_edit_after_equipment_change_shows_on_the_draft(
+    dbsession, add_models, report_versions
+):
+    """
+    Revision numbers count per equipment version. A supplemental edit saved
+    against a newer equipment version starts again at 0, yet it is the latest
+    save, so the Draft shows it rather than an older revision numbered 1.
+    """
+    organization_id = report_versions.organization_id
+    equipment = report_versions.submitted_equipment
+    original, supplemental, draft = await _report_group(
+        dbsession,
+        organization_id,
+        "2025",
+        [
+            ComplianceReportStatusEnum.Assessed,
+            ComplianceReportStatusEnum.Assessed,
+            ComplianceReportStatusEnum.Draft,
+        ],
+    )
+    await add_models([original, supplemental, draft])
+    edited_equipment = await _new_equipment_version(add_models, equipment)
+    await add_models(
+        [
+            _selection(equipment, original, 0, 1000.0, 2025),
+            _selection(equipment, supplemental, 1, 1100.0, 2025),
+            _selection(edited_equipment, draft, 0, 2000.0, 2025),
+        ]
+    )
+
+    assert await _draft_page_rows(
+        dbsession, organization_id, draft.compliance_report_id
+    ) == ([(SUBMITTED_SERIAL, 2000.0)], 2000.0)
+
+
+@pytest.mark.anyio
+async def test_save_after_equipment_change_on_the_same_draft_shows(
+    dbsession, add_models, report_versions
+):
+    """
+    An edit of carried-forward equipment on a Draft saves revision 1. Once the
+    equipment changes, an upload on the same Draft saves revision 0 for the new
+    equipment version. Both are on the Draft, so the one saved last shows.
+    """
+    organization_id = report_versions.organization_id
+    equipment = report_versions.submitted_equipment
+    original, draft = await _report_group(
+        dbsession,
+        organization_id,
+        "2025",
+        [ComplianceReportStatusEnum.Assessed, ComplianceReportStatusEnum.Draft],
+    )
+    await add_models([original, draft])
+    await add_models(
+        [
+            _selection(equipment, original, 0, 1000.0, 2025),
+            _selection(equipment, draft, 1, 1100.0, 2025),
+        ]
+    )
+    edited_equipment = await _new_equipment_version(add_models, equipment)
+    await add_models([_selection(edited_equipment, draft, 0, 2000.0, 2025)])
+
+    assert await _draft_page_rows(
+        dbsession, organization_id, draft.compliance_report_id
+    ) == ([(SUBMITTED_SERIAL, 2000.0)], 2000.0)
+
+
+@pytest.mark.anyio
+async def test_unchecking_the_row_saved_last_on_a_draft_excludes_it(
+    dbsession, add_models, report_versions
+):
+    """
+    Unchecking the row saved last deactivates it, so the Draft leaves the
+    equipment out rather than showing an older, still-active row saved before
+    the equipment changed.
+    """
+    organization_id = report_versions.organization_id
+    equipment = report_versions.submitted_equipment
+    original, draft = await _report_group(
+        dbsession,
+        organization_id,
+        "2025",
+        [ComplianceReportStatusEnum.Assessed, ComplianceReportStatusEnum.Draft],
+    )
+    await add_models([original, draft])
+    await add_models(
+        [
+            _selection(equipment, original, 0, 1000.0, 2025),
+            _selection(equipment, draft, 1, 1100.0, 2025),
+        ]
+    )
+    edited_equipment = await _new_equipment_version(add_models, equipment)
+    saved_last = _selection(edited_equipment, draft, 0, 2000.0, 2025)
+    await add_models([saved_last])
+
+    await FinalSupplyEquipmentRepository(db=dbsession).update_reporting_active_status(
+        [saved_last.charging_equipment_compliance_id],
+        False,
+        draft.compliance_report_id,
+    )
+
+    assert await _draft_page_rows(
+        dbsession, organization_id, draft.compliance_report_id
+    ) == ([], 0)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("source", ["base_pref", "vw_fse_base"])
+async def test_rows_have_the_view_columns_in_order(dbsession, report_versions, source):
+    """text().columns() matches the declared columns by position."""
+    result = await dbsession.execute(
+        text(fse_reporting_rows_sql(source)),
+        {"compliance_report_id": report_versions.reports[2].compliance_report_id},
+    )
+
+    assert list(result.keys()) == [
+        column.name for column in FSEReportingBasePrefView.__table__.columns
+    ]
+
+
+@pytest.mark.anyio
+async def test_created_rows_answer_with_their_ids(dbsession, report_versions):
+    repo = FinalSupplyEquipmentRepository(db=dbsession)
+    report = report_versions.reports[2]
+    equipment = report_versions.submitted_equipment
+
+    result = await repo.create_fse_reporting_batch(
+        [
+            {
+                "charging_equipment_id": equipment.charging_equipment_id,
+                "charging_equipment_version": equipment.version,
+                "compliance_report_id": report.compliance_report_id,
+                "compliance_report_group_uuid": report.compliance_report_group_uuid,
+                "organization_id": report.organization_id,
+                "version": 1,
+                "supply_from_date": datetime(2024, 1, 1),
+                "supply_to_date": datetime(2024, 12, 31),
+                "kwh_usage": 5.0,
+            }
+        ]
+    )
+
+    (created,) = result["data"]
+    record = await dbsession.get(ComplianceReportChargingEquipment, created["id"])
+    assert record.compliance_report_id == report.compliance_report_id
+    assert record.kwh_usage == 5.0

@@ -163,6 +163,8 @@ export const useGetCIApplication = (
       ).data
     },
     staleTime: 60 * 1000,
+    // Reopened applications must pick up supplier resubmissions immediately.
+    refetchOnMount: 'always',
     ...options
   })
 }
