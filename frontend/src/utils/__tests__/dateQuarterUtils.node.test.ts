@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vite-plus/test'
 import { getCurrentQuarter, getQuarterDateRange } from '../dateQuarterUtils'
 
-const setDate = (dateStr) => {
+const setDate = (dateStr: string): void => {
   vi.setSystemTime(new Date(dateStr))
 }
 
