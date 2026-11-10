@@ -4,7 +4,20 @@
  * @param {Object} fileTypes - Object containing MIME_TYPES array and DESCRIPTION string
  * @returns {Object} - { isValid: boolean, errorMessage: string|null }
  */
-export const validateFileMimeType = (file, fileTypes) => {
+interface FileTypes {
+  MIME_TYPES: readonly string[]
+  DESCRIPTION: string
+}
+
+interface FileValidationResult {
+  isValid: boolean
+  errorMessage: string | null
+}
+
+export const validateFileMimeType = (
+  file: File | null | undefined,
+  fileTypes: FileTypes
+): FileValidationResult => {
   if (!file) {
     return { isValid: false, errorMessage: 'No file selected' }
   }
@@ -28,10 +41,14 @@ export const validateFileMimeType = (file, fileTypes) => {
  * @param {Object} fileTypes - Object containing MIME_TYPES array and DESCRIPTION string
  * @returns {Object} - { isValid: boolean, errorMessage: string|null }
  */
-export const validateFile = (file, maxSizeBytes, fileTypes) => {
+export const validateFile = (
+  file: File | null | undefined,
+  maxSizeBytes: number,
+  fileTypes: FileTypes
+): FileValidationResult => {
   // Check MIME type first
   const mimeValidation = validateFileMimeType(file, fileTypes)
-  if (!mimeValidation.isValid) {
+  if (!mimeValidation.isValid || !file) {
     return mimeValidation
   }
 

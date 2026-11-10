@@ -7,7 +7,7 @@ import { screen } from '@testing-library/react'
 // Now import the other modules
 import { OrganizationProfile } from '../OrganizationProfile.jsx'
 import * as formatters from '@/utils/formatters'
-import * as addressUtils from '@/utils/constructAddress.js'
+import * as addressUtils from '@/utils/constructAddress'
 
 // Import the mocked functions to control their behavior
 import { isFeatureEnabled } from '@/constants/config'

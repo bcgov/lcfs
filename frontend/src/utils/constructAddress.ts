@@ -1,4 +1,13 @@
-export const constructAddress = (address) => {
+export interface Address {
+  streetAddress?: string | null
+  addressOther?: string | null
+  city?: string | null
+  provinceState?: string | null
+  country?: string | null
+  postalcodeZipcode?: string | null
+}
+
+export const constructAddress = (address?: Address | null): string => {
   const {
     streetAddress = '',
     addressOther = '',

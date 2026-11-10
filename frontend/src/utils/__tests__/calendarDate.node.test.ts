@@ -3,9 +3,9 @@ import { formatCalendarDate } from '../calendarDate'
 
 // CI runs in UTC, where local and UTC midnight coincide and toISOString()
 // looks correct. Pin zones on both sides of UTC so a regression shows.
-const withTimeZone = (timeZone, run) =>
+const withTimeZone = (timeZone: string, run: () => void): void => {
   describe(timeZone, () => {
-    let original
+    let original: string | undefined
     beforeAll(() => {
       original = process.env.TZ
       process.env.TZ = timeZone
@@ -15,6 +15,7 @@ const withTimeZone = (timeZone, run) =>
     })
     run()
   })
+}
 
 describe('formatCalendarDate', () => {
   for (const timeZone of ['Europe/Paris', 'America/Vancouver']) {

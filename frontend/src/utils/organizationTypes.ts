@@ -1,4 +1,4 @@
-export const ORG_TYPE_LABELS = {
+export const ORG_TYPE_LABELS: Record<string, string> = {
   fuel_supplier: 'Supplier',
   aggregator: 'Aggregator',
   fuel_producer: 'Producer',
@@ -8,7 +8,19 @@ export const ORG_TYPE_LABELS = {
   lcjfip: 'LCJFIP'
 }
 
-const normalizeOrgTypeKey = (orgType) => {
+interface OrganizationTypeDetails {
+  orgType?: string | null
+  org_type?: string | null
+  description?: string | null
+}
+
+export type OrganizationTypeInput =
+  | string
+  | OrganizationTypeDetails
+  | null
+  | undefined
+
+const normalizeOrgTypeKey = (orgType: OrganizationTypeInput): string => {
   if (!orgType) return ''
   if (typeof orgType === 'string') {
     return orgType.toLowerCase()
@@ -17,10 +29,14 @@ const normalizeOrgTypeKey = (orgType) => {
 }
 
 // Joined label for an organization's full type list (#4565 multi-type orgs)
-export const getOrgTypesDisplayLabel = (orgTypes) =>
+export const getOrgTypesDisplayLabel = (
+  orgTypes: readonly OrganizationTypeInput[] | null | undefined
+): string =>
   (orgTypes || []).map(getOrgTypeDisplayLabel).filter(Boolean).join(', ')
 
-export const getOrgTypeDisplayLabel = (orgType) => {
+export const getOrgTypeDisplayLabel = (
+  orgType: OrganizationTypeInput
+): string => {
   const key = normalizeOrgTypeKey(orgType)
 
   if (!key) {

@@ -29,7 +29,7 @@ vi.mock('@/utils/schedules.js', () => ({
 }))
 
 // Mock array utils
-vi.mock('@/utils/array.js', () => ({
+vi.mock('@/utils/array', () => ({
   isArrayEmpty: vi.fn((arr) => !arr || arr.length === 0)
 }))
 

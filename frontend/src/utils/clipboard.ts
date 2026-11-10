@@ -7,7 +7,7 @@
  * @param {string} text - Text to copy
  * @returns {boolean} - Success status
  */
-const createClipboardFallback = (text) => {
+const createClipboardFallback = (text: string): boolean => {
   const textarea = document.createElement('textarea')
   textarea.value = text
   textarea.style.cssText = 'position:fixed;top:-999px;left:-999px;opacity:0'
@@ -31,7 +31,7 @@ const createClipboardFallback = (text) => {
  * @param {string} text - Text to copy to clipboard
  * @returns {Promise<boolean>} - Promise resolving to success status
  */
-export const copyToClipboard = async (text) => {
+export const copyToClipboard = async (text?: unknown): Promise<boolean> => {
   if (!text || typeof text !== 'string') {
     console.error('Invalid text provided to copyToClipboard')
     return false
@@ -55,7 +55,7 @@ export const copyToClipboard = async (text) => {
  * Check if clipboard API is available
  * @returns {boolean} - Whether clipboard API is supported
  */
-export const isClipboardSupported = () => {
+export const isClipboardSupported = (): boolean => {
   return !!(navigator.clipboard && window.isSecureContext)
 }
 

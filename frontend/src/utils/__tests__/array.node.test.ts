@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test'
-import { isArrayEmpty } from '@/utils/array.js'
+import { isArrayEmpty } from '@/utils/array'
 
 describe('isArrayEmpty', () => {
   it('should return true for empty arrays', () => {
