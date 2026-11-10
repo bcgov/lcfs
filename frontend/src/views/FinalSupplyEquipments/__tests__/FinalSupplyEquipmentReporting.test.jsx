@@ -11,7 +11,6 @@ import {
 } from '@/hooks/useFinalSupplyEquipment'
 import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 import { handleScheduleSave } from '@/utils/schedules'
-import { useFseReportingSavedRowsStore } from '@/stores/useFseReportingSavedRowsStore'
 
 import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import { FinalSupplyEquipmentReporting } from '../FinalSupplyEquipmentReporting'
@@ -39,6 +38,7 @@ vi.mock('@/hooks/useChargingSite', () => ({
 }))
 
 vi.mock('@/hooks/useFinalSupplyEquipment', () => ({
+  invalidateFseReportingLists: vi.fn(),
   useGetFSEReportingList: vi.fn(),
   useSaveFSEReporting: vi.fn(),
   useDeleteFSEReportingBatch: vi.fn(),
@@ -128,7 +128,6 @@ describe('FinalSupplyEquipmentReporting', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    useFseReportingSavedRowsStore.setState({ savedRows: {} })
 
     // Mock useSiteNames
     vi.mocked(useSiteNames).mockReturnValue({
@@ -623,9 +622,7 @@ describe('FinalSupplyEquipmentReporting', () => {
       expect(useImportFSEReportingUpdate).toHaveBeenCalled()
     })
   })
-  // The list is read from a materialized view refreshed in the background, so
-  // the fetch that follows a save can still return the row as it was (#5132).
-  describe('Saved values while the list catches up', () => {
+  describe('Cell saves', () => {
     const listRow = (overrides = {}) => ({
       chargingEquipmentId: 1,
       chargingEquipmentVersion: 2,
@@ -639,41 +636,33 @@ describe('FinalSupplyEquipmentReporting', () => {
       complianceNotes: null,
       ...overrides
     })
-    const otherRow = listRow({
-      chargingEquipmentId: 2,
-      chargingEquipmentComplianceId: 98
-    })
-    const listResponse = (rows, dataUpdatedAt) => ({
+    const listResponse = (rows) => ({
       data: {
         finalSupplyEquipments: rows,
         pagination: { total: rows.length, page: 1, size: 10 }
       },
       isLoading: false,
-      isError: false,
-      refetch: vi.fn(),
-      dataUpdatedAt
+      isError: false
     })
     const latestGridRows = () =>
       mockBCGrid.mock.calls.at(-1)[0].queryData.data.finalSupplyEquipments
-    const savedRowsForReport = () =>
-      useFseReportingSavedRowsStore.getState().savedRows['123']
 
     // As with AG Grid, the edited value is already on the row data when
     // onCellValueChanged fires.
     const editKwh = async (
       kwhUsage,
-      saveResult = { validationStatus: 'success', modified: false, id: 99 }
+      saveResult,
+      row = listRow({ kwhUsage })
     ) => {
       handleScheduleSave.mockResolvedValueOnce(saveResult)
       const { onCellValueChanged } = mockBCGrid.mock.calls.at(-1)[0]
-      const data = listRow({ kwhUsage })
       const updateData = vi.fn()
       await act(async () => {
         await onCellValueChanged({
           oldValue: 100,
           newValue: kwhUsage,
-          data,
-          node: { data, updateData },
+          data: row,
+          node: { data: row, updateData },
           api: { autoSizeAllColumns: vi.fn() }
         })
       })
@@ -682,53 +671,12 @@ describe('FinalSupplyEquipmentReporting', () => {
 
     beforeEach(() => {
       vi.mocked(useGetFSEReportingList).mockReturnValue(
-        listResponse([listRow(), otherRow], 1)
+        listResponse([listRow()])
       )
-    })
-
-    it('keeps the saved kWh when the refetch returns the row as it was', async () => {
-      const { rerender } = render(<FinalSupplyEquipmentReporting />, {
-        fixtureOptions
-      })
-
-      await editKwh(250)
-      vi.mocked(useGetFSEReportingList).mockReturnValue(
-        listResponse([listRow(), otherRow], Date.now() + 1000)
-      )
-      rerender(<FinalSupplyEquipmentReporting />)
-
-      const rows = latestGridRows()
-      expect(rows[0].kwhUsage).toBe(250)
-      expect(rows[1]).toBe(otherRow)
-      expect(savedRowsForReport()).toBeDefined()
-    })
-
-    it('shows the list as returned once it has the saved value', async () => {
-      const { rerender } = render(<FinalSupplyEquipmentReporting />, {
-        fixtureOptions
-      })
-
-      await editKwh(250)
-      vi.mocked(useGetFSEReportingList).mockReturnValue(
-        listResponse([listRow({ kwhUsage: 250 }), otherRow], Date.now() + 1000)
-      )
-      rerender(<FinalSupplyEquipmentReporting />)
-
-      await waitFor(() => expect(savedRowsForReport()).toBeUndefined())
-
-      // A later change made elsewhere is not hidden.
-      vi.mocked(useGetFSEReportingList).mockReturnValue(
-        listResponse([listRow({ kwhUsage: 300 }), otherRow], Date.now() + 2000)
-      )
-      rerender(<FinalSupplyEquipmentReporting />)
-
-      expect(latestGridRows()[0].kwhUsage).toBe(300)
     })
 
     it('sends later saves to the record the update answered with', async () => {
-      const { rerender } = render(<FinalSupplyEquipmentReporting />, {
-        fixtureOptions
-      })
+      render(<FinalSupplyEquipmentReporting />, { fixtureOptions })
 
       const updateData = await editKwh(250, {
         validationStatus: 'success',
@@ -743,84 +691,58 @@ describe('FinalSupplyEquipmentReporting', () => {
           validationStatus: 'success'
         })
       )
-
-      vi.mocked(useGetFSEReportingList).mockReturnValue(
-        listResponse([listRow(), otherRow], Date.now() + 1000)
-      )
-      rerender(<FinalSupplyEquipmentReporting />)
-
-      expect(latestGridRows()[0]).toMatchObject({
-        kwhUsage: 250,
-        chargingEquipmentComplianceId: 555
-      })
     })
 
-    it('does not hold values from a save that failed', async () => {
-      const { rerender } = render(<FinalSupplyEquipmentReporting />, {
-        fixtureOptions
+    it('sends later saves to the record a create answered with', async () => {
+      render(<FinalSupplyEquipmentReporting />, { fixtureOptions })
+
+      const updateData = await editKwh(
+        250,
+        {
+          validationStatus: 'success',
+          modified: false,
+          message: 'FSE compliance reporting data created successfully',
+          data: [{ id: 777 }]
+        },
+        listRow({ kwhUsage: 250, chargingEquipmentComplianceId: undefined })
+      )
+
+      expect(updateData).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          kwhUsage: 250,
+          chargingEquipmentComplianceId: 777
+        })
+      )
+    })
+
+    it('keeps the record id when the save failed', async () => {
+      render(<FinalSupplyEquipmentReporting />, { fixtureOptions })
+
+      const updateData = await editKwh(250, {
+        validationStatus: 'error',
+        id: 555
       })
 
-      const updateData = await editKwh(250, { validationStatus: 'error' })
-
-      expect(savedRowsForReport()).toBeUndefined()
       expect(updateData).toHaveBeenLastCalledWith(
         expect.objectContaining({
           chargingEquipmentComplianceId: 99,
           validationStatus: 'error'
         })
       )
-
-      vi.mocked(useGetFSEReportingList).mockReturnValue(
-        listResponse([listRow(), otherRow], Date.now() + 1000)
-      )
-      rerender(<FinalSupplyEquipmentReporting />)
-
-      expect(latestGridRows()[0].kwhUsage).toBe(100)
     })
 
-    it('keeps the saved kWh when the page is opened again', async () => {
-      const { unmount } = render(<FinalSupplyEquipmentReporting />, {
+    it('shows the rows the list returns after a save', async () => {
+      const { rerender } = render(<FinalSupplyEquipmentReporting />, {
         fixtureOptions
       })
 
-      await editKwh(250)
-      unmount()
-
+      await editKwh(250, { validationStatus: 'success', id: 99 })
       vi.mocked(useGetFSEReportingList).mockReturnValue(
-        listResponse([listRow(), otherRow], Date.now() + 1000)
+        listResponse([listRow({ kwhUsage: 300 })])
       )
-      render(<FinalSupplyEquipmentReporting />, { fixtureOptions })
+      rerender(<FinalSupplyEquipmentReporting />)
 
-      expect(latestGridRows()[0].kwhUsage).toBe(250)
-    })
-
-    it('stops holding saved dates for rows given default dates', async () => {
-      render(<FinalSupplyEquipmentReporting />, { fixtureOptions })
-
-      await editKwh(250)
-      mockBCGrid.mock.calls.at(-1)[0].gridRef.current = {
-        api: {
-          getSelectedNodes: () => [{ data: listRow() }, { data: otherRow }],
-          forEachNode: () => {},
-          setNodesSelected: () => {}
-        }
-      }
-
-      const setDefaultButton = screen.getByRole('button', {
-        name: /set default/i
-      })
-      await waitFor(() => expect(setDefaultButton).toBeEnabled())
-      await act(async () => {
-        fireEvent.click(setDefaultButton)
-      })
-
-      await waitFor(() =>
-        expect(savedRowsForReport()['1-2'].values).toEqual({
-          kwhUsage: 250,
-          complianceNotes: null,
-          chargingEquipmentComplianceId: 99
-        })
-      )
+      expect(latestGridRows()[0].kwhUsage).toBe(300)
     })
   })
 })

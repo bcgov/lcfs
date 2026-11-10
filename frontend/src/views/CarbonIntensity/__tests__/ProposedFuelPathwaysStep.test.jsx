@@ -11,8 +11,10 @@ vi.mock('react-i18next', () => ({
 // BCGridEditor pulls in AG Grid which is heavy and not relevant to this
 // component's contract. Stub it out so we can drive its callbacks
 // directly from the test.
+const gridProps = vi.fn()
 vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
   BCGridEditor: (props) => {
+    gridProps(props)
     if (props.gridRef) {
       props.gridRef.current = {
         api: {
@@ -76,6 +78,60 @@ describe('ProposedFuelPathwaysStep', () => {
     vi.clearAllMocks()
   })
   afterEach(cleanup)
+
+  test('keeps unsaved grid rows and description on document-only refetches', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    const application = {
+      ...baseCi,
+      pathways: [{ pathwayId: 1, feedstock: 'Original feedstock' }],
+      pathwayDescription: 'Saved description'
+    }
+    const { rerender } = render(
+      <ProposedFuelPathwaysStep
+        ciApplication={application}
+        optionsData={optionsData}
+      />,
+      [query, theme, localization, router]
+    )
+    const rows = gridProps.mock.lastCall[0].rowData
+    rows[0].feedstock = 'Unsaved feedstock'
+    fireEvent.change(screen.getByTestId('pathwayDescription'), {
+      target: { value: 'Unsaved description' }
+    })
+
+    rerender(
+      <ProposedFuelPathwaysStep
+        ciApplication={{
+          ...application,
+          pathways: application.pathways.map((row) => ({ ...row })),
+          documents: [{ documentId: 7 }]
+        }}
+        optionsData={optionsData}
+      />
+    )
+
+    expect(gridProps.mock.lastCall[0].rowData).toBe(rows)
+    expect(gridProps.mock.lastCall[0].rowData[0].feedstock).toBe(
+      'Unsaved feedstock'
+    )
+    expect(screen.getByTestId('pathwayDescription')).toHaveValue(
+      'Unsaved description'
+    )
+
+    rerender(
+      <ProposedFuelPathwaysStep
+        ciApplication={{ ...baseCi, ciApplicationId: 100 }}
+        optionsData={optionsData}
+      />
+    )
+    expect(screen.getByTestId('pathwayDescription')).toHaveValue('')
+    expect(gridProps.mock.lastCall[0].rowData[0].pathwayId).toBeNull()
+  })
 
   test('renders the grid, description, and action buttons', ({
     render,

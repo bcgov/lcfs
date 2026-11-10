@@ -988,15 +988,26 @@ def _fuel_type_obj(ident=1, name="Biodiesel"):
     )
 
 
-def _fuel_code_obj(ident=42, suffix="100.4", prefix="C-BCLCF", organization_id=1):
+def _fuel_code_obj(
+    ident=42,
+    suffix="100.4",
+    prefix="C-BCLCF",
+    organization_id=1,
+    prefix_id=None,
+):
     return SimpleNamespace(
         fuel_code_id=ident,
+        prefix_id=prefix_id
+        if prefix_id is not None
+        else {"BCLCF": 1, "C-BCLCF": 3}.get(prefix, 1),
         fuel_suffix=suffix,
         carbon_intensity=23.23,
         fuel_type_id=1,
         fuel_type=_fuel_type_obj(),
         feedstock="Corn",
         feedstock_location="Ontario, CA",
+        effective_date=date(2025, 1, 1),
+        expiration_date=None,
         fuel_code_prefix=FuelCodePrefix(prefix=prefix),
         organization_id=organization_id,
     )
@@ -1331,6 +1342,9 @@ async def test_update_step2_allows_requested_supplemental_edit_and_adds_changelo
     ci.pathway_supplemental_edit_enabled = True
     ci.pathway_changes_requested_at = datetime(2026, 6, 10, tzinfo=timezone.utc)
     ci.pathway_changes_requested_by = "idir_user"
+    ci.document_upload_enabled = True
+    ci.document_changes_requested_at = datetime(2026, 6, 11, tzinfo=timezone.utc)
+    ci.document_changes_requested_by = "idir_user"
     ci.pathways = []
     ci.verification_1_user_id = 22
     ci.verification_1_date = datetime(2026, 5, 19, tzinfo=timezone.utc)
@@ -1352,6 +1366,11 @@ async def test_update_step2_allows_requested_supplemental_edit_and_adds_changelo
     assert ci.pathway_supplemental_edit_enabled is False
     assert ci.pathway_changes_requested_at is None
     assert ci.pathway_changes_requested_by is None
+    assert ci.document_upload_enabled is True
+    assert ci.document_changes_requested_at == datetime(
+        2026, 6, 11, tzinfo=timezone.utc
+    )
+    assert ci.document_changes_requested_by == "idir_user"
     repo.add_history.assert_awaited_once()
     snapshot = repo.add_history.await_args.kwargs["snapshot"]
     assert snapshot["event"] == "supplemental_pathways_updated"
@@ -1669,6 +1688,135 @@ async def test_generate_fuel_codes_allows_low_after_verification_1(
 
 
 @pytest.mark.anyio
+async def test_generate_fuel_codes_generates_unique_four_digit_suffixes(
+    service, repo, mock_user
+):
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _submitted_ci_for_generation("Low")
+    ci.pathways = [
+        _generation_pathway(pathway_id=1),
+        _generation_pathway(pathway_id=2),
+        _generation_pathway(pathway_id=3),
+    ]
+    _stub_generation_dependencies(service, repo, ci)
+    service.fuel_repo.get_next_available_fuel_code_by_prefix.return_value = "1000.0"
+
+    await service.generate_fuel_codes(ci, mock_user)
+
+    generated_suffixes = [
+        association.fuel_code.fuel_suffix
+        for association in ci.generated_fuel_code_associations
+    ]
+    assert generated_suffixes == ["1000.0", "1001.0", "1002.0"]
+
+
+@pytest.mark.anyio
+async def test_generate_fuel_codes_reserves_iterations_per_prefix(
+    service, repo, mock_user
+):
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _submitted_ci_for_generation("Low")
+    bclcf_source = _fuel_code_obj(
+        ident=10, suffix="1000.0", prefix="BCLCF"
+    )
+    c_bclcf_source = _fuel_code_obj(
+        ident=11, suffix="1000.0", prefix="C-BCLCF"
+    )
+    ci.pathways = [
+        _generation_pathway(pathway_id=1, fuel_code_id=10, fuel_code=bclcf_source),
+        _generation_pathway(pathway_id=2, fuel_code_id=11, fuel_code=c_bclcf_source),
+    ]
+    _stub_generation_dependencies(service, repo, ci)
+    service.fuel_repo.get_fuel_code_prefixes.return_value = [
+        SimpleNamespace(fuel_code_prefix_id=1, prefix="BCLCF"),
+        SimpleNamespace(fuel_code_prefix_id=3, prefix="C-BCLCF"),
+    ]
+    next_sub_version = (
+        service.fuel_repo.get_next_available_sub_version_fuel_code_by_prefix
+    )
+    next_sub_version.return_value = "1000.1"
+
+    await service.generate_fuel_codes(ci, mock_user)
+
+    generated_suffixes = [
+        association.fuel_code.fuel_suffix
+        for association in ci.generated_fuel_code_associations
+    ]
+    generated_codes = [
+        (
+            association.fuel_code.fuel_code_prefix.prefix,
+            association.fuel_code.fuel_suffix,
+        )
+        for association in ci.generated_fuel_code_associations
+    ]
+    assert generated_suffixes == ["1000.1", "1000.1"]
+    assert generated_codes == [("BCLCF", "1000.1"), ("C-BCLCF", "1000.1")]
+
+
+@pytest.mark.anyio
+async def test_generate_fuel_codes_passes_prefix_reservations_to_iteration_lookup(
+    service, repo, mock_user
+):
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _submitted_ci_for_generation("Low")
+    source = _fuel_code_obj(ident=10, suffix="1000.0", prefix="BCLCF")
+    ci.pathways = [
+        _generation_pathway(pathway_id=1, fuel_code_id=10, fuel_code=source),
+        _generation_pathway(pathway_id=2, fuel_code_id=11, fuel_code=source),
+    ]
+    _stub_generation_dependencies(service, repo, ci)
+    observed_reservations = []
+
+    async def next_sub_version(fuel_suffix, prefix_id, reserved_suffixes=None):
+        observed_reservations.append(set(reserved_suffixes or set()))
+        return "1000.1"
+
+    service.fuel_repo.get_next_available_sub_version_fuel_code_by_prefix.side_effect = (
+        next_sub_version
+    )
+
+    await service.generate_fuel_codes(ci, mock_user)
+
+    assert observed_reservations == [set(), {"1000.1"}]
+
+
+@pytest.mark.anyio
+async def test_generate_fuel_codes_reserves_rollover_numbers_across_prefixes(
+    service, repo, mock_user
+):
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _submitted_ci_for_generation("Low")
+    sources = [
+        _fuel_code_obj(ident=10, suffix="999.9", prefix="BCLCF"),
+        _fuel_code_obj(ident=11, suffix="999.9", prefix="C-BCLCF"),
+    ]
+    ci.pathways = [
+        _generation_pathway(
+            pathway_id=index,
+            fuel_code_id=source.fuel_code_id,
+            fuel_code=source,
+        )
+        for index, source in enumerate(sources, start=1)
+    ]
+    _stub_generation_dependencies(service, repo, ci)
+    service.fuel_repo.get_fuel_code_prefixes.return_value = [
+        SimpleNamespace(fuel_code_prefix_id=1, prefix="BCLCF"),
+        SimpleNamespace(fuel_code_prefix_id=3, prefix="C-BCLCF"),
+    ]
+    next_sub_version = (
+        service.fuel_repo.get_next_available_sub_version_fuel_code_by_prefix
+    )
+    next_sub_version.return_value = "1000.0"
+
+    await service.generate_fuel_codes(ci, mock_user)
+
+    assert [
+        association.fuel_code.fuel_suffix
+        for association in ci.generated_fuel_code_associations
+    ] == ["1000.0", "1001.0"]
+
+
+@pytest.mark.anyio
 async def test_generate_fuel_codes_requires_verification_2_for_high_risk(
     service, repo, mock_user
 ):
@@ -1795,10 +1943,22 @@ def _stub_generation_dependencies(service, repo, ci):
     ]
     service.fuel_repo.get_next_available_fuel_code_by_prefix.return_value = "001.0"
 
+    next_fuel_code_id = 100
+
     async def create_fuel_code(fuel_code):
-        fuel_code.fuel_code_id = 100
+        nonlocal next_fuel_code_id
+        fuel_code.fuel_code_id = next_fuel_code_id
+        next_fuel_code_id += 1
+        prefix_name = next(
+            (
+                prefix.prefix
+                for prefix in service.fuel_repo.get_fuel_code_prefixes.return_value
+                if prefix.fuel_code_prefix_id == fuel_code.prefix_id
+            ),
+            "BCLCF",
+        )
         fuel_code.fuel_code_prefix = FuelCodePrefix(
-            fuel_code_prefix_id=1, prefix="BCLCF"
+            fuel_code_prefix_id=fuel_code.prefix_id, prefix=prefix_name
         )
         fuel_code.fuel_code_status = FuelCodeStatus(
             fuel_code_status_id=1,

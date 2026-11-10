@@ -13,7 +13,18 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 import structlog
 from fastapi import Depends
-from sqlalchemy import Integer, String, and_, asc, case, cast, desc, func, select
+from sqlalchemy import (
+    BigInteger,
+    Integer,
+    String,
+    and_,
+    asc,
+    case,
+    cast,
+    desc,
+    func,
+    select,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -242,7 +253,7 @@ class CIApplicationRepository:
         (government callers).
         """
         base_suffix = func.split_part(FuelCode.fuel_suffix, ".", 1)
-        main_version = cast(base_suffix, Integer)
+        main_version = cast(base_suffix, BigInteger)
         sub_version = cast(func.split_part(FuelCode.fuel_suffix, ".", 2), Integer)
 
         query = (
@@ -256,11 +267,10 @@ class CIApplicationRepository:
             .where(FuelCodeStatus.status == FuelCodeStatusEnum.Approved)
             # One row per (prefix, base suffix) group, keeping the highest
             # iteration — DISTINCT ON needs the leading ORDER BY to match.
-            .distinct(FuelCode.prefix_id, base_suffix)
+            .distinct(FuelCode.prefix_id, main_version)
             .order_by(
                 FuelCode.prefix_id,
-                base_suffix,
-                desc(main_version),
+                main_version,
                 desc(sub_version),
             )
         )

@@ -3,7 +3,9 @@ import pytest
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.db.models.user.role_domains import (
     GOVERNMENT_ROLE_SET,
+    ORG_CONTROLLABLE_ROLES,
     ORG_ROLE_SET,
+    allowed_roles_for_org,
     validate_seed_user_roles,
 )
 
@@ -26,6 +28,8 @@ ROLE_ID_TO_ENUM = {
     15: RoleEnum.IA_ANALYST,
     16: RoleEnum.IA_MANAGER,
     17: RoleEnum.IA_SIGNER,
+    18: RoleEnum.LCJFIP_APPLICANT,
+    19: RoleEnum.LCJFIP_ADMINISTRATOR,
 }
 
 
@@ -106,6 +110,48 @@ def test_ia_roles_belong_to_exactly_one_domain():
 
     assert {RoleEnum.IA_ANALYST, RoleEnum.IA_MANAGER} <= GOVERNMENT_ROLE_SET
     assert {RoleEnum.IA_PROPONENT, RoleEnum.IA_SIGNER} <= ORG_ROLE_SET
+
+
+def test_lcjfip_roles_are_bceid_roles():
+    assert {
+        RoleEnum.LCJFIP_APPLICANT,
+        RoleEnum.LCJFIP_ADMINISTRATOR,
+    } <= ORG_ROLE_SET
+    assert not {
+        RoleEnum.LCJFIP_APPLICANT,
+        RoleEnum.LCJFIP_ADMINISTRATOR,
+    } & GOVERNMENT_ROLE_SET
+
+
+def test_lcjfip_applicant_is_org_controllable_but_administrator_is_not():
+    assert RoleEnum.LCJFIP_APPLICANT in ORG_CONTROLLABLE_ROLES
+    assert RoleEnum.LCJFIP_ADMINISTRATOR not in ORG_CONTROLLABLE_ROLES
+
+
+def test_allowed_roles_for_org_without_lcjfip_applicant():
+    allowed = allowed_roles_for_org(set())
+    assert RoleEnum.LCJFIP_APPLICANT not in allowed
+    assert RoleEnum.LCJFIP_ADMINISTRATOR not in allowed
+    assert RoleEnum.IA_SIGNER not in allowed
+    assert {
+        RoleEnum.SUPPLIER,
+        RoleEnum.MANAGE_USERS,
+        RoleEnum.SIGNING_AUTHORITY,
+        RoleEnum.READ_ONLY,
+    } <= allowed
+
+
+def test_allowed_roles_for_org_lcjfip_administrator_rides_on_applicant():
+    allowed = allowed_roles_for_org({RoleEnum.LCJFIP_APPLICANT})
+    assert RoleEnum.LCJFIP_APPLICANT in allowed
+    assert RoleEnum.LCJFIP_ADMINISTRATOR in allowed
+    assert RoleEnum.IA_SIGNER not in allowed
+
+
+def test_allowed_roles_for_org_ia_signer_rides_on_proponent():
+    allowed = allowed_roles_for_org({RoleEnum.IA_PROPONENT})
+    assert RoleEnum.IA_SIGNER in allowed
+    assert RoleEnum.LCJFIP_ADMINISTRATOR not in allowed
 
 
 def test_validate_seed_user_roles_accepts_an_ia_signer():
