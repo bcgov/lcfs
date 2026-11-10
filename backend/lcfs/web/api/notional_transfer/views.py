@@ -122,9 +122,10 @@ async def get_notional_transfers_paginated(
         sort_orders=request_data.sort_orders,
         filters=request_data.filters,
     )
-    await report_validate.validate_organization_access(
+    compliance_report = await report_validate.validate_organization_access(
         request_data.compliance_report_id
     )
+    await report_validate.validate_compliance_report_access(compliance_report)
     compliance_report_id = request_data.compliance_report_id
     return await service.get_notional_transfers_paginated(
         pagination,
@@ -145,9 +146,10 @@ async def get_notional_transfer(
     notional_transfer = await service.get_notional_transfer(notional_transfer_id)
     if not notional_transfer:
         raise HTTPException(status_code=404, detail="Notional transfer not found")
-    await report_validate.validate_organization_access(
+    compliance_report = await report_validate.validate_organization_access(
         notional_transfer.compliance_report_id
     )
+    await report_validate.validate_compliance_report_access(compliance_report)
     return notional_transfer
 
 

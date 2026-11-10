@@ -669,9 +669,10 @@ async def test_create_supplemental_report_includes_summary_lines(
 async def test_delete_supplemental_report_success(compliance_report_service, mock_repo):
     """Test successful deletion of a supplemental compliance report"""
 
-    mock_user = MagicMock(organization_id=998)
+    mock_user = MagicMock(organization_id=998, role_names=[RoleEnum.SUPPLIER])
     mock_report = MagicMock(
         organization_id=998,
+        supplemental_initiator=SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL,
         current_status=MagicMock(status=ComplianceReportStatusEnum.Draft),
     )
 
@@ -759,7 +760,7 @@ async def test_delete_compliance_report_wrong_status(
     with pytest.raises(Exception) as exc_info:
         await compliance_report_service.delete_compliance_report(996, mock_user)
 
-    assert exc_info.typename == "ServiceException"
+    assert exc_info.value.status_code == 403
 
     mock_repo.get_compliance_report_by_id.assert_called_once_with(996)
     mock_repo.delete_compliance_report.assert_not_called()

@@ -7,6 +7,7 @@ from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.organizations.repo import OrganizationsRepository
 from fastapi import status
 from lcfs.web.api.role.schema import user_has_roles
+from lcfs.web.api.compliance_report.workflow import can_access_report
 
 
 class ComplianceReportValidation:
@@ -86,26 +87,8 @@ class ComplianceReportValidation:
     async def validate_compliance_report_access(
         self, compliance_report: ComplianceReport
     ):
-        """Validates government user access to draft reports"""
-        is_supplier = user_has_roles(self.request.user, [RoleEnum.SUPPLIER])
-        if (
-            not is_supplier
-            and compliance_report.current_status.status
-            == ComplianceReportStatusEnum.Draft
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="User does not have access to this compliance report.",
-            )
-
-        is_analyst_or_director = user_has_roles(
-            self.request.user, [RoleEnum.ANALYST]
-        ) or user_has_roles(self.request.user, [RoleEnum.DIRECTOR])
-        if (
-            not is_analyst_or_director
-            and compliance_report.current_status.status
-            == ComplianceReportStatusEnum.Analyst_adjustment
-        ):
+        """Refuse report versions hidden from the caller's roles."""
+        if not can_access_report(self.request.user, compliance_report):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="User does not have access to this compliance report.",

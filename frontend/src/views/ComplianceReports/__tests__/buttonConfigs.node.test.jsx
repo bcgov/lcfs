@@ -28,6 +28,29 @@ vi.mock('luxon', () => ({
 describe('ComplianceReports buttonConfigs', () => {
   let mockContext
 
+  it('submits supplier fields without government assessment defaults', () => {
+    mockContext.currentStatus = COMPLIANCE_REPORT_STATUSES.DRAFT
+    mockContext.hasRoles = vi.fn((role) => role === roles.signing_authority)
+    mockContext.hasAnyRole = vi.fn(() => false)
+    mockContext.updateComplianceReport = vi.fn()
+    const config = buttonClusterConfigFn(mockContext)
+    const submit = config[COMPLIANCE_REPORT_STATUSES.DRAFT].find(
+      (button) => button.id === 'submit-report-btn'
+    )
+    submit.handler({
+      supplementalNote: 'Supplier note',
+      assessmentStatement: '',
+      isNonAssessment: false,
+      isRenewableFuelExempted: false,
+      isLowCarbonFuelExempted: false
+    })
+    mockContext.setModalData.mock.calls[0][0].primaryButtonAction()
+    expect(mockContext.updateComplianceReport).toHaveBeenCalledWith({
+      supplementalNote: 'Supplier note',
+      status: COMPLIANCE_REPORT_STATUSES.SUBMITTED
+    })
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     mockContext = {

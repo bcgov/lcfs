@@ -768,7 +768,11 @@ async def test_get_organization_fuel_supply_analytics_renewable_liquid_volume(
         ).scalars()
     }
     status = (
-        await dbsession.execute(select(ComplianceReportStatus).limit(1))
+        await dbsession.execute(
+            select(ComplianceReportStatus).where(
+                ComplianceReportStatus.status == "Submitted"
+            )
+        )
     ).scalar_one()
     fuel_types = {
         fuel_type.fuel_type: fuel_type
@@ -940,7 +944,11 @@ async def test_get_organization_fuel_supply_uses_effective_versions(dbsession):
     # Reference rows come from the migrations' seed data.
     period = (await dbsession.execute(select(CompliancePeriod).limit(1))).scalar_one()
     status = (
-        await dbsession.execute(select(ComplianceReportStatus).limit(1))
+        await dbsession.execute(
+            select(ComplianceReportStatus).where(
+                ComplianceReportStatus.status == "Submitted"
+            )
+        )
     ).scalar_one()
     fuel_type = (await dbsession.execute(select(FuelType).limit(1))).scalar_one()
     fuel_category = (

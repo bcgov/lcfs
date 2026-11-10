@@ -111,6 +111,9 @@ class FakeForbiddenDocumentService(FakeDocumentService):
 
 
 class FakeComplianceReportValidation:
+    async def validate_compliance_report_access(self, report):
+        return
+
     async def validate_organization_access(self, parent_id: int):
         return
 

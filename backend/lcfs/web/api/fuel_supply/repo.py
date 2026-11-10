@@ -13,6 +13,10 @@ from lcfs.db.models.compliance import (
     FuelSupply,
     ComplianceReport,
 )
+from lcfs.db.models.compliance.ComplianceReportStatus import (
+    ComplianceReportStatus,
+    ComplianceReportStatusEnum,
+)
 from lcfs.db.models.compliance.ComplianceReport import (
     QuantityUnitsEnum as FuelSupplyUnitsEnum,
 )
@@ -818,8 +822,13 @@ class FuelSupplyRepository:
         organization's reports — and drop groups whose latest version is a
         DELETE, mirroring ``get_effective_fuel_supplies`` for a single chain.
         """
-        organization_report_ids = select(ComplianceReport.compliance_report_id).where(
-            ComplianceReport.organization_id == organization_id
+        organization_report_ids = (
+            select(ComplianceReport.compliance_report_id)
+            .join(ComplianceReportStatus)
+            .where(
+                ComplianceReport.organization_id == organization_id,
+                ComplianceReportStatus.status != ComplianceReportStatusEnum.Draft,
+            )
         )
         latest_version_subq = VersioningQueryHelper.latest_version_subquery(
             FuelSupply,
@@ -876,7 +885,7 @@ class FuelSupplyRepository:
                     ComplianceReport.compliance_period
                 ),
             )
-            .where(ComplianceReport.organization_id == organization_id)
+            .where(FuelSupply.compliance_report_id.in_(organization_report_ids))
             .where(
                 FuelSupply.action_type.in_(
                     [ActionTypeEnum.CREATE, ActionTypeEnum.UPDATE]

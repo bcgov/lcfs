@@ -233,7 +233,9 @@ async def test_export_allocation_agreements_view(
     with patch.object(
         ComplianceReportValidation,
         "validate_organization_access",
-        new=AsyncMock(return_value=True),
+        new=AsyncMock(return_value=MagicMock(
+            current_status=MagicMock(status="Submitted"), supplemental_initiator=None
+        )),
     ), patch.object(
         AllocationAgreementExporter,
         "export",
@@ -261,7 +263,9 @@ async def test_import_allocation_agreements_view(
     with patch.object(
         ComplianceReportValidation,
         "validate_organization_access",
-        new=AsyncMock(return_value=True),
+        new=AsyncMock(return_value=MagicMock(
+            current_status=MagicMock(status="Submitted"), supplemental_initiator=None
+        )),
     ), patch.object(
         ComplianceReportServices, "get_compliance_report_by_id", new=AsyncMock()
     ) as mock_get_report, patch.object(
@@ -311,7 +315,9 @@ async def test_import_allocation_agreements_overwrite_not_allowed(
     with patch.object(
         ComplianceReportValidation,
         "validate_organization_access",
-        new=AsyncMock(return_value=True),
+        new=AsyncMock(return_value=MagicMock(
+            current_status=MagicMock(status="Submitted"), supplemental_initiator=None
+        )),
     ), patch.object(
         ComplianceReportServices, "get_compliance_report_by_id", new=AsyncMock()
     ) as mock_get_report, patch.object(
@@ -358,7 +364,9 @@ async def test_get_allocation_agreement_template(
     with patch.object(
         ComplianceReportValidation,
         "validate_organization_access",
-        new=AsyncMock(return_value=True),
+        new=AsyncMock(return_value=MagicMock(
+            current_status=MagicMock(status="Submitted"), supplemental_initiator=None
+        )),
     ), patch.object(
         AllocationAgreementExporter,
         "export",

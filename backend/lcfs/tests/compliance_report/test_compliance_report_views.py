@@ -354,7 +354,10 @@ async def test_get_compliance_report_year_navigation_success(
             ),
         )
         mock_get_navigation.return_value = mock_navigation
-        mock_validate_organization_access.return_value = None
+        mock_validate_organization_access.return_value = MagicMock(
+            current_status=MagicMock(status=ComplianceReportStatusEnum.Submitted.value),
+            supplemental_initiator=None,
+        )
 
         url = fastapi_app.url_path_for(
             "get_compliance_report_year_navigation", report_id=10
@@ -382,7 +385,10 @@ async def test_get_compliance_report_year_navigation_not_found(
     ) as mock_validate_organization_access:
         set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
 
-        mock_validate_organization_access.return_value = None
+        mock_validate_organization_access.return_value = MagicMock(
+            current_status=MagicMock(status=ComplianceReportStatusEnum.Submitted.value),
+            supplemental_initiator=None,
+        )
         mock_get_navigation.side_effect = DataNotFoundException(
             "Compliance report not found."
         )
@@ -414,7 +420,10 @@ async def test_get_compliance_report_summary_success(
         mock_calculate_compliance_report_summary.return_value = (
             mock_compliance_report_summary
         )
-        mock_validate_organization_access.return_value = None
+        mock_validate_organization_access.return_value = MagicMock(
+            current_status=MagicMock(status=ComplianceReportStatusEnum.Submitted.value),
+            supplemental_initiator=None,
+        )
 
         url = fastapi_app.url_path_for("get_compliance_report_summary", report_id=1)
 
@@ -691,6 +700,9 @@ async def test_update_compliance_report_summary_with_penalty_override_director_r
         )
 
         mock_validate_organization_access.return_value = compliance_report_base_schema()
+        mock_validate_organization_access.return_value.current_status.status = (
+            ComplianceReportStatusEnum.Recommended_by_manager.value
+        )
         mock_update_compliance_report_summary.return_value = (
             mock_compliance_report_summary
         )
@@ -788,6 +800,9 @@ async def test_update_compliance_report_summary_penalty_override_disabled(
         )
 
         mock_validate_organization_access.return_value = compliance_report_base_schema()
+        mock_validate_organization_access.return_value.current_status.status = (
+            ComplianceReportStatusEnum.Recommended_by_manager.value
+        )
         mock_update_compliance_report_summary.return_value = (
             mock_compliance_report_summary
         )
@@ -834,6 +849,9 @@ async def test_update_compliance_report_summary_penalty_override_zero_values(
         )
 
         mock_validate_organization_access.return_value = compliance_report_base_schema()
+        mock_validate_organization_access.return_value.current_status.status = (
+            ComplianceReportStatusEnum.Recommended_by_manager.value
+        )
         mock_update_compliance_report_summary.return_value = (
             mock_compliance_report_summary
         )
@@ -904,7 +922,10 @@ async def test_get_compliance_report_summary_with_penalty_override_fields(
         mock_summary.penalty_override_user = 123
 
         mock_get_compliance_report_summary.return_value = mock_summary
-        mock_validate_organization_access.return_value = None
+        mock_validate_organization_access.return_value = MagicMock(
+            current_status=MagicMock(status=ComplianceReportStatusEnum.Submitted.value),
+            supplemental_initiator=None,
+        )
 
         url = fastapi_app.url_path_for("get_compliance_report_summary", report_id=1)
         response = await client.get(url)
@@ -942,10 +963,13 @@ async def test_update_compliance_report_success(
     ) as mock_validate_organization_access, patch(
         "lcfs.web.api.compliance_report.services.ComplianceReportServices.get_compliance_report_chain"
     ) as mock_get_compliance_report_chain:
-        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
+        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING])
 
         mock_compliance_report = compliance_report_base_schema()
-        mock_validate_organization_access.return_value = None
+        mock_validate_organization_access.return_value = MagicMock(
+            current_status=MagicMock(status=ComplianceReportStatusEnum.Draft.value),
+            supplemental_initiator=None,
+        )
         mock_update_compliance_report.return_value = mock_compliance_report
         mock_get_compliance_report_chain.return_value = ChainedComplianceReportSchema(
             report=mock_compliance_report, chain=[], is_newest=True
@@ -1063,10 +1087,13 @@ async def test_update_compliance_report_draft_success(
     ) as mock_validate_organization_access, patch(
         "lcfs.web.api.compliance_report.services.ComplianceReportServices.get_compliance_report_chain"
     ) as mock_get_compliance_report_chain:
-        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
+        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING])
 
         mock_compliance_report = compliance_report_base_schema()
-        mock_validate_organization_access.return_value = None
+        mock_validate_organization_access.return_value = MagicMock(
+            current_status=MagicMock(status=ComplianceReportStatusEnum.Draft.value),
+            supplemental_initiator=None,
+        )
         mock_update_compliance_report.return_value = mock_compliance_report
         mock_get_compliance_report_chain.return_value = ChainedComplianceReportSchema(
             report=mock_compliance_report, chain=[], is_newest=True
@@ -1109,7 +1136,10 @@ async def test_update_compliance_report_submitted_success(
         set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
         mock_compliance_report = compliance_report_base_schema()
-        mock_validate_organization_access.return_value = None
+        mock_validate_organization_access.return_value = MagicMock(
+            current_status=MagicMock(status=ComplianceReportStatusEnum.Submitted.value),
+            supplemental_initiator=None,
+        )
         mock_update_compliance_report.return_value = mock_compliance_report
         mock_get_compliance_report_chain.return_value = ChainedComplianceReportSchema(
             report=mock_compliance_report, chain=[], is_newest=True
@@ -1152,7 +1182,10 @@ async def test_update_compliance_report_recommended_by_analyst_success(
         set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
         mock_compliance_report = compliance_report_base_schema()
-        mock_validate_organization_access.return_value = None
+        mock_validate_organization_access.return_value = MagicMock(
+            current_status=MagicMock(status=ComplianceReportStatusEnum.Submitted.value),
+            supplemental_initiator=None,
+        )
         mock_update_compliance_report.return_value = mock_compliance_report
         mock_get_compliance_report_chain.return_value = ChainedComplianceReportSchema(
             report=mock_compliance_report, chain=[], is_newest=True
@@ -1198,7 +1231,10 @@ async def test_update_compliance_report_recommended_by_manager_success(
         set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
         mock_compliance_report = compliance_report_base_schema()
-        mock_validate_organization_access.return_value = None
+        mock_validate_organization_access.return_value = MagicMock(
+            current_status=MagicMock(status=ComplianceReportStatusEnum.Submitted.value),
+            supplemental_initiator=None,
+        )
         mock_update_compliance_report.return_value = mock_compliance_report
         mock_get_compliance_report_chain.return_value = ChainedComplianceReportSchema(
             report=mock_compliance_report, chain=[], is_newest=True
@@ -1244,7 +1280,10 @@ async def test_update_compliance_report_assessed_success(
         set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
         mock_compliance_report = compliance_report_base_schema()
-        mock_validate_organization_access.return_value = None
+        mock_validate_organization_access.return_value = MagicMock(
+            current_status=MagicMock(status=ComplianceReportStatusEnum.Submitted.value),
+            supplemental_initiator=None,
+        )
         mock_update_compliance_report.return_value = mock_compliance_report
         mock_get_compliance_report_chain.return_value = ChainedComplianceReportSchema(
             report=mock_compliance_report, chain=[], is_newest=True
@@ -1290,7 +1329,10 @@ async def test_update_compliance_report_non_assessment_success(
         # Mock the compliance report
         mock_compliance_report = compliance_report_base_schema()
         mock_compliance_report.is_non_assessment = True
-        mock_validate_organization_access.return_value = None
+        mock_validate_organization_access.return_value = MagicMock(
+            current_status=MagicMock(status=ComplianceReportStatusEnum.Submitted.value),
+            supplemental_initiator=None,
+        )
         mock_update_compliance_report.return_value = mock_compliance_report
         mock_get_compliance_report_chain.return_value = ChainedComplianceReportSchema(
             report=mock_compliance_report, chain=[], is_newest=True

@@ -45,7 +45,10 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportYearNavigationSchema,
     ChainedComplianceReportSchema,
 )
-from lcfs.web.api.compliance_report.workflow import ensure_report_transition
+from lcfs.web.api.compliance_report.workflow import (
+    ensure_report_transition,
+    can_access_report,
+)
 from lcfs.web.api.final_supply_equipment.services import FinalSupplyEquipmentServices
 from lcfs.web.api.organization_snapshot.services import OrganizationSnapshotService
 from lcfs.web.api.organizations.repo import OrganizationsRepository
@@ -660,6 +663,16 @@ class ComplianceReportServices:
                 "You do not have permission to delete a this report."
             )
 
+        if not user_has_roles(user, [RoleEnum.GOVERNMENT]) and (
+            current_report.current_status.status != ComplianceReportStatusEnum.Draft
+            or current_report.supplemental_initiator
+            not in (None, SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL)
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="You do not have permission to delete this report.",
+            )
+
         # Validate that the status of the current report is 'Draft'
         if current_report.current_status.status not in [
             ComplianceReportStatusEnum.Draft,
@@ -875,8 +888,11 @@ class ComplianceReportServices:
             chained_report
             for chained_report in compliance_report_chain
             if (
-                chained_report.version <= report.version
-                or self.is_supplemental_requested_by_gov_user(chained_report)
+                can_access_report(user, chained_report)
+                and (
+                    chained_report.version <= report.version
+                    or self.is_supplemental_requested_by_gov_user(chained_report)
+                )
             )
         ]
 
