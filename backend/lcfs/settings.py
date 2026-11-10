@@ -87,7 +87,6 @@ class Settings(BaseSettings):
     well_known_endpoint: str = (
         "https://dev.loginproxy.gov.bc.ca/auth/realms/standard/.well-known/openid-configuration"
     )
-    keycloak_jwks_endpoint: Optional[str] = None
     keycloak_audience: str = "low-carbon-fuel-standard-5147"
     keycloak_issuer: Optional[str] = None
     local_keycloak_enabled: bool = False

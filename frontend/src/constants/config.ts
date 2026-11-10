@@ -130,17 +130,25 @@ const getAnalystReviewAssistantName = (): string => {
   return assistantName?.trim() || 'Fuelbert'
 }
 
-const getKeycloakConfig = (
-  config: KeycloakConfig
+export const getKeycloakConfig = (
+  config: KeycloakConfig,
+  environment?: {
+    hostname?: string
+    origin?: string
+    viteEnv?: Record<string, string | undefined>
+  }
 ): Required<KeycloakConfig> => {
-  const viteEnv = (
-    import.meta as ImportMeta & {
-      env?: Record<string, string | undefined>
-    }
-  ).env
+  const viteEnv =
+    environment?.viteEnv ??
+    (
+      import.meta as ImportMeta & {
+        env?: Record<string, string | undefined>
+      }
+    ).env
+  const hostname = environment?.hostname ?? window.location.hostname
+  const origin = environment?.origin ?? window.location.origin
   const localAuth =
-    window.location.hostname === 'localhost' &&
-    viteEnv?.VITE_LOCAL_KEYCLOAK === 'true'
+    hostname === 'localhost' && viteEnv?.VITE_LOCAL_KEYCLOAK === 'true'
 
   return {
     REALM: localAuth
@@ -153,7 +161,7 @@ const getKeycloakConfig = (
       ? (viteEnv?.VITE_KEYCLOAK_AUTH_URL ?? 'http://localhost:8180')
       : (config.AUTH_URL ?? 'https://dev.loginproxy.gov.bc.ca/auth'),
     POST_LOGOUT_URL: localAuth
-      ? `${window.location.origin}/`
+      ? `${origin}/`
       : (config.POST_LOGOUT_URL ?? 'http://localhost:3000/'),
     SM_LOGOUT_URL: localAuth
       ? ''

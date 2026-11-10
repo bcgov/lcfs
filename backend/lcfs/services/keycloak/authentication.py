@@ -57,10 +57,7 @@ class UserAuthentication(AuthenticationBackend):
             async with httpx.AsyncClient() as client:
                 oidc_response = await client.get(self.settings.well_known_endpoint)
                 oidc_response.raise_for_status()
-                jwks_uri = (
-                    self.settings.keycloak_jwks_endpoint
-                    or oidc_response.json().get("jwks_uri")
-                )
+                jwks_uri = oidc_response.json().get("jwks_uri")
 
                 if not jwks_uri:
                     raise ValueError(

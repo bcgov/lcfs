@@ -54,6 +54,7 @@ async def seed_local_keycloak_users(session: AsyncSession) -> None:
     """Create local-only profiles covering every IDIR and BCeID role."""
     role_rows = await session.execute(select(Role.name, Role.role_id))
     role_id_by_enum = {role_name: role_id for role_name, role_id in role_rows.all()}
+    created_count = 0
 
     for username, identity_provider, assigned_role in LOCAL_ROLE_USERS:
         email = f"{username}@example.com"
@@ -63,43 +64,35 @@ async def seed_local_keycloak_users(session: AsyncSession) -> None:
         )
         profile = profile_result.scalar_one_or_none()
 
-        if profile is None:
-            profile = UserProfile(
-                keycloak_email=email,
-                keycloak_username=username,
-                email=email,
-                title=f"Local {identity_provider} role fixture",
-                first_name="Local",
-                last_name=assigned_role.value,
-                organization_id=organization_id,
-                is_active=True,
-            )
-            session.add(profile)
-            await session.flush()
-        else:
-            profile.keycloak_email = email
-            profile.email = email
-            profile.organization_id = organization_id
-            profile.is_active = True
+        if profile is not None:
+            # The dev seeder runs on every backend startup. Leave fixture
+            # profiles and role assignments alone so local user-management
+            # changes survive a stop/start cycle.
+            continue
 
-        existing_role_result = await session.execute(
-            select(UserRole.role_id).where(
-                UserRole.user_profile_id == profile.user_profile_id
-            )
+        profile = UserProfile(
+            keycloak_email=email,
+            keycloak_username=username,
+            email=email,
+            title=f"Local {identity_provider} role fixture",
+            first_name="Local",
+            last_name=assigned_role.value,
+            organization_id=organization_id,
+            is_active=True,
         )
-        existing_role_ids = set(existing_role_result.scalars().all())
+        session.add(profile)
+        await session.flush()
+        created_count += 1
 
         for role in _roles_for_identity(identity_provider, assigned_role):
             role_id = role_id_by_enum.get(role)
             if role_id is None:
                 raise ValueError(f"Role {role.value} is missing from the role table")
-            if role_id not in existing_role_ids:
-                session.add(
-                    UserRole(
-                        user_profile_id=profile.user_profile_id,
-                        role_id=role_id,
-                    )
+            session.add(
+                UserRole(
+                    user_profile_id=profile.user_profile_id,
+                    role_id=role_id,
                 )
-                existing_role_ids.add(role_id)
+            )
 
-    logger.info("Local Keycloak role profiles seeded", count=len(LOCAL_ROLE_USERS))
+    logger.info("Local Keycloak role profiles seeded", count=created_count)

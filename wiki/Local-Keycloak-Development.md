@@ -39,6 +39,13 @@ volumes. Stop a stack without removing its data volumes with `stop`:
 ./scripts/local-keycloak-stack.sh stop agent-a
 ```
 
+To permanently remove one stack, including its containers, data volumes, and
+locally built images, use `destroy`:
+
+```sh
+./scripts/local-keycloak-stack.sh destroy agent-a
+```
+
 After starting two or more stacks, the live smoke test authenticates all 17 role
 accounts against every stack in this worktree, verifies their backend role
 assignments, and checks that each Keycloak cookie host remains separate:
@@ -56,7 +63,7 @@ The launcher ignores exported `LCFS_*_PUBLISHED_PORT` variables so its selected
 ports are the ones Compose uses. Running `start` again for an active name
 reuses its ports. `stop` releases that port assignment but keeps the data
 volumes; starting the name later assigns new ports and reuses its volumes.
-Removing volumes is a separate, manual cleanup step.
+`destroy` removes the stack's containers, data volumes, and locally built images.
 
 To manage Compose directly, create an env file with unique values for
 `LCFS_FRONTEND_PUBLISHED_PORT`, `LCFS_BACKEND_PUBLISHED_PORT`,
@@ -107,10 +114,10 @@ development only. Without the local override, the local Keycloak service,
 login mode, and role fixtures are disabled; the app uses the normal development
 Keycloak configuration and database volume.
 
-The backend fetches Keycloak's discovery document and signing keys through the
-Compose service name, while the browser uses the published localhost port.
-The local configuration sets the expected browser issuer and an internal JWKS
-endpoint so the backend never tries to reach a container's `localhost` URL.
+The backend fetches Keycloak's discovery document through the Compose service
+name, while the browser uses the published localhost port. Keycloak dynamically
+resolves backchannel URLs such as the JWKS endpoint from the backend request and
+keeps the configured browser issuer for tokens.
 
 ## Stop and reset
 
@@ -121,10 +128,10 @@ The launcher preserves one stack's volumes when you stop it:
 ```
 
 Keycloak realm imports run when its project data volume is first created. To
-re-import the realm, clear that stack's cached signing keys, stop the stack,
-and remove only its Keycloak volume. Keep the PostgreSQL and RustFS volumes if
-their data should remain. The following commands reset the Keycloak realm for
-the `agent-a` stack and then start it again with a newly assigned port set:
+re-import the realm, stop the stack first, then remove its Keycloak and Redis
+volumes. This clears cached signing keys without affecting PostgreSQL or RustFS
+data. The following commands reset the Keycloak realm for the `agent-a` stack
+and then start it again with a newly assigned port set:
 
 ```sh
 state_dir="${LCFS_LOCAL_KEYCLOAK_STATE_DIR:-${XDG_STATE_HOME:-${TMPDIR:-/tmp}}/lcfs-local-keycloak}"
@@ -138,13 +145,11 @@ PY
 )"
 project_name="lcfs-local-${worktree_id}-agent-a"
 
-docker compose --env-file "$state_dir/$project_name.env" -p "$project_name" \
-  -f docker-compose.yml -f docker-compose.local-keycloak.yml \
-  exec redis sh -c 'REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli -n 1 DEL jwks_data'
-
 ./scripts/local-keycloak-stack.sh stop agent-a
 
-docker volume rm "${project_name}_keycloak_data"
+docker volume rm \
+  "${project_name}_keycloak_data" \
+  "${project_name}_redis_local_keycloak_data"
 
 ./scripts/local-keycloak-stack.sh start agent-a
 ```

@@ -22,11 +22,13 @@ usage() {
 Usage:
   scripts/local-keycloak-stack.sh start [name]
   scripts/local-keycloak-stack.sh stop <name>
+  scripts/local-keycloak-stack.sh destroy <name>
   scripts/local-keycloak-stack.sh status <name>
   scripts/local-keycloak-stack.sh list
 
 With no name, start creates a unique stack name. Stop keeps the stack's data
-volumes so the same named stack can be started again later.
+volumes so the same named stack can be started again later. Destroy removes
+that stack's containers, data volumes, and locally built images.
 EOF
 }
 
@@ -77,8 +79,15 @@ compose() {
       LCFS_KEYCLOAK_PUBLISHED_PORT \
       LCFS_LOCAL_KEYCLOAK_HOSTNAME
 
+    local compose_env_args=()
+    if [[ -f "${env_file:-}" ]]; then
+      compose_env_args+=(--env-file "${env_file}")
+    else
+      compose_env_args+=(--env-file /dev/null)
+    fi
+
     docker compose \
-      --env-file "${env_file}" \
+      "${compose_env_args[@]}" \
       --project-name "${project_name}" \
       --file "${repo_root}/docker-compose.yml" \
       --file "${repo_root}/docker-compose.local-keycloak.yml" \
@@ -88,10 +97,11 @@ compose() {
 
 run_with_project_lock() {
   local locked_project="$1"
+  local lock_behavior="$2"
   local project_lock_path="${state_dir}/${locked_project}.compose.lock"
-  shift
+  shift 2
 
-  python3 - "${project_lock_path}" "${script_path}" "$@" <<'PY'
+  python3 - "${project_lock_path}" "${script_path}" "${lock_behavior}" "${locked_project}" "$@" <<'PY'
 import fcntl
 import subprocess
 import sys
@@ -99,9 +109,20 @@ from pathlib import Path
 
 lock_path = Path(sys.argv[1])
 script_path = sys.argv[2]
-command = ["bash", script_path, *sys.argv[3:]]
+lock_behavior = sys.argv[3]
+locked_project = sys.argv[4]
+command = ["bash", script_path, *sys.argv[5:]]
 with lock_path.open("a") as lock_file:
-    fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+    lock_flags = fcntl.LOCK_EX
+    if lock_behavior == "nonblocking":
+        lock_flags |= fcntl.LOCK_NB
+    elif lock_behavior != "blocking":
+        raise SystemExit(f"Unknown lock behavior: {lock_behavior}")
+    try:
+        fcntl.flock(lock_file.fileno(), lock_flags)
+    except BlockingIOError:
+        print(f"{locked_project}: lifecycle operation in progress")
+        raise SystemExit(0)
     result = subprocess.run(command)
 raise SystemExit(result.returncode)
 PY
@@ -243,8 +264,9 @@ PY
   frontend_port="$(awk -F= '$1 == "LCFS_FRONTEND_PUBLISHED_PORT" { print $2 }' "${env_file}")"
   printf '\nStack ready: %s\nFrontend: http://localhost:%s\n' \
     "${project_name}" "${frontend_port}"
-  printf 'List stacks: %s list\nStop stack: %s stop %s\n' \
-    "${BASH_SOURCE[0]}" "${BASH_SOURCE[0]}" "${project_name}"
+  printf 'List stacks: %s list\nStop stack: %s stop %s\nDestroy stack and its data: %s destroy %s\n' \
+    "${BASH_SOURCE[0]}" "${BASH_SOURCE[0]}" "${project_name}" \
+    "${BASH_SOURCE[0]}" "${project_name}"
 }
 
 stop_stack() {
@@ -269,6 +291,27 @@ with lock_path.open("a") as lock_file:
     env_file.unlink(missing_ok=True)
 PY
   printf 'Stopped %s; data volumes were kept.\n' "${project_name}"
+}
+
+destroy_stack() {
+  local requested_name="$1"
+  project_name="$(normalise_project_name "${requested_name}")"
+  env_file="${state_dir}/${project_name}.env"
+
+  compose down --volumes --rmi local
+  python3 - "${env_file}" <<'PY'
+import fcntl
+from pathlib import Path
+import sys
+
+env_file = Path(sys.argv[1])
+lock_path = env_file.parent / ".ports.lock"
+with lock_path.open("a") as lock_file:
+    fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+    env_file.unlink(missing_ok=True)
+PY
+  printf 'Destroyed %s; containers, data volumes, and local images were removed.\n' \
+    "${project_name}"
 }
 
 show_status() {
@@ -321,7 +364,7 @@ PY
   while IFS=$'\t' read -r project_name frontend_port; do
     [[ -n "${project_name}" ]] || continue
     printf '\n%s — http://localhost:%s\n' "${project_name}" "${frontend_port}"
-    run_with_project_lock "${project_name}" __list_status_locked "${project_name}"
+    run_with_project_lock "${project_name}" nonblocking __list_status_locked "${project_name}"
     count=$((count + 1))
   done <<<"${stack_records}"
 
@@ -339,17 +382,22 @@ case "${action}" in
       requested_name="$(date -u '+%Y%m%d%H%M%S')-$$"
     fi
     project_name="$(normalise_project_name "${requested_name}")"
-    run_with_project_lock "${project_name}" __start_locked "${project_name}"
+    run_with_project_lock "${project_name}" blocking __start_locked "${project_name}"
     ;;
   stop|down)
     if [[ "$#" -ne 2 ]]; then usage >&2; exit 2; fi
     project_name="$(normalise_project_name "$2")"
-    run_with_project_lock "${project_name}" __stop_locked "${project_name}"
+    run_with_project_lock "${project_name}" blocking __stop_locked "${project_name}"
+    ;;
+  destroy)
+    if [[ "$#" -ne 2 ]]; then usage >&2; exit 2; fi
+    project_name="$(normalise_project_name "$2")"
+    run_with_project_lock "${project_name}" blocking __destroy_locked "${project_name}"
     ;;
   status)
     if [[ "$#" -ne 2 ]]; then usage >&2; exit 2; fi
     project_name="$(normalise_project_name "$2")"
-    run_with_project_lock "${project_name}" __status_locked "${project_name}"
+    run_with_project_lock "${project_name}" nonblocking __status_locked "${project_name}"
     ;;
   __start_locked)
     if [[ "$#" -ne 2 ]]; then usage >&2; exit 2; fi
@@ -358,6 +406,10 @@ case "${action}" in
   __stop_locked)
     if [[ "$#" -ne 2 ]]; then usage >&2; exit 2; fi
     stop_stack "$2"
+    ;;
+  __destroy_locked)
+    if [[ "$#" -ne 2 ]]; then usage >&2; exit 2; fi
+    destroy_stack "$2"
     ;;
   __status_locked)
     if [[ "$#" -ne 2 ]]; then usage >&2; exit 2; fi

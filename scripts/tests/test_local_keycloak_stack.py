@@ -37,8 +37,10 @@ class LocalKeycloakStackTests(unittest.TestCase):
             "with open(os.environ['LCFS_TEST_DOCKER_LOG'], 'a') as log:\n"
             "    log.write(json.dumps(sys.argv[1:]) + '\\n')\n"
             "args = sys.argv[1:]\n"
-            "env_file = Path(args[args.index('--env-file') + 1])\n"
-            "config = dict(line.split('=', 1) for line in env_file.read_text().splitlines())\n"
+            "config = {}\n"
+            "if '--env-file' in args:\n"
+            "    env_file = Path(args[args.index('--env-file') + 1])\n"
+            "    config = dict(line.split('=', 1) for line in env_file.read_text().splitlines())\n"
             "with open(os.environ['LCFS_TEST_CONFIG_LOG'], 'a') as log:\n"
             "    log.write(json.dumps(config) + '\\n')\n"
             "if 'up' in args and os.environ.get('LCFS_TEST_PAUSE_COMPOSE_UP') == '1':\n"
@@ -98,7 +100,7 @@ class LocalKeycloakStackTests(unittest.TestCase):
         (worktree / "docker-compose.local-keycloak.yml").touch()
         return worktree
 
-    def _run(self, worktree, *args):
+    def _run(self, worktree, *args, timeout=30):
         env = os.environ.copy()
         env.update(
             {
@@ -127,6 +129,7 @@ class LocalKeycloakStackTests(unittest.TestCase):
             capture_output=True,
             text=True,
             env=env,
+            timeout=timeout,
         )
         return result.stdout
 
@@ -191,6 +194,74 @@ class LocalKeycloakStackTests(unittest.TestCase):
             self._option_value(self._docker_calls()[-1], "--project-name"),
             project_name,
         )
+
+    def test_destroy_removes_stack_volumes_local_images_and_saved_config(self):
+        worktree = self._make_worktree("worktree-a")
+        self._run(worktree, "start", "agent-a")
+        start_call = self._docker_calls()[0]
+        project_name = self._option_value(start_call, "--project-name")
+        env_file = Path(self._option_value(start_call, "--env-file"))
+
+        output = self._run(worktree, "destroy", "agent-a")
+
+        destroy_call = self._docker_calls()[-1]
+        self.assertEqual(self._option_value(destroy_call, "--project-name"), project_name)
+        self.assertEqual(destroy_call[-4:], ["down", "--volumes", "--rmi", "local"])
+        self.assertFalse(env_file.exists())
+        self.assertIn("data volumes, and local images were removed", output)
+
+    def test_destroy_still_cleans_resources_after_stack_was_stopped(self):
+        worktree = self._make_worktree("worktree-a")
+        self._run(worktree, "start", "agent-a")
+        project_name = self._option_value(self._docker_calls()[0], "--project-name")
+        self._run(worktree, "stop", "agent-a")
+
+        self._run(worktree, "destroy", "agent-a")
+
+        destroy_call = self._docker_calls()[-1]
+        self.assertEqual(self._option_value(destroy_call, "--project-name"), project_name)
+        self.assertEqual(self._option_value(destroy_call, "--env-file"), "/dev/null")
+        self.assertEqual(destroy_call[-4:], ["down", "--volumes", "--rmi", "local"])
+
+    def test_list_and_status_return_while_a_stack_is_starting(self):
+        worktree = self._make_worktree("worktree-a")
+        marker = self.root / "compose-up-waiting"
+        env = os.environ.copy()
+        env.update(
+            {
+                "PATH": f"{self.bin_dir}:{env['PATH']}",
+                "LCFS_LOCAL_KEYCLOAK_STATE_DIR": str(self.state_dir),
+                "LCFS_TEST_DOCKER_LOG": str(self.docker_log),
+                "LCFS_TEST_CONFIG_LOG": str(self.config_log),
+                "LCFS_TEST_MARKER": str(marker),
+                "LCFS_TEST_PAUSE_COMPOSE_UP": "1",
+            }
+        )
+        command = ["bash", str(worktree / "scripts" / LAUNCHER.name)]
+        starting = subprocess.Popen(
+            [*command, "start", "agent-a"],
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        try:
+            deadline = time.monotonic() + 10
+            while not marker.exists():
+                if starting.poll() is not None or time.monotonic() > deadline:
+                    self.fail("start did not enter the mocked Compose startup")
+                time.sleep(0.01)
+
+            status = self._run(worktree, "status", "agent-a", timeout=2)
+            listed = self._run(worktree, "list", timeout=2)
+            self.assertIn("lifecycle operation in progress", status)
+            self.assertIn("lifecycle operation in progress", listed)
+            self.assertEqual(len(self._docker_calls()), 1)
+        finally:
+            marker.with_suffix(".release").touch()
+            starting.communicate(timeout=10)
+
+        self.assertEqual(starting.returncode, 0)
 
     def test_concurrent_start_never_reads_partial_stack_configuration(self):
         worktree = self._make_worktree("worktree-a")

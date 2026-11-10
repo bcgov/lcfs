@@ -9,6 +9,7 @@ services:
       KC_HTTP_ENABLED: "true"
       KC_HEALTH_ENABLED: "true"
       KC_HOSTNAME: "http://${LCFS_LOCAL_KEYCLOAK_HOSTNAME:-lcfs-keycloak.localhost}:${LCFS_KEYCLOAK_PUBLISHED_PORT:-8180}"
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
     ports:
       - "127.0.0.1:${LCFS_KEYCLOAK_PUBLISHED_PORT:-8180}:8080"
     volumes:
@@ -33,7 +34,6 @@ services:
     environment:
       LCFS_LOCAL_KEYCLOAK_ENABLED: "true"
       LCFS_WELL_KNOWN_ENDPOINT: http://keycloak:8080/realms/lcfs-local/.well-known/openid-configuration
-      LCFS_KEYCLOAK_JWKS_ENDPOINT: http://keycloak:8080/realms/lcfs-local/protocol/openid-connect/certs
       LCFS_KEYCLOAK_AUDIENCE: low-carbon-fuel-standard-5147
       LCFS_KEYCLOAK_ISSUER: "http://${LCFS_LOCAL_KEYCLOAK_HOSTNAME:-lcfs-keycloak.localhost}:${LCFS_KEYCLOAK_PUBLISHED_PORT:-8180}/realms/lcfs-local"
       # Use a separate Redis DB so the local realm never reuses cached keys
