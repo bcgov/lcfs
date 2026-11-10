@@ -1,35 +1,44 @@
 import { describe, it, expect } from 'vite-plus/test'
 import { getStatus } from '../getStatus'
 
-const baseData = {
-  transactionType: { type: '' },
-  transferHistoryRecord: {
-    transferStatus: { status: 'Recorded' }
-  },
-  issuanceHistoryRecord: {
-    issuanceStatus: { status: 'Issued' }
-  }
-}
-
 describe('getStatus', () => {
-  it('returns transfer status for Transfer', () => {
+  it('returns transfer status with only the transfer history', () => {
     const result = getStatus({
-      data: { ...baseData, transactionType: { type: 'Transfer' } }
+      data: {
+        transactionType: { type: 'Transfer' },
+        transferHistoryRecord: { transferStatus: { status: 'Recorded' } }
+      }
     })
     expect(result).toBe('Recorded')
   })
 
-  it('returns issuance status for Issuance', () => {
+  it('returns issuance status with only the issuance history', () => {
     const result = getStatus({
-      data: { ...baseData, transactionType: { type: 'Issuance' } }
+      data: {
+        transactionType: { type: 'Issuance' },
+        issuanceHistoryRecord: { issuanceStatus: { status: 'Issued' } }
+      }
     })
     expect(result).toBe('Issued')
   })
 
-  it('returns empty string for other types', () => {
-    const result = getStatus({
-      data: { ...baseData, transactionType: { type: 'Assessment' } }
-    })
-    expect(result).toBe('')
+  it('returns an empty string for an assessment without history records', () => {
+    expect(
+      getStatus({ data: { transactionType: { type: 'Assessment' } } })
+    ).toBe('')
+  })
+
+  it('returns an empty string for an initiative agreement without history records', () => {
+    expect(
+      getStatus({
+        data: { transactionType: { type: 'Initiative Agreement' } }
+      })
+    ).toBe('')
+  })
+
+  it('preserves the default result for unknown transaction types', () => {
+    expect(
+      getStatus({ data: { transactionType: { type: 'Unknown' } } })
+    ).toBeUndefined()
   })
 })

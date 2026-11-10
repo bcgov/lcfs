@@ -1,21 +1,40 @@
-interface TransactionHistoryData {
+interface TransferStatusHistory {
+  transferStatus: { status: string }
+}
+
+interface IssuanceStatusHistory {
+  issuanceStatus: { status: string }
+}
+
+type TransactionStatusData<T extends string> = {
+  transactionType: { type: T }
+} & (T extends 'Transfer'
+  ? { transferHistoryRecord: TransferStatusHistory }
+  : T extends 'Issuance'
+    ? { issuanceHistoryRecord: IssuanceStatusHistory }
+    : {})
+
+interface RuntimeTransactionStatusData {
   transactionType: { type: string }
-  transferHistoryRecord: { transferStatus: { status: string } }
-  issuanceHistoryRecord: { issuanceStatus: { status: string } }
+  transferHistoryRecord?: TransferStatusHistory
+  issuanceHistoryRecord?: IssuanceStatusHistory
 }
 
-interface TransactionHistoryParams {
-  data: TransactionHistoryData
+interface RuntimeTransactionStatusParams {
+  data: RuntimeTransactionStatusData
 }
 
-export const getStatus = ({
+export function getStatus<T extends string>(params: {
+  data: TransactionStatusData<T>
+}): string | undefined
+export function getStatus({
   data
-}: TransactionHistoryParams): string | undefined => {
+}: RuntimeTransactionStatusParams): string | undefined {
   switch (data.transactionType.type) {
     case 'Transfer':
-      return data.transferHistoryRecord.transferStatus.status
+      return data.transferHistoryRecord!.transferStatus.status
     case 'Issuance':
-      return data.issuanceHistoryRecord.issuanceStatus.status
+      return data.issuanceHistoryRecord!.issuanceStatus.status
     case 'Assessment':
       return ''
     case 'Initiative Agreement':
