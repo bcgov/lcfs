@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { expect } from '@playwright/test'
+import { findCompleteCredentialPair } from '../../e2e/credential-pairs.js'
 import { getByDataTest } from './fixtures.js'
 
 const cypressEnvPath = fileURLToPath(
@@ -19,60 +20,61 @@ try {
 
 const credentialsFor = (userType) => {
   if (userType.toLowerCase() === 'idir') {
-    return {
-      usernameKeys: [
-        'PLAYWRIGHT_ADMIN_IDIR_USERNAME',
-        'PLAYWRIGHT_IDIR_TEST_USER',
-        'ADMIN_IDIR_USERNAME',
-        'IDIR_TEST_USER'
-      ],
-      passwordKeys: [
-        'PLAYWRIGHT_ADMIN_IDIR_PASSWORD',
-        'PLAYWRIGHT_IDIR_TEST_PASS',
-        'ADMIN_IDIR_PASSWORD',
-        'IDIR_TEST_PASS'
-      ]
-    }
+    return [
+      {
+        usernameKey: 'PLAYWRIGHT_ADMIN_IDIR_USERNAME',
+        passwordKey: 'PLAYWRIGHT_ADMIN_IDIR_PASSWORD'
+      },
+      {
+        usernameKey: 'PLAYWRIGHT_IDIR_TEST_USER',
+        passwordKey: 'PLAYWRIGHT_IDIR_TEST_PASS'
+      },
+      {
+        usernameKey: 'ADMIN_IDIR_USERNAME',
+        passwordKey: 'ADMIN_IDIR_PASSWORD'
+      },
+      { usernameKey: 'IDIR_TEST_USER', passwordKey: 'IDIR_TEST_PASS' }
+    ]
   }
 
   if (userType.toLowerCase() === 'bceid') {
-    return {
-      usernameKeys: [
-        'PLAYWRIGHT_BCEID_TEST_USER',
-        'BCEID_TEST_USER',
-        'PLAYWRIGHT_ORG1_BCEID_USERNAME',
-        'ORG1_BCEID_USERNAME',
-        'PLAYWRIGHT_ORG2_BCEID_USERNAME',
-        'ORG2_BCEID_USERNAME'
-      ],
-      passwordKeys: [
-        'PLAYWRIGHT_BCEID_TEST_PASS',
-        'BCEID_TEST_PASS',
-        'PLAYWRIGHT_ORG1_BCEID_PASSWORD',
-        'ORG1_BCEID_PASSWORD',
-        'PLAYWRIGHT_ORG2_BCEID_PASSWORD',
-        'ORG2_BCEID_PASSWORD'
-      ]
-    }
+    return [
+      {
+        usernameKey: 'PLAYWRIGHT_BCEID_TEST_USER',
+        passwordKey: 'PLAYWRIGHT_BCEID_TEST_PASS'
+      },
+      { usernameKey: 'BCEID_TEST_USER', passwordKey: 'BCEID_TEST_PASS' },
+      {
+        usernameKey: 'PLAYWRIGHT_ORG1_BCEID_USERNAME',
+        passwordKey: 'PLAYWRIGHT_ORG1_BCEID_PASSWORD'
+      },
+      {
+        usernameKey: 'ORG1_BCEID_USERNAME',
+        passwordKey: 'ORG1_BCEID_PASSWORD'
+      },
+      {
+        usernameKey: 'PLAYWRIGHT_ORG2_BCEID_USERNAME',
+        passwordKey: 'PLAYWRIGHT_ORG2_BCEID_PASSWORD'
+      },
+      { usernameKey: 'ORG2_BCEID_USERNAME', passwordKey: 'ORG2_BCEID_PASSWORD' }
+    ]
   }
 
   const prefix = userType.toUpperCase()
-  return {
-    usernameKeys: ['PLAYWRIGHT_' + prefix + '_USERNAME', prefix + '_USERNAME'],
-    passwordKeys: ['PLAYWRIGHT_' + prefix + '_PASSWORD', prefix + '_PASSWORD']
-  }
+  return [
+    {
+      usernameKey: 'PLAYWRIGHT_' + prefix + '_USERNAME',
+      passwordKey: 'PLAYWRIGHT_' + prefix + '_PASSWORD'
+    },
+    { usernameKey: prefix + '_USERNAME', passwordKey: prefix + '_PASSWORD' }
+  ]
 }
 
 const readCredentials = (userType) => {
-  const { usernameKeys, passwordKeys } = credentialsFor(userType)
-  return {
-    username: usernameKeys
-      .map((key) => process.env[key] || cypressEnv[key])
-      .find(Boolean),
-    password: passwordKeys
-      .map((key) => process.env[key] || cypressEnv[key])
-      .find(Boolean)
-  }
+  return findCompleteCredentialPair(credentialsFor(userType), (key) => {
+    const value = process.env[key] || cypressEnv[key]
+    return typeof value === 'string' ? value : undefined
+  })
 }
 
 export const hasAuthCredentials = (userType) => {
@@ -93,7 +95,7 @@ export const loginWithEnv = async (page, userType) => {
     throw new Error(authCredentialHint(userType))
   }
 
-  await page.goto('/')
+  await page.goto('/login')
   await getByDataTest(page, 'link-' + userType.toLowerCase()).click()
 
   const usernameInput = page.locator('input[name="user"]')

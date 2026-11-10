@@ -25,7 +25,11 @@ export default defineConfig({
   e2e: {
     supportFile: 'cypress/support/e2e.ts',
     testIsolation: false,
-    specPattern: ['**/*.feature', '**/*.cy.js', '**/*.cy.ts'],
+    specPattern: [
+      'cypress/e2e/**/*.feature',
+      'cypress/e2e/**/*.cy.js',
+      'cypress/e2e/**/*.cy.ts'
+    ],
     excludeSpecPattern: ['**/*.skip.feature'],
     screenshotsFolder: 'cypress/screenshots' + browserOutputSuffix,
     videosFolder: 'cypress/videos' + browserOutputSuffix,

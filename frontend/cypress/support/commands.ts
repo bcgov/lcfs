@@ -1,6 +1,7 @@
 /* oxlint-disable cypress/unsafe-to-chain-command */
 import axeCore from 'axe-core'
 import type { Result as AxeResult, RunOptions as AxeRunOptions } from 'axe-core'
+import { findCompleteCredentialPair } from '../../e2e/credential-pairs.js'
 
 type CucumberRoleTable = { raw: () => string[][] }
 type BCeIDRoles = string[] | CucumberRoleTable
@@ -201,10 +202,14 @@ Cypress.Commands.add('loginWith', (userType, username, password) => {
   cy.get('.main-layout-navbar', { timeout: 60000 }).should('be.visible')
 })
 
+type CredentialPair = {
+  usernameKey: string
+  passwordKey: string
+}
+
 type CredentialKeys = {
   authType: 'idir' | 'bceid'
-  usernameKeys: string[]
-  passwordKeys: string[]
+  credentialPairs: CredentialPair[]
 }
 
 const credentialKeysFor = (userType: string): CredentialKeys => {
@@ -213,23 +218,29 @@ const credentialKeysFor = (userType: string): CredentialKeys => {
   if (normalizedUserType === 'idir') {
     return {
       authType: 'idir',
-      usernameKeys: ['ADMIN_IDIR_USERNAME', 'IDIR_TEST_USER'],
-      passwordKeys: ['ADMIN_IDIR_PASSWORD', 'IDIR_TEST_PASS']
+      credentialPairs: [
+        {
+          usernameKey: 'ADMIN_IDIR_USERNAME',
+          passwordKey: 'ADMIN_IDIR_PASSWORD'
+        },
+        { usernameKey: 'IDIR_TEST_USER', passwordKey: 'IDIR_TEST_PASS' }
+      ]
     }
   }
 
   if (normalizedUserType === 'bceid') {
     return {
       authType: 'bceid',
-      usernameKeys: [
-        'ORG1_BCEID_USERNAME',
-        'BCEID_TEST_USER',
-        'ORG2_BCEID_USERNAME'
-      ],
-      passwordKeys: [
-        'ORG1_BCEID_PASSWORD',
-        'BCEID_TEST_PASS',
-        'ORG2_BCEID_PASSWORD'
+      credentialPairs: [
+        {
+          usernameKey: 'ORG1_BCEID_USERNAME',
+          passwordKey: 'ORG1_BCEID_PASSWORD'
+        },
+        { usernameKey: 'BCEID_TEST_USER', passwordKey: 'BCEID_TEST_PASS' },
+        {
+          usernameKey: 'ORG2_BCEID_USERNAME',
+          passwordKey: 'ORG2_BCEID_PASSWORD'
+        }
       ]
     }
   }
@@ -237,8 +248,12 @@ const credentialKeysFor = (userType: string): CredentialKeys => {
   const envPrefix = normalizedUserType.toUpperCase()
   return {
     authType: normalizedUserType.includes('bceid') ? 'bceid' : 'idir',
-    usernameKeys: [`${envPrefix}_USERNAME`],
-    passwordKeys: [`${envPrefix}_PASSWORD`]
+    credentialPairs: [
+      {
+        usernameKey: `${envPrefix}_USERNAME`,
+        passwordKey: `${envPrefix}_PASSWORD`
+      }
+    ]
   }
 }
 
@@ -246,20 +261,33 @@ Cypress.Commands.add(
   'getCredentialsFromEnv',
   (userType, usernameKeys, passwordKeys) => {
     const defaults = credentialKeysFor(userType)
-    const keys = {
-      usernameKeys: usernameKeys || defaults.usernameKeys,
-      passwordKeys: passwordKeys || defaults.passwordKeys
+    if (Boolean(usernameKeys) !== Boolean(passwordKeys)) {
+      throw new Error(
+        'Pass usernameKeys and passwordKeys together to preserve credential pairs.'
+      )
     }
-    const envKeys = [...new Set([...keys.usernameKeys, ...keys.passwordKeys])]
+    const credentialPairs =
+      usernameKeys && passwordKeys
+        ? usernameKeys.flatMap((usernameKey, index) => {
+            const passwordKey = passwordKeys[index]
+            return passwordKey ? [{ usernameKey, passwordKey }] : []
+          })
+        : defaults.credentialPairs
+    const envKeys = [
+      ...new Set(
+        credentialPairs.flatMap(({ usernameKey, passwordKey }) => [
+          usernameKey,
+          passwordKey
+        ])
+      )
+    ]
 
-    return cy.env(envKeys, { log: false }).then((env) => ({
-      username: keys.usernameKeys.map((key) => env[key]).find(Boolean) as
-        | string
-        | undefined,
-      password: keys.passwordKeys.map((key) => env[key]).find(Boolean) as
-        | string
-        | undefined
-    }))
+    return cy.env(envKeys, { log: false }).then((env) =>
+      findCompleteCredentialPair(credentialPairs, (key) => {
+        const value = env[key]
+        return typeof value === 'string' ? value : undefined
+      })
+    )
   }
 )
 
