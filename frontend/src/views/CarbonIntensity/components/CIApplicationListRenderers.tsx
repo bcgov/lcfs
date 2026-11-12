@@ -1,8 +1,13 @@
-import type { ReactNode } from 'react'
+import type { ReactElement, ReactNode } from 'react'
 import BCBox from '@/components/BCBox'
 import BCUserInitials from '@/components/BCUserInitials/BCUserInitials'
 import { CIApplicationStatusRenderer } from '@/utils/grid/cellRenderers'
 import { createStatusRenderer } from '@/utils/grid/createStatusRenderer'
+import {
+  CI_APPLICATION_CHANGES_REQUESTED_LABEL,
+  getCIApplicationDisplayStatus,
+  type CIApplicationDisplayStatusData
+} from './ciApplicationDisplayStatus'
 
 const ANALYST_CHIP_SX = {
   bgcolor: '#606060',
@@ -55,29 +60,28 @@ export const LastCommentRenderer = ({
   )
 }
 
-const CI_APPLICATION_CHANGES_REQUESTED_LABEL = 'Changes requested'
 const CIApplicationChangesRequestedRenderer = createStatusRenderer(
   { [CI_APPLICATION_CHANGES_REQUESTED_LABEL]: 'warning' },
   { statusField: 'status.status' },
   CI_APPLICATION_CHANGES_REQUESTED_LABEL
 )
 
-export const CIApplicationListStatusRenderer = (props: {
-  data?: {
-    pathwaySupplementalEditEnabled?: boolean
-    pathway_supplemental_edit_enabled?: boolean
-  }
-}) => {
-  const supplementalEditEnabled =
-    props.data?.pathwaySupplementalEditEnabled ||
-    props.data?.pathway_supplemental_edit_enabled
-
-  if (!supplementalEditEnabled) {
-    return <CIApplicationStatusRenderer {...props} />
-  }
-
-  return <CIApplicationChangesRequestedRenderer {...props} />
+type CIApplicationStatusDisplayRendererComponent = ((props: {
+  data?: CIApplicationDisplayStatusData
+}) => ReactElement) & {
+  filterPillRenderer?: typeof CIApplicationStatusRenderer.filterPillRenderer
 }
 
-CIApplicationListStatusRenderer.filterPillRenderer =
+export const CIApplicationStatusDisplayRenderer: CIApplicationStatusDisplayRendererComponent =
+  (props) => {
+    const displayStatus = getCIApplicationDisplayStatus(props.data)
+
+    if (displayStatus !== CI_APPLICATION_CHANGES_REQUESTED_LABEL) {
+      return <CIApplicationStatusRenderer {...props} />
+    }
+
+    return <CIApplicationChangesRequestedRenderer {...props} />
+  }
+
+CIApplicationStatusDisplayRenderer.filterPillRenderer =
   CIApplicationStatusRenderer.filterPillRenderer

@@ -100,6 +100,26 @@ describe('ciApplicationsColDefs (IDIR)', () => {
     expect(screen.getByText('Changes requested')).toBeInTheDocument()
   })
 
+  test('displays Changes requested while additional documents are requested', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    const cols = ciApplicationsColDefs(t, { isGovernment: true })
+    const status = cols.find((c) => c.field === 'status.status')
+    const rendererElement = status.cellRenderer({
+      data: {
+        status: { status: 'Submitted' },
+        documentUploadEnabled: true
+      }
+    })
+
+    render(rendererElement, [query, theme, localization, router])
+    expect(screen.getByText('Changes requested')).toBeInTheDocument()
+  })
+
   it('Assigned analyst / Last comment columns are non-sortable display pills', () => {
     const cols = ciApplicationsColDefs(t, { isGovernment: true })
     const analyst = cols.find((c) => c.field === 'assignedAnalyst')

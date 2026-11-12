@@ -72,6 +72,18 @@ const PAGES: PageDefinition[] = [
     keywords: ['periods', 'open reports']
   },
   {
+    label: 'Allocation agreements',
+    route: ROUTES.REPORTS.ALLOCATION_AGREEMENTS_INDEX,
+    section: 'Compliance reporting',
+    audience: 'gov',
+    keywords: [
+      'allocation',
+      'agreements',
+      'transaction partner',
+      'responsibility'
+    ]
+  },
+  {
     label: 'Charging sites',
     route: ROUTES.REPORTS.CHARGING_SITE.INDEX,
     section: 'Compliance reporting',
