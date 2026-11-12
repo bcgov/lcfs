@@ -350,7 +350,7 @@ async def test_get_expected_use_types(fuel_code_repo, mock_db):
 
 
 @pytest.mark.anyio
-async def test_get_fuel_code_bulletin_rows_current_uses_effective_after_cutoff(
+async def test_get_fuel_code_bulletin_rows_current_includes_future_effective_codes(
     fuel_code_repo, mock_db
 ):
     # first execute() -> query rows, second scalar() -> count
@@ -374,7 +374,7 @@ async def test_get_fuel_code_bulletin_rows_current_uses_effective_after_cutoff(
     executed_stmt = mock_db.execute.await_args.args[0]
     stmt_sql = str(executed_stmt)
 
-    assert "effective_date <" in stmt_sql
+    assert "effective_date <" not in stmt_sql
     assert "effective_date >=" not in stmt_sql
     assert "expiration_date >=" in stmt_sql
 
@@ -435,7 +435,7 @@ async def test_get_fuel_code_bulletin_rows_archived_is_inverse_of_current(
 
     # archived branch applies inverse (~current_conditions)
     assert "NOT (" in stmt_sql
-    assert "effective_date <" in stmt_sql
+    assert "effective_date <" not in stmt_sql
     assert "expiration_date >=" in stmt_sql
 
 

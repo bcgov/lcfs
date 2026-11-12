@@ -176,11 +176,10 @@ class FuelCodeRepository:
         bulletin_type: 'current' or 'archived'
         Current:
           - Approved fuel codes
-          - Effective before the end of the current bulletin period
-          - Not expired before the current reporting year
+          - Not expired before the current reporting year, including future-effective codes
 
         Archived:
-          - Approved fuel codes not in current
+          - Approved fuel codes expired before the current reporting year
         """
         query = select(
             FuelCodeListView.fuel_code_id,
@@ -213,8 +212,6 @@ class FuelCodeRepository:
         ).where(
             cast(FuelCodeListView.status, String) == FuelCodeStatusEnum.Approved.value
         )
-        # compliance_period end would 31st March of next compliance year, so add 1 year to start and set to 31st March
-        compliance_period_end = date(compliance_period_start.year + 1, 3, 31)
         count_query = (
             select(func.count())
             .select_from(FuelCodeListView)
@@ -225,12 +222,9 @@ class FuelCodeRepository:
         )
 
         expiration_cutoff = date(compliance_period_start.year, 1, 1)
-        current_conditions = and_(
-            FuelCodeListView.effective_date < compliance_period_end,
-            or_(
-                FuelCodeListView.expiration_date.is_(None),
-                FuelCodeListView.expiration_date >= expiration_cutoff,
-            ),
+        current_conditions = or_(
+            FuelCodeListView.expiration_date.is_(None),
+            FuelCodeListView.expiration_date >= expiration_cutoff,
         )
 
         # Apply bulletin type filter
