@@ -43,6 +43,7 @@ This wiki is organized into the following main sections, broadly covering System
 *   **[Deployment Architecture](Deployment-Architecture.md)**: Details on local Docker setup and OpenShift deployment.
 *   **[Database Schema Overview](Database-Schema-Overview.md)**: Description of the PostgreSQL database structure and Alembic migrations.
 *   **[Activity Timeline Design Spike](Activity-Timeline-Design-Spike.md)**: Research findings on a reusable cross-app activity timeline, with compliance reports as the first use case.
+*   **[CI Application Event Log Design Spike](CI-Application-Event-Log-Design-Spike.md)**: CI-specific verification, assignment, comment and decision history using the shared activity-log foundation.
 *   **[Caching Strategy](Caching-Strategy.md)**: How Redis caching is implemented and used.
 *   **[Security Architecture](Security-Architecture.md)**: Overview of security measures, protocols, and Keycloak integration.
 *   **[Performance Considerations](Performance-Considerations.md)**: Notes on system performance and load testing with Locust.
