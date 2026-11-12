@@ -376,7 +376,38 @@ async def test_get_fuel_code_bulletin_rows_current_uses_effective_after_cutoff(
 
     assert "effective_date <" in stmt_sql
     assert "effective_date >=" not in stmt_sql
-    assert "expiration_date >" in stmt_sql
+    assert "expiration_date >=" in stmt_sql
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    ("period_start", "expected_cutoff"),
+    [
+        (date(2026, 3, 31), "2026-01-01"),
+        (date(2027, 3, 31), "2027-01-01"),
+    ],
+)
+async def test_bulletin_current_expiry_cutoff_tracks_reporting_year(
+    fuel_code_repo, mock_db, period_start, expected_cutoff
+):
+    mock_result = MagicMock()
+    mock_result.all.return_value = []
+    mock_db.execute.return_value = mock_result
+    mock_db.scalar.return_value = 0
+
+    await fuel_code_repo.get_fuel_code_bulletin_rows(
+        compliance_period_start=period_start,
+        bulletin_type="current",
+        conditions=[],
+        sort_orders=[],
+    )
+
+    sql = str(
+        mock_db.execute.await_args.args[0].compile(
+            dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
+        )
+    )
+    assert f"vw_fuel_code_base.expiration_date >= '{expected_cutoff}'" in sql
 
 
 @pytest.mark.anyio
@@ -405,7 +436,7 @@ async def test_get_fuel_code_bulletin_rows_archived_is_inverse_of_current(
     # archived branch applies inverse (~current_conditions)
     assert "NOT (" in stmt_sql
     assert "effective_date <" in stmt_sql
-    assert "expiration_date >" in stmt_sql
+    assert "expiration_date >=" in stmt_sql
 
 
 @pytest.mark.anyio

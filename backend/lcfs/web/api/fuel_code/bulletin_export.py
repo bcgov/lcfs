@@ -40,7 +40,7 @@ class FuelCodeBulletinExporter:
         period_anchor_this_year = date(today.year, 3, 31)
         return (
             period_anchor_this_year
-            if today >= period_anchor_this_year
+            if today > period_anchor_this_year
             else date(today.year - 1, 3, 31)
         )
 

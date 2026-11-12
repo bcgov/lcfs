@@ -176,8 +176,8 @@ class FuelCodeRepository:
         bulletin_type: 'current' or 'archived'
         Current:
           - Approved fuel codes
-          - Effective after compliance period start
-          - Still active beyond compliance period start
+          - Effective before the end of the current bulletin period
+          - Not expired before the current reporting year
 
         Archived:
           - Approved fuel codes not in current
@@ -224,11 +224,12 @@ class FuelCodeRepository:
             )
         )
 
+        expiration_cutoff = date(compliance_period_start.year, 1, 1)
         current_conditions = and_(
             FuelCodeListView.effective_date < compliance_period_end,
             or_(
                 FuelCodeListView.expiration_date.is_(None),
-                FuelCodeListView.expiration_date > compliance_period_start,
+                FuelCodeListView.expiration_date >= expiration_cutoff,
             ),
         )
 
