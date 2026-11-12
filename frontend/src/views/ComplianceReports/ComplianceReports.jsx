@@ -7,7 +7,6 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
 import { ROUTES, buildPath } from '@/routes/routes'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   useCreateComplianceReport,
@@ -144,8 +143,7 @@ export const ComplianceReports = () => {
             handleNewReport={(option) => {
               createComplianceReport({
                 compliancePeriod: option.description,
-                organizationId: currentUser?.organization?.organizationId,
-                status: COMPLIANCE_REPORT_STATUSES.DRAFT
+                organizationId: currentUser?.organization?.organizationId
               })
             }}
             isButtonLoading={isButtonLoading}
