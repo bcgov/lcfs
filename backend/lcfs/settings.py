@@ -4,6 +4,7 @@ from pathlib import Path
 from tempfile import gettempdir
 from typing import Optional
 
+from pydantic import Field
 from pydantic_settings import BaseSettings
 from yarl import URL
 
@@ -51,6 +52,18 @@ class Settings(BaseSettings):
     db_base: str = "lcfs"
     db_test: str = "lcfs_test"
     db_echo: bool = False
+
+    # Database statement timeouts in milliseconds
+    db_statement_timeout_ms: int = Field(30_000, ge=0)
+    db_export_statement_timeout_ms: int = Field(300_000, ge=0)
+    db_background_statement_timeout_ms: int = Field(0, ge=0)
+    db_slow_query_threshold_seconds: float = Field(1.3, ge=0)
+    db_pool_monitoring_enabled: bool = True
+    db_connection_budget: int = Field(80, ge=1)
+    db_pool_utilization_warn_ratio: float = Field(0.8, gt=0, le=1)
+    db_connection_hold_warn_seconds: float = Field(30.0, ge=0)
+    db_pool_stats_log_interval_seconds: float = Field(60.0, ge=0)
+
     compliance_reindex_enabled: bool = True
     compliance_reindex_months: str = "1,4,7,10"
     compliance_reindex_day: int = 1

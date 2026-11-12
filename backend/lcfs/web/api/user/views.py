@@ -5,6 +5,7 @@ from fastapi import APIRouter, Body, status, Request, Response, Depends, Query
 from fastapi.responses import StreamingResponse
 
 from lcfs.db import dependencies
+from lcfs.db.dependencies import extended_statement_timeout
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema, FilterModel
 from lcfs.web.api.role.schema import RoleSchema
@@ -28,7 +29,12 @@ logger = structlog.get_logger(__name__)
 get_async_db = dependencies.get_async_db_session
 
 
-@router.get("/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
+@router.get(
+    "/export",
+    response_class=StreamingResponse,
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(extended_statement_timeout)],
+)
 @view_handler([RoleEnum.GOVERNMENT])
 async def export_users(
     request: Request,

@@ -4,6 +4,7 @@ import structlog
 from fastapi import APIRouter, Depends, status, Request, Body, Query, Path
 from fastapi.responses import StreamingResponse
 
+from lcfs.db.dependencies import extended_statement_timeout
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.core.decorators import view_handler
@@ -96,6 +97,7 @@ async def get_organization_ledger_years(
     "/organization/{organization_id}/period/{compliance_year}/export",
     response_class=StreamingResponse,
     status_code=status.HTTP_200_OK,
+    dependencies=[Depends(extended_statement_timeout)],
 )
 @view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
 async def export_period_credit_ledger(
@@ -128,6 +130,7 @@ async def export_period_credit_ledger(
     "/organization/{organization_id}/export",
     response_class=StreamingResponse,
     status_code=status.HTTP_200_OK,
+    dependencies=[Depends(extended_statement_timeout)],
 )
 @view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
 async def export_credit_ledger(

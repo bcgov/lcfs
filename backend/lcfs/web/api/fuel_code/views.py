@@ -19,6 +19,7 @@ from fastapi_cache.decorator import cache
 from starlette.responses import StreamingResponse
 
 from lcfs.db import dependencies
+from lcfs.db.dependencies import extended_statement_timeout
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_code.bulletin_export import FuelCodeBulletinExporter
@@ -205,7 +206,10 @@ async def get_my_fuel_codes(
 
 
 @router.post(
-    "/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK
+    "/export",
+    response_class=StreamingResponse,
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(extended_statement_timeout)],
 )
 @view_handler([RoleEnum.GOVERNMENT])
 async def export_fuel_codes(
@@ -267,6 +271,7 @@ async def get_fuel_code_bulletins(
     "/bulletins/export",
     response_class=StreamingResponse,
     status_code=status.HTTP_200_OK,
+    dependencies=[Depends(extended_statement_timeout)],
 )
 @public_view_handler(rate_limit=RateLimit(times=5, seconds=60))
 async def export_fuel_code_bulletins(
