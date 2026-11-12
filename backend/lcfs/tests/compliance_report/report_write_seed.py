@@ -367,6 +367,7 @@ async def seed_allocation_agreement(
     group_uuid: str | None = None,
     version: int = 0,
     action_type: ActionTypeEnum = ActionTypeEnum.CREATE,
+    quantity: int = 1000,
 ) -> AllocationAgreement:
     row = AllocationAgreement(
         compliance_report_id=compliance_report_id,
@@ -376,7 +377,7 @@ async def seed_allocation_agreement(
         fuel_type_id=ref.fuel_type.fuel_type_id,
         fuel_category_id=ref.fuel_category.fuel_category_id,
         provision_of_the_act_id=ref.default_ci_provision_id,
-        quantity=1000,
+        quantity=quantity,
         units="Litres",
         **_versioned(group_uuid, version, action_type),
     )

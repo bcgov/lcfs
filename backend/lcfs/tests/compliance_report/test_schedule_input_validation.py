@@ -1,14 +1,17 @@
 """
-Schedule saves reject inputs that would change compliance units without being
-real: negative quantities, fuel codes the row may not claim, and energy
-densities the supplier sets for a recognized fuel.
+Schedule saves cannot change compliance units with inputs that are not real:
+negative quantities, fuel codes the row may not claim, and energy densities
+the supplier sets for a recognized fuel.
 
-- Quantities are bounded at the API (422) and by CHECK constraints.
+- Quantities are bounded at the API (422) and by CHECK constraints. Rows
+  saved before the CHECK still read back; only saves are bounded.
 - A fuel code must be Approved, for the row's fuel type, and effective in the
   report's compliance year. A row that keeps the code it already had is not
   date-checked again (reports from before 2024 carry codes that expired).
-- A recognized fuel is calculated with its standard energy density; a value
-  is accepted only for an unrecognized ("Other") fuel, within range.
+- A recognized fuel is calculated with its standard energy density. A value
+  sent with the row is discarded, not rejected: the grids send every row back
+  with the density the server returned. A value is used only for an
+  unrecognized ("Other") fuel, within range.
 
 These run against the database through the API.
 """
@@ -18,7 +21,7 @@ from datetime import date
 import pytest
 from fastapi import FastAPI
 from httpx import AsyncClient
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
 
 from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
@@ -33,6 +36,7 @@ from lcfs.tests.compliance_report.report_write_seed import (
     YEAR,
     fuel_reference,
     organization_ids,
+    seed_allocation_agreement,
     seed_fuel_code,
     seed_fuel_supply,
     seed_notional_transfer,
@@ -227,6 +231,93 @@ async def test_database_rejects_negative_quantities(
     with pytest.raises(IntegrityError):
         async with dbsession.begin_nested():
             await seed(add_models, ref, report.compliance_report_id, quantity=-1)
+
+
+async def _seed_row_saved_before_the_check(dbsession, model, seed):
+    """Store a negative quantity the way the migration can leave one.
+
+    When existing rows break the quantity CHECK, the migration adds it
+    NOT VALID: those rows stay, and only new writes are checked. The test
+    transaction is rolled back, so the constraint is restored afterwards.
+    """
+    table = model.__tablename__
+    constraint = f"ck_{table}_quantities_non_negative"
+    definition = (
+        await dbsession.execute(
+            text(
+                "SELECT pg_get_constraintdef(oid) FROM pg_constraint "
+                "WHERE conname = :name"
+            ),
+            {"name": constraint},
+        )
+    ).scalar_one()
+    await dbsession.execute(text(f"ALTER TABLE {table} DROP CONSTRAINT {constraint}"))
+    row = await seed()
+    await dbsession.execute(
+        text(f"ALTER TABLE {table} ADD CONSTRAINT {constraint} {definition} NOT VALID")
+    )
+    return row
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "model, seed, route_name, list_key, extra_body",
+    [
+        # The same list requests the schedule grids make.
+        (
+            FuelSupply,
+            seed_fuel_supply,
+            "get_fuel_supply",
+            "fuelSupplies",
+            {"filters": [], "page": 1, "size": 10, "sortOrders": []},
+        ),
+        (
+            NotionalTransfer,
+            seed_notional_transfer,
+            "get_notional_transfers",
+            "notionalTransfers",
+            {},
+        ),
+        pytest.param(
+            AllocationAgreement,
+            seed_allocation_agreement,
+            "get_allocation_agreements",
+            "allocationAgreements",
+            {},
+            # list-all leaves `pagination` at its {} default, which pydantic
+            # warns about when serializing; that is unrelated to quantities.
+            marks=pytest.mark.filterwarnings(
+                "ignore:Pydantic serializer warnings:UserWarning"
+            ),
+        ),
+    ],
+)
+async def test_rows_saved_before_the_quantity_check_still_list(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    dbsession,
+    add_models,
+    report,
+    ref,
+    model,
+    seed,
+    route_name,
+    list_key,
+    extra_body,
+):
+    await _seed_row_saved_before_the_check(
+        dbsession,
+        model,
+        lambda: seed(add_models, ref, report.compliance_report_id, quantity=-500),
+    )
+
+    response = await client.post(
+        fastapi_app.url_path_for(route_name),
+        json={"complianceReportId": report.compliance_report_id, **extra_body},
+    )
+
+    assert response.status_code == 200
+    assert [row["quantity"] for row in response.json()[list_key]] == [-500]
 
 
 # --- Fuel codes ---------------------------------------------------------------
@@ -481,19 +572,35 @@ async def test_allocation_agreement_rejects_unapproved_fuel_code_by_name(
 
 
 @pytest.mark.anyio
-async def test_fuel_export_ignores_energy_density_sent_for_a_recognized_fuel(
-    client: AsyncClient, fastapi_app: FastAPI, dbsession, report, ref
+@pytest.mark.parametrize(
+    "route_name, body_builder, model",
+    [
+        ("save_fuel_supply_row", _fuel_supply_body, FuelSupply),
+        ("save_fuel_export_row", _fuel_export_body, FuelExport),
+    ],
+)
+async def test_energy_density_sent_for_a_recognized_fuel_is_discarded(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    dbsession,
+    report,
+    ref,
+    route_name,
+    body_builder,
+    model,
 ):
     response = await _save(
         client,
         fastapi_app,
-        "save_fuel_export_row",
-        _fuel_export_body(report, ref, energyDensity=99.0),
+        route_name,
+        body_builder(report, ref, energyDensity=99.0),
     )
 
     assert response.status_code == 201
-    [row] = await _rows(dbsession, FuelExport, report.compliance_report_id)
+    assert response.json()["energyDensity"] == pytest.approx(ref.energy_density)
+    [row] = await _rows(dbsession, model, report.compliance_report_id)
     assert float(row.energy_density) == pytest.approx(ref.energy_density)
+    assert float(row.energy) == pytest.approx(ref.energy_density * 1000, abs=0.01)
 
 
 @pytest.mark.anyio

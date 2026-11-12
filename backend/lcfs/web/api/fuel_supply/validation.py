@@ -3,7 +3,10 @@ from fastapi.exceptions import RequestValidationError
 
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
-from lcfs.web.api.fuel_supply.schema import FuelSupplyCreateUpdateSchema
+from lcfs.web.api.fuel_supply.schema import (
+    FuelSupplyCreateUpdateSchema,
+    FuelSupplyStoredSchema,
+)
 from lcfs.web.utils.schema_validators import other_fuel_energy_density_valid
 
 
@@ -27,7 +30,7 @@ class FuelSupplyValidation:
             fuel_supply.group_uuid, fuel_supply.compliance_report_id
         )
         if prev_fs:
-            prev_fs_data = FuelSupplyCreateUpdateSchema.model_validate(
+            prev_fs_data = FuelSupplyStoredSchema.model_validate(
                 prev_fs, context={"skip_quantity_validation": True}
             )
             return await self.fs_repo.check_duplicate(prev_fs_data)

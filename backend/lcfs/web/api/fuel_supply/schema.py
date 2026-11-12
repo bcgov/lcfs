@@ -178,7 +178,22 @@ class FuelSupplyCreateUpdateSchema(BaseSchema):
         return fuel_quantity_required(values)
 
 
-class FuelSupplyResponseSchema(FuelSupplyCreateUpdateSchema):
+class FuelSupplyStoredSchema(FuelSupplyCreateUpdateSchema):
+    """A saved fuel supply row, read back as it is stored.
+
+    The quantity bounds apply to saves. Rows saved before the quantity CHECK
+    constraint may hold negative values, which the migration leaves in place,
+    so reading a stored row does not apply them.
+    """
+
+    quantity: Optional[int] = None
+    q1_quantity: Optional[int] = None
+    q2_quantity: Optional[int] = None
+    q3_quantity: Optional[int] = None
+    q4_quantity: Optional[int] = None
+
+
+class FuelSupplyResponseSchema(FuelSupplyStoredSchema):
     action_type: str
     fuel_type: str
     fuel_category: str
