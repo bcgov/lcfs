@@ -168,6 +168,7 @@ async def test_export_transactions(transactions_service):
     mock_transactions = [
         MagicMock(
             transaction_type="Transfer",
+            description=None,
             transaction_id=1,
             compliance_period="2023",
             from_organization="Org A",
@@ -360,6 +361,7 @@ def _view_row(**overrides):
     """An mv_transaction_aggregate row as the export reads it."""
     row = dict(
         transaction_type="Transfer",
+        description=None,
         transaction_id=7,
         compliance_period="2026",
         from_organization="Org A",
@@ -449,6 +451,63 @@ async def test_export_uses_display_names_for_aggregator_and_legacy_transactions(
     assert [(row["ID"], row["Type"]) for row in rows] == [
         ("AG12", "Aggregator Issuance"),
         ("ST91", "Legacy Transaction"),
+    ]
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("export_format", ["csv", "xlsx"])
+async def test_export_transaction_type_includes_description(
+    transactions_service, export_format
+):
+    rows = [
+        _view_row(
+            transaction_type="ComplianceReport",
+            transaction_id=1,
+            description="Original Report",
+        ),
+        _view_row(
+            transaction_type="ComplianceReport",
+            transaction_id=2,
+            description="Supplemental report 2",
+        ),
+        _view_row(
+            transaction_type="ComplianceReport",
+            transaction_id=3,
+            description="Government adjustment",
+        ),
+        _view_row(
+            transaction_type="ComplianceReport", transaction_id=4, description=None
+        ),
+        _view_row(
+            transaction_type="ComplianceReport", transaction_id=5, description=""
+        ),
+        _view_row(transaction_type="AggregatorIssuance", transaction_id=6),
+    ]
+    transactions_service.repo.get_transactions_paginated.return_value = (
+        rows,
+        len(rows),
+    )
+
+    response = await transactions_service.export_transactions(
+        export_format=export_format
+    )
+    content = b"".join([chunk async for chunk in response.body_iterator])
+    if export_format == "csv":
+        exported = list(csv.DictReader(io.StringIO(content.decode("utf-8"))))
+        types = [row["Type"] for row in exported]
+    else:
+        sheet = openpyxl.load_workbook(io.BytesIO(content)).active
+        values = list(sheet.values)
+        type_column = values[0].index("Type")
+        types = [row[type_column] for row in values[1 : len(rows) + 1]]
+
+    assert types == [
+        "Compliance Report - Original Report",
+        "Compliance Report - Supplemental report 2",
+        "Compliance Report - Government adjustment",
+        "Compliance Report",
+        "Compliance Report",
+        "Aggregator Issuance",
     ]
 
 

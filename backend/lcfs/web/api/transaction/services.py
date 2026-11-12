@@ -275,12 +275,16 @@ class TransactionsService:
 
             row_data = None
             try:
+                type_label = transaction_type_to_display_name_map.get(
+                    result.transaction_type, result.transaction_type
+                )
+                if result.description:
+                    type_label = f"{type_label} - {result.description}"
+
                 row_data = [
                     f"{prefix}{result.transaction_id}",
                     result.compliance_period,
-                    transaction_type_to_display_name_map.get(
-                        result.transaction_type, result.transaction_type
-                    ),
+                    type_label,
                     result.from_organization,
                     result.to_organization,
                     result.quantity,
