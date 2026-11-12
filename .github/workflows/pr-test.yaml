@@ -70,12 +70,14 @@ jobs:
   local-keycloak-stack-tests:
     name: "Local Keycloak Stack Tests"
     runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      LCFS_LOCAL_KEYCLOAK_STATE_DIR: ${{ runner.temp }}/lcfs-local-keycloak
+      LCFS_LOCAL_KEYCLOAK_START_TIMEOUT: "600"
     steps:
       - uses: actions/checkout@v6.0.2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-          sparse-checkout: |
-            scripts
 
       - name: Set up Python
         uses: actions/setup-python@v6.2.0
@@ -84,6 +86,22 @@ jobs:
 
       - name: Test local Keycloak stack launcher
         run: python -m unittest scripts.tests.test_local_keycloak_stack -v
+
+      - name: Start isolated local Keycloak stacks
+        run: |
+          ./scripts/local-keycloak-stack.sh start ci-a
+          ./scripts/local-keycloak-stack.sh start ci-b
+
+      - name: Test local Keycloak authentication across stacks
+        run: python -m unittest scripts.tests.test_local_keycloak_auth -v
+        env:
+          LCFS_LOCAL_KEYCLOAK_INTEGRATION: "1"
+
+      - name: Remove local Keycloak stacks
+        if: always()
+        run: |
+          ./scripts/local-keycloak-stack.sh destroy ci-a || true
+          ./scripts/local-keycloak-stack.sh destroy ci-b || true
 
   backend-setup:
     name: "Backend Setup"
