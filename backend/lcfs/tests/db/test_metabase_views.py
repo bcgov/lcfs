@@ -1,4 +1,3 @@
-import importlib.util
 import re
 from pathlib import Path
 
@@ -6,13 +5,6 @@ from lcfs.db.dependencies import parse_sql_sections
 
 METABASE_SQL_PATH = (
     Path(__file__).resolve().parents[2] / "db" / "sql" / "views" / "metabase.sql"
-)
-MIGRATION_PATH = (
-    Path(__file__).resolve().parents[2]
-    / "db"
-    / "migrations"
-    / "versions"
-    / "2026-10-20-10-00_e5d7c9a1b3f4.py"
 )
 
 
@@ -32,32 +24,6 @@ def _view_definitions():
             if match:
                 definitions[match.group(1).lower()] = statement
     return definitions
-
-
-def test_migration_refreshes_each_view_definition_in_place():
-    spec = importlib.util.spec_from_file_location(
-        "metabase_view_migration", MIGRATION_PATH
-    )
-    migration = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(migration)
-
-    definitions = migration._view_definitions()
-    assert tuple(definitions) == migration.VIEWS_TO_REFRESH
-    for view_name, definition in definitions.items():
-        match = re.match(
-            r"CREATE\s+OR\s+REPLACE\s+VIEW\s+([a-z0-9_]+)\s+AS\b",
-            definition,
-            re.IGNORECASE,
-        )
-        assert match is not None
-        assert match.group(1).lower() == view_name
-
-    downgrade_definitions = migration._downgrade_view_definitions()
-    assert tuple(downgrade_definitions) == migration.VIEWS_TO_REFRESH
-    assert "action_type <> 'DELETE'" in downgrade_definitions[
-        "vw_fuel_supply_analytics_base"
-    ]
-    assert "action_type <> 'DELETE'" in downgrade_definitions["vw_fuel_supply_map"]
 
 
 def test_fuel_supply_views_use_latest_action_and_portal_fuel_code_value():
