@@ -4,7 +4,7 @@
  */
 
 // Country prefix mapping
-const COUNTRY_PREFIXES = {
+const COUNTRY_PREFIXES: Record<string, string> = {
   canada: 'C-'
 }
 
@@ -13,7 +13,9 @@ const COUNTRY_PREFIXES = {
  * @param {string} country - The country name (case insensitive)
  * @returns {string} The prefix to apply, or empty string if no prefix needed
  */
-export const getCountryPrefix = (country) => {
+export const getCountryPrefix = (
+  country: string | null | undefined
+): string => {
   if (!country) return ''
 
   const normalizedCountry = country.toLowerCase().trim()
@@ -28,7 +30,11 @@ export const getCountryPrefix = (country) => {
  * @param {number|string} compliancePeriod - The compliance period (e.g., 2025)
  * @returns {string} The formatted fuel code with prefix if applicable
  */
-export const formatFuelCodeWithCountryPrefix = (fuelCode) => {
+export const formatFuelCodeWithCountryPrefix = (
+  fuelCode: string | null | undefined,
+  _country?: string | null,
+  _compliancePeriod?: number | string
+): string | null | undefined => {
   return fuelCode
 }
 
@@ -37,7 +43,9 @@ export const formatFuelCodeWithCountryPrefix = (fuelCode) => {
  * @param {string} formattedFuelCode - The fuel code that may contain a country prefix
  * @returns {string} The original fuel code without prefix
  */
-export const extractOriginalFuelCode = (formattedFuelCode) => {
+export const extractOriginalFuelCode = (
+  formattedFuelCode: string | null | undefined
+): string | null | undefined => {
   if (!formattedFuelCode) return formattedFuelCode
 
   // Check each prefix and remove if found
@@ -56,7 +64,17 @@ export const extractOriginalFuelCode = (formattedFuelCode) => {
  * @param {number|string} compliancePeriod - The compliance period
  * @returns {Array} Array of formatted fuel code strings for display
  */
-export const formatFuelCodeOptions = (fuelCodes, compliancePeriod) => {
+interface FuelCodeOption {
+  fuelCode?: string | null
+  fuel_code?: string | null
+  fuelProductionFacilityCountry?: string | null
+  fuel_production_facility_country?: string | null
+}
+
+export const formatFuelCodeOptions = (
+  fuelCodes: FuelCodeOption[] | null | undefined,
+  compliancePeriod: number | string
+): Array<string | null | undefined> => {
   if (!fuelCodes || !Array.isArray(fuelCodes)) return []
 
   return fuelCodes.map((item) => {

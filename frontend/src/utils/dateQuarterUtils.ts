@@ -14,7 +14,10 @@
  * @param {string} compliancePeriod - Target year (e.g. 2025)
  * @returns {string} - Current quarter ('Q1', 'Q2', 'Q3', 'Q4')
  */
-export function getCurrentQuarter(compliancePeriod) {
+type Quarter = 'Q1' | 'Q2' | 'Q3' | 'Q4'
+type QuarterRange = { from: string; to: string }
+
+export function getCurrentQuarter(compliancePeriod: string): Quarter {
   const now = new Date()
   const currentMonth = now.getMonth() // 0-11
   const currentYear = now.getFullYear()
@@ -51,8 +54,11 @@ export function getCurrentQuarter(compliancePeriod) {
  * @param {string} year - Compliance period year
  * @returns {object} - Object with 'from' and 'to' date strings
  */
-export function getQuarterDateRange(quarter, year) {
-  const ranges = {
+export function getQuarterDateRange(
+  quarter: string,
+  year: string
+): QuarterRange {
+  const ranges: Record<string, QuarterRange> = {
     Q1: { from: `${year}-01-01`, to: `${year}-03-31` },
     Q2: { from: `${year}-01-01`, to: `${year}-06-30` },
     Q3: { from: `${year}-01-01`, to: `${year}-09-30` },

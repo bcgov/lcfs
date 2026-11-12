@@ -5,11 +5,11 @@ import {
   FUEL_TYPE_OTHER
 } from '../fuelTypeOther'
 
-const makeParams = (actionType = 'UPDATE', fuelType = FUEL_TYPE_OTHER) => ({
-  data: {
-    actionType,
-    fuelType
-  }
+const makeParams = (
+  actionType: string = 'UPDATE',
+  fuelType: string = FUEL_TYPE_OTHER
+): { data: { actionType: string; fuelType: string } } => ({
+  data: { actionType, fuelType }
 })
 
 describe('fuelTypeOtherConditionalStyle', () => {

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 
 // Hook
-export const useDebounce = (value, delay) => {
+export const useDebounce = <T>(value: T, delay: number | undefined): T => {
   // State and setters for debounced value
   const [debouncedValue, setDebouncedValue] = useState(value)
 
@@ -25,7 +25,7 @@ export const useDebounce = (value, delay) => {
   return debouncedValue
 }
 
-export const useComponentWillMount = (func) => {
+export const useComponentWillMount = (func: () => void): void => {
   const willMount = useRef(true)
 
   if (willMount.current) {

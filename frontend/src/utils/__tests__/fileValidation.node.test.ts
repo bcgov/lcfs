@@ -7,7 +7,11 @@ import {
 
 describe('fileValidation', () => {
   // Helper function to create a mock file
-  const createMockFile = (name, type, size = 1000) => {
+  const createMockFile = (
+    name: string,
+    type: string | undefined,
+    size: number = 1000
+  ): File => {
     // For testing, we'll create a mock File object with the exact size we want
     const file = new File(['test content'], name, { type })
     // Override the size property for testing purposes

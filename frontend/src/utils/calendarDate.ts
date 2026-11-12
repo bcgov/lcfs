@@ -8,7 +8,9 @@
  * toISOString() would turn a local midnight into the previous day for anyone
  * east of UTC.
  */
-export const formatCalendarDate = (value) => {
+export const formatCalendarDate = (
+  value: string | Date | number | null | undefined
+): string | number | null | undefined => {
   if (!value) return value
   if (typeof value === 'string') return value.split('T')[0]
 
