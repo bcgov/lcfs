@@ -90,6 +90,33 @@ class CIApplicationValidation:
             )
         return facility
 
+    async def validate_document_write_access(
+        self, ci_application_id: int
+    ) -> CIApplication:
+        """Allow supplier document changes only on drafts or during a request."""
+        ci_application = await self.validate_access(ci_application_id)
+        if is_government_user(self.request.user):
+            return ci_application
+
+        status_value = (
+            ci_application.ci_application_status.status
+            if ci_application.ci_application_status
+            else None
+        )
+        if status_value == CIApplicationStatusEnum.Draft.value or (
+            status_value == CIApplicationStatusEnum.Submitted.value
+            and ci_application.document_upload_enabled
+        ):
+            return ci_application
+
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "CI application documents can only be changed on Draft "
+                "applications or while additional documentation is requested."
+            ),
+        )
+
     def require_supplier_organization(self) -> int:
         """Returns the organization_id of the supplier user making the call."""
         org = self.request.user.organization

@@ -67,8 +67,9 @@ async def validate_parent_access(
 
     Every document route funnels through this, so a parent type that is not
     handled fails closed rather than silently skipping validation. *write*
-    is only consulted for internal comments, where reading and editing are
-    separate rights; every other surface grants both together.
+    distinguishes internal comment edits from reads, applies the supplier
+    upload window for CI applications, and blocks government writes to fuel
+    production facility documents; the other surfaces grant both together.
     """
     if parent_type == "compliance_report":
         await cr_validate.validate_organization_access(parent_id)
@@ -88,7 +89,10 @@ async def validate_parent_access(
     elif parent_type == "charging_site":
         await cs_validate.validate_organization_access(parent_id)
     elif parent_type == "ci_application":
-        await ci_validate.validate_access(parent_id)
+        if write:
+            await ci_validate.validate_document_write_access(parent_id)
+        else:
+            await ci_validate.validate_access(parent_id)
     elif parent_type == "fuel_production_facility":
         await ci_validate.validate_facility_access(
             parent_id, write=write or request.method != "GET"
@@ -197,7 +201,7 @@ async def upload_file(
         await cs_validate.validate_organization_access(parent_id)
 
     if parent_type == "ci_application":
-        await ci_validate.validate_access(parent_id)
+        await ci_validate.validate_document_write_access(parent_id)
     elif parent_type == "fuel_production_facility":
         await ci_validate.validate_facility_access(parent_id, write=True)
 

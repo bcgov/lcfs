@@ -1406,6 +1406,9 @@ async def test_update_step2_allows_requested_supplemental_edit_and_adds_changelo
     ci.pathway_supplemental_edit_enabled = True
     ci.pathway_changes_requested_at = datetime(2026, 6, 10, tzinfo=timezone.utc)
     ci.pathway_changes_requested_by = "idir_user"
+    ci.document_upload_enabled = True
+    ci.document_changes_requested_at = datetime(2026, 6, 11, tzinfo=timezone.utc)
+    ci.document_changes_requested_by = "idir_user"
     ci.pathways = []
     ci.verification_1_user_id = 22
     ci.verification_1_date = datetime(2026, 5, 19, tzinfo=timezone.utc)
@@ -1427,6 +1430,11 @@ async def test_update_step2_allows_requested_supplemental_edit_and_adds_changelo
     assert ci.pathway_supplemental_edit_enabled is False
     assert ci.pathway_changes_requested_at is None
     assert ci.pathway_changes_requested_by is None
+    assert ci.document_upload_enabled is True
+    assert ci.document_changes_requested_at == datetime(
+        2026, 6, 11, tzinfo=timezone.utc
+    )
+    assert ci.document_changes_requested_by == "idir_user"
     repo.add_history.assert_awaited_once()
     snapshot = repo.add_history.await_args.kwargs["snapshot"]
     assert snapshot["event"] == "supplemental_pathways_updated"

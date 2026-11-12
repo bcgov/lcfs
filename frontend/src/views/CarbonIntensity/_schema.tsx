@@ -8,7 +8,7 @@ import {
 } from '@/hooks/useCIApplication'
 import {
   LastCommentRenderer,
-  CIApplicationListStatusRenderer
+  CIApplicationStatusDisplayRenderer
 } from './components/CIApplicationListRenderers'
 import { CIAssignedAnalystCell } from './components/CIAssignedAnalystCell'
 
@@ -68,7 +68,7 @@ const productionFacilityLocation = (data?: CIApplicationListRow) => {
 const statusCol = (t: (key: string) => string) => ({
   field: 'status.status',
   headerName: t('carbonIntensity:columns.status'),
-  cellRenderer: CIApplicationListStatusRenderer,
+  cellRenderer: CIApplicationStatusDisplayRenderer,
   valueGetter: (params: { data?: CIApplicationListRow }) =>
     params.data?.status?.status,
   minWidth: 140,
