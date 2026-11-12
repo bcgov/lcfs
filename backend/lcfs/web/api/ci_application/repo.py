@@ -50,6 +50,7 @@ from lcfs.db.models.comment.InternalComment import InternalComment
 from lcfs.db.models.fuel.FeedstockFuelTransportMode import FeedstockFuelTransportMode
 from lcfs.db.models.fuel.FinishedFuelTransportMode import FinishedFuelTransportMode
 from lcfs.db.models.fuel.FuelCode import FuelCode
+from lcfs.db.models.fuel.FuelProductionFacility import FuelProductionFacility
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus, FuelCodeStatusEnum
 from lcfs.db.models.fuel.FuelType import FuelType
 from lcfs.db.models.fuel.TransportMode import TransportMode
@@ -292,6 +293,9 @@ class CIApplicationRepository:
                 selectinload(CIApplication.organization).selectinload(
                     Organization.org_address
                 ),
+                selectinload(CIApplication.fuel_production_facility).selectinload(
+                    FuelProductionFacility.documents
+                ),
                 selectinload(CIApplication.ci_application_status),
                 selectinload(CIApplication.assigned_analyst),
                 selectinload(CIApplication.verification_1_user),
@@ -306,12 +310,18 @@ class CIApplicationRepository:
                     Pathway.fuel_code_type
                 ),
                 selectinload(CIApplication.pathways).selectinload(Pathway.fuel_type),
+                selectinload(CIApplication.pathways).selectinload(
+                    Pathway.fuel_production_facility
+                ),
                 selectinload(CIApplication.pathways)
                 .selectinload(Pathway.fuel_code)
                 .selectinload(FuelCode.fuel_code_prefix),
                 selectinload(CIApplication.pathways)
                 .selectinload(Pathway.fuel_code)
                 .selectinload(FuelCode.fuel_type),
+                selectinload(CIApplication.pathways)
+                .selectinload(Pathway.fuel_code)
+                .selectinload(FuelCode.fuel_production_facility),
                 selectinload(CIApplication.pathways)
                 .selectinload(Pathway.feedstock_transport_modes)
                 .selectinload(PathwayFeedstockTransportMode.transport_mode),
@@ -332,6 +342,9 @@ class CIApplicationRepository:
                 .selectinload(FuelCode.fuel_type),
                 selectinload(CIApplication.generated_fuel_code_associations)
                 .selectinload(CIApplicationFuelCodeAssociation.fuel_code)
+                .selectinload(FuelCode.fuel_production_facility),
+                selectinload(CIApplication.generated_fuel_code_associations)
+                .selectinload(CIApplicationFuelCodeAssociation.fuel_code)
                 .selectinload(FuelCode.feedstock_fuel_transport_modes)
                 .selectinload(FeedstockFuelTransportMode.feedstock_fuel_transport_mode),
                 selectinload(CIApplication.generated_fuel_code_associations)
@@ -342,6 +355,73 @@ class CIApplicationRepository:
             .where(CIApplication.ci_application_id == ci_application_id)
         )
         return result.scalar_one_or_none()
+
+    # Relationships read when serializing or syncing a facility. Loaded
+    # explicitly so no lazy load can fire under asyncpg, including on
+    # facilities created earlier in the same request.
+    FACILITY_RELATIONSHIPS = ("documents", "fuel_codes")
+
+    @staticmethod
+    def _facility_load_options():
+        # Built per call: evaluating relationship attributes at import time
+        # would configure mappers before all models are loaded.
+        return [
+            selectinload(getattr(FuelProductionFacility, name))
+            for name in CIApplicationRepository.FACILITY_RELATIONSHIPS
+        ]
+
+    @repo_handler
+    async def get_facility_for_organization(
+        self, facility_id: int, organization_id: int
+    ) -> Optional[FuelProductionFacility]:
+        result = await self.db.execute(
+            select(FuelProductionFacility)
+            .options(*self._facility_load_options())
+            .where(
+                FuelProductionFacility.fuel_production_facility_id == facility_id,
+                FuelProductionFacility.organization_id == organization_id,
+            )
+        )
+        return result.scalar_one_or_none()
+
+    @repo_handler
+    async def get_facilities_for_organization(
+        self, organization_id: int
+    ) -> List[FuelProductionFacility]:
+        result = await self.db.execute(
+            select(FuelProductionFacility)
+            .options(*self._facility_load_options())
+            .where(FuelProductionFacility.organization_id == organization_id)
+            .order_by(
+                FuelProductionFacility.name,
+                FuelProductionFacility.fuel_production_facility_id,
+            )
+        )
+        return list(result.scalars().all())
+
+    @repo_handler
+    async def get_facility_by_id(
+        self, facility_id: int
+    ) -> Optional[FuelProductionFacility]:
+        result = await self.db.execute(
+            select(FuelProductionFacility)
+            .options(*self._facility_load_options())
+            .where(
+                FuelProductionFacility.fuel_production_facility_id == facility_id
+            )
+        )
+        return result.scalar_one_or_none()
+
+    @repo_handler
+    async def create_facility(
+        self, facility: FuelProductionFacility
+    ) -> FuelProductionFacility:
+        self.db.add(facility)
+        await self.db.flush()
+        # A freshly flushed instance has no loaded collections; refresh them
+        # here (inside the greenlet) so later attribute reads do no IO.
+        await self.db.refresh(facility, list(self.FACILITY_RELATIONSHIPS))
+        return facility
 
     @repo_handler
     async def create(self, ci_application: CIApplication) -> CIApplication:

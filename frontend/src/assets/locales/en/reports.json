@@ -53,6 +53,10 @@
   "clickDrag": "Drag and drop your (PDF, JPG, JPEG, PNG, DOC, DOCX, XLS, XLSX, CSV, TXT) file(s) here or click to select the file(s) from your machine to upload.",
   "deleteDocumentConfirmTitle": "Delete document?",
   "deleteDocumentConfirmText": "Are you sure you want to delete {{fileName}}?",
+  "replaceDocumentConfirmTitle": "Replace existing file?",
+  "replaceDocumentConfirmText": "Only one file can be attached here. Uploading {{newFileName}} will replace {{existingFileName}}.",
+  "replaceDocumentBtn": "Replace",
+  "singleFileClickDrag": "Drag and drop your (PDF, JPG, JPEG, PNG, DOC, DOCX, XLS, XLSX, CSV, TXT) file here or click to select the file from your machine to upload. Only one file can be attached.",
   "activityLinksList": "Click links to report activities",
   "activitySecondList": "Verification details",
   "activityLists": {

@@ -46,6 +46,105 @@ const baseApplication = {
 describe('ApplicationSummary', () => {
   afterEach(cleanup)
 
+  test('shows the organization confirmation note only when requested (BCeID users)', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    const withAddress = {
+      ...baseApplication,
+      organization: {
+        name: 'Fuel Producer Ltd.',
+        orgAddress: {
+          streetAddress: '697 Sarmiento',
+          city: 'San Martin',
+          provinceState: 'Santa Fe',
+          country: 'Argentina'
+        }
+      }
+    }
+    const { unmount } = render(
+      <ApplicationSummary
+        ciApplication={withAddress}
+        showOrgInfoConfirmation
+      />,
+      [query, theme, localization, router]
+    )
+    expect(
+      screen.getByTestId('ci-summary-org-info-confirmation')
+    ).toBeInTheDocument()
+    unmount()
+
+    render(<ApplicationSummary ciApplication={withAddress} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
+    expect(screen.queryByTestId('ci-summary-org-info-confirmation')).toBeNull()
+  })
+
+  test('lists the facility process flow diagram alongside application documents', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(
+      <ApplicationSummary
+        ciApplication={{
+          ...baseApplication,
+          fuelProductionFacilityId: 4,
+          fuelProductionFacility: {
+            fuelProductionFacilityId: 4,
+            name: 'Test facility',
+            documents: [
+              { documentId: 9, fileName: 'process-flow.pdf', fileSize: 2048 }
+            ]
+          },
+          documents: [{ documentId: 1, fileName: 'tech.pdf', fileSize: 100 }]
+        }}
+      />,
+      [query, theme, localization, router]
+    )
+
+    const card = screen.getByTestId('ci-summary-documents')
+    expect(card).toHaveTextContent('tech.pdf')
+    expect(
+      screen.getByTestId('ci-summary-facility-documents-header')
+    ).toHaveTextContent('carbonIntensity:summary.processFlowDiagramHeader')
+    const facilityRow = screen.getByTestId('ci-summary-facility-document-row')
+    expect(facilityRow).toHaveTextContent('process-flow.pdf')
+
+    fireEvent.click(screen.getByText('process-flow.pdf'))
+    expect(mockDownloadDocument).toHaveBeenCalledWith(9, 'process-flow.pdf')
+  })
+
+  test('omits the facility diagram section when the facility has no documents', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(
+      <ApplicationSummary
+        ciApplication={{
+          ...baseApplication,
+          fuelProductionFacilityId: 4,
+          fuelProductionFacility: { fuelProductionFacilityId: 4, documents: [] }
+        }}
+      />,
+      [query, theme, localization, router]
+    )
+    expect(
+      screen.queryByTestId('ci-summary-facility-documents-header')
+    ).toBeNull()
+  })
+
   test('downloads an un-renamed document using its original file name', ({
     render,
     query,

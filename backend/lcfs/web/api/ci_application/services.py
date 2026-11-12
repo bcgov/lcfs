@@ -33,6 +33,7 @@ from lcfs.db.models.ci_application.CIApplication import (
 from lcfs.db.models.fuel.FeedstockFuelTransportMode import FeedstockFuelTransportMode
 from lcfs.db.models.fuel.FinishedFuelTransportMode import FinishedFuelTransportMode
 from lcfs.db.models.fuel.FuelCode import FuelCode
+from lcfs.db.models.fuel.FuelProductionFacility import FuelProductionFacility
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatusEnum
 from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 from lcfs.db.models.user.Role import RoleEnum
@@ -63,6 +64,8 @@ from lcfs.web.api.ci_application.schema import (
     CIRiskAssessmentEnum,
     CITableOptionsSchema,
     FuelCodeOptionSchema,
+    FuelProductionFacilityCreateSchema,
+    FuelProductionFacilitySchema,
     FuelTypeOptionSchema,
     LatestCommentSchema,
     OrganizationInfoSchema,
@@ -161,11 +164,64 @@ def _to_fuel_code_option(fc: FuelCode) -> FuelCodeOptionSchema:
     )
 
 
+def _update_facility_from_step1(
+    facility: FuelProductionFacility, data: CIApplicationStep1Schema
+) -> None:
+    for field in ("name", "city", "province_state", "country", "iso"):
+        value = getattr(data, f"facility_{field}", None)
+        if value is not None:
+            setattr(facility, field, value)
+    if data.facility_contact_name is not None:
+        facility.contact_name = data.facility_contact_name
+    if data.facility_contact_email is not None:
+        facility.contact_email = str(data.facility_contact_email)
+    if data.facility_nameplate_capacity is not None:
+        facility.nameplate_capacity = data.facility_nameplate_capacity
+    if data.facility_nameplate_capacity_unit is not None:
+        facility.nameplate_capacity_unit = QuantityUnitsEnum(
+            data.facility_nameplate_capacity_unit
+        )
+
+    required_facility_values = (
+        facility.city,
+        facility.province_state,
+        facility.country,
+        facility.nameplate_capacity,
+        facility.nameplate_capacity_unit,
+    )
+    if any(value is None for value in required_facility_values):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "The selected facility must have a city/town, province/state, "
+                "country, nameplate capacity, and unit of measure."
+            ),
+        )
+
+    for fuel_code in facility.fuel_codes:
+        fuel_code.fuel_production_facility_city = facility.city
+        fuel_code.fuel_production_facility_province_state = facility.province_state
+        fuel_code.fuel_production_facility_country = facility.country
+        fuel_code.facility_nameplate_capacity = facility.nameplate_capacity
+        fuel_code.facility_nameplate_capacity_unit = facility.nameplate_capacity_unit
+        fuel_code.contact_name = facility.contact_name
+        fuel_code.contact_email = facility.contact_email
+
+
+def _to_facility_schema(
+    facility: FuelProductionFacility,
+) -> FuelProductionFacilitySchema:
+    return FuelProductionFacilitySchema.model_validate(facility)
+
+
 def _to_pathway_schema(pathway: Pathway) -> PathwaySchema:
     action_type = getattr(pathway, "action_type", None)
     return PathwaySchema(
         pathway_id=pathway.pathway_id,
         ci_application_id=pathway.ci_application_id,
+        fuel_production_facility_id=getattr(
+            pathway, "fuel_production_facility_id", None
+        ),
         group_uuid=getattr(pathway, "group_uuid", None),
         version=getattr(pathway, "version", None),
         action_type=action_type.value if hasattr(action_type, "value") else action_type,
@@ -622,6 +678,7 @@ def _generated_fuel_code_row_from_association(
     fuel_code = getattr(association, "fuel_code", None)
     if not fuel_code:
         return None
+    facility = getattr(fuel_code, "fuel_production_facility", None)
     status_value = getattr(getattr(fuel_code, "fuel_code_status", None), "status", None)
     if getattr(status_value, "value", status_value) != FuelCodeStatusEnum.Draft.value:
         return None
@@ -644,8 +701,8 @@ def _generated_fuel_code_row_from_association(
         ),
         edrms=fuel_code.edrms,
         company=fuel_code.company,
-        contact_name=fuel_code.contact_name,
-        contact_email=fuel_code.contact_email,
+        contact_name=(facility.contact_name if facility else fuel_code.contact_name),
+        contact_email=(facility.contact_email if facility else fuel_code.contact_email),
         application_date=fuel_code.application_date,
         approval_date=fuel_code.approval_date,
         effective_date=fuel_code.effective_date,
@@ -665,6 +722,9 @@ def _generated_fuel_code_row_from_association(
             fuel_code.facility_nameplate_capacity_unit.value
             if fuel_code.facility_nameplate_capacity_unit
             else None
+        ),
+        fuel_production_facility_id=getattr(
+            fuel_code, "fuel_production_facility_id", None
         ),
         former_company=fuel_code.former_company,
         notes=fuel_code.notes,
@@ -709,6 +769,7 @@ def _to_full_schema(
     include_assignment_history: bool = False,
 ) -> CIApplicationSchema:
     all_pathways = list(getattr(ci, "pathways", None) or [])
+    facility = getattr(ci, "fuel_production_facility", None)
 
     # Group UUIDs present before the first supplemental edit (None if none yet).
     original_group_uuids: Optional[Set[str]] = None
@@ -737,6 +798,8 @@ def _to_full_schema(
         organization_id=ci.organization_id,
         organization=_to_org_info(ci.organization),
         status=CIApplicationStatusSchema.model_validate(ci.ci_application_status),
+        fuel_production_facility_id=getattr(ci, "fuel_production_facility_id", None),
+        fuel_production_facility=(_to_facility_schema(facility) if facility else None),
         facility_city=ci.facility_city,
         facility_province_state=ci.facility_province_state,
         facility_country=ci.facility_country,
@@ -1238,6 +1301,9 @@ class CIApplicationServices:
                     detail="Unable to reserve a fuel code prefix and suffix.",
                 )
 
+            production_facility = getattr(
+                ci_application, "fuel_production_facility", None
+            )
             draft_fuel_code = FuelCode(
                 fuel_status_id=draft_status.fuel_code_status_id,
                 prefix_id=prefix_id,
@@ -1249,8 +1315,12 @@ class CIApplicationServices:
                 ),
                 edrms=getattr(ci_application.organization, "edrms_record", None) or "",
                 company=getattr(ci_application.organization, "name", None),
-                contact_name=ci_application.signature_user,
-                contact_email=getattr(ci_application.organization, "email", None),
+                contact_name=(
+                    production_facility.contact_name if production_facility else None
+                ),
+                contact_email=(
+                    production_facility.contact_email if production_facility else None
+                ),
                 application_date=application_date,
                 approval_date=None,
                 effective_date=effective_date,
@@ -1267,6 +1337,10 @@ class CIApplicationServices:
                 facility_nameplate_capacity=ci_application.facility_nameplate_capacity,
                 facility_nameplate_capacity_unit=ci_application.facility_nameplate_capacity_unit,
                 organization_id=ci_application.organization_id,
+                fuel_production_facility_id=(
+                    getattr(pathway, "fuel_production_facility_id", None)
+                    or getattr(ci_application, "fuel_production_facility_id", None)
+                ),
             )
             draft_fuel_code.feedstock_fuel_transport_modes = (
                 self._fuel_code_transport_mode_links(
@@ -1344,6 +1418,17 @@ class CIApplicationServices:
         updates = data.model_dump(exclude_unset=True)
         feedstock_transport_modes = updates.pop("feedstock_fuel_transport_mode", None)
         finished_transport_modes = updates.pop("finished_fuel_transport_mode", None)
+        facility = getattr(fuel_code, "fuel_production_facility", None)
+        for contact_field in ("contact_name", "contact_email"):
+            if contact_field not in updates:
+                continue
+            contact_value = updates.pop(contact_field)
+            if facility:
+                setattr(facility, contact_field, contact_value)
+                for related_fuel_code in facility.fuel_codes:
+                    setattr(related_fuel_code, contact_field, contact_value)
+            else:
+                setattr(fuel_code, contact_field, contact_value)
         if "facility_nameplate_capacity_unit" in updates:
             unit = updates["facility_nameplate_capacity_unit"]
             updates["facility_nameplate_capacity_unit"] = (
@@ -1633,9 +1718,7 @@ class CIApplicationServices:
         return suggestions
 
     @service_handler
-    async def search_fuel_code_field_options(
-        self, field: str, query: str
-    ) -> List[str]:
+    async def search_fuel_code_field_options(self, field: str, query: str) -> List[str]:
         normalized_field = field.strip()
         search_text = (query or "").strip()
         if normalized_field == "feedstock":
@@ -2065,6 +2148,54 @@ class CIApplicationServices:
     # Step 1 — create / update / delete draft
     # ------------------------------------------------------------------
 
+    async def _resolve_step1_facility(
+        self,
+        organization_id: int,
+        data: CIApplicationStep1Schema,
+        user: UserProfile,
+    ) -> Optional[FuelProductionFacility]:
+        """
+        Selecting an existing facility (always scoped to the caller's
+        organization) syncs its details from Step 1; typing a new facility
+        name creates one for the organization inline.
+        """
+        if data.fuel_production_facility_id:
+            facility = await self.repo.get_facility_for_organization(
+                data.fuel_production_facility_id, organization_id
+            )
+            if not facility:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Fuel production facility not found for this organization.",
+                )
+            _update_facility_from_step1(facility, data)
+            return facility
+
+        if not data.facility_name:
+            return None
+
+        facility = FuelProductionFacility(
+            organization_id=organization_id,
+            name=data.facility_name,
+            city=data.facility_city,
+            province_state=data.facility_province_state,
+            country=data.facility_country,
+            iso=data.facility_iso,
+            nameplate_capacity=data.facility_nameplate_capacity,
+            nameplate_capacity_unit=QuantityUnitsEnum(
+                data.facility_nameplate_capacity_unit
+            ),
+            contact_name=data.facility_contact_name,
+            contact_email=(
+                str(data.facility_contact_email)
+                if data.facility_contact_email
+                else None
+            ),
+            create_user=user.keycloak_username,
+            update_user=user.keycloak_username,
+        )
+        return await self.repo.create_facility(facility)
+
     @service_handler
     async def create_draft(
         self,
@@ -2078,16 +2209,30 @@ class CIApplicationServices:
         if not draft_status:
             raise DataNotFoundException("Draft status is not configured.")
 
+        facility = await self._resolve_step1_facility(organization_id, data, user)
+
         ci = CIApplication(
             status_id=draft_status.ci_application_status_id,
             organization_id=organization_id,
-            facility_city=data.facility_city,
-            facility_province_state=data.facility_province_state,
-            facility_country=data.facility_country,
-            facility_iso=data.facility_iso,
-            facility_nameplate_capacity=data.facility_nameplate_capacity,
+            fuel_production_facility_id=(
+                facility.fuel_production_facility_id if facility else None
+            ),
+            fuel_production_facility=facility,
+            facility_city=facility.city if facility else data.facility_city,
+            facility_province_state=(
+                facility.province_state if facility else data.facility_province_state
+            ),
+            facility_country=facility.country if facility else data.facility_country,
+            facility_iso=facility.iso if facility else data.facility_iso,
+            facility_nameplate_capacity=(
+                facility.nameplate_capacity
+                if facility
+                else data.facility_nameplate_capacity
+            ),
             facility_nameplate_capacity_unit=QuantityUnitsEnum(
-                data.facility_nameplate_capacity_unit
+                facility.nameplate_capacity_unit
+                if facility
+                else data.facility_nameplate_capacity_unit
             ),
             proposed_fuel_code_effective_date=data.proposed_fuel_code_effective_date,
             group_uuid=str(uuid.uuid4()),
@@ -2109,14 +2254,41 @@ class CIApplicationServices:
         data: CIApplicationStep1Schema,
         user: UserProfile,
     ) -> CIApplicationSchema:
-        ci_application.facility_city = data.facility_city
-        ci_application.facility_province_state = data.facility_province_state
-        ci_application.facility_country = data.facility_country
-        ci_application.facility_iso = data.facility_iso
-        ci_application.facility_nameplate_capacity = data.facility_nameplate_capacity
-        ci_application.facility_nameplate_capacity_unit = QuantityUnitsEnum(
-            data.facility_nameplate_capacity_unit
+        facility = await self._resolve_step1_facility(
+            ci_application.organization_id, data, user
         )
+
+        ci_application.fuel_production_facility_id = (
+            facility.fuel_production_facility_id if facility else None
+        )
+        # Assign the relationship too: the already-loaded facility would
+        # otherwise stay stale on the identity-mapped application and be
+        # returned in the response after the save.
+        ci_application.fuel_production_facility = facility
+        ci_application.facility_city = facility.city if facility else data.facility_city
+        ci_application.facility_province_state = (
+            facility.province_state if facility else data.facility_province_state
+        )
+        ci_application.facility_country = (
+            facility.country if facility else data.facility_country
+        )
+        ci_application.facility_iso = facility.iso if facility else data.facility_iso
+        ci_application.facility_nameplate_capacity = (
+            facility.nameplate_capacity
+            if facility
+            else data.facility_nameplate_capacity
+        )
+        ci_application.facility_nameplate_capacity_unit = QuantityUnitsEnum(
+            facility.nameplate_capacity_unit
+            if facility
+            else data.facility_nameplate_capacity_unit
+        )
+        for pathway in _latest_active_pathways(
+            list(getattr(ci_application, "pathways", None) or [])
+        ):
+            pathway.fuel_production_facility_id = (
+                facility.fuel_production_facility_id if facility else None
+            )
         ci_application.proposed_fuel_code_effective_date = (
             data.proposed_fuel_code_effective_date
         )
@@ -2126,6 +2298,37 @@ class CIApplicationServices:
         ci_application = await self.repo.update(ci_application)
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
         return await self._to_full_schema_with_user(ci, user)
+
+    @service_handler
+    async def get_facilities(
+        self, organization_id: int
+    ) -> List[FuelProductionFacilitySchema]:
+        facilities = await self.repo.get_facilities_for_organization(organization_id)
+        return [_to_facility_schema(facility) for facility in facilities]
+
+    @service_handler
+    async def create_facility(
+        self,
+        organization_id: int,
+        data: FuelProductionFacilityCreateSchema,
+        user: UserProfile,
+    ) -> FuelProductionFacilitySchema:
+        facility = FuelProductionFacility(
+            organization_id=organization_id,
+            name=data.name,
+            city=data.city,
+            province_state=data.province_state,
+            country=data.country,
+            iso=data.iso,
+            nameplate_capacity=data.nameplate_capacity,
+            nameplate_capacity_unit=QuantityUnitsEnum(data.nameplate_capacity_unit),
+            contact_name=data.contact_name,
+            contact_email=str(data.contact_email) if data.contact_email else None,
+            create_user=user.keycloak_username,
+            update_user=user.keycloak_username,
+        )
+        facility = await self.repo.create_facility(facility)
+        return _to_facility_schema(facility)
 
     @service_handler
     async def delete_draft(self, ci_application: CIApplication) -> None:
@@ -2290,6 +2493,14 @@ class CIApplicationServices:
                 operating_data_from=row.operating_data_from,
                 operating_data_to=row.operating_data_to,
                 fuel_code_id=row.fuel_code_id,
+                fuel_production_facility_id=(
+                    getattr(ci_application, "fuel_production_facility_id", None)
+                    or (
+                        getattr(previous, "fuel_production_facility_id", None)
+                        if previous
+                        else None
+                    )
+                ),
                 proposed_ci=row.proposed_ci,
                 fuel_type_id=row.fuel_type_id,
                 feedstock=row.feedstock,
@@ -2338,6 +2549,9 @@ class CIApplicationServices:
                     operating_data_from=previous.operating_data_from,
                     operating_data_to=previous.operating_data_to,
                     fuel_code_id=previous.fuel_code_id,
+                    fuel_production_facility_id=getattr(
+                        previous, "fuel_production_facility_id", None
+                    ),
                     proposed_ci=previous.proposed_ci,
                     fuel_type_id=previous.fuel_type_id,
                     feedstock=previous.feedstock,

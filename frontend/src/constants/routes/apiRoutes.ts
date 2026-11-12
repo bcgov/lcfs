@@ -136,6 +136,8 @@ export const apiRoutes = {
 
   // ci-applications (Carbon Intensity)
   ciApplicationOptions: '/ci-applications/table-options',
+  ciApplicationFacilities: '/ci-applications/facilities',
+  createCIApplicationFacility: '/ci-applications/facilities',
   ciApplicationFuelCodeFieldSearch: '/ci-applications/fuel-code-field-search?',
   ciApplicationLocationSearch: '/ci-applications/location-search?',
   getCIApplications: '/ci-applications/list',

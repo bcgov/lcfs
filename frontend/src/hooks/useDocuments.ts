@@ -1,9 +1,21 @@
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient
+} from '@tanstack/react-query'
 import type { AxiosRequestConfig, AxiosResponse } from 'axios'
 import { invalidateComplianceReportRelatedQueries } from './reportQueryInvalidation'
 import type { QueryOptions, ExtMutationOptions } from './types'
+
+// Facility documents are embedded in the CI facility list and application
+// detail responses, so those caches must refresh alongside the documents.
+const invalidateFuelProductionFacilityQueries = (queryClient: QueryClient) => {
+  queryClient.invalidateQueries({ queryKey: ['ci-application-facilities'] })
+  queryClient.invalidateQueries({ queryKey: ['ci-application'] })
+}
 
 // Default cache configuration
 const DEFAULT_CACHE_TIME = 15 * 60 * 1000 // 15 minutes
@@ -123,6 +135,8 @@ export const useUploadDocument = (
           queryClient.invalidateQueries({
             queryKey: ['ci-application', String(parentID)]
           })
+        } else if (parentType === 'fuel_production_facility') {
+          invalidateFuelProductionFacilityQueries(queryClient)
         }
       }
 
@@ -195,6 +209,8 @@ export const useDeleteDocument = (
           queryClient.invalidateQueries({
             queryKey: ['ci-application', String(parentID)]
           })
+        } else if (parentType === 'fuel_production_facility') {
+          invalidateFuelProductionFacilityQueries(queryClient)
         }
       }
 
@@ -423,6 +439,8 @@ export const useUpdateDocument = (
           queryClient.invalidateQueries({
             queryKey: ['ci-application', String(parentID)]
           })
+        } else if (parentType === 'fuel_production_facility') {
+          invalidateFuelProductionFacilityQueries(queryClient)
         }
       }
 

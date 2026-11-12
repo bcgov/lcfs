@@ -37,6 +37,8 @@ from lcfs.web.api.ci_application.schema import (
     CIGeneratedFuelCodeSchema,
     CIGeneratedFuelCodeUpdateSchema,
     CITableOptionsSchema,
+    FuelProductionFacilityCreateSchema,
+    FuelProductionFacilitySchema,
 )
 from lcfs.web.api.ci_application.services import CIApplicationServices
 from lcfs.web.api.ci_application.validation import CIApplicationValidation
@@ -132,6 +134,37 @@ async def search_fuel_code_field_options(
     """FuelCode-backed typeahead for proposed pathway text fields."""
     logger.info("Searching CI FuelCode field options", field=field)
     return await service.search_fuel_code_field_options(field, query)
+
+
+@router.get(
+    "/facilities",
+    response_model=List[FuelProductionFacilitySchema],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.CI_APPLICANT, RoleEnum.SIGNING_AUTHORITY])
+async def get_fuel_production_facilities(
+    request: Request,
+    service: CIApplicationServices = Depends(),
+    validate: CIApplicationValidation = Depends(),
+) -> List[FuelProductionFacilitySchema]:
+    organization_id = validate.require_supplier_organization()
+    return await service.get_facilities(organization_id)
+
+
+@router.post(
+    "/facilities",
+    response_model=FuelProductionFacilitySchema,
+    status_code=status.HTTP_201_CREATED,
+)
+@view_handler([RoleEnum.CI_APPLICANT, RoleEnum.SIGNING_AUTHORITY])
+async def create_fuel_production_facility(
+    request: Request,
+    data: FuelProductionFacilityCreateSchema = Body(...),
+    service: CIApplicationServices = Depends(),
+    validate: CIApplicationValidation = Depends(),
+) -> FuelProductionFacilitySchema:
+    organization_id = validate.require_supplier_organization()
+    return await service.create_facility(organization_id, data, request.user)
 
 
 @router.get(
