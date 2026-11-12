@@ -1,0 +1,18 @@
+import type { Components, Theme } from '@mui/material/styles'
+import borders from '@/themes/base/borders'
+import colors from '@/themes/base/colors'
+import { pxToRem } from '@/themes/utils'
+
+const { borderWidth } = borders
+const { light } = colors
+
+const tableCell: NonNullable<Components<Theme>['MuiTableCell']> = {
+  styleOverrides: {
+    root: {
+      padding: `${pxToRem(12)} ${pxToRem(16)}`,
+      borderBottom: `${borderWidth[1]} solid ${light.main}`
+    }
+  }
+}
+
+export default tableCell
