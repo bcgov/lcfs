@@ -69,11 +69,12 @@ Level 3 (Depends on Level 2)
 
 -   **vw_fuel_supply_base**: Clean fuel supply data (latest versions only)
 -   **vw_fuel_supply_analytics_base**: Analytics-ready fuel supply with metadata, using the latest applicable non-draft report action per line; deleted lines are excluded and `co_processed` comes from `fuel_code.co_processed` (null defaults to `No`, matching Portal behavior)
--   **vw_fuel_export_analytics_base**: Fuel export data for analytics
+-   **vw_fuel_export_analytics_base**: Fuel export data for analytics, with the latest action selected before deleted rows are excluded
 -   **vw_fuel_code_base**: Comprehensive fuel code information
--   **vw_fuels_other_use_base**: Non-standard fuel usage tracking
+-   **vw_fuels_other_use_base**: Non-standard fuel usage tracking, excluding deleted latest rows and Draft reports
 -   **vw_fse_base**: Final Supply Equipment reporting
--   **vw_allocation_agreement_base**: Latest allocation agreements
+-   **vw_allocation_agreement_base**: Latest non-deleted allocation agreements for eligible reports
+-   **vw_allocation_agreement_extended_base**: Allocation agreement details excluding deleted rows and reports currently in Draft
 -   **vw_notional_transfer_base**: Notional transfer tracking
 
 ### User & System Analytics Views
@@ -109,7 +110,7 @@ Level 3 (Depends on Level 2)
 
 -   All views grant SELECT permissions to `basic_lcfs_reporting_role`
 -   Report-detail views granted to the reporting role exclude reports whose current status is Draft. Lifecycle metrics may still include a historical Draft transition for a report that has since advanced to a non-draft status.
--   Fuel-supply analytics and map totals use the latest eligible `fuel_supply.version` per `group_uuid`; determine the latest action before filtering `DELETE` so a deleted line cannot reappear from an older report version.
+-   Versioned fuel-supply, fuel-export, and allocation-agreement views select the latest eligible schedule action per `group_uuid` before excluding `DELETE`, so deleted lines cannot reappear from an older report version.
 -   Views use `CASCADE` drops to handle dependencies automatically
 -   Index creation statements are included for performance optimization
 -   Complex versioning logic is centralized in base views and reused by dependent views
