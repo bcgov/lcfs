@@ -6,6 +6,7 @@ from starlette import status
 
 from lcfs.utils.constants import POSTAL_REGEX
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
+from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
 from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
 from lcfs.web.api.final_supply_equipment.schema import FinalSupplyEquipmentCreateSchema
 
@@ -29,6 +30,35 @@ class FinalSupplyEquipmentValidation:
         self.fse_repo = fse_repo
         self.request = request
         self.report_repo = report_repo
+
+    async def validate_reporting_write(
+        self, report_ids=(), reporting_ids=(), source_editable=True
+    ):
+        """Authorize all parents before mutation.
+
+        Revision writes may read a visible finalized source, but must write to
+        an editable destination. Direct deletions require editable sources too.
+        """
+        editable_ids = set(report_ids)
+        parent_ids = set(report_ids)
+        for reporting_id in set(reporting_ids):
+            record = await self.fse_repo.get_reporting_record_by_id(reporting_id)
+            if record is None:
+                raise HTTPException(
+                    status_code=404, detail="FSE reporting record not found"
+                )
+            parent_ids.add(record.compliance_report_id)
+            if source_editable:
+                editable_ids.add(record.compliance_report_id)
+
+        validation = ComplianceReportValidation(
+            request=self.request, repo=self.report_repo
+        )
+        for report_id in parent_ids:
+            report = await validation.validate_organization_access(report_id)
+            await validation.validate_compliance_report_access(report)
+            if report_id in editable_ids:
+                await validation.validate_compliance_report_editable(report)
 
     async def validate_fse_record(
         self,

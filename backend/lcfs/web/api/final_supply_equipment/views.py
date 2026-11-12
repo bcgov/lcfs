@@ -205,6 +205,7 @@ async def export(
     compliance_report = await report_validate.validate_organization_access(
         compliance_report_id
     )
+    await report_validate.validate_compliance_report_access(compliance_report)
     if compliance_report is None:
         raise HTTPException(status_code=404, detail="Compliance report not found")
 
@@ -263,6 +264,7 @@ async def import_fse(
     compliance_report = await report_validate.validate_organization_access(
         compliance_report_id
     )
+    await report_validate.validate_compliance_report_access(compliance_report)
     await report_validate.validate_compliance_report_editable(compliance_report)
 
     if compliance_report is None:
@@ -319,6 +321,7 @@ async def get_template(
     compliance_report = await report_validate.validate_organization_access(
         compliance_report_id
     )
+    await report_validate.validate_compliance_report_access(compliance_report)
     if compliance_report is None:
         raise HTTPException(status_code=404, detail="Compliance report not found")
 
@@ -377,6 +380,7 @@ async def get_fse_reporting_update_template(
     compliance_report = await report_validate.validate_organization_access(
         compliance_report_id
     )
+    await report_validate.validate_compliance_report_access(compliance_report)
     if compliance_report is None:
         raise HTTPException(status_code=404, detail="Compliance report not found")
 
@@ -413,6 +417,7 @@ async def bulk_update_fse_reporting(
     compliance_report = await report_validate.validate_organization_access(
         compliance_report_id
     )
+    await report_validate.validate_compliance_report_access(compliance_report)
     if compliance_report is None:
         raise HTTPException(status_code=404, detail="Compliance report not found")
 
@@ -467,10 +472,16 @@ async def get_fse_reporting_list(
         description="Reporting source: 'base_pref' uses preferred rows; 'vw_fse_base' uses the base view",
     ),
     service: FinalSupplyEquipmentServices = Depends(),
+    report_validate: ComplianceReportValidation = Depends(),
 ) -> dict:
     """
     Get paginated charging equipment with related charging site and FSE compliance reporting data
     """
+    if compliance_report_id is not None:
+        compliance_report = await report_validate.validate_organization_access(
+            compliance_report_id
+        )
+        await report_validate.validate_compliance_report_access(compliance_report)
     org_id = (
         organization_id
         if request.user.is_government and organization_id
@@ -491,11 +502,18 @@ async def create_fse_reporting(
     request: Request,
     request_data: FSEReportingBatchSchema = Body(...),
     service: FinalSupplyEquipmentServices = Depends(),
+    fse_validate: FinalSupplyEquipmentValidation = Depends(),
 ) -> dict:
     """
     Create FSE compliance reporting data
     """
-    return await service.create_fse_reporting_batch(request_data.fse_reports)
+    rows = request_data.fse_reports
+    rows = rows if isinstance(rows, list) else [rows]
+    await fse_validate.validate_reporting_write(
+        report_ids=[request_data.compliance_report_id]
+        + [row.compliance_report_id for row in rows]
+    )
+    return await service.create_fse_reporting_batch(rows)
 
 
 @router.delete(
@@ -508,10 +526,15 @@ async def delete_fse_reporting_batch(
     request: Request,
     request_data: FSEReportingBatchDeleteSchema = Body(...),
     service: FinalSupplyEquipmentServices = Depends(),
+    fse_validate: FinalSupplyEquipmentValidation = Depends(),
 ) -> dict:
     """
     Delete multiple FSE compliance reporting records
     """
+    await fse_validate.validate_reporting_write(
+        report_ids=[request_data.compliance_report_id],
+        reporting_ids=request_data.reporting_ids,
+    )
     return await service.delete_fse_reporting_batch(request_data.reporting_ids)
 
 @router.patch(
@@ -524,10 +547,16 @@ async def update_fse_reporting_active_status(
     request: Request,
     request_data: FSEReportingActiveStatusSchema = Body(...),
     service: FinalSupplyEquipmentServices = Depends(),
+    fse_validate: FinalSupplyEquipmentValidation = Depends(),
 ) -> dict:
     """
     Activate or deactivate multiple FSE compliance reporting records without deleting data
     """
+    await fse_validate.validate_reporting_write(
+        report_ids=[request_data.compliance_report_id],
+        reporting_ids=request_data.reporting_ids,
+        source_editable=False,
+    )
     return await service.update_fse_reporting_active_status(request_data)
 
 
@@ -542,10 +571,16 @@ async def update_fse_reporting(
     reporting_id: int,
     request_data: FSEReportingBaseSchema = Body(...),
     service: FinalSupplyEquipmentServices = Depends(),
+    fse_validate: FinalSupplyEquipmentValidation = Depends(),
 ) -> dict:
     """
     Update FSE compliance reporting data
     """
+    await fse_validate.validate_reporting_write(
+        report_ids=[request_data.compliance_report_id],
+        reporting_ids=[reporting_id],
+        source_editable=False,
+    )
     return await service.update_fse_reporting(reporting_id, request_data)
 
 
@@ -558,10 +593,12 @@ async def delete_fse_reporting(
     request: Request,
     reporting_id: int,
     service: FinalSupplyEquipmentServices = Depends(),
+    fse_validate: FinalSupplyEquipmentValidation = Depends(),
 ):
     """
     Delete FSE compliance reporting data
     """
+    await fse_validate.validate_reporting_write(reporting_ids=[reporting_id])
     await service.delete_fse_reporting(reporting_id)
 
 
@@ -571,10 +608,14 @@ async def set_default_dates_fse_reporting(
     request: Request,
     request_data: FSEReportingDefaultDates = Body(...),
     service: FinalSupplyEquipmentServices = Depends(),
+    fse_validate: FinalSupplyEquipmentValidation = Depends(),
 ):
     """
     Set default supply dates to the selected charging equipments
     """
+    await fse_validate.validate_reporting_write(
+        report_ids=[request_data.compliance_report_id]
+    )
     organization_id = getattr(request.user, "organization_id", None)
 
     if request.user.is_government or not organization_id:

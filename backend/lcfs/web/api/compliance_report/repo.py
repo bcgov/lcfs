@@ -1905,10 +1905,34 @@ class ComplianceReportRepository:
                     .scalar_subquery()
                 )
             else:
-                logger.info(
-                    "Non-government user, no additional status filtering applied",
-                    user_id=user.user_profile_id,
-                    username=user.keycloak_username,
+                final_status = select(
+                    ComplianceReportStatus.compliance_report_status_id
+                ).where(
+                    ComplianceReportStatus.status.in_([
+                        ComplianceReportStatusEnum.Assessed,
+                        ComplianceReportStatusEnum.Exempted,
+                    ])
+                )
+                query_conditions.append(
+                    or_(
+                        ComplianceReport.supplemental_initiator.is_(None),
+                        ComplianceReport.supplemental_initiator
+                        != SupplementalInitiatorType.GOVERNMENT_REASSESSMENT,
+                        ComplianceReport.current_status_id.in_(final_status),
+                    )
+                )
+
+            if not (
+                user_has_roles(user, [RoleEnum.ANALYST])
+                or user_has_roles(user, [RoleEnum.DIRECTOR])
+            ):
+                query_conditions.append(
+                    ComplianceReport.current_status_id.in_(
+                        select(ComplianceReportStatus.compliance_report_status_id).where(
+                            ComplianceReportStatus.status
+                            != ComplianceReportStatusEnum.Analyst_adjustment
+                        )
+                    )
                 )
 
             # Get the specific schedule relationship for this data type

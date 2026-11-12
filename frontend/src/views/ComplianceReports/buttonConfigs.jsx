@@ -88,7 +88,7 @@ class ButtonActionFactory {
         this.context.setModalData({
           primaryButtonAction: () =>
             this.context.updateComplianceReport({
-              ...formData,
+              supplementalNote: formData.supplementalNote,
               status: COMPLIANCE_REPORT_STATUSES.SUBMITTED
             }),
           primaryButtonText: this.context.t(

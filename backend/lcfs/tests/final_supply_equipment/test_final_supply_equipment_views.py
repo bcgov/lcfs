@@ -16,6 +16,14 @@ from lcfs.web.api.final_supply_equipment.schema import (
 )
 
 
+@pytest.fixture
+def authorized_reporting_write():
+    with patch(
+        "lcfs.web.api.final_supply_equipment.validation.FinalSupplyEquipmentValidation.validate_reporting_write"
+    ) as validation:
+        yield validation
+
+
 @pytest.mark.anyio
 async def test_get_fse_options_success(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
@@ -493,7 +501,12 @@ async def test_get_fse_reporting_list_with_params(
     """Test FSE reporting list with organization and compliance report parameters"""
     with patch(
         "lcfs.web.api.final_supply_equipment.services.FinalSupplyEquipmentServices.get_fse_reporting_list_paginated"
-    ) as mock_get_reporting:
+    ) as mock_get_reporting, patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_organization_access"
+    ) as mock_report_access:
+        mock_report_access.return_value = MagicMock(
+            current_status=MagicMock(status="Submitted"), supplemental_initiator=None
+        )
         mock_get_reporting.return_value = {
             "finalSupplyEquipments": [],
             "pagination": {"page": 1, "size": 10, "total": 0, "total_pages": 0},
@@ -517,7 +530,7 @@ async def test_get_fse_reporting_list_with_params(
 
 @pytest.mark.anyio
 async def test_create_fse_reporting_success(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, authorized_reporting_write
 ):
     """Test successful creation of FSE reporting batch"""
     with patch(
@@ -550,7 +563,7 @@ async def test_create_fse_reporting_success(
 
 @pytest.mark.anyio
 async def test_update_fse_reporting_success(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, authorized_reporting_write
 ):
     """Test successful update of FSE reporting"""
     with patch(
@@ -583,7 +596,7 @@ async def test_update_fse_reporting_success(
 
 @pytest.mark.anyio
 async def test_delete_fse_reporting_batch_success(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, authorized_reporting_write
 ):
     """Test successful batch deletion of FSE reporting"""
     with patch(
@@ -609,7 +622,7 @@ async def test_delete_fse_reporting_batch_success(
 
 @pytest.mark.anyio
 async def test_update_fse_reporting_active_status_success(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, authorized_reporting_write
 ):
     """Test toggling FSE reporting active status"""
     with patch(
@@ -634,7 +647,7 @@ async def test_update_fse_reporting_active_status_success(
 
 @pytest.mark.anyio
 async def test_set_default_dates_fse_reporting_success(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, authorized_reporting_write
 ):
     """Test successful setting of default dates for FSE reporting"""
     with patch(

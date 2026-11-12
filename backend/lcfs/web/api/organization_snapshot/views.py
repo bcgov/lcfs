@@ -32,7 +32,10 @@ async def get_snapshot_by_compliance_report_id(
     """
     Endpoint to get the organization details snapshot attached to a compliance report
     """
-    await report_validate.validate_organization_access(compliance_report_id)
+    compliance_report = await report_validate.validate_organization_access(
+        compliance_report_id
+    )
+    await report_validate.validate_compliance_report_access(compliance_report)
     snapshot = await org_snapshot_service.get_by_compliance_report_id(
         compliance_report_id
     )
@@ -55,6 +58,9 @@ async def update_compliance_report_snapshot(
     """
     Endpoint to update a compliance report address snapshot
     """
-    await report_validate.validate_organization_access(compliance_report_id)
+    compliance_report = await report_validate.validate_organization_access(
+        compliance_report_id
+    )
+    await report_validate.validate_compliance_report_access(compliance_report)
     snapshot = await org_snapshot_service.update(request_data, compliance_report_id)
     return OrganizationSnapshotSchema.model_validate(snapshot)
