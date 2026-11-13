@@ -3,7 +3,7 @@ from io import UnsupportedOperation
 import os
 import re
 import uuid
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import structlog
 
@@ -667,12 +667,17 @@ class DocumentService:
         document_id: int,
         parent_id: int,
         parent_type: str,
+        require_physical_delete: bool = False,
         defer_storage_delete: bool = False,
-    ) -> Optional[str]:
-        """Delete a document link, and the document itself when it is the last.
+    ) -> Union[bool, Optional[str]]:
+        """Remove *parent_id*'s link to the document, and the document itself
+        when that was its last link. Returns whether the file was physically
+        deleted. With *require_physical_delete*, a document still linked
+        elsewhere is left untouched and ``False`` is returned instead.
 
-        With ``defer_storage_delete`` the S3 object is left in place and its key
-        is returned so the caller can remove it once the database change has
+        With *defer_storage_delete* the S3 object is left in place and its key
+        is returned instead (``None`` when the file was not physically
+        deleted), so the caller can remove it once the database change has
         been committed (see ``delete_storage_objects``).
         """
         # The caller was authorized for the parent, so the document must hang
@@ -691,9 +696,13 @@ class DocumentService:
                 .select_from(table)
                 .where(table.c.document_id == document_id)
             )
+        has_other_links = link_count > 1
 
-        # If last link, delete the whole document
-        if link_count == 1:
+        if has_other_links and require_physical_delete:
+            return None if defer_storage_delete else False
+
+        file_key = None
+        if not has_other_links:
             file_key = document.file_key
             if not defer_storage_delete:
                 # Delete the file from S3
@@ -702,8 +711,7 @@ class DocumentService:
             # Delete the entry from the database
             await self.db.delete(document)
             await self.db.flush()
-            return file_key if defer_storage_delete else None
-        else:  # Delete the association
+        else:
             await self.db.execute(
                 delete(association_table).where(
                     and_(
@@ -712,6 +720,9 @@ class DocumentService:
                     )
                 )
             )
+        if defer_storage_delete:
+            return file_key
+        return not has_other_links
 
     def delete_storage_objects(self, file_keys: List[str]) -> None:
         """Remove S3 objects after their documents were deleted and committed.

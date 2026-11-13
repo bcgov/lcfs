@@ -66,6 +66,14 @@ export function ReportsMenu() {
       }
     ]
 
+    if (isIDIR) {
+      baseTabs.push({
+        key: 'allocationAgreements',
+        label: t('tabs.allocationAgreements'),
+        path: ROUTES.REPORTS.ALLOCATION_AGREEMENTS_INDEX
+      })
+    }
+
     if (canAccessChargingSitesTab) {
       baseTabs.push({
         key: 'chargingSites',
@@ -120,6 +128,16 @@ export function ReportsMenu() {
 
   // Determine what content to render based on current route
   const renderContent = () => {
+    if (
+      location.pathname.startsWith(ROUTES.REPORTS.ALLOCATION_AGREEMENTS_INDEX)
+    ) {
+      return (
+        <Role roles={govRoles}>
+          <Outlet />
+        </Role>
+      )
+    }
+
     if (location.pathname.includes('/charging-sites')) {
       return (
         <Role roles={[...govRoles, roles.compliance_reporting]}>

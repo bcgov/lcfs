@@ -563,6 +563,55 @@ async def test_delete_file_not_linked_to_the_parent(document_service, db_mock):
 
 
 @pytest.mark.anyio
+async def test_delete_file_preserves_cross_parent_type_reference(
+    document_service, document_mock, db_mock
+):
+    """A document shared with another parent type keeps its file; only this
+    parent's link goes, and the caller is told nothing was destroyed."""
+    _link_document(db_mock, document_mock, [1, 1] + [0] * (_TABLES - 2))
+
+    deleted = await document_service.delete_file(1, 1, "compliance_report")
+
+    assert deleted is False
+    document_service.s3_client.delete_object.assert_not_called()
+    db_mock.delete.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_hard_delete_refuses_cross_parent_type_reference(
+    document_service, document_mock, db_mock
+):
+    """Permanent deletion must not silently degrade to unlinking: a shared
+    document is left entirely untouched and the caller is told so."""
+    _link_document(db_mock, document_mock, [1, 1] + [0] * (_TABLES - 2))
+
+    deleted = await document_service.delete_file(
+        1, 1, "compliance_report", require_physical_delete=True
+    )
+
+    assert deleted is False
+    document_service.s3_client.delete_object.assert_not_called()
+    db_mock.delete.assert_not_called()
+    # Not even the association row is removed.
+    db_mock.execute.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_hard_delete_last_link_reports_physical_delete(
+    document_service, document_mock, db_mock
+):
+    _link_document(db_mock, document_mock, [1] + [0] * (_TABLES - 1))
+
+    deleted = await document_service.delete_file(
+        1, 1, "compliance_report", require_physical_delete=True
+    )
+
+    assert deleted is True
+    document_service.s3_client.delete_object.assert_called_once()
+    db_mock.delete.assert_called_once_with(document_mock)
+
+
+@pytest.mark.anyio
 async def test_get_by_id_and_type_compliance_report(document_service, db_mock):
     # Setup
     # Create a mock result with scalars and all methods

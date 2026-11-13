@@ -70,6 +70,7 @@ let mockGetCIApplication = {
 }
 const mockCreate = vi.fn().mockResolvedValue({ ciApplicationId: 99 })
 const mockUpdate = vi.fn().mockResolvedValue({ ciApplicationId: 99 })
+const mockUpdateStep3 = vi.fn().mockResolvedValue({ ciApplicationId: 99 })
 const mockDelete = vi.fn().mockResolvedValue(undefined)
 const mockOptions = {
   data: {
@@ -95,7 +96,7 @@ vi.mock('@/hooks/useCIApplication', () => ({
     isPending: false
   })),
   useUpdateCIApplicationStep3: vi.fn(() => ({
-    mutateAsync: vi.fn().mockResolvedValue({ ciApplicationId: 99 }),
+    mutateAsync: mockUpdateStep3,
     isPending: false
   })),
   useUpdateCIApplicationStep4: vi.fn(() => ({
@@ -126,7 +127,23 @@ vi.mock('@/hooks/useCIApplication', () => ({
 }))
 
 vi.mock('@/views/CarbonIntensity/components/DocumentsModellingStep', () => ({
-  DocumentsModellingStep: () => <div data-test="step3-stub" />,
+  DocumentsModellingStep: ({ onSave, showSaveControls }) => (
+    <div
+      data-test="step3-stub"
+      data-show-save-controls={String(!!showSaveControls)}
+    >
+      {showSaveControls && (
+        <button
+          data-test="step3-submit-trigger"
+          onClick={() =>
+            onSave({ supportingDocumentOther: 'Additional information' })
+          }
+        >
+          Submit additional documents
+        </button>
+      )}
+    </div>
+  ),
   DOC_CATEGORY_TECHNICAL_REPORT: 'technical_report',
   DOC_CATEGORY_GHGENIUS_MODEL: 'ghgenius_model',
   DOC_CATEGORY_SUPPORTING: 'supporting'
@@ -152,10 +169,22 @@ vi.mock('@/views/CarbonIntensity/components/ProposedFuelPathwaysStep', () => ({
 }))
 
 vi.mock('@/views/CarbonIntensity/components/ApplicationSummary', () => ({
-  ApplicationSummary: ({ canEditPathways }) => {
+  ApplicationSummary: ({
+    canEditDocuments,
+    onEditDocuments,
+    canEditPathways
+  }) => {
     const [editing, setEditing] = React.useState(false)
     return (
       <div data-test="summary-stub">
+        {canEditDocuments && (
+          <button
+            data-test="summary-documents-edit-trigger"
+            onClick={onEditDocuments}
+          >
+            edit documents
+          </button>
+        )}
         {canEditPathways && (
           <button
             data-test="summary-pathways-edit"
@@ -655,5 +684,40 @@ describe('EditViewCIApplication', () => {
         'false'
       )
     })
+  })
+
+  test('lets a supplier submit requested documents to lock uploads again', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    mockParams = { ciApplicationId: '10' }
+    mockGetCIApplication = {
+      data: {
+        ciApplicationId: 10,
+        organization: { name: 'Example Fuel Co' },
+        status: { status: 'Submitted' },
+        documentUploadEnabled: true
+      },
+      isLoading: false
+    }
+
+    render(<EditViewCIApplication />, [query, theme, localization, router])
+    fireEvent.click(await screen.findByTestId('summary-documents-edit-trigger'))
+
+    expect(screen.getByText('Status: Changes requested')).toBeInTheDocument()
+    expect(screen.getByTestId('step3-stub')).toHaveAttribute(
+      'data-show-save-controls',
+      'true'
+    )
+    fireEvent.click(screen.getByTestId('step3-submit-trigger'))
+
+    await waitFor(() =>
+      expect(mockUpdateStep3).toHaveBeenCalledWith({
+        supportingDocumentOther: 'Additional information'
+      })
+    )
   })
 })
