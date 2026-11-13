@@ -3,12 +3,34 @@ from __future__ import annotations
 from typing import Sequence
 
 from sqlalchemy import and_, case, func, select
+from sqlalchemy.orm import aliased
 
 from lcfs.db.base import ActionTypeEnum
+from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 
 
 class VersioningQueryHelper:
     """Shared helpers for selecting the newest row in a versioned group."""
+
+    @staticmethod
+    def report_chain_ids(compliance_report_id: int):
+        """IDs of every report in the same chain (the original and its
+        supplementals and adjustments) as *compliance_report_id*.
+
+        A schedule row's earlier versions live in earlier reports of the same
+        chain, so a group_uuid, version or row ID sent with a save is looked up
+        only among these reports. Anything outside the chain reads as missing.
+        """
+        current = aliased(ComplianceReport)
+        return (
+            select(ComplianceReport.compliance_report_id)
+            .join(
+                current,
+                current.compliance_report_group_uuid
+                == ComplianceReport.compliance_report_group_uuid,
+            )
+            .where(current.compliance_report_id == compliance_report_id)
+        )
 
     @staticmethod
     def latest_version_subquery(

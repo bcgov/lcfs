@@ -156,10 +156,14 @@ class NotionalTransferServices:
     ) -> NotionalTransferSchema:
         """Update an existing notional transfer"""
         existing_transfer = await self.repo.get_latest_notional_transfer_by_group_uuid(
-            notional_transfer_data.group_uuid
+            notional_transfer_data.group_uuid,
+            notional_transfer_data.compliance_report_id,
         )
         if not existing_transfer:
-            raise ValueError("Notional transfer not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Notional transfer not found",
+            )
 
         if (
             existing_transfer.compliance_report_id
@@ -226,8 +230,14 @@ class NotionalTransferServices:
     ) -> DeleteNotionalTransferResponseSchema:
         """Delete a notional transfer"""
         existing_transfer = await self.repo.get_latest_notional_transfer_by_group_uuid(
-            notional_transfer_data.group_uuid
+            notional_transfer_data.group_uuid,
+            notional_transfer_data.compliance_report_id,
         )
+        if not existing_transfer:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Notional transfer not found",
+            )
 
         if (
             existing_transfer.compliance_report_id
@@ -242,7 +252,7 @@ class NotionalTransferServices:
         else:
             deleted_entity = NotionalTransfer(
                 compliance_report_id=notional_transfer_data.compliance_report_id,
-                group_uuid=notional_transfer_data.group_uuid,
+                group_uuid=existing_transfer.group_uuid,
                 version=existing_transfer.version + 1,
                 action_type=ActionTypeEnum.DELETE,
             )

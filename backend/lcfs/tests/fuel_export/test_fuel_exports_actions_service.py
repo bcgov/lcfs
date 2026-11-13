@@ -235,7 +235,9 @@ async def test_update_fuel_export_success_existing_report(
 
     # Assertions
     assert result == FuelExportSchema.model_validate(updated_export)
-    mock_repo.get_fuel_export_by_id.assert_awaited_once_with(fe_data.fuel_export_id)
+    mock_repo.get_fuel_export_by_id.assert_awaited_once_with(
+        fe_data.fuel_export_id, fe_data.compliance_report_id
+    )
     mock_repo.update_fuel_export.assert_awaited_once()
     mock_fuel_code_repo.get_standardized_fuel_data.assert_awaited_once()
     # Ensure compliance units were updated correctly
@@ -310,7 +312,9 @@ async def test_update_fuel_export_create_new_version(
 
     # Assertions
     assert result == FuelExportSchema.model_validate(new_export)
-    mock_repo.get_fuel_export_by_id.assert_awaited_once_with(fe_data.fuel_export_id)
+    mock_repo.get_fuel_export_by_id.assert_awaited_once_with(
+        fe_data.fuel_export_id, fe_data.compliance_report_id
+    )
     mock_repo.create_fuel_export.assert_awaited_once()
     mock_fuel_code_repo.get_standardized_fuel_data.assert_awaited_once()
     # Ensure compliance units were calculated correctly
@@ -340,7 +344,7 @@ async def test_delete_fuel_export_success(fuel_export_action_service, mock_repo)
     assert isinstance(result, DeleteFuelExportResponseSchema)
     assert result.message == "Marked as deleted."
     mock_repo.get_latest_fuel_export_by_group_uuid.assert_awaited_once_with(
-        fe_data.group_uuid
+        fe_data.group_uuid, fe_data.compliance_report_id
     )
     mock_repo.delete_fuel_export.assert_awaited_once()
 
@@ -394,7 +398,7 @@ async def test_delete_fuel_export_changelog(fuel_export_action_service, mock_rep
     assert isinstance(result, DeleteFuelExportResponseSchema)
     assert result.message == "Marked as deleted."
     mock_repo.get_latest_fuel_export_by_group_uuid.assert_awaited_once_with(
-        fe_data.group_uuid
+        fe_data.group_uuid, fe_data.compliance_report_id
     )
     mock_repo.create_fuel_export.assert_awaited_once()
 

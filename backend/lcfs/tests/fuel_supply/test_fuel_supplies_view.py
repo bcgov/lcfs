@@ -343,3 +343,54 @@ async def test_save_fuel_supply_submitted_status_blocked(
         assert response.status_code == 403
         assert "Forbidden resource" in response.json()["detail"]
         mock_validate_editable.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_save_fuel_supply_row_checks_report_access(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    mock_fuel_supply_action_service,
+    mock_compliance_report_validation,
+    mock_fuel_supply_validation,
+):
+    """The save checks the caller may see the report's version (a Draft is the
+    supplier's alone) before anything else, as the other schedules do."""
+    from fastapi import HTTPException
+
+    set_mock_user(fastapi_app, [RoleEnum.ANALYST])
+    report = MagicMock()
+    mock_compliance_report_validation.validate_organization_access = AsyncMock(
+        return_value=report
+    )
+    mock_compliance_report_validation.validate_compliance_report_access = AsyncMock(
+        side_effect=HTTPException(status_code=403, detail="No access")
+    )
+    fastapi_app.dependency_overrides[ComplianceReportValidation] = (
+        lambda: mock_compliance_report_validation
+    )
+    fastapi_app.dependency_overrides[FuelSupplyValidation] = (
+        lambda: mock_fuel_supply_validation
+    )
+    fastapi_app.dependency_overrides[FuelSupplyActionService] = (
+        lambda: mock_fuel_supply_action_service
+    )
+
+    response = await client.post(
+        fastapi_app.url_path_for("save_fuel_supply_row"),
+        json={
+            "compliance_report_id": 1,
+            "fuel_type_id": 1,
+            "fuel_category_id": 1,
+            "end_use_id": 24,
+            "provision_of_the_act_id": 1,
+            "quantity": 1000,
+            "units": "L",
+        },
+    )
+
+    assert response.status_code == 403
+    mock_compliance_report_validation.validate_compliance_report_access.assert_awaited_once_with(
+        report
+    )
+    mock_fuel_supply_action_service.create_fuel_supply.assert_not_called()

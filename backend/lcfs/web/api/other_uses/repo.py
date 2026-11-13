@@ -91,16 +91,20 @@ class OtherUsesRepository:
 
     @repo_handler
     async def get_latest_other_uses_by_group_uuid(
-        self, group_uuid: str
+        self, group_uuid: str, compliance_report_id: int
     ) -> Optional[OtherUses]:
         """
-        Retrieve the latest OtherUses record for a given group UUID.
-        Government records are prioritized over supplier records by ordering first by `user_type`
-        (with GOVERNMENT records coming first) and then by `version` in descending order.
+        Retrieve the latest OtherUses record for a given group UUID, from the
+        chain of the given compliance report only.
         """
         query = (
             select(OtherUses)
-            .where(OtherUses.group_uuid == group_uuid)
+            .where(
+                OtherUses.group_uuid == group_uuid,
+                OtherUses.compliance_report_id.in_(
+                    VersioningQueryHelper.report_chain_ids(compliance_report_id)
+                ),
+            )
             .order_by(
                 OtherUses.version.desc(),
             )
@@ -269,9 +273,12 @@ class OtherUsesRepository:
         return paginated_other_uses, total_count
 
     @repo_handler
-    async def get_other_use(self, other_uses_id: int) -> OtherUses:
+    async def get_other_use(
+        self, other_uses_id: int, compliance_report_id: int
+    ) -> OtherUses:
         """
-        Get a specific other use by id.
+        Get a specific other use by id, from the chain of the given compliance
+        report only.
         """
         return await self.db.scalar(
             select(OtherUses)
@@ -282,7 +289,12 @@ class OtherUsesRepository:
                 joinedload(OtherUses.provision_of_the_act),
                 joinedload(OtherUses.fuel_code),
             )
-            .where(OtherUses.other_uses_id == other_uses_id)
+            .where(
+                OtherUses.other_uses_id == other_uses_id,
+                OtherUses.compliance_report_id.in_(
+                    VersioningQueryHelper.report_chain_ids(compliance_report_id)
+                ),
+            )
         )
 
     @repo_handler

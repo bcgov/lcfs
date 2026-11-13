@@ -1,4 +1,5 @@
 from sqlalchemy import Boolean, Column, Integer, ForeignKey, Enum, String, Numeric, BigInteger, text
+from sqlalchemy import CheckConstraint, UniqueConstraint
 from sqlalchemy.orm import relationship
 from lcfs.db.base import BaseModel, Auditable, Versioning
 from lcfs.db.models.compliance.ComplianceReport import QuantityUnitsEnum
@@ -6,9 +7,19 @@ from lcfs.db.models.compliance.ComplianceReport import QuantityUnitsEnum
 
 class FuelSupply(BaseModel, Auditable, Versioning):
     __tablename__ = "fuel_supply"
-    __table_args__ = {
-        "comment": "Records the supply of fuel for compliance purposes, including changes in supplemental reports"
-    }
+    __table_args__ = (
+        UniqueConstraint(
+            "group_uuid", "version", name="uq_fuel_supply_group_uuid_version"
+        ),
+        CheckConstraint(
+            "quantity >= 0 AND q1_quantity >= 0 AND q2_quantity >= 0"
+            " AND q3_quantity >= 0 AND q4_quantity >= 0",
+            name="quantities_non_negative",
+        ),
+        {
+            "comment": "Records the supply of fuel for compliance purposes, including changes in supplemental reports"
+        },
+    )
 
     fuel_supply_id = Column(
         Integer,

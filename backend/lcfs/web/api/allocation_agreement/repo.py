@@ -545,15 +545,20 @@ class AllocationAgreementRepository:
 
     @repo_handler
     async def get_latest_allocation_agreement_by_group_uuid(
-        self, group_uuid: str
+        self, group_uuid: str, compliance_report_id: int
     ) -> Optional[AllocationAgreement]:
         """
-        Retrieve the latest version of an allocation agreement by group UUID.
-        Government records are prioritized over supplier records.
+        Retrieve the latest version of an allocation agreement by group UUID,
+        from the chain of the given compliance report only.
         """
         query = (
             select(AllocationAgreement)
-            .where(AllocationAgreement.group_uuid == group_uuid)
+            .where(
+                AllocationAgreement.group_uuid == group_uuid,
+                AllocationAgreement.compliance_report_id.in_(
+                    VersioningQueryHelper.report_chain_ids(compliance_report_id)
+                ),
+            )
             .order_by(
                 AllocationAgreement.version.desc(),
             )

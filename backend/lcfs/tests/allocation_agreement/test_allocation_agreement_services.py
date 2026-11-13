@@ -223,7 +223,7 @@ async def test_update_allocation_agreement(
     # Verify that update_allocation_agreement was called with expected arguments
     mock_repo_full.update_allocation_agreement.assert_called_once()
     mock_repo_full.get_latest_allocation_agreement_by_group_uuid.assert_called_once_with(
-        DEFAULT_UUID
+        DEFAULT_UUID, 1
     )
 
 
@@ -319,7 +319,7 @@ async def test_update_allocation_agreement_quarterly_fields(
     # Verify that update_allocation_agreement was called
     mock_repo_full.update_allocation_agreement.assert_called_once()
     mock_repo_full.get_latest_allocation_agreement_by_group_uuid.assert_called_once_with(
-        DEFAULT_UUID
+        DEFAULT_UUID, 1
     )
 
 
@@ -469,7 +469,7 @@ async def test_delete_allocation_agreement(
     # Assertions
     assert result.message == "Marked as deleted."
     mock_repo_full.get_latest_allocation_agreement_by_group_uuid.assert_called_once_with(
-        group_uuid
+        group_uuid, 1
     )
     mock_repo_full.create_allocation_agreement.assert_called_once()
 
@@ -506,7 +506,7 @@ async def test_delete_already_deleted_allocation_agreement(
         result.message == "Marked as deleted."
     )  # The service now always returns "Marked as deleted."
     mock_repo_full.get_latest_allocation_agreement_by_group_uuid.assert_called_once_with(
-        group_uuid
+        group_uuid, 1
     )
     # Verify create_allocation_agreement was not called
     mock_repo_full.create_allocation_agreement.assert_not_called()

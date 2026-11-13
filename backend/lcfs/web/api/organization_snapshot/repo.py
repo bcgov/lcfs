@@ -6,6 +6,11 @@ from sqlalchemy.orm import immediateload
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models import ComplianceReportOrganizationSnapshot, Organization
+from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+from lcfs.db.models.compliance.ComplianceReportStatus import (
+    ComplianceReportStatus,
+    ComplianceReportStatusEnum,
+)
 from lcfs.web.core.decorators import repo_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
 
@@ -50,6 +55,21 @@ class OrganizationSnapshotRepository:
         )
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
+
+    @repo_handler
+    async def get_compliance_report_status(
+        self, compliance_report_id: int
+    ) -> ComplianceReportStatusEnum | None:
+        """The current status of the report the snapshot belongs to."""
+        return await self.db.scalar(
+            select(ComplianceReportStatus.status)
+            .join(
+                ComplianceReport,
+                ComplianceReport.current_status_id
+                == ComplianceReportStatus.compliance_report_status_id,
+            )
+            .where(ComplianceReport.compliance_report_id == compliance_report_id)
+        )
 
     @repo_handler
     async def save_snapshot(self, org_snapshot):

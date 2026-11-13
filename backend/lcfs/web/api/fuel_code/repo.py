@@ -11,6 +11,7 @@ from lcfs.db.models.compliance import (
 )
 import structlog
 from fastapi import Depends, HTTPException
+from fastapi.exceptions import RequestValidationError
 from sqlalchemy import (
     BigInteger,
     and_,
@@ -85,6 +86,25 @@ class CarbonIntensityResult:
     eer: float
     energy_density: float | None
     uci: float | None
+    unrecognized: bool = False
+
+    def reported_energy_density(self, sent: float | None) -> float | None:
+        """The energy density a schedule row is calculated with.
+
+        The standard value for the fuel type and year wins. A value sent with
+        the row is used only for an unrecognized ("Other") fuel, which has no
+        standard value; validation bounds it before it gets here.
+        """
+        if self.energy_density is not None:
+            return self.energy_density
+        return sent if self.unrecognized else None
+
+
+def fuel_code_validation_error(problem: str) -> RequestValidationError:
+    """The 422 a schedule save gets for a fuel code it may not use."""
+    return RequestValidationError(
+        [{"loc": ("fuelCode",), "msg": problem, "type": "value_error"}]
+    )
 
 
 def _row_mapping(row: Any) -> dict[str, Any]:
@@ -1686,6 +1706,75 @@ class FuelCodeRepository:
 
         return result.scalar_one_or_none()
 
+    async def ensure_fuel_code_reportable(
+        self,
+        fuel_code_id: Optional[int],
+        *,
+        fuel_type_id: Optional[int],
+        compliance_report_id: int,
+        check_effective_dates: bool = True,
+    ) -> None:
+        """Reject a fuel code a schedule row in this report may not claim (422).
+
+        The fuel code sets the row's carbon intensity, so it must be an
+        Approved code for the row's fuel type, effective during the report's
+        compliance year: the same codes the schedule's fuel code list offers.
+        The compliance year is the stored report's.
+
+        *check_effective_dates* is False when an existing row keeps the code it
+        already had: reports from before 2024 carry codes that expired before
+        their year, and re-saving those rows must keep working.
+
+        Not wrapped in ``repo_handler``: the 422 must reach the view as is.
+        """
+        if fuel_code_id is None:
+            return
+
+        fuel_code = (
+            await self.db.execute(
+                select(
+                    FuelCodeStatus.status,
+                    FuelCode.fuel_type_id,
+                    FuelCode.effective_date,
+                    FuelCode.expiration_date,
+                )
+                .join(
+                    FuelCodeStatus,
+                    FuelCode.fuel_status_id == FuelCodeStatus.fuel_code_status_id,
+                )
+                .where(FuelCode.fuel_code_id == fuel_code_id)
+            )
+        ).one_or_none()
+
+        problem = None
+        if fuel_code is None or fuel_code.status != FuelCodeStatusEnum.Approved:
+            problem = "must be an approved fuel code"
+        elif fuel_code.fuel_type_id != fuel_type_id:
+            problem = "does not match the fuel type"
+        elif check_effective_dates:
+            compliance_year = int(
+                await self.db.scalar(
+                    select(CompliancePeriod.description)
+                    .join(
+                        ComplianceReport,
+                        ComplianceReport.compliance_period_id
+                        == CompliancePeriod.compliance_period_id,
+                    )
+                    .where(ComplianceReport.compliance_report_id == compliance_report_id)
+                )
+            )
+            if (
+                fuel_code.effective_date is not None
+                and fuel_code.effective_date > date(compliance_year, 12, 31)
+            ) or (
+                fuel_code.expiration_date is not None
+                and fuel_code.expiration_date < date(compliance_year, 1, 1)
+            ):
+                problem = f"is not effective in {compliance_year}"
+
+        if problem:
+            raise fuel_code_validation_error(problem)
+
     @repo_handler
     async def get_standardized_fuel_data(
         self,
@@ -1823,6 +1912,7 @@ class FuelCodeRepository:
             eer=eer,
             energy_density=energy_density,
             uci=uci.intensity if uci else None,
+            unrecognized=bool(fuel_type.unrecognized),
         )
 
     @repo_handler
