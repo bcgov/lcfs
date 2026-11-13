@@ -10,9 +10,11 @@ import Tooltip from '@mui/material/Tooltip'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 
 import BCBox from '@/components/BCBox'
-import BCButton from '@/components/BCButton'
+import CommentActionButton from '@/components/Comments/CommentActionButton'
 import BCTypography from '@/components/BCTypography'
 import CommentForm from '@/components/Comments/CommentForm'
+import CommentAttachments from '@/components/Comments/CommentAttachments'
+import { useDownloadDocument } from '@/hooks/useDocuments'
 
 import { sanitizeAndHighlightCommentHtml } from '@/utils/sanitizeCommentHtml'
 import { MENTION_CHIP_STYLE } from '@/components/Comments/mentionUtils'
@@ -31,6 +33,10 @@ const metadataChipSx = {
 }
 
 const ENTITY_TYPE_CONFIG = {
+  penaltyLog: {
+    label: 'Penalty log',
+    path: (id) => `/organizations/${id}/penalty-log`
+  },
   Transfer: {
     label: 'Transfer',
     path: (id) => `/transfers/${id}`
@@ -74,6 +80,21 @@ const getInitials = (name) => {
     .map((part) => part[0])
     .join('')
     .toUpperCase()
+}
+
+// Mount document hooks only for rows that have attachments.
+const CommentRowAttachments = ({ comment }) => {
+  const downloadDocument = useDownloadDocument(
+    'internal_comment',
+    comment.internalCommentId
+  )
+  return (
+    <CommentAttachments
+      commentId={comment.internalCommentId}
+      documents={comment.documents}
+      onDownload={downloadDocument}
+    />
+  )
 }
 
 /**
@@ -302,31 +323,14 @@ export const CommentRow = forwardRef(function CommentRow(
               )}
             </BCTypography>
             {comment.canEdit && !editing && (
-              <BCButton
-                variant="outlined"
-                size="small"
+              <CommentActionButton
+                disabled={isEditPending}
                 onClick={startEdit}
                 data-test="edit-comment-btn"
                 aria-label={t('internalComment:edit')}
-                sx={{
-                  height: 'auto',
-                  py: 0.25,
-                  px: 1.5,
-                  minWidth: 'auto',
-                  fontSize: '0.8125rem',
-                  lineHeight: 1.4,
-                  borderColor: 'primary.main',
-                  color: 'primary.main',
-                  backgroundColor: '#fff',
-                  '&:hover': {
-                    backgroundColor: 'primary.light',
-                    borderColor: 'primary.main',
-                    color: '#fff'
-                  }
-                }}
               >
                 {t('internalComment:edit')}
-              </BCButton>
+              </CommentActionButton>
             )}
           </BCBox>
           <BCBox sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -376,6 +380,9 @@ export const CommentRow = forwardRef(function CommentRow(
           }}
           dangerouslySetInnerHTML={{ __html: renderedHtml }}
         />
+        {comment.documents?.length > 0 && (
+          <CommentRowAttachments comment={comment} />
+        )}
         {editing && (
           <>
             <BCBox sx={{ borderTop: '1px solid #ccc', mt: 2, mb: 1.5 }} />

@@ -36,13 +36,15 @@ const DocumentPreviewButton = ({
           <Visibility fontSize="inherit" />
         </IconButton>
       </Tooltip>
-      <DocumentPreviewDialog
-        open={open}
-        onClose={() => setOpen(false)}
-        parentType={parentType}
-        parentID={parentID}
-        document={document}
-      />
+      {open && (
+        <DocumentPreviewDialog
+          open={open}
+          onClose={() => setOpen(false)}
+          parentType={parentType}
+          parentID={parentID}
+          document={document}
+        />
+      )}
     </>
   )
 }
