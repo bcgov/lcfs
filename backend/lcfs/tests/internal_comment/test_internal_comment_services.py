@@ -384,6 +384,7 @@ def _build_service_with_user_roles(role_names):
     # Most comments are not Company Overview notes; tests that need the
     # organization-comment path override this.
     service.repo.is_organization_comment = AsyncMock(return_value=False)
+    service.repo.is_penalty_log_comment = AsyncMock(return_value=False)
     return service
 
 

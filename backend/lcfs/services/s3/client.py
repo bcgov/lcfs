@@ -3,6 +3,9 @@ from io import UnsupportedOperation
 import os
 import re
 import uuid
+from typing import List, Optional, Union
+
+import structlog
 
 from lcfs.utils.constants import ALLOWED_MIME_TYPES, ALLOWED_FILE_TYPES
 from lcfs.db.models.admin_adjustment.AdminAdjustment import (
@@ -45,6 +48,8 @@ from lcfs.db.models.comment.InternalComment import (
     InternalComment,
     internal_comment_document_association,
 )
+from lcfs.db.models.comment.PenaltyLogInternalComment import PenaltyLogInternalComment
+from lcfs.services.comment_permissions import can_manage_penalty_comment
 from lcfs.db.models.comment.CIApplicationInternalComment import (
     CIApplicationInternalComment,
 )
@@ -59,6 +64,8 @@ from lcfs.db.models.compliance.ChargingSite import charging_site_document_associ
 from lcfs.web.core.decorators import repo_handler
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 from botocore.exceptions import ClientError
+
+logger = structlog.get_logger(__name__)
 
 BUCKET_NAME = settings.s3_bucket
 MAX_FILE_SIZE_MB = 50
@@ -344,6 +351,7 @@ class DocumentService:
             if not internal_comment:
                 raise Exception("Internal comment not found")
 
+            document.create_user = user.keycloak_username
             self.db.add(document)
             await self.db.flush()
 
@@ -509,8 +517,8 @@ class DocumentService:
         Attachment visibility follows the comment itself ("match comment
         permissions"):
 
-        * write (add/remove attachment): only the comment's author, mirroring
-          internal comment edit permissions.
+        * write (add/remove attachment): the comment's author; government
+          administrators may also manage penalty log comment attachments.
         * read (list/download): government staff see everything; everyone else
           only Public comments, on a compliance report or CI application
           belonging to their own organization.
@@ -531,10 +539,22 @@ class DocumentService:
         is_government = RoleEnum.GOVERNMENT in user.role_names
 
         if write:
-            if comment.create_user != user.keycloak_username:
+            is_penalty_log = (
+                await self.db.execute(
+                    select(PenaltyLogInternalComment.internal_comment_id).where(
+                        PenaltyLogInternalComment.internal_comment_id == parent_id
+                    )
+                )
+            ).scalar_one_or_none() is not None
+            can_write = (
+                can_manage_penalty_comment(user, comment)
+                if is_penalty_log
+                else comment.create_user == user.keycloak_username
+            )
+            if not can_write:
                 raise HTTPException(
                     status_code=403,
-                    detail="Only the comment author can modify its attachments.",
+                    detail="You do not have permission to modify this comment's attachments.",
                 )
         elif not is_government:
             visibility = (
@@ -648,11 +668,18 @@ class DocumentService:
         parent_id: int,
         parent_type: str,
         require_physical_delete: bool = False,
-    ) -> bool:
+        defer_storage_delete: bool = False,
+    ) -> Union[bool, Optional[str]]:
         """Remove *parent_id*'s link to the document, and the document itself
         when that was its last link. Returns whether the file was physically
         deleted. With *require_physical_delete*, a document still linked
-        elsewhere is left untouched and ``False`` is returned instead."""
+        elsewhere is left untouched and ``False`` is returned instead.
+
+        With *defer_storage_delete* the S3 object is left in place and its key
+        is returned instead (``None`` when the file was not physically
+        deleted), so the caller can remove it once the database change has
+        been committed (see ``delete_storage_objects``).
+        """
         # The caller was authorized for the parent, so the document must hang
         # off that parent; one linked elsewhere reads as missing.
         document = await self._get_document_for_parent(
@@ -672,11 +699,14 @@ class DocumentService:
         has_other_links = link_count > 1
 
         if has_other_links and require_physical_delete:
-            return False
+            return None if defer_storage_delete else False
 
+        file_key = None
         if not has_other_links:
-            # Delete the file from S3
-            self.s3_client.delete_object(Bucket=BUCKET_NAME, Key=document.file_key)
+            file_key = document.file_key
+            if not defer_storage_delete:
+                # Delete the file from S3
+                self.s3_client.delete_object(Bucket=BUCKET_NAME, Key=file_key)
 
             # Delete the entry from the database
             await self.db.delete(document)
@@ -690,7 +720,23 @@ class DocumentService:
                     )
                 )
             )
+        if defer_storage_delete:
+            return file_key
         return not has_other_links
+
+    def delete_storage_objects(self, file_keys: List[str]) -> None:
+        """Remove S3 objects after their documents were deleted and committed.
+
+        A failure leaves an orphaned object, which is safer than a retained
+        record that points to a file that is gone, so it is logged, not raised.
+        """
+        for file_key in file_keys:
+            try:
+                self.s3_client.delete_object(Bucket=BUCKET_NAME, Key=file_key)
+            except Exception:
+                logger.error(
+                    "Failed to delete S3 object", file_key=file_key, exc_info=True
+                )
 
     @repo_handler
     async def get_by_id_and_type(self, parent_id: int, parent_type="compliance_report"):
