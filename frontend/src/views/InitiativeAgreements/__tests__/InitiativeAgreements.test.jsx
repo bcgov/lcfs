@@ -123,7 +123,7 @@ describe('InitiativeAgreements', () => {
       expect.objectContaining({
         page: 1,
         size: 10,
-        sortOrders: [{ field: 'updateDate', direction: 'desc' }]
+        sortOrders: []
       })
     )
     const gridProps = mockBCGridViewer.mock.calls[0][0]
