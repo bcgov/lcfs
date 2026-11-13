@@ -151,6 +151,7 @@ class UserAuthentication(AuthenticationBackend):
                     signing_key,
                     algorithms=["RS256"],
                     audience=self.settings.keycloak_audience,
+                    issuer=self.settings.keycloak_issuer,
                     options={"verify_exp": True},
                     leeway=5,  # Allows for 5 seconds of clock skew
                 )

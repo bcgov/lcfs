@@ -88,6 +88,8 @@ class Settings(BaseSettings):
         "https://dev.loginproxy.gov.bc.ca/auth/realms/standard/.well-known/openid-configuration"
     )
     keycloak_audience: str = "low-carbon-fuel-standard-5147"
+    keycloak_issuer: Optional[str] = None
+    local_keycloak_enabled: bool = False
 
     # Variables for S3
     s3_endpoint: str = "http://localhost:9000"
