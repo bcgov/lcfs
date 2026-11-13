@@ -19,11 +19,7 @@ Given('the user is on the login page', () => {
 Given(
   'the analyst logs in with valid credentials for compliance reports',
   () => {
-    cy.loginWith(
-      'idir',
-      Cypress.env('ADMIN_IDIR_USERNAME'),
-      Cypress.env('ADMIN_IDIR_PASSWORD')
-    )
+    cy.loginWithEnv('idir')
     cy.wait(5000)
     cy.setIDIRRoles('analyst')
     cy.visit('/', { timeout: 60000 })
@@ -76,10 +72,10 @@ Then('a success message is displayed for report return', () => {
 
 // For the supplier scenario
 Given('the supplier logs in with valid credentials', () => {
-  cy.loginWith(
+  cy.loginWithEnv(
     'bceid',
-    Cypress.env('TEST_SUPPLIER_USERNAME'),
-    Cypress.env('TEST_SUPPLIER_PASSWORD')
+    ['TEST_SUPPLIER_USERNAME'],
+    ['TEST_SUPPLIER_PASSWORD']
   )
   cy.wait(5000)
   cy.visit('/', { timeout: 60000 })

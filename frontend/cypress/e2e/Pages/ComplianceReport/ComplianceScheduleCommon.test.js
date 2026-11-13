@@ -27,11 +27,7 @@ function selectComplianceYear() {
 Given(
   'the compliance schedule test user is logged in with a new draft report',
   () => {
-    cy.loginWith(
-      'bceid',
-      Cypress.env('ORG1_BCEID_USERNAME') || Cypress.env('BCEID_TEST_USER'),
-      Cypress.env('ORG1_BCEID_PASSWORD') || Cypress.env('BCEID_TEST_PASS')
-    )
+    cy.loginWithEnv('bceid')
     cy.visit('/', { timeout: 60000 })
     cy.getByDataTest('dashboard-container', { timeout: 30000 }).should('exist')
 

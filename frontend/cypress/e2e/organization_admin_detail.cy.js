@@ -237,11 +237,7 @@ const stubShell = () => {
 
 describe('IDIR organization admin detail views (#4091)', () => {
   before(() => {
-    cy.loginWith(
-      'idir',
-      Cypress.env('ADMIN_IDIR_USERNAME'),
-      Cypress.env('ADMIN_IDIR_PASSWORD')
-    )
+    cy.loginWithEnv('idir')
     cy.get('.main-layout-navbar', { timeout: 30000 }).should('be.visible')
   })
 

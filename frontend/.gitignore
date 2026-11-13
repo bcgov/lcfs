@@ -28,6 +28,14 @@ cypress.env.json
 cypress/screenshots/
 cypress/videos/
 cypress/reports/
+playwright-report/
+test-results/
+playwright/artifacts/
+playwright/reports/
+playwright/.features-gen/
+playwright/.firefox-home/
+playwright/.cypress-firefox-home/
+.playwright-mcp/
 
 # Vistest coverage folder
 /coverage
