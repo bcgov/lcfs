@@ -1,4 +1,7 @@
 import io
+from contextlib import contextmanager
+from types import SimpleNamespace
+
 import pytest
 from fastapi import FastAPI
 from httpx import AsyncClient
@@ -14,6 +17,31 @@ from lcfs.web.api.final_supply_equipment.schema import (
     FSEOptionsSchema,
     PortsEnum,
 )
+
+VALIDATION = "lcfs.web.api.compliance_report.validation.ComplianceReportValidation"
+
+
+@contextmanager
+def validated_report(compliance_report_id=10, organization_id=1):
+    """Pass the report checks a reporting write makes, for this report."""
+    report = SimpleNamespace(
+        compliance_report_id=compliance_report_id,
+        organization_id=organization_id,
+        compliance_report_group_uuid=None,
+    )
+    with patch(
+        f"{VALIDATION}.validate_organization_access", return_value=report
+    ) as organization_access, patch(
+        f"{VALIDATION}.validate_compliance_report_access", return_value=None
+    ) as report_access, patch(
+        f"{VALIDATION}.validate_compliance_report_editable", return_value=None
+    ) as editable:
+        yield SimpleNamespace(
+            report=report,
+            organization_access=organization_access,
+            report_access=report_access,
+            editable=editable,
+        )
 
 
 @pytest.mark.anyio
@@ -166,7 +194,9 @@ async def test_save_final_supply_equipment_delete_success(
         "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_organization_access"
     ) as mock_validate_report, patch(
         "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_compliance_report_editable"
-    ) as mock_validate_editable:
+    ) as mock_validate_editable, patch(
+        "lcfs.web.api.final_supply_equipment.services.FinalSupplyEquipmentServices.delete_final_supply_equipment"
+    ) as mock_delete_fse:
         # Create a properly mocked compliance report with current_status
         mock_report = ComplianceReport(organization=Organization())
         mock_report.current_status = MagicMock()
@@ -174,6 +204,7 @@ async def test_save_final_supply_equipment_delete_success(
         mock_validate_report.return_value = mock_report
         mock_validate_report_access.return_value = None
         mock_validate_editable.return_value = None
+        mock_delete_fse.return_value = None
 
         set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
         url = fastapi_app.url_path_for("save_final_supply_equipment_row")
@@ -205,6 +236,8 @@ async def test_save_final_supply_equipment_delete_success(
             response.json()["message"]
             == "Final supply equipment row deleted successfully"
         )
+        # Deleted only within the validated report.
+        mock_delete_fse.assert_awaited_once_with(123, 456)
 
 
 @pytest.mark.anyio
@@ -520,7 +553,7 @@ async def test_create_fse_reporting_success(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
     """Test successful creation of FSE reporting batch"""
-    with patch(
+    with validated_report() as validation, patch(
         "lcfs.web.api.final_supply_equipment.services.FinalSupplyEquipmentServices.create_fse_reporting_batch"
     ) as mock_create:
         mock_create.return_value = {"message": "FSE reporting created successfully"}
@@ -546,6 +579,28 @@ async def test_create_fse_reporting_success(
 
         assert response.status_code == 201
         assert "message" in response.json()
+        validation.organization_access.assert_awaited_once_with(10)
+        validation.editable.assert_awaited_once()
+        assert mock_create.call_args.args[1] is validation.report
+
+
+@pytest.mark.anyio
+async def test_create_fse_reporting_rejects_body_organization(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """The outer organization must be the validated report's."""
+    with validated_report(organization_id=1), patch(
+        "lcfs.web.api.final_supply_equipment.services.FinalSupplyEquipmentServices.create_fse_reporting_batch"
+    ) as mock_create:
+        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+        url = fastapi_app.url_path_for("create_fse_reporting")
+        response = await client.post(
+            url,
+            json={"fseReports": [], "complianceReportId": 10, "organizationId": 2},
+        )
+
+        assert response.status_code == 400
+        mock_create.assert_not_called()
 
 
 @pytest.mark.anyio
@@ -553,7 +608,7 @@ async def test_update_fse_reporting_success(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
     """Test successful update of FSE reporting"""
-    with patch(
+    with validated_report() as validation, patch(
         "lcfs.web.api.final_supply_equipment.services.FinalSupplyEquipmentServices.update_fse_reporting"
     ) as mock_update:
         mock_update.return_value = {
@@ -579,6 +634,9 @@ async def test_update_fse_reporting_success(
         assert response.status_code == 200
         assert response.json()["id"] == 1
         mock_update.assert_called_once()
+        validation.organization_access.assert_awaited_once_with(10)
+        validation.editable.assert_awaited_once()
+        assert mock_update.call_args.args[2] is validation.report
 
 
 @pytest.mark.anyio
@@ -586,7 +644,7 @@ async def test_delete_fse_reporting_batch_success(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
     """Test successful batch deletion of FSE reporting"""
-    with patch(
+    with validated_report() as validation, patch(
         "lcfs.web.api.final_supply_equipment.services.FinalSupplyEquipmentServices.delete_fse_reporting_batch"
     ) as mock_delete:
         mock_delete.return_value = {
@@ -604,7 +662,11 @@ async def test_delete_fse_reporting_batch_success(
 
         assert response.status_code == 200
         assert "message" in response.json()
-        mock_delete.assert_called_once_with([1, 2])
+        mock_delete.assert_called_once()
+        data, compliance_report = mock_delete.call_args.args
+        assert data.reporting_ids == [1, 2]
+        assert compliance_report is validation.report
+        validation.editable.assert_awaited_once()
 
 
 @pytest.mark.anyio
@@ -612,7 +674,7 @@ async def test_update_fse_reporting_active_status_success(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
     """Test toggling FSE reporting active status"""
-    with patch(
+    with validated_report() as validation, patch(
         "lcfs.web.api.final_supply_equipment.services.FinalSupplyEquipmentServices.update_fse_reporting_active_status"
     ) as mock_toggle:
         mock_toggle.return_value = {"updated": 1, "is_active": False}
@@ -630,6 +692,33 @@ async def test_update_fse_reporting_active_status_success(
         assert response.status_code == 200
         assert response.json()["updated"] == 1
         mock_toggle.assert_called_once()
+        assert mock_toggle.call_args.args[1] is validation.report
+        validation.editable.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_delete_fse_reporting_resolves_the_record_report(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """A single delete validates the report the record belongs to."""
+    services = (
+        "lcfs.web.api.final_supply_equipment.services.FinalSupplyEquipmentServices"
+    )
+    with validated_report(compliance_report_id=33) as validation, patch(
+        f"{services}.get_reporting_record_for_write",
+        return_value=SimpleNamespace(compliance_report_id=33),
+    ) as mock_get_record, patch(
+        f"{services}.delete_fse_reporting", return_value=None
+    ) as mock_delete:
+        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+        url = fastapi_app.url_path_for("delete_fse_reporting", reporting_id=7)
+        response = await client.delete(url)
+
+        assert response.status_code == 204
+        assert mock_get_record.call_args.args[0] == 7
+        validation.organization_access.assert_awaited_once_with(33)
+        validation.editable.assert_awaited_once()
+        mock_delete.assert_called_once_with(7, validation.report)
 
 
 @pytest.mark.anyio
@@ -637,7 +726,7 @@ async def test_set_default_dates_fse_reporting_success(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
     """Test successful setting of default dates for FSE reporting"""
-    with patch(
+    with validated_report(organization_id=5) as validation, patch(
         "lcfs.web.api.final_supply_equipment.services.FinalSupplyEquipmentServices.set_default_dates_fse_reporting"
     ) as mock_set_dates:
         mock_set_dates.return_value = {"updated": 3}
@@ -658,6 +747,7 @@ async def test_set_default_dates_fse_reporting_success(
         assert response.json()["updated"] == 3
         # The payload gets converted to FSEReportingDefaultDates schema, so we just check it was called
         mock_set_dates.assert_called_once()
+        validation.editable.assert_awaited_once()
 
 
 @pytest.mark.anyio
