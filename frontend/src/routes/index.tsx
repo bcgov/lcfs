@@ -20,6 +20,7 @@ import { publicPageRoutes } from './routeConfig/publicPageRoutes'
 import { marketDataRoutes } from './routeConfig/marketDataRoutes'
 import { PublicPageLayout } from '@/layouts/PublicPageLayout'
 import { initiativeAgreementRoutes } from './routeConfig/initiativeAgreementRoutes'
+import { lcjfipRoutes } from './routeConfig/lcjfipRoutes'
 import { ReleaseNotes } from '@/views/ReleaseNotes'
 
 const allRoutes = [
@@ -36,7 +37,8 @@ const allRoutes = [
   ...notificationRoutes,
   ...marketDataRoutes,
   ...publicPageRoutes,
-  ...initiativeAgreementRoutes
+  ...initiativeAgreementRoutes,
+  ...lcjfipRoutes
 ]
 
 export const router = createBrowserRouter([

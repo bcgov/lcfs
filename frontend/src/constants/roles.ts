@@ -47,6 +47,19 @@ export const nonGovRoles: RoleName[] = [
   roles.lcjfip_administrator
 ]
 
+// Roles that can see the LCJFIP tab and page (#5488): BCeID applicants and
+// administrators, and the IDIR staff who run incentive programs.
+export const lcjfipBceidRoles: RoleName[] = [
+  roles.lcjfip_applicant,
+  roles.lcjfip_administrator
+]
+
+export const lcjfipIdirRoles: RoleName[] = [
+  roles.ia_analyst,
+  roles.ia_manager,
+  roles.director
+]
+
 export const formatDelegatedRoleLabel = (role: string): string => {
   const roleLabels: Record<string, string> = {
     Analyst: 'Analyst',
