@@ -7,12 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { govRoles } from '@/constants/roles'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import {
-  buildColumnDefs,
-  formatDate,
-  normalizeRows,
-  type FuelCodeRow
-} from '../_schema'
+import { buildColumnDefs, normalizeRows, type FuelCodeRow } from '../_schema'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import {
   useDownloadFuelCodeBulletins,
@@ -35,7 +30,6 @@ const initialPaginationOptions: BCPaginationOptions = {
 
 type FuelCodeBulletinData = {
   fuelCodes?: FuelCodeRow[]
-  cutoffDate?: string | null
 }
 
 export const CurrentFuelCodes = () => {
@@ -71,10 +65,6 @@ export const CurrentFuelCodes = () => {
     }),
     [data, isLoading, isError, error]
   )
-  const cutoffLabel = (data as FuelCodeBulletinData | undefined)?.cutoffDate
-    ? formatDate((data as FuelCodeBulletinData).cutoffDate as string)
-    : t('current.cutoffLabel')
-
   const navigateToFuelCodeDetail = (fuelCodeId: unknown) => {
     const id = Number(fuelCodeId)
     if (!Number.isInteger(id) || id <= 0) return
@@ -124,7 +114,7 @@ export const CurrentFuelCodes = () => {
       {!isIdirView && (
         <>
           <BCTypography variant="body2" color="text">
-            {t('current.description', { cutoffLabel })}
+            {t('current.description')}
           </BCTypography>
           <BCTypography variant="body2" color="text">
             {t('common.fuelCodePrefix')}
