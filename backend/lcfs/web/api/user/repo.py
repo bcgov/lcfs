@@ -229,6 +229,8 @@ class UserRepository:
                 RoleEnum.CI_APPLICANT,
                 RoleEnum.IA_PROPONENT,
                 RoleEnum.IA_SIGNER,
+                RoleEnum.LCJFIP_APPLICANT,
+                RoleEnum.LCJFIP_ADMINISTRATOR,
             }:
                 if new_role not in existing_roles_set:
                     user.user_roles.append(await self.find_user_role(new_role))
@@ -245,6 +247,8 @@ class UserRepository:
                     RoleEnum.CI_APPLICANT,
                     RoleEnum.IA_PROPONENT,
                     RoleEnum.IA_SIGNER,
+                    RoleEnum.LCJFIP_APPLICANT,
+                    RoleEnum.LCJFIP_ADMINISTRATOR,
                 }
                 and user_role.role.name not in new_roles
             ):

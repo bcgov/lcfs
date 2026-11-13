@@ -210,6 +210,7 @@ async def test_create_charging_equipment_success(
 ):
     """Test creating charging equipment successfully."""
     # Mock the repository responses
+    mock_repo.get_charging_site_organization_id.return_value = mock_user.organization_id
     mock_repo.check_duplicate_serial_number.return_value = False
     mock_repo.create_charging_equipment.return_value = valid_charging_equipment
     mock_repo.get_charging_equipment_by_id.return_value = valid_charging_equipment
@@ -246,6 +247,7 @@ async def test_create_charging_equipment_duplicate_same_site_blocked(
     valid_charging_equipment_create_schema,
 ):
     """Duplicate serials should still be blocked within the same charging site."""
+    mock_repo.get_charging_site_organization_id.return_value = mock_user.organization_id
     mock_repo.check_duplicate_serial_number.return_value = True
 
     with pytest.raises(HTTPException) as exc_info:
@@ -260,6 +262,93 @@ async def test_create_charging_equipment_duplicate_same_site_blocked(
         serial_number=valid_charging_equipment_create_schema.serial_number,
     )
     mock_repo.create_charging_equipment.assert_not_called()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "site_organization_id", [2, None], ids=["other-org", "missing"]
+)
+async def test_create_charging_equipment_at_site_not_owned_is_404(
+    service,
+    mock_repo,
+    mock_user,
+    valid_charging_equipment_create_schema,
+    site_organization_id,
+):
+    """Equipment cannot be created at another organization's (or no) site."""
+    mock_repo.get_charging_site_organization_id.return_value = site_organization_id
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service.create_charging_equipment(
+            mock_user, valid_charging_equipment_create_schema
+        )
+
+    assert exc_info.value.status_code == 404
+    mock_repo.create_charging_equipment.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_create_charging_equipment_government_user_skips_site_owner_check(
+    service,
+    mock_repo,
+    mock_government_user,
+    valid_charging_equipment,
+    valid_charging_equipment_create_schema,
+):
+    mock_repo.get_charging_site_organization_id.return_value = 2
+    mock_repo.check_duplicate_serial_number.return_value = False
+    mock_repo.create_charging_equipment.return_value = valid_charging_equipment
+    mock_repo.get_charging_equipment_by_id.return_value = valid_charging_equipment
+
+    await service.create_charging_equipment(
+        mock_government_user, valid_charging_equipment_create_schema
+    )
+
+    mock_repo.create_charging_equipment.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_update_charging_equipment_to_other_org_site_is_404(
+    service,
+    mock_repo,
+    mock_user,
+    valid_charging_equipment,
+):
+    """Equipment cannot be moved to another organization's site."""
+    mock_repo.get_charging_equipment_by_id.return_value = valid_charging_equipment
+    mock_repo.get_charging_site_organization_id.return_value = 2
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service.update_charging_equipment(
+            mock_user, 1, ChargingEquipmentUpdateSchema(charging_site_id=2)
+        )
+
+    assert exc_info.value.status_code == 404
+    mock_repo.update_charging_equipment.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_update_charging_equipment_same_site_skips_site_lookup(
+    service,
+    mock_repo,
+    mock_user,
+    valid_charging_equipment,
+):
+    """Sending the site the equipment is already on needs no destination check."""
+    mock_repo.get_charging_equipment_by_id.return_value = valid_charging_equipment
+    mock_repo.check_duplicate_serial_number.return_value = False
+    mock_repo.update_charging_equipment.return_value = valid_charging_equipment
+
+    await service.update_charging_equipment(
+        mock_user,
+        1,
+        ChargingEquipmentUpdateSchema(
+            charging_site_id=valid_charging_equipment.charging_site_id
+        ),
+    )
+
+    mock_repo.get_charging_site_organization_id.assert_not_awaited()
+    mock_repo.update_charging_equipment.assert_called_once()
 
 
 @pytest.mark.anyio
@@ -314,11 +403,13 @@ async def test_update_charging_equipment_allows_duplicate_serial_at_different_si
     )
 
     mock_repo.get_charging_equipment_by_id.return_value = valid_charging_equipment
+    mock_repo.get_charging_site_organization_id.return_value = mock_user.organization_id
     mock_repo.check_duplicate_serial_number.return_value = False
     mock_repo.update_charging_equipment.return_value = valid_charging_equipment
 
     await service.update_charging_equipment(mock_user, 1, update_schema)
 
+    mock_repo.get_charging_site_organization_id.assert_awaited_once_with(2)
     mock_repo.check_duplicate_serial_number.assert_called_once_with(
         charging_site_id=2,
         serial_number=valid_charging_equipment.serial_number,

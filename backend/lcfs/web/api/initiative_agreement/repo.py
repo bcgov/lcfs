@@ -32,7 +32,11 @@ from lcfs.db.models.comment.InitiativeAgreementInternalComment import (
     InitiativeAgreementInternalComment,
 )
 from lcfs.db.models.comment.InternalComment import InternalComment
-from lcfs.db.models.initiative_agreement.DesignatedAction import DesignatedAction
+from lcfs.db.models.document import Document
+from lcfs.db.models.initiative_agreement.DesignatedAction import (
+    DesignatedAction,
+    designated_action_document_association,
+)
 from lcfs.db.models.initiative_agreement.DesignatedActionHistory import (
     DesignatedActionHistory,
 )
@@ -570,6 +574,42 @@ class InitiativeAgreementRepository:
         )
         result = await self.db.execute(query)
         return result.scalars().all()
+
+    @repo_handler
+    async def get_designated_action_document_targets(
+        self, initiative_agreement_id: int, username: str
+    ) -> List[Tuple[int, int]]:
+        """Return only action versions with deleted files visible to this user."""
+        visible_document = (
+            select(Document.document_id)
+            .join(
+                designated_action_document_association,
+                designated_action_document_association.c.document_id
+                == Document.document_id,
+            )
+            .where(
+                designated_action_document_association.c.designated_action_id
+                == DesignatedAction.designated_action_id,
+                Document.deleted_date.is_not(None),
+                or_(Document.create_user == username, Document.deleted_by == username),
+            )
+            .exists()
+        )
+        result = await self.db.execute(
+            select(
+                DesignatedAction.designated_action_id,
+                DesignatedAction.action_number,
+            )
+            .where(
+                DesignatedAction.initiative_agreement_id == initiative_agreement_id,
+                visible_document,
+            )
+            .order_by(
+                DesignatedAction.action_number,
+                DesignatedAction.version,
+            )
+        )
+        return [(row[0], row[1]) for row in result.all()]
 
     @repo_handler
     async def get_latest_comments_by_agreement_ids(
