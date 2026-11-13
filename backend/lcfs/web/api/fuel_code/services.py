@@ -44,6 +44,8 @@ from lcfs.web.api.fuel_code.schema import (
     FuelCodeStatusSchema,
     FuelCodeBulletinsSchema,
     FuelCodeBulletinRowSchema,
+    GovernmentFuelCodeBulletinsSchema,
+    GovernmentFuelCodeBulletinRowSchema,
     VolumeDataPointSchema,
     ComplianceUnitsDataPointSchema,
     CompanySearchOptionSchema,
@@ -109,11 +111,15 @@ class FuelCodeServices:
 
     @service_handler
     async def get_fuel_code_bulletins(
-        self, bulletin_type: str, pagination: PaginationRequestSchema
+        self,
+        bulletin_type: str,
+        pagination: PaginationRequestSchema,
+        *,
+        include_internal: bool = False,
     ) -> FuelCodeBulletinsSchema:
         period_start, _ = self._get_compliance_period_bounds(date.today())
         conditions, sort_orders = self.repo.get_fuel_code_bulletin_pagination_params(
-            pagination
+            pagination, include_internal=include_internal
         )
         offset = (pagination.page - 1) * pagination.size
 
@@ -124,11 +130,22 @@ class FuelCodeServices:
             limit=pagination.size,
             conditions=conditions,
             sort_orders=sort_orders,
+            include_internal=include_internal,
         )
 
-        return FuelCodeBulletinsSchema(
+        schema = (
+            GovernmentFuelCodeBulletinsSchema
+            if include_internal
+            else FuelCodeBulletinsSchema
+        )
+        row_schema = (
+            GovernmentFuelCodeBulletinRowSchema
+            if include_internal
+            else FuelCodeBulletinRowSchema
+        )
+        return schema(
             cutoff_date=period_start,
-            fuel_codes=[FuelCodeBulletinRowSchema.model_validate(row) for row in rows],
+            fuel_codes=[row_schema.model_validate(row) for row in rows],
             pagination=PaginationResponseSchema(
                 total=total_count,
                 page=pagination.page,

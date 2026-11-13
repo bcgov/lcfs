@@ -322,11 +322,13 @@ describe('Fuel Code management', () => {
   it('renders current and archived Fuel Code bulletins', () => {
     cy.intercept(
       'POST',
-      '**/fuel-codes/bulletins?bulletinType=current',
+      '**/fuel-codes/government/bulletins?bulletinType=current',
       pagination([
         {
           fuelCodeId: 901,
           fuelCode: 'BCLCF102.5',
+          prefix: 'BCLCF',
+          fuelSuffix: '102.5',
           fuel: 'Ethanol',
           company: 'Cypress Biofuels',
           carbonIntensity: 42.15,
@@ -337,11 +339,13 @@ describe('Fuel Code management', () => {
     ).as('currentBulletin')
     cy.intercept(
       'POST',
-      '**/fuel-codes/bulletins?bulletinType=archived',
+      '**/fuel-codes/government/bulletins?bulletinType=archived',
       pagination([
         {
           fuelCodeId: 800,
           fuelCode: 'BCLCF099.9',
+          prefix: 'BCLCF',
+          fuelSuffix: '099.9',
           fuel: 'Ethanol',
           company: 'Archived Cypress Fuels',
           carbonIntensity: 55.2,
@@ -357,13 +361,17 @@ describe('Fuel Code management', () => {
       'contain',
       'Current fuel codes'
     )
-    cy.contains('BCLCF102.5').should('be.visible')
+    cy.get('.ag-cell[col-id="fuelSuffix"]')
+      .contains('102.5')
+      .should('be.visible')
     cy.getByDataTest('current-fuel-codes-download-btn').should('be.visible')
 
     cy.visit('/fuel-codes-bulletins?type=archived')
     cy.wait('@archivedBulletin')
     cy.getByDataTest('archived-fuel-codes-title').should('contain', 'Archived')
-    cy.contains('BCLCF099.9').should('be.visible')
+    cy.get('.ag-cell[col-id="fuelSuffix"]')
+      .contains('099.9')
+      .should('be.visible')
     cy.getByDataTest('archived-fuel-codes-download-btn').should('be.visible')
   })
 })

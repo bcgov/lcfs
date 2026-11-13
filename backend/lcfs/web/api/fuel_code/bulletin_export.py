@@ -64,7 +64,7 @@ class FuelCodeBulletinExporter:
 
         period_start = self._get_compliance_period_start(date.today())
         conditions, sort_orders = self.repo.get_fuel_code_bulletin_pagination_params(
-            pagination
+            pagination, include_internal=is_idir
         )
         rows, _ = await self.repo.get_fuel_code_bulletin_rows(
             compliance_period_start=period_start,
@@ -73,6 +73,7 @@ class FuelCodeBulletinExporter:
             limit=None,
             conditions=conditions,
             sort_orders=sort_orders,
+            include_internal=is_idir,
         )
 
         if is_idir:
