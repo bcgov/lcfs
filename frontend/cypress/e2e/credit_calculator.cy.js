@@ -184,6 +184,12 @@ const selectDieselBiodiesel = () => {
   cy.get('input[type="radio"][value="Any"]', { timeout: 15000 }).should(
     'be.checked'
   )
+  // Selecting the end use clears the provision and the form then re-selects
+  // the default, so wait for that to settle before a test changes it.
+  cy.get(
+    'input[type="radio"][value="Default carbon intensity - section 19 (b) (ii)"]',
+    { timeout: 15000 }
+  ).should('be.checked')
 }
 
 describe('Public Credit Calculator and Calculation Data (#4089)', () => {
@@ -273,6 +279,12 @@ describe('Public Credit Calculator and Calculation Data (#4089)', () => {
 
     it('accepts a custom carbon intensity for applicable provisions', () => {
       selectDieselBiodiesel()
+      // The first result means the default selections have settled.
+      cy.wait('@calculate')
+      cy.getByDataTest('complianceUnits', { timeout: 15000 }).should(
+        'have.value',
+        '1,234'
+      )
 
       // A request carrying useCustomCi=true gets a distinct response so we can
       // assert both the request shape and the rendered result.

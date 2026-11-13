@@ -10,11 +10,12 @@ const SELECTORS = {
   submittedStatus: ':contains("Submitted")'
 }
 
-// Get the current compliance year for testing
-
-Given('the user is on the login page', () => {
-  cy.visit('/', { timeout: 60000 })
-})
+// Step definitions load globally (cypress/e2e/Pages/**/*.test.js), even for
+// skipped features. The shared steps this feature uses ("the user is on the
+// login page", "the supplier logs in with valid credentials", "they navigate to
+// the compliance reports page", "they click the report to view it") are defined
+// once in ComplianceReport.test.js; defining them here as well makes every
+// feature that uses them fail with "Multiple matching step definitions".
 
 Given(
   'the analyst logs in with valid credentials for compliance reports',
@@ -31,11 +32,6 @@ Given(
   }
 )
 
-Given('they navigate to the compliance reports page', () => {
-  cy.visit('/compliance-reporting')
-  cy.wait(2000)
-})
-
 // This would need to be set up with test data or replaced by a direct API call
 Given('they see a submitted supplemental report', () => {
   // This is a placeholder - in practice, you would need to ensure there's a supplemental report
@@ -43,11 +39,6 @@ Given('they see a submitted supplemental report', () => {
   cy.get('.ag-body-viewport').should('be.visible')
   cy.contains('.ag-cell', 'Supplemental').should('be.visible')
   cy.contains('.ag-cell', 'Submitted').should('be.visible')
-})
-
-Given('they click the report to view it', () => {
-  cy.contains('.ag-cell', 'Supplemental').parent('.ag-row').find('a').click()
-  cy.wait(2000)
 })
 
 When('the analyst clicks the "Return report to the supplier" button', () => {
@@ -72,18 +63,6 @@ Then('the supplemental report is set to Draft status', () => {
 Then('a success message is displayed for report return', () => {
   // The exact message will depend on your implementation - check actual UI
   cy.contains(/report.*returned|returned.*report/i).should('be.visible')
-})
-
-// For the supplier scenario
-Given('the supplier logs in with valid credentials', () => {
-  cy.loginWith(
-    'bceid',
-    Cypress.env('TEST_SUPPLIER_USERNAME'),
-    Cypress.env('TEST_SUPPLIER_PASSWORD')
-  )
-  cy.wait(5000)
-  cy.visit('/', { timeout: 60000 })
-  cy.get(SELECTORS.dashboard).should('exist')
 })
 
 Then(
