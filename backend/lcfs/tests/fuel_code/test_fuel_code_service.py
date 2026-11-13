@@ -879,3 +879,16 @@ async def test_get_fuel_code_bulletins_wires_cutoff_and_pagination():
     assert call_kwargs["offset"] == 25
     assert call_kwargs["limit"] == 25
     assert "compliance_period_end" not in call_kwargs
+
+
+@pytest.mark.parametrize(
+    ("today", "expected_start"),
+    [
+        (date(2027, 3, 31), date(2026, 3, 31)),
+        (date(2027, 4, 1), date(2027, 3, 31)),
+    ],
+)
+def test_bulletin_compliance_period_rolls_over_on_april_first(today, expected_start):
+    assert (
+        FuelCodeServices._get_bulletin_compliance_period_start(today) == expected_start
+    )
