@@ -32,6 +32,7 @@ from lcfs.utils.constants import (
     LCFS_Constants,
     FILE_MEDIA_TYPE,
     transaction_type_to_id_prefix_map,
+    transaction_type_to_display_name_map,
     id_prefix_to_transaction_type_map,
 )
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
@@ -274,10 +275,16 @@ class TransactionsService:
 
             row_data = None
             try:
+                type_label = transaction_type_to_display_name_map.get(
+                    result.transaction_type, result.transaction_type
+                )
+                if result.description:
+                    type_label = f"{type_label} - {result.description}"
+
                 row_data = [
                     f"{prefix}{result.transaction_id}",
                     result.compliance_period,
-                    result.transaction_type,
+                    type_label,
                     result.from_organization,
                     result.to_organization,
                     result.quantity,
