@@ -1,3 +1,6 @@
+import type { ComponentProps, ReactNode } from 'react'
+import type { DialogProps, IconButtonProps } from '@mui/material'
+import type BCButton from '@/components/BCButton'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import BCModal from '@/components/BCModal'
@@ -8,7 +11,13 @@ vi.unmock('@/components/BCModal')
 // Mock BCButton to avoid theme/function errors in tests
 vi.mock('@/components/BCButton', () => ({
   __esModule: true,
-  default: ({ children, onClick, 'data-test': dataTest, id, ...props }) => {
+  default: ({
+    children,
+    onClick,
+    'data-test': dataTest,
+    id,
+    ...props
+  }: ComponentProps<typeof BCButton> & { 'data-test'?: string }) => {
     delete props.variant
     delete props.color
     return (
@@ -27,7 +36,12 @@ vi.mock('@/components/BCButton', () => ({
 
 // Mock MUI components
 vi.mock('@mui/material/Dialog', () => ({
-  default: ({ children, open, 'data-test': dataTest, ...props }) => {
+  default: ({
+    children,
+    open,
+    'data-test': dataTest,
+    ...props
+  }: DialogProps & { 'data-test'?: string }) => {
     delete props.onClose
     return open ? (
       <div data-test={dataTest || 'modal'} role="dialog">
@@ -38,15 +52,15 @@ vi.mock('@mui/material/Dialog', () => ({
 }))
 
 vi.mock('@mui/material/DialogTitle', () => ({
-  default: ({ children }) => <div>{children}</div>
+  default: ({ children }: { children?: ReactNode }) => <div>{children}</div>
 }))
 
 vi.mock('@mui/material/DialogContent', () => ({
-  default: ({ children }) => <div>{children}</div>
+  default: ({ children }: { children?: ReactNode }) => <div>{children}</div>
 }))
 
 vi.mock('@mui/material/DialogActions', () => ({
-  default: ({ children }) => <div>{children}</div>
+  default: ({ children }: { children?: ReactNode }) => <div>{children}</div>
 }))
 
 vi.mock('@mui/material/IconButton', () => ({
@@ -56,7 +70,7 @@ vi.mock('@mui/material/IconButton', () => ({
     'aria-label': ariaLabel,
     'data-test': dataTest,
     ...props
-  }) => {
+  }: IconButtonProps & { 'data-test'?: string }) => {
     delete props.sx
     return (
       <button
@@ -78,6 +92,13 @@ vi.mock('@mui/material/Box', () => ({
     dangerouslySetInnerHTML,
     'data-test': dataTest,
     ...props
+  }: ComponentProps<'div'> & {
+    'data-test'?: string
+    bgcolor?: string
+    borderRadius?: number
+    p?: number
+    display?: string
+    gap?: number
   }) => {
     delete props.bgcolor
     delete props.borderRadius
@@ -184,10 +205,10 @@ describe('Not Found Component', () => {
     // submit, minting a duplicate Reserved transaction.
     const onClose = vi.fn()
     const secondaryButtonAction = vi.fn()
-    let resolvePrimary
+    let resolvePrimary!: () => void
     const primaryButtonAction = vi.fn(
       () =>
-        new Promise((resolve) => {
+        new Promise<void>((resolve) => {
           resolvePrimary = resolve
         })
     )

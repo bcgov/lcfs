@@ -11,23 +11,29 @@ import IconButton from '@mui/material/IconButton'
 import PropTypes from 'prop-types'
 import { useEffect, useId, useState } from 'react'
 import BCButton from './BCButton'
+import type { ReactNode } from 'react'
 
-/**
- * @typedef {object} ModalData
- * @property {import('react').ReactNode} [title]
- * @property {import('react').ReactNode} [content]
- * @property {import('react').ReactNode} [primaryButtonText]
- * @property {() => unknown | Promise<unknown>} [primaryButtonAction]
- * @property {string} [primaryButtonColor]
- * @property {boolean} [primaryButtonDisabled]
- * @property {import('react').ReactNode} [warningText]
- * @property {import('react').ReactNode} [secondaryButtonText]
- * @property {() => unknown} [secondaryButtonAction]
- * @property {string} [secondaryButtonColor]
- * @property {import('react').ReactNode} [customButtons]
- */
-/** @param {{open: boolean, onClose: () => void, data?: ModalData | null}} props */
-const BCModal = ({ open, onClose, data = null }) => {
+export interface ModalData {
+  title?: ReactNode
+  content?: ReactNode
+  primaryButtonText?: ReactNode
+  primaryButtonAction?: () => unknown | Promise<unknown>
+  primaryButtonColor?: string
+  primaryButtonDisabled?: boolean
+  warningText?: string
+  secondaryButtonText?: ReactNode
+  secondaryButtonAction?: () => unknown
+  secondaryButtonColor?: string
+  customButtons?: ReactNode
+}
+
+export interface BCModalProps {
+  open: boolean
+  onClose: () => void
+  data?: ModalData | null
+}
+
+const BCModal = ({ open, onClose, data = null }: BCModalProps) => {
   const [isLoading, setIsLoading] = useState(false)
   const baseId = useId()
   const titleId = `${baseId}-title`
@@ -59,7 +65,7 @@ const BCModal = ({ open, onClose, data = null }) => {
       return
     }
     setIsLoading(true)
-    await primaryButtonAction()
+    await primaryButtonAction!()
   }
 
   // Belt-and-suspenders close guard. The X / Cancel buttons already carry
@@ -134,7 +140,7 @@ const BCModal = ({ open, onClose, data = null }) => {
             variant="outlined"
             id={
               'modal-btn-' +
-              secondaryButtonText.toLowerCase().replaceAll(' ', '-')
+              (secondaryButtonText as string).toLowerCase().replaceAll(' ', '-')
             }
             color={secondaryButtonColor ?? 'dark'}
             onClick={handleSecondaryButtonClick}
@@ -150,7 +156,7 @@ const BCModal = ({ open, onClose, data = null }) => {
             variant="contained"
             id={
               'modal-btn-' +
-              primaryButtonText.toLowerCase().replaceAll(' ', '-')
+              (primaryButtonText as string).toLowerCase().replaceAll(' ', '-')
             }
             color={primaryButtonColor ?? 'primary'}
             autoFocus

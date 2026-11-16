@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useGetComplianceReport } from '@/hooks/useComplianceReports.js'
 import { useCurrentUser } from '@/hooks/useCurrentUser.js'
-import Loading from '@/components/Loading.jsx'
+import Loading from '@/components/Loading'
 import { useLocation, useParams } from 'react-router-dom'
 import { EditViewComplianceReport } from '@/views/ComplianceReports/EditViewComplianceReport.jsx'
 import { useEffect } from 'react'

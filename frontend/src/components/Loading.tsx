@@ -4,7 +4,12 @@ import colors from '@/themes/base/colors'
 import CircularProgress from '@mui/material/CircularProgress'
 import PropTypes from 'prop-types'
 
-const Loading = ({ message = 'Loading...', fixed = false }) => {
+interface LoadingProps {
+  message?: string
+  fixed?: boolean
+}
+
+const Loading = ({ message = 'Loading...', fixed = false }: LoadingProps) => {
   return (
     <div
       className="text-center"
@@ -16,8 +21,8 @@ const Loading = ({ message = 'Loading...', fixed = false }) => {
         width: '100%',
         zIndex: 99999,
         position: fixed ? 'fixed' : 'relative',
-        top: fixed && 0,
-        left: fixed && 0,
+        top: fixed ? 0 : undefined,
+        left: fixed ? 0 : undefined,
         margin: fixed ? 0 : '10px'
       }}
       data-test="loading"
@@ -30,8 +35,8 @@ const Loading = ({ message = 'Loading...', fixed = false }) => {
           flexDirection: 'column',
           border: fixed ? `1px solid ${colors.primary.main}` : undefined,
           borderRadius: fixed ? borders.borderRadius.lg : undefined,
-          padding: fixed && '20px',
-          background: fixed && 'white'
+          padding: fixed ? '20px' : undefined,
+          background: fixed ? 'white' : undefined
         }}
       >
         <CircularProgress aria-labelledby="loading" />
