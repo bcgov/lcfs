@@ -820,6 +820,21 @@ class ComplianceReportRepository:
         return compliance_report
 
     @repo_handler
+    async def lock_compliance_report_group(self, report_id: int) -> None:
+        """Serialize changes to existing versions in the same report group.
+
+        Acquire this transaction-scoped lock before any report row lock. The
+        initial lookup takes no row lock, so deleting a report while a caller
+        waits is safe: the caller re-reads the report after taking its row lock.
+        A hash collision only serializes unrelated groups.
+        """
+        await self.db.execute(
+            select(func.pg_advisory_xact_lock(
+                func.hashtextextended(ComplianceReport.compliance_report_group_uuid, 0)
+            )).where(ComplianceReport.compliance_report_id == report_id)
+        )
+
+    @repo_handler
     async def lock_compliance_report_row(self, report_id: int) -> Optional[int]:
         """Take a row-level lock on the compliance_report row and return its
         current persisted transaction_id.

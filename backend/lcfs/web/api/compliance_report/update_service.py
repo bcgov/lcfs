@@ -122,6 +122,7 @@ class ComplianceReportUpdateService:
     ) -> ComplianceReportBaseSchema:
         """Updates an existing compliance report."""
         # Get and validate report
+        await self.repo.lock_compliance_report_group(report_id)
         await self.repo.lock_compliance_report_row(report_id)
         report = await self.repo.get_compliance_report_by_id(report_id, refresh=True)
         if not report:

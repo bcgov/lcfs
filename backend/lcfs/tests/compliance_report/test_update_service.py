@@ -3067,6 +3067,7 @@ async def test_return_transition_records_destination_and_marked_history(
     )
 
     assert report.current_status.status == destination
+    mock_repo.lock_compliance_report_group.assert_awaited_once_with(40)
     mock_repo.get_compliance_report_status_by_desc.assert_awaited_once_with(destination.value)
     mock_repo.add_compliance_report_history.assert_awaited_once_with(report, user, is_return=True)
 

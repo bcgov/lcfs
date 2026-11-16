@@ -682,6 +682,7 @@ async def test_delete_supplemental_report_success(compliance_report_service, moc
     result = await compliance_report_service.delete_compliance_report(996, mock_user)
 
     assert result is True
+    mock_repo.lock_compliance_report_group.assert_awaited_once_with(996)
     mock_repo.lock_compliance_report_row.assert_awaited_once_with(996)
     mock_repo.get_compliance_report_by_id.assert_called_once_with(996, refresh=True)
     mock_repo.delete_compliance_report.assert_called_once_with(996)
@@ -2848,6 +2849,7 @@ async def test_create_analyst_adjustment_from_submitted_status_success(
 
     # Assert
     assert result is not None
+    mock_repo.lock_compliance_report_group.assert_awaited_once_with(1)
     mock_repo.get_compliance_report_by_id.assert_called_once_with(1, refresh=True)
     mock_repo.create_compliance_report.assert_called_once()
 

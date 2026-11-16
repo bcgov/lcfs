@@ -305,6 +305,7 @@ class ComplianceReportServices:
         Analyst adjustments are only allowed if the status of the current report is 'Submitted' or 'Assessed'
         """
         # Fetch the current report using the provided report_id
+        await self.repo.lock_compliance_report_group(existing_report_id)
         await self.repo.lock_compliance_report_row(existing_report_id)
         current_report = await self.repo.get_compliance_report_by_id(existing_report_id, refresh=True)
         if not current_report:
@@ -397,6 +398,7 @@ class ComplianceReportServices:
         Supplemental reports are only allowed if the status of the current report is 'Assessed'.
         """
         # Fetch the current report using the provided report_id
+        await self.repo.lock_compliance_report_group(original_report_id)
         await self.repo.lock_compliance_report_row(original_report_id)
         current_report = await self.repo.get_compliance_report_by_id(original_report_id, refresh=True)
         if not current_report:
@@ -514,6 +516,7 @@ class ComplianceReportServices:
         This new report starts in 'Draft' status for the supplier to edit.
         """
         # 1. Fetch the current report the Analyst is viewing
+        await self.repo.lock_compliance_report_group(existing_report_id)
         await self.repo.lock_compliance_report_row(existing_report_id)
         current_report = await self.repo.get_compliance_report_by_id(existing_report_id, refresh=True)
         if not current_report:
@@ -647,6 +650,7 @@ class ComplianceReportServices:
           status then allow Gov users to delete the report.
         """
         # Fetch the current report using the provided report_id
+        await self.repo.lock_compliance_report_group(report_id)
         await self.repo.lock_compliance_report_row(report_id)
         current_report = await self.repo.get_compliance_report_by_id(report_id, refresh=True)
         if not current_report:
