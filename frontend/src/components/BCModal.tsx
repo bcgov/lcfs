@@ -1,0 +1,203 @@
+import colors from '@/themes/base/colors'
+import Close from '@mui/icons-material/Close'
+import Warning from '@mui/icons-material/Warning'
+import Box from '@mui/material/Box'
+import Dialog from '@mui/material/Dialog'
+import DialogActions from '@mui/material/DialogActions'
+import DialogContent from '@mui/material/DialogContent'
+import DialogTitle from '@mui/material/DialogTitle'
+import Divider from '@mui/material/Divider'
+import IconButton from '@mui/material/IconButton'
+import PropTypes from 'prop-types'
+import { useEffect, useId, useState } from 'react'
+import BCButton from './BCButton'
+import type { ReactNode } from 'react'
+
+export interface ModalData {
+  title?: ReactNode
+  content?: ReactNode
+  primaryButtonText?: ReactNode
+  primaryButtonAction?: () => unknown | Promise<unknown>
+  primaryButtonColor?: string
+  primaryButtonDisabled?: boolean
+  warningText?: string
+  secondaryButtonText?: ReactNode
+  secondaryButtonAction?: () => unknown
+  secondaryButtonColor?: string
+  customButtons?: ReactNode
+}
+
+export interface BCModalProps {
+  open: boolean
+  onClose: () => void
+  data?: ModalData | null
+}
+
+const BCModal = ({ open, onClose, data = null }: BCModalProps) => {
+  const [isLoading, setIsLoading] = useState(false)
+  const baseId = useId()
+  const titleId = `${baseId}-title`
+  const contentId = `${baseId}-content`
+
+  useEffect(() => {
+    setIsLoading(false)
+  }, [open])
+
+  if (!data) return null
+
+  const {
+    content,
+    title,
+    primaryButtonText,
+    primaryButtonAction,
+    primaryButtonColor,
+    primaryButtonDisabled,
+    warningText,
+    secondaryButtonText,
+    secondaryButtonAction,
+    secondaryButtonColor,
+    customButtons
+  } = data
+
+  const handlePrimaryButtonClick = async () => {
+    // Blocks repeat clicks of the button
+    if (isLoading) {
+      return
+    }
+    setIsLoading(true)
+    await primaryButtonAction!()
+  }
+
+  // Belt-and-suspenders close guard. The X / Cancel buttons already carry
+  // `disabled={isLoading}`, but the disabled attribute only suppresses the
+  // click after React commits the state update — and the action button
+  // dispatches a react-query `mutate()` (fire-and-forget) so the modal
+  // doesn't actually wait on the network call. A keyboard activation or
+  // a queued click landing in that pre-commit window could still close
+  // the modal and let the user fire a duplicate submit. JS-level guard
+  // closes that gap regardless of the disabled prop's render timing.
+  const handleClose = () => {
+    if (isLoading) return
+    onClose()
+  }
+
+  const handleSecondaryButtonClick = () => {
+    if (isLoading) return
+    if (secondaryButtonAction) {
+      secondaryButtonAction()
+    } else {
+      onClose()
+    }
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      maxWidth="md"
+      fullWidth
+      aria-labelledby={titleId}
+      aria-describedby={contentId}
+      data-test="modal"
+    >
+      <DialogTitle id={titleId}>{title}</DialogTitle>
+      <IconButton
+        aria-label="close"
+        onClick={handleClose}
+        disabled={isLoading}
+        sx={{
+          position: 'absolute',
+          right: 8,
+          top: 8,
+          color: (theme) => theme.palette.grey[500]
+        }}
+        data-test="modal-btn-close"
+      >
+        <Close />
+      </IconButton>
+      {warningText && (
+        <DialogContent>
+          <Box
+            bgcolor={colors.alerts.warning.background}
+            borderRadius={1}
+            p={1}
+            display={'flex'}
+            gap={1}
+          >
+            <Warning color="warning" fontSize={'medium'} />
+            <div
+              dangerouslySetInnerHTML={{ __html: warningText }}
+              data-test="text-warning"
+            />
+          </Box>
+        </DialogContent>
+      )}
+      <DialogContent id={contentId}>{content}</DialogContent>
+      <Divider />
+      <DialogActions>
+        {secondaryButtonText && (
+          <BCButton
+            variant="outlined"
+            id={
+              'modal-btn-' +
+              (secondaryButtonText as string).toLowerCase().replaceAll(' ', '-')
+            }
+            color={secondaryButtonColor ?? 'dark'}
+            onClick={handleSecondaryButtonClick}
+            disabled={isLoading}
+            data-test="modal-btn-secondary"
+          >
+            {secondaryButtonText}
+          </BCButton>
+        )}
+        {customButtons}
+        {primaryButtonText && (
+          <BCButton
+            variant="contained"
+            id={
+              'modal-btn-' +
+              (primaryButtonText as string).toLowerCase().replaceAll(' ', '-')
+            }
+            color={primaryButtonColor ?? 'primary'}
+            autoFocus
+            onClick={handlePrimaryButtonClick}
+            isLoading={isLoading}
+            // `isLoading` swaps the children for a spinner but does NOT
+            // disable the underlying button. The JS guard in
+            // handlePrimaryButtonClick catches a repeat click *if* its
+            // closure has already seen isLoading=true, but a click queued
+            // before React commits, or an Enter keypress while focus is
+            // still on the action button, can land a second
+            // primaryButtonAction — onSuccess of the first then navigates
+            // the user to the list view, hiding the duplicate submission.
+            // DOM-level disabled is the only thing that suppresses those
+            // pre-commit and keyboard activations.
+            disabled={isLoading || primaryButtonDisabled}
+            data-test="modal-btn-primary"
+          >
+            {primaryButtonText}
+          </BCButton>
+        )}
+      </DialogActions>
+    </Dialog>
+  )
+}
+
+BCModal.propTypes = {
+  open: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  data: PropTypes.shape({
+    content: PropTypes.node.isRequired,
+    title: PropTypes.string.isRequired,
+    primaryButtonText: PropTypes.string,
+    primaryButtonAction: PropTypes.func,
+    primaryButtonColor: PropTypes.string,
+    warningText: PropTypes.string,
+    secondaryButtonText: PropTypes.string,
+    secondaryButtonAction: PropTypes.func,
+    secondaryButtonColor: PropTypes.string,
+    customButtons: PropTypes.node
+  })
+}
+
+export default BCModal

@@ -35,7 +35,7 @@ vi.mock('uuid', () => ({
 }))
 
 // Mock utility functions
-vi.mock('@/utils/array.js', () => ({
+vi.mock('@/utils/array', () => ({
   isArrayEmpty: vi.fn()
 }))
 
@@ -249,7 +249,7 @@ describe('AddEditFuelExports', () => {
     })
 
     // Setup mocked utility functions
-    const arrayUtils = await import('@/utils/array.js')
+    const arrayUtils = await import('@/utils/array')
     const scheduleUtils = await import('@/utils/schedules.js')
 
     arrayUtils.isArrayEmpty.mockImplementation(
@@ -292,7 +292,7 @@ describe('AddEditFuelExports', () => {
         isLoading: false
       })
 
-      const { isArrayEmpty } = await import('@/utils/array.js')
+      const { isArrayEmpty } = await import('@/utils/array')
       isArrayEmpty.mockReturnValue(true)
 
       render(<AddEditFuelExports />, { fixtureOptions })
@@ -341,7 +341,7 @@ describe('AddEditFuelExports', () => {
     })
 
     it('processes fuel exports data when loading completes', async () => {
-      const { isArrayEmpty } = await import('@/utils/array.js')
+      const { isArrayEmpty } = await import('@/utils/array')
       isArrayEmpty.mockReturnValue(false)
 
       render(<AddEditFuelExports />, { fixtureOptions })
@@ -353,7 +353,7 @@ describe('AddEditFuelExports', () => {
 
   describe('onGridReady Function', () => {
     it('handles grid ready with existing data', async () => {
-      const { isArrayEmpty } = await import('@/utils/array.js')
+      const { isArrayEmpty } = await import('@/utils/array')
       isArrayEmpty.mockReturnValue(false)
 
       render(<AddEditFuelExports />, { fixtureOptions })
@@ -370,7 +370,7 @@ describe('AddEditFuelExports', () => {
     })
 
     it('handles grid ready with no data', async () => {
-      const { isArrayEmpty } = await import('@/utils/array.js')
+      const { isArrayEmpty } = await import('@/utils/array')
       isArrayEmpty.mockReturnValue(true)
 
       render(<AddEditFuelExports />, { fixtureOptions })

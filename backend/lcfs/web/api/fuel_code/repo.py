@@ -122,7 +122,7 @@ class FuelCodeRepository:
         self.db = db
 
     def get_fuel_code_bulletin_pagination_params(
-        self, pagination: PaginationRequestSchema
+        self, pagination: PaginationRequestSchema, *, include_internal: bool = False
     ) -> tuple[list, list]:
         conditions = []
         filter_field_map = {
@@ -149,6 +149,10 @@ class FuelCodeRepository:
 
             filter_option = filter.type
             filter_type = filter.filter_type
+            if not include_internal and filter.field not in filter_field_map:
+                raise HTTPException(
+                    status_code=400, detail="Unsupported public bulletin filter"
+                )
             field = (
                 filter_field_map[filter.field]
                 if filter.field in filter_field_map
@@ -169,6 +173,7 @@ class FuelCodeRepository:
         limit: Optional[int] = None,
         conditions: Optional[list] = None,
         sort_orders: Optional[list] = None,
+        include_internal: bool = False,
     ):
         """
         Returns paginated approved fuel code bulletin rows.
@@ -182,35 +187,44 @@ class FuelCodeRepository:
         Archived:
           - Approved fuel codes not in current
         """
-        query = select(
-            FuelCodeListView.fuel_code_id,
-            FuelCodeListView.prefix,
-            FuelCodeListView.fuel_suffix,
-            FuelCodeListView.fuel_type,
+        columns = [
+            func.concat(FuelCodeListView.prefix, FuelCodeListView.fuel_suffix).label(
+                "fuel_code"
+            ),
+            FuelCodeListView.fuel_type.label("fuel"),
             FuelCodeListView.company,
             FuelCodeListView.carbon_intensity,
             FuelCodeListView.effective_date,
-            FuelCodeListView.expiration_date,
-            FuelCodeListView.status,
-            FuelCodeListView.edrms,
-            FuelCodeListView.contact_name,
-            FuelCodeListView.contact_email,
-            FuelCodeListView.application_date,
-            FuelCodeListView.approval_date,
-            FuelCodeListView.feedstock,
-            FuelCodeListView.feedstock_location,
-            FuelCodeListView.feedstock_misc,
-            FuelCodeListView.co_processed,
-            FuelCodeListView.fuel_production_facility_city,
-            FuelCodeListView.fuel_production_facility_province_state,
-            FuelCodeListView.fuel_production_facility_country,
-            FuelCodeListView.facility_nameplate_capacity,
-            FuelCodeListView.facility_nameplate_capacity_unit,
-            FuelCodeListView.feedstock_fuel_transport_modes,
-            FuelCodeListView.finished_fuel_transport_modes,
-            FuelCodeListView.former_company,
-            FuelCodeListView.notes,
-        ).where(
+            FuelCodeListView.expiration_date.label("expiry_date"),
+        ]
+        if include_internal:
+            columns.extend(
+                [
+                    FuelCodeListView.fuel_code_id,
+                    FuelCodeListView.prefix,
+                    FuelCodeListView.fuel_suffix,
+                    FuelCodeListView.status,
+                    FuelCodeListView.edrms,
+                    FuelCodeListView.contact_name,
+                    FuelCodeListView.contact_email,
+                    FuelCodeListView.application_date,
+                    FuelCodeListView.approval_date,
+                    FuelCodeListView.feedstock,
+                    FuelCodeListView.feedstock_location,
+                    FuelCodeListView.feedstock_misc,
+                    FuelCodeListView.co_processed,
+                    FuelCodeListView.fuel_production_facility_city,
+                    FuelCodeListView.fuel_production_facility_province_state,
+                    FuelCodeListView.fuel_production_facility_country,
+                    FuelCodeListView.facility_nameplate_capacity,
+                    FuelCodeListView.facility_nameplate_capacity_unit,
+                    FuelCodeListView.feedstock_fuel_transport_modes,
+                    FuelCodeListView.finished_fuel_transport_modes,
+                    FuelCodeListView.former_company,
+                    FuelCodeListView.notes,
+                ]
+            )
+        query = select(*columns).where(
             cast(FuelCodeListView.status, String) == FuelCodeStatusEnum.Approved.value
         )
         # compliance_period end would 31st March of next compliance year, so add 1 year to start and set to 31st March
@@ -298,59 +312,10 @@ class FuelCodeRepository:
 
         formatted_rows = []
         for row in rows:
-            r = row._mapping
-            effective_date = r["effective_date"]
-            expiration_date = r["expiration_date"]
-            application_date = r["application_date"]
-            approval_date = r["approval_date"]
-
-            if isinstance(effective_date, datetime):
-                effective_date = effective_date.date()
-            if isinstance(expiration_date, datetime):
-                expiration_date = expiration_date.date()
-            if isinstance(application_date, datetime):
-                application_date = application_date.date()
-            if isinstance(approval_date, datetime):
-                approval_date = approval_date.date()
-
             formatted_rows.append(
                 {
-                    "fuel_code_id": r["fuel_code_id"],
-                    "fuel_code": f'{r["prefix"]}{r["fuel_suffix"]}',
-                    "fuel": r["fuel_type"],
-                    "company": r["company"],
-                    "carbon_intensity": r["carbon_intensity"],
-                    "effective_date": effective_date,
-                    "expiry_date": expiration_date,
-                    "prefix": r["prefix"],
-                    "fuel_suffix": r["fuel_suffix"],
-                    "status": r["status"],
-                    "edrms": r["edrms"],
-                    "contact_name": r["contact_name"],
-                    "contact_email": r["contact_email"],
-                    "application_date": application_date,
-                    "approval_date": approval_date,
-                    "feedstock": r["feedstock"],
-                    "feedstock_location": r["feedstock_location"],
-                    "feedstock_misc": r["feedstock_misc"],
-                    "co_processed": r["co_processed"],
-                    "fuel_production_facility_city": r["fuel_production_facility_city"],
-                    "fuel_production_facility_province_state": r[
-                        "fuel_production_facility_province_state"
-                    ],
-                    "fuel_production_facility_country": r[
-                        "fuel_production_facility_country"
-                    ],
-                    "facility_nameplate_capacity": r["facility_nameplate_capacity"],
-                    "facility_nameplate_capacity_unit": r[
-                        "facility_nameplate_capacity_unit"
-                    ],
-                    "feedstock_fuel_transport_modes": r[
-                        "feedstock_fuel_transport_modes"
-                    ],
-                    "finished_fuel_transport_modes": r["finished_fuel_transport_modes"],
-                    "former_company": r["former_company"],
-                    "notes": r["notes"],
+                    key: value.date() if isinstance(value, datetime) else value
+                    for key, value in row._mapping.items()
                 }
             )
 

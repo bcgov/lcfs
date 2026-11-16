@@ -90,8 +90,16 @@ vi.mock('react-i18next', () => ({
 vi.mock('@/hooks/useFuelCode', () => ({
   useFuelCodeBulletins: (
     bulletinType: 'current' | 'archived',
-    paginationOptions: unknown
-  ) => mockUseFuelCodeBulletins(bulletinType, paginationOptions),
+    paginationOptions: unknown,
+    options: unknown,
+    isGovernment: boolean
+  ) =>
+    mockUseFuelCodeBulletins(
+      bulletinType,
+      paginationOptions,
+      options,
+      isGovernment
+    ),
   useDownloadFuelCodeBulletins: () => ({
     mutateAsync: mockDownloadMutate
   }),
@@ -200,7 +208,9 @@ describe('FuelCodeBulletins UI', () => {
     ).toBeInTheDocument()
     expect(mockUseFuelCodeBulletins).toHaveBeenCalledWith(
       'archived',
-      expect.any(Object)
+      expect.any(Object),
+      {},
+      false
     )
   })
 
@@ -228,7 +238,9 @@ describe('FuelCodeBulletins UI', () => {
         size: 25,
         sortOrders: [],
         filters: []
-      })
+      }),
+      {},
+      false
     )
   })
 
@@ -295,6 +307,26 @@ describe('FuelCodeBulletins UI', () => {
     })
   })
 
+  for (const [bulletinType, Component] of [
+    ['current', CurrentFuelCodes],
+    ['archived', ArchivedFuelCodes]
+  ] as const) {
+    test(`requests government bulletin data for ${bulletinType}`, ({
+      render,
+      theme,
+      router
+    }) => {
+      mockHasAnyRole.mockReturnValue(true)
+      render(<Component />, [theme, router])
+      expect(mockUseFuelCodeBulletins).toHaveBeenCalledWith(
+        bulletinType,
+        expect.any(Object),
+        {},
+        true
+      )
+    })
+  }
+
   test('updates pagination options after grid pagination change', async ({
     render,
     theme,
@@ -309,7 +341,9 @@ describe('FuelCodeBulletins UI', () => {
     await waitFor(() => {
       expect(mockUseFuelCodeBulletins).toHaveBeenCalledWith(
         'current',
-        expect.objectContaining({ page: 2, size: 50 })
+        expect.objectContaining({ page: 2, size: 50 }),
+        {},
+        false
       )
     })
   })

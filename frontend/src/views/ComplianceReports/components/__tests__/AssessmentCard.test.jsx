@@ -102,7 +102,7 @@ vi.mock('@/components/BCWidgetCard/BCWidgetCard', () => ({
   )
 }))
 
-vi.mock('@/components/Loading.jsx', () => ({
+vi.mock('@/components/Loading', () => ({
   __esModule: true,
   default: () => <div data-test="loading">Loading...</div>
 }))
