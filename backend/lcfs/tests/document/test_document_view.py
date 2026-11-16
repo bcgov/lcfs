@@ -316,6 +316,45 @@ async def test_delete_file_invalid_parent_type(fastapi_app, client):
     assert "Unsupported document parent type" in response.json()["detail"]
 
 
+class FakeRecordingDocumentService(FakeDocumentService):
+    """Records physical deletes so a test can prove none happened."""
+
+    deleted = []
+
+    async def delete_file(self, document_id: int, parent_id: int, parent_type: str):
+        FakeRecordingDocumentService.deleted.append(
+            (parent_type, parent_id, document_id)
+        )
+
+
+@pytest.mark.anyio
+async def test_delete_file_refuses_folder_enabled_parent_type(
+    fastapi_app, client, set_mock_user
+):
+    """
+    Designated actions delete through the document bin, whose hard-delete
+    route only lets the file's owner destroy a file they themselves binned.
+    This shared route destroys the S3 object on parent access alone, so a
+    user who merely shares the agreement could use it to bypass those
+    ownership checks. It must refuse folder-enabled parents outright, before
+    even resolving parent access, and nothing may reach the service.
+    """
+    set_mock_user(fastapi_app, [RoleEnum.IA_ANALYST])
+    FakeRecordingDocumentService.deleted = []
+    fastapi_app.dependency_overrides[DocumentService] = (
+        lambda: FakeRecordingDocumentService()
+    )
+
+    url = fastapi_app.url_path_for(
+        "delete_file", parent_type="designatedAction", parent_id=1, document_id=100
+    )
+    response = await client.delete(url)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert "document bin" in response.json()["detail"]
+    assert FakeRecordingDocumentService.deleted == []
+
+
 # --- internal_comment attachments (issue #4514) ------------------------------
 
 

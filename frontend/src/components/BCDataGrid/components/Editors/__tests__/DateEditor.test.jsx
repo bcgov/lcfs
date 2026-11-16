@@ -520,6 +520,18 @@ describe('DateEditor', () => {
       )
     })
 
+    it('marks the calendar popper as part of the cell editor for AG Grid', () => {
+      render(<DateEditor {...defaultProps} />)
+
+      const datePickerProps = DatePicker.mock.calls.at(-1)[0]
+
+      // Without this, grids with stopEditingWhenCellsLoseFocus close the
+      // editor as soon as the calendar takes focus.
+      expect(datePickerProps.slotProps.popper.className).toBe(
+        'ag-custom-component-popup'
+      )
+    })
+
     it('disables picker focus restoration so closing the calendar does not scroll to another grid', () => {
       render(<DateEditor {...defaultProps} />)
 

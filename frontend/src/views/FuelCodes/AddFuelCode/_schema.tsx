@@ -97,10 +97,12 @@ export const normalizeTransportModeDistances = (value: unknown) => {
     .filter((item): item is NonNullable<typeof item> => !!item?.transportMode)
 }
 
+// The grid shows a missing distance as '', but the API only accepts a number
+// or null, so send null when no distance was entered.
 export const normalizeTransportModeDistancesForSave = (value: unknown) =>
   normalizeTransportModeDistances(value).map((item) => ({
     transport_mode: item.transportMode,
-    distance: item.distance
+    distance: item.distance === '' ? null : item.distance
   }))
 
 const renderTransportModeDistances = (params: ICellRendererParams) => {

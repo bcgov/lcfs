@@ -2,7 +2,11 @@ import { render, screen } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vite-plus/test'
 
 import { BCeIDSpecificRoleFields } from '../components/BCeIDSpecificRoleFields'
-import { bceidRoleOptions, iaSignerOption } from '../_schema'
+import {
+  bceidRoleOptions,
+  iaSignerOption,
+  lcjfipAdministratorOption
+} from '../_schema'
 
 // @/components/BCForm is globally mocked in testSetup.ts:
 //   BCFormCheckbox → <div data-test="{name}-checkbox-group"> with child <input> per option
@@ -46,7 +50,7 @@ vi.mock('@mui/material/FormControlLabel', () => ({
 vi.mock('@mui/material/Checkbox', () => ({
   default: ({ id, checked, disabled }) => (
     <input
-      data-test="ia-signer-checkbox"
+      data-test={`${id}-checkbox`}
       id={id}
       type="checkbox"
       defaultChecked={checked}
@@ -56,44 +60,62 @@ vi.mock('@mui/material/Checkbox', () => ({
   )
 }))
 
+const MANAGE_USERS_OPTION = {
+  label: 'Manage Users',
+  header: 'Manage Users',
+  text: 'desc',
+  value: 'manage users',
+  dataTestId: 'bceidRoles1'
+}
+const IA_PROPONENT_OPTION = {
+  label: 'IA Proponent',
+  header: 'IA Proponent',
+  text: 'desc',
+  value: 'ia proponent',
+  dataTestId: 'bceidRoles2'
+}
+const LCJFIP_APPLICANT_OPTION = {
+  label: 'LCJFIP Applicant',
+  header: 'LCJFIP Applicant',
+  text: 'desc',
+  value: 'lcjfip applicant',
+  dataTestId: 'bceidRoles3'
+}
+
+// Mirrors the real semantics: null availableRoles = no filtering; a parent
+// option is offered only when available to the organization.
+const mockBceidRoleOptions = (_t, availableRoles = null) => [
+  MANAGE_USERS_OPTION,
+  ...(availableRoles == null || availableRoles.includes('IA Proponent')
+    ? [IA_PROPONENT_OPTION]
+    : []),
+  ...(availableRoles != null && availableRoles.includes('LCJFIP Applicant')
+    ? [LCJFIP_APPLICANT_OPTION]
+    : [])
+]
+
 vi.mock('../_schema', () => ({
-  bceidRoleOptions: vi.fn(() => [
-    {
-      label: 'Manage Users',
-      header: 'Manage Users',
-      text: 'desc',
-      value: 'manage users',
-      dataTestId: 'bceidRoles1'
-    },
-    {
-      label: 'IA Proponent',
-      header: 'IA Proponent',
-      text: 'desc',
-      value: 'ia proponent',
-      dataTestId: 'bceidRoles2'
-    }
-  ]),
+  bceidRoleOptions: vi.fn(),
   iaSignerOption: vi.fn(() => ({
     label: 'IA Signer',
     header: 'IA Signer',
     text: 'ia signer desc',
     value: 'ia signer'
   })),
-  // Mirrors the real semantics: null availableRoles = no filtering; IA Signer
-  // is allowed only when IA Proponent is available.
-  allowedBceidRoleValues: vi.fn((availableRoles) =>
-    availableRoles == null
-      ? null
-      : availableRoles.includes('IA Proponent')
-        ? ['manage users', 'signing authority', 'ia proponent', 'ia signer']
-        : ['manage users', 'signing authority']
-  )
+  lcjfipAdministratorOption: vi.fn(() => ({
+    label: 'LCJFIP Administrator',
+    header: 'LCJFIP Administrator',
+    text: 'lcjfip administrator desc',
+    value: 'lcjfip administrator'
+  }))
 }))
 
 vi.mock('@/constants/roles', () => ({
   roles: {
     ia_proponent: 'IA Proponent',
-    ia_signer: 'IA Signer'
+    ia_signer: 'IA Signer',
+    lcjfip_applicant: 'LCJFIP Applicant',
+    lcjfip_administrator: 'LCJFIP Administrator'
   }
 }))
 
@@ -110,27 +132,18 @@ describe('BCeIDSpecificRoleFields', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     t.mockImplementation((key) => key)
-    bceidRoleOptions.mockReturnValue([
-      {
-        label: 'Manage Users',
-        header: 'Manage Users',
-        text: 'desc',
-        value: 'manage users',
-        dataTestId: 'bceidRoles1'
-      },
-      {
-        label: 'IA Proponent',
-        header: 'IA Proponent',
-        text: 'desc',
-        value: 'ia proponent',
-        dataTestId: 'bceidRoles2'
-      }
-    ])
+    bceidRoleOptions.mockImplementation(mockBceidRoleOptions)
     iaSignerOption.mockReturnValue({
       label: 'IA Signer',
       header: 'IA Signer',
       text: 'ia signer desc',
       value: 'ia signer'
+    })
+    lcjfipAdministratorOption.mockReturnValue({
+      label: 'LCJFIP Administrator',
+      header: 'LCJFIP Administrator',
+      text: 'lcjfip administrator desc',
+      value: 'lcjfip administrator'
     })
   })
 
@@ -280,5 +293,102 @@ describe('BCeIDSpecificRoleFields', () => {
       />
     )
     expect(screen.getByTestId('ia-signer-checkbox')).toBeInTheDocument()
+  })
+
+  it('renders LCJFIP Administrator directly under LCJFIP Applicant for IDIR editors', () => {
+    render(
+      <BCeIDSpecificRoleFields
+        form={makeForm(['lcjfip applicant'])}
+        disabled={false}
+        t={t}
+        isGovernmentUser
+        availableRoles={['IA Proponent', 'LCJFIP Applicant']}
+      />
+    )
+    const admin = screen.getByTestId('lcjfip-administrator-checkbox')
+    expect(admin).toBeInTheDocument()
+    expect(admin).not.toBeDisabled()
+    expect(
+      screen.getAllByRole('checkbox').map((c) => c.getAttribute('data-test'))
+    ).toEqual([
+      'bceidRoles1',
+      'bceidRoles2',
+      'ia-signer-checkbox',
+      'bceidRoles3',
+      'lcjfip-administrator-checkbox'
+    ])
+  })
+
+  it('allows LCJFIP Administrator without a user Applicant assignment', () => {
+    render(
+      <BCeIDSpecificRoleFields
+        form={makeForm([])}
+        disabled={false}
+        t={t}
+        isGovernmentUser
+        availableRoles={['LCJFIP Applicant']}
+      />
+    )
+    expect(
+      screen.getByTestId('lcjfip-administrator-checkbox')
+    ).not.toBeDisabled()
+  })
+
+  it('preserves a checked LCJFIP Administrator without a user Applicant assignment', () => {
+    render(
+      <BCeIDSpecificRoleFields
+        form={makeForm(['lcjfip administrator'])}
+        disabled={false}
+        t={t}
+        isGovernmentUser
+        availableRoles={['LCJFIP Applicant']}
+      />
+    )
+    expect(screen.getByTestId('lcjfip-administrator-checkbox')).toBeChecked()
+    expect(
+      screen.getByTestId('lcjfip-administrator-checkbox')
+    ).not.toBeDisabled()
+  })
+
+  it('disables LCJFIP Administrator when the form is disabled', () => {
+    render(
+      <BCeIDSpecificRoleFields
+        form={makeForm(['lcjfip administrator'])}
+        disabled
+        t={t}
+        isGovernmentUser
+        availableRoles={['LCJFIP Applicant']}
+      />
+    )
+    expect(screen.getByTestId('lcjfip-administrator-checkbox')).toBeDisabled()
+  })
+
+  it('hides LCJFIP Administrator when LCJFIP Applicant is not available to the org', () => {
+    render(
+      <BCeIDSpecificRoleFields
+        form={makeForm(['lcjfip applicant'])}
+        disabled={false}
+        t={t}
+        isGovernmentUser
+        availableRoles={['IA Proponent']}
+      />
+    )
+    expect(
+      screen.queryByTestId('lcjfip-administrator-checkbox')
+    ).not.toBeInTheDocument()
+  })
+
+  it('does not show LCJFIP Administrator to BCeID editors', () => {
+    render(
+      <BCeIDSpecificRoleFields
+        form={makeForm(['lcjfip applicant'])}
+        disabled={false}
+        t={t}
+        availableRoles={['LCJFIP Applicant']}
+      />
+    )
+    expect(
+      screen.queryByTestId('lcjfip-administrator-checkbox')
+    ).not.toBeInTheDocument()
   })
 })

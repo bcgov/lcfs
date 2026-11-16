@@ -60,6 +60,58 @@ describe('ApplicationInformationStep', () => {
   })
   afterEach(cleanup)
 
+  test('preserves dirty form fields across document-only application refetches', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    const application = {
+      ciApplicationId: 99,
+      facilityCity: 'Original city',
+      facilityNameplateCapacity: 100,
+      documents: []
+    }
+    const { rerender } = render(
+      <ApplicationInformationStep {...baseProps} ciApplication={application} />,
+      [query, theme, localization, router]
+    )
+    fireEvent.change(document.getElementById('facilityCity'), {
+      target: { value: 'Unsaved city' }
+    })
+    fireEvent.change(document.getElementById('facilityNameplateCapacity'), {
+      target: { value: '250' }
+    })
+
+    rerender(
+      <ApplicationInformationStep
+        {...baseProps}
+        ciApplication={{
+          ...application,
+          documents: [{ documentId: 7, fileName: 'uploaded.pdf' }]
+        }}
+      />
+    )
+
+    expect(document.getElementById('facilityCity')).toHaveValue('Unsaved city')
+    expect(document.getElementById('facilityNameplateCapacity')).toHaveValue(
+      '250'
+    )
+
+    rerender(
+      <ApplicationInformationStep
+        {...baseProps}
+        ciApplication={{
+          ...application,
+          ciApplicationId: 100,
+          facilityCity: 'Next city'
+        }}
+      />
+    )
+    expect(document.getElementById('facilityCity')).toHaveValue('Next city')
+  })
+
   test('renders the organization summary block when provided', ({
     render,
     query,

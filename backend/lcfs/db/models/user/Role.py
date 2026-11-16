@@ -24,6 +24,8 @@ class RoleEnum(enum.Enum):
     IA_ANALYST = "IA Analyst"
     IA_MANAGER = "IA Manager"
     IA_SIGNER = "IA Signer"
+    LCJFIP_APPLICANT = "LCJFIP Applicant"
+    LCJFIP_ADMINISTRATOR = "LCJFIP Administrator"
 
 
 class Role(BaseModel, Auditable):

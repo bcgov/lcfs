@@ -32,8 +32,8 @@ class DocumentFolder(BaseModel, Auditable):
         # Case-insensitive sibling uniqueness. parent_folder_id is NULL at
         # the root, and NULLs never collide in a plain unique index, so the
         # root level coalesces to 0 to get the same guarantee.
-        # Live folders only: a folder in the bin would otherwise hold its
-        # name hostage forever, since nothing is ever purged.
+        # Live folders only: a binned folder may be restored beside a
+        # replacement that has since taken its name.
         Index(
             "uq_document_folder_sibling_name",
             "parent_type",

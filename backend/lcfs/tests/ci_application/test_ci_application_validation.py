@@ -170,3 +170,53 @@ def test_require_supplier_organization_raises_when_missing():
     with pytest.raises(HTTPException) as exc:
         v.require_supplier_organization()
     assert exc.value.status_code == status.HTTP_403_FORBIDDEN
+
+
+# ---------------------------------------------------------------------------
+# CI application document writes
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    ("status_name", "document_upload_enabled"),
+    [("Draft", False), ("Submitted", True)],
+)
+async def test_validate_document_write_access_allows_draft_or_requested_uploads(
+    repo, status_name, document_upload_enabled
+):
+    ci = _application_in(status_name)
+    ci.document_upload_enabled = document_upload_enabled
+    repo.get_by_id.return_value = ci
+    validation = _validation(_user([RoleEnum.CI_APPLICANT]), repo)
+
+    result = await validation.validate_document_write_access(ci.ci_application_id)
+
+    assert result is ci
+
+
+@pytest.mark.anyio
+async def test_validate_document_write_access_blocks_supplier_after_resubmission(repo):
+    ci = _application_in("Submitted")
+    ci.document_upload_enabled = False
+    repo.get_by_id.return_value = ci
+    validation = _validation(_user([RoleEnum.CI_APPLICANT]), repo)
+
+    with pytest.raises(HTTPException) as exc:
+        await validation.validate_document_write_access(ci.ci_application_id)
+
+    assert exc.value.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.anyio
+async def test_validate_document_write_access_allows_government_reviewers(repo):
+    ci = _application_in("Submitted", organization_id=99)
+    ci.document_upload_enabled = False
+    repo.get_by_id.return_value = ci
+    user = _user([RoleEnum.GOVERNMENT], organization_id=None)
+    user.user_roles = [SimpleNamespace(role=SimpleNamespace(is_government_role=True))]
+    validation = _validation(user, repo)
+
+    result = await validation.validate_document_write_access(ci.ci_application_id)
+
+    assert result is ci

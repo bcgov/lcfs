@@ -169,6 +169,21 @@ describe('useCIApplication hooks', () => {
       expect(result.current.data).toEqual(data)
     })
 
+    test('refreshes cached workflow flags when the detail page mounts', async ({
+      renderHook,
+      query
+    }) => {
+      const cached = { ciApplicationId: 7, documentUploadEnabled: true }
+      const latest = { ciApplicationId: 7, documentUploadEnabled: false }
+      query.client.setQueryData(['ci-application', '7'], cached)
+      mockGet.mockResolvedValue({ data: latest })
+
+      const { result } = renderHook(() => useGetCIApplication(7), [query])
+
+      await waitFor(() => expect(result.current.data).toEqual(latest))
+      expect(mockGet).toHaveBeenCalledWith('/ci-applications/7')
+    })
+
     test('does not fetch when id is undefined', ({ renderHook, query }) => {
       const { result } = renderHook(
         () => useGetCIApplication(undefined),

@@ -6,7 +6,16 @@
     "Report fuel volumes for which you have an allocation agreement. Report both fuels that you have allocated responsibility to another organization, and fuels you have received responsibly from another organization.",
     "Fuels that you have received responsibility for must also be reported in fuel supply."
   ],
+  "allocationAgreementIndex": {
+    "title": "Allocation agreements",
+    "description": "Allocation agreements from all compliance report versions except those in Draft status. Select a row to open its compliance report.",
+    "showAgreementsInvolve": "Show allocation agreements that involve",
+    "selectOrganization": "Select organization"
+  },
   "allocationAgreementColLabels": {
+    "status": "Status",
+    "compliancePeriod": "Compliance period",
+    "reportingOrganization": "Reporting organization",
     "allocationTransactionType": "Responsibility",
     "transactionPartner": "Legal name of transaction partner",
     "postalAddress": "Address for service",

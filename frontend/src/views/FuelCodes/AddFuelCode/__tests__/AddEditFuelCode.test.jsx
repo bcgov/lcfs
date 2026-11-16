@@ -1144,6 +1144,44 @@ describe('AddEditFuelCode', () => {
 
       // This tests hasNotesValidationError computation
     })
+
+    it('disables Save while a row has a failed save, until the row saves', async () => {
+      mockMutation.mutateAsync
+        .mockRejectedValueOnce({
+          response: {
+            status: 422,
+            data: {
+              errors: [
+                {
+                  fields: ['feedstockFuelTransportMode'],
+                  message: 'Input should be a valid string'
+                }
+              ]
+            }
+          }
+        })
+        .mockResolvedValueOnce({
+          data: { fuelCodeId: 123, fuelSuffix: 'BCLCF001' }
+        })
+
+      render(
+        <TestWrapper>
+          <AddEditFuelCode />
+        </TestWrapper>
+      )
+      fireEvent.click(await screen.findByText('Ready'))
+
+      const saveButton = () =>
+        document.querySelector('[data-test="save-fuel-code-btn"]')
+      await waitFor(() => expect(saveButton()).not.toBeDisabled())
+
+      fireEvent.click(screen.getByText('Stop Edit'))
+      await waitFor(() => expect(saveButton()).toBeDisabled())
+
+      fireEvent.click(screen.getByText('Stop Edit'))
+      await waitFor(() => expect(saveButton()).not.toBeDisabled())
+      expect(mockMutation.mutateAsync).toHaveBeenCalledTimes(2)
+    })
   })
 
   // Error handling edge cases
