@@ -9,7 +9,7 @@ import {
   useInitiativeAgreementStatuses
 } from '@/hooks/useInitiativeAgreements'
 import { DAAssignedAnalystCell } from './components/DAAssignedAnalystCell'
-import { dateFormatter } from '@/utils/formatters'
+import { dateFormatter, numberFormatter } from '@/utils/formatters'
 import {
   InitiativeAgreementStatusRenderer,
   LastCommentRenderer
@@ -47,6 +47,34 @@ const DATE_FILTER_PARAMS = {
 const DATE_FLOATING_FILTER_PARAMS = {
   initialFilterType: 'equals'
 }
+
+const NUMBER_FILTER_PARAMS = {
+  // inRange is left out: the list endpoint takes a single filter value.
+  filterOptions: [
+    'equals',
+    'notEqual',
+    'greaterThan',
+    'greaterThanOrEqual',
+    'lessThan',
+    'lessThanOrEqual'
+  ],
+  buttons: ['clear']
+}
+
+// Whole credits with thousands separators, right aligned; calculated by the
+// list endpoint from the designated actions (#5339).
+const creditCol = (
+  field: ColDef<InitiativeAgreementGridRow>['field'],
+  headerName: string
+): ColDef<InitiativeAgreementGridRow> => ({
+  field,
+  headerName,
+  type: 'numericColumn',
+  valueFormatter: (params) => numberFormatter(params, false, 0),
+  filter: 'agNumberColumnFilter',
+  filterParams: NUMBER_FILTER_PARAMS,
+  minWidth: 150
+})
 
 const dateCol = (
   field: ColDef<InitiativeAgreementGridRow>['field'],
@@ -99,22 +127,12 @@ export const initiativeAgreementColDefs = (
     filterParams: TEXT_FILTER_PARAMS
   },
   {
-    field: 'contactName',
-    headerName: t('initiativeAgreement:columns.contact'),
-    minWidth: 160,
-    filter: 'agTextColumnFilter',
-    filterParams: TEXT_FILTER_PARAMS
-  },
-  {
     field: 'iaCode',
     headerName: t('initiativeAgreement:columns.iaName'),
     minWidth: 150,
     filter: 'agTextColumnFilter',
     filterParams: TEXT_FILTER_PARAMS
   },
-  dateCol('agreementStartDate', t('initiativeAgreement:columns.startDate')),
-  dateCol('agreementEndDate', t('initiativeAgreement:columns.endDate')),
-  dateCol('updateDate', t('initiativeAgreement:columns.lastUpdated')),
   {
     field: 'lastComment',
     headerName: t('initiativeAgreement:columns.comments'),
@@ -122,10 +140,17 @@ export const initiativeAgreementColDefs = (
     sortable: false,
     filter: false,
     minWidth: 120
-  }
+  },
+  creditCol('awardedCredits', t('initiativeAgreement:columns.awardedCredits')),
+  creditCol('totalCredits', t('initiativeAgreement:columns.totalCredits')),
+  dateCol('agreementStartDate', t('initiativeAgreement:columns.startDate')),
+  dateCol('agreementEndDate', t('initiativeAgreement:columns.endDate'))
 ]
 
-export const defaultSortModel = [{ field: 'updateDate', direction: 'desc' }]
+// No sort column is shown by default; the list endpoint falls back to the
+// most recently updated agreements first.
+export const defaultSortModel: { field: string; direction: 'asc' | 'desc' }[] =
+  []
 
 // Column definitions for the designated actions grid on the agreement
 // detail page (#4896). The ID renders as "DA{n}-IA{agreement}", matching

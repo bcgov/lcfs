@@ -5,20 +5,32 @@ import { useComments } from '@/hooks/useComments'
 import { useMentionableUsers } from '@/hooks/useMentionableUsers'
 import CommentList from './CommentList'
 import Loading from '@/components/Loading'
+import BCAlert from '@/components/BCAlert'
+import { getCommentErrorMessage } from './commentErrors'
 
 const Comments = ({
   entityType,
   entityId,
   commentMode = 'internal-only',
-  enableAttachments = true
+  enableAttachments = true,
+  showUploadDropzone = false,
+  enableDeletion = false,
+  enableSorting = true,
+  showTitle = true,
+  placeholder
 }) => {
   const { t } = useTranslation(['internalComment'])
   const {
     comments,
+    canComment,
     isLoading,
     error,
     addComment,
     editComment,
+    cancelEditComment,
+    deleteComment,
+    isDeletingComment,
+    mutationError,
     isAddingComment,
     isEditingComment,
     commentInput,
@@ -68,28 +80,44 @@ const Comments = ({
   }
 
   return (
-    <CommentList
-      comments={comments}
-      onAddComment={handleAddComment}
-      onEditComment={handleEditComment}
-      showAddCommentBtn={showAddCommentBtn}
-      isAddingComment={isAddingComment}
-      isEditingComment={isEditingComment}
-      commentInput={commentInput}
-      onCommentInputChange={handleCommentInputChange}
-      commentMode={commentMode}
-      visibility={visibility}
-      onVisibilityChange={handleVisibilityChange}
-      allowInternalVisibility={allowInternalVisibility}
-      enableAttachments={enableAttachments}
-      attachments={attachments}
-      onAttachmentsChange={handleAttachmentsChange}
-      onDownloadAttachment={downloadCommentAttachment}
-      sortOrder={sortOrder}
-      onSortOrderChange={handleSortOrderChange}
-      mentionResults={mentionResults}
-      onMentionQueryChange={setMentionQuery}
-    />
+    <>
+      {mutationError && (
+        <BCAlert severity="error" role="alert">
+          {t('internalComment:saveError')}{' '}
+          {getCommentErrorMessage(mutationError)}
+        </BCAlert>
+      )}
+      <CommentList
+        comments={comments}
+        onAddComment={handleAddComment}
+        onEditComment={handleEditComment}
+        onCancelEdit={cancelEditComment}
+        onDeleteComment={enableDeletion ? deleteComment : undefined}
+        isDeletingComment={isDeletingComment}
+        showTitle={showTitle}
+        placeholder={placeholder}
+        canCreateComment={entityType === 'penaltyLog' ? canComment : undefined}
+        showAddCommentBtn={showAddCommentBtn}
+        isAddingComment={isAddingComment}
+        isEditingComment={isEditingComment}
+        commentInput={commentInput}
+        onCommentInputChange={handleCommentInputChange}
+        commentMode={commentMode}
+        visibility={visibility}
+        onVisibilityChange={handleVisibilityChange}
+        allowInternalVisibility={allowInternalVisibility}
+        enableAttachments={enableAttachments}
+        showUploadDropzone={showUploadDropzone}
+        attachments={attachments}
+        onAttachmentsChange={handleAttachmentsChange}
+        onDownloadAttachment={downloadCommentAttachment}
+        sortOrder={sortOrder}
+        enableSorting={enableSorting}
+        onSortOrderChange={handleSortOrderChange}
+        mentionResults={mentionResults}
+        onMentionQueryChange={setMentionQuery}
+      />
+    </>
   )
 }
 
@@ -101,7 +129,12 @@ Comments.propTypes = {
     PropTypes.oneOf([null])
   ]),
   commentMode: PropTypes.oneOf(['internal-only', 'dual']),
-  enableAttachments: PropTypes.bool
+  enableAttachments: PropTypes.bool,
+  showUploadDropzone: PropTypes.bool,
+  enableDeletion: PropTypes.bool,
+  enableSorting: PropTypes.bool,
+  showTitle: PropTypes.bool,
+  placeholder: PropTypes.string
 }
 
 export default Comments
