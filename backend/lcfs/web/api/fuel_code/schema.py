@@ -378,14 +378,23 @@ class FuelCodesSchema(BaseSchema):
 
 
 class FuelCodeBulletinRowSchema(BaseSchema):
-    fuel_code_id: Optional[int] = None
+    """Public bulletin allowlist: code, fuel, company, CI and validity dates.
+
+    These are the six fields published by the public bulletin export. Internal
+    application, contact, feedstock and facility details belong only in the
+    authenticated government schema.
+    """
+
     fuel_code: str
     fuel: str
     company: str
     carbon_intensity: float
     effective_date: Optional[date] = None
     expiry_date: Optional[date] = None
-    # Extra fields exposed for IDIR view (optional for public view)
+
+
+class GovernmentFuelCodeBulletinRowSchema(FuelCodeBulletinRowSchema):
+    fuel_code_id: Optional[int] = None
     prefix: Optional[str] = None
     fuel_suffix: Optional[str] = None
     status: Optional[str] = None
@@ -413,6 +422,10 @@ class FuelCodeBulletinsSchema(BaseSchema):
     cutoff_date: date
     fuel_codes: List[FuelCodeBulletinRowSchema]
     pagination: Optional[PaginationResponseSchema] = None
+
+
+class GovernmentFuelCodeBulletinsSchema(FuelCodeBulletinsSchema):
+    fuel_codes: List[GovernmentFuelCodeBulletinRowSchema]
 
 
 class VolumeDataPointSchema(BaseSchema):
