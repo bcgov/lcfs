@@ -55,6 +55,12 @@ class DesignatedAction(BaseModel, Auditable, Versioning):
             "version",
             name="uq_designated_action_agreement_number_version",
         ),
+        UniqueConstraint(
+            "designated_action_id",
+            "initiative_agreement_id",
+            "group_uuid",
+            name="uq_designated_action_id_agreement_group",
+        ),
         Index("ix_designated_action_group_uuid", "group_uuid"),
         # Prevent shared transactions; row locks prevent duplicate issuance.
         Index(
@@ -180,4 +186,10 @@ class DesignatedAction(BaseModel, Auditable, Versioning):
     )
     designated_action_internal_comments = relationship(
         "DesignatedActionInternalComment", back_populates="designated_action"
+    )
+    initiative_agreement_note_links = relationship(
+        "InitiativeAgreementNoteDesignatedAction",
+        back_populates="designated_action",
+        overlaps="designated_action_links,initiative_agreement_note",
+        passive_deletes=True,
     )

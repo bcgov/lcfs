@@ -1,5 +1,6 @@
 from datetime import date as date_type
 from datetime import datetime, timezone
+from decimal import Decimal
 from typing import Dict, List, Optional, Sequence, Tuple
 
 from fastapi import Depends
@@ -41,6 +42,10 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreementLifecycleHistory imp
 )
 from lcfs.db.models.initiative_agreement.InitiativeAgreementLifecycleStatus import (
     InitiativeAgreementLifecycleStatus,
+)
+from lcfs.db.models.initiative_agreement.InitiativeAgreementNote import (
+    InitiativeAgreementNote,
+    InitiativeAgreementNoteDesignatedAction,
 )
 from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
     InitiativeAgreementStatus,
@@ -870,6 +875,91 @@ class InitiativeAgreementRepository:
         await self.db.flush()
         await self.db.refresh(requirement)
         return requirement
+
+    @repo_handler
+    async def add_initiative_agreement_note(
+        self,
+        initiative_agreement_id: int,
+        note_text: str,
+        note_number: Optional[Decimal] = None,
+        designated_action_ids: Sequence[int] = (),
+        username: Optional[str] = None,
+    ) -> InitiativeAgreementNote:
+        """Create a note, serializing number allocation per agreement."""
+        agreement = await self.db.scalar(
+            select(InitiativeAgreement)
+            .where(
+                InitiativeAgreement.initiative_agreement_id == initiative_agreement_id
+            )
+            .with_for_update()
+        )
+        if agreement is None:
+            raise DataNotFoundException(
+                f"Initiative Agreement with id {initiative_agreement_id} not found"
+            )
+
+        if note_number is None:
+            highest = await self.db.scalar(
+                select(func.max(InitiativeAgreementNote.note_number)).where(
+                    InitiativeAgreementNote.initiative_agreement_id
+                    == initiative_agreement_id
+                )
+            )
+            note_number = (highest or Decimal(0)) + Decimal(1)
+
+        duplicate = await self.db.scalar(
+            select(InitiativeAgreementNote.initiative_agreement_note_id).where(
+                InitiativeAgreementNote.initiative_agreement_id
+                == initiative_agreement_id,
+                InitiativeAgreementNote.note_number == note_number,
+            )
+        )
+        if duplicate is not None:
+            raise ValueError(
+                f"Note number {note_number} is already in use for this "
+                "initiative agreement."
+            )
+
+        action_ids = tuple(dict.fromkeys(designated_action_ids or ()))
+        actions = []
+        if action_ids:
+            actions = list(
+                (
+                    await self.db.scalars(
+                        select(DesignatedAction).where(
+                            DesignatedAction.initiative_agreement_id
+                            == initiative_agreement_id,
+                            DesignatedAction.designated_action_id.in_(action_ids),
+                        )
+                    )
+                ).all()
+            )
+            if len(actions) != len(action_ids):
+                raise ValueError(
+                    "Every designated action must belong to this initiative agreement."
+                )
+
+        note = InitiativeAgreementNote(
+            initiative_agreement_id=initiative_agreement_id,
+            note_number=note_number,
+            note_text=note_text,
+            create_user=username,
+            update_user=username,
+        )
+        self.db.add(note)
+        await self.db.flush()
+
+        self.db.add_all(
+            InitiativeAgreementNoteDesignatedAction(
+                initiative_agreement_note_id=note.initiative_agreement_note_id,
+                initiative_agreement_id=initiative_agreement_id,
+                designated_action_id=action.designated_action_id,
+                designated_action_group_uuid=action.group_uuid,
+            )
+            for action in actions
+        )
+        await self.db.flush()
+        return note
 
     @repo_handler
     async def get_active_ia_analysts(self) -> List[UserProfile]:
