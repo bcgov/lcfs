@@ -61,7 +61,12 @@ describe('HistoryCard', () => {
   })
 
   test('distinguishes creation and return events, even when creation is hidden', ({
-    render, query, theme, localization, router, i18n
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
   }) => {
     const event = (status, date, isReturn, displayName) => ({
       complianceReportId: 123,
@@ -70,33 +75,73 @@ describe('HistoryCard', () => {
       isReturn,
       displayName
     })
-    renderComponent(render, [query, theme, localization, router, i18n], {
-      complianceReportId: 123,
-      currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
-      history: [
-        event(COMPLIANCE_REPORT_STATUSES.DRAFT, '2024-01-01', false, 'Creator'),
-        event(COMPLIANCE_REPORT_STATUSES.DRAFT, '2024-01-03', true, 'Reviewer'),
-        event(COMPLIANCE_REPORT_STATUSES.SUBMITTED, '2024-01-04', true, 'Manager')
-      ]
-    }, { defaultExpanded: true })
+    renderComponent(
+      render,
+      [query, theme, localization, router, i18n],
+      {
+        complianceReportId: 123,
+        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
+        history: [
+          event(
+            COMPLIANCE_REPORT_STATUSES.DRAFT,
+            '2024-01-01',
+            false,
+            'Creator'
+          ),
+          event(
+            COMPLIANCE_REPORT_STATUSES.DRAFT,
+            '2024-01-03',
+            true,
+            'Reviewer'
+          ),
+          event(
+            COMPLIANCE_REPORT_STATUSES.SUBMITTED,
+            '2024-01-04',
+            true,
+            'Manager'
+          )
+        ]
+      },
+      { defaultExpanded: true }
+    )
 
-    expect(screen.getByText(/Created formatted-2024-01-01 by Creator/)).toBeInTheDocument()
-    expect(screen.getByText(/Returned formatted-2024-01-03 by Reviewer/)).toBeInTheDocument()
-    expect(screen.getByText(/Returned formatted-2024-01-04 by Manager/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Created formatted-2024-01-01 by Creator/)
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/Returned formatted-2024-01-03 by Reviewer/)
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/Returned formatted-2024-01-04 by Manager/)
+    ).toBeInTheDocument()
   })
 
   test('labels a return when the original draft event is absent', ({
-    render, query, theme, localization, router, i18n
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n
   }) => {
-    renderComponent(render, [query, theme, localization, router, i18n], {
-      history: [{
-        status: { status: COMPLIANCE_REPORT_STATUSES.DRAFT },
-        createDate: '2024-01-03',
-        isReturn: true,
-        displayName: 'Reviewer'
-      }]
-    }, { defaultExpanded: true })
-    expect(screen.getByText(/Returned formatted-2024-01-03 by Reviewer/)).toBeInTheDocument()
+    renderComponent(
+      render,
+      [query, theme, localization, router, i18n],
+      {
+        history: [
+          {
+            status: { status: COMPLIANCE_REPORT_STATUSES.DRAFT },
+            createDate: '2024-01-03',
+            isReturn: true,
+            displayName: 'Reviewer'
+          }
+        ]
+      },
+      { defaultExpanded: true }
+    )
+    expect(
+      screen.getByText(/Returned formatted-2024-01-03 by Reviewer/)
+    ).toBeInTheDocument()
   })
 
   test('renders without history', async ({

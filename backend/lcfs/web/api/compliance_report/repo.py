@@ -468,6 +468,10 @@ class ComplianceReportRepository:
         )
         self.db.add(history)
         await self.db.flush()
+        # The report may already have its history loaded in this session.
+        # Reload it for the response rather than returning the stale collection.
+        if isinstance(report, ComplianceReport):
+            self.db.expire(report, ["history"])
         return history
 
     @repo_handler
