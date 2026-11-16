@@ -63,7 +63,13 @@ export const useUploadDocument = (
   parentID: number | string | undefined | null,
   options: ExtMutationOptions<
     unknown,
-    File | Blob | { file: File | Blob; documentCategory?: string }
+    | File
+    | Blob
+    | {
+        file: File | Blob
+        documentCategory?: string
+        replaceDocumentId?: number
+      }
   > = {}
 ) => {
   const client = useApiService()
@@ -80,15 +86,26 @@ export const useUploadDocument = (
 
   return useMutation({
     mutationFn: async (
-      input: File | Blob | { file: File | Blob; documentCategory?: string }
+      input:
+        | File
+        | Blob
+        | {
+            file: File | Blob
+            documentCategory?: string
+            replaceDocumentId?: number
+          }
     ) => {
       // Backwards compatible: callers can either pass a File directly
       // (legacy signature) or a { file, documentCategory } object so
       // CI applications can route uploads to a specific category bucket
       // (technical_report / ghgenius_model / supporting).
-      const { file, documentCategory } =
+      const { file, documentCategory, replaceDocumentId } =
         input instanceof File || input instanceof Blob
-          ? { file: input, documentCategory: undefined }
+          ? {
+              file: input,
+              documentCategory: undefined,
+              replaceDocumentId: undefined
+            }
           : input || {}
 
       if (!file) {
@@ -110,9 +127,17 @@ export const useUploadDocument = (
         headers: {
           'Content-Type': 'multipart/form-data'
         },
-        params: documentCategory
-          ? { document_category: documentCategory }
-          : undefined,
+        params:
+          documentCategory || replaceDocumentId
+            ? {
+                ...(documentCategory
+                  ? { document_category: documentCategory }
+                  : {}),
+                ...(replaceDocumentId
+                  ? { replace_document_id: replaceDocumentId }
+                  : {})
+              }
+            : undefined,
         onUploadProgress
       })
     },

@@ -13,6 +13,7 @@ from lcfs.db.models.fuel.FinishedFuelTransportMode import FinishedFuelTransportM
 from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatusEnum
 from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
+from lcfs.services.fuel_production_facility import sync_fuel_code_contacts
 from lcfs.web.api.base import (
     calculate_total_pages,
     PaginationRequestSchema,
@@ -599,15 +600,30 @@ class FuelCodeServices:
                 fuel_code_data.company
             )
 
+        facility = getattr(fuel_code, "fuel_production_facility", None)
+        contact_updates = {
+            "contact_name": fuel_code_data.contact_name,
+            "contact_email": fuel_code_data.contact_email,
+        }
         for field, value in fuel_code_data.model_dump(
             exclude={
                 "feedstock_fuel_transport_modes",
                 "feedstock_fuel_transport_mode",
                 "finished_fuel_transport_modes",
                 "facility_nameplate_capacity_unit",
+                "contact_name",
+                "contact_email",
             }
         ).items():
             setattr(fuel_code, field, value)
+
+        if facility:
+            facility.contact_name = contact_updates["contact_name"]
+            facility.contact_email = contact_updates["contact_email"]
+            sync_fuel_code_contacts(facility)
+        else:
+            fuel_code.contact_name = contact_updates["contact_name"]
+            fuel_code.contact_email = contact_updates["contact_email"]
 
         # If expiration_date changed, clear the notification timestamp
         # so a new expiry notification will be sent

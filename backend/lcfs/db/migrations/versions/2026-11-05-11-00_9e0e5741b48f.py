@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 revision = "9e0e5741b48f"
-down_revision = "a6f1c2d3e4b5"
+down_revision = "8b3e6a1c5d90"
 branch_labels = None
 depends_on = None
 
@@ -110,8 +110,7 @@ def upgrade() -> None:
         "fuel_production_facility",
         sa.Column("legacy_company_key", sa.String(length=1000), nullable=True),
     )
-    op.execute(
-        """
+    op.execute("""
         CREATE TEMP TABLE tmp_fpf_source AS
         SELECT 'ci_application' AS source_type,
                ci_application_id AS source_id,
@@ -146,28 +145,25 @@ def upgrade() -> None:
                COALESCE(create_date, now()),
                create_user
         FROM fuel_code
-        """
-    )
+        """)
     # Records with no facility data at all get no facility row.
-    op.execute(
-        """
+    op.execute("""
         DELETE FROM tmp_fpf_source
         WHERE city IS NULL AND province_state IS NULL AND country IS NULL
           AND nameplate_capacity IS NULL AND nameplate_capacity_unit IS NULL
           AND contact_name IS NULL AND contact_email IS NULL
-        """
-    )
+        """)
 
     _insert_missing_facilities("src.source_type = 'ci_application'")
     _link_facilities(
         "ci_application", "ci_application_id", "src.source_type = 'ci_application'"
     )
 
-    # Fuel codes generated from a CI application share its facility when the
-    # location and capacity still match; their contact details then complete
-    # the facility record (CI applications never captured contacts).
-    op.execute(
-        f"""
+    # Share a facility with associated fuel codes only when the legacy
+    # contacts are consistent across every associated code for that facility.
+    # Conflicting contacts remain on separate facility records so backfill
+    # does not discard historical contact data.
+    op.execute(f"""
         UPDATE fuel_code AS code
         SET fuel_production_facility_id = application.fuel_production_facility_id
         FROM ci_application_fuel_code_association AS assoc
@@ -182,10 +178,36 @@ def upgrade() -> None:
               IS NOT DISTINCT FROM application.facility_nameplate_capacity
           AND code.facility_nameplate_capacity_unit
               IS NOT DISTINCT FROM application.facility_nameplate_capacity_unit
-        """
-    )
-    op.execute(
-        """
+          AND NOT EXISTS (
+              SELECT 1
+              FROM ci_application_fuel_code_association AS conflict_assoc
+              JOIN ci_application AS conflict_application
+                ON conflict_application.ci_application_id = conflict_assoc.ci_application_id
+              JOIN fuel_code AS conflict_code
+                ON conflict_code.fuel_code_id = conflict_assoc.fuel_code_id
+              WHERE conflict_application.organization_id
+                    IS NOT DISTINCT FROM application.organization_id
+                AND {_same_text("conflict_application.facility_city", "application.facility_city")}
+                AND {_same_text("conflict_application.facility_province_state", "application.facility_province_state")}
+                AND {_same_text("conflict_application.facility_country", "application.facility_country")}
+                AND conflict_application.facility_nameplate_capacity
+                    IS NOT DISTINCT FROM application.facility_nameplate_capacity
+                AND conflict_application.facility_nameplate_capacity_unit
+                    IS NOT DISTINCT FROM application.facility_nameplate_capacity_unit
+                AND {_same_text("conflict_code.fuel_production_facility_city", "conflict_application.facility_city")}
+                AND {_same_text("conflict_code.fuel_production_facility_province_state", "conflict_application.facility_province_state")}
+                AND {_same_text("conflict_code.fuel_production_facility_country", "conflict_application.facility_country")}
+                AND conflict_code.facility_nameplate_capacity
+                    IS NOT DISTINCT FROM conflict_application.facility_nameplate_capacity
+                AND conflict_code.facility_nameplate_capacity_unit
+                    IS NOT DISTINCT FROM conflict_application.facility_nameplate_capacity_unit
+                AND (
+                    NOT ({_same_text("code.contact_name", "conflict_code.contact_name")})
+                    OR NOT ({_same_text("code.contact_email", "conflict_code.contact_email")})
+                )
+          )
+        """)
+    op.execute("""
         UPDATE fuel_production_facility AS facility
         SET contact_name = contacts.contact_name,
             contact_email = contacts.contact_email
@@ -200,8 +222,7 @@ def upgrade() -> None:
         WHERE facility.fuel_production_facility_id = contacts.fuel_production_facility_id
           AND facility.contact_name IS NULL
           AND facility.contact_email IS NULL
-        """
-    )
+        """)
 
     remaining_fuel_codes = """
         src.source_type = 'fuel_code'
@@ -219,12 +240,12 @@ def upgrade() -> None:
     op.execute("""
         UPDATE pathway
         SET fuel_production_facility_id = COALESCE(
-            (SELECT code.fuel_production_facility_id
-             FROM fuel_code AS code
-             WHERE code.fuel_code_id = pathway.fuel_code_id),
             (SELECT application.fuel_production_facility_id
              FROM ci_application AS application
-             WHERE application.ci_application_id = pathway.ci_application_id)
+             WHERE application.ci_application_id = pathway.ci_application_id),
+            (SELECT code.fuel_production_facility_id
+             FROM fuel_code AS code
+             WHERE code.fuel_code_id = pathway.fuel_code_id)
         )
         """)
 
@@ -266,8 +287,7 @@ _SOURCE_KEY_EXPRESSIONS = """
 def _insert_missing_facilities(source_filter: str) -> None:
     """Create one facility per distinct key among the filtered source rows
     that does not already have a matching facility."""
-    op.execute(
-        f"""
+    op.execute(f"""
         INSERT INTO fuel_production_facility (
             organization_id, legacy_company_key, city, province_state, country, iso,
             nameplate_capacity, nameplate_capacity_unit, contact_name, contact_email,
@@ -287,13 +307,11 @@ def _insert_missing_facilities(source_filter: str) -> None:
           )
         ORDER BY {_SOURCE_KEY_EXPRESSIONS},
                  src.iso IS NULL, src.create_date, src.source_id
-        """
-    )
+        """)
 
 
 def _link_facilities(table: str, primary_key: str, source_filter: str) -> None:
-    op.execute(
-        f"""
+    op.execute(f"""
         UPDATE {table} AS target
         SET fuel_production_facility_id = facility.fuel_production_facility_id
         FROM tmp_fpf_source AS src
@@ -301,8 +319,8 @@ def _link_facilities(table: str, primary_key: str, source_filter: str) -> None:
           ON {_facility_key_match("facility", "src")}
         WHERE ({source_filter})
           AND target.{primary_key} = src.source_id
-        """
-    )
+        """)
+
 
 def downgrade() -> None:
     for table in ("pathway", "fuel_code", "ci_application"):

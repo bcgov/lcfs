@@ -39,6 +39,7 @@ from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.services.geocoder.client import Address, BCGeocoderService
 from lcfs.services.geocoder.dependency import get_geocoder_service_async
+from lcfs.services.fuel_production_facility import sync_fuel_code_contacts
 from lcfs.services.s3.schema import FileResponseSchema
 from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.ci_application.repo import CIApplicationRepository
@@ -198,14 +199,7 @@ def _update_facility_from_step1(
             ),
         )
 
-    for fuel_code in facility.fuel_codes:
-        fuel_code.fuel_production_facility_city = facility.city
-        fuel_code.fuel_production_facility_province_state = facility.province_state
-        fuel_code.fuel_production_facility_country = facility.country
-        fuel_code.facility_nameplate_capacity = facility.nameplate_capacity
-        fuel_code.facility_nameplate_capacity_unit = facility.nameplate_capacity_unit
-        fuel_code.contact_name = facility.contact_name
-        fuel_code.contact_email = facility.contact_email
+    sync_fuel_code_contacts(facility)
 
 
 def _to_facility_schema(
@@ -1302,8 +1296,8 @@ class CIApplicationServices:
                 )
 
             production_facility = getattr(
-                ci_application, "fuel_production_facility", None
-            )
+                pathway, "fuel_production_facility", None
+            ) or getattr(ci_application, "fuel_production_facility", None)
             draft_fuel_code = FuelCode(
                 fuel_status_id=draft_status.fuel_code_status_id,
                 prefix_id=prefix_id,
@@ -1331,15 +1325,39 @@ class CIApplicationServices:
                 feedstock=pathway.feedstock,
                 feedstock_location=pathway.feedstock_region,
                 co_processed="No",
-                fuel_production_facility_city=ci_application.facility_city,
-                fuel_production_facility_province_state=ci_application.facility_province_state,
-                fuel_production_facility_country=ci_application.facility_country,
-                facility_nameplate_capacity=ci_application.facility_nameplate_capacity,
-                facility_nameplate_capacity_unit=ci_application.facility_nameplate_capacity_unit,
+                fuel_production_facility_city=(
+                    production_facility.city
+                    if production_facility
+                    else ci_application.facility_city
+                ),
+                fuel_production_facility_province_state=(
+                    production_facility.province_state
+                    if production_facility
+                    else ci_application.facility_province_state
+                ),
+                fuel_production_facility_country=(
+                    production_facility.country
+                    if production_facility
+                    else ci_application.facility_country
+                ),
+                facility_nameplate_capacity=(
+                    production_facility.nameplate_capacity
+                    if production_facility
+                    else ci_application.facility_nameplate_capacity
+                ),
+                facility_nameplate_capacity_unit=(
+                    production_facility.nameplate_capacity_unit
+                    if production_facility
+                    else ci_application.facility_nameplate_capacity_unit
+                ),
                 organization_id=ci_application.organization_id,
                 fuel_production_facility_id=(
-                    getattr(pathway, "fuel_production_facility_id", None)
-                    or getattr(ci_application, "fuel_production_facility_id", None)
+                    production_facility.fuel_production_facility_id
+                    if production_facility
+                    else (
+                        getattr(pathway, "fuel_production_facility_id", None)
+                        or getattr(ci_application, "fuel_production_facility_id", None)
+                    )
                 ),
             )
             draft_fuel_code.feedstock_fuel_transport_modes = (

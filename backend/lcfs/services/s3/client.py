@@ -174,6 +174,7 @@ class DocumentService:
         parent_type,
         user=None,
         document_category: str | None = None,
+        replace_document_id: int | None = None,
     ):
         if parent_type == "compliance_report":
             await self._verify_compliance_report_access(parent_id, user)
@@ -197,11 +198,54 @@ class DocumentService:
                     detail=f"Invalid document_category '{document_category}'.",
                 )
         elif parent_type == "fuel_production_facility":
-            facility = await self.db.get(FuelProductionFacility, parent_id)
+            facility = await self.db.scalar(
+                select(FuelProductionFacility)
+                .where(FuelProductionFacility.fuel_production_facility_id == parent_id)
+                .with_for_update()
+            )
             if not facility:
                 raise DataNotFoundException("Fuel production facility not found.")
+            if replace_document_id is not None:
+                existing_document_ids = list(
+                    (
+                        await self.db.scalars(
+                            select(
+                                fuel_production_facility_document_association.c.document_id
+                            ).where(
+                                fuel_production_facility_document_association.c.fuel_production_facility_id
+                                == parent_id
+                            )
+                        )
+                    ).all()
+                )
+                if existing_document_ids != [replace_document_id]:
+                    raise HTTPException(
+                        status_code=409,
+                        detail="The facility document changed. Refresh and try again.",
+                    )
+            elif await self.db.scalar(
+                select(func.count())
+                .select_from(fuel_production_facility_document_association)
+                .where(
+                    fuel_production_facility_document_association.c.fuel_production_facility_id
+                    == parent_id
+                )
+            ):
+                raise HTTPException(
+                    status_code=409,
+                    detail="A facility document already exists. Replace the current document.",
+                )
         else:
             raise ServiceException(f"Unknown parent type {parent_type} in upload_file")
+
+        if (
+            replace_document_id is not None
+            and parent_type != "fuel_production_facility"
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Document replacement is only supported for facility documents.",
+            )
 
         file_id = uuid.uuid4()
         file_key = f"{settings.s3_docs_path}/{parent_type}/{parent_id}/{file_id}"
@@ -366,6 +410,8 @@ class DocumentService:
                 document_id=document.document_id,
             )
             await self.db.execute(stmt)
+            if replace_document_id is not None:
+                await self.delete_file(replace_document_id, parent_id, parent_type)
         elif parent_type == "internal_comment":
             internal_comment = await self.db.get(InternalComment, parent_id)
             if not internal_comment:

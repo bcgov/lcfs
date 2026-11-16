@@ -32,12 +32,14 @@ import InfoIcon from '@mui/icons-material/Info'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
 
 import BCAlertRoot from '@/components/BCAlert/BCAlertRoot'
+import BCAlert from '@/components/BCAlert'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
 import DocumentPreviewButton from '@/components/Documents/DocumentPreviewButton'
 import {
   useCIFacilityLocationSearch,
+  useCreateCIApplicationFacility,
   useGetCIApplicationFacilities
 } from '@/hooks/useCIApplication'
 import colors from '@/themes/base/colors'
@@ -241,11 +243,16 @@ const toFormValues = (data) => {
   return {
     fuelProductionFacilityId: data?.fuelProductionFacilityId ?? '',
     facilityName: facility?.name ?? data?.facilityName ?? '',
-    facilityCity: data?.facilityCity ?? '',
-    facilityProvinceState: data?.facilityProvinceState ?? '',
-    facilityCountry: data?.facilityCountry ?? '',
-    facilityNameplateCapacity: data?.facilityNameplateCapacity ?? '',
-    facilityNameplateCapacityUnit: data?.facilityNameplateCapacityUnit ?? '',
+    facilityCity: facility?.city ?? data?.facilityCity ?? '',
+    facilityProvinceState:
+      facility?.provinceState ?? data?.facilityProvinceState ?? '',
+    facilityCountry: facility?.country ?? data?.facilityCountry ?? '',
+    facilityNameplateCapacity:
+      facility?.nameplateCapacity ?? data?.facilityNameplateCapacity ?? '',
+    facilityNameplateCapacityUnit:
+      facility?.nameplateCapacityUnit ??
+      data?.facilityNameplateCapacityUnit ??
+      '',
     facilityContactName:
       facility?.contactName ?? data?.facilityContactName ?? '',
     facilityContactEmail:
@@ -288,7 +295,14 @@ export const ApplicationInformationStep = forwardRef(
   ) => {
     const { t } = useTranslation(['common', 'carbonIntensity'])
     const autofillTrapRef = useRef(null)
+    const facilityUploadInProgress = useRef(false)
     const [documentDialogOpen, setDocumentDialogOpen] = useState(false)
+    const [facilityUploadError, setFacilityUploadError] = useState(false)
+    const {
+      mutate: createFacility,
+      data: createdFacility,
+      isPending: isCreatingFacility
+    } = useCreateCIApplicationFacility()
     // Facility section modes: 'select' (pick an existing facility),
     // 'form' (edit an incomplete/selected facility or add a new one) and
     // 'summary' (facility saved on the application). User actions override
@@ -324,6 +338,9 @@ export const ApplicationInformationStep = forwardRef(
       facilities.find(
         (facility) => facility.fuelProductionFacilityId === selectedFacilityId
       ) ||
+      (createdFacility?.fuelProductionFacilityId === selectedFacilityId
+        ? createdFacility
+        : null) ||
       null
 
     // Selecting an existing facility links it and fills its saved details.
@@ -379,12 +396,19 @@ export const ApplicationInformationStep = forwardRef(
 
     const handleAddNewFacility = useCallback(() => {
       setSelectError('')
+      setFacilityUploadError(false)
       setValue('fuelProductionFacilityId', '', { shouldDirty: true })
       for (const name of FACILITY_FIELDS) {
         setValue(name, '', { shouldDirty: true })
       }
       setModeOverride('form')
     }, [setValue])
+
+    const handleCancelFacilitySelection = useCallback(() => {
+      reset(toFormValues(ciApplication))
+      setSelectError('')
+      setModeOverride('summary')
+    }, [ciApplication, reset])
 
     useEffect(() => {
       const seed = {
@@ -475,6 +499,59 @@ export const ApplicationInformationStep = forwardRef(
         return
       }
       setModeOverride('form')
+    }
+
+    const handleUpload = () => {
+      if (
+        readOnly ||
+        isSaving ||
+        isCreatingFacility ||
+        facilityUploadInProgress.current
+      )
+        return
+      setFacilityUploadError(false)
+      if (selectedFacilityId) {
+        setDocumentDialogOpen(true)
+        return
+      }
+      facilityUploadInProgress.current = true
+      setModeOverride('form')
+      handleSubmit(
+        (values) => {
+          const payload = toApiPayload(values)
+          createFacility(
+            {
+              name: payload.facilityName,
+              city: payload.facilityCity,
+              provinceState: payload.facilityProvinceState,
+              country: payload.facilityCountry,
+              nameplateCapacity: payload.facilityNameplateCapacity,
+              nameplateCapacityUnit: payload.facilityNameplateCapacityUnit,
+              contactName: payload.facilityContactName,
+              contactEmail: payload.facilityContactEmail
+            },
+            {
+              onSuccess: (facility) => {
+                facilityUploadInProgress.current = false
+                setValue(
+                  'fuelProductionFacilityId',
+                  facility.fuelProductionFacilityId,
+                  FILL_OPTIONS
+                )
+                setDocumentDialogOpen(true)
+              },
+              onError: () => {
+                facilityUploadInProgress.current = false
+                setFacilityUploadError(true)
+              }
+            }
+          )
+        },
+        () => {
+          facilityUploadInProgress.current = false
+          onInvalid()
+        }
+      )()
     }
 
     useImperativeHandle(ref, () => ({
@@ -633,6 +710,17 @@ export const ApplicationInformationStep = forwardRef(
                   </IconButton>
                 )}
               </Stack>
+              {!readOnly && facilities.length > 0 && (
+                <BCButton
+                  type="button"
+                  variant="outlined"
+                  color="primary"
+                  onClick={() => setModeOverride('select')}
+                  data-test="ci-step1-change-facility"
+                >
+                  {t('carbonIntensity:step1.changeFacility')}
+                </BCButton>
+              )}
               {facilityLocation && (
                 <BCTypography variant="body2">{facilityLocation}</BCTypography>
               )}
@@ -736,10 +824,35 @@ export const ApplicationInformationStep = forwardRef(
               >
                 {t('carbonIntensity:step1.addFacility')}
               </BCButton>
+              {ciApplication?.fuelProductionFacilityId && (
+                <BCButton
+                  type="button"
+                  variant="text"
+                  color="primary"
+                  onClick={handleCancelFacilitySelection}
+                  data-test="ci-step1-cancel-facility-selection"
+                  sx={{ ml: 1 }}
+                >
+                  {t('common:cancelBtn')}
+                </BCButton>
+              )}
             </Box>
           </>
         ) : (
           <>
+            {facilities.length > 0 && (
+              <Box sx={{ mb: 2 }}>
+                <BCButton
+                  type="button"
+                  variant="text"
+                  color="primary"
+                  onClick={() => setModeOverride('select')}
+                  data-test="ci-step1-back-to-facility-selection"
+                >
+                  {t('carbonIntensity:step1.chooseDifferentFacility')}
+                </BCButton>
+              </Box>
+            )}
             <Grid2 container spacing={2}>
               <Grid2 size={{ xs: 12, md: 4 }}>
                 <Controller
@@ -1015,8 +1128,11 @@ export const ApplicationInformationStep = forwardRef(
             </Grid2>
 
             {renderFacilityDocuments({ allowReplace: false })}
-            {/* Documents attach to a saved facility, so uploads wait until an
-            existing facility is linked (new ones link on save). */}
+            {facilityUploadError && (
+              <BCAlert severity="error" sx={{ mb: 2 }}>
+                {t('carbonIntensity:step1.facilityUploadFailed')}
+              </BCAlert>
+            )}
             <Stack
               direction="row"
               spacing={1}
@@ -1035,23 +1151,13 @@ export const ApplicationInformationStep = forwardRef(
                     }}
                   />
                 }
-                onClick={() => setDocumentDialogOpen(true)}
-                disabled={readOnly || !selectedFacilityId}
+                onClick={handleUpload}
+                disabled={readOnly || isSaving || isCreatingFacility}
                 data-test="ci-step1-process-flow-upload"
               >
                 {t('carbonIntensity:step1.processFlowDiagram')}
               </BCButton>
             </Stack>
-            {!selectedFacilityId && !readOnly && (
-              <BCTypography
-                variant="caption"
-                color="text.secondary"
-                component="p"
-                sx={{ mt: -2, mb: 3 }}
-              >
-                {t('carbonIntensity:step1.processFlowSaveFirst')}
-              </BCTypography>
-            )}
           </>
         )}
 
@@ -1156,7 +1262,7 @@ export const ApplicationInformationStep = forwardRef(
             variant="contained"
             color="primary"
             data-test="ci-step1-save-btn"
-            disabled={readOnly || isSaving}
+            disabled={readOnly || isSaving || isCreatingFacility}
           >
             {t('carbonIntensity:step1.saveAndProceed')}
           </BCButton>

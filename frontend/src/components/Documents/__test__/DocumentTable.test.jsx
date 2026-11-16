@@ -1117,6 +1117,38 @@ describe('DocumentTable', () => {
       expect(screen.getByText('old-diagram.pdf')).toBeInTheDocument()
     })
 
+    test('uploads facility replacements before removing the existing document', async ({
+      render,
+      theme,
+      router
+    }) => {
+      const newFile = createMockFile('new-diagram.pdf')
+      useDocuments.mockReturnValue({ data: [existingFile], isLoading: false })
+      render(
+        <DocumentTable
+          parentType="fuel_production_facility"
+          parentID="456"
+          maxFiles={1}
+        />,
+        [theme, router]
+      )
+      await screen.findByText('old-diagram.pdf')
+
+      fireEvent.change(screen.getByTestId('file-input'), {
+        target: { files: [newFile] }
+      })
+      fireEvent.click(await screen.findByRole('button', { name: 'Replace' }))
+
+      await waitFor(() =>
+        expect(mockUploadMutate).toHaveBeenCalledWith(
+          { file: newFile, replaceDocumentId: 7 },
+          expect.objectContaining({ onSuccess: expect.any(Function) })
+        )
+      )
+      expect(mockDeleteMutate).not.toHaveBeenCalled()
+      expect(screen.getByText('old-diagram.pdf')).toBeInTheDocument()
+    })
+
     test('does not upload the new file when deleting the old one fails', async ({
       render,
       theme,

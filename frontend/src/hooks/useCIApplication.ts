@@ -226,6 +226,7 @@ export const useCreateCIApplication = () => {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['ci-applications'] })
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.facilities })
       if (data?.ciApplicationId) {
         queryClient.setQueryData(QUERY_KEYS.detail(data.ciApplicationId), data)
       }
@@ -252,6 +253,7 @@ export const useUpdateCIApplicationStep1 = (
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['ci-applications'] })
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.facilities })
       queryClient.setQueryData(QUERY_KEYS.detail(ciApplicationId), data)
     }
   })

@@ -199,6 +199,19 @@ async def test_validate_facility_access_supplier_other_org_not_found(repo):
 
 
 @pytest.mark.anyio
+async def test_validate_facility_access_supplier_without_org_cannot_access_unowned_facility(
+    repo,
+):
+    repo.get_facility_by_id.return_value = SimpleNamespace(organization_id=None)
+    v = _validation(_user([RoleEnum.CI_APPLICANT], organization_id=None), repo)
+
+    with pytest.raises(HTTPException) as exc:
+        await v.validate_facility_access(12)
+
+    assert exc.value.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.anyio
 async def test_validate_facility_access_government_cannot_write(repo):
     repo.get_facility_by_id.return_value = SimpleNamespace(organization_id=1)
     v = _validation(_user([RoleEnum.GOVERNMENT], organization_id=None), repo)

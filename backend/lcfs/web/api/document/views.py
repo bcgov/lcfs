@@ -181,6 +181,12 @@ async def upload_file(
             "'technical_report', 'ghgenius_model', or 'supporting'."
         ),
     ),
+    replace_document_id: Optional[int] = Query(
+        None,
+        description=(
+            "Existing facility document to replace after the new upload succeeds."
+        ),
+    ),
     document_service: DocumentService = Depends(),
     cr_validate: ComplianceReportValidation = Depends(),
     ia_validate: InitiativeAgreementValidation = Depends(),
@@ -211,6 +217,7 @@ async def upload_file(
         parent_type,
         request.user,
         document_category=document_category,
+        replace_document_id=replace_document_id,
     )
     return FileResponseSchema.model_validate(document)
 

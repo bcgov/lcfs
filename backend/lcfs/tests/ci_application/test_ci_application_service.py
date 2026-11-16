@@ -548,9 +548,10 @@ async def test_search_fuel_code_field_options_uses_fuel_code_feedstock_columns(
         "Canola",
         "Corn",
     ]
-    assert await service.search_fuel_code_field_options(
-        "feedstockLocation", "Sa"
-    ) == ["Ontario", "Saskatchewan"]
+    assert await service.search_fuel_code_field_options("feedstockLocation", "Sa") == [
+        "Ontario",
+        "Saskatchewan",
+    ]
 
     fuel_repo.get_distinct_feedstocks.assert_awaited_once_with("Ca")
     fuel_repo.get_distinct_feedstock_locations.assert_awaited_once_with("Sa")
@@ -809,9 +810,7 @@ async def test_assign_analyst_noop_does_not_create_history(service, repo, mock_u
 
 
 @pytest.mark.anyio
-async def test_assign_analyst_rejects_inactive_idir_analyst(
-    service, repo, mock_user
-):
+async def test_assign_analyst_rejects_inactive_idir_analyst(service, repo, mock_user):
     inactive_analyst = _analyst(12, "Alex", "Analyst")
     inactive_analyst.is_active = False
     ci = _ci_application(status=_status("Submitted", 2))
@@ -969,7 +968,15 @@ async def test_update_step1_writes_fields_and_marks_update(service, repo, mock_u
 async def test_update_step1_writes_facility_name_and_contact(service, repo, mock_user):
     ci = _ci_application()
     ci.pathways = []
-    fuel_code = SimpleNamespace(contact_name=None, contact_email=None)
+    fuel_code = SimpleNamespace(
+        contact_name=None,
+        contact_email=None,
+        fuel_production_facility_city="Approved city",
+        fuel_production_facility_province_state="Approved province",
+        fuel_production_facility_country="Approved country",
+        facility_nameplate_capacity=500,
+        facility_nameplate_capacity_unit=QuantityUnitsEnum.Kilograms,
+    )
     facility = SimpleNamespace(
         fuel_production_facility_id=4,
         name="Old name",
@@ -1003,6 +1010,11 @@ async def test_update_step1_writes_facility_name_and_contact(service, repo, mock
     assert facility.city == "San Martin"
     assert fuel_code.contact_name == "Pat Example"
     assert fuel_code.contact_email == "pat@example.com"
+    assert fuel_code.fuel_production_facility_city == "Approved city"
+    assert fuel_code.fuel_production_facility_province_state == "Approved province"
+    assert fuel_code.fuel_production_facility_country == "Approved country"
+    assert fuel_code.facility_nameplate_capacity == 500
+    assert fuel_code.facility_nameplate_capacity_unit == QuantityUnitsEnum.Kilograms
     assert ci.fuel_production_facility_id == 4
 
 
@@ -1093,9 +1105,11 @@ def _fuel_code_obj(
 ):
     return SimpleNamespace(
         fuel_code_id=ident,
-        prefix_id=prefix_id
-        if prefix_id is not None
-        else {"BCLCF": 1, "C-BCLCF": 3}.get(prefix, 1),
+        prefix_id=(
+            prefix_id
+            if prefix_id is not None
+            else {"BCLCF": 1, "C-BCLCF": 3}.get(prefix, 1)
+        ),
         fuel_suffix=suffix,
         carbon_intensity=23.23,
         fuel_type_id=1,
@@ -1854,12 +1868,8 @@ async def test_generate_fuel_codes_reserves_iterations_per_prefix(
 ):
     mock_user.role_names = {RoleEnum.ANALYST}
     ci = _submitted_ci_for_generation("Low")
-    bclcf_source = _fuel_code_obj(
-        ident=10, suffix="1000.0", prefix="BCLCF"
-    )
-    c_bclcf_source = _fuel_code_obj(
-        ident=11, suffix="1000.0", prefix="C-BCLCF"
-    )
+    bclcf_source = _fuel_code_obj(ident=10, suffix="1000.0", prefix="BCLCF")
+    c_bclcf_source = _fuel_code_obj(ident=11, suffix="1000.0", prefix="C-BCLCF")
     ci.pathways = [
         _generation_pathway(pathway_id=1, fuel_code_id=10, fuel_code=bclcf_source),
         _generation_pathway(pathway_id=2, fuel_code_id=11, fuel_code=c_bclcf_source),
@@ -1986,6 +1996,52 @@ async def test_generate_fuel_codes_allows_high_after_verification_2(
     assert created_fuel_code.edrms == "EDRMS-123"
     assert created_fuel_code.fuel_code_status.status.value == "Draft"
     repo.update.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_generate_fuel_codes_copies_details_from_linked_pathway_facility(
+    service, repo, mock_user
+):
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _submitted_ci_for_generation("High")
+    application_facility = SimpleNamespace(
+        fuel_production_facility_id=77,
+        city="Application City",
+        province_state="Application Province",
+        country="Application Country",
+        nameplate_capacity=100,
+        nameplate_capacity_unit=QuantityUnitsEnum.Litres,
+        contact_name="Application Contact",
+        contact_email="application@example.com",
+    )
+    pathway_facility = SimpleNamespace(
+        fuel_production_facility_id=88,
+        city="Pathway City",
+        province_state="Pathway Province",
+        country="Pathway Country",
+        nameplate_capacity=200,
+        nameplate_capacity_unit=QuantityUnitsEnum.Kilograms,
+        contact_name="Pathway Contact",
+        contact_email="pathway@example.com",
+    )
+    ci.fuel_production_facility = application_facility
+    ci.pathways[0].fuel_production_facility_id = 88
+    ci.pathways[0].fuel_production_facility = pathway_facility
+    ci.verification_2_date = datetime(2026, 5, 3, tzinfo=timezone.utc)
+    ci.verification_2_risk_assessment = "High"
+    _stub_generation_dependencies(service, repo, ci)
+
+    await service.generate_fuel_codes(ci, mock_user)
+
+    generated = ci.generated_fuel_code_associations[0].fuel_code
+    assert generated.fuel_production_facility_id == 88
+    assert generated.fuel_production_facility_city == "Pathway City"
+    assert generated.fuel_production_facility_province_state == "Pathway Province"
+    assert generated.fuel_production_facility_country == "Pathway Country"
+    assert generated.facility_nameplate_capacity == 200
+    assert generated.facility_nameplate_capacity_unit == QuantityUnitsEnum.Kilograms
+    assert generated.contact_name == "Pathway Contact"
+    assert generated.contact_email == "pathway@example.com"
 
 
 def _step4_payload(**overrides):
@@ -2609,9 +2665,7 @@ async def test_request_documentation_enables_upload_for_workflow_roles(
     ]
     assert request.notification_data.type == "CI Application Changes Requested"
     assert request.notification_data.related_organization_id == ci.organization_id
-    assert request.notification_data.related_transaction_id == str(
-        ci.ci_application_id
-    )
+    assert request.notification_data.related_transaction_id == str(ci.ci_application_id)
     assert isinstance(result, CIApplicationSchema)
 
 
@@ -2982,9 +3036,7 @@ async def test_request_pathway_changes_resets_review_and_preserves_assessment(
     ]
     assert request.notification_data.type == "CI Application Changes Requested"
     assert request.notification_data.related_organization_id == ci.organization_id
-    assert request.notification_data.related_transaction_id == str(
-        ci.ci_application_id
-    )
+    assert request.notification_data.related_transaction_id == str(ci.ci_application_id)
     assert isinstance(result, CIApplicationSchema)
 
 

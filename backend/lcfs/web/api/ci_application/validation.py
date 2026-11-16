@@ -83,7 +83,7 @@ class CIApplicationValidation:
             if self.request.user.organization
             else None
         )
-        if facility.organization_id != user_org_id:
+        if user_org_id is None or facility.organization_id != user_org_id:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Fuel production facility not found.",

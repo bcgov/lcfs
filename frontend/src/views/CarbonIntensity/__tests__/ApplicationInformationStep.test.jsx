@@ -5,7 +5,10 @@ import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { ApplicationInformationStep } from '@/views/CarbonIntensity/components/ApplicationInformationStep'
-import { useGetCIApplicationFacilities } from '@/hooks/useCIApplication'
+import {
+  useCreateCIApplicationFacility,
+  useGetCIApplicationFacilities
+} from '@/hooks/useCIApplication'
 import carbonIntensityEn from '@/assets/locales/en/carbonIntensity.json'
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
@@ -23,7 +26,8 @@ vi.mock('lodash', async (importOriginal) => {
   }
 })
 
-const { defaultFacilities } = vi.hoisted(() => ({
+const { createFacility, defaultFacilities } = vi.hoisted(() => ({
+  createFacility: vi.fn(),
   defaultFacilities: [
     {
       fuelProductionFacilityId: 1,
@@ -61,7 +65,22 @@ vi.mock('@/components/Documents/DocumentPreviewButton', () => ({
   )
 }))
 
+vi.mock('@/components/Documents/DocumentUploadDialog', () => ({
+  default: ({ open, close, parentID }) =>
+    open ? (
+      <div data-test="facility-upload-dialog" data-parent-id={parentID}>
+        <button type="button" onClick={close}>
+          Close upload
+        </button>
+      </div>
+    ) : null
+}))
+
 vi.mock('@/hooks/useCIApplication', () => ({
+  useCreateCIApplicationFacility: vi.fn(() => ({
+    mutate: createFacility,
+    isPending: false
+  })),
   useGetCIApplicationFacilities: vi.fn(() => ({
     data: defaultFacilities,
     isLoading: false,
@@ -138,6 +157,11 @@ const fillContact = async (user) => {
 describe('ApplicationInformationStep', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    createFacility.mockReset()
+    useCreateCIApplicationFacility.mockReturnValue({
+      mutate: createFacility,
+      isPending: false
+    })
     useGetCIApplicationFacilities.mockReturnValue({
       data: defaultFacilities,
       isLoading: false,
@@ -427,6 +451,82 @@ describe('ApplicationInformationStep', () => {
     expect(screen.getByTestId('ci-step1-process-flow-upload')).toBeEnabled()
   })
 
+  test('saved facility can be changed to another existing facility', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    const user = userEvent.setup()
+    const onSave = vi.fn()
+    render(
+      <ApplicationInformationStep
+        {...baseProps}
+        ciApplication={savedFacilityApplication}
+        onSave={onSave}
+      />,
+      [query, theme, localization, router]
+    )
+
+    await user.click(screen.getByTestId('ci-step1-change-facility'))
+    await selectFacility(user, 'Filled facility — Mock City')
+    fireEvent.click(screen.getByTestId('ci-step1-save-btn'))
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled())
+    expect(onSave.mock.calls[0][0]).toMatchObject({
+      fuelProductionFacilityId: 3,
+      facilityName: 'Filled facility',
+      facilityCity: 'Mock City'
+    })
+  })
+
+  test('canceling a changed facility selection restores the saved facility', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    const user = userEvent.setup()
+    render(
+      <ApplicationInformationStep
+        {...baseProps}
+        ciApplication={savedFacilityApplication}
+      />,
+      [query, theme, localization, router]
+    )
+
+    await user.click(screen.getByTestId('ci-step1-change-facility'))
+    await selectFacility(user, 'Filled facility — Mock City')
+    await user.click(screen.getByTestId('ci-step1-cancel-facility-selection'))
+    expect(screen.getByTestId('ci-step1-facility-summary')).toHaveTextContent(
+      'San Martin, Santa Fe, Argentina'
+    )
+  })
+
+  test('incomplete facility form can return to the facility selector', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    const user = userEvent.setup()
+    render(<ApplicationInformationStep {...baseProps} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
+
+    await selectFacility(user, 'Test facility')
+    await user.click(screen.getByTestId('ci-step1-back-to-facility-selection'))
+    expect(
+      document.getElementById('fuelProductionFacilityId')
+    ).toBeInTheDocument()
+  })
+
   test('saving in select mode without a selection shows a facility error', async ({
     render,
     query,
@@ -671,8 +771,7 @@ describe('ApplicationInformationStep', () => {
     await selectUnit(user, 'L')
     await fillContact(user)
 
-    // Upload needs a saved facility to attach documents to.
-    expect(screen.getByTestId('ci-step1-process-flow-upload')).toBeDisabled()
+    expect(screen.getByTestId('ci-step1-process-flow-upload')).toBeEnabled()
 
     fireEvent.click(screen.getByTestId('ci-step1-save-btn'))
 
@@ -689,6 +788,228 @@ describe('ApplicationInformationStep', () => {
       facilityContactEmail: 'pat@example.com'
     })
   }, 15000)
+
+  test('creates a new facility on Upload without proceeding and reuses it on save', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    const onSave = vi.fn()
+    render(<ApplicationInformationStep {...baseProps} onSave={onSave} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
+    openNewFacilityForm()
+    const facility = defaultFacilities[1]
+    for (const [field, value] of Object.entries({
+      facilityName: facility.name,
+      facilityCity: facility.city,
+      facilityProvinceState: facility.provinceState,
+      facilityCountry: facility.country,
+      facilityNameplateCapacity: facility.nameplateCapacity,
+      facilityContactName: facility.contactName,
+      facilityContactEmail: facility.contactEmail
+    })) {
+      fireEvent.change(document.getElementById(field), {
+        target: { value: String(value) }
+      })
+    }
+    await selectUnit(userEvent.setup())
+    createFacility.mockImplementation((_payload, { onSuccess }) =>
+      onSuccess({ ...facility, fuelProductionFacilityId: 99 })
+    )
+
+    fireEvent.click(screen.getByTestId('ci-step1-process-flow-upload'))
+    await waitFor(() =>
+      expect(screen.getByTestId('facility-upload-dialog')).toHaveAttribute(
+        'data-parent-id',
+        '99'
+      )
+    )
+    expect(createFacility.mock.calls[0][0]).toEqual({
+      name: facility.name,
+      city: facility.city,
+      provinceState: facility.provinceState,
+      country: facility.country,
+      nameplateCapacity: facility.nameplateCapacity,
+      nameplateCapacityUnit: facility.nameplateCapacityUnit,
+      contactName: facility.contactName,
+      contactEmail: facility.contactEmail
+    })
+    expect(onSave).not.toHaveBeenCalled()
+    expect(document.getElementById('facilityName')).toHaveValue(facility.name)
+
+    fireEvent.click(screen.getByText('Close upload'))
+    fireEvent.click(screen.getByTestId('ci-step1-process-flow-upload'))
+    expect(createFacility).toHaveBeenCalledTimes(1)
+    expect(screen.getByTestId('facility-upload-dialog')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Close upload'))
+    fireEvent.click(screen.getByTestId('ci-step1-save-btn'))
+    await waitFor(() => expect(onSave).toHaveBeenCalled())
+    expect(onSave.mock.calls[0][0].fuelProductionFacilityId).toBe(99)
+  })
+
+  test('validates new facility details before opening Upload', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(<ApplicationInformationStep {...baseProps} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
+    openNewFacilityForm()
+    fireEvent.click(screen.getByTestId('ci-step1-process-flow-upload'))
+    await screen.findByText(
+      'carbonIntensity:step1.validation.facilityNameRequired'
+    )
+    expect(createFacility).not.toHaveBeenCalled()
+    expect(
+      screen.queryByTestId('facility-upload-dialog')
+    ).not.toBeInTheDocument()
+  })
+
+  test('shows a creation error and allows retry without losing new facility details', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    useGetCIApplicationFacilities.mockReturnValue({
+      data: [],
+      isLoading: false
+    })
+    render(
+      <ApplicationInformationStep
+        {...baseProps}
+        ciApplication={{
+          ...savedFacilityApplication,
+          fuelProductionFacilityId: null,
+          fuelProductionFacility: null,
+          facilityName: 'New facility',
+          facilityContactName: 'Pat Example',
+          facilityContactEmail: 'pat@example.com'
+        }}
+      />,
+      [query, theme, localization, router]
+    )
+    createFacility.mockImplementationOnce((_payload, { onError }) =>
+      onError(new Error('Creation failed'))
+    )
+    fireEvent.click(screen.getByTestId('ci-step1-process-flow-upload'))
+    await screen.findByText('carbonIntensity:step1.facilityUploadFailed')
+    expect(
+      screen.queryByTestId('facility-upload-dialog')
+    ).not.toBeInTheDocument()
+    expect(document.getElementById('facilityName')).toHaveValue('New facility')
+    expect(screen.getByTestId('ci-step1-process-flow-upload')).toBeEnabled()
+
+    createFacility.mockImplementationOnce((_payload, { onSuccess }) =>
+      onSuccess({ fuelProductionFacilityId: 99 })
+    )
+    fireEvent.click(screen.getByTestId('ci-step1-process-flow-upload'))
+    await screen.findByTestId('facility-upload-dialog')
+    expect(createFacility).toHaveBeenCalledTimes(2)
+    expect(
+      screen.queryByText('carbonIntensity:step1.facilityUploadFailed')
+    ).not.toBeInTheDocument()
+  })
+
+  test('uploads to an existing facility without creating another', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(
+      <ApplicationInformationStep
+        {...baseProps}
+        ciApplication={savedFacilityApplication}
+      />,
+      [query, theme, localization, router]
+    )
+    fireEvent.click(screen.getByTestId('ci-step1-edit-facility'))
+    fireEvent.click(screen.getByTestId('ci-step1-process-flow-upload'))
+    expect(screen.getByTestId('facility-upload-dialog')).toHaveAttribute(
+      'data-parent-id',
+      '1'
+    )
+    expect(createFacility).not.toHaveBeenCalled()
+  })
+
+  test('keeps the new facility form open when the facility list refreshes', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    useGetCIApplicationFacilities.mockReturnValue({
+      data: [],
+      isLoading: false
+    })
+    const application = {
+      ...savedFacilityApplication,
+      fuelProductionFacilityId: null,
+      fuelProductionFacility: null,
+      facilityName: 'New facility',
+      facilityContactName: 'Pat Example',
+      facilityContactEmail: 'pat@example.com'
+    }
+    const { rerender } = render(
+      <ApplicationInformationStep {...baseProps} ciApplication={application} />,
+      [query, theme, localization, router]
+    )
+    createFacility.mockImplementationOnce((_payload, { onSuccess }) =>
+      onSuccess({ fuelProductionFacilityId: 99 })
+    )
+    fireEvent.click(screen.getByTestId('ci-step1-process-flow-upload'))
+    await screen.findByTestId('facility-upload-dialog')
+    useGetCIApplicationFacilities.mockReturnValue({
+      data: [{ ...defaultFacilities[1], fuelProductionFacilityId: 99 }],
+      isLoading: false
+    })
+    rerender(
+      <ApplicationInformationStep {...baseProps} ciApplication={application} />
+    )
+    expect(document.getElementById('facilityName')).toHaveValue('New facility')
+    expect(screen.getByTestId('facility-upload-dialog')).toHaveAttribute(
+      'data-parent-id',
+      '99'
+    )
+  })
+
+  test('disables Upload and Save while creating a facility', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    useCreateCIApplicationFacility.mockReturnValue({
+      mutate: createFacility,
+      isPending: true
+    })
+    render(<ApplicationInformationStep {...baseProps} />, [
+      query,
+      theme,
+      localization,
+      router
+    ])
+    openNewFacilityForm()
+    expect(screen.getByTestId('ci-step1-process-flow-upload')).toBeDisabled()
+    expect(screen.getByTestId('ci-step1-save-btn')).toBeDisabled()
+  })
 
   test('blocks submission when required fields are missing', async ({
     render,
@@ -972,10 +1293,21 @@ describe('ApplicationInformationStep', () => {
     localization,
     router
   }) => {
+    const application = {
+      ...savedFacilityApplication,
+      fuelProductionFacility: {
+        ...savedFacilityApplication.fuelProductionFacility,
+        city: 'Embedded City',
+        provinceState: 'Embedded province',
+        country: 'Embedded country',
+        nameplateCapacity: 999,
+        nameplateCapacityUnit: 'kg'
+      }
+    }
     render(
       <ApplicationInformationStep
         {...baseProps}
-        ciApplication={savedFacilityApplication}
+        ciApplication={application}
         onDelete={vi.fn()}
       />,
       [query, theme, localization, router]
@@ -983,8 +1315,10 @@ describe('ApplicationInformationStep', () => {
 
     const summary = screen.getByTestId('ci-step1-facility-summary')
     expect(summary).toHaveTextContent('Test facility')
-    expect(summary).toHaveTextContent('San Martin, Santa Fe, Argentina')
-    expect(summary).toHaveTextContent('1,500 L')
+    expect(summary).toHaveTextContent(
+      'Embedded City, Embedded province, Embedded country'
+    )
+    expect(summary).toHaveTextContent('999 kg')
     expect(summary).toHaveTextContent('pat@example.com')
     expect(document.getElementById('proposedFuelCodeEffectiveDate').value).toBe(
       '2026-06-01'
@@ -993,13 +1327,15 @@ describe('ApplicationInformationStep', () => {
     fireEvent.click(screen.getByTestId('ci-step1-edit-facility'))
 
     expect(document.getElementById('facilityName').value).toBe('Test facility')
-    expect(document.getElementById('facilityCity').value).toBe('San Martin')
+    expect(document.getElementById('facilityCity').value).toBe('Embedded City')
     expect(document.getElementById('facilityProvinceState').value).toBe(
-      'Santa Fe'
+      'Embedded province'
     )
-    expect(document.getElementById('facilityCountry').value).toBe('Argentina')
+    expect(document.getElementById('facilityCountry').value).toBe(
+      'Embedded country'
+    )
     expect(document.getElementById('facilityNameplateCapacity').value).toBe(
-      '1,500'
+      '999'
     )
     expect(document.getElementById('facilityContactName').value).toBe(
       'Pat Example'

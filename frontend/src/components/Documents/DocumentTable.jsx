@@ -76,6 +76,8 @@ function DocumentTable({ parentType, parentID, maxFiles }) {
   const [errorMessage, setErrorMessage] = useState(null)
   const [documentPendingDelete, setDocumentPendingDelete] = useState(null)
   const [pendingReplace, setPendingReplace] = useState(null)
+  const [singleFileUploadPending, setSingleFileUploadPending] = useState(false)
+  const singleFileUploadPendingRef = useRef(false)
   const singleFile = maxFiles === 1
   const { data: currentUser, hasRoles } = useCurrentUser()
 
@@ -145,6 +147,13 @@ function DocumentTable({ parentType, parentID, maxFiles }) {
     // Clear any existing error message before processing a new batch.
     setErrorMessage(null)
     if (singleFile) {
+      if (
+        singleFileUploadPendingRef.current ||
+        files.some((file) => file.scanning || file.deleting)
+      ) {
+        setErrorMessage(t('report:singleFileUploadInProgress'))
+        return
+      }
       selected = selected.slice(0, 1)
       const existing = files.find(
         (file) =>
@@ -168,6 +177,10 @@ function DocumentTable({ parentType, parentID, maxFiles }) {
     if (!pendingReplace) return
     const { file, existing } = pendingReplace
     setPendingReplace(null)
+    if (parentType === 'fuel_production_facility') {
+      handleFileUpload(file, 0, existing.documentId)
+      return
+    }
     try {
       setFiles((current) =>
         current.map((item) => ({
@@ -194,9 +207,17 @@ function DocumentTable({ parentType, parentID, maxFiles }) {
     handleFileUpload(file)
   }
 
-  const handleFileUpload = async (file, index = 0) => {
+  const handleFileUpload = async (file, index = 0, replaceDocumentId) => {
     if (!file) {
       return
+    }
+    if (singleFile && singleFileUploadPendingRef.current) {
+      setErrorMessage(t('report:singleFileUploadInProgress'))
+      return
+    }
+    if (singleFile) {
+      singleFileUploadPendingRef.current = true
+      setSingleFileUploadPending(true)
     }
 
     // Unique placeholder id so multiple files selected in the same tick do not
@@ -218,6 +239,10 @@ function DocumentTable({ parentType, parentID, maxFiles }) {
       COMPLIANCE_REPORT_FILE_TYPES
     )
     if (!validation.isValid) {
+      if (singleFile) {
+        singleFileUploadPendingRef.current = false
+        setSingleFileUploadPending(false)
+      }
       // Show error alert with file name and allowed formats. Functional updates
       // keep every file's row when several are processed in the same batch.
       setErrorMessage(
@@ -235,6 +260,10 @@ function DocumentTable({ parentType, parentID, maxFiles }) {
     }
 
     if (file.size > MAX_FILE_SIZE_BYTES) {
+      if (singleFile) {
+        singleFileUploadPendingRef.current = false
+        setSingleFileUploadPending(false)
+      }
       setFiles((prev) => [
         ...prev,
         {
@@ -253,11 +282,19 @@ function DocumentTable({ parentType, parentID, maxFiles }) {
       }
     ])
 
-    uploadFile(file, {
+    uploadFile(replaceDocumentId ? { file, replaceDocumentId } : file, {
+      onSuccess: () => {
+        if (singleFile) {
+          singleFileUploadPendingRef.current = false
+          setSingleFileUploadPending(false)
+        }
+      },
       onError: (error) => {
+        if (singleFile) {
+          singleFileUploadPendingRef.current = false
+          setSingleFileUploadPending(false)
+        }
         if (error.response?.status === 422) {
-          // Transition this file's own row from scanning to virus-detected,
-          // matched by its placeholder id so sibling uploads are untouched.
           setFiles((prev) =>
             prev.map((f) =>
               f.documentId === fileId
@@ -267,6 +304,13 @@ function DocumentTable({ parentType, parentID, maxFiles }) {
           )
         } else {
           console.error('Error uploading file:', error)
+          setFiles((prev) =>
+            prev.map((item) =>
+              item.documentId === fileId
+                ? { ...item, scanning: false, error: true }
+                : item
+            )
+          )
         }
       }
     })
@@ -346,16 +390,18 @@ function DocumentTable({ parentType, parentID, maxFiles }) {
         multiple={!singleFile}
         data-test="file-input"
         ref={fileInputRef}
+        disabled={singleFileUploadPending}
         style={{ display: 'none' }}
         accept={COMPLIANCE_REPORT_FILE_TYPES.ACCEPT_STRING}
         onChange={handleFileChange}
       />
       <StyledCard
-        onClick={handleCardClick}
+        onClick={singleFileUploadPending ? undefined : handleCardClick}
         onDragEnter={handleDragIn}
         onDragLeave={handleDragOut}
         onDragOver={handleDrag}
-        onDrop={handleDrop}
+        onDrop={singleFileUploadPending ? undefined : handleDrop}
+        aria-disabled={singleFileUploadPending}
       >
         <CardContent>
           <IconButton aria-label="upload" size="medium">
