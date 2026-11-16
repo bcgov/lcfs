@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import BCTypography from '@/components/BCTypography/index.jsx'
-import { StyledListItem } from '@/components/StyledListItem.jsx'
+import { StyledListItem } from '@/components/StyledListItem'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { useCurrentUser } from '@/hooks/useCurrentUser.js'
 import { timezoneFormatter, currencyFormatter } from '@/utils/formatters'
