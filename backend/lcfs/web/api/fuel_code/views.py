@@ -314,6 +314,7 @@ async def get_government_fuel_code_bulletins(
     "/government/bulletins/export",
     response_class=StreamingResponse,
     status_code=status.HTTP_200_OK,
+    dependencies=[Depends(extended_statement_timeout)],
 )
 @view_handler([RoleEnum.GOVERNMENT])
 async def export_government_fuel_code_bulletins(
