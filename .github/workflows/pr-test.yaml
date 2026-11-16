@@ -73,6 +73,9 @@ jobs:
     timeout-minutes: 25
     env:
       LCFS_LOCAL_KEYCLOAK_START_TIMEOUT: "600"
+      # Both test stacks use the same source and run sequentially, so reuse
+      # the app images built by the first stack.
+      LCFS_LOCAL_KEYCLOAK_IMAGE_PREFIX: lcfs-local-keycloak-ci-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - uses: actions/checkout@v6.0.2
         with:
@@ -102,8 +105,10 @@ jobs:
       - name: Remove local Keycloak stacks
         if: always()
         run: |
-          ./scripts/local-keycloak-stack.sh destroy ci-a || true
-          ./scripts/local-keycloak-stack.sh destroy ci-b || true
+          # The hosted runner is temporary, so leave its disposable volumes and
+          # cached app images for runner cleanup instead of deleting them here.
+          ./scripts/local-keycloak-stack.sh stop ci-a || true
+          ./scripts/local-keycloak-stack.sh stop ci-b || true
         env:
           LCFS_LOCAL_KEYCLOAK_STATE_DIR: ${{ runner.temp }}/lcfs-local-keycloak
 

@@ -31,6 +31,9 @@ services:
       start_period: 35s
 
   backend:
+    # CI sets a shared prefix for sequential stacks; local stacks default to
+    # their own prefix so changed build contexts are picked up.
+    image: "${LCFS_LOCAL_KEYCLOAK_IMAGE_PREFIX:-lcfs-local-keycloak}-backend"
     environment:
       LCFS_LOCAL_KEYCLOAK_ENABLED: "true"
       LCFS_WELL_KNOWN_ENDPOINT: http://keycloak:8080/realms/lcfs-local/.well-known/openid-configuration
@@ -65,6 +68,7 @@ services:
       - rustfs_local_keycloak_data:/data
 
   frontend:
+    image: "${LCFS_LOCAL_KEYCLOAK_IMAGE_PREFIX:-lcfs-local-keycloak}-frontend"
     environment:
       VITE_LOCAL_KEYCLOAK: "true"
       VITE_KEYCLOAK_REALM: lcfs-local

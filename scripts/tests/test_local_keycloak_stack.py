@@ -9,6 +9,7 @@ import sys
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 LAUNCHER = REPO_ROOT / "scripts" / "local-keycloak-stack.sh"
@@ -37,10 +38,11 @@ class LocalKeycloakStackTests(unittest.TestCase):
             "with open(os.environ['LCFS_TEST_DOCKER_LOG'], 'a') as log:\n"
             "    log.write(json.dumps(sys.argv[1:]) + '\\n')\n"
             "args = sys.argv[1:]\n"
-            "config = {}\n"
+            "config = {'LCFS_LOCAL_KEYCLOAK_IMAGE_PREFIX': os.environ.get('LCFS_LOCAL_KEYCLOAK_IMAGE_PREFIX')}\n"
             "if '--env-file' in args:\n"
             "    env_file = Path(args[args.index('--env-file') + 1])\n"
             "    config = dict(line.split('=', 1) for line in env_file.read_text().splitlines())\n"
+            "config['LCFS_LOCAL_KEYCLOAK_IMAGE_PREFIX'] = os.environ.get('LCFS_LOCAL_KEYCLOAK_IMAGE_PREFIX')\n"
             "with open(os.environ['LCFS_TEST_CONFIG_LOG'], 'a') as log:\n"
             "    log.write(json.dumps(config) + '\\n')\n"
             "if 'up' in args and os.environ.get('LCFS_TEST_PAUSE_COMPOSE_UP') == '1':\n"
@@ -162,6 +164,14 @@ class LocalKeycloakStackTests(unittest.TestCase):
         self.assertNotEqual(project_a, project_b)
         self.assertNotEqual(env_a, env_b)
 
+        configs = self._compose_configs()
+        self.assertEqual(len(configs), 2)
+        image_prefix_a = configs[0]["LCFS_LOCAL_KEYCLOAK_IMAGE_PREFIX"]
+        image_prefix_b = configs[1]["LCFS_LOCAL_KEYCLOAK_IMAGE_PREFIX"]
+        self.assertNotEqual(image_prefix_a, image_prefix_b)
+        self.assertEqual(image_prefix_a, project_a)
+        self.assertEqual(image_prefix_b, project_b)
+
         config_a = dict(line.split("=", 1) for line in env_a.read_text().splitlines())
         config_b = dict(line.split("=", 1) for line in env_b.read_text().splitlines())
         self.assertNotEqual(
@@ -194,6 +204,21 @@ class LocalKeycloakStackTests(unittest.TestCase):
             self._option_value(self._docker_calls()[-1], "--project-name"),
             project_name,
         )
+
+    def test_stacks_in_the_same_worktree_share_an_image_prefix(self):
+        worktree = self._make_worktree("worktree-a")
+        with patch.dict(
+            os.environ,
+            {"LCFS_LOCAL_KEYCLOAK_IMAGE_PREFIX": "lcfs-local-keycloak-ci-test"},
+        ):
+            self._run(worktree, "start", "agent-a")
+            self._run(worktree, "start", "agent-b")
+
+        configs = self._compose_configs()
+        self.assertEqual(len(configs), 2)
+        prefixes = {config["LCFS_LOCAL_KEYCLOAK_IMAGE_PREFIX"] for config in configs}
+        self.assertEqual(len(prefixes), 1)
+        self.assertEqual(next(iter(prefixes)), "lcfs-local-keycloak-ci-test")
 
     def test_destroy_removes_stack_volumes_local_images_and_saved_config(self):
         worktree = self._make_worktree("worktree-a")
