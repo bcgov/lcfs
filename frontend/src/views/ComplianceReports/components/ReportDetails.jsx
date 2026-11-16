@@ -13,7 +13,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import BCAlert from '@/components/BCAlert'
 import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
 import { Role } from '@/components/Role'
-import { TogglePanel } from '@/components/TogglePanel.jsx'
+import { TogglePanel } from '@/components/TogglePanel'
 import {
   REPORT_SCHEDULES,
   LEGISLATION_TRANSITION_YEAR

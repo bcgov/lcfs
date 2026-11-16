@@ -2,6 +2,15 @@ import Box from '@mui/material/Box'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import { useEffect, useState } from 'react'
 import Switch from '@mui/material/Switch'
+import type { ReactNode } from 'react'
+
+interface TogglePanelProps {
+  label: string
+  offComponent: ReactNode
+  onComponent: ReactNode
+  defaultState?: boolean
+  disabled?: boolean
+}
 
 export const TogglePanel = ({
   label,
@@ -9,7 +18,7 @@ export const TogglePanel = ({
   onComponent,
   defaultState = false,
   disabled = false
-}) => {
+}: TogglePanelProps) => {
   const [isToggle, setToggle] = useState(false)
 
   useEffect(() => {
