@@ -429,6 +429,37 @@ describe('useFuelCode', () => {
     })
   })
 
+  test('government bulletin list uses the authenticated route', async ({
+    renderHook,
+    query
+  }) => {
+    mockPost.mockResolvedValue({ data: { fuelCodes: [] } })
+    const { result } = renderHook(
+      () => useFuelCodeBulletins('current', {}, {}, true),
+      [query]
+    )
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(mockPost).toHaveBeenCalledWith(
+      '/fuel-codes/government/bulletins?bulletinType=current',
+      expect.any(Object)
+    )
+  })
+
+  test('government bulletin export uses the authenticated route without an idir query', async ({
+    renderHook,
+    query
+  }) => {
+    mockDownload.mockResolvedValue({ data: 'ok' })
+    const { result } = renderHook(() => useDownloadFuelCodeBulletins(), [query])
+    await result.current.mutateAsync({ bulletinType: 'archived', idir: true })
+    expect(mockDownload).toHaveBeenCalledWith({
+      url: '/fuel-codes/government/bulletins/export',
+      method: 'post',
+      params: { bulletinType: 'archived', format: 'xlsx' },
+      data: undefined
+    })
+  })
+
   describe('useFuelCodeMutation', () => {
     test('should handle create action successfully', async ({
       renderHook,
