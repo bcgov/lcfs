@@ -329,6 +329,7 @@ def compliance_report_update_service(
 @pytest.fixture
 def mock_org_service():
     mock_org_service = MagicMock()
+    mock_org_service.lock_balance = AsyncMock()
     mock_org_service.adjust_balance = AsyncMock()  # Mock the adjust_balance method
     mock_org_service.calculate_available_balance = AsyncMock(return_value=1000)
     return mock_org_service

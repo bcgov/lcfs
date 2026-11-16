@@ -36,7 +36,7 @@ class TransferValidation:
                 detail="Validation for authorization failed.",
             )
         # Before recording the transfer ensure both the organizations are still registered for transfer.
-        if TransferStatusEnum.Recorded.value == transfer_create.current_status:
+        if transfer_create.current_status == TransferStatusEnum.Recorded:
             is_to_org_registered = await self.org_repo.is_registered_for_transfer(
                 transfer_create.to_organization_id
             )

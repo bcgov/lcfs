@@ -1386,9 +1386,10 @@ class InitiativeAgreementServices:
         self, initiative_agreement_data: InitiativeAgreementCreateSchema
     ) -> InitiativeAgreementSchema:
         """Update an existing initiative agreement."""
-        # Fetch the existing initiative agreement
+        # Lock the row first so two concurrent approvals cannot both see the
+        # old status and each issue credits.
         initiative_agreement = await self.repo.get_initiative_agreement_by_id(
-            initiative_agreement_data.initiative_agreement_id
+            initiative_agreement_data.initiative_agreement_id, for_update=True
         )
         if not initiative_agreement:
             raise DataNotFoundException(

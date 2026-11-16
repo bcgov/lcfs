@@ -2,14 +2,12 @@ import datetime
 from fastapi import Depends, HTTPException, Request
 from starlette import status
 
-from lcfs.db.models.transfer.TransferStatus import TransferStatusEnum
 from lcfs.web.api.organizations.repo import OrganizationsRepository
 from lcfs.web.api.transaction.repo import TransactionRepository
 from lcfs.web.api.transfer.schema import TransferCreateSchema
 from lcfs.web.api.compliance_report.schema import ComplianceReportCreateSchema
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.report_opening.repo import ReportOpeningRepository
-from lcfs.utils.constants import LCFS_Constants
 from lcfs.web.core.ownership import ensure_matches
 
 
@@ -88,30 +86,6 @@ class OrganizationValidation:
                 detail="Validation for authorization failed.",
             )
         return
-
-    async def update_transfer(
-        self, organization_id, transfer_create: TransferCreateSchema
-    ):
-        # Before updating, check for available balance
-        valid_status = (
-            transfer_create.current_status in LCFS_Constants.FROM_ORG_TRANSFER_STATUSES
-        )
-
-        await self.check_available_balance(
-            transfer_create.from_organization_id, transfer_create.quantity
-        )
-        if (
-            transfer_create.from_organization_id == organization_id and valid_status
-        ) or (  # status changes allowed for from-organization
-            transfer_create.to_organization_id == organization_id
-            and transfer_create.current_status
-            in LCFS_Constants.TO_ORG_TRANSFER_STATUSES
-        ):  # status changes allowed for to-organization
-            return
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Validation for authorization failed.",
-        )
 
     async def create_compliance_report(
         self, organization_id, report_data: ComplianceReportCreateSchema

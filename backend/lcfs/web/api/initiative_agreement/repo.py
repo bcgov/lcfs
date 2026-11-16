@@ -275,8 +275,9 @@ class InitiativeAgreementRepository:
 
     @repo_handler
     async def get_initiative_agreement_by_id(
-        self, initiative_agreement_id: int
+        self, initiative_agreement_id: int, for_update: bool = False
     ) -> Optional[InitiativeAgreement]:
+        """With ``for_update`` the row stays locked until the transaction ends."""
         query = (
             select(InitiativeAgreement)
             .options(
@@ -296,6 +297,11 @@ class InitiativeAgreementRepository:
                 InitiativeAgreement.initiative_agreement_id == initiative_agreement_id
             )
         )
+        if for_update:
+            # Re-read after the wait, even if the row is in the identity map.
+            query = query.with_for_update(of=InitiativeAgreement).execution_options(
+                populate_existing=True
+            )
         result = await self.db.execute(query)
         return result.scalars().first()
 

@@ -1184,7 +1184,9 @@ async def test_reserve_transaction(dbsession, transaction_repo, mock_transaction
 @pytest.mark.anyio
 async def test_release_transaction(dbsession, transaction_repo, mock_transactions):
     await _reserve_four(dbsession)
-    success = await transaction_repo.release_transaction(4)
+    success = await transaction_repo.release_transaction(
+        4, organization_id=test_org_id
+    )
     assert success
 
     updated_transaction = await dbsession.get(Transaction, 4)
@@ -1202,7 +1204,9 @@ async def _reserve_four(dbsession):
 @pytest.mark.anyio
 async def test_confirm_transaction(dbsession, transaction_repo, mock_transactions):
     await _reserve_four(dbsession)
-    success = await transaction_repo.confirm_transaction(4)
+    success = await transaction_repo.confirm_transaction(
+        4, organization_id=test_org_id
+    )
     assert success
 
     updated_transaction = await dbsession.get(Transaction, 4)
@@ -1216,11 +1220,29 @@ async def test_only_a_reservation_is_released_or_confirmed(
 ):
     """A confirmed transaction has already moved units; releasing or
     confirming it again would hand them back or count them twice."""
-    success = await getattr(transaction_repo, method)(5)
+    success = await getattr(transaction_repo, method)(5, organization_id=test_org_id)
 
     assert not success
     transaction = await dbsession.get(Transaction, 5)
     assert transaction.transaction_action == TransactionActionEnum.Adjustment
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("method", ["release_transaction", "confirm_transaction"])
+async def test_only_the_named_organizations_reservation_changes(
+    dbsession, transaction_repo, mock_transactions, method
+):
+    """A reservation is released or confirmed only for the organization
+    that holds it."""
+    await _reserve_four(dbsession)
+
+    success = await getattr(transaction_repo, method)(
+        4, organization_id=test_org_id + 1
+    )
+
+    assert not success
+    transaction = await dbsession.get(Transaction, 4)
+    assert transaction.transaction_action == TransactionActionEnum.Reserved
 
 
 @pytest.mark.anyio
@@ -1432,7 +1454,7 @@ async def test_reinstate_transaction_reinstates_released(
     """A transaction released when a superseding report was created goes back
     to Reserved when that superseding report is deleted."""
     await _reserve_four(dbsession)
-    await transaction_repo.release_transaction(4)
+    await transaction_repo.release_transaction(4, organization_id=test_org_id)
 
     success = await transaction_repo.reinstate_transaction(4)
 

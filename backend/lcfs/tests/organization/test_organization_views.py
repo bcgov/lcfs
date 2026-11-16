@@ -296,7 +296,6 @@ async def test_update_transfer_success(
 
     payload = {"from_organization_id": 1, "to_organization_id": 2}
 
-    mock_organization_validation.update_transfer.return_value = None
     mock_transfer_services.update_transfer.return_value = {
         "transfer_id": 1,
         "from_organization": {"organization_id": 1, "name": "org1"},

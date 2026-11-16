@@ -1005,7 +1005,8 @@ class ComplianceReportServices:
             and transaction.transaction_action == TransactionActionEnum.Reserved
         ):
             await self.transaction_repo.release_transaction(
-                current_report.transaction_id
+                current_report.transaction_id,
+                organization_id=current_report.organization_id,
             )
 
     def _mask_report_status_for_history(

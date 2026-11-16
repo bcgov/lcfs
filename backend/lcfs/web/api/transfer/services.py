@@ -7,7 +7,7 @@ from typing import List, Optional
 
 from lcfs.db.models import UserProfile
 from lcfs.db.models.transaction.Transaction import TransactionActionEnum
-from lcfs.db.models.transfer.Transfer import Transfer
+from lcfs.db.models.transfer.Transfer import Transfer, TransferRecommendationEnum
 from lcfs.db.models.transfer.TransferCategory import TransferCategoryEnum
 from lcfs.db.models.transfer.TransferComment import TransferCommentSourceEnum
 from lcfs.db.models.transfer.TransferStatus import TransferStatusEnum
@@ -30,12 +30,45 @@ from lcfs.web.api.transfer.schema import (
     TransferCreateSchema,
 )
 from lcfs.web.api.transfer.validation import TransferValidation
-from lcfs.web.api.transfer.workflow import ensure_transfer_transition
+from lcfs.web.api.transfer.workflow import (
+    PARTY_FROM,
+    PARTY_GOVERNMENT,
+    PARTY_TO,
+    ensure_transfer_transition,
+)
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.core.ownership import ensure_matches
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 
 logger = structlog.get_logger(__name__)
+
+# The fields a sending organization chooses for a new transfer. Status,
+# category, recommendation, ledger links and IDs are set by the server.
+TRANSFER_CREATE_FIELDS = {
+    "from_organization_id",
+    "to_organization_id",
+    "agreement_date",
+    "quantity",
+    "price_per_unit",
+}
+
+# Each side of a transfer writes only its own comment.
+PARTY_COMMENTS = {
+    PARTY_FROM: ("from_org_comment", TransferCommentSourceEnum.FROM_ORG),
+    PARTY_TO: ("to_org_comment", TransferCommentSourceEnum.TO_ORG),
+    PARTY_GOVERNMENT: ("gov_comment", TransferCommentSourceEnum.GOVERNMENT),
+}
+
+# The moves that set the analyst's recommendation. The workflow table
+# decides who may make them.
+RECOMMENDATION_MOVES = {
+    (TransferStatusEnum.Submitted, TransferStatusEnum.Recommended),
+    (TransferStatusEnum.Recommended, TransferStatusEnum.Recommended),
+}
+
+
+def _enum_value(value):
+    return getattr(value, "value", value)
 
 
 class TransferServices:
@@ -192,18 +225,9 @@ class TransferServices:
         fails due to missing data or database issues, appropriate exceptions are raised
         and handled by the @service_handler decorator.
         """
-        ensure_transfer_transition(user, None, transfer_data.current_status)
+        party = ensure_transfer_transition(user, None, transfer_data.current_status)
 
-        transfer = Transfer(
-            **transfer_data.model_dump(
-                exclude={
-                    "current_status",
-                    "from_org_comment",
-                    "to_org_comment",
-                    "gov_comment",
-                }
-            )
-        )
+        transfer = Transfer(**transfer_data.model_dump(include=TRANSFER_CREATE_FIELDS))
         current_status = await self.repo.get_transfer_status_by_name(
             transfer_data.current_status
         )
@@ -213,28 +237,7 @@ class TransferServices:
             await self.sign_and_send_from_supplier(transfer, user)
 
         transfer = await self.repo.create_transfer(transfer)
-
-        # Upsert the comments
-        if transfer_data.from_org_comment is not None:
-            await self.repo.upsert_transfer_comment(
-                transfer_id=transfer.transfer_id,
-                comment=transfer_data.from_org_comment,
-                comment_source=TransferCommentSourceEnum.FROM_ORG,
-            )
-
-        if transfer_data.to_org_comment is not None:
-            await self.repo.upsert_transfer_comment(
-                transfer_id=transfer.transfer_id,
-                comment=transfer_data.to_org_comment,
-                comment_source=TransferCommentSourceEnum.TO_ORG,
-            )
-
-        if transfer_data.gov_comment is not None:
-            await self.repo.upsert_transfer_comment(
-                transfer_id=transfer.transfer_id,
-                comment=transfer_data.gov_comment,
-                comment_source=TransferCommentSourceEnum.GOVERNMENT,
-            )
+        await self._save_party_comment(transfer.transfer_id, party, transfer_data, user)
 
         # Add a new transfer history record if the status has changed
         await self.repo.add_transfer_history(
@@ -257,7 +260,11 @@ class TransferServices:
         new_status = await self.repo.get_transfer_status_by_name(
             transfer_data.current_status
         )
-        transfer = await self.repo.get_transfer_by_id(transfer_data.transfer_id)
+        # Lock the row first: two concurrent moves (a double-clicked Sign and
+        # send, say) must not both act on the same starting status.
+        transfer = await self.repo.get_transfer_by_id(
+            transfer_data.transfer_id, for_update=True
+        )
 
         if not transfer:
             raise DataNotFoundException(
@@ -268,7 +275,8 @@ class TransferServices:
         # its counterparties, and the move from its current status. The body's
         # organizations must be the stored ones; only a draft's recipient can
         # still change.
-        ensure_transfer_transition(user, transfer, transfer_data.current_status)
+        party = ensure_transfer_transition(user, transfer, transfer_data.current_status)
+        current_status = transfer.current_status.status
         ensure_matches(
             transfer.from_organization_id,
             transfer_data.from_organization_id,
@@ -304,28 +312,11 @@ class TransferServices:
                 transfer.agreement_date = transfer_data.agreement_date
                 transfer.quantity = transfer_data.quantity
                 transfer.price_per_unit = transfer_data.price_per_unit
+                # Drafting and signing need both sides registered for
+                # transfers, as on create.
+                await self._ensure_registered_for_transfer(transfer)
 
-        # Upsert the comments
-        if transfer_data.from_org_comment is not None:
-            await self.repo.upsert_transfer_comment(
-                transfer_id=transfer.transfer_id,
-                comment=transfer_data.from_org_comment,
-                comment_source=TransferCommentSourceEnum.FROM_ORG,
-            )
-
-        if transfer_data.to_org_comment is not None:
-            await self.repo.upsert_transfer_comment(
-                transfer_id=transfer.transfer_id,
-                comment=transfer_data.to_org_comment,
-                comment_source=TransferCommentSourceEnum.TO_ORG,
-            )
-
-        if transfer_data.gov_comment is not None:
-            await self.repo.upsert_transfer_comment(
-                transfer_id=transfer.transfer_id,
-                comment=transfer_data.gov_comment,
-                comment_source=TransferCommentSourceEnum.GOVERNMENT,
-            )
+        await self._save_party_comment(transfer.transfer_id, party, transfer_data, user)
 
         # if the transfer is returned back to analyst by the director then don't store the history.
         if (
@@ -333,11 +324,7 @@ class TransferServices:
             and transfer.current_status.status == TransferStatusEnum.Recommended
         ) or re_recommended:
             status_has_changed = False
-        if (
-            transfer_data.recommendation
-            and transfer_data.recommendation != transfer.recommendation
-        ):
-            transfer.recommendation = transfer_data.recommendation
+        self._apply_recommendation(transfer, party, current_status, transfer_data)
         # Update existing history record
         if re_recommended:
             transfer.current_status = await self.repo.update_transfer_history(
@@ -391,6 +378,65 @@ class TransferServices:
             user=user,
         )
         return transfer_result
+
+    async def _save_party_comment(
+        self,
+        transfer_id: int,
+        party: str,
+        transfer_data: TransferCreateSchema,
+        user: UserProfile,
+    ) -> None:
+        """Save the caller's own comment; other sides' comment fields are ignored.
+
+        The transfer page sends every comment field back, so the other
+        sides' fields arrive holding their stored text and are not errors.
+        """
+        field, comment_source = PARTY_COMMENTS[party]
+        comment = getattr(transfer_data, field)
+        if comment is None:
+            return
+        await self.repo.upsert_transfer_comment(
+            transfer_id=transfer_id,
+            comment=comment,
+            comment_source=comment_source,
+            author=getattr(user, "keycloak_username", None),
+        )
+
+    @staticmethod
+    def _apply_recommendation(
+        transfer: Transfer,
+        party: str,
+        current_status: TransferStatusEnum,
+        transfer_data: TransferCreateSchema,
+    ) -> None:
+        """Set the recommendation only on the moves that recommend.
+
+        The page sends the stored recommendation back on every move, so an
+        unchanged value is not a write. A change from an organization is
+        refused; on any other government move the stored value is kept.
+        """
+        requested = _enum_value(transfer_data.recommendation)
+        if not requested or requested == _enum_value(transfer.recommendation):
+            return
+        if (current_status, transfer_data.current_status) in RECOMMENDATION_MOVES:
+            transfer.recommendation = TransferRecommendationEnum(requested)
+            return
+        if party != PARTY_GOVERNMENT:
+            raise HTTPException(
+                status_code=403,
+                detail="Only the government analyst can set the recommendation.",
+            )
+
+    async def _ensure_registered_for_transfer(self, transfer: Transfer) -> None:
+        for organization_id in (
+            transfer.from_organization_id,
+            transfer.to_organization_id,
+        ):
+            if not await self.org_repo.is_registered_for_transfer(organization_id):
+                raise HTTPException(
+                    status_code=403,
+                    detail="Both organizations must be registered for transfers.",
+                )
 
     async def _perform_notification_call(
         self,
@@ -490,7 +536,8 @@ class TransferServices:
 
         # Confirm transaction of sending organization
         confirm_result = await self.transaction_repo.confirm_transaction(
-            transfer.from_transaction_id
+            transfer.from_transaction_id,
+            organization_id=transfer.from_organization_id,
         )
 
         if not confirm_result:
@@ -563,7 +610,8 @@ class TransferServices:
         This method is invoked when a transfer is declined, rescinded, or refused.
         """
         release_result = await self.transaction_repo.release_transaction(
-            transfer.from_transaction_id
+            transfer.from_transaction_id,
+            organization_id=transfer.from_organization_id,
         )
         if not release_result:
             raise ServiceException(
