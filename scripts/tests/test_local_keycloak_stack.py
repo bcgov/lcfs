@@ -9,7 +9,6 @@ import sys
 import tempfile
 import time
 import unittest
-from unittest.mock import patch
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 LAUNCHER = REPO_ROOT / "scripts" / "local-keycloak-stack.sh"
@@ -102,7 +101,7 @@ class LocalKeycloakStackTests(unittest.TestCase):
         (worktree / "docker-compose.local-keycloak.yml").touch()
         return worktree
 
-    def _run(self, worktree, *args, timeout=30):
+    def _run(self, worktree, *args, timeout=30, image_prefix=None):
         env = os.environ.copy()
         env.update(
             {
@@ -122,8 +121,11 @@ class LocalKeycloakStackTests(unittest.TestCase):
             "LCFS_RUSTFS_CONSOLE_PUBLISHED_PORT",
             "LCFS_KEYCLOAK_PUBLISHED_PORT",
             "LCFS_LOCAL_KEYCLOAK_HOSTNAME",
+            "LCFS_LOCAL_KEYCLOAK_IMAGE_PREFIX",
         ):
             env.pop(name, None)
+        if image_prefix is not None:
+            env["LCFS_LOCAL_KEYCLOAK_IMAGE_PREFIX"] = image_prefix
 
         result = subprocess.run(
             ["bash", str(worktree / "scripts" / LAUNCHER.name), *args],
@@ -207,18 +209,15 @@ class LocalKeycloakStackTests(unittest.TestCase):
 
     def test_stacks_in_the_same_worktree_share_an_image_prefix(self):
         worktree = self._make_worktree("worktree-a")
-        with patch.dict(
-            os.environ,
-            {"LCFS_LOCAL_KEYCLOAK_IMAGE_PREFIX": "lcfs-local-keycloak-ci-test"},
-        ):
-            self._run(worktree, "start", "agent-a")
-            self._run(worktree, "start", "agent-b")
+        image_prefix = "lcfs-local-keycloak-ci-test"
+        self._run(worktree, "start", "agent-a", image_prefix=image_prefix)
+        self._run(worktree, "start", "agent-b", image_prefix=image_prefix)
 
         configs = self._compose_configs()
         self.assertEqual(len(configs), 2)
         prefixes = {config["LCFS_LOCAL_KEYCLOAK_IMAGE_PREFIX"] for config in configs}
         self.assertEqual(len(prefixes), 1)
-        self.assertEqual(next(iter(prefixes)), "lcfs-local-keycloak-ci-test")
+        self.assertEqual(next(iter(prefixes)), image_prefix)
 
     def test_destroy_removes_stack_volumes_local_images_and_saved_config(self):
         worktree = self._make_worktree("worktree-a")
