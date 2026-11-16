@@ -2128,6 +2128,18 @@ class CIApplicationServices:
                 detail="Workflow actions can only be recorded on Submitted applications.",
             )
 
+    def _require_draft(self, ci_application: CIApplication, action: str) -> None:
+        """Once submitted, the application belongs to the review: the
+        applicant can no longer edit or delete it."""
+        if (
+            ci_application.ci_application_status.status
+            != CIApplicationStatusEnum.Draft.value
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Only Draft applications can be {action}.",
+            )
+
     def _reset_government_workflow_review(self, ci_application: CIApplication) -> None:
         if ci_application.verification_2_risk_assessment is not None:
             ci_application.preliminary_risk_assessment = (
@@ -2254,6 +2266,7 @@ class CIApplicationServices:
         data: CIApplicationStep1Schema,
         user: UserProfile,
     ) -> CIApplicationSchema:
+        self._require_draft(ci_application, "edited")
         facility = await self._resolve_step1_facility(
             ci_application.organization_id, data, user
         )
@@ -2332,6 +2345,7 @@ class CIApplicationServices:
 
     @service_handler
     async def delete_draft(self, ci_application: CIApplication) -> None:
+        self._require_draft(ci_application, "deleted")
         await self.repo.delete(ci_application)
 
     # ------------------------------------------------------------------
@@ -2740,7 +2754,18 @@ class CIApplicationServices:
         ``CI_STEP3_REQUIRE_DOCUMENTS`` so it can be re-enabled without
         redevelopment. Files are uploaded out-of-band via the generic document
         endpoint with a category query param.
+
+        Editable on a Draft, or on a Submitted application while government
+        has documentation requested; saving then closes that request.
         """
+        is_documentation_request = (
+            ci_application.ci_application_status.status
+            == CIApplicationStatusEnum.Submitted.value
+            and bool(getattr(ci_application, "document_upload_enabled", False))
+        )
+        if not is_documentation_request:
+            self._require_draft(ci_application, "edited")
+
         if CI_STEP3_REQUIRE_DOCUMENTS:
             present_categories = set(
                 await self.repo.get_document_categories(
@@ -2759,7 +2784,7 @@ class CIApplicationServices:
                 )
 
         ci_application.supporting_document_other = data.supporting_document_other
-        if getattr(ci_application, "document_upload_enabled", False):
+        if is_documentation_request:
             ci_application.document_upload_enabled = False
             ci_application.document_changes_requested_at = None
             ci_application.document_changes_requested_by = None
