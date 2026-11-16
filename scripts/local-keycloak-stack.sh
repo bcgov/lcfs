@@ -79,11 +79,6 @@ compose() {
       LCFS_KEYCLOAK_PUBLISHED_PORT \
       LCFS_LOCAL_KEYCLOAK_HOSTNAME
 
-    # Use stack-specific images by default so changes to a stack's build
-    # context are picked up. CI can pass a shared prefix to reuse one build
-    # across sequential stacks.
-    export LCFS_LOCAL_KEYCLOAK_IMAGE_PREFIX="${LCFS_LOCAL_KEYCLOAK_IMAGE_PREFIX:-${project_name}}"
-
     local compose_env_args=()
     if [[ -f "${env_file:-}" ]]; then
       compose_env_args+=(--env-file "${env_file}")

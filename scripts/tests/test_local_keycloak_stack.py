@@ -37,11 +37,10 @@ class LocalKeycloakStackTests(unittest.TestCase):
             "with open(os.environ['LCFS_TEST_DOCKER_LOG'], 'a') as log:\n"
             "    log.write(json.dumps(sys.argv[1:]) + '\\n')\n"
             "args = sys.argv[1:]\n"
-            "config = {'LCFS_LOCAL_KEYCLOAK_IMAGE_PREFIX': os.environ.get('LCFS_LOCAL_KEYCLOAK_IMAGE_PREFIX')}\n"
+            "config = {}\n"
             "if '--env-file' in args:\n"
             "    env_file = Path(args[args.index('--env-file') + 1])\n"
             "    config = dict(line.split('=', 1) for line in env_file.read_text().splitlines())\n"
-            "config['LCFS_LOCAL_KEYCLOAK_IMAGE_PREFIX'] = os.environ.get('LCFS_LOCAL_KEYCLOAK_IMAGE_PREFIX')\n"
             "with open(os.environ['LCFS_TEST_CONFIG_LOG'], 'a') as log:\n"
             "    log.write(json.dumps(config) + '\\n')\n"
             "if 'up' in args and os.environ.get('LCFS_TEST_PAUSE_COMPOSE_UP') == '1':\n"
@@ -101,7 +100,7 @@ class LocalKeycloakStackTests(unittest.TestCase):
         (worktree / "docker-compose.local-keycloak.yml").touch()
         return worktree
 
-    def _run(self, worktree, *args, timeout=30, image_prefix=None):
+    def _run(self, worktree, *args, timeout=30):
         env = os.environ.copy()
         env.update(
             {
@@ -121,11 +120,8 @@ class LocalKeycloakStackTests(unittest.TestCase):
             "LCFS_RUSTFS_CONSOLE_PUBLISHED_PORT",
             "LCFS_KEYCLOAK_PUBLISHED_PORT",
             "LCFS_LOCAL_KEYCLOAK_HOSTNAME",
-            "LCFS_LOCAL_KEYCLOAK_IMAGE_PREFIX",
         ):
             env.pop(name, None)
-        if image_prefix is not None:
-            env["LCFS_LOCAL_KEYCLOAK_IMAGE_PREFIX"] = image_prefix
 
         result = subprocess.run(
             ["bash", str(worktree / "scripts" / LAUNCHER.name), *args],
@@ -166,14 +162,6 @@ class LocalKeycloakStackTests(unittest.TestCase):
         self.assertNotEqual(project_a, project_b)
         self.assertNotEqual(env_a, env_b)
 
-        configs = self._compose_configs()
-        self.assertEqual(len(configs), 2)
-        image_prefix_a = configs[0]["LCFS_LOCAL_KEYCLOAK_IMAGE_PREFIX"]
-        image_prefix_b = configs[1]["LCFS_LOCAL_KEYCLOAK_IMAGE_PREFIX"]
-        self.assertNotEqual(image_prefix_a, image_prefix_b)
-        self.assertEqual(image_prefix_a, project_a)
-        self.assertEqual(image_prefix_b, project_b)
-
         config_a = dict(line.split("=", 1) for line in env_a.read_text().splitlines())
         config_b = dict(line.split("=", 1) for line in env_b.read_text().splitlines())
         self.assertNotEqual(
@@ -206,18 +194,6 @@ class LocalKeycloakStackTests(unittest.TestCase):
             self._option_value(self._docker_calls()[-1], "--project-name"),
             project_name,
         )
-
-    def test_stacks_in_the_same_worktree_share_an_image_prefix(self):
-        worktree = self._make_worktree("worktree-a")
-        image_prefix = "lcfs-local-keycloak-ci-test"
-        self._run(worktree, "start", "agent-a", image_prefix=image_prefix)
-        self._run(worktree, "start", "agent-b", image_prefix=image_prefix)
-
-        configs = self._compose_configs()
-        self.assertEqual(len(configs), 2)
-        prefixes = {config["LCFS_LOCAL_KEYCLOAK_IMAGE_PREFIX"] for config in configs}
-        self.assertEqual(len(prefixes), 1)
-        self.assertEqual(next(iter(prefixes)), image_prefix)
 
     def test_destroy_removes_stack_volumes_local_images_and_saved_config(self):
         worktree = self._make_worktree("worktree-a")
