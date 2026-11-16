@@ -2,7 +2,7 @@ from datetime import date, datetime
 from typing import Any, List, Optional, Sequence, Tuple
 
 import structlog
-from fastapi import Depends
+from fastapi import Depends, HTTPException, status
 from sqlalchemy import (
     and_,
     delete,
@@ -62,6 +62,7 @@ from lcfs.web.api.final_supply_equipment.schema import (
     FSEReportingDefaultDates,
 )
 from lcfs.web.core.decorators import repo_handler
+from lcfs.web.core.ownership import delete_one
 
 logger = structlog.get_logger(__name__)
 
@@ -540,10 +541,11 @@ class FinalSupplyEquipmentRepository:
 
     @repo_handler
     async def get_final_supply_equipment_by_id(
-        self, final_supply_equipment_id: int
-    ) -> FinalSupplyEquipment:
+        self, final_supply_equipment_id: int, compliance_report_id: int
+    ) -> FinalSupplyEquipment | None:
         """
-        Retrieve a final supply equipment from the database
+        Retrieve a final supply equipment row of the given report. A row ID
+        from another report reads as missing.
         """
         result = await self.db.execute(
             select(FinalSupplyEquipment)
@@ -554,7 +556,8 @@ class FinalSupplyEquipmentRepository:
             )
             .where(
                 FinalSupplyEquipment.final_supply_equipment_id
-                == final_supply_equipment_id
+                == final_supply_equipment_id,
+                FinalSupplyEquipment.compliance_report_id == compliance_report_id,
             )
         )
         return result.unique().scalar_one_or_none()
@@ -590,13 +593,15 @@ class FinalSupplyEquipmentRepository:
         return final_supply_equipment
 
     @repo_handler
-    async def delete_final_supply_equipment(self, final_supply_equipment_id: int):
-        """Delete a final supply equipment from the database"""
-        await self.db.execute(
-            delete(FinalSupplyEquipment).where(
-                FinalSupplyEquipment.final_supply_equipment_id
-                == final_supply_equipment_id
-            )
+    async def delete_final_supply_equipment(
+        self, final_supply_equipment_id: int, compliance_report_id: int
+    ):
+        """Delete the row only if it is in this report; 404 otherwise."""
+        await delete_one(
+            self.db,
+            FinalSupplyEquipment,
+            final_supply_equipment_id=final_supply_equipment_id,
+            compliance_report_id=compliance_report_id,
         )
         await self.db.flush()
 
@@ -1085,6 +1090,48 @@ class FinalSupplyEquipmentRepository:
         )
         result = await self.db.execute(stmt)
         return result.scalars().first()
+
+    @repo_handler
+    async def get_reporting_records_by_ids(
+        self, charging_equipment_compliance_ids: List[int]
+    ) -> Sequence[ComplianceReportChargingEquipment]:
+        """Retrieve compliance-report charging equipment records by primary key."""
+        if not charging_equipment_compliance_ids:
+            return []
+        stmt = select(ComplianceReportChargingEquipment).where(
+            ComplianceReportChargingEquipment.charging_equipment_compliance_id.in_(
+                set(charging_equipment_compliance_ids)
+            )
+        )
+        return (await self.db.execute(stmt)).scalars().all()
+
+    @repo_handler
+    async def get_charging_equipment_owners(
+        self, charging_equipment_ids: List[int]
+    ) -> dict:
+        """
+        Map each charging equipment ID to the organization that owns its
+        charging site and to the equipment version that ID is. IDs that do not
+        exist are left out.
+        """
+        if not charging_equipment_ids:
+            return {}
+        stmt = (
+            select(
+                ChargingEquipment.charging_equipment_id,
+                ChargingEquipment.version,
+                ChargingSite.organization_id,
+            )
+            .join(
+                ChargingSite,
+                ChargingSite.charging_site_id == ChargingEquipment.charging_site_id,
+            )
+            .where(
+                ChargingEquipment.charging_equipment_id.in_(set(charging_equipment_ids))
+            )
+        )
+        rows = (await self.db.execute(stmt)).all()
+        return {row.charging_equipment_id: row for row in rows}
 
     @repo_handler
     async def has_decommissioned_fse_in_report(
@@ -2076,28 +2123,57 @@ class FinalSupplyEquipmentRepository:
         return updated_count + created_count
 
     @repo_handler
-    async def delete_fse_reporting(self, charging_equipment_compliance_id: int) -> None:
+    async def delete_fse_reporting(
+        self,
+        charging_equipment_compliance_id: int,
+        compliance_report_id: int,
+        organization_id: int,
+    ) -> None:
         """
-        Delete FSE compliance reporting data
+        Delete the FSE reporting record only if it is in this report and
+        organization; 404 otherwise.
         """
-        stmt = delete(ComplianceReportChargingEquipment).where(
-            ComplianceReportChargingEquipment.charging_equipment_compliance_id
-            == charging_equipment_compliance_id
+        await delete_one(
+            self.db,
+            ComplianceReportChargingEquipment,
+            charging_equipment_compliance_id=charging_equipment_compliance_id,
+            compliance_report_id=compliance_report_id,
+            organization_id=organization_id,
         )
-        await self.db.execute(stmt)
         await self.db.flush()
 
     @repo_handler
-    async def delete_fse_reporting_batch(self, reporting_ids: List[int]) -> int:
+    async def delete_fse_reporting_batch(
+        self,
+        reporting_ids: List[int],
+        compliance_report_id: int,
+        organization_id: int,
+    ) -> int:
         """
-        Delete multiple FSE compliance reporting records
+        Delete FSE reporting records of this report and organization. If any
+        ID is not one of them, nothing is deleted (404).
         """
-        stmt = delete(ComplianceReportChargingEquipment).where(
+        requested_ids = set(reporting_ids)
+        scope = and_(
             ComplianceReportChargingEquipment.charging_equipment_compliance_id.in_(
-                reporting_ids
-            )
+                requested_ids
+            ),
+            ComplianceReportChargingEquipment.compliance_report_id
+            == compliance_report_id,
+            ComplianceReportChargingEquipment.organization_id == organization_id,
         )
-        result = await self.db.execute(stmt)
+        matching = await self.db.scalar(
+            select(func.count())
+            .select_from(ComplianceReportChargingEquipment)
+            .where(scope)
+        )
+        if matching != len(requested_ids):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Record not found."
+            )
+        result = await self.db.execute(
+            delete(ComplianceReportChargingEquipment).where(scope)
+        )
         await self.db.flush()
         return result.rowcount
 

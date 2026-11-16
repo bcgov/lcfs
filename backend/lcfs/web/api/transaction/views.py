@@ -3,6 +3,7 @@ import structlog
 from fastapi import APIRouter, Depends, status, Request, Body, Query
 from fastapi.responses import StreamingResponse
 from fastapi_cache.decorator import cache
+from lcfs.db.dependencies import extended_statement_timeout
 from lcfs.web.core.decorators import view_handler
 from lcfs.web.api.transaction.services import TransactionsService
 from lcfs.web.api.transaction.schema import (
@@ -39,6 +40,7 @@ async def get_transactions_paginated_by_org(
     "/{organization_id:int}/export",
     response_class=StreamingResponse,
     status_code=status.HTTP_200_OK,
+    dependencies=[Depends(extended_statement_timeout)],
 )
 @view_handler([RoleEnum.GOVERNMENT])
 async def export_transactions_by_org(
@@ -70,7 +72,10 @@ async def get_transactions_paginated(
 
 
 @router.post(
-    "/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK
+    "/export",
+    response_class=StreamingResponse,
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(extended_statement_timeout)],
 )
 @view_handler([RoleEnum.GOVERNMENT])
 async def export_transactions(

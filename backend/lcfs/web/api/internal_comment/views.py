@@ -1,8 +1,19 @@
 import structlog
 from typing import List, Optional
 from datetime import date
+from botocore.client import BaseClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from fastapi import APIRouter, Body, Depends, Query, status, Request, HTTPException
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Body,
+    Depends,
+    Query,
+    status,
+    Request,
+    HTTPException,
+)
 
 from lcfs.db import dependencies
 from lcfs.web.core.decorators import view_handler
@@ -19,13 +30,34 @@ from .schema import (
     OrganizationCommentsFilterSchema,
     OrganizationCommentsResponseSchema,
 )
-from typing import List
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.services.s3.dependency import get_s3_client
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()
 org_comments_router = APIRouter()
 get_async_db = dependencies.get_async_db_session
+
+
+@router.delete("/{internal_comment_id}", status_code=status.HTTP_204_NO_CONTENT)
+@view_handler([RoleEnum.GOVERNMENT])
+async def delete_comment(
+    request: Request,
+    internal_comment_id: int,
+    background_tasks: BackgroundTasks,
+    service: InternalCommentService = Depends(),
+    db: AsyncSession = Depends(get_async_db, scope="function"),
+    s3_client: BaseClient = Depends(get_s3_client),
+) -> None:
+    # Import lazily because DocumentService's parent services import this router.
+    from lcfs.services.s3.client import DocumentService
+
+    document_service = DocumentService(db=db, s3_client=s3_client)
+    file_keys = await service.delete_internal_comment(
+        internal_comment_id, document_service
+    )
+    # Runs after the response, so after the database transaction has committed.
+    background_tasks.add_task(document_service.delete_storage_objects, file_keys)
 
 
 @org_comments_router.get(
