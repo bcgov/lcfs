@@ -122,11 +122,20 @@ class ComplianceReportUpdateService:
     ) -> ComplianceReportBaseSchema:
         """Updates an existing compliance report."""
         # Get and validate report
-        report = await self._check_report_exists(report_id)
+        await self.repo.lock_compliance_report_row(report_id)
+        report = await self.repo.get_compliance_report_by_id(report_id, refresh=True)
+        if not report:
+            raise DataNotFoundException(f"Compliance report with ID {report_id} not found")
 
         # Refuse a status the workflow does not allow from the stored one,
         # before anything is changed.
         ensure_report_transition(user, report, report_data.status)
+
+        existing_draft = await self.repo.get_draft_report_by_group_uuid(
+            report.compliance_report_group_uuid
+        )
+        if existing_draft and existing_draft.version > report.version:
+            raise HTTPException(status_code=409, detail="This report has been superseded by a draft supplemental report.")
 
         # Store original status
         current_status = report_data.status
@@ -212,8 +221,11 @@ class ComplianceReportUpdateService:
             ):
                 await self._recommend_before_direct_assessment(report, user)
             await self.handle_status_change(report, new_status.status, user)
-            # Add history record
-            await self.repo.add_compliance_report_history(report, user)
+        if status_has_changed or current_status in [status.value for status in ReturnStatus]:
+            if current_status in [status.value for status in ReturnStatus]:
+                await self.repo.add_compliance_report_history(report, user, is_return=True)
+            else:
+                await self.repo.add_compliance_report_history(report, user)
 
         # Handle notifications only for workflow transitions and return statuses (not for other edits)
         return_status_values = [status.value for status in ReturnStatus]
@@ -627,9 +639,11 @@ class ComplianceReportUpdateService:
             # For non-assessment reports: summary should already be locked when flag was set
             # Just ensure no transactions exist
             if report.transaction_id:
-                await self.trx_service.repo.delete_transaction(
+                deleted = await self.trx_service.repo.delete_reserved_transaction(
                     report.transaction_id, report.compliance_report_id
                 )
+                if not deleted:
+                    raise HTTPException(status_code=409, detail="The report transaction is not reserved.")
                 report.transaction_id = None
 
         await self.repo.update_compliance_report(report)
@@ -659,9 +673,11 @@ class ComplianceReportUpdateService:
 
         # No financial processing for exempted reports — delete any existing transaction
         if report.transaction_id:
-            await self.trx_service.repo.delete_transaction(
+            deleted = await self.trx_service.repo.delete_reserved_transaction(
                 report.transaction_id, report.compliance_report_id
             )
+            if not deleted:
+                raise HTTPException(status_code=409, detail="The report transaction is not reserved.")
             report.transaction_id = None
 
         # Blank out summary lines based on which exemption applies

@@ -1033,18 +1033,6 @@ class TransactionRepository:
         return oldest_year
 
     @repo_handler
-    async def delete_transaction(self, transaction_id, attached_report_id):
-        """Deletes a transaction with the given ID"""
-        await self.db.execute(
-            update(ComplianceReport)
-            .where(ComplianceReport.compliance_report_id == attached_report_id)
-            .values(transaction_id=None)
-        )
-        await self.db.execute(
-            delete(Transaction).where(Transaction.transaction_id == transaction_id)
-        )
-
-    @repo_handler
     async def delete_reserved_transaction(
         self, transaction_id, attached_report_id
     ) -> bool:
@@ -1053,11 +1041,41 @@ class TransactionRepository:
         A Released or confirmed (Adjustment) transaction is a ledger record,
         not a working reservation, and stays. Returns whether it was deleted.
         """
-        transaction = await self.get_transaction_by_id(transaction_id)
-        if (
-            transaction is None
-            or transaction.transaction_action != TransactionActionEnum.Reserved
-        ):
+        report_transaction_id = await self.db.scalar(
+            select(ComplianceReport.transaction_id)
+            .where(ComplianceReport.compliance_report_id == attached_report_id)
+            .with_for_update()
+        )
+        if report_transaction_id != transaction_id:
             return False
-        await self.delete_transaction(transaction_id, attached_report_id)
+        transaction = await self.db.scalar(
+            select(Transaction)
+            .where(
+                Transaction.transaction_id == transaction_id,
+                Transaction.transaction_action == TransactionActionEnum.Reserved,
+                exists().where(
+                    ComplianceReport.compliance_report_id == attached_report_id,
+                    ComplianceReport.transaction_id == Transaction.transaction_id,
+                ),
+            )
+            .with_for_update()
+        )
+        if transaction is None:
+            return False
+        detached = await self.db.execute(
+            update(ComplianceReport)
+            .where(ComplianceReport.compliance_report_id == attached_report_id,
+                   ComplianceReport.transaction_id == transaction_id)
+            .values(transaction_id=None)
+        )
+        if not detached.rowcount:
+            return False
+        deleted = await self.db.execute(
+            delete(Transaction).where(
+                Transaction.transaction_id == transaction_id,
+                Transaction.transaction_action == TransactionActionEnum.Reserved,
+            )
+        )
+        if not deleted.rowcount:
+            raise RuntimeError("Reserved transaction changed during deletion")
         return True

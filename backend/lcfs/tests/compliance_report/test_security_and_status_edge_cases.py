@@ -355,7 +355,7 @@ class TestReportLifecycleAndTransactions:
         v1_report.assigned_analyst = mock_analyst
 
         # 4. Mock repository methods
-        def get_report_side_effect(report_id):
+        def get_report_side_effect(report_id, **kwargs):
             if report_id == 1:
                 return v0_report
             elif report_id == 2:
@@ -627,7 +627,7 @@ class TestReportLifecycleAndTransactions:
         )
         assert v0_transaction.transaction_action == TransactionActionEnum.Reserved
         # ...and the deleted adjustment's own reserve is removed, not orphaned.
-        mock_trxn_repo.delete_transaction.assert_awaited_once_with(
+        mock_trxn_repo.delete_reserved_transaction.assert_awaited_once_with(
             own_reserve.transaction_id, v1_report.compliance_report_id
         )
 
@@ -654,7 +654,9 @@ class TestReportLifecycleAndTransactions:
             report_id=v1_report.compliance_report_id, user=user
         )
 
-        mock_trxn_repo.delete_transaction.assert_not_awaited()
+        mock_trxn_repo.delete_reserved_transaction.assert_awaited_once_with(
+            finalized.transaction_id, v1_report.compliance_report_id
+        )
 
 
 @pytest.mark.anyio

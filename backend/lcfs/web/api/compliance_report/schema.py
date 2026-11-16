@@ -125,6 +125,7 @@ class ComplianceReportHistorySchema(BaseSchema):
     status: ComplianceReportStatusSchema
     user_profile: ComplianceReportUserSchema
     display_name: Optional[str] = None
+    is_return: bool = False
     create_date: datetime
 
 

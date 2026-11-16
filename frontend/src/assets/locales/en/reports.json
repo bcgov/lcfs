@@ -241,6 +241,7 @@
   "saveReturn": "Save & return to report",
   "reportHistory": "Report history",
   "complianceReportHistory": {
+    "Returned": "Returned {{createDate}} by {{displayName}}.",
     "Draft": "Created {{createDate}} by {{displayName}}.",
     "Submitted": "Signed and submitted {{createDate}} by {{displayName}}.",
     "Analyst adjustment": "Created {{createDate}} by {{displayName}}.",

@@ -107,7 +107,7 @@ async def test_update_compliance_report_status_change(
 
     # Assertions
     assert updated_report == mock_report
-    mock_repo.get_compliance_report_by_id.assert_called_once_with(report_id)
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(report_id, refresh=True)
     mock_repo.get_compliance_report_status_by_desc.assert_called_once_with(
         report_data.status
     )
@@ -312,7 +312,7 @@ async def test_update_compliance_report_not_found(
             report_id, report_data, UserProfile()
         )
 
-    mock_repo.get_compliance_report_by_id.assert_called_once_with(report_id)
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(report_id, refresh=True)
 
 
 @pytest.mark.anyio
@@ -2330,7 +2330,7 @@ async def test_handle_exempted_status_deletes_existing_transaction(
         )
 
     # Verify the transaction was deleted
-    compliance_report_update_service.trx_service.repo.delete_transaction.assert_called_once_with(
+    compliance_report_update_service.trx_service.repo.delete_reserved_transaction.assert_called_once_with(
         999, 200
     )
     # Verify the transaction_id was cleared
@@ -2941,7 +2941,7 @@ async def test_director_assess_from_analyst_adjustment_matches_three_step_path(
     # reinstated or deleted.
     mock_trxn_repo.release_transaction.assert_not_called()
     mock_trxn_repo.reinstate_transaction.assert_not_called()
-    mock_trxn_repo.delete_transaction.assert_not_called()
+    mock_trxn_repo.delete_reserved_transaction.assert_not_called()
 
 
 @pytest.mark.anyio
@@ -3040,6 +3040,38 @@ def _wire_return(service, mock_repo, report):
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize(
+    "source, action, destination, initiator, user",
+    [
+        (ComplianceReportStatusEnum.Submitted, "Return to supplier", ComplianceReportStatusEnum.Draft, None, ANALYST),
+        (ComplianceReportStatusEnum.Recommended_by_analyst, "Return to analyst", ComplianceReportStatusEnum.Submitted, None, DIRECTOR),
+        (ComplianceReportStatusEnum.Recommended_by_manager, "Return to manager", ComplianceReportStatusEnum.Recommended_by_analyst, None, DIRECTOR),
+        (ComplianceReportStatusEnum.Recommended_by_analyst, "Return to analyst", ComplianceReportStatusEnum.Analyst_adjustment, SupplementalInitiatorType.GOVERNMENT_REASSESSMENT, DIRECTOR),
+    ],
+)
+async def test_return_transition_records_destination_and_marked_history(
+    compliance_report_update_service, mock_repo, mock_trxn_repo,
+    source, action, destination, initiator, user,
+):
+    report = _submitted_report(transaction_id=321)
+    report.current_status.status = source
+    report.supplemental_initiator = initiator
+    _wire_return(compliance_report_update_service, mock_repo, report)
+    destination_status = MagicMock(spec=ComplianceReportStatus)
+    destination_status.status = destination
+    mock_repo.get_compliance_report_status_by_desc.return_value = destination_status
+    mock_trxn_repo.delete_reserved_transaction.return_value = True
+
+    await compliance_report_update_service.update_compliance_report(
+        40, ComplianceReportUpdateSchema(status=action), user
+    )
+
+    assert report.current_status.status == destination
+    mock_repo.get_compliance_report_status_by_desc.assert_awaited_once_with(destination.value)
+    mock_repo.add_compliance_report_history.assert_awaited_once_with(report, user, is_return=True)
+
+
+@pytest.mark.anyio
 async def test_return_to_supplier_deletes_the_reservation(
     compliance_report_update_service, mock_repo, mock_summary_repo, mock_trxn_repo
 ):
@@ -3052,8 +3084,29 @@ async def test_return_to_supplier_deletes_the_reservation(
     )
 
     mock_trxn_repo.delete_reserved_transaction.assert_awaited_once_with(321, 40)
-    mock_trxn_repo.delete_transaction.assert_not_called()
     mock_summary_repo.reset_summary_lock.assert_awaited_once_with(40)
+    mock_repo.add_compliance_report_history.assert_awaited_once_with(report, ANALYST, is_return=True)
+
+
+@pytest.mark.anyio
+async def test_return_rejects_newer_working_report_before_mutation(
+    compliance_report_update_service, mock_repo, mock_summary_repo, mock_trxn_repo
+):
+    report = _submitted_report()
+    report.version = 1
+    _wire_return(compliance_report_update_service, mock_repo, report)
+    mock_repo.get_draft_report_by_group_uuid.return_value = MagicMock(version=2)
+
+    with pytest.raises(HTTPException) as exc:
+        await compliance_report_update_service.update_compliance_report(
+            40, ComplianceReportUpdateSchema(status="Return to supplier"), ANALYST
+        )
+
+    assert exc.value.status_code == 409
+    mock_repo.lock_compliance_report_row.assert_awaited_once_with(40)
+    mock_trxn_repo.delete_reserved_transaction.assert_not_awaited()
+    mock_summary_repo.reset_summary_lock.assert_not_awaited()
+    mock_repo.add_compliance_report_history.assert_not_awaited()
 
 
 @pytest.mark.anyio
@@ -3103,6 +3156,6 @@ async def test_supplier_cannot_return_or_reopen_their_report(
         )
 
     assert exc.value.status_code == 403
-    mock_trxn_repo.delete_transaction.assert_not_called()
+    mock_trxn_repo.delete_reserved_transaction.assert_not_called()
     mock_summary_repo.reset_summary_lock.assert_not_called()
     mock_repo.update_compliance_report.assert_not_called()
