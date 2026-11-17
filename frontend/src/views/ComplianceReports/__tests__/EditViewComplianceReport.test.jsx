@@ -18,6 +18,7 @@ import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { CONFIG } from '@/constants/config'
+import { REPORT_SCHEDULES } from '@/constants/common'
 import { buttonClusterConfigFn } from '../buttonConfigs'
 
 const { mockTriggerAlert } = vi.hoisted(() => ({ mockTriggerAlert: vi.fn() }))
@@ -1614,6 +1615,36 @@ describe('EditViewComplianceReport', () => {
         expect(
           screen.getByTestId('compliance-report-header')
         ).toBeInTheDocument()
+      })
+
+      it('keeps the original quarter when a later return to analyst is recorded', () => {
+        const returnedAcrossQuarterBoundary = {
+          ...defaultReportData,
+          report: {
+            ...defaultReportData.report,
+            reportingFrequency: REPORT_SCHEDULES.QUARTERLY,
+            history: [
+              {
+                status: { status: 'Submitted' },
+                createDate: '2024-06-28T10:00:00Z'
+              },
+              {
+                status: { status: 'Submitted' },
+                createDate: '2024-07-03T10:00:00Z',
+                isReturn: true
+              }
+            ]
+          }
+        }
+        useComplianceReportStore.mockImplementation((selector) =>
+          selector({ getCachedReport: () => returnedAcrossQuarterBoundary })
+        )
+
+        render(<EditViewComplianceReport />)
+
+        expect(screen.getByTestId('compliance-report-header')).toHaveTextContent(
+          '2024 report:complianceReportEarlyIssuance 1'
+        )
       })
 
       it('calculates quarter 2 for July-September months', () => {
