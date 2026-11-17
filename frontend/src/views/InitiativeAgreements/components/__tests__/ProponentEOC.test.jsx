@@ -161,6 +161,47 @@ test('signers accept declaration and submitted evidence becomes read-only', asyn
   ).toHaveAttribute('data-enable-attachments', 'false')
 })
 
+test('shows the revision event and plain-text request message to the proponent', async ({
+  render,
+  app
+}) => {
+  const requestMessage = 'Please upload <em>signed permits</em>.'
+  api.get.mockResolvedValue({
+    data: {
+      initiativeAgreementId: 2,
+      iaCode: 'IA-2',
+      actionNumber: 1,
+      name: 'Install equipment',
+      organizationName: 'Example company',
+      status: 'Draft',
+      canEdit: true,
+      content: { summary_of_work_completed: 'Existing evidence' },
+      revisionRequest: {
+        eventType: 'Information requested',
+        message: requestMessage
+      },
+      requirements: [{ id: 'summary_of_work_completed', title: 'Equipment' }]
+    }
+  })
+
+  render(<ProponentEOC designatedActionId="3" />, app)
+  const revisionAlert = await screen.findByRole('alert')
+  expect(revisionAlert).toHaveTextContent(
+    'Revision requested: Information requested'
+  )
+  expect(revisionAlert).toHaveTextContent(requestMessage)
+  expect(revisionAlert.querySelector('em')).not.toBeInTheDocument()
+})
+
+test('does not show revision instructions on a normal draft', async ({
+  render,
+  app
+}) => {
+  render(<ProponentEOC designatedActionId="3" />, app)
+  await screen.findByText('Organization: Example company')
+  expect(screen.queryByText(/Revision requested:/)).not.toBeInTheDocument()
+})
+
 test('failed saves preserve content and show an error', async ({
   render,
   app
@@ -173,6 +214,66 @@ test('failed saves preserve content and show an error', async ({
   expect(screen.getByLabelText('Evidence response')).toHaveValue(
     'Existing evidence'
   )
+})
+
+test('manual save cancels the debounce and failed saves are not retried', async ({
+  render,
+  app
+}) => {
+  api.put.mockRejectedValue(new Error('Network error'))
+  render(<ProponentEOC designatedActionId="3" />, app)
+  await screen.findByText('Organization: Example company')
+  fireEvent.change(screen.getByLabelText('Evidence response'), {
+    target: { value: 'Unsaved evidence' }
+  })
+  fireEvent.click(screen.getByRole('button', { name: 'Save to draft' }))
+  await screen.findByText(/Unable to save evidence/)
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 1100))
+  })
+
+  expect(api.put).toHaveBeenCalledTimes(1)
+  expect(screen.getByLabelText('Evidence response')).toHaveValue(
+    'Unsaved evidence'
+  )
+})
+
+test('submitting cancels a pending autosave while the submission is in flight', async ({
+  render,
+  app
+}) => {
+  signer = true
+  let resolveSubmission
+  api.post.mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        resolveSubmission = () => {
+          submitted = true
+          resolve({ data: {} })
+        }
+      })
+  )
+  render(<ProponentEOC designatedActionId="3" />, app)
+  await screen.findByText('Organization: Example company')
+  fireEvent.change(screen.getByLabelText('Evidence response'), {
+    target: { value: 'Evidence being submitted' }
+  })
+  fireEvent.click(screen.getByRole('checkbox'))
+  fireEvent.click(screen.getByRole('button', { name: 'Submit application' }))
+  await waitFor(() => expect(api.post).toHaveBeenCalledTimes(1))
+
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 1100))
+  })
+  expect(api.put).not.toHaveBeenCalled()
+
+  await act(async () => resolveSubmission())
+  await screen.findByText('Evidence submitted.')
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 50))
+  })
+  expect(api.put).not.toHaveBeenCalled()
+  expect(screen.queryByText(/Unable to save evidence/)).not.toBeInTheDocument()
 })
 
 test('draft saves refresh the EOC cache and later query data updates the editor', async ({

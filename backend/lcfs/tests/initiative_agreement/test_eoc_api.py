@@ -257,7 +257,9 @@ async def test_idir_request_information_authorizes_one_portal_revision(
         description="Provide the signed permits",
         is_active=True,
         review_outcome=REVIEW_OUTCOME_INFORMATION_REQUESTED,
-        missing_information="Upload the signed permits.",
+        missing_information=(
+            "<p>Upload the <strong>signed</strong> permits &amp; photos.</p>"
+        ),
     )
     dbsession.add(requirement)
     await dbsession.flush()
@@ -283,7 +285,20 @@ async def test_idir_request_information_authorizes_one_portal_revision(
     assert info_event is not None
 
     authenticate([RoleEnum.IA_SIGNER])
-    assert (await client.get(eoc_url)).json()["canEdit"]
+    revision_response = await client.get(eoc_url)
+    assert revision_response.status_code == 200
+    revision_state = revision_response.json()
+    assert revision_state["canEdit"]
+    assert revision_state["revisionRequest"]["eventType"] == "Information requested"
+    assert revision_state["revisionRequest"]["message"] == (
+        "EOC 1 - Permits: Upload the signed permits & photos."
+    )
+    assert set(revision_state["revisionRequest"]) == {
+        "eventType",
+        "requestedAt",
+        "message",
+    }
+    assert "evidenceRequirements" not in revision_state["revisionRequest"]
     revision = {**payload, "summaryOfWorkCompleted": "Revised response"}
     first_draft_save = await client.put(eoc_url, json=revision)
     assert first_draft_save.status_code == 200, first_draft_save.text
@@ -405,7 +420,17 @@ async def test_ordinary_analyst_edit_does_not_reopen_returned_submission(
     assert return_event is not None
 
     authenticate([RoleEnum.IA_SIGNER])
-    assert (await client.get(eoc_url)).json()["canEdit"]
+    revision_response = await client.get(eoc_url)
+    assert revision_response.status_code == 200
+    revision_state = revision_response.json()
+    assert revision_state["canEdit"]
+    assert revision_state["revisionRequest"]["eventType"] == "Returned"
+    assert revision_state["revisionRequest"]["message"] == "Revise the evidence."
+    assert set(revision_state["revisionRequest"]) == {
+        "eventType",
+        "requestedAt",
+        "message",
+    }
     revision = {**payload, "summaryOfWorkCompleted": "Revised evidence"}
     assert (await client.put(eoc_url, json=revision)).status_code == 200
     resubmitted = await client.post(f"{eoc_url}/submit", json=revision)

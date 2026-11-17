@@ -75,12 +75,20 @@ export const ProponentEOC = ({ designatedActionId, readOnly = false }) => {
   const [failure, setFailure] = useState('')
   const [saving, setSaving] = useState(false)
   const editorRefs = useRef({})
+  const autoSaveTimer = useRef(null)
   const dirty = useRef(false)
   const latest = useRef({})
   const queue = useRef(Promise.resolve())
   const locked =
     readOnly || data?.canEdit === false || data?.status === 'Submitted'
   const blocker = useBlocker(() => !readOnly && dirty.current)
+  const sections = useMemo(
+    () =>
+      data?.requirements?.length
+        ? data.requirements
+        : [{ id: 'completion', title: 'Evidence of completion' }],
+    [data?.requirements]
+  )
   useEffect(() => {
     if (data && (readOnly || !dirty.current)) {
       latest.current = data.content || {}
@@ -92,6 +100,19 @@ export const ProponentEOC = ({ designatedActionId, readOnly = false }) => {
       editorRefs.current
     )) {
       const editor = editorRef?.getEditor?.()
+      if (!editor) continue
+      const requirement = sections.find(
+        (section) => String(section.id) === requirementId
+      )
+      editor.root.setAttribute('role', 'textbox')
+      editor.root.setAttribute(
+        'aria-label',
+        requirement?.title ||
+          requirement?.description ||
+          'Evidence of completion'
+      )
+      editor.root.setAttribute('aria-multiline', 'true')
+      editor.root.setAttribute('aria-readonly', String(locked || saving))
       const toolbar = editor?.getModule('toolbar')?.container
       if (!toolbar) continue
       toolbar.setAttribute('role', 'toolbar')
@@ -113,7 +134,7 @@ export const ProponentEOC = ({ designatedActionId, readOnly = false }) => {
       })
       toolbar.setAttribute('data-requirement-id', requirementId)
     }
-  }, [content, expanded, locked, saving])
+  }, [content, expanded, locked, saving, sections])
   const downloadSubmissionDocument = async (submissionId, document) => {
     try {
       const response = await api.get(
@@ -132,6 +153,10 @@ export const ProponentEOC = ({ designatedActionId, readOnly = false }) => {
   }
   const save = useCallback(
     (submit = false) => {
+      if (autoSaveTimer.current) {
+        clearTimeout(autoSaveTimer.current)
+        autoSaveTimer.current = null
+      }
       const snapshot = { ...latest.current }
       setSaving(true)
       setFailure('')
@@ -176,13 +201,21 @@ export const ProponentEOC = ({ designatedActionId, readOnly = false }) => {
     },
     [api, url, declaration, queryClient, queryKey, refetch]
   )
+  const cancelAutoSave = useCallback(() => {
+    if (autoSaveTimer.current) {
+      clearTimeout(autoSaveTimer.current)
+      autoSaveTimer.current = null
+    }
+  }, [])
   useEffect(() => {
     if (locked || !dirty.current) return
-    const timer = setTimeout(() => {
+    cancelAutoSave()
+    autoSaveTimer.current = setTimeout(() => {
+      autoSaveTimer.current = null
       save().catch(() => {})
     }, 1000)
-    return () => clearTimeout(timer)
-  }, [content, locked, save])
+    return cancelAutoSave
+  }, [content, locked, save, cancelAutoSave])
   useEffect(() => {
     const warn = (event) => {
       if (dirty.current) {
@@ -205,9 +238,6 @@ export const ProponentEOC = ({ designatedActionId, readOnly = false }) => {
         Designated action does not belong to this agreement.
       </Alert>
     )
-  const sections = data.requirements.length
-    ? data.requirements
-    : [{ id: 'completion', title: 'Evidence of completion' }]
   const change = (key, value) => {
     dirty.current = true
     latest.current = { ...latest.current, [key]: value }
@@ -257,6 +287,16 @@ export const ProponentEOC = ({ designatedActionId, readOnly = false }) => {
                 : '—'}
             </BCTypography>
           </Stack>
+          {data.revisionRequest && (
+            <Alert severity="info" sx={{ mb: 3 }}>
+              <BCTypography component="p" sx={{ fontWeight: 700 }}>
+                Revision requested: {data.revisionRequest.eventType}
+              </BCTypography>
+              <BCTypography component="p">
+                {data.revisionRequest.message}
+              </BCTypography>
+            </Alert>
+          )}
           <DocumentTree
             parentType="designatedAction"
             parentID={designatedActionId}

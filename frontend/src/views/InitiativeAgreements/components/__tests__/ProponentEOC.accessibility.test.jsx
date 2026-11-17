@@ -57,6 +57,11 @@ test('names the actual Quill formatting toolbar and its controls', async ({
   await screen.findByText('Organization: Example company')
   fireEvent.click(screen.getByRole('button', { name: 'Expand all' }))
 
+  const textbox = await screen.findByRole('textbox', {
+    name: 'Summary of work completed'
+  })
+  expect(textbox).toHaveAttribute('aria-multiline', 'true')
+
   const toolbar = await screen.findByRole('toolbar', {
     name: 'Evidence formatting toolbar'
   })

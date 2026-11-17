@@ -1678,6 +1678,53 @@ class InitiativeAgreementServices:
                 return entry.designated_action_history_id
         return None
 
+    def _eoc_revision_request(self, action_history, submissions):
+        """Return only the outstanding, proponent-facing reason to revise."""
+        prior = next((row for row in submissions if row.status != "Draft"), None)
+        prior_event = self._submission_event(prior) if prior is not None else None
+        prior_snapshot = prior_event.snapshot or {} if prior_event else {}
+        consumed_info_request_id = (
+            prior_snapshot.get("da_information_request_history_id") or 0
+        )
+        consumed_return_id = prior_snapshot.get("da_return_history_id") or 0
+
+        candidates = []
+        for entry in action_history:
+            history_id = entry.designated_action_history_id
+            if (
+                entry.event == EVENT_INFORMATION_REQUESTED
+                and history_id > consumed_info_request_id
+            ):
+                candidates.append((entry, "Information requested"))
+            elif (
+                entry.event == "STATUS_CHANGE"
+                and getattr(getattr(entry, "status", None), "status", None)
+                == "Returned"
+                and history_id > consumed_return_id
+            ):
+                candidates.append((entry, "Returned"))
+
+        if not candidates:
+            return None
+        event, event_type = max(
+            candidates,
+            key=lambda candidate: candidate[0].designated_action_history_id,
+        )
+        # The information-request snapshot also contains internal evidence
+        # reviews. Only its comment is exposed, normalized as plain text.
+        message = unescape(
+            sanitize_comment_text(
+                (getattr(event, "snapshot", None) or {}).get("comment")
+            )
+        )
+        if not message:
+            return None
+        return {
+            "event_type": event_type,
+            "requested_at": getattr(event, "create_date", None),
+            "message": message,
+        }
+
     async def get_eoc(self, designated_action_id: int):
         from lcfs.web.api.initiative_agreement.schema import EOCSchema
 
@@ -1757,6 +1804,11 @@ class InitiativeAgreementServices:
                 {"id": key, "title": label} for key, label in self.EOC_FIELDS.items()
             ],
             submissions=history,
+            revision_request=(
+                self._eoc_revision_request(action._eoc_action_history, rows)
+                if editable
+                else None
+            ),
         )
 
     async def validate_eoc_write(self, designated_action_id: int):

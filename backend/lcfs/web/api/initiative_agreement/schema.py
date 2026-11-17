@@ -443,9 +443,16 @@ class EOCSaveSchema(BaseSchema):
     declaration_accepted: bool = False
 
 
+class EOCRevisionRequestSchema(BaseSchema):
+    event_type: str
+    requested_at: Optional[datetime] = None
+    message: str
+
+
 class EOCSchema(BaseSchema):
     submissions: List[dict] = Field(default_factory=list)
     can_edit: bool = False
+    revision_request: Optional[EOCRevisionRequestSchema] = None
     da_status: str
     initiative_agreement_id: int
     ia_code: Optional[str] = None
