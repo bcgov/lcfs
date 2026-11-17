@@ -800,6 +800,16 @@ class DocumentService:
             raise DataNotFoundException(
                 f"Document {document_id} does not belong to {parent_type} {parent_id}"
             )
+        # Lock the row and reload it, so when two decisions arrive together
+        # only the first still finds the file waiting
+        document = (
+            await self.db.execute(
+                select(Document)
+                .where(Document.document_id == document.document_id)
+                .with_for_update()
+                .execution_options(populate_existing=True)
+            )
+        ).scalar_one()
         if document.scan_status != DocumentScanStatusEnum.pending_approval:
             raise HTTPException(
                 status_code=400, detail="This file isn't waiting for approval."

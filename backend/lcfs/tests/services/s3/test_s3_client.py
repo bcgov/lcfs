@@ -6,6 +6,7 @@ from io import BytesIO
 
 import pytest
 from fastapi import UploadFile, HTTPException
+from sqlalchemy.dialects import postgresql
 from starlette.responses import StreamingResponse
 from botocore.exceptions import ClientError
 
@@ -1045,6 +1046,12 @@ async def test_blocked_macro_workbook_is_not_stored(
     document_service.s3_client.upload_fileobj.assert_not_called()
 
 
+def _locked_row(document):
+    result = MagicMock()
+    result.scalar_one.return_value = document
+    return result
+
+
 @pytest.mark.anyio
 @pytest.mark.parametrize("approve", [True, False])
 async def test_review_scan_records_the_decision(document_service, approve):
@@ -1052,6 +1059,7 @@ async def test_review_scan_records_the_decision(document_service, approve):
         document_id=7, scan_status=DocumentScanStatusEnum.pending_approval
     )
     document_service.get_by_id_and_type = AsyncMock(return_value=[document])
+    document_service.db.execute = AsyncMock(return_value=_locked_row(document))
     document_service.db.refresh = AsyncMock(side_effect=lambda x: x)
     admin = MagicMock(keycloak_username="admin1")
 
@@ -1068,6 +1076,7 @@ async def test_review_scan_records_the_decision(document_service, approve):
 async def test_review_scan_only_for_files_waiting_for_approval(document_service):
     document = Document(document_id=7, scan_status=DocumentScanStatusEnum.clean)
     document_service.get_by_id_and_type = AsyncMock(return_value=[document])
+    document_service.db.execute = AsyncMock(return_value=_locked_row(document))
 
     with pytest.raises(HTTPException) as exc_info:
         await document_service.review_scan(
@@ -1085,3 +1094,27 @@ async def test_review_scan_scoped_to_the_parent(document_service):
         await document_service.review_scan(
             7, 5, "ci_application", True, MagicMock(keycloak_username="admin1")
         )
+
+
+@pytest.mark.anyio
+async def test_review_scan_rechecks_the_locked_row(document_service):
+    # The parent's listing still shows the file waiting, but another
+    # administrator decided it first: the locked, reloaded row wins.
+    listed = Document(
+        document_id=7, scan_status=DocumentScanStatusEnum.pending_approval
+    )
+    decided = Document(document_id=7, scan_status=DocumentScanStatusEnum.rejected)
+    document_service.get_by_id_and_type = AsyncMock(return_value=[listed])
+    document_service.db.execute = AsyncMock(return_value=_locked_row(decided))
+
+    with pytest.raises(HTTPException) as exc_info:
+        await document_service.review_scan(
+            7, 5, "ci_application", True, MagicMock(keycloak_username="admin2")
+        )
+
+    assert exc_info.value.status_code == 400
+    assert decided.scan_status == DocumentScanStatusEnum.rejected
+    statement = document_service.db.execute.await_args.args[0]
+    sql = str(statement.compile(dialect=postgresql.dialect()))
+    assert sql.rstrip().endswith("FOR UPDATE")
+    assert statement.get_execution_options()["populate_existing"] is True
