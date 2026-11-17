@@ -77,6 +77,11 @@ def upgrade():
             primary_key=True,
         ),
     )
+    op.create_index(
+        "ix_da_eoc_submission_document_association_document_id",
+        "da_eoc_submission_document_association",
+        ["document_id"],
+    )
     op.create_table(
         "da_eoc_submission_history",
         sa.Column("da_eoc_submission_history_id", sa.Integer(), primary_key=True),

@@ -26,6 +26,9 @@ da_eoc_submission_document_association = Table(
     Column(
         "document_id", Integer, ForeignKey("document.document_id"), primary_key=True
     ),
+    Index(
+        "ix_da_eoc_submission_document_association_document_id", "document_id"
+    ),
 )
 
 
