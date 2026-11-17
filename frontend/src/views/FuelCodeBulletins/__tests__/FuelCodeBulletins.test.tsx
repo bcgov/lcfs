@@ -6,6 +6,7 @@ import type { ComponentType } from 'react'
 import FuelCodeBulletins from '../FuelCodeBulletins'
 import { CurrentFuelCodes } from '../components/CurrentFuelCodes'
 import { ArchivedFuelCodes } from '../components/ArchivedFuelCodes'
+import bulletinsEn from '@/assets/locales/en/bulletins.json'
 
 const mockUseFuelCodeBulletins = vi.fn()
 const mockDownloadMutate = vi.fn()
@@ -58,11 +59,12 @@ vi.mock('@/views/CarbonIntensity/components/FuelCodesTabs', () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, options?: Record<string, string>) => {
+    t: (key: string) => {
       const translations: Record<string, string> = {
         'tabs.current': 'Current',
         'tabs.archived': 'Archived',
         'current.title': 'Approved carbon intensities - Current',
+        'current.description': bulletinsEn.current.description,
         'archived.title': 'Approved carbon intensities - Archived',
         'archived.description': 'Archived description',
         'common.fuelCodePrefix':
@@ -79,9 +81,6 @@ vi.mock('react-i18next', () => ({
         'columns.effectiveDate': 'Effective date',
         'columns.expiryDate': 'Expiry date'
       }
-      if (key === 'current.description') {
-        return `Current description after ${options?.cutoffLabel}`
-      }
       return translations[key] || key
     }
   })
@@ -90,8 +89,16 @@ vi.mock('react-i18next', () => ({
 vi.mock('@/hooks/useFuelCode', () => ({
   useFuelCodeBulletins: (
     bulletinType: 'current' | 'archived',
-    paginationOptions: unknown
-  ) => mockUseFuelCodeBulletins(bulletinType, paginationOptions),
+    paginationOptions: unknown,
+    options: unknown,
+    isGovernment: boolean
+  ) =>
+    mockUseFuelCodeBulletins(
+      bulletinType,
+      paginationOptions,
+      options,
+      isGovernment
+    ),
   useDownloadFuelCodeBulletins: () => ({
     mutateAsync: mockDownloadMutate
   }),
@@ -200,7 +207,9 @@ describe('FuelCodeBulletins UI', () => {
     ).toBeInTheDocument()
     expect(mockUseFuelCodeBulletins).toHaveBeenCalledWith(
       'archived',
-      expect.any(Object)
+      expect.any(Object),
+      {},
+      false
     )
   })
 
@@ -228,7 +237,9 @@ describe('FuelCodeBulletins UI', () => {
         size: 25,
         sortOrders: [],
         filters: []
-      })
+      }),
+      {},
+      false
     )
   })
 
@@ -295,6 +306,26 @@ describe('FuelCodeBulletins UI', () => {
     })
   })
 
+  for (const [bulletinType, Component] of [
+    ['current', CurrentFuelCodes],
+    ['archived', ArchivedFuelCodes]
+  ] as const) {
+    test(`requests government bulletin data for ${bulletinType}`, ({
+      render,
+      theme,
+      router
+    }) => {
+      mockHasAnyRole.mockReturnValue(true)
+      render(<Component />, [theme, router])
+      expect(mockUseFuelCodeBulletins).toHaveBeenCalledWith(
+        bulletinType,
+        expect.any(Object),
+        {},
+        true
+      )
+    })
+  }
+
   test('updates pagination options after grid pagination change', async ({
     render,
     theme,
@@ -309,21 +340,27 @@ describe('FuelCodeBulletins UI', () => {
     await waitFor(() => {
       expect(mockUseFuelCodeBulletins).toHaveBeenCalledWith(
         'current',
-        expect.objectContaining({ page: 2, size: 50 })
+        expect.objectContaining({ page: 2, size: 50 }),
+        {},
+        false
       )
     })
   })
 
-  test('renders current cutoff date in description', ({
+  test('explains reporting-year retention without extending validity', ({
     render,
     theme,
     router
   }) => {
     render(<CurrentFuelCodes />, [theme, router])
 
-    expect(
-      screen.getByText('Current description after March 31, 2026')
-    ).toBeInTheDocument()
+    const description = screen.getByText(bulletinsEn.current.description)
+    expect(description).toHaveTextContent(
+      'Codes that expire during a calendar year remain on this list through March 31 of the following year, then move to the archived list.'
+    )
+    expect(description).toHaveTextContent(
+      "Inclusion on this list does not extend a fuel code's validity."
+    )
   })
 
   test('renders API error message when archived bulletin fails', ({

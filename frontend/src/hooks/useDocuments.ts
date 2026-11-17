@@ -119,6 +119,10 @@ export const useUploadDocument = (
         // Invalidate any parent entity that might display document counts or status
         if (parentType === 'compliance_report') {
           invalidateComplianceReportRelatedQueries(queryClient, parentID)
+        } else if (parentType === 'ci_application') {
+          queryClient.invalidateQueries({
+            queryKey: ['ci-application', String(parentID)]
+          })
         }
       }
 
@@ -155,9 +159,14 @@ export const useDeleteDocument = (
         throw new Error('Parent ID and Parent Type are required')
       }
 
-      const path = apiRoutes.getDocument
+      const path = (
+        parentType === 'designatedAction'
+          ? apiRoutes.documentFolderDeleteDocument
+          : apiRoutes.getDocument
+      )
         .replace(':parentID', String(parentID ?? ''))
         .replace(':parentType', String(parentType ?? ''))
+        .replace(':documentId', String(documentID ?? ''))
         .replace(':documentID', String(documentID ?? ''))
 
       return await client.delete(path)
@@ -167,10 +176,25 @@ export const useDeleteDocument = (
       queryClient.invalidateQueries({
         queryKey: ['documents', parentType, parentID]
       })
+      if (parentType === 'designatedAction') {
+        queryClient.invalidateQueries({
+          queryKey: ['document-tree', parentType, String(parentID)]
+        })
+        queryClient.invalidateQueries({
+          queryKey: ['document-tree-deleted', parentType, String(parentID)]
+        })
+        queryClient.invalidateQueries({
+          queryKey: ['initiative-agreements', 'document-restore-targets']
+        })
+      }
 
       if (invalidateRelatedQueries) {
         if (parentType === 'compliance_report') {
           invalidateComplianceReportRelatedQueries(queryClient, parentID)
+        } else if (parentType === 'ci_application') {
+          queryClient.invalidateQueries({
+            queryKey: ['ci-application', String(parentID)]
+          })
         }
       }
 
@@ -395,6 +419,10 @@ export const useUpdateDocument = (
       if (invalidateRelatedQueries) {
         if (parentType === 'compliance_report') {
           invalidateComplianceReportRelatedQueries(queryClient, parentID)
+        } else if (parentType === 'ci_application') {
+          queryClient.invalidateQueries({
+            queryKey: ['ci-application', String(parentID)]
+          })
         }
       }
 

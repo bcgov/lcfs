@@ -279,6 +279,9 @@ export const DateEditor = ({
             }
           },
           popper: {
+            // Tells AG Grid the calendar belongs to the cell editor, so grids
+            // with stopEditingWhenCellsLoseFocus keep the editor open.
+            className: 'ag-custom-component-popup',
             placement: 'bottom-start',
             onMouseDown: stopPropagation,
             onClick: stopPropagation,

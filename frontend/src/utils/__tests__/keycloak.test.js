@@ -1,5 +1,8 @@
 // utils/__tests__/keycloak.test.js
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vite-plus/test'
+import { CONFIG } from '@/constants/config'
+
+const originalLocalAuth = CONFIG.KEYCLOAK.LOCAL_AUTH
 
 // Mock Keycloak class first
 vi.mock('keycloak-js', () => {
@@ -18,6 +21,7 @@ vi.mock('keycloak-js', () => {
           idToken: 'mock-id-token'
         },
         updateToken: mockUpdateToken,
+        logout: vi.fn().mockResolvedValue(undefined),
         endpoints: {
           logout: () => 'mock-logout-endpoint'
         }
@@ -35,9 +39,11 @@ describe('Keycloak Utils', () => {
   let mockClearTimeout
 
   beforeEach(() => {
+    CONFIG.KEYCLOAK.LOCAL_AUTH = false
     // Reset mocks before each test
     vi.resetAllMocks()
     vi.restoreAllMocks()
+    getKeycloak().logout.mockResolvedValue(undefined)
 
     // Mock console methods
     vi.spyOn(console, 'log').mockImplementation(() => {})
@@ -88,6 +94,10 @@ describe('Keycloak Utils', () => {
   afterEach(() => {
     // Restore all mocks
     vi.restoreAllMocks()
+    CONFIG.KEYCLOAK.LOCAL_AUTH = originalLocalAuth
+    const keycloak = getKeycloak()
+    keycloak.idToken = 'mock-id-token'
+    keycloak.tokenParsed = { ...keycloak.tokenParsed, idToken: 'mock-id-token' }
   })
 
   describe('getKeycloak', () => {
@@ -112,7 +122,7 @@ describe('Keycloak Utils', () => {
       expect(localStorage.clear).toHaveBeenCalled()
     })
 
-    it('should handle missing idToken', () => {
+    it('uses the shared logout flow when idToken is missing', () => {
       // Mock the case where idToken is missing
       const tempKeycloak = getKeycloak()
       Object.defineProperty(tempKeycloak, 'idToken', { value: null })
@@ -124,8 +134,18 @@ describe('Keycloak Utils', () => {
       vi.spyOn(console, 'error')
       logout()
 
-      // Verify that console.error was called
-      expect(console.error).toHaveBeenCalled()
+      expect(console.error).toHaveBeenCalledWith('idToken is not available')
+    })
+
+    it('uses the local Keycloak logout callback', () => {
+      CONFIG.KEYCLOAK.LOCAL_AUTH = true
+      const tempKeycloak = getKeycloak()
+
+      logout()
+
+      expect(tempKeycloak.logout).toHaveBeenCalledWith({
+        redirectUri: CONFIG.KEYCLOAK.POST_LOGOUT_URL
+      })
     })
   })
 })

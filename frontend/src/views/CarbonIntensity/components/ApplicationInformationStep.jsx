@@ -21,6 +21,7 @@ import {
   parseISO
 } from 'date-fns'
 import { debounce } from 'lodash'
+import isEqual from 'lodash/isEqual'
 import * as Yup from 'yup'
 import { yupResolver } from '@hookform/resolvers/yup'
 import Grid2 from '@mui/material/Grid2'
@@ -234,9 +235,17 @@ export const ApplicationInformationStep = forwardRef(
     })
 
     const { control, handleSubmit, reset, setValue, formState } = form
+    const previousSeed = useRef(null)
 
     useEffect(() => {
-      reset(toFormValues(ciApplication))
+      const seed = {
+        id: ciApplication?.ciApplicationId,
+        values: toFormValues(ciApplication)
+      }
+      if (!isEqual(previousSeed.current, seed)) {
+        previousSeed.current = seed
+        reset(seed.values)
+      }
     }, [ciApplication, reset])
 
     useImperativeHandle(ref, () => ({

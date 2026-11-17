@@ -167,6 +167,63 @@ export const useGetAllocationAgreementsList = (
   })
 }
 
+/**
+ * IDIR index of allocation agreements across all non-Draft compliance report
+ * versions. Filtering, sorting and paging happen on the server;
+ * `organizationId` matches the reporting organization or the transaction
+ * partner's legal name.
+ */
+export const useGetAllocationAgreementsIndex = (
+  {
+    page = 1,
+    size = 25,
+    sortOrders = [],
+    filters = [],
+    organizationId
+  }: PaginationParams = {},
+  options: QueryOptions<unknown> = {}
+) => {
+  const client = useApiService()
+
+  const {
+    staleTime = DEFAULT_STALE_TIME,
+    gcTime = DEFAULT_CACHE_TIME,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: [
+      'allocation-agreements',
+      'index',
+      page,
+      size,
+      sortOrders,
+      filters,
+      organizationId ?? null
+    ],
+    queryFn: async () => {
+      const response = await client.post(
+        apiRoutes.getAllocationAgreementsIndex,
+        {
+          page,
+          size,
+          sortOrders,
+          filters,
+          organizationId: organizationId ?? null
+        }
+      )
+      return response.data
+    },
+    enabled,
+    staleTime,
+    gcTime,
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...restOptions
+  })
+}
+
 export const useSaveAllocationAgreement = (
   params: { complianceReportId: number | string },
   options: ExtMutationOptions<unknown, Record<string, unknown>> = {}

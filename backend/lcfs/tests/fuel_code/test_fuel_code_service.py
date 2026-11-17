@@ -966,3 +966,16 @@ async def test_status_change_rejects_a_draft_the_legacy_pages_never_started():
     )
     repo_mock.update_fuel_code.assert_not_called()
     repo_mock.create_fuel_code_history.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("today", "expected_start"),
+    [
+        (date(2027, 3, 31), date(2026, 3, 31)),
+        (date(2027, 4, 1), date(2027, 3, 31)),
+    ],
+)
+def test_bulletin_compliance_period_rolls_over_on_april_first(today, expected_start):
+    assert (
+        FuelCodeServices._get_bulletin_compliance_period_start(today) == expected_start
+    )

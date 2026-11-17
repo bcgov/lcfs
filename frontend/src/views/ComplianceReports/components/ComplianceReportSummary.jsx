@@ -28,7 +28,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { roles } from '@/constants/roles'
 import { useOrganizationSnapshot } from '@/hooks/useOrganizationSnapshot.js'
 import { CompareReports } from '@/views/CompareReports/CompareReports.jsx'
-import { TogglePanel } from '@/components/TogglePanel.jsx'
+import { TogglePanel } from '@/components/TogglePanel'
 import ExpandMore from '@mui/icons-material/ExpandMore'
 import { SUMMARY } from '@/constants/common'
 
