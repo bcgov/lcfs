@@ -1,3 +1,4 @@
+import { createElement, type ReactNode } from 'react'
 import { renderHook } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vite-plus/test'
 import { useAuth } from '../useAuth'
@@ -14,6 +15,7 @@ describe('useAuth', () => {
 
   it('should return context when used within AuthProvider', () => {
     const mockContextValue = {
+      refreshToken: vi.fn(),
       keycloak: {
         authenticated: true,
         token: 'mock-token',
@@ -22,7 +24,7 @@ describe('useAuth', () => {
       }
     }
 
-    const wrapper = ({ children }) => (
+    const wrapper = ({ children }: { children: ReactNode }) => (
       <KeycloakContext.Provider value={mockContextValue}>
         {children}
       </KeycloakContext.Provider>
@@ -49,7 +51,7 @@ describe('useAuth', () => {
     const originalError = console.error
     console.error = vi.fn()
 
-    const wrapper = ({ children }) => (
+    const wrapper = ({ children }: { children: ReactNode }) => (
       <KeycloakContext.Provider value={null}>
         {children}
       </KeycloakContext.Provider>
@@ -66,11 +68,12 @@ describe('useAuth', () => {
     const originalError = console.error
     console.error = vi.fn()
 
-    const wrapper = ({ children }) => (
-      <KeycloakContext.Provider value={undefined}>
-        {children}
-      </KeycloakContext.Provider>
-    )
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      Reflect.apply(createElement, null, [
+        KeycloakContext.Provider,
+        { value: undefined },
+        children
+      ])
 
     expect(() => {
       renderHook(() => useAuth(), { wrapper })

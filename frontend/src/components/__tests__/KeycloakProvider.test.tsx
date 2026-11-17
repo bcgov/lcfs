@@ -2,7 +2,7 @@ import { KeycloakProvider } from '@/components/KeycloakProvider'
 import { KeycloakContext } from '@/components/KeycloakContext'
 import { render, screen, act } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vite-plus/test'
-import { useContext } from 'react'
+import { useContext, type ReactNode } from 'react'
 
 // Mock all dependencies first
 vi.mock('@/utils/keycloak', () => ({
@@ -27,7 +27,7 @@ vi.mock('axios', () => ({
 }))
 
 vi.mock('@react-keycloak/web', () => ({
-  ReactKeycloakProvider: ({ children }) => children
+  ReactKeycloakProvider: ({ children }: { children: ReactNode }) => children
 }))
 
 vi.mock('@/components/Loading', () => ({
@@ -68,7 +68,7 @@ const TestConsumer = () => {
 }
 
 describe('KeycloakProvider', () => {
-  let originalLocalStorage
+  let originalLocalStorage: Storage
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -77,6 +77,8 @@ describe('KeycloakProvider', () => {
     // Mock localStorage
     originalLocalStorage = global.localStorage
     global.localStorage = {
+      length: 0,
+      key: vi.fn(),
       getItem: vi.fn(),
       setItem: vi.fn(),
       removeItem: vi.fn(),

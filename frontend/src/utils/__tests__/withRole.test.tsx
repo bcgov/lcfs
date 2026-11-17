@@ -1,15 +1,17 @@
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vite-plus/test'
-import withRole from '../withRole.jsx'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
+import withRole from '../withRole'
+const useCurrentUser = vi.hoisted(() => vi.fn())
 
 // Mock the useCurrentUser hook
-vi.mock('@/hooks/useCurrentUser')
+vi.mock('@/hooks/useCurrentUser', () => ({ useCurrentUser }))
 
 // Mock Navigate component
 vi.mock('react-router-dom', () => ({
   ...vi.importActual('react-router-dom'),
-  Navigate: ({ to }) => <div data-test="navigate">Navigate to {to}</div>
+  Navigate: ({ to }: { to: string }) => (
+    <div data-test="navigate">Navigate to {to}</div>
+  )
 }))
 
 // Define a mock component to be wrapped
