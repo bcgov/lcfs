@@ -24,11 +24,13 @@ There are two engines:
 
 | Scope | Default | Setting | Applied by |
 |---|---|---|---|
-| API requests (`app` engine) | 30 s | `LCFS_DB_STATEMENT_TIMEOUT_MS` | asyncpg `server_settings` startup parameter on every connection |
+| API requests (`app` engine) | 30 s | `LCFS_DB_STATEMENT_TIMEOUT_MS` | `SET LOCAL` at the start of every transaction |
 | Export / report endpoints | 5 min | `LCFS_DB_EXPORT_STATEMENT_TIMEOUT_MS` | `SET LOCAL` for the request's transaction (see below) |
-| `lifetime` engine (auth + scheduled jobs) | unlimited (`0`) | `LCFS_DB_BACKGROUND_STATEMENT_TIMEOUT_MS` | asyncpg `server_settings` |
+| `lifetime` engine (auth + scheduled jobs) | unlimited (`0`) | `LCFS_DB_BACKGROUND_STATEMENT_TIMEOUT_MS` | `SET LOCAL` at the start of every transaction |
 
-A value of `0` disables the timeout; it is sent to PostgreSQL as an explicit `statement_timeout=0`, so it also overrides any server/database/role level default. The export override is skipped when `LCFS_DB_STATEMENT_TIMEOUT_MS=0`, or when the export value is nonzero and no larger than the normal one, so an export can never get a *tighter* limit than a normal request (an export value of `0` stays unlimited). Invalid values (negative timeouts, a budget below 1, a warn ratio outside `(0, 1]`) are rejected at startup. When a statement exceeds the limit PostgreSQL cancels it (`canceling statement due to statement timeout`, SQLSTATE `57014`) and the request fails with a server error; the transaction is rolled back and the connection is released.
+The engine defaults come from `register_statement_timeout` in `backend/lcfs/db/engine_config.py`: a SQLAlchemy `begin` listener that runs `SET LOCAL statement_timeout = <ms>` as the first statement of each transaction. They are deliberately **not** sent as asyncpg `server_settings` startup parameters: the deployed environments connect through PgBouncer, which rejects startup parameters it does not track (`unsupported startup parameter: statement_timeout`), and that fails every connection.
+
+A value of `0` disables the timeout; it is sent to PostgreSQL as an explicit `statement_timeout = 0`, so it also overrides any server/database/role level default. The export override is skipped when `LCFS_DB_STATEMENT_TIMEOUT_MS=0`, or when the export value is nonzero and no larger than the normal one, so an export can never get a *tighter* limit than a normal request (an export value of `0` stays unlimited). Invalid values (negative timeouts, a budget below 1, a warn ratio outside `(0, 1]`) are rejected at startup. When a statement exceeds the limit PostgreSQL cancels it (`canceling statement due to statement timeout`, SQLSTATE `57014`) and the request fails with a server error; the transaction is rolled back and the connection is released.
 
 The `lifetime` engine is intentionally unlimited by default: scheduled maintenance jobs such as `REINDEX TABLE CONCURRENTLY` legitimately run for minutes. Set `LCFS_DB_BACKGROUND_STATEMENT_TIMEOUT_MS` only if you have measured your longest job.
 
@@ -49,7 +51,7 @@ async def export_things(...):
     ...
 ```
 
-How it works: FastAPI resolves route-level `dependencies` *before* parameter dependencies, so `extended_statement_timeout` records the longer limit on `request.state` before `get_async_db_session` opens the session. The session then runs `set_config('statement_timeout', ..., true)` (equivalent to `SET LOCAL`), which lasts only for that transaction and cannot leak to another request.
+How it works: FastAPI resolves route-level `dependencies` *before* parameter dependencies, so `extended_statement_timeout` records the longer limit on `request.state` before `get_async_db_session` opens the session. The session then runs `set_config('statement_timeout', ..., true)` (equivalent to `SET LOCAL`) right after the engine default, so it wins for that transaction and cannot leak to another request.
 
 **When adding a new export or report endpoint, add this dependency**, otherwise it is limited to the 30 s default. A unit test (`TestExportRoutesUseExtendedTimeout`) fails if a route whose path ends in `/export`, contains `/export/` or is the FSE `update-template` is missing it.
 
@@ -60,8 +62,8 @@ Not extended (they remain at 30 s): blank Excel *template* downloads (they load 
 ### Notes and limits
 
 * The timeout is per **statement**, not per request. A request that runs many fast queries is not affected.
-* `SET LOCAL` is discarded at commit/rollback. Export paths must not commit mid-request; they currently do not.
-* If PgBouncer in transaction mode is introduced, the `server_settings` startup parameter must be allowed (`ignore_startup_parameters = statement_timeout`) or the default moved to a per-transaction `SET LOCAL`.
+* `SET LOCAL` is discarded at commit/rollback. The engine default is applied again to the next transaction, but the export override is not, so export paths must not commit mid-request; they currently do not.
+* Do not move the timeout back to a connection-level setting. PgBouncer's transaction pooling hands the server connection to another client after each transaction, so a session-level `SET` would leak, and a startup parameter is rejected outright. Adding it to PgBouncer's `ignore_startup_parameters` would only silence the error: the timeout would be dropped.
 * Migrations (`alembic`), the importers and scripts create their own engines and are not subject to these timeouts.
 
 ## Slow query logging
