@@ -867,6 +867,176 @@ ORDER BY cp.description DESC, org.name, ft.fuel_type, fc.category;
 GRANT SELECT ON vw_fuels_other_use_base TO basic_lcfs_reporting_role;
 
 -- ==========================================
+-- LCJFIP Application Base View
+-- ==========================================
+-- One row per LCJFIP application that has left Draft. Drafts are the
+-- applicant's private work and are excluded, as on the IDIR side of the portal.
+-- Labels are resolved from the lookups, totals are rolled up from the purchase
+-- details, and timestamps are converted to Pacific time. Applicant and fuel
+-- supplier contact details are deliberately left out.
+CREATE OR REPLACE VIEW vw_lcjfip_application_base AS
+WITH purchase_totals AS (
+    SELECT
+        pd.lcjfip_application_id,
+        COUNT(*) AS purchase_detail_count,
+        SUM(pd.estimated_volume) AS total_estimated_volume,
+        MIN(pd.anticipated_delivery_date) AS first_anticipated_delivery_date,
+        MAX(pd.anticipated_delivery_date) AS last_anticipated_delivery_date
+    FROM lcjfip_purchase_detail pd
+    GROUP BY pd.lcjfip_application_id
+),
+car_types AS (
+    SELECT
+        act.lcjfip_application_id,
+        STRING_AGG(ct.name, ', ' ORDER BY ct.display_order, ct.name) AS car_types
+    FROM lcjfip_application_car_type act
+    JOIN lcjfip_car_type ct ON ct.lcjfip_car_type_id = act.car_type_id
+    GROUP BY act.lcjfip_application_id
+),
+status_dates AS (
+    SELECT
+        h.lcjfip_application_id,
+        MIN(h.create_date) FILTER (WHERE s.status = 'Submitted') AS first_submitted_date,
+        MAX(h.create_date) FILTER (WHERE s.status IN ('Approved', 'Rejected')) AS decision_date
+    FROM lcjfip_application_history h
+    JOIN lcjfip_application_status s
+        ON s.lcjfip_application_status_id = h.status_id
+    GROUP BY h.lcjfip_application_id
+)
+SELECT
+    a.lcjfip_application_id,
+    'LCJFIP-' || a.lcjfip_application_id AS application_number,
+    st.status AS application_status,
+    a.application_period_id,
+    ap.description AS application_period,
+    a.organization_id,
+    org.name AS organization_name,
+    ct.car_types,
+    cert.name AS certificate_type,
+    io.name AS incentive_option,
+    io.incentive_type::text AS incentive_type,
+    CASE io.incentive_type
+        WHEN 'Cash' THEN 'CAD'
+        WHEN 'Credit' THEN 'Credits'
+    END AS incentive_unit,
+    a.estimated_carbon_intensity,
+    CASE
+        WHEN fc.fuel_code_id IS NOT NULL THEN fcp.prefix || fc.fuel_suffix
+    END AS fuel_code,
+    COALESCE(pt.purchase_detail_count, 0) AS purchase_detail_count,
+    pt.total_estimated_volume,
+    a.requested_incentive_volume,
+    a.estimated_incentive_amount,
+    CASE WHEN io.incentive_type = 'Cash' THEN a.estimated_incentive_amount END AS estimated_incentive_cad,
+    CASE WHEN io.incentive_type = 'Credit' THEN a.estimated_incentive_amount END AS estimated_incentive_credits,
+    rate.max_rate_per_litre AS max_incentive_rate_per_litre,
+    a.requested_incentive_volume * rate.max_rate_per_litre AS max_eligible_incentive_amount,
+    a.fuel_supplier_organization_id,
+    COALESCE(fso.name, a.fuel_supplier_legal_name) AS fuel_supplier_name,
+    (a.fuel_supplier_organization_id IS NOT NULL) AS fuel_supplier_is_lcfs_organization,
+    pt.first_anticipated_delivery_date,
+    pt.last_anticipated_delivery_date,
+    (sd.first_submitted_date AT TIME ZONE 'America/Vancouver') AS first_submitted_date,
+    (a.signed_date AT TIME ZONE 'America/Vancouver') AS last_submitted_date,
+    (sd.decision_date AT TIME ZONE 'America/Vancouver') AS decision_date,
+    (a.create_date AT TIME ZONE 'America/Vancouver') AS create_date,
+    (a.update_date AT TIME ZONE 'America/Vancouver') AS update_date
+FROM lcjfip_application a
+JOIN lcjfip_application_status st
+    ON st.lcjfip_application_status_id = a.status_id
+JOIN organization org
+    ON org.organization_id = a.organization_id
+LEFT JOIN lcjfip_application_period ap
+    ON ap.lcjfip_application_period_id = a.application_period_id
+LEFT JOIN lcjfip_certificate_type cert
+    ON cert.lcjfip_certificate_type_id = a.certificate_type_id
+LEFT JOIN lcjfip_incentive_option io
+    ON io.lcjfip_incentive_option_id = a.incentive_option_id
+LEFT JOIN fuel_code fc
+    ON fc.fuel_code_id = a.fuel_code_id
+LEFT JOIN fuel_code_prefix fcp
+    ON fcp.fuel_code_prefix_id = fc.prefix_id
+LEFT JOIN organization fso
+    ON fso.organization_id = a.fuel_supplier_organization_id
+LEFT JOIN purchase_totals pt
+    ON pt.lcjfip_application_id = a.lcjfip_application_id
+LEFT JOIN car_types ct
+    ON ct.lcjfip_application_id = a.lcjfip_application_id
+LEFT JOIN status_dates sd
+    ON sd.lcjfip_application_id = a.lcjfip_application_id
+-- The rate band in effect on the (Pacific) submission date.
+LEFT JOIN LATERAL (
+    SELECT r.max_rate_per_litre
+    FROM lcjfip_incentive_rate r
+    WHERE r.incentive_type = io.incentive_type
+      AND (r.ci_lower_bound IS NULL OR a.estimated_carbon_intensity > r.ci_lower_bound)
+      AND (r.ci_upper_bound IS NULL OR a.estimated_carbon_intensity <= r.ci_upper_bound)
+      AND (r.effective_date IS NULL
+           OR r.effective_date <= (COALESCE(a.signed_date, now()) AT TIME ZONE 'America/Vancouver')::date)
+      AND (r.expiration_date IS NULL
+           OR r.expiration_date >= (COALESCE(a.signed_date, now()) AT TIME ZONE 'America/Vancouver')::date)
+    ORDER BY r.effective_date DESC NULLS LAST
+    LIMIT 1
+) rate ON TRUE
+WHERE st.status <> 'Draft';
+
+GRANT SELECT ON vw_lcjfip_application_base TO basic_lcfs_reporting_role;
+
+-- ==========================================
+-- LCJFIP Purchase Detail Base View
+-- ==========================================
+-- One row per LCJF purchase detail on an LCJFIP application that has left
+-- Draft. A purchase can name several feedstock sources, so they are listed in
+-- one column: summing estimated_volume by feedstock would count blended
+-- purchases more than once.
+CREATE OR REPLACE VIEW vw_lcjfip_purchase_detail_base AS
+WITH feedstocks AS (
+    SELECT
+        pdf.lcjfip_purchase_detail_id,
+        STRING_AGG(fs.name, ', ' ORDER BY fs.display_order, fs.name) AS feedstock_sources,
+        COUNT(*) AS feedstock_source_count
+    FROM lcjfip_purchase_detail_feedstock pdf
+    JOIN lcjfip_feedstock_source fs
+        ON fs.lcjfip_feedstock_source_id = pdf.feedstock_source_id
+    GROUP BY pdf.lcjfip_purchase_detail_id
+)
+SELECT
+    pd.lcjfip_purchase_detail_id,
+    a.lcjfip_application_id,
+    'LCJFIP-' || a.lcjfip_application_id AS application_number,
+    st.status AS application_status,
+    a.application_period_id,
+    ap.description AS application_period,
+    a.organization_id,
+    org.name AS organization_name,
+    pd.estimated_volume,
+    pd.anticipated_delivery_date,
+    EXTRACT(YEAR FROM pd.anticipated_delivery_date)::int AS anticipated_delivery_year,
+    f.feedstock_sources,
+    COALESCE(f.feedstock_source_count, 0) AS feedstock_source_count,
+    pd.estimated_blend_percentage,
+    pd.assumed_jet_a_price,
+    pd.price_premium_from,
+    pd.price_premium_to,
+    pd.price_premium_to - pd.price_premium_from AS price_premium_range_width,
+    (pd.create_date AT TIME ZONE 'America/Vancouver') AS create_date,
+    (pd.update_date AT TIME ZONE 'America/Vancouver') AS update_date
+FROM lcjfip_purchase_detail pd
+JOIN lcjfip_application a
+    ON a.lcjfip_application_id = pd.lcjfip_application_id
+JOIN lcjfip_application_status st
+    ON st.lcjfip_application_status_id = a.status_id
+JOIN organization org
+    ON org.organization_id = a.organization_id
+LEFT JOIN lcjfip_application_period ap
+    ON ap.lcjfip_application_period_id = a.application_period_id
+LEFT JOIN feedstocks f
+    ON f.lcjfip_purchase_detail_id = pd.lcjfip_purchase_detail_id
+WHERE st.status <> 'Draft';
+
+GRANT SELECT ON vw_lcjfip_purchase_detail_base TO basic_lcfs_reporting_role;
+
+-- ==========================================
 -- LEVEL 2: Views depending on Level 1 views
 -- ==========================================
 

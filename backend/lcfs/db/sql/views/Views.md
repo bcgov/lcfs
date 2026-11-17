@@ -18,7 +18,9 @@ Level 1 (Base Tables Only)
 ├── vw_fuel_code_base
 ├── vw_compliance_reports_time_per_status
 ├── vw_notional_transfer_base
-└── vw_fuels_other_use_base
+├── vw_fuels_other_use_base
+├── vw_lcjfip_application_base
+└── vw_lcjfip_purchase_detail_base
 
 Level 2 (Depends on Level 1)
 ├── vw_compliance_report_analytics_base (depends on: v_compliance_report)
@@ -80,6 +82,13 @@ Level 3 (Depends on Level 2)
 -   **vw_bceid_daily_login_summary**: Daily BCeID login metrics
 -   **vw_bceid_user_statistics**: Individual user behavior analysis
 -   **vw_login_failures_analysis**: Login failure pattern analysis
+
+### LCJFIP Views
+
+Both views exclude Draft applications and leave out contact details. Timestamps are in Pacific time. See the wiki page `ERD-LCJFIP-Domain.md` for the data model.
+
+-   **vw_lcjfip_application_base**: One row per LCJFIP application, with purchase totals, incentive amounts split into CAD and credits, and the maximum rate by carbon intensity band
+-   **vw_lcjfip_purchase_detail_base**: One row per LCJF purchase detail, with feedstocks listed in one column (grouping volume by feedstock double counts blended purchases)
 
 ### Utility Views
 
