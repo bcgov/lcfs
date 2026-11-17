@@ -317,6 +317,8 @@ async def test_update_fuel_code_contacts_do_not_cross_ownership_boundaries(
     service = FuelCodeServices(repo=repo)
     code = create_mock_fuel_code_model()
     code.organization_id = old_org
+    # A draft the legacy pages started, not owned by a CI application (#5308)
+    code.history_records = [MagicMock(fuel_status_id=1)]
     sibling = SimpleNamespace(
         contact_name="Old Contact", contact_email="old@example.com"
     )
@@ -329,6 +331,7 @@ async def test_update_fuel_code_contacts_do_not_cross_ownership_boundaries(
     code.fuel_production_facility = facility
     code.fuel_production_facility_id = 12
     repo.get_fuel_code.return_value = code
+    repo.get_open_ci_application_id.return_value = None
     repo.get_organization_by_name.return_value = new_org
     repo.update_fuel_code.return_value = code
     repo.get_fuel_code_history.return_value = None
