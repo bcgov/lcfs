@@ -84,7 +84,7 @@ describe('DocumentTable', () => {
   }
 
   const createDragEvent = (type, files = []) => {
-    const event = new Event(type, { bubbles: true })
+    const event = new Event(type, { bubbles: true, cancelable: true })
     Object.defineProperty(event, 'dataTransfer', {
       value: {
         files,
@@ -956,8 +956,72 @@ describe('DocumentTable', () => {
       'Error uploading file:',
       expect.any(Object)
     )
+    expect(screen.getByTestId('file-upload-error-alert')).toHaveTextContent(
+      'report:documentUploadFailed'
+    )
+    expect(screen.queryByText('test.pdf')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Unsupported file type/)).not.toBeInTheDocument()
 
     consoleSpy.mockRestore()
+  })
+
+  test('shows API replacement guidance and retains the existing diagram', async ({
+    render,
+    theme,
+    router
+  }) => {
+    useDocuments.mockReturnValue({
+      data: [{ documentId: 7, fileName: 'existing.pdf', fileSize: 100 }],
+      isLoading: false
+    })
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    mockUploadMutate.mockImplementation((_file, { onError }) => {
+      onError({
+        response: {
+          status: 409,
+          data: { detail: 'Refresh before replacing this diagram.' }
+        }
+      })
+    })
+    render(
+      <DocumentTable
+        parentType="fuel_production_facility"
+        parentID="12"
+        maxFiles={1}
+      />,
+      [theme, router]
+    )
+    fireEvent.change(screen.getByTestId('file-input'), {
+      target: { files: [createMockFile('replacement.pdf')] }
+    })
+    fireEvent.click(await screen.findByText('Replace'))
+
+    expect(screen.getByTestId('file-upload-error-alert')).toHaveTextContent(
+      'Refresh before replacing this diagram.'
+    )
+    expect(screen.getByText('existing.pdf')).toBeInTheDocument()
+    expect(screen.queryByText('replacement.pdf')).not.toBeInTheDocument()
+    expect(mockDeleteMutate).not.toHaveBeenCalled()
+    consoleSpy.mockRestore()
+  })
+
+  test('prevents browser navigation when dropping during a pending single-file upload', ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<DocumentTable {...defaultProps} maxFiles={1} />, [theme, router])
+    fireEvent.change(screen.getByTestId('file-input'), {
+      target: { files: [createMockFile('first.pdf')] }
+    })
+    const drop = createDragEvent('drop', [createMockFile('second.pdf')])
+    const card = screen
+      .getByText('Click or drag one file here to upload')
+      .closest('.MuiCard-root')
+    fireEvent(card, drop)
+
+    expect(drop.defaultPrevented).toBe(true)
+    expect(mockUploadMutate).toHaveBeenCalledTimes(1)
   })
 
   test('should handle file size display correctly', async ({

@@ -58,22 +58,17 @@ class FuelProductionFacility(BaseModel, Auditable):
     organization = relationship(
         "Organization", back_populates="fuel_production_facilities"
     )
-    fuel_codes = relationship(
-        "FuelCode", back_populates="fuel_production_facility", lazy="selectin"
-    )
+    fuel_codes = relationship("FuelCode", back_populates="fuel_production_facility")
     ci_applications = relationship(
         "CIApplication",
         back_populates="fuel_production_facility",
-        lazy="selectin",
     )
     pathways = relationship(
         "Pathway",
         back_populates="fuel_production_facility",
-        lazy="selectin",
     )
     documents = relationship(
         "Document",
         secondary=fuel_production_facility_document_association,
         back_populates="fuel_production_facilities",
-        lazy="selectin",
     )

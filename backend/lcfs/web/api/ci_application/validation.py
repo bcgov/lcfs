@@ -63,7 +63,7 @@ class CIApplicationValidation:
     async def validate_facility_access(
         self, facility_id: int, write: bool = False
     ) -> FuelProductionFacility:
-        facility = await self.repo.get_facility_by_id(facility_id)
+        facility = await self.repo.get_facility_by_id(facility_id, for_update=write)
         if not facility:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -76,6 +76,14 @@ class CIApplicationValidation:
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Government users cannot modify supplier facility documents.",
                 )
+            if not (
+                await self.repo.has_non_draft_facility_application(facility_id)
+                or await self.repo.has_facility_fuel_codes(facility_id)
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Fuel production facility not found.",
+                )
             return facility
 
         user_org_id = (
@@ -87,6 +95,15 @@ class CIApplicationValidation:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Fuel production facility not found.",
+            )
+        if write and await self.repo.has_non_draft_facility_application(facility_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    "This facility's process flow diagram is locked because it is "
+                    "referenced by a submitted application. Create a new facility "
+                    "to use a different diagram."
+                ),
             )
         return facility
 

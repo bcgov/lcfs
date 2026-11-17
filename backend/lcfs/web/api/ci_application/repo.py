@@ -23,6 +23,7 @@ from sqlalchemy import (
     cast,
     desc,
     func,
+    or_,
     select,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -180,8 +181,7 @@ class CIApplicationRepository:
             .select_from(CIApplication)
             .join(
                 CIApplicationStatus,
-                CIApplication.status_id
-                == CIApplicationStatus.ci_application_status_id,
+                CIApplication.status_id == CIApplicationStatus.ci_application_status_id,
             )
             .where(CIApplicationStatus.status.in_(["Submitted", "Recommended"]))
             .group_by(CIApplicationStatus.status)
@@ -342,7 +342,8 @@ class CIApplicationRepository:
                 .selectinload(FuelCode.fuel_type),
                 selectinload(CIApplication.generated_fuel_code_associations)
                 .selectinload(CIApplicationFuelCodeAssociation.fuel_code)
-                .selectinload(FuelCode.fuel_production_facility),
+                .selectinload(FuelCode.fuel_production_facility)
+                .selectinload(FuelProductionFacility.fuel_codes),
                 selectinload(CIApplication.generated_fuel_code_associations)
                 .selectinload(CIApplicationFuelCodeAssociation.fuel_code)
                 .selectinload(FuelCode.feedstock_fuel_transport_modes)
@@ -401,16 +402,41 @@ class CIApplicationRepository:
 
     @repo_handler
     async def get_facility_by_id(
-        self, facility_id: int
+        self, facility_id: int, for_update: bool = False
     ) -> Optional[FuelProductionFacility]:
-        result = await self.db.execute(
+        query = (
             select(FuelProductionFacility)
             .options(*self._facility_load_options())
+            .where(FuelProductionFacility.fuel_production_facility_id == facility_id)
+        )
+        if for_update:
+            query = query.with_for_update(of=FuelProductionFacility)
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none()
+
+    @repo_handler
+    async def has_non_draft_facility_application(self, facility_id: int) -> bool:
+        query = (
+            select(CIApplication.ci_application_id)
+            .join(CIApplication.ci_application_status)
             .where(
-                FuelProductionFacility.fuel_production_facility_id == facility_id
+                or_(
+                    CIApplication.fuel_production_facility_id == facility_id,
+                    CIApplication.pathways.any(
+                        Pathway.fuel_production_facility_id == facility_id
+                    ),
+                ),
+                CIApplicationStatus.status != "Draft",
             )
         )
-        return result.scalar_one_or_none()
+        return bool(await self.db.scalar(select(query.exists())))
+
+    @repo_handler
+    async def has_facility_fuel_codes(self, facility_id: int) -> bool:
+        query = select(FuelCode.fuel_code_id).where(
+            FuelCode.fuel_production_facility_id == facility_id
+        )
+        return bool(await self.db.scalar(select(query.exists())))
 
     @repo_handler
     async def create_facility(

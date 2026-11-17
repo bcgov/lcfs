@@ -1,7 +1,7 @@
 """Add organization-linked fuel production facilities.
 
 Revision ID: 9e0e5741b48f
-Revises: a6f1c2d3e4b5
+Revises: 8b3e6a1c5d90
 Create Date: 2026-11-05 11:00:00.000000
 """
 
@@ -171,6 +171,7 @@ def upgrade() -> None:
           ON application.ci_application_id = assoc.ci_application_id
         WHERE code.fuel_code_id = assoc.fuel_code_id
           AND application.fuel_production_facility_id IS NOT NULL
+          AND code.organization_id = application.organization_id
           AND {_same_text("code.fuel_production_facility_city", "application.facility_city")}
           AND {_same_text("code.fuel_production_facility_province_state", "application.facility_province_state")}
           AND {_same_text("code.fuel_production_facility_country", "application.facility_country")}
@@ -187,6 +188,7 @@ def upgrade() -> None:
                 ON conflict_code.fuel_code_id = conflict_assoc.fuel_code_id
               WHERE conflict_application.organization_id
                     IS NOT DISTINCT FROM application.organization_id
+                AND conflict_code.organization_id = conflict_application.organization_id
                 AND {_same_text("conflict_application.facility_city", "application.facility_city")}
                 AND {_same_text("conflict_application.facility_province_state", "application.facility_province_state")}
                 AND {_same_text("conflict_application.facility_country", "application.facility_country")}

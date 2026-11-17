@@ -3,7 +3,7 @@
 from datetime import date, datetime, timezone
 from decimal import Decimal
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, call
 
 import pytest
 from fastapi import HTTPException, status
@@ -2044,6 +2044,44 @@ async def test_generate_fuel_codes_copies_details_from_linked_pathway_facility(
     assert generated.contact_email == "pathway@example.com"
 
 
+@pytest.mark.anyio
+@pytest.mark.parametrize("facility_source", ["application", "pathway", "legacy"])
+async def test_generate_fuel_codes_prefix_uses_the_effective_facility_country(
+    service, repo, mock_user, facility_source
+):
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _submitted_ci_for_generation("Low")
+    ci.facility_country = "Argentina"
+    facility = SimpleNamespace(
+        fuel_production_facility_id=77,
+        city="Example City",
+        province_state="BC",
+        country="Canada",
+        nameplate_capacity=100,
+        nameplate_capacity_unit=QuantityUnitsEnum.Litres,
+        contact_name="Example Contact",
+        contact_email="contact@example.com",
+    )
+    if facility_source == "application":
+        ci.fuel_production_facility = facility
+    elif facility_source == "pathway":
+        ci.pathways[0].fuel_production_facility = facility
+    _stub_generation_dependencies(service, repo, ci)
+    service.fuel_repo.get_fuel_code_prefixes.return_value.append(
+        SimpleNamespace(fuel_code_prefix_id=3, prefix="C-BCLCF")
+    )
+
+    await service.generate_fuel_codes(ci, mock_user)
+
+    generated = ci.generated_fuel_code_associations[0].fuel_code
+    if facility_source == "legacy":
+        assert generated.prefix_id == 1
+        assert generated.fuel_production_facility_country == "Argentina"
+    else:
+        assert generated.prefix_id == 3
+        assert generated.fuel_production_facility_country == "Canada"
+
+
 def _step4_payload(**overrides):
     from lcfs.web.api.ci_application.schema import CIApplicationStep4Schema
 
@@ -2396,6 +2434,31 @@ async def test_step4_submit_succeeds_when_documents_missing(service, repo, mock_
     assert ci.status_id == submitted.ci_application_status_id
     assert ci.action_type == ActionTypeEnum.UPDATE
     assert isinstance(result, CIApplicationSchema)
+
+
+@pytest.mark.anyio
+async def test_step4_submit_locks_application_and_pathway_diagrams_before_transition(
+    service, repo, mock_user
+):
+    _grant_signing_authority(mock_user)
+    ci = _draft_ci_with_pathways()
+    ci.fuel_production_facility_id = 77
+    ci.pathways = [
+        SimpleNamespace(fuel_production_facility_id=88),
+        SimpleNamespace(fuel_production_facility_id=77),
+    ]
+    repo.get_status_by_name.return_value = _status("Submitted", 2)
+    repo.get_by_id.return_value = _reloaded_ci(ci)
+
+    await service.submit_application(ci, _step4_payload(), mock_user)
+
+    assert repo.get_facility_by_id.await_args_list == [
+        call(77, for_update=True),
+        call(88, for_update=True),
+    ]
+    assert repo.mock_calls.index(call.get_facility_by_id(88, for_update=True)) < (
+        repo.mock_calls.index(call.update(ci))
+    )
 
 
 @pytest.mark.anyio

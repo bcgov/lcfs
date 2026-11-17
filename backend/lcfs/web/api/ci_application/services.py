@@ -1264,11 +1264,18 @@ class CIApplicationServices:
             list(getattr(ci_application, "pathways", None) or [])
         )
         for index, pathway in enumerate(current_pathways, start=1):
+            production_facility = getattr(
+                pathway, "fuel_production_facility", None
+            ) or getattr(ci_application, "fuel_production_facility", None)
             prefix_id, prefix_name, fuel_suffix = (
                 await self._resolve_generated_prefix_and_suffix(
                     pathway,
                     prefix_map,
-                    ci_application.facility_country,
+                    (
+                        production_facility.country
+                        if production_facility
+                        else ci_application.facility_country
+                    ),
                     reserved_suffixes_by_prefix,
                 )
             )
@@ -1295,9 +1302,6 @@ class CIApplicationServices:
                     detail="Unable to reserve a fuel code prefix and suffix.",
                 )
 
-            production_facility = getattr(
-                pathway, "fuel_production_facility", None
-            ) or getattr(ci_application, "fuel_production_facility", None)
             draft_fuel_code = FuelCode(
                 fuel_status_id=draft_status.fuel_code_status_id,
                 prefix_id=prefix_id,
@@ -2922,6 +2926,14 @@ class CIApplicationServices:
         )
         if not submitted_status:
             raise DataNotFoundException("Submitted status is not configured.")
+
+        # Serialize submission with diagram writes so the reviewed file stays fixed.
+        facility_ids = {
+            getattr(pathway, "fuel_production_facility_id", None)
+            for pathway in ci_application.pathways
+        } | {getattr(ci_application, "fuel_production_facility_id", None)}
+        for facility_id in sorted(facility_ids - {None}):
+            await self.repo.get_facility_by_id(facility_id, for_update=True)
 
         # Persist consultant info only when the signatory consented;
         # otherwise wipe any previously-saved values defensively.

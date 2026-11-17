@@ -46,6 +46,43 @@ const baseApplication = {
 describe('ApplicationSummary', () => {
   afterEach(cleanup)
 
+  test('displays the facility name and contacts separately from organization contacts', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    render(
+      <ApplicationSummary
+        ciApplication={{
+          ...baseApplication,
+          organization: {
+            name: 'Example Producer',
+            email: 'organization@example.com'
+          },
+          fuelProductionFacility: {
+            name: 'Example Facility',
+            contactName: 'Facility Contact',
+            contactEmail: 'facility@example.com'
+          }
+        }}
+      />,
+      [query, theme, localization, router]
+    )
+
+    expect(screen.getByTestId('ci-summary-facility-name')).toHaveTextContent(
+      'Example Facility'
+    )
+    expect(
+      screen.getByTestId('ci-summary-facility-contact-name')
+    ).toHaveTextContent('Facility Contact')
+    expect(
+      screen.getByTestId('ci-summary-facility-contact-email')
+    ).toHaveTextContent('facility@example.com')
+    expect(screen.getByText('organization@example.com')).toBeInTheDocument()
+  })
+
   test('shows the organization confirmation note only when requested (BCeID users)', ({
     render,
     query,

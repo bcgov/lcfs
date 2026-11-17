@@ -612,12 +612,27 @@ class FuelCodeServices:
 
         original_expiration_date = fuel_code.expiration_date
 
-        if fuel_code_data.company != fuel_code.company:
+        company_changed = fuel_code_data.company != fuel_code.company
+        previous_organization_id = fuel_code.organization_id
+        if company_changed:
             fuel_code.organization_id = await self.repo.get_organization_by_name(
                 fuel_code_data.company
             )
 
         facility = getattr(fuel_code, "fuel_production_facility", None)
+        if facility and (
+            facility.organization_id != fuel_code.organization_id
+            or (
+                company_changed
+                and (
+                    previous_organization_id != fuel_code.organization_id
+                    or fuel_code.organization_id is None
+                )
+            )
+        ):
+            fuel_code.fuel_production_facility = None
+            fuel_code.fuel_production_facility_id = None
+            facility = None
         contact_updates = {
             "contact_name": fuel_code_data.contact_name,
             "contact_email": fuel_code_data.contact_email,

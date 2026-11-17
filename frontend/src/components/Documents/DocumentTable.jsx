@@ -304,13 +304,10 @@ function DocumentTable({ parentType, parentID, maxFiles }) {
           )
         } else {
           console.error('Error uploading file:', error)
-          setFiles((prev) =>
-            prev.map((item) =>
-              item.documentId === fileId
-                ? { ...item, scanning: false, error: true }
-                : item
-            )
+          setErrorMessage(
+            error.response?.data?.detail || t('report:documentUploadFailed')
           )
+          setFiles((prev) => prev.filter((item) => item.documentId !== fileId))
         }
       }
     })
@@ -400,7 +397,7 @@ function DocumentTable({ parentType, parentID, maxFiles }) {
         onDragEnter={handleDragIn}
         onDragLeave={handleDragOut}
         onDragOver={handleDrag}
-        onDrop={singleFileUploadPending ? undefined : handleDrop}
+        onDrop={handleDrop}
         aria-disabled={singleFileUploadPending}
       >
         <CardContent>

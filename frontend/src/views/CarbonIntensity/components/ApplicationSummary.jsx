@@ -620,6 +620,21 @@ const ApplicationSummaryDetails = ({
               dataTest="ci-summary-reference-number"
             />
             <Labelled
+              label={t('carbonIntensity:step1.facilityName')}
+              value={ciApplication.fuelProductionFacility?.name}
+              dataTest="ci-summary-facility-name"
+            />
+            <Labelled
+              label={t('carbonIntensity:step1.contactName')}
+              value={ciApplication.fuelProductionFacility?.contactName}
+              dataTest="ci-summary-facility-contact-name"
+            />
+            <Labelled
+              label={t('carbonIntensity:step1.contactEmail')}
+              value={ciApplication.fuelProductionFacility?.contactEmail}
+              dataTest="ci-summary-facility-contact-email"
+            />
+            <Labelled
               label={t('carbonIntensity:summary.facilityLocation')}
               value={facilityLocation}
               dataTest="ci-summary-facility-location"

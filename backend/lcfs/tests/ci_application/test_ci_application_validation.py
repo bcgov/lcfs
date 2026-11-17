@@ -59,7 +59,10 @@ def _application(application_id=10, organization_id=1):
 
 @pytest.fixture
 def repo():
-    return AsyncMock()
+    repo = AsyncMock()
+    repo.has_non_draft_facility_application.return_value = False
+    repo.has_facility_fuel_codes.return_value = False
+    return repo
 
 
 def _validation(user, repo):
@@ -226,9 +229,52 @@ async def test_validate_facility_access_government_cannot_write(repo):
 async def test_validate_facility_access_analyst_can_read(repo):
     facility = SimpleNamespace(organization_id=1)
     repo.get_facility_by_id.return_value = facility
+    repo.has_non_draft_facility_application.return_value = True
     v = _validation(_user([RoleEnum.ANALYST], organization_id=None), repo)
 
     assert await v.validate_facility_access(12) is facility
+
+
+@pytest.mark.anyio
+async def test_validate_facility_access_hides_draft_only_diagrams_from_government(repo):
+    repo.get_facility_by_id.return_value = SimpleNamespace(organization_id=1)
+    v = _validation(_user([RoleEnum.ANALYST], organization_id=None), repo)
+
+    with pytest.raises(HTTPException) as exc:
+        await v.validate_facility_access(12)
+
+    assert exc.value.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.anyio
+async def test_validate_facility_access_allows_government_fuel_code_diagrams(repo):
+    facility = SimpleNamespace(organization_id=None)
+    repo.get_facility_by_id.return_value = facility
+    repo.has_facility_fuel_codes.return_value = True
+    v = _validation(_user([RoleEnum.ANALYST], organization_id=None), repo)
+
+    assert await v.validate_facility_access(12) is facility
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("submitted", [False, True])
+async def test_facility_diagram_writes_lock_and_preserve_submitted_diagrams(
+    repo, submitted
+):
+    facility = SimpleNamespace(organization_id=1)
+    repo.get_facility_by_id.return_value = facility
+    repo.has_non_draft_facility_application.return_value = submitted
+    v = _validation(_user([RoleEnum.CI_APPLICANT]), repo)
+
+    if submitted:
+        with pytest.raises(HTTPException) as exc:
+            await v.validate_facility_access(12, write=True)
+        assert exc.value.status_code == status.HTTP_403_FORBIDDEN
+        assert "locked" in exc.value.detail
+    else:
+        assert await v.validate_facility_access(12, write=True) is facility
+
+    repo.get_facility_by_id.assert_awaited_once_with(12, for_update=True)
 
 
 # ---------------------------------------------------------------------------

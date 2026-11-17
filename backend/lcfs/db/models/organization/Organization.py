@@ -225,7 +225,6 @@ class Organization(BaseModel, Auditable, EffectiveDates):
     fuel_production_facilities = relationship(
         "FuelProductionFacility",
         back_populates="organization",
-        lazy="selectin",
     )
     organization_internal_comments = relationship(
         "OrganizationInternalComment", back_populates="organization"
