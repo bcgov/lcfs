@@ -263,9 +263,13 @@ class InternalCommentService:
         required_roles = roles_by_entity.get(entity_type, ())
         if has_ia_role and entity_type == EntityTypeEnum.COMPLIANCE_REPORT:
             # The auth layer can include the base Supplier role with an IA
-            # role. Require the explicit compliance-report permission so IA
-            # access alone does not extend beyond DA threads.
-            required_roles = (RoleEnum.COMPLIANCE_REPORTING,)
+            # role. Require a specific non-IA permission so IA access alone
+            # does not extend beyond DA threads, while retaining CI Applicant
+            # access for users who hold both roles.
+            required_roles = (
+                RoleEnum.COMPLIANCE_REPORTING,
+                RoleEnum.CI_APPLICANT,
+            )
         elif has_ia_role and entity_type == EntityTypeEnum.CI_APPLICATION:
             required_roles = (RoleEnum.CI_APPLICANT,)
         if not any(role in role_names for role in required_roles):

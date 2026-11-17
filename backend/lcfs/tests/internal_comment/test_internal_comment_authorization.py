@@ -419,6 +419,41 @@ async def test_ci_applicant_retains_existing_non_da_comment_access(
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize("ia_role", [RoleEnum.IA_PROPONENT, RoleEnum.IA_SIGNER])
+async def test_ci_applicant_with_ia_role_keeps_compliance_report_comment_access(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    add_models,
+    ia_role,
+):
+    """An IA role must not suppress a separately held CI Applicant permission."""
+    set_mock_user(
+        fastapi_app,
+        [RoleEnum.CI_APPLICANT, ia_role],
+        user_details={"keycloak_username": "MIXEDROLE", "organization_id": 1},
+    )
+    await _seed_author(add_models)
+    await _seed_report_comment(add_models, compliance_report_id=8824, organization_id=1)
+
+    read_url = fastapi_app.url_path_for(
+        "get_comments",
+        entity_type=EntityTypeEnum.COMPLIANCE_REPORT.value,
+        entity_id=8824,
+    )
+    response = await client.get(read_url)
+    assert response.status_code == status.HTTP_200_OK
+
+    posted = await _post_comment(
+        client,
+        fastapi_app,
+        entity_type=EntityTypeEnum.COMPLIANCE_REPORT.value,
+        entity_id=8824,
+    )
+    assert posted.status_code == status.HTTP_201_CREATED
+
+
+@pytest.mark.anyio
 async def test_bceid_can_comment_on_own_orgs_compliance_report(
     client: AsyncClient,
     fastapi_app: FastAPI,
