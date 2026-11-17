@@ -48,7 +48,9 @@ export const ArchivedFuelCodes = () => {
 
   const { data, isLoading, isError, error } = useFuelCodeBulletins(
     'archived',
-    paginationOptions as PaginationParams
+    paginationOptions as PaginationParams,
+    {},
+    isIdirView
   )
 
   const colDefs = useMemo(() => buildColumnDefs(t, isIdirView), [t, isIdirView])

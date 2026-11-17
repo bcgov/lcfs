@@ -45,6 +45,7 @@ This wiki is organized into the following main sections, broadly covering System
 *   **[Caching Strategy](Caching-Strategy.md)**: How Redis caching is implemented and used.
 *   **[Security Architecture](Security-Architecture.md)**: Overview of security measures, protocols, and Keycloak integration.
 *   **[Performance Considerations](Performance-Considerations.md)**: Notes on system performance and load testing with Locust.
+*   **[Database Query Timeouts and Connection Monitoring](Database-Query-Timeouts-and-Connection-Monitoring.md)**: Statement timeouts, export/report timeout overrides, slow query logging and connection utilization metrics.
 *   **[System Requirements and Dependencies](System-Requirements-and-Dependencies.md)**: Software, hardware, and service dependencies.
 
 ### Development Workflows & Processes

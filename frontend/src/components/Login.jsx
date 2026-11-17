@@ -145,69 +145,103 @@ export const Login = () => {
               <BCBox pt={1} pb={3} px={3}>
                 {message && <Alert severity={severity}>{message}</Alert>}
                 <BCBox component="form" role="form" data-test="login-container">
-                  <BCBox mt={5} mb={1}>
-                    <BCButton
-                      variant="contained"
-                      color="primary"
-                      aria-label="Login with BCeID"
-                      onClick={() => {
-                        keycloak.login({
-                          idpHint: IDENTITY_PROVIDERS.BCEID_BUSINESS,
-                          redirectUri
-                        })
-                      }}
-                      id="link-bceid"
-                      className="button"
-                      data-test="link-bceid"
-                      size="large"
-                      fullWidth
-                    >
-                      <BCTypography
-                        variant="h6"
-                        component="span"
-                        color="inherit"
-                        sx={{ fontWeight: '400' }}
+                  {CONFIG.KEYCLOAK.LOCAL_AUTH ? (
+                    <BCBox mt={5} mb={1}>
+                      <BCButton
+                        variant="contained"
+                        color="primary"
+                        aria-label="Login with local Keycloak"
+                        onClick={() => keycloak.login({ redirectUri })}
+                        id="link-local-keycloak"
+                        className="button"
+                        data-test="link-local-keycloak"
+                        size="large"
+                        fullWidth
                       >
-                        {t('login.loginMessage')}&nbsp;
-                      </BCTypography>
-                      <BCTypography
-                        variant="h6"
-                        component="span"
-                        className="bceid-name"
-                      >
-                        BCeID
-                      </BCTypography>
-                    </BCButton>
-                  </BCBox>
-                  <BCBox mt={4} mb={1}>
-                    <BCButton
-                      variant="outlined"
-                      color="white"
-                      aria-label="Login with IDIR"
-                      onClick={() => {
-                        keycloak.login({
-                          idpHint: IDENTITY_PROVIDERS.IDIR,
-                          redirectUri
-                        })
-                      }}
-                      id="link-idir"
-                      className="button"
-                      data-test="link-idir"
-                      size="large"
-                      fullWidth
-                    >
-                      <BCTypography
-                        variant="h6"
-                        color="inherit"
-                        sx={{ fontWeight: '400' }}
-                      >
-                        {t('login.loginMessage')}&nbsp;
-                      </BCTypography>
-                      <BCTypography variant="h6" mr={3} className="idir-name">
-                        IDIR
-                      </BCTypography>
-                    </BCButton>
-                  </BCBox>
+                        <BCTypography
+                          variant="h6"
+                          component="span"
+                          color="inherit"
+                          sx={{ fontWeight: '400' }}
+                        >
+                          {t('login.loginMessage')}&nbsp;
+                        </BCTypography>
+                        <BCTypography variant="h6" component="span">
+                          Keycloak
+                        </BCTypography>
+                      </BCButton>
+                    </BCBox>
+                  ) : (
+                    <>
+                      <BCBox mt={5} mb={1}>
+                        <BCButton
+                          variant="contained"
+                          color="primary"
+                          aria-label="Login with BCeID"
+                          onClick={() => {
+                            keycloak.login({
+                              idpHint: IDENTITY_PROVIDERS.BCEID_BUSINESS,
+                              redirectUri
+                            })
+                          }}
+                          id="link-bceid"
+                          className="button"
+                          data-test="link-bceid"
+                          size="large"
+                          fullWidth
+                        >
+                          <BCTypography
+                            variant="h6"
+                            component="span"
+                            color="inherit"
+                            sx={{ fontWeight: '400' }}
+                          >
+                            {t('login.loginMessage')}&nbsp;
+                          </BCTypography>
+                          <BCTypography
+                            variant="h6"
+                            component="span"
+                            className="bceid-name"
+                          >
+                            BCeID
+                          </BCTypography>
+                        </BCButton>
+                      </BCBox>
+                      <BCBox mt={4} mb={1}>
+                        <BCButton
+                          variant="outlined"
+                          color="white"
+                          aria-label="Login with IDIR"
+                          onClick={() => {
+                            keycloak.login({
+                              idpHint: IDENTITY_PROVIDERS.IDIR,
+                              redirectUri
+                            })
+                          }}
+                          id="link-idir"
+                          className="button"
+                          data-test="link-idir"
+                          size="large"
+                          fullWidth
+                        >
+                          <BCTypography
+                            variant="h6"
+                            color="inherit"
+                            sx={{ fontWeight: '400' }}
+                          >
+                            {t('login.loginMessage')}&nbsp;
+                          </BCTypography>
+                          <BCTypography
+                            variant="h6"
+                            mr={3}
+                            className="idir-name"
+                          >
+                            IDIR
+                          </BCTypography>
+                        </BCButton>
+                      </BCBox>
+                    </>
+                  )}
                   <BCBox mt={4} mb={1}>
                     <BCButton
                       variant="contained"
