@@ -1642,9 +1642,9 @@ describe('EditViewComplianceReport', () => {
 
         render(<EditViewComplianceReport />)
 
-        expect(screen.getByTestId('compliance-report-header')).toHaveTextContent(
-          '2024 report:complianceReportEarlyIssuance 1'
-        )
+        expect(
+          screen.getByTestId('compliance-report-header')
+        ).toHaveTextContent('2024 report:complianceReportEarlyIssuance 1')
       })
 
       it('calculates quarter 2 for July-September months', () => {
