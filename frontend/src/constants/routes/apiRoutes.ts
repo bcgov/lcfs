@@ -82,6 +82,12 @@ export const apiRoutes = {
     '/initiative-agreements/:initiativeAgreementId/profile',
   getInitiativeAgreementDocumentRestoreTargets:
     '/initiative-agreements/:initiativeAgreementId/document-restore-targets',
+  initiativeAgreementNotes:
+    '/initiative-agreements/:initiativeAgreementId/notes',
+  initiativeAgreementNextNoteNumber:
+    '/initiative-agreements/:initiativeAgreementId/notes/next-number',
+  initiativeAgreementNote:
+    '/initiative-agreements/:initiativeAgreementId/notes/:noteId',
   getInitiativeAgreementAnalysts: '/initiative-agreements/analysts',
   getDesignatedActionsList:
     '/initiative-agreements/:initiativeAgreementId/designated-actions/list',
