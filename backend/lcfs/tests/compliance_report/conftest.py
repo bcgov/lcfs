@@ -115,9 +115,7 @@ def compliance_report_list_schema(compliance_report_schema):
 
 @pytest.fixture
 def compliance_report_create_schema():
-    return ComplianceReportCreateSchema(
-        compliance_period="2024", organization_id=1, status="Draft"
-    )
+    return ComplianceReportCreateSchema(compliance_period="2024", organization_id=1)
 
 
 @pytest.fixture

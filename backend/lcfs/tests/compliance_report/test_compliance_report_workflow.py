@@ -77,6 +77,25 @@ def test_moves_the_report_page_offers_are_allowed(user, current, requested):
 
 
 @pytest.mark.parametrize(
+    "user, requested, expected_status",
+    [
+        (REPORTER, S.Draft.value, 200),
+        (REPORTER, S.Assessed.value, 403),
+        (SIGNER, S.Draft.value, 403),
+    ],
+)
+def test_report_creation_only_allows_compliance_reporting_users_to_create_drafts(
+    user, requested, expected_status
+):
+    try:
+        ensure_report_transition(user, None, requested)
+    except HTTPException as exc:
+        assert exc.status_code == expected_status
+    else:
+        assert expected_status == 200
+
+
+@pytest.mark.parametrize(
     "user, current, requested",
     [
         # A supplier cannot return its own report, or reopen it as a draft.

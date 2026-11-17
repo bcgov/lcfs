@@ -9,9 +9,11 @@ from lcfs.db.models.document import Document, DocumentFolder, DocumentFolderItem
 from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.initiative_agreement.DesignatedAction import (
+    DesignatedAction,
     designated_action_document_association,
 )
 from lcfs.web.core.decorators import repo_handler
+from lcfs.web.exception.exceptions import DataNotFoundException
 
 
 class DocumentFolderRepository:
@@ -19,6 +21,17 @@ class DocumentFolderRepository:
         self, db: AsyncSession = Depends(get_async_db_session, scope="function")
     ):
         self.db = db
+
+    @repo_handler
+    async def lock_parent(self, parent_id: int) -> None:
+        """Serialize folder mutations until the shared request transaction ends."""
+        result = await self.db.execute(
+            select(DesignatedAction.designated_action_id)
+            .where(DesignatedAction.designated_action_id == parent_id)
+            .with_for_update(of=DesignatedAction)
+        )
+        if result.scalar_one_or_none() is None:
+            raise DataNotFoundException(f"Designated action {parent_id} not found")
 
     @repo_handler
     async def get_folders(
@@ -76,13 +89,12 @@ class DocumentFolderRepository:
 
     @repo_handler
     async def get_deleted_documents(
-        self, parent_id: int, limit: int = 50, offset: int = 0
+        self, parent_id: int, username: str, limit: int = 50, offset: int = 0
     ) -> Tuple[List[Document], int]:
-        """The bin for one parent, newest deletion first.
+        """The current user's bin for one parent, newest deletion first.
 
-        Paginated from the start: nothing is ever purged, so this list
-        only grows and the screen will need paging eventually even though
-        it does not today.
+        Paginated from the start because the bin may grow beyond what the
+        panel should fetch in one request.
         """
         base = (
             select(Document)
@@ -95,6 +107,9 @@ class DocumentFolderRepository:
                 designated_action_document_association.c.designated_action_id
                 == parent_id,
                 Document.deleted_date.isnot(None),
+                # Keycloak usernames include their identity-provider suffix,
+                # so only the exact actor account can see an item.
+                (Document.create_user == username) | (Document.deleted_by == username),
             )
         )
         total = (
@@ -111,10 +126,10 @@ class DocumentFolderRepository:
 
     @repo_handler
     async def get_document_for_parent(
-        self, document_id: int, parent_id: int
+        self, document_id: int, parent_id: int, *, for_update: bool = False
     ) -> Optional[Document]:
         """A document, but only if it belongs to this parent."""
-        result = await self.db.execute(
+        query = (
             select(Document)
             .join(
                 designated_action_document_association,
@@ -128,6 +143,9 @@ class DocumentFolderRepository:
             )
             .execution_options(populate_existing=True)
         )
+        if for_update:
+            query = query.with_for_update(of=Document)
+        result = await self.db.execute(query)
         return result.scalars().first()
 
     @repo_handler
@@ -251,7 +269,7 @@ class DocumentFolderRepository:
     async def get_documents_in_folders(
         self, folder_ids: Sequence[int]
     ) -> List[Document]:
-        """Live documents placed in any of these folders."""
+        """All documents placed in any of these folders, including binned files."""
         if not folder_ids:
             return []
         result = await self.db.execute(
@@ -262,7 +280,6 @@ class DocumentFolderRepository:
             )
             .where(
                 DocumentFolderItem.folder_id.in_(folder_ids),
-                Document.deleted_date.is_(None),
             )
         )
         return list(result.scalars().all())

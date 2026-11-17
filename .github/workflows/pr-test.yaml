@@ -69,7 +69,7 @@ jobs:
 
   backend-setup:
     name: "Backend Setup"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       # Add output to signal completion
       setup-complete: ${{ steps.setup-complete.outputs.complete }}
@@ -186,7 +186,7 @@ jobs:
   backend-tests:
     name: "Backend Tests (Shard ${{ matrix.shard }}/${{ strategy.job-total }})"
     needs: backend-setup
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Add explicit dependency check
     if: needs.backend-setup.outputs.setup-complete == 'true'
     services:
@@ -673,7 +673,8 @@ jobs:
           fi
 
   teams-notification:
-    needs: [post-backend-tests, post-frontend-tests]
+    needs:
+      [post-backend-tests, post-frontend-tests]
     runs-on: ubuntu-latest
     if: always()
     steps:

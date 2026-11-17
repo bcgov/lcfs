@@ -37,7 +37,7 @@ vi.mock('@/hooks/useCurrentUser.js', () => ({
   useCurrentUser: () => mockUseCurrentUser()
 }))
 
-vi.mock('@/components/Loading.jsx', () => ({
+vi.mock('@/components/Loading', () => ({
   default: () => <div data-test="loading">Loading...</div>
 }))
 

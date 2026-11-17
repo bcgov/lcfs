@@ -67,3 +67,11 @@ declare module 'react-input-mask' {
   const InputMask: ComponentType<InputMaskProps>
   export default InputMask
 }
+
+declare module 'chroma-js' {
+  interface ChromaColor {
+    rgb(): number[]
+  }
+
+  export default function chroma(color: string): ChromaColor
+}

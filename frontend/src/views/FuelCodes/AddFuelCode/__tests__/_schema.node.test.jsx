@@ -567,4 +567,20 @@ describe('normalizeTransportModeDistances', () => {
       ])
     ).toEqual([{ transport_mode: 'Truck', distance: 125 }])
   })
+
+  it('sends a null distance when none was entered', () => {
+    expect(
+      normalizeTransportModeDistancesForSave([
+        { transportMode: 'Rail', distance: '' },
+        { transportMode: 'Truck', distance: null },
+        { transportMode: 'Adjacent', distance: 0 },
+        'Pipeline'
+      ])
+    ).toEqual([
+      { transport_mode: 'Rail', distance: null },
+      { transport_mode: 'Truck', distance: null },
+      { transport_mode: 'Adjacent', distance: 0 },
+      { transport_mode: 'Pipeline', distance: null }
+    ])
+  })
 })

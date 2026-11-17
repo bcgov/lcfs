@@ -6,6 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.core.decorators import repo_handler
 from lcfs.db.models.transfer.Transfer import Transfer
+from lcfs.db.models.transfer.TransferCategory import (
+    TransferCategory,
+    TransferCategoryEnum,
+)
 from lcfs.db.models.transfer.TransferStatus import TransferStatus, TransferStatusEnum
 from lcfs.db.models.transaction.Transaction import (
     Transaction,
@@ -376,7 +380,12 @@ class CreditMarketRepository:
                 TransferStatus,
                 Transfer.current_status_id == TransferStatus.transfer_status_id,
             )
-            .where(*self._recorded_transfer_filters())
+            .where(
+                *self._recorded_transfer_filters(),
+                ~Transfer.transfer_category.has(
+                    TransferCategory.category == TransferCategoryEnum.D
+                ),
+            )
         )
         result = await self.db.execute(query)
         return result.first()

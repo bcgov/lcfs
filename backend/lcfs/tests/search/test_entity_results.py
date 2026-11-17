@@ -172,6 +172,23 @@ async def test_fuel_code_search_supports_large_company_result_sets():
 
 
 @pytest.mark.anyio
+async def test_fuel_code_search_orders_suffix_ties_numerically():
+    db = _db_returning()
+
+    await search_fuel_codes(db, _context("BCLCF"))
+
+    sql = _executed_sql(db)
+    assert (
+        "CAST(split_part(vw_fuel_code_base.fuel_suffix, '.', 1) AS BIGINT)"
+        in sql
+    )
+    assert (
+        "CAST(split_part(vw_fuel_code_base.fuel_suffix, '.', 2) AS INTEGER)"
+        in sql
+    )
+
+
+@pytest.mark.anyio
 async def test_transfer_result_formats_quantities_prices_and_dates():
     transfer = SimpleNamespace(
         transfer_id=7,

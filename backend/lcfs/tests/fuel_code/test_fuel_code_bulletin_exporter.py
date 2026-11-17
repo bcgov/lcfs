@@ -1,11 +1,27 @@
 from datetime import date
+from io import BytesIO
 from unittest.mock import AsyncMock, MagicMock
 
+from openpyxl import load_workbook
 import pytest
 from starlette.responses import StreamingResponse
 
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_code.bulletin_export import FuelCodeBulletinExporter
+
+
+@pytest.mark.parametrize(
+    ("today", "expected_start"),
+    [
+        (date(2027, 3, 31), date(2026, 3, 31)),
+        (date(2027, 4, 1), date(2027, 3, 31)),
+    ],
+)
+def test_bulletin_export_compliance_period_rolls_over_on_april_first(
+    today, expected_start
+):
+    exporter = FuelCodeBulletinExporter(repo=MagicMock())
+    assert exporter._get_compliance_period_start(today) == expected_start
 
 
 @pytest.mark.anyio
@@ -44,7 +60,7 @@ async def test_bulletin_export_success():
     assert response.media_type == "text/csv"
     assert "BC-LCFS-Current-Fuel-Codes" in response.headers["Content-Disposition"]
     repo_mock.get_fuel_code_bulletin_pagination_params.assert_called_once_with(
-        pagination
+        pagination, include_internal=False
     )
     repo_mock.get_fuel_code_bulletin_rows.assert_awaited_once()
     call_kwargs = repo_mock.get_fuel_code_bulletin_rows.await_args.kwargs
@@ -59,6 +75,46 @@ async def test_bulletin_export_success():
         in headers
     )
     assert b"C-BCLCF264.3,CNG,FortisBC,2.89,2025-12-31,2028-12-30" in file_content
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("bulletin_type", ["current", "archived"])
+async def test_bulletin_excel_preserves_numeric_suffix_order(bulletin_type):
+    repo_mock = MagicMock()
+    repo_mock.get_fuel_code_bulletin_rows = AsyncMock()
+    repo_mock.get_fuel_code_bulletin_pagination_params.return_value = ([], [])
+    repo_mock.get_fuel_code_bulletin_rows.return_value = (
+        [
+            {
+                "fuel_code": f"BCLCF{suffix}",
+                "fuel": "Renewable diesel",
+                "company": "Example Fuel Co",
+                "carbon_intensity": 10.0,
+                "effective_date": date(2025, 1, 1),
+                "expiry_date": None,
+            }
+            for suffix in ("101.0", "999.0", "1000.0")
+        ],
+        3,
+    )
+    exporter = FuelCodeBulletinExporter(repo=repo_mock)
+
+    response = await exporter.export(
+        bulletin_type,
+        "xlsx",
+        PaginationRequestSchema(page=1, size=25, sort_orders=[], filters=[]),
+    )
+    content = b"".join([chunk async for chunk in response.body_iterator])
+    worksheet = load_workbook(BytesIO(content), read_only=True).active
+    exported_codes = [
+        row[0]
+        for row in worksheet.iter_rows(
+            min_row=2, min_col=1, max_col=1, values_only=True
+        )
+        if row[0] is not None
+    ]
+
+    assert exported_codes == ["BCLCF101.0", "BCLCF999.0", "BCLCF1000.0"]
 
 
 @pytest.mark.anyio

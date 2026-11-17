@@ -117,7 +117,7 @@ describe('DocumentTable', () => {
       isPending: false
     })
     useDeleteDocument.mockReturnValue({
-      mutate: mockDeleteMutate
+      mutateAsync: mockDeleteMutate
     })
     useUpdateDocument.mockReturnValue({
       mutateAsync: mockUpdateMutate
@@ -805,7 +805,6 @@ describe('DocumentTable', () => {
 
     useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
 
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     mockDeleteMutate.mockRejectedValue(new Error('Deletion failed'))
 
     render(<DocumentTable {...defaultProps} />, [theme, router])
@@ -819,13 +818,9 @@ describe('DocumentTable', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
 
     await waitFor(() => {
-      expect(consoleSpy).toHaveBeenCalledWith(
-        'Error uploading file:',
-        expect.any(Error)
-      )
+      expect(screen.getByText('Deletion failed')).toBeInTheDocument()
+      expect(screen.getByTestId('delete-button')).toBeInTheDocument()
     })
-
-    consoleSpy.mockRestore()
   })
 
   test('should handle files with missing properties gracefully', async ({

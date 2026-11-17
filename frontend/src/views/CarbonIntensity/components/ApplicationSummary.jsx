@@ -27,7 +27,7 @@ import {
 } from '@/views/CarbonIntensity/components/_step2Schema'
 import { ProposedFuelPathwaysStep } from './ProposedFuelPathwaysStep'
 import { CIApplicationAssignmentHistory } from './CIApplicationAssignmentHistory'
-import { CIApplicationStatusRenderer } from '@/utils/grid/cellRenderers'
+import { CIApplicationStatusDisplayRenderer } from './CIApplicationListRenderers'
 import { constructAddress } from '@/utils/constructAddress'
 import { exportRowsToXlsx } from './pathwayExport'
 import { getDocumentDisplayName, isDocumentLocked } from '@/utils/documents'
@@ -502,7 +502,7 @@ const ApplicationSummaryDetails = ({
             </BCTypography>
             {ciApplication.status && (
               <Box sx={{ '& > span': { m: '0 !important' } }}>
-                <CIApplicationStatusRenderer data={ciApplication} />
+                <CIApplicationStatusDisplayRenderer data={ciApplication} />
               </Box>
             )}
           </Stack>

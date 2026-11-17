@@ -123,6 +123,15 @@ transaction_type_to_id_prefix_map = {
     "AggregatorIssuance": "AG",
 }
 
+transaction_type_to_display_name_map = {
+    "Transfer": "Transfer",
+    "AdminAdjustment": "Admin Adjustment",
+    "InitiativeAgreement": "Initiative Agreement",
+    "ComplianceReport": "Compliance Report",
+    "StandaloneTransaction": "Legacy Transaction",
+    "AggregatorIssuance": "Aggregator Issuance",
+}
+
 id_prefix_to_transaction_type_map = {
     "CT": "Transfer",
     "AA": "AdminAdjustment",

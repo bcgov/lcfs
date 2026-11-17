@@ -350,7 +350,7 @@ async def test_get_expected_use_types(fuel_code_repo, mock_db):
 
 
 @pytest.mark.anyio
-async def test_get_fuel_code_bulletin_rows_current_uses_effective_after_cutoff(
+async def test_get_fuel_code_bulletin_rows_current_includes_future_effective_codes(
     fuel_code_repo, mock_db
 ):
     # first execute() -> query rows, second scalar() -> count
@@ -374,9 +374,40 @@ async def test_get_fuel_code_bulletin_rows_current_uses_effective_after_cutoff(
     executed_stmt = mock_db.execute.await_args.args[0]
     stmt_sql = str(executed_stmt)
 
-    assert "effective_date <" in stmt_sql
+    assert "effective_date <" not in stmt_sql
     assert "effective_date >=" not in stmt_sql
-    assert "expiration_date >" in stmt_sql
+    assert "expiration_date >=" in stmt_sql
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    ("period_start", "expected_cutoff"),
+    [
+        (date(2026, 3, 31), "2026-01-01"),
+        (date(2027, 3, 31), "2027-01-01"),
+    ],
+)
+async def test_bulletin_current_expiry_cutoff_tracks_reporting_year(
+    fuel_code_repo, mock_db, period_start, expected_cutoff
+):
+    mock_result = MagicMock()
+    mock_result.all.return_value = []
+    mock_db.execute.return_value = mock_result
+    mock_db.scalar.return_value = 0
+
+    await fuel_code_repo.get_fuel_code_bulletin_rows(
+        compliance_period_start=period_start,
+        bulletin_type="current",
+        conditions=[],
+        sort_orders=[],
+    )
+
+    sql = str(
+        mock_db.execute.await_args.args[0].compile(
+            dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
+        )
+    )
+    assert f"vw_fuel_code_base.expiration_date >= '{expected_cutoff}'" in sql
 
 
 @pytest.mark.anyio
@@ -404,8 +435,70 @@ async def test_get_fuel_code_bulletin_rows_archived_is_inverse_of_current(
 
     # archived branch applies inverse (~current_conditions)
     assert "NOT (" in stmt_sql
-    assert "effective_date <" in stmt_sql
-    assert "expiration_date >" in stmt_sql
+    assert "effective_date <" not in stmt_sql
+    assert "expiration_date >=" in stmt_sql
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("bulletin_type", ["current", "archived"])
+async def test_bulletin_default_order_uses_numeric_fuel_suffix(
+    fuel_code_repo, mock_db, bulletin_type
+):
+    mock_result = MagicMock()
+    mock_result.all.return_value = []
+    mock_db.execute.return_value = mock_result
+    mock_db.scalar.return_value = 0
+
+    await fuel_code_repo.get_fuel_code_bulletin_rows(
+        compliance_period_start=date(2025, 3, 31),
+        bulletin_type=bulletin_type,
+        conditions=[],
+        sort_orders=[],
+    )
+
+    sql = str(
+        mock_db.execute.await_args.args[0].compile(
+            dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
+        )
+    )
+    assert (
+        "ORDER BY vw_fuel_code_base.prefix ASC, "
+        "CAST(split_part(vw_fuel_code_base.fuel_suffix, '.', 1) AS BIGINT), "
+        "CAST(split_part(vw_fuel_code_base.fuel_suffix, '.', 2) AS INTEGER), "
+        "vw_fuel_code_base.effective_date DESC"
+    ) in sql
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("direction", ["asc", "desc"])
+async def test_bulletin_fuel_code_sort_uses_numeric_fuel_suffix(
+    fuel_code_repo, mock_db, direction
+):
+    mock_result = MagicMock()
+    mock_result.all.return_value = []
+    mock_db.execute.return_value = mock_result
+    mock_db.scalar.return_value = 0
+
+    await fuel_code_repo.get_fuel_code_bulletin_rows(
+        compliance_period_start=date(2025, 3, 31),
+        bulletin_type="archived",
+        conditions=[],
+        sort_orders=[SimpleNamespace(field="fuel_code", direction=direction)],
+    )
+
+    sql = str(
+        mock_db.execute.await_args.args[0].compile(
+            dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
+        )
+    )
+    sort_direction = "ASC" if direction == "asc" else "DESC"
+    assert (
+        f"ORDER BY vw_fuel_code_base.prefix {sort_direction}, "
+        "CAST(split_part(vw_fuel_code_base.fuel_suffix, '.', 1) AS BIGINT) "
+        f"{sort_direction}, "
+        "CAST(split_part(vw_fuel_code_base.fuel_suffix, '.', 2) AS INTEGER) "
+        f"{sort_direction}"
+    ) in sql
 
 
 def test_get_fuel_code_bulletin_pagination_params_accepts_fuel_code_filter(
@@ -600,9 +693,12 @@ async def test_get_fuel_codes_paginated_filters_by_organization_id(
     assert count == 1
     assert mock_db.execute.call_count == 3
 
-    # The organization_id filter appears inside the windowed subquery SQL
-    stmt_sql = str(mock_db.execute.call_args_list[0].args[0])
+    # The organization_id and Approved filters appear inside the windowed
+    # subquery SQL
+    stmt = mock_db.execute.call_args_list[0].args[0]
+    stmt_sql = str(stmt.compile(compile_kwargs={"literal_binds": True}))
     assert "fuel_code.organization_id = " in stmt_sql
+    assert "'Approved'" in stmt_sql
     assert "lower(vw_fuel_code_base.company)" not in stmt_sql
 
 
@@ -614,8 +710,40 @@ async def test_get_fuel_codes_paginated_skips_organization_filter_when_omitted(
     pagination = MagicMock(page=1, size=10, filters=[], sort_orders=[])
     await fuel_code_repo.get_fuel_codes_paginated(pagination)
 
-    stmt_sql = str(mock_db.execute.call_args_list[0].args[0])
+    stmt = mock_db.execute.call_args_list[0].args[0]
+    stmt_sql = str(stmt.compile(compile_kwargs={"literal_binds": True}))
     assert "fuel_code.organization_id = " not in stmt_sql
+    assert "'Approved'" not in stmt_sql
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("direction", ["asc", "desc"])
+async def test_get_fuel_codes_paginated_sorts_suffix_as_two_integers(
+    fuel_code_repo, mock_db, direction
+):
+    mock_db.execute.return_value = _make_paginate_mock()
+    pagination = PaginationRequestSchema.model_validate(
+        {
+            "page": 1,
+            "size": 10,
+            "sortOrders": [{"field": "fuelSuffix", "direction": direction}],
+        }
+    )
+
+    await fuel_code_repo.get_fuel_codes_paginated(pagination)
+
+    stmt_sql = str(
+        mock_db.execute.await_args.args[0].compile(
+            dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
+        )
+    )
+    sort_direction = "ASC" if direction == "asc" else "DESC"
+    assert (
+        "ORDER BY CAST(split_part(vw_fuel_code_base.fuel_suffix, '.', 1) "
+        f"AS BIGINT) {sort_direction}, "
+        "CAST(split_part(vw_fuel_code_base.fuel_suffix, '.', 2) AS INTEGER) "
+        f"{sort_direction}"
+    ) in stmt_sql
 
 
 @pytest.mark.anyio
@@ -777,6 +905,35 @@ async def test_get_distinct_fuel_codes_by_code(fuel_code_repo, mock_db):
     result = await fuel_code_repo.get_distinct_fuel_codes_by_code("101", "BC")
     assert len(result) == 2
 
+    statement = mock_db.execute.await_args.args[0]
+    stmt_sql = str(
+        statement.compile(
+            dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
+        )
+    )
+    assert (
+        "ORDER BY CAST(split_part(fuel_code.fuel_suffix, '.', 1) AS BIGINT), "
+        "CAST(split_part(fuel_code.fuel_suffix, '.', 2) AS INTEGER)"
+    ) in stmt_sql
+
+    compiled = statement.compile(dialect=postgresql.dialect())
+    compiled_sql = " ".join(str(compiled).split())
+    selected_expressions = compiled_sql.split(" FROM ", 1)[0]
+    ordered_expressions = compiled_sql.split(" ORDER BY ", 1)[1].split(
+        " LIMIT", 1
+    )[0]
+    selected_parameters = {
+        name
+        for name in compiled.params
+        if f"%({name})s" in selected_expressions
+    }
+    ordered_parameters = {
+        name
+        for name in compiled.params
+        if f"%({name})s" in ordered_expressions
+    }
+    assert ordered_parameters <= selected_parameters
+
 
 @pytest.mark.anyio
 async def test_get_fuel_code_by_code_prefix(fuel_code_repo, mock_db):
@@ -815,6 +972,33 @@ async def test_validate_fuel_code(fuel_code_repo, mock_db):
     )
     result = await fuel_code_repo.validate_fuel_code("300.0", 1)
     assert result == "300.1"
+
+
+@pytest.mark.anyio
+async def test_validate_fuel_code_rolls_over_iteration_with_shared_sequence(
+    fuel_code_repo, mock_db
+):
+    existing_code = FuelCode(
+        fuel_code_id=5,
+        fuel_suffix="999.9",
+        fuel_code_prefix=FuelCodePrefix(fuel_code_prefix_id=1, prefix="BCLCF"),
+    )
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = existing_code
+    mock_db.execute.return_value = mock_result
+    fuel_code_repo.get_next_available_sub_version_fuel_code_by_prefix = AsyncMock(
+        return_value="999.10"
+    )
+    fuel_code_repo.get_next_available_fuel_code_by_prefix = AsyncMock(
+        return_value="1000.0"
+    )
+
+    result = await fuel_code_repo.validate_fuel_code("999.9", 1)
+
+    assert result == "1000.0"
+    fuel_code_repo.get_next_available_fuel_code_by_prefix.assert_awaited_once_with(
+        "BCLCF"
+    )
 
 
 @pytest.mark.anyio
@@ -1291,3 +1475,38 @@ async def test_mark_fuel_codes_notified_empty_list(fuel_code_repo, mock_db):
     await fuel_code_repo.mark_fuel_codes_notified([])
 
     mock_db.execute.assert_not_called()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("bulletin_type", ["current", "archived"])
+async def test_public_bulletin_query_selects_only_public_projection(
+    fuel_code_repo, mock_db, bulletin_type
+):
+    result = MagicMock()
+    result.all.return_value = []
+    mock_db.execute.return_value = result
+    mock_db.scalar.return_value = 0
+    await fuel_code_repo.get_fuel_code_bulletin_rows(date(2025, 3, 31), bulletin_type)
+    statement = mock_db.execute.await_args.args[0]
+    assert set(statement.selected_columns.keys()) == {
+        "fuel_code",
+        "fuel",
+        "company",
+        "carbon_intensity",
+        "effective_date",
+        "expiry_date",
+    }
+
+
+@pytest.mark.parametrize(
+    "field", ["edrms", "contactEmail", "notes", "feedstock", "fuelCodeId"]
+)
+def test_public_bulletin_cannot_filter_on_internal_fields(fuel_code_repo, field):
+    from fastapi import HTTPException
+
+    pagination = PaginationRequestSchema(
+        filters=[{"field": field, "filter": "private"}]
+    )
+    with pytest.raises(HTTPException) as exc:
+        fuel_code_repo.get_fuel_code_bulletin_pagination_params(pagination)
+    assert exc.value.status_code == 400

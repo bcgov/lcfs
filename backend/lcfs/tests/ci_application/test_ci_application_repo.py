@@ -4,6 +4,7 @@ from datetime import date, datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from sqlalchemy.dialects import postgresql
 
 from lcfs.db.models.ci_application import (
     CIApplication,
@@ -36,6 +37,30 @@ def repo(mock_db):
     r = CIApplicationRepository()
     r.db = mock_db
     return r
+
+
+@pytest.mark.anyio
+async def test_approved_fuel_code_options_sort_main_suffix_numerically(repo, mock_db):
+    result = MagicMock()
+    result.scalars.return_value.all.return_value = []
+    mock_db.execute.return_value = result
+
+    await repo.get_approved_fuel_codes()
+
+    sql = str(
+        mock_db.execute.await_args.args[0].compile(
+            dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
+        )
+    )
+    assert (
+        "ORDER BY fuel_code.prefix_id, "
+        "CAST(split_part(fuel_code.fuel_suffix, '.', 1) AS BIGINT), "
+        "CAST(split_part(fuel_code.fuel_suffix, '.', 2) AS INTEGER) DESC"
+    ) in sql
+    assert (
+        "ORDER BY fuel_code.prefix_id, split_part(fuel_code.fuel_suffix, '.', 1)"
+        not in sql
+    )
 
 
 def _make_status(name="Draft", ident=1):

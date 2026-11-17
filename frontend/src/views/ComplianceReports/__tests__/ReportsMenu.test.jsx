@@ -118,6 +118,70 @@ describe('ReportsMenu - FSE / charging-sites tab visibility', () => {
     expect(screen.getByText('tabs.chargingSites')).toBeInTheDocument()
   })
 
+  test('shows the allocation agreements tab between compliance reporting and charging sites for IDIR users', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    mockUserRoles = ['Government', 'Analyst']
+    render(<ReportsMenu />, [query, theme, localization, router])
+
+    const tabLabels = screen.getAllByRole('tab').map((tab) => tab.textContent)
+    expect(tabLabels.slice(0, 3)).toEqual([
+      'tabs.complianceReporting',
+      'tabs.allocationAgreements',
+      'tabs.chargingSites'
+    ])
+  })
+
+  test('hides the allocation agreements tab from BCeID users', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    mockUserRoles = ['Compliance Reporting', 'Signing Authority']
+    render(<ReportsMenu />, [query, theme, localization, router])
+
+    expect(
+      screen.queryByText('tabs.allocationAgreements')
+    ).not.toBeInTheDocument()
+  })
+
+  test('renders allocation agreements content for IDIR users on its route', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    mockUserRoles = ['Government', 'Analyst']
+    mockLocation.pathname = '/compliance-reporting/allocation-agreements'
+    render(<ReportsMenu />, [query, theme, localization, router])
+
+    expect(screen.getByTestId('outlet')).toBeInTheDocument()
+    expect(
+      screen.getByRole('tab', { name: 'tabs.allocationAgreements' })
+    ).toHaveAttribute('aria-selected', 'true')
+  })
+
+  test('blocks direct navigation to allocation agreements for BCeID users', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    mockUserRoles = ['Compliance Reporting']
+    mockLocation.pathname = '/compliance-reporting/allocation-agreements'
+    render(<ReportsMenu />, [query, theme, localization, router])
+
+    expect(screen.queryByTestId('outlet')).not.toBeInTheDocument()
+  })
+
   test('blocks direct navigation to FSE content for signing-authority-only user', ({
     render,
     query,

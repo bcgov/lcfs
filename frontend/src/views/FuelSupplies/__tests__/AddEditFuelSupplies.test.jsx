@@ -28,7 +28,7 @@ const mockNavigate = vi.fn()
 vi.mock('@/hooks/useCurrentUser')
 
 // Mock utility functions
-vi.mock('@/utils/array.js', () => ({
+vi.mock('@/utils/array', () => ({
   isArrayEmpty: vi.fn((arr) => !arr || arr.length === 0)
 }))
 

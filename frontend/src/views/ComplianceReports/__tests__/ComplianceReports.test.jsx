@@ -203,8 +203,7 @@ describe('ComplianceReports - Comprehensive Tests', () => {
 
     expect(mockCreateMutate).toHaveBeenCalledWith({
       compliancePeriod: '2024',
-      organizationId: 1,
-      status: expect.any(String)
+      organizationId: 1
     })
   })
 

@@ -1,20 +1,15 @@
-"""
-Database-backed tests for the next-available fuel code helpers (issue #4101).
+"""Database-backed tests for fuel code numbering and iteration helpers.
 
-``get_next_available_fuel_code_by_prefix`` and
-``get_next_available_sub_version_fuel_code_by_prefix`` were rewritten from raw
-SQL to SQLAlchemy Core. The query-shape tests in
-``test_fuel_code_query_shapes.py`` only compile the statements; these tests
-execute them against seeded prefixes and assert the returned code values for
-the gap-selection cases the helpers exist for.
-
-The pytest database is migrated but holds no fuel codes, so every test starts
-from an empty ``fuel_code`` table and inserts exactly the rows it needs.
+The query-shape tests only compile repository statements; these tests execute
+the number generators against seeded prefixes and assert returned values.
+The pytest database holds no fuel codes, so every test starts from an empty
+``fuel_code`` table and inserts exactly the rows it needs.
 """
 
 from datetime import date
 from decimal import Decimal
 
+from fastapi import HTTPException
 import pytest
 from sqlalchemy import func, select
 
@@ -76,7 +71,11 @@ async def add_fuel_codes(dbsession, prefix_ids, status_ids, next_code_fuel_type)
         "module assume an empty fuel_code table"
     )
 
-    async def _add(prefix, *suffixes, status=FuelCodeStatusEnum.Approved):
+    async def _add(
+        prefix,
+        *suffixes,
+        status=FuelCodeStatusEnum.Approved,
+    ):
         codes = [
             FuelCode(
                 prefix_id=prefix_ids[prefix],
@@ -122,29 +121,74 @@ async def test_next_fuel_code_after_contiguous_codes_is_max_plus_one(
 
 
 @pytest.mark.anyio
-async def test_next_fuel_code_reuses_an_interior_gap(repo, add_fuel_codes):
+async def test_next_fuel_code_does_not_backfill_an_interior_gap(repo, add_fuel_codes):
     await add_fuel_codes("BCLCF", "101.0", "103.0", "104.0")
 
-    assert await repo.get_next_available_fuel_code_by_prefix("BCLCF") == "102.0"
+    assert await repo.get_next_available_fuel_code_by_prefix("BCLCF") == "105.0"
 
 
 @pytest.mark.anyio
-async def test_next_fuel_code_reuses_the_lowest_of_several_gaps(repo, add_fuel_codes):
+async def test_next_fuel_code_does_not_backfill_multiple_gaps(repo, add_fuel_codes):
     await add_fuel_codes("BCLCF", "101.0", "104.0", "106.0")
 
-    assert await repo.get_next_available_fuel_code_by_prefix("BCLCF") == "102.0"
+    assert await repo.get_next_available_fuel_code_by_prefix("BCLCF") == "107.0"
 
 
 @pytest.mark.anyio
 async def test_next_fuel_code_treats_a_deleted_status_code_as_taken(
     repo, add_fuel_codes
 ):
-    # Parity with the raw SQL this replaced: only physically removed rows free
-    # up a number; a code whose status is Deleted still occupies it.
-    await add_fuel_codes("BCLCF", "101.0", "103.0")
-    await add_fuel_codes("BCLCF", "102.0", status=FuelCodeStatusEnum.Deleted)
+    await add_fuel_codes("BCLCF", "101.0")
+    await add_fuel_codes(
+        "BCLCF", "1000.0", status=FuelCodeStatusEnum.Deleted
+    )
 
-    assert await repo.get_next_available_fuel_code_by_prefix("BCLCF") == "104.0"
+    assert await repo.get_next_available_fuel_code_by_prefix("BCLCF") == "1001.0"
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("highest_prefix", ["BCLCF", "C-BCLCF"])
+async def test_next_fuel_code_uses_shared_sequence_for_bclcf_prefixes(
+    repo, add_fuel_codes, highest_prefix
+):
+    await add_fuel_codes(highest_prefix, "999.0")
+
+    assert await repo.get_next_available_fuel_code_by_prefix("BCLCF") == "1000.0"
+    assert await repo.get_next_available_fuel_code_by_prefix("C-BCLCF") == "1000.0"
+
+    other_prefix = "C-BCLCF" if highest_prefix == "BCLCF" else "BCLCF"
+    await add_fuel_codes(other_prefix, "1000.0")
+
+    assert await repo.get_next_available_fuel_code_by_prefix("BCLCF") == "1001.0"
+    assert await repo.get_next_available_fuel_code_by_prefix("C-BCLCF") == "1001.0"
+
+
+@pytest.mark.anyio
+async def test_next_fuel_code_does_not_truncate_existing_four_digit_number(
+    repo, add_fuel_codes
+):
+    await add_fuel_codes("BCLCF", "1234.0")
+
+    assert await repo.get_next_available_fuel_code_by_prefix("C-BCLCF") == "1235.0"
+
+
+@pytest.mark.anyio
+async def test_next_fuel_code_reports_exhausted_suffix_storage_range(
+    repo, add_fuel_codes
+):
+    await add_fuel_codes("BCLCF", "999999999999999999.0")
+
+    with pytest.raises(HTTPException) as exc:
+        await repo.get_next_available_fuel_code_by_prefix("C-BCLCF")
+
+    assert exc.value.status_code == 409
+    assert "supported fuel suffix length" in exc.value.detail
+    assert (
+        await repo.get_next_available_fuel_code_by_prefix(
+            "C-BCLCF", return_none_if_exhausted=True
+        )
+        is None
+    )
 
 
 @pytest.mark.anyio
@@ -153,6 +197,22 @@ async def test_next_fuel_code_is_scoped_to_the_prefix(repo, add_fuel_codes):
 
     assert await repo.get_next_available_fuel_code_by_prefix("PROXY") == "003.0"
     assert await repo.get_next_available_fuel_code_by_prefix("BCLCF") == "101.0"
+
+
+@pytest.mark.anyio
+async def test_proxy_numbering_keeps_lowest_gap_behavior(repo, add_fuel_codes):
+    await add_fuel_codes("PROXY", "001.0", "003.0")
+
+    assert await repo.get_next_available_fuel_code_by_prefix("PROXY") == "002.0"
+
+
+@pytest.mark.anyio
+async def test_proxy_numbering_does_not_enumerate_through_large_suffixes(
+    repo, add_fuel_codes
+):
+    await add_fuel_codes("PROXY", "999999999999999999.0")
+
+    assert await repo.get_next_available_fuel_code_by_prefix("PROXY") == "001.0"
 
 
 # --- sub version ------------------------------------------------------------
@@ -182,6 +242,73 @@ async def test_next_sub_version_after_contiguous_sub_versions_is_max_plus_one(
     )
 
     assert result == "101.3"
+
+
+@pytest.mark.anyio
+async def test_next_sub_version_for_four_digit_code(repo, add_fuel_codes, prefix_ids):
+    await add_fuel_codes("BCLCF", "1000.0")
+
+    result = await repo.get_next_available_sub_version_fuel_code_by_prefix(
+        "1000", prefix_ids["BCLCF"]
+    )
+
+    assert result == "1000.1"
+
+
+@pytest.mark.anyio
+async def test_next_sub_version_skips_database_and_batch_reservations(
+    repo, add_fuel_codes, prefix_ids
+):
+    await add_fuel_codes("BCLCF", "1000.0", "1000.2")
+
+    result = await repo.get_next_available_sub_version_fuel_code_by_prefix(
+        "1000", prefix_ids["BCLCF"], reserved_suffixes={"1000.1"}
+    )
+
+    assert result == "1000.3"
+
+
+@pytest.mark.anyio
+async def test_copying_four_digit_code_suggests_next_iteration(
+    repo, add_fuel_codes, prefix_ids
+):
+    await add_fuel_codes("BCLCF", "1000.0")
+
+    clones = await repo.get_fuel_code_by_code_prefix("1000.0", "BCLCF")
+
+    assert len(clones) == 1
+    assert clones[0].fuel_suffix == "1000.1"
+    assert clones[0].prefix_id == prefix_ids["BCLCF"]
+
+
+@pytest.mark.anyio
+async def test_ninth_iteration_rolls_to_next_shared_main_number(
+    repo, add_fuel_codes, prefix_ids
+):
+    await add_fuel_codes("BCLCF", "1001.0")
+    await add_fuel_codes(
+        "C-BCLCF", *(f"1000.{iteration}" for iteration in range(10))
+    )
+
+    next_suffix = await repo.get_next_available_sub_version_fuel_code_by_prefix(
+        "1000", prefix_ids["C-BCLCF"]
+    )
+
+    assert next_suffix == "1002.0"
+
+
+@pytest.mark.anyio
+async def test_copying_ninth_iteration_rolls_to_next_main_number(
+    repo, add_fuel_codes
+):
+    await add_fuel_codes(
+        "BCLCF", *(f"1000.{iteration}" for iteration in range(10))
+    )
+
+    clones = await repo.get_fuel_code_by_code_prefix("1000.9", "BCLCF")
+
+    assert len(clones) == 1
+    assert clones[0].fuel_suffix == "1001.0"
 
 
 @pytest.mark.anyio

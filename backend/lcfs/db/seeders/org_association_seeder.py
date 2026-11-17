@@ -4,7 +4,8 @@ from sqlalchemy import text
 logger = structlog.get_logger(__name__)
 
 # Role ids fixed by the role seed migrations:
-# 8 TRANSFER, 9 COMPLIANCE_REPORTING, 12 CI_APPLICANT, 13 IA_PROPONENT, 17 IA_SIGNER
+# 8 TRANSFER, 9 COMPLIANCE_REPORTING, 12 CI_APPLICANT, 13 IA_PROPONENT,
+# 17 IA_SIGNER, 18 LCJFIP_APPLICANT, 19 LCJFIP_ADMINISTRATOR
 TYPE_DEFAULT_ROLES = [
     ("fuel_supplier", 9),
     ("fuel_supplier", 8),
@@ -13,6 +14,7 @@ TYPE_DEFAULT_ROLES = [
     ("aggregator", 8),
     ("fuel_producer", 12),
     ("initiative_agreement_holder", 13),
+    ("lcjfip", 18),
 ]
 
 
@@ -61,22 +63,25 @@ async def seed_org_type_and_available_role_associations(session):
                 FROM user_role ur
                 JOIN user_profile up ON up.user_profile_id = ur.user_profile_id
                 WHERE up.organization_id IS NOT NULL
-                  AND ur.role_id IN (8, 9, 12, 13)
+                  AND ur.role_id IN (8, 9, 12, 13, 18)
                 ON CONFLICT DO NOTHING;
                 """
             )
         )
 
-        # IA Signer holders imply IA Proponent availability (see migration)
+        # Dependent-role holders imply parent availability (see migrations):
+        # IA Signer (17) -> IA Proponent (13), LCJFIP Administrator (19) ->
+        # LCJFIP Applicant (18)
         await session.execute(
             text(
                 """
                 INSERT INTO organization_available_role (organization_id, role_id)
-                SELECT DISTINCT up.organization_id, 13
+                SELECT DISTINCT up.organization_id, m.parent_role_id
                 FROM user_role ur
                 JOIN user_profile up ON up.user_profile_id = ur.user_profile_id
+                JOIN (VALUES (17, 13), (19, 18)) AS m(role_id, parent_role_id)
+                    ON m.role_id = ur.role_id
                 WHERE up.organization_id IS NOT NULL
-                  AND ur.role_id = 17
                 ON CONFLICT DO NOTHING;
                 """
             )

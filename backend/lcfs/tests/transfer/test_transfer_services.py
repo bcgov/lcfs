@@ -279,6 +279,47 @@ async def test_update_transfer_success(transfer_service, mock_transfer_repo):
 
 
 @pytest.mark.anyio
+async def test_update_draft_transfer_persists_agreement_date(
+    transfer_service, mock_transfer_repo
+):
+    sender = _make_signer(org_id=1)
+    draft_status = TransferStatus(transfer_status_id=1, status=TransferStatusEnum.Draft)
+    original_date = date(2026, 10, 1)
+    updated_date = date(2026, 10, 2)
+    transfer = Transfer(
+        transfer_id=1,
+        from_organization_id=1,
+        to_organization_id=2,
+        agreement_date=original_date,
+        quantity=10,
+        price_per_unit=5.75,
+        current_status=draft_status,
+    )
+    transfer.transfer_history = []
+    transfer.transfer_comments = []
+
+    mock_transfer_repo.get_transfer_by_id.return_value = transfer
+    mock_transfer_repo.get_transfer_status_by_name.return_value = draft_status
+    mock_transfer_repo.update_transfer.return_value = transfer
+    transfer_service._perform_notification_call = AsyncMock()
+    update_data = TransferCreateSchema(
+        transfer_id=1,
+        from_organization_id=1,
+        to_organization_id=2,
+        agreement_date=updated_date,
+        quantity=10,
+        price_per_unit=5.75,
+        current_status="Draft",
+    )
+
+    await transfer_service.update_transfer(update_data, sender)
+
+    assert update_data.current_status is TransferStatusEnum.Draft
+    assert transfer.agreement_date == updated_date
+    mock_transfer_repo.update_transfer.assert_awaited_once_with(transfer)
+
+
+@pytest.mark.anyio
 async def test_update_category_success(transfer_service, mock_transfer_repo):
     old_status = TransferStatus(transfer_status_id=1, status="Draft")
     transfer_id = 1

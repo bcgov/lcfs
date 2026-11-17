@@ -1,5 +1,6 @@
 import { Login } from '@/components/Login'
 import { IDENTITY_PROVIDERS } from '@/constants/auth'
+import { CONFIG } from '@/constants/config'
 import { screen, fireEvent } from '@testing-library/react'
 import { vi, describe, expect, beforeEach, afterEach } from 'vite-plus/test'
 import { test } from '@/tests/utils/fixtures'
@@ -14,6 +15,14 @@ const mockKeycloak = {
   token: 'mock-token',
   idToken: 'mock-id-token'
 }
+const originalLocalAuth = CONFIG.KEYCLOAK.LOCAL_AUTH
+const isLocalKeycloak = () => CONFIG.KEYCLOAK.LOCAL_AUTH
+const primaryLoginTestId = () =>
+  isLocalKeycloak() ? 'link-local-keycloak' : 'link-bceid'
+const primaryLoginOptions = () => ({
+  ...(!isLocalKeycloak() ? { idpHint: IDENTITY_PROVIDERS.BCEID_BUSINESS } : {}),
+  redirectUri: window.location.origin
+})
 
 const keycloak = vi.hoisted(() => ({
   useKeycloak: vi.fn()
@@ -60,6 +69,7 @@ vi.mock('react-i18next', () => ({
 
 describe('Login Component', () => {
   beforeEach(() => {
+    CONFIG.KEYCLOAK.LOCAL_AUTH = false
     vi.clearAllMocks()
     mockLocation.state = null
     keycloak.useKeycloak.mockReturnValue({
@@ -69,6 +79,7 @@ describe('Login Component', () => {
   })
 
   afterEach(() => {
+    CONFIG.KEYCLOAK.LOCAL_AUTH = originalLocalAuth
     vi.resetAllMocks()
   })
 
@@ -85,19 +96,27 @@ describe('Login Component', () => {
       expect(screen.getByText('Login')).toBeInTheDocument()
     })
 
-    test('should render both login buttons and public dashboard button', ({
+    test('should render the configured login buttons and public dashboard button', ({
       render,
       theme,
       router
     }) => {
       render(<Login />, [theme, router])
 
-      expect(screen.getByTestId('link-bceid')).toBeInTheDocument()
-      expect(screen.getByTestId('link-idir')).toBeInTheDocument()
+      if (isLocalKeycloak()) {
+        expect(screen.getByTestId('link-local-keycloak')).toBeInTheDocument()
+        expect(screen.queryByTestId('link-bceid')).not.toBeInTheDocument()
+        expect(screen.queryByTestId('link-idir')).not.toBeInTheDocument()
+        expect(screen.getAllByText(/Login with/)).toHaveLength(1)
+        expect(screen.getByText('Keycloak')).toBeInTheDocument()
+      } else {
+        expect(screen.getByTestId('link-bceid')).toBeInTheDocument()
+        expect(screen.getByTestId('link-idir')).toBeInTheDocument()
+        expect(screen.getAllByText(/Login with/)).toHaveLength(2)
+        expect(screen.getByText('BCeID')).toBeInTheDocument()
+        expect(screen.getByText('IDIR')).toBeInTheDocument()
+      }
       expect(screen.getByTestId('link-public-dashboard')).toBeInTheDocument()
-      expect(screen.getAllByText(/Login with/)).toHaveLength(2)
-      expect(screen.getByText('BCeID')).toBeInTheDocument()
-      expect(screen.getByText('IDIR')).toBeInTheDocument()
       expect(screen.getByText('Public LCFS information')).toBeInTheDocument()
     })
 
@@ -117,20 +136,16 @@ describe('Login Component', () => {
   })
 
   describe('Authentication Flow', () => {
-    test('should call keycloak.login with BCeID when BCeID button is clicked', ({
+    test('should call keycloak.login from the primary login button', ({
       render,
       theme,
       router
     }) => {
       render(<Login />, [theme, router])
 
-      const bceidButton = screen.getByTestId('link-bceid')
-      fireEvent.click(bceidButton)
+      fireEvent.click(screen.getByTestId(primaryLoginTestId()))
 
-      expect(mockKeycloak.login).toHaveBeenCalledWith({
-        idpHint: IDENTITY_PROVIDERS.BCEID_BUSINESS,
-        redirectUri: window.location.origin
-      })
+      expect(mockKeycloak.login).toHaveBeenCalledWith(primaryLoginOptions())
     })
 
     test('should call keycloak.login with IDIR when IDIR button is clicked', ({
@@ -149,11 +164,28 @@ describe('Login Component', () => {
       })
     })
 
+    test('uses local Keycloak without an identity-provider hint', ({
+      render,
+      theme,
+      router
+    }) => {
+      CONFIG.KEYCLOAK.LOCAL_AUTH = true
+      render(<Login />, [theme, router])
+
+      expect(screen.getByTestId('link-local-keycloak')).toBeInTheDocument()
+      expect(screen.queryByTestId('link-bceid')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('link-idir')).not.toBeInTheDocument()
+      fireEvent.click(screen.getByTestId('link-local-keycloak'))
+
+      expect(mockKeycloak.login).toHaveBeenCalledWith({
+        redirectUri: window.location.origin
+      })
+    })
+
     test('should use correct redirect URI', ({ render, theme, router }) => {
       render(<Login />, [theme, router])
 
-      const bceidButton = screen.getByTestId('link-bceid')
-      fireEvent.click(bceidButton)
+      fireEvent.click(screen.getByTestId(primaryLoginTestId()))
 
       expect(mockKeycloak.login).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -253,7 +285,7 @@ describe('Login Component', () => {
 
       // Component should render properly even when not authenticated
       expect(screen.getByTestId('login')).toBeInTheDocument()
-      expect(screen.getByTestId('link-bceid')).toBeInTheDocument()
+      expect(screen.getByTestId(primaryLoginTestId())).toBeInTheDocument()
       expect(screen.getByTestId('link-idir')).toBeInTheDocument()
     })
   })
@@ -273,11 +305,12 @@ describe('Login Component', () => {
     }) => {
       render(<Login />, [theme, router])
 
-      const bceidButton = screen.getByTestId('link-bceid')
-      const idirButton = screen.getByTestId('link-idir')
-
-      expect(bceidButton).toHaveAttribute('aria-label', 'Login with BCeID')
-      expect(idirButton).toHaveAttribute('aria-label', 'Login with IDIR')
+      const primaryButton = screen.getByTestId(primaryLoginTestId())
+      expect(primaryButton).toHaveAttribute('aria-label', 'Login with BCeID')
+      expect(screen.getByTestId('link-idir')).toHaveAttribute(
+        'aria-label',
+        'Login with IDIR'
+      )
     })
 
     test('should have correct button IDs for testing', ({
@@ -287,10 +320,8 @@ describe('Login Component', () => {
     }) => {
       render(<Login />, [theme, router])
 
-      expect(screen.getByTestId('link-bceid')).toHaveAttribute(
-        'id',
-        'link-bceid'
-      )
+      const primaryButton = screen.getByTestId(primaryLoginTestId())
+      expect(primaryButton).toHaveAttribute('id', 'link-bceid')
       expect(screen.getByTestId('link-idir')).toHaveAttribute('id', 'link-idir')
     })
   })
@@ -305,14 +336,12 @@ describe('Login Component', () => {
 
       render(<Login />, [theme, router])
 
-      const bceidButton = screen.getByTestId('link-bceid')
-      fireEvent.click(bceidButton)
+      fireEvent.click(screen.getByTestId(primaryLoginTestId()))
 
-      expect(mockKeycloak.login).toHaveBeenCalledWith(
-        expect.objectContaining({
-          redirectUri: originalLocation
-        })
-      )
+      expect(mockKeycloak.login).toHaveBeenCalledWith({
+        ...primaryLoginOptions(),
+        redirectUri: originalLocation
+      })
     })
   })
 
@@ -335,14 +364,13 @@ describe('Login Component', () => {
     }) => {
       render(<Login />, [theme, router])
 
-      const bceidButton = screen.getByTestId('link-bceid')
-      const idirButton = screen.getByTestId('link-idir')
+      const primaryButton = screen.getByTestId(primaryLoginTestId())
 
       // Tab navigation should work
-      bceidButton.focus()
-      expect(document.activeElement).toBe(bceidButton)
+      primaryButton.focus()
+      expect(document.activeElement).toBe(primaryButton)
 
-      // Should be able to focus on IDIR button as well
+      const idirButton = screen.getByTestId('link-idir')
       idirButton.focus()
       expect(document.activeElement).toBe(idirButton)
     })
@@ -366,19 +394,16 @@ describe('Login Component', () => {
     }) => {
       render(<Login />, [theme, router])
 
-      const bceidButton = screen.getByTestId('link-bceid')
+      const primaryButton = screen.getByTestId(primaryLoginTestId())
 
       // Rapid clicks
-      fireEvent.click(bceidButton)
-      fireEvent.click(bceidButton)
-      fireEvent.click(bceidButton)
+      fireEvent.click(primaryButton)
+      fireEvent.click(primaryButton)
+      fireEvent.click(primaryButton)
 
       // Should still only call login with correct parameters
       expect(mockKeycloak.login).toHaveBeenCalledTimes(3)
-      expect(mockKeycloak.login).toHaveBeenCalledWith({
-        idpHint: IDENTITY_PROVIDERS.BCEID_BUSINESS,
-        redirectUri: window.location.origin
-      })
+      expect(mockKeycloak.login).toHaveBeenCalledWith(primaryLoginOptions())
     })
   })
 })

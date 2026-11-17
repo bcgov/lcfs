@@ -28,6 +28,8 @@ vi.mock('@/services/useApiService', () => ({
 vi.mock('@/constants/routes', () => ({
   apiRoutes: {
     getDocuments: '/documents/:parentType/:parentID',
+    documentFolderDeleteDocument:
+      '/document-folders/:parentType/:parentID/documents/:documentId',
     getDocument: '/documents/:parentType/:parentID/:documentID',
     reviewDocumentScan:
       '/documents/:parentType/:parentID/:documentID/scan-review'
@@ -39,6 +41,7 @@ const mockQueryClient = vi.hoisted(() => ({
   invalidateQueries: vi.fn(),
   removeQueries: vi.fn()
 }))
+const mockInvalidateQueries = mockQueryClient.invalidateQueries
 
 vi.mock('@tanstack/react-query', () => ({
   useQuery: vi.fn(),
@@ -271,6 +274,31 @@ describe('useDocuments', () => {
         '/documents/compliance_report/123/456'
       )
       expect(result.data).toEqual({})
+    })
+
+    it('soft-deletes designated-action files and refreshes the list, tree and bin', async () => {
+      let mutation
+      mockUseMutation.mockImplementation((options) => {
+        mutation = options
+        return { mutate: vi.fn() }
+      })
+      mockApiService.delete.mockResolvedValue({ data: {} })
+
+      useDeleteDocument('designatedAction', 123)
+      const response = await mutation.mutationFn(456)
+      mutation.onSuccess(response, 456)
+
+      expect(mockApiService.delete).toHaveBeenCalledWith(
+        '/document-folders/designatedAction/123/documents/456'
+      )
+      for (const queryKey of [
+        ['documents', 'designatedAction', 123],
+        ['document-tree', 'designatedAction', '123'],
+        ['document-tree-deleted', 'designatedAction', '123'],
+        ['initiative-agreements', 'document-restore-targets']
+      ]) {
+        expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey })
+      }
     })
   })
 

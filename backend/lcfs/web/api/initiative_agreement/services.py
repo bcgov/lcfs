@@ -191,14 +191,14 @@ class InitiativeAgreementServices:
             organization_id = (
                 user.organization.organization_id if user.organization else -1
             )
-        agreements, total_count = await self.repo.get_initiative_agreements_paginated(
+        rows, total_count = await self.repo.get_initiative_agreements_paginated(
             pagination,
             organization_id,
             hidden_statuses=hidden_lifecycle_statuses(user),
         )
         # Non-government callers never receive internal comment text.
         latest_comments = await self.repo.get_latest_comments_by_agreement_ids(
-            [a.initiative_agreement_id for a in agreements],
+            [agreement.initiative_agreement_id for agreement, _, _ in rows],
             include_internal=organization_id is None,
         )
         return InitiativeAgreementsListSchema(
@@ -213,11 +213,13 @@ class InitiativeAgreementServices:
             initiative_agreements=[
                 InitiativeAgreementListItemSchema(
                     **self._list_item_kwargs(agreement),
+                    total_credits=total_credits,
+                    awarded_credits=awarded_credits,
                     last_comment=self._last_comment_payload(
                         latest_comments, agreement.initiative_agreement_id
                     ),
                 )
-                for agreement in agreements
+                for agreement, total_credits, awarded_credits in rows
             ],
         )
 
@@ -655,6 +657,17 @@ class InitiativeAgreementServices:
         return DesignatedActionsListSchema(
             pagination=self._pagination_response(pagination, total_count),
             designated_actions=rows,
+        )
+
+    @service_handler
+    async def get_designated_action_document_targets(
+        self, initiative_agreement_id: int, user
+    ):
+        username = getattr(user, "keycloak_username", None)
+        if not username:
+            raise HTTPException(status_code=403, detail="User identity is required.")
+        return await self.repo.get_designated_action_document_targets(
+            initiative_agreement_id, username
         )
 
     @service_handler

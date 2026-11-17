@@ -571,6 +571,31 @@ async def test_delete_file_last_link(document_service, document_mock, db_mock):
 
 
 @pytest.mark.anyio
+async def test_delete_file_can_defer_storage_deletion(
+    document_service, document_mock, db_mock
+):
+    """The document row goes, but its S3 object is left for the caller to
+    remove once the transaction has committed."""
+    _link_document(db_mock, document_mock, [1] + [0] * (_TABLES - 1))
+
+    file_key = await document_service.delete_file(
+        1, 1, "compliance_report", defer_storage_delete=True
+    )
+
+    assert file_key == document_mock.file_key
+    document_service.s3_client.delete_object.assert_not_called()
+    db_mock.delete.assert_called_once_with(document_mock)
+
+
+def test_delete_storage_objects_continues_after_a_failure(document_service):
+    document_service.s3_client.delete_object.side_effect = [Exception("boom"), None]
+
+    document_service.delete_storage_objects(["a", "b"])
+
+    assert document_service.s3_client.delete_object.call_count == 2
+
+
+@pytest.mark.anyio
 async def test_delete_file_multiple_links(document_service, document_mock, db_mock):
     _link_document(db_mock, document_mock, [2] + [0] * (_TABLES - 1))
 
@@ -605,6 +630,55 @@ async def test_delete_file_not_linked_to_the_parent(document_service, db_mock):
     assert exc.value.status_code == 404
     document_service.s3_client.delete_object.assert_not_called()
     db_mock.delete.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_delete_file_preserves_cross_parent_type_reference(
+    document_service, document_mock, db_mock
+):
+    """A document shared with another parent type keeps its file; only this
+    parent's link goes, and the caller is told nothing was destroyed."""
+    _link_document(db_mock, document_mock, [1, 1] + [0] * (_TABLES - 2))
+
+    deleted = await document_service.delete_file(1, 1, "compliance_report")
+
+    assert deleted is False
+    document_service.s3_client.delete_object.assert_not_called()
+    db_mock.delete.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_hard_delete_refuses_cross_parent_type_reference(
+    document_service, document_mock, db_mock
+):
+    """Permanent deletion must not silently degrade to unlinking: a shared
+    document is left entirely untouched and the caller is told so."""
+    _link_document(db_mock, document_mock, [1, 1] + [0] * (_TABLES - 2))
+
+    deleted = await document_service.delete_file(
+        1, 1, "compliance_report", require_physical_delete=True
+    )
+
+    assert deleted is False
+    document_service.s3_client.delete_object.assert_not_called()
+    db_mock.delete.assert_not_called()
+    # Not even the association row is removed.
+    db_mock.execute.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_hard_delete_last_link_reports_physical_delete(
+    document_service, document_mock, db_mock
+):
+    _link_document(db_mock, document_mock, [1] + [0] * (_TABLES - 1))
+
+    deleted = await document_service.delete_file(
+        1, 1, "compliance_report", require_physical_delete=True
+    )
+
+    assert deleted is True
+    document_service.s3_client.delete_object.assert_called_once()
+    db_mock.delete.assert_called_once_with(document_mock)
 
 
 @pytest.mark.anyio

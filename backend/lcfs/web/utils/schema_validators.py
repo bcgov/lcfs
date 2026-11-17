@@ -1,6 +1,10 @@
 import re
 from fastapi.exceptions import RequestValidationError
 
+# `fuel_suffix` is VARCHAR(20), allowing 18 main-number digits, a dot, and one
+# iteration digit.
+MAX_FUEL_SUFFIX_MAIN_DIGITS = 18
+
 
 def fuel_quantity_required(values: dict) -> dict:
     quantity = values.get("quantity")
@@ -154,13 +158,17 @@ def fuel_suffix_format_validator(values: dict) -> dict:
     fuel_suffix = values.get("fuelSuffix")
 
     if fuel_suffix is not None:
-        pattern = r"^\d{3}\.\d{1}$"
+        pattern = rf"(?:\d{{3}}|[1-9]\d{{3,{MAX_FUEL_SUFFIX_MAIN_DIGITS - 1}}})\.\d"
 
-        if not re.match(pattern, fuel_suffix):
+        if not re.fullmatch(pattern, fuel_suffix):
             errors = [
                 {
                     "loc": ("fuelSuffix",),
-                    "msg": "format is invalid. Must be like '102.5'.",
+                    "msg": (
+                        "format is invalid. Use exactly 3 digits, or 4 to 18 digits "
+                        "without a leading zero, followed by a decimal point and "
+                        "one iteration digit (e.g. '102.5' or '1000.0')."
+                    ),
                     "type": "value_error",
                 }
             ]

@@ -31,6 +31,7 @@ import {
 } from '@/hooks/useCIApplication'
 
 import { CIApplicationProgress } from './components/CIApplicationProgress'
+import { getCIApplicationDisplayStatus } from './components/ciApplicationDisplayStatus'
 import { getCIResumeStep } from './ciResumeStep'
 import { ApplicationInformationStep } from './components/ApplicationInformationStep'
 import { ApplicationSummary } from './components/ApplicationSummary'
@@ -246,6 +247,25 @@ const EditViewCIApplicationBase = () => {
     [updateStep3, goToStep, t]
   )
 
+  const handleSupplementalDocumentsSubmit = useCallback(
+    async (payload) => {
+      try {
+        await updateStep3(payload)
+        alertRef.current?.triggerAlert?.({
+          message: t('carbonIntensity:step3.saveSuccess'),
+          severity: 'success'
+        })
+        setIsDocumentEditorOpen(false)
+      } catch (err) {
+        alertRef.current?.triggerAlert?.({
+          message: getApiError(err, 'Failed to submit additional documents.'),
+          severity: 'error'
+        })
+      }
+    },
+    [updateStep3, t]
+  )
+
   const handleStep2Save = useCallback(
     async (payload) => {
       try {
@@ -352,6 +372,7 @@ const EditViewCIApplicationBase = () => {
   }, [ciApplication, currentUser])
 
   const isDraft = ciApplication?.status?.status === 'Draft'
+  const displayStatus = getCIApplicationDisplayStatus(ciApplication)
   const isSubmittedOrTerminal = Boolean(
     ciApplication?.status?.status && ciApplication.status.status !== 'Draft'
   )
@@ -485,9 +506,7 @@ const EditViewCIApplicationBase = () => {
 
       {!isAdd && ciApplication?.status?.status && (
         <Box mb={2}>
-          <BCAlert severity="info">
-            {`Status: ${ciApplication.status.status}`}
-          </BCAlert>
+          <BCAlert severity="info">{`Status: ${displayStatus}`}</BCAlert>
         </Box>
       )}
 
@@ -642,11 +661,15 @@ const EditViewCIApplicationBase = () => {
                 content: (
                   <DocumentsModellingStep
                     ciApplication={ciApplication}
-                    onSave={async () => {}}
-                    isSaving={false}
+                    onSave={
+                      canSupplementallyEditDocuments
+                        ? handleSupplementalDocumentsSubmit
+                        : async () => {}
+                    }
+                    isSaving={isUpdatingStep3}
                     readOnly={false}
                     showTitle={false}
-                    showSaveControls={false}
+                    showSaveControls={canSupplementallyEditDocuments}
                   />
                 )
               }

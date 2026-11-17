@@ -292,13 +292,13 @@ class TransferServices:
         )
         # if the transfer status is Draft or Sent then update all the fields within the transfer
         if transfer_data.current_status in [
-            TransferStatusEnum.Draft.value,
-            TransferStatusEnum.Sent.value,
+            TransferStatusEnum.Draft,
+            TransferStatusEnum.Sent,
         ]:
             # Only update certain fields if the status is Draft or changing to Sent
             if (
                 status_has_changed
-                or transfer_data.current_status == TransferStatusEnum.Draft.value
+                or transfer_data.current_status == TransferStatusEnum.Draft
             ):
                 transfer.to_organization_id = transfer_data.to_organization_id
                 transfer.agreement_date = transfer_data.agreement_date

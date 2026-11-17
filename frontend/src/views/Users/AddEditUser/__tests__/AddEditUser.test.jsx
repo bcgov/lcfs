@@ -583,6 +583,68 @@ describe('AddEditUser', () => {
     })
   })
 
+  test('preserves LCJFIP Administrator without Applicant when IDIR edits a phone number', async ({
+    render,
+    theme
+  }) => {
+    mockUseParams.mockReturnValue({ userID: 'user123', orgID: '42' })
+    vi.mocked(userHooks.useUser).mockReturnValue({
+      data: {
+        userProfileId: 'user123',
+        firstName: 'Sample',
+        lastName: 'User',
+        keycloakEmail: 'sample.user@example.com',
+        keycloakUsername: 'sample.user',
+        phone: '250-555-0100',
+        email: null,
+        roles: [{ name: roles.supplier }, { name: roles.lcjfip_administrator }],
+        isActive: true,
+        isGovernmentUser: false,
+        organization: { organizationId: 42, name: 'Example Organization' }
+      },
+      isLoading: false,
+      isFetched: true
+    })
+    vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
+      data: {
+        isGovernmentUser: true,
+        roles: [{ name: roles.government }, { name: roles.administrator }]
+      },
+      hasRoles: vi.fn((...requested) =>
+        requested.every((role) =>
+          [roles.government, roles.administrator].includes(role)
+        )
+      ),
+      isLoading: false
+    })
+    vi.mocked(organizationUserHooks.useOrganization).mockReturnValue({
+      data: { availableRoles: [roles.lcjfip_applicant] },
+      isLoading: false
+    })
+
+    render(<AddEditUser userType="bceid" />, [theme])
+
+    await waitFor(() => {
+      expect(document.getElementById('phone')).toHaveValue('250-555-0100')
+    })
+    fillField('phone', '250-555-0101')
+    fireEvent.click(screen.getByTestId('saveUser'))
+    fireEvent.click(await screen.findByTestId('impact-modal-confirm-btn'))
+
+    await waitFor(() => {
+      expect(mockUpdateUser).toHaveBeenCalledWith({
+        userID: 'user123',
+        payload: expect.objectContaining({
+          phone: '250-555-0101',
+          roles: [
+            roles.lcjfip_administrator.toLowerCase(),
+            roles.supplier.toLowerCase()
+          ]
+        })
+      })
+    })
+  })
+
   test('includes correct payload structure for government user', async ({
     render,
     theme

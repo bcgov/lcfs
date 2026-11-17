@@ -88,7 +88,7 @@ class Document(BaseModel, Auditable):
         comment="When the file was approved or rejected",
     )
 
-    # --- Soft deletion (nothing is ever purged) ------------------------
+    # --- Soft deletion; authorized hard deletes remove the document row ---
     # Only folder-enabled parents have a route that sets these; for every
     # other surface they stay NULL and the read filter is inert.
     deleted_date = Column(

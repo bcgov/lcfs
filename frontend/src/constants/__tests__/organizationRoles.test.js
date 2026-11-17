@@ -20,12 +20,13 @@ describe('organizationRoles (#4565)', () => {
     expect(formatOrgAvailableRoles(null)).toBe('')
   })
 
-  it('only ever offers the four org-controllable roles', () => {
+  it('only ever offers the org-controllable roles', () => {
     expect(orgAvailableRoleOptions.map((o) => o.value)).toEqual([
       roles.compliance_reporting,
       roles.transfers,
       roles.ci_applicant,
-      roles.ia_proponent
+      roles.ia_proponent,
+      roles.lcjfip_applicant
     ])
     const offered = new Set(orgAvailableRoleOptions.map((o) => o.value))
     Object.values(orgTypeDefaultRoles)
@@ -40,6 +41,7 @@ describe('organizationRoles (#4565)', () => {
     expect(
       suggestedRolesForTypes(['fuel_supplier', 'initiative_agreement_holder'])
     ).toEqual([roles.compliance_reporting, roles.transfers, roles.ia_proponent])
+    expect(suggestedRolesForTypes(['lcjfip'])).toEqual([roles.lcjfip_applicant])
   })
 
   it('does not re-add roles the organization already has, and de-duplicates', () => {
