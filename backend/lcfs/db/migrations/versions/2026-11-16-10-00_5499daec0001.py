@@ -1,7 +1,7 @@
 """Add independent DA/EOC submissions and document links.
 
 Revision ID: 5499daec0001
-Revises: 8b3e6a1c5d90
+Revises: 9e0e5741b48f
 """
 
 from alembic import op
@@ -9,7 +9,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 revision = "5499daec0001"
-down_revision = "8b3e6a1c5d90"
+down_revision = "9e0e5741b48f"
 branch_labels = None
 depends_on = None
 
