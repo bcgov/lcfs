@@ -366,17 +366,23 @@ async def review_document_scan(
     ci_validate=Depends(ci_application_validator),
 ) -> FileResponseSchema:
     """An IDIR Administrator approves or rejects a macro-enabled workbook."""
-    await validate_parent_access(
-        parent_type,
-        parent_id,
-        request,
-        document_service,
-        cr_validate,
-        ia_validate,
-        aa_validate,
-        cs_validate,
-        ci_validate,
-    )
+    if parent_type == "fuel_production_facility":
+        # A review changes the file's scan status, not the facility's
+        # documents, so it needs read access rather than the supplier-only
+        # write rule validate_parent_access applies to every non-GET request.
+        await ci_validate.validate_facility_access(parent_id)
+    else:
+        await validate_parent_access(
+            parent_type,
+            parent_id,
+            request,
+            document_service,
+            cr_validate,
+            ia_validate,
+            aa_validate,
+            cs_validate,
+            ci_validate,
+        )
 
     document = await document_service.review_scan(
         document_id,

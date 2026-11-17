@@ -286,6 +286,8 @@ export const useReviewDocumentScan = (
         queryClient.invalidateQueries({
           queryKey: ['ci-application', String(parentID)]
         })
+      } else if (parentType === 'fuel_production_facility') {
+        invalidateFuelProductionFacilityQueries(queryClient)
       }
       onSuccess?.(data, variables, context)
     },

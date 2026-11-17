@@ -5,6 +5,7 @@ from lcfs.db.models.document.Document import DocumentScanStatusEnum
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.services.s3.client import DocumentService
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
+from lcfs.web.api.document.views import ci_application_validator
 
 FINDINGS = [
     "Contains macros (2 code modules)",
@@ -170,3 +171,37 @@ async def test_findings_are_for_government_staff_only(
     document = response.json()[0]
     assert document["scanStatus"] == "pending_approval"
     assert document["scanFindings"] == findings
+
+
+class FakeFacilityValidation:
+    calls = []
+
+    async def validate_facility_access(self, facility_id, write=False):
+        FakeFacilityValidation.calls.append((facility_id, write))
+
+
+@pytest.mark.anyio
+async def test_facility_file_review_needs_read_access_only(
+    fastapi_app, client, set_mock_user
+):
+    # The facility write rule refuses government users, so a review must not
+    # go through it.
+    FakeFacilityValidation.calls = []
+    fastapi_app.dependency_overrides[ci_application_validator] = (
+        lambda: FakeFacilityValidation()
+    )
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT, RoleEnum.ADMINISTRATOR])
+
+    response = await client.put(
+        fastapi_app.url_path_for(
+            "review_document_scan",
+            parent_type="fuel_production_facility",
+            parent_id=12,
+            document_id=10,
+        ),
+        json={"decision": "approve"},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert FakeFacilityValidation.calls == [(12, False)]
+    assert FakeDocumentService.reviews == [(10, 12, True)]
