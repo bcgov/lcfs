@@ -105,6 +105,23 @@ describe('ComplianceReports buttonConfigs', () => {
     }
   })
 
+  it.each([
+    [null, true],
+    ['Supplier Supplemental', true],
+    ['Government Initiated', false],
+    ['Government Reassessment', false]
+  ])('shows delete for initiator %s: %s', (supplementalInitiator, visible) => {
+    mockContext.currentStatus = COMPLIANCE_REPORT_STATUSES.DRAFT
+    mockContext.hasRoles = vi.fn((role) => role === roles.signing_authority)
+    mockContext.hasAnyRole = vi.fn(() => false)
+    mockContext.supplementalInitiator = supplementalInitiator
+    const buttons =
+      buttonClusterConfigFn(mockContext)[COMPLIANCE_REPORT_STATUSES.DRAFT]
+    expect(buttons.some((button) => button.id === 'delete-draft-btn')).toBe(
+      visible
+    )
+  })
+
   describe('issueAssessment Button Configuration', () => {
     beforeEach(() => {
       // Mock director role

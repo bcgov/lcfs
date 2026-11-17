@@ -47,6 +47,16 @@ class FinalSupplyEquipmentValidation:
                 raise HTTPException(
                     status_code=404, detail="FSE reporting record not found"
                 )
+            record_org = getattr(record, "organization_id", None)
+            user_org = getattr(self.request.user, "organization_id", None)
+            if (
+                record_org is not None
+                and not self.request.user.is_government
+                and record_org != user_org
+            ):
+                raise HTTPException(
+                    status_code=404, detail="FSE reporting record not found"
+                )
             parent_ids.add(record.compliance_report_id)
             if source_editable:
                 editable_ids.add(record.compliance_report_id)

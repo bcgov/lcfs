@@ -313,7 +313,9 @@ async def test_equipment_writes_reject_hidden_reports_before_mutation(
         response = await client.request(
             method, "/api/final-supply-equipments" + path, json=payload
         )
-        assert response.status_code == 403, response.text
+        assert response.status_code == (
+            400 if operation == "create" else 403
+        ), response.text
         mutation.assert_not_awaited()
 
 

@@ -6,7 +6,7 @@ import pytest
 from fastapi import FastAPI
 from httpx import AsyncClient
 from starlette.responses import StreamingResponse
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 from datetime import datetime
 from lcfs.db.models import ComplianceReport, Organization, CompliancePeriod
 from lcfs.db.models.user.Role import RoleEnum
@@ -718,6 +718,9 @@ async def test_delete_fse_reporting_resolves_the_record_report(
         "lcfs.web.api.final_supply_equipment.services.FinalSupplyEquipmentServices"
     )
     with validated_report(compliance_report_id=33) as validation, patch(
+        "lcfs.web.api.final_supply_equipment.validation.FinalSupplyEquipmentValidation.validate_reporting_write",
+        new_callable=AsyncMock,
+    ), patch(
         f"{services}.get_reporting_record_for_write",
         return_value=SimpleNamespace(compliance_report_id=33),
     ) as mock_get_record, patch(

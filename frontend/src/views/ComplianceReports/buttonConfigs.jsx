@@ -571,6 +571,12 @@ function shouldShowButton(buttonName, context) {
 
   switch (buttonName) {
     case 'deleteDraft':
+      if (
+        context.supplementalInitiator &&
+        context.supplementalInitiator !== 'Supplier Supplemental'
+      ) {
+        return false
+      }
       // For early issuance: only until first early issuance has been assessed
       if (context.isEarlyIssuance && context.hadBeenAssessed) {
         return false
