@@ -168,7 +168,8 @@ describe('Navbar', () => {
       ['Director', roles.director, true],
       ['IA Analyst', roles.ia_analyst, true],
       ['IA Manager', roles.ia_manager, true],
-      ['IA Proponent (BCeID)', roles.ia_proponent, false]
+      ['IA Proponent (BCeID)', roles.ia_proponent, false],
+      ['IA Signer (BCeID)', roles.ia_signer, false]
     ])(
       'shows tab for %s',
       ([, role, isGovernmentUser], { render, query, theme, router }) => {

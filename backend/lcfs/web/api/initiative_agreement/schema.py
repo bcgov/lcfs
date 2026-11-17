@@ -434,3 +434,27 @@ class AgreementUpdateSchema(BaseSchema):
     contact_phone: Optional[str] = Field(None, max_length=50)
     agreement_start_date: Optional[date] = None
     agreement_end_date: Optional[date] = None
+
+
+class EOCSaveSchema(BaseSchema):
+    summary_of_work_completed: str = ""
+    how_evidence_meets_agreement_requirements: str = ""
+    exceptions_limitations_and_context: str = ""
+    declaration_accepted: bool = False
+
+
+class EOCSchema(BaseSchema):
+    submissions: List[dict] = Field(default_factory=list)
+    can_edit: bool = False
+    da_status: str
+    initiative_agreement_id: int
+    ia_code: Optional[str] = None
+    action_number: int
+    name: str
+    designated_action_id: int
+    status: str
+    content: dict[str, str] = Field(default_factory=dict)
+    submitted_at: Optional[datetime] = None
+    submitted_by_user_id: Optional[int] = None
+    organization_name: Optional[str] = None
+    requirements: List[dict] = Field(default_factory=list)

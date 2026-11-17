@@ -50,6 +50,28 @@ router = APIRouter()
 logger = structlog.get_logger(__name__)
 
 
+def validate_document_write_roles(request: Request, parent_type: str) -> None:
+    """The added IA roles authorize DA files only; legacy roles retain access."""
+    roles = request.user.role_names
+    if any(
+        role in roles
+        for role in (
+            RoleEnum.SUPPLIER,
+            RoleEnum.ANALYST,
+            RoleEnum.GOVERNMENT,
+            RoleEnum.CI_APPLICANT,
+        )
+    ):
+        return
+    if parent_type == "designatedAction" and any(
+        role in roles for role in (RoleEnum.IA_PROPONENT, RoleEnum.IA_SIGNER)
+    ):
+        return
+    raise HTTPException(
+        status_code=403, detail="Insufficient document permissions for this parent type"
+    )
+
+
 async def validate_parent_access(
     parent_type: str,
     parent_id: int,
@@ -86,6 +108,8 @@ async def validate_parent_access(
             parent_id
         )
         await ia_validate.validate_organization_access(agreement_id)
+        if write:
+            await ia_validate.service.validate_eoc_write(parent_id)
     elif parent_type == "charging_site":
         await cs_validate.validate_organization_access(parent_id)
     elif parent_type == "ci_application":
@@ -167,6 +191,8 @@ async def get_all_documents(
         RoleEnum.ANALYST,
         RoleEnum.GOVERNMENT,
         RoleEnum.CI_APPLICANT,
+        RoleEnum.IA_PROPONENT,
+        RoleEnum.IA_SIGNER,
     ]
 )
 async def upload_file(
@@ -194,22 +220,20 @@ async def upload_file(
     cs_validate: ChargingSiteValidation = Depends(),
     ci_validate=Depends(ci_application_validator),
 ) -> FileResponseSchema:
-    if parent_type == "compliance_report":
-        await cr_validate.validate_organization_access(parent_id)
 
-    if parent_type == "initiativeAgreement":
-        await ia_validate.validate_organization_access(parent_id)
-
-    if parent_type == "adminAdjustment":
-        await aa_validate.validate_organization_access(parent_id)
-
-    if parent_type == "charging_site":
-        await cs_validate.validate_organization_access(parent_id)
-
-    if parent_type == "ci_application":
-        await ci_validate.validate_document_write_access(parent_id)
-    elif parent_type == "fuel_production_facility":
-        await ci_validate.validate_facility_access(parent_id, write=True)
+    validate_document_write_roles(request, parent_type)
+    await validate_parent_access(
+        parent_type,
+        parent_id,
+        request,
+        document_service,
+        cr_validate,
+        ia_validate,
+        aa_validate,
+        cs_validate,
+        ci_validate,
+        write=True,
+    )
 
     document = await document_service.upload_file(
         file,
@@ -279,6 +303,8 @@ async def stream_document(
         RoleEnum.ANALYST,
         RoleEnum.GOVERNMENT,
         RoleEnum.CI_APPLICANT,
+        RoleEnum.IA_PROPONENT,
+        RoleEnum.IA_SIGNER,
     ]
 )
 async def rename_file(
@@ -297,6 +323,7 @@ async def rename_file(
     # The one dispatch, rather than a fourth copy of it: the inline
     # copies here had already drifted, and neither knew about
     # designatedAction.
+    validate_document_write_roles(request, parent_type)
     await validate_parent_access(
         parent_type,
         parent_id,
@@ -309,6 +336,22 @@ async def rename_file(
         ci_validate,
         write=True,
     )
+
+    if (
+        parent_type == "designatedAction"
+        and RoleEnum.GOVERNMENT not in request.user.role_names
+        and any(
+            role in request.user.role_names
+            for role in (RoleEnum.IA_PROPONENT, RoleEnum.IA_SIGNER)
+        )
+    ):
+        document = await document_service._get_document_for_parent(
+            document_id, parent_id, parent_type
+        )
+        if document.create_user != request.user.keycloak_username:
+            raise HTTPException(
+                status_code=403, detail="Only the creator may rename this evidence item"
+            )
 
     document = await document_service.rename_file(
         document_id, parent_id, parent_type, data.display_name
@@ -343,6 +386,8 @@ async def delete_file(
                 "document bin."
             ),
         )
+
+    validate_document_write_roles(request, parent_type)
 
     # The one dispatch, rather than a fourth copy of it: the inline
     # copies here had already drifted, and neither knew about

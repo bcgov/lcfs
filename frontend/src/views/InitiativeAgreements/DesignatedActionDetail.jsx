@@ -43,6 +43,7 @@ import {
   PLACEMENT_EVIDENCE
 } from './components/DesignatedActionWorkflow'
 import { EditDesignatedAction } from './components/EditDesignatedAction'
+import { ProponentEOC } from './components/ProponentEOC'
 import { DesignatedActionHistoryPanel } from './components/DesignatedActionHistoryPanel'
 
 // The shared document machinery keys on this string for designated actions.
@@ -89,7 +90,7 @@ const navButtonSx = {
   }
 }
 
-const DesignatedActionDetailBase = () => {
+const DesignatedActionDetailIDIR = () => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const navigate = useNavigate()
   const { initiativeAgreementId, designatedActionId } = useParams()
@@ -479,6 +480,12 @@ const DesignatedActionDetailBase = () => {
         parentID={designatedActionId}
       />
 
+      <ProponentEOC
+        key={designatedActionId}
+        designatedActionId={designatedActionId}
+        readOnly
+      />
+
       {/* The audit trail behind every workflow step (#4898). */}
       <Role roles={[roles.ia_analyst, roles.ia_manager, roles.director]}>
         <DesignatedActionHistoryPanel designatedActionId={designatedActionId} />
@@ -497,9 +504,29 @@ const DesignatedActionDetailBase = () => {
   )
 }
 
+const DesignatedActionDetailBase = () => {
+  const { hasRoles } = useCurrentUser()
+  const { designatedActionId } = useParams()
+  if (hasRoles?.(roles.ia_proponent) || hasRoles?.(roles.ia_signer)) {
+    return (
+      <ProponentEOC
+        key={designatedActionId}
+        designatedActionId={designatedActionId}
+      />
+    )
+  }
+  return <DesignatedActionDetailIDIR />
+}
+
 export const DesignatedActionDetail = withRole(
   DesignatedActionDetailBase,
-  [roles.ia_analyst, roles.ia_manager, roles.director],
+  [
+    roles.ia_analyst,
+    roles.ia_manager,
+    roles.director,
+    roles.ia_proponent,
+    roles.ia_signer
+  ],
   ROUTES.DASHBOARD
 )
 DesignatedActionDetail.displayName = 'DesignatedActionDetail'

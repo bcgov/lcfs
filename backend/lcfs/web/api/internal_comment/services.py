@@ -250,6 +250,11 @@ class InternalCommentService:
         resolves to no organization fails closed rather than revealing
         whether it exists.
         """
+        if entity_type == EntityTypeEnum.DESIGNATED_ACTION and not any(
+            role in self.request.user.role_names
+            for role in (RoleEnum.IA_PROPONENT, RoleEnum.IA_SIGNER)
+        ):
+            raise HTTPException(status_code=403, detail="IA role required")
         org_id, _ = await self.repo.get_entity_org_and_year(entity_type, entity_id)
         user_org_id = self._user_organization_id()
         if org_id is None or user_org_id is None or org_id != user_org_id:
@@ -288,6 +293,16 @@ class InternalCommentService:
         agreement = await self.repo.get_parent_initiative_agreement_of_comment(
             internal_comment_id
         )
+        if not self._is_government_user():
+            entity = await self.repo.get_comment_entity(internal_comment_id)
+            if entity and entity[0] == EntityTypeEnum.DESIGNATED_ACTION:
+                await self._require_own_organization(*entity)
+                comment = await self.repo.get_internal_comment_by_id(
+                    internal_comment_id
+                )
+                visibility = getattr(comment.visibility, "value", comment.visibility)
+                if visibility != CommentVisibilityEnum.PUBLIC.value:
+                    raise HTTPException(status_code=403, detail="Forbidden resource")
         if agreement is not None and is_hidden_from(agreement, self.request.user):
             raise HTTPException(status_code=404, detail="Internal comment not found.")
 
@@ -549,6 +564,7 @@ class InternalCommentService:
             if data.entity_type not in (
                 EntityTypeEnum.COMPLIANCE_REPORT,
                 EntityTypeEnum.CI_APPLICATION,
+                EntityTypeEnum.DESIGNATED_ACTION,
             ):
                 raise HTTPException(status_code=403, detail="Forbidden resource")
             if data.visibility != CommentVisibilityEnum.PUBLIC:
@@ -691,6 +707,7 @@ class InternalCommentService:
             if entity_type not in (
                 EntityTypeEnum.COMPLIANCE_REPORT,
                 EntityTypeEnum.CI_APPLICATION,
+                EntityTypeEnum.DESIGNATED_ACTION,
             ):
                 raise HTTPException(status_code=403, detail="Forbidden resource")
             await self._require_own_organization(entity_type, entity_id)
