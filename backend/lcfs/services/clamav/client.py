@@ -1,5 +1,6 @@
 import structlog
 import socket
+import time
 
 from starlette.concurrency import run_in_threadpool
 
@@ -8,6 +9,8 @@ from lcfs.settings import settings
 logger = structlog.get_logger(__name__)
 
 CHUNK_SIZE = 64 * 1024
+# The only reply that means a zINSTREAM upload was scanned and found clean
+CLEAN_REPLY = "stream: OK"
 
 
 class FileScanException(Exception):
@@ -68,25 +71,47 @@ class ClamAVService:
         return await run_in_threadpool(self.scan_file, file)
 
     def _instream(self, stream) -> tuple[str, bool]:
-        timeout = settings.clamav_timeout_seconds
+        # One budget for connect, send and read, so a scanner that answers a
+        # byte at a time can't hold the worker past the timeout.
+        deadline = time.monotonic() + settings.clamav_timeout_seconds
         address = (settings.clamav_host, settings.clamav_port)
-        with socket.create_connection(address, timeout=timeout) as sock:
+        with socket.create_connection(
+            address, timeout=self._remaining(deadline)
+        ) as sock:
             send_interrupted = False
             try:
-                sock.sendall(b"zINSTREAM\0")
+                self._send(sock, b"zINSTREAM\0", deadline)
                 while chunk := stream.read(CHUNK_SIZE):
-                    sock.sendall(len(chunk).to_bytes(4, byteorder="big") + chunk)
-                sock.sendall(b"\0\0\0\0")  # Zero-length chunk ends the stream
+                    self._send(
+                        sock, len(chunk).to_bytes(4, byteorder="big") + chunk, deadline
+                    )
+                # Zero-length chunk ends the stream
+                self._send(sock, b"\0\0\0\0", deadline)
             except (BrokenPipeError, ConnectionResetError):
                 # clamd hangs up early when a stream limit is hit. Its reply,
                 # if one arrived, says why.
                 send_interrupted = True
-            return self._read_reply(sock), send_interrupted
+            return self._read_reply(sock, deadline), send_interrupted
 
     @staticmethod
-    def _read_reply(sock) -> str:
+    def _remaining(deadline: float) -> float:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            logger.error("ClamAV scan ran out of time")
+            raise ScanUnavailableException("ClamAV scan timed out")
+        return remaining
+
+    @classmethod
+    def _send(cls, sock, data: bytes, deadline: float) -> None:
+        # sendall's timeout covers the whole call, not each write
+        sock.settimeout(cls._remaining(deadline))
+        sock.sendall(data)
+
+    @classmethod
+    def _read_reply(cls, sock, deadline: float) -> str:
         data = b""
         while not data.endswith(b"\0"):
+            sock.settimeout(cls._remaining(deadline))
             try:
                 chunk = sock.recv(4096)
             except ConnectionResetError:
@@ -98,10 +123,13 @@ class ClamAVService:
 
     @staticmethod
     def _check_reply(reply: str, send_interrupted: bool = False) -> str:
-        if reply.endswith(": OK"):
+        # Only the exact clean reply to a stream clamd received in full passes
+        if reply == CLEAN_REPLY and not send_interrupted:
             return reply
 
-        if reply.endswith(" FOUND"):
+        # More than one reply (lines or NUL-separated) is not a verdict
+        single_reply = not any(sep in reply for sep in ("\n", "\r", "\0"))
+        if single_reply and reply.endswith(" FOUND"):
             signature = reply.split(": ", 1)[-1].removesuffix(" FOUND")
             if signature.startswith("Heuristics.Limits.Exceeded"):
                 logger.error("File exceeded ClamAV scan limits", result=reply)
@@ -109,7 +137,7 @@ class ClamAVService:
             logger.error("Virus detected", result=reply)
             raise VirusScanException(f"Virus detected: {reply}")
 
-        if "size limit exceeded" in reply.lower() or (send_interrupted and not reply):
+        if send_interrupted or "size limit exceeded" in reply.lower():
             logger.error("File exceeded ClamAV stream limit", result=reply)
             raise FileTooLargeToScanException(reply or "stream closed by clamd")
 

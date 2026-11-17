@@ -1,6 +1,7 @@
 import socket
 import threading
 from io import BytesIO
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -140,6 +141,29 @@ def test_empty_reply_fails_closed(upload):
         scan_with(reply(b""), upload)
 
 
+@pytest.mark.parametrize(
+    "text",
+    [
+        b"fd[10]: OK",
+        b"INSTREAM: OK",
+        b"stream: Eicar-Signature FOUND stream: OK",
+        b"stream: Eicar-Signature FOUND\nstream: OK",
+        b"stream: OK\nstream: OK",
+        b"stream: OK\0stream: Eicar-Signature FOUND",
+    ],
+)
+def test_only_the_exact_clean_reply_passes(upload, text):
+    with pytest.raises(ScanUnavailableException):
+        scan_with(reply(text), upload)
+
+
+@pytest.mark.parametrize("text", ["stream: OK", "fd[10]: OK", ""])
+def test_ok_after_an_interrupted_send_is_too_large(text):
+    # clamd stopped reading part way, so it never saw the whole file
+    with pytest.raises(FileTooLargeToScanException):
+        ClamAVService._check_reply(text, send_interrupted=True)
+
+
 def test_hang_up_without_reply_fails_closed(upload):
     # Whether the client sees a broken pipe first depends on socket buffers,
     # so only the outcome is fixed: the upload is refused.
@@ -150,6 +174,60 @@ def test_hang_up_without_reply_fails_closed(upload):
 def test_stalled_scanner_times_out(upload):
     with pytest.raises(ScanUnavailableException):
         scan_with(never_reply, upload, timeout=0.5)
+
+
+class TricklingSocket:
+    """Accepts the stream, then answers one byte at a time, forever."""
+
+    def __init__(self, clock):
+        self.clock = clock
+        self.timeouts = []
+        self.recv_calls = 0
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def settimeout(self, value):
+        self.timeouts.append(value)
+
+    def sendall(self, data):
+        self.clock.now += 0.1
+
+    def recv(self, size):
+        self.recv_calls += 1
+        self.clock.now += 0.9  # Each byte arrives just inside a per-call timeout
+        return b"s"
+
+
+def test_trickling_scanner_hits_the_overall_deadline(upload):
+    clock = SimpleNamespace(now=0.0)
+    sock = TricklingSocket(clock)
+    connect_timeouts = []
+
+    def create_connection(address, timeout):
+        connect_timeouts.append(timeout)
+        return sock
+
+    with patch("lcfs.services.clamav.client.settings") as settings, patch(
+        "lcfs.services.clamav.client.time",
+        SimpleNamespace(monotonic=lambda: clock.now),
+    ), patch("lcfs.services.clamav.client.socket.create_connection", create_connection):
+        settings.clamav_host = "127.0.0.1"
+        settings.clamav_port = 3310
+        settings.clamav_timeout_seconds = 5
+        with pytest.raises(ScanUnavailableException):
+            ClamAVService().scan_file(upload)
+
+    assert connect_timeouts == [5]
+    # Every operation got only what was left of the one budget
+    assert all(t > 0 for t in sock.timeouts)
+    assert sock.timeouts == sorted(sock.timeouts, reverse=True)
+    assert sock.timeouts[-1] < 1
+    assert sock.recv_calls < 6
+    assert upload.file.tell() == 0
 
 
 def test_unreachable_scanner_fails_closed(upload):
