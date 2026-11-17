@@ -12,7 +12,7 @@ from structlog.testing import capture_logs
 
 from lcfs.db import pool_monitor
 from lcfs.db.dependencies import extended_statement_timeout, set_statement_timeout
-from lcfs.db.engine_config import build_connect_args
+from lcfs.db.engine_config import build_connect_args, register_statement_timeout
 from lcfs.db.pool_monitor import ConnectionTracker, register_pool_monitor
 from lcfs.settings import Settings, settings
 from lcfs.utils import query_analyzer
@@ -31,18 +31,13 @@ def _counter_value(counter, *labels) -> float:
 
 
 class TestBuildConnectArgs:
-    def test_sets_statement_timeout_as_server_setting(self):
-        args = build_connect_args(30_000)
-        assert args["server_settings"] == {"statement_timeout": "30000"}
+    def test_sends_no_startup_parameters(self):
+        """PgBouncer refuses startup parameters it does not track, so the
+        timeout must not travel as asyncpg ``server_settings``."""
+        args = build_connect_args()
+        assert "server_settings" not in args
         assert args["statement_cache_size"] == 0
         assert args["prepared_statement_cache_size"] == 0
-
-    @pytest.mark.parametrize("value", [0, -1])
-    def test_zero_or_negative_explicitly_disables_timeout(self, value):
-        """An explicit "0" overrides any inherited server/database/role timeout."""
-        assert build_connect_args(value)["server_settings"] == {
-            "statement_timeout": "0"
-        }
 
     def test_defaults(self):
         assert settings.db_statement_timeout_ms == 30_000
@@ -420,26 +415,63 @@ class TestConnectionTracker:
         assert fresh.snapshot()["total_checkouts"] == 0
 
 
+async def _maintenance_db_engine(statement_timeout_ms: int):
+    """Engine on the maintenance DB (exists everywhere; tests only use
+    pg_sleep/SHOW) with the given default timeout, or skip if unreachable."""
+    from sqlalchemy.ext.asyncio import create_async_engine
+    from sqlalchemy.pool import NullPool
+
+    engine = create_async_engine(
+        str(settings.db_url.with_path("/postgres")),
+        poolclass=NullPool,
+        connect_args=build_connect_args(),
+    )
+    register_statement_timeout(engine.sync_engine, statement_timeout_ms)
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(sa.text("SELECT 1"))
+    except Exception as exc:
+        await engine.dispose()
+        pytest.skip(f"PostgreSQL not reachable: {exc!r}")
+    return engine
+
+
 class TestStatementTimeoutAgainstPostgres:
     @pytest.fixture
     async def pg_engine(self):
-        from sqlalchemy.ext.asyncio import create_async_engine
-        from sqlalchemy.pool import NullPool
-
-        engine = create_async_engine(
-            # maintenance DB: exists everywhere and these tests only use pg_sleep/SHOW
-            str(settings.db_url.with_path("/postgres")),
-            poolclass=NullPool,
-            connect_args=build_connect_args(300),  # 300ms
-        )
-        try:
-            async with engine.connect() as conn:
-                await conn.execute(sa.text("SELECT 1"))
-        except Exception as exc:
-            await engine.dispose()
-            pytest.skip(f"PostgreSQL not reachable: {exc!r}")
+        engine = await _maintenance_db_engine(300)  # 300ms
         yield engine
         await engine.dispose()
+
+    async def test_default_applies_to_every_transaction(self, pg_engine):
+        async with pg_engine.connect() as conn:
+            assert (await conn.scalar(sa.text("SHOW statement_timeout"))) == "300ms"
+            await conn.commit()
+            # SET LOCAL ended with the first transaction; the next one sets it again.
+            assert (await conn.scalar(sa.text("SHOW statement_timeout"))) == "300ms"
+
+    async def test_default_does_not_outlive_the_transaction(self, pg_engine):
+        """Under PgBouncer transaction pooling the server connection goes to
+        another client after commit, so nothing may stay set on it."""
+        async with pg_engine.connect() as conn:
+            assert (await conn.scalar(sa.text("SHOW statement_timeout"))) == "300ms"
+            await conn.commit()
+            raw = await conn.get_raw_connection()
+            # Straight to asyncpg: no transaction, no begin event.
+            session_value = await raw.driver_connection.fetchval(
+                "SHOW statement_timeout"
+            )
+            assert session_value != "300ms"
+
+    @pytest.mark.parametrize("value", [0, -1])
+    async def test_zero_or_negative_explicitly_disables_timeout(self, value):
+        """An explicit "0" overrides any inherited server/database/role timeout."""
+        engine = await _maintenance_db_engine(value)
+        try:
+            async with engine.connect() as conn:
+                assert (await conn.scalar(sa.text("SHOW statement_timeout"))) == "0"
+        finally:
+            await engine.dispose()
 
     async def test_default_timeout_cancels_slow_query(self, pg_engine):
         before = _counter_value(STATEMENT_TIMEOUTS_TOTAL, "pg-test")
@@ -471,23 +503,9 @@ class TestSessionDependencyEndToEnd:
     """Real ``get_async_db_session`` over HTTP: default vs export timeout."""
 
     async def test_request_and_export_routes_get_expected_timeouts(self, monkeypatch):
-        from sqlalchemy.ext.asyncio import create_async_engine
-        from sqlalchemy.pool import NullPool
-
         from lcfs.db import dependencies as db_dependencies
 
-        engine = create_async_engine(
-            str(settings.db_url.with_path("/postgres")),
-            poolclass=NullPool,
-            connect_args=build_connect_args(settings.db_statement_timeout_ms),
-        )
-        try:
-            async with engine.connect() as conn:
-                await conn.execute(sa.text("SELECT 1"))
-        except Exception as exc:
-            await engine.dispose()
-            pytest.skip(f"PostgreSQL not reachable: {exc!r}")
-
+        engine = await _maintenance_db_engine(30_000)
         monkeypatch.setattr(db_dependencies, "async_engine", engine)
         monkeypatch.setattr(settings, "db_statement_timeout_ms", 30_000)
         monkeypatch.setattr(settings, "db_export_statement_timeout_ms", 300_000)
