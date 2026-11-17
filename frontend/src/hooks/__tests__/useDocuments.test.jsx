@@ -349,6 +349,29 @@ describe('useDocuments', () => {
         queryKey: ['ci-application', '5']
       })
     })
+    it('refreshes the CI application views after a facility file review', async () => {
+      let options
+      mockUseMutation.mockImplementation((opts) => {
+        options = opts
+        return { mutateAsync: vi.fn() }
+      })
+      mockApiService.put.mockResolvedValue({ data: {} })
+
+      useReviewDocumentScan('fuel_production_facility', 12)
+      await options.mutationFn({ documentID: 9, decision: 'reject' })
+      options.onSuccess({}, {}, undefined)
+
+      expect(mockApiService.put).toHaveBeenCalledWith(
+        '/documents/fuel_production_facility/12/9/scan-review',
+        { decision: 'reject' }
+      )
+      expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith({
+        queryKey: ['documents', 'fuel_production_facility', 12]
+      })
+      expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith({
+        queryKey: ['ci-application']
+      })
+    })
   })
 
   describe('useDownloadDocument', () => {
