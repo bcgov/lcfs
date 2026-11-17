@@ -58,6 +58,31 @@ async def test_get_transactions(transactions_service):
 
 
 @pytest.mark.anyio
+async def test_get_transactions_filters_by_aggregator_issuance(transactions_service):
+    pagination_request = PaginationRequestSchema(
+        page=1,
+        size=10,
+        filters=[
+            FilterModel(
+                field="transactionType",
+                filter="AggregatorIssuance",
+                type="equals",
+                filter_type="text",
+            )
+        ],
+        sort_orders=[],
+    )
+
+    await transactions_service.get_transactions_paginated(pagination=pagination_request)
+
+    conditions = transactions_service.repo.get_transactions_paginated.call_args.args[2]
+    type_condition = next(
+        condition for condition in conditions if "transaction_type" in str(condition)
+    )
+    assert "aggregatorissuance" in type_condition.compile().params.values()
+
+
+@pytest.mark.anyio
 @pytest.mark.parametrize(
     "filter_value",
     [
@@ -143,6 +168,7 @@ async def test_export_transactions(transactions_service):
     mock_transactions = [
         MagicMock(
             transaction_type="Transfer",
+            description=None,
             transaction_id=1,
             compliance_period="2023",
             from_organization="Org A",
@@ -335,6 +361,7 @@ def _view_row(**overrides):
     """An mv_transaction_aggregate row as the export reads it."""
     row = dict(
         transaction_type="Transfer",
+        description=None,
         transaction_id=7,
         compliance_period="2026",
         from_organization="Org A",
@@ -399,6 +426,89 @@ async def test_export_shows_a1_category_and_agreement_date(transactions_service)
     assert row["Category"] == "A1"
     assert row["Agreement Date"] == "2026-03-02"
     assert row["Effective Date"] == "2026-03-20"
+
+
+@pytest.mark.anyio
+async def test_export_uses_display_names_for_aggregator_and_legacy_transactions(
+    transactions_service,
+):
+    reader = await _export_csv(
+        transactions_service,
+        [
+            _view_row(
+                transaction_type="AggregatorIssuance",
+                transaction_id=12,
+            ),
+            _view_row(
+                transaction_type="StandaloneTransaction",
+                transaction_id=91,
+            ),
+        ],
+        {},
+    )
+
+    rows = list(reader)
+    assert [(row["ID"], row["Type"]) for row in rows] == [
+        ("AG12", "Aggregator Issuance"),
+        ("ST91", "Legacy Transaction"),
+    ]
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("export_format", ["csv", "xlsx"])
+async def test_export_transaction_type_includes_description(
+    transactions_service, export_format
+):
+    rows = [
+        _view_row(
+            transaction_type="ComplianceReport",
+            transaction_id=1,
+            description="Original Report",
+        ),
+        _view_row(
+            transaction_type="ComplianceReport",
+            transaction_id=2,
+            description="Supplemental report 2",
+        ),
+        _view_row(
+            transaction_type="ComplianceReport",
+            transaction_id=3,
+            description="Government adjustment",
+        ),
+        _view_row(
+            transaction_type="ComplianceReport", transaction_id=4, description=None
+        ),
+        _view_row(
+            transaction_type="ComplianceReport", transaction_id=5, description=""
+        ),
+        _view_row(transaction_type="AggregatorIssuance", transaction_id=6),
+    ]
+    transactions_service.repo.get_transactions_paginated.return_value = (
+        rows,
+        len(rows),
+    )
+
+    response = await transactions_service.export_transactions(
+        export_format=export_format
+    )
+    content = b"".join([chunk async for chunk in response.body_iterator])
+    if export_format == "csv":
+        exported = list(csv.DictReader(io.StringIO(content.decode("utf-8"))))
+        types = [row["Type"] for row in exported]
+    else:
+        sheet = openpyxl.load_workbook(io.BytesIO(content)).active
+        values = list(sheet.values)
+        type_column = values[0].index("Type")
+        types = [row[type_column] for row in values[1 : len(rows) + 1]]
+
+    assert types == [
+        "Compliance Report - Original Report",
+        "Compliance Report - Supplemental report 2",
+        "Compliance Report - Government adjustment",
+        "Compliance Report",
+        "Compliance Report",
+        "Aggregator Issuance",
+    ]
 
 
 @pytest.mark.anyio

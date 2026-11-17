@@ -39,6 +39,7 @@ class FakeDocumentService:
         parent_type: str,
         user,
         document_category=None,
+        replace_document_id=None,
     ):
         return {
             "document_id": 2,

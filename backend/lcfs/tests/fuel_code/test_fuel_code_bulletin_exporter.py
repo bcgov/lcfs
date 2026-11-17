@@ -10,6 +10,20 @@ from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_code.bulletin_export import FuelCodeBulletinExporter
 
 
+@pytest.mark.parametrize(
+    ("today", "expected_start"),
+    [
+        (date(2027, 3, 31), date(2026, 3, 31)),
+        (date(2027, 4, 1), date(2027, 3, 31)),
+    ],
+)
+def test_bulletin_export_compliance_period_rolls_over_on_april_first(
+    today, expected_start
+):
+    exporter = FuelCodeBulletinExporter(repo=MagicMock())
+    assert exporter._get_compliance_period_start(today) == expected_start
+
+
 @pytest.mark.anyio
 async def test_bulletin_export_success():
     repo_mock = MagicMock()
