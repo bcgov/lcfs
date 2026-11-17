@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
 from lcfs.db.base import current_user_var, get_current_user
-from lcfs.db.engine_config import build_connect_args
+from lcfs.db.engine_config import build_connect_args, register_statement_timeout
 from lcfs.db.pool_monitor import register_pool_monitor
 from lcfs.settings import settings
 from lcfs.utils.query_analyzer import register_query_analyzer
@@ -25,9 +25,10 @@ async_engine = create_async_engine(
     db_url,
     future=True,
     poolclass=NullPool,
-    connect_args=build_connect_args(settings.db_statement_timeout_ms),
+    connect_args=build_connect_args(),
 )
 logger = structlog.get_logger("sqlalchemy.engine")
+register_statement_timeout(async_engine.sync_engine, settings.db_statement_timeout_ms)
 register_query_analyzer(async_engine.sync_engine, name="app")
 register_pool_monitor(async_engine.sync_engine, name="app")
 
