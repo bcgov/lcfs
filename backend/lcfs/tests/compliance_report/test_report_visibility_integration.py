@@ -357,3 +357,58 @@ async def test_equipment_revision_can_read_assessed_source_into_supplier_draft(
         )
         assert response.status_code == 200, response.text
         mutation.assert_awaited_once()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "roles, expected_version",
+    [
+        ([R.DIRECTOR], 3),
+        ([R.ANALYST], 3),
+        ([R.COMPLIANCE_MANAGER], 2),
+        ([R.SUPPLIER], 2),
+    ],
+)
+async def test_year_navigation_selects_latest_visible_version(
+    dbsession, roles, expected_version
+):
+    """Navigation must filter versions using the same rules as report access."""
+    from types import SimpleNamespace
+
+    from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
+
+    org_id = await dbsession.scalar(select(Organization.organization_id).limit(1))
+    statuses = {
+        row.status: row.compliance_report_status_id
+        for row in (await dbsession.scalars(select(ComplianceReportStatus))).all()
+    }
+    period = CompliancePeriod(compliance_period_id=900001, description="2201")
+    dbsession.add(period)
+    await dbsession.flush()
+    group = str(uuid.uuid4())
+    reports = {}
+    for version, status, initiator in (
+        (1, S.Assessed, I.GOVERNMENT_REASSESSMENT),
+        (2, S.Exempted, I.GOVERNMENT_REASSESSMENT),
+        (3, S.Analyst_adjustment, I.GOVERNMENT_REASSESSMENT),
+        (4, S.Draft, I.GOVERNMENT_REASSESSMENT),
+    ):
+        report = ComplianceReport(
+            organization_id=org_id,
+            compliance_period_id=period.compliance_period_id,
+            current_status_id=statuses[status],
+            compliance_report_group_uuid=group,
+            version=version,
+            supplemental_initiator=initiator,
+        )
+        dbsession.add(report)
+        await dbsession.flush()
+        reports[version] = report.compliance_report_id
+
+    # Deliberately omit organization metadata: supplier visibility is role based.
+    user = SimpleNamespace(role_names=roles, organization=None)
+    previous, next_report = await ComplianceReportRepository(
+        dbsession
+    ).get_adjacent_year_reports(org_id, "2202", user)
+    assert previous.compliance_report_id == reports[expected_version]
+    assert next_report is None
