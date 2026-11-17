@@ -9,10 +9,10 @@ submitted; a Draft stays the applicant's (#5231).
 from fastapi import Depends, HTTPException, Request, status
 
 from lcfs.db.models.ci_application import CIApplication
-from lcfs.db.models.user.Role import RoleEnum
+from lcfs.db.models.fuel.FuelProductionFacility import FuelProductionFacility
 from lcfs.web.api.ci_application.repo import CIApplicationRepository
 from lcfs.web.api.ci_application.schema import CIApplicationStatusEnum
-from lcfs.web.api.role.schema import is_government_user, user_has_roles
+from lcfs.web.api.role.schema import is_government_user
 
 
 class CIApplicationValidation:
@@ -32,8 +32,7 @@ class CIApplicationValidation:
                 detail="CI application not found.",
             )
 
-        is_government = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
-        if is_government:
+        if is_government_user(self.request.user):
             # A Draft is the applicant's until it is submitted. Government
             # lists leave drafts out; a direct link must not reach one
             # either (#5231).
@@ -60,6 +59,53 @@ class CIApplicationValidation:
                 detail="User does not have access to this CI application.",
             )
         return ci_application
+
+    async def validate_facility_access(
+        self, facility_id: int, write: bool = False
+    ) -> FuelProductionFacility:
+        facility = await self.repo.get_facility_by_id(facility_id, for_update=write)
+        if not facility:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Fuel production facility not found.",
+            )
+
+        if is_government_user(self.request.user):
+            if write:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Government users cannot modify supplier facility documents.",
+                )
+            if not (
+                await self.repo.has_non_draft_facility_application(facility_id)
+                or await self.repo.has_facility_fuel_codes(facility_id)
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Fuel production facility not found.",
+                )
+            return facility
+
+        user_org_id = (
+            self.request.user.organization.organization_id
+            if self.request.user.organization
+            else None
+        )
+        if user_org_id is None or facility.organization_id != user_org_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Fuel production facility not found.",
+            )
+        if write and await self.repo.has_non_draft_facility_application(facility_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    "This facility's process flow diagram is locked because it is "
+                    "referenced by a submitted application. Create a new facility "
+                    "to use a different diagram."
+                ),
+            )
+        return facility
 
     async def validate_document_write_access(
         self, ci_application_id: int

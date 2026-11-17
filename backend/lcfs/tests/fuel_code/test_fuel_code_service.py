@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
@@ -122,6 +123,7 @@ def create_mock_fuel_code_model():
             self.fuel_status_id = 1
             self.fuel_code = "BCLCF001"
             self.company = "XYZ Corp"
+            self.organization_id = None
             self.carbon_intensity = 20.5
             self.fuel_suffix = "001.0"
             self.prefix_id = 1001
@@ -294,6 +296,65 @@ async def test_update_fuel_code_success():
     assert result.fuel_code_id == 1
     repo_mock.get_fuel_code.assert_called_once_with(fuel_code_id)
     repo_mock.update_fuel_code.assert_called_once()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    ("old_org", "new_org", "company", "detached"),
+    [
+        (1, 2, "Example New Producer", True),
+        (1, None, "Example Historical Producer", True),
+        (None, 2, "Example New Producer", True),
+        (None, None, "Example Other Historical Producer", True),
+        (1, 1, "Example Renamed Producer", False),
+        (1, 1, "XYZ Corp", False),
+    ],
+)
+async def test_update_fuel_code_contacts_do_not_cross_ownership_boundaries(
+    old_org, new_org, company, detached
+):
+    repo = AsyncMock()
+    service = FuelCodeServices(repo=repo)
+    code = create_mock_fuel_code_model()
+    code.organization_id = old_org
+    sibling = SimpleNamespace(
+        contact_name="Old Contact", contact_email="old@example.com"
+    )
+    facility = SimpleNamespace(
+        organization_id=old_org,
+        contact_name="Old Contact",
+        contact_email="old@example.com",
+        fuel_codes=[code, sibling],
+    )
+    code.fuel_production_facility = facility
+    code.fuel_production_facility_id = 12
+    repo.get_fuel_code.return_value = code
+    repo.get_organization_by_name.return_value = new_org
+    repo.update_fuel_code.return_value = code
+    repo.get_fuel_code_history.return_value = None
+    payload = FuelCodeCreateUpdateSchema(
+        **{
+            **vars(code),
+            "company": company,
+            "contact_name": "New Contact",
+            "contact_email": "new@example.com",
+        }
+    )
+
+    await service.update_fuel_code(payload)
+
+    assert code.organization_id == new_org
+    assert code.contact_name == "New Contact"
+    assert code.contact_email == "new@example.com"
+    if detached:
+        assert code.fuel_production_facility_id is None
+        assert code.fuel_production_facility is None
+        assert facility.contact_name == sibling.contact_name == "Old Contact"
+        assert facility.contact_email == sibling.contact_email == "old@example.com"
+    else:
+        assert code.fuel_production_facility is facility
+        assert facility.contact_name == sibling.contact_name == "New Contact"
+        assert facility.contact_email == sibling.contact_email == "new@example.com"
 
 
 @pytest.mark.anyio
@@ -602,8 +663,7 @@ async def test_get_table_options_uses_shared_next_number_for_bclcf_prefixes():
     result = await service.get_table_options()
 
     next_codes = {
-        prefix.prefix: prefix.next_fuel_code
-        for prefix in result.fuel_code_prefixes
+        prefix.prefix: prefix.next_fuel_code for prefix in result.fuel_code_prefixes
     }
     assert next_codes == {"BCLCF": "1000.0", "C-BCLCF": "1000.0"}
     assert repo_mock.get_next_available_fuel_code_by_prefix.await_count == 2
@@ -637,8 +697,7 @@ async def test_get_table_options_keeps_other_prefixes_when_sequence_is_exhausted
     result = await service.get_table_options()
 
     next_codes = {
-        prefix.prefix: prefix.next_fuel_code
-        for prefix in result.fuel_code_prefixes
+        prefix.prefix: prefix.next_fuel_code for prefix in result.fuel_code_prefixes
     }
     assert next_codes == {"BCLCF": None, "C-BCLCF": None, "PROXY": "001.0"}
     assert all(

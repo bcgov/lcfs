@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import BCTypography from '@/components/BCTypography'
 import DocumentTable from '@/components/Documents/DocumentTable.jsx'
 
-function DocumentUploadDialog({ open, close, parentType, parentID }) {
+function DocumentUploadDialog({ open, close, parentType, parentID, maxFiles }) {
   const { t } = useTranslation([
     'report',
     'chargingSite',
@@ -27,6 +27,12 @@ function DocumentUploadDialog({ open, close, parentType, parentID }) {
         return {
           title: t('carbonIntensity:documents.uploadTitle'),
           documentLabel: t('carbonIntensity:documents.documentLabel'),
+          returnButton: t('carbonIntensity:documents.returnButton')
+        }
+      case 'fuel_production_facility':
+        return {
+          title: t('carbonIntensity:step1.processFlowUploadTitle'),
+          documentLabel: t('carbonIntensity:step1.processFlowDocumentLabel'),
           returnButton: t('carbonIntensity:documents.returnButton')
         }
       case 'initiativeAgreement':
@@ -68,7 +74,11 @@ function DocumentUploadDialog({ open, close, parentType, parentID }) {
       <BCTypography variant="body2" style={{ marginTop: '10px' }}>
         {modalTexts.documentLabel}
       </BCTypography>
-      <DocumentTable parentID={parentID} parentType={parentType} />
+      <DocumentTable
+        parentID={parentID}
+        parentType={parentType}
+        maxFiles={maxFiles}
+      />
     </Box>
   )
 
