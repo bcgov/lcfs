@@ -235,6 +235,29 @@ describe('useDocuments', () => {
       )
       expect(result.data.id).toBe(1)
     })
+
+    it('passes the replacement document ID for a facility upload', async () => {
+      let capturedMutationFn
+      mockUseMutation.mockImplementation(({ mutationFn }) => {
+        capturedMutationFn = mutationFn
+        return { mutate: vi.fn() }
+      })
+      mockApiService.post.mockResolvedValue({ data: { id: 2 } })
+      useUploadDocument('fuel_production_facility', 123)
+
+      const file = new File(['content'], 'replacement.pdf', {
+        type: 'application/pdf'
+      })
+      await capturedMutationFn({ file, replaceDocumentId: 7 })
+
+      expect(mockApiService.post).toHaveBeenCalledWith(
+        '/documents/fuel_production_facility/123',
+        expect.any(FormData),
+        expect.objectContaining({
+          params: { replace_document_id: 7 }
+        })
+      )
+    })
   })
 
   describe('useDeleteDocument', () => {

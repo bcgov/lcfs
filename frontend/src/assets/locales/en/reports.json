@@ -51,7 +51,6 @@
   "supplementalCreated": "Supplemental report created successfully.",
   "analystAdjustmentCreated": "Analyst adjustment created successfully.",
   "clickDrag": "Drag and drop your (PDF, JPG, JPEG, PNG, DOC, DOCX, XLS, XLSX, CSV, TXT) file(s) here or click to select the file(s) from your machine to upload.",
-  "uploadFailed": "The file could not be uploaded, please try again.",
   "clickDragWithXlsm": "Drag and drop your (PDF, JPG, JPEG, PNG, DOC, DOCX, XLS, XLSX, XLSM, CSV, TXT) file(s) here or click to select the file(s) from your machine to upload. Macro-enabled (.xlsm) files can be opened once an administrator approves them.",
   "documentScan": {
     "awaitingApproval": "Contains macros – awaiting approval",
@@ -69,7 +68,13 @@
     "reviewFailed": "The decision couldn't be saved, please try again."
   },
   "deleteDocumentConfirmTitle": "Delete document?",
+  "documentUploadFailed": "The file could not be uploaded. Please try again.",
   "deleteDocumentConfirmText": "Are you sure you want to delete {{fileName}}?",
+  "replaceDocumentConfirmTitle": "Replace existing file?",
+  "replaceDocumentConfirmText": "Only one file can be attached here. Uploading {{newFileName}} will replace {{existingFileName}}.",
+  "replaceDocumentBtn": "Replace",
+  "singleFileClickDrag": "Drag and drop your (PDF, JPG, JPEG, PNG, DOC, DOCX, XLS, XLSX, CSV, TXT) file here or click to select the file from your machine to upload. Only one file can be attached.",
+  "singleFileUploadInProgress": "A file upload is already in progress. Wait for it to finish before uploading or replacing a file.",
   "activityLinksList": "Click links to report activities",
   "activitySecondList": "Verification details",
   "activityLists": {

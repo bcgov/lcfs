@@ -20,6 +20,9 @@ from lcfs.db.models.initiative_agreement.DesignatedAction import (
 from lcfs.db.models.compliance.ChargingSite import (
     charging_site_document_association,
 )
+from lcfs.db.models.fuel.FuelProductionFacility import (
+    fuel_production_facility_document_association,
+)
 from lcfs.db.models.ci_application.CIApplication import (
     ci_application_document_association,
 )
@@ -144,6 +147,11 @@ class Document(BaseModel, Auditable):
     ci_applications = relationship(
         "CIApplication",
         secondary=ci_application_document_association,
+        back_populates="documents",
+    )
+    fuel_production_facilities = relationship(
+        "FuelProductionFacility",
+        secondary=fuel_production_facility_document_association,
         back_populates="documents",
     )
     internal_comments = relationship(

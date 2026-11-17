@@ -68,7 +68,11 @@ vi.mock('react-i18next', () => ({
         'report:deleteDocumentConfirmTitle': 'Delete document?',
         'report:deleteDocumentConfirmText': `Are you sure you want to delete ${options.fileName}?`,
         'common:deleteBtn': 'Delete',
-        'common:cancelBtn': 'Cancel'
+        'common:cancelBtn': 'Cancel',
+        'report:singleFileClickDrag': 'Click or drag one file here to upload',
+        'report:replaceDocumentConfirmTitle': 'Replace existing file?',
+        'report:replaceDocumentConfirmText': `Uploading ${options.newFileName} will replace ${options.existingFileName}.`,
+        'report:replaceDocumentBtn': 'Replace'
       }
       return translations[key] || key
     }
@@ -88,7 +92,7 @@ describe('DocumentTable', () => {
   }
 
   const createDragEvent = (type, files = []) => {
-    const event = new Event(type, { bubbles: true })
+    const event = new Event(type, { bubbles: true, cancelable: true })
     Object.defineProperty(event, 'dataTransfer', {
       value: {
         files,
@@ -1056,8 +1060,72 @@ describe('DocumentTable', () => {
       'Error uploading file:',
       expect.any(Object)
     )
+    expect(screen.getByTestId('file-upload-error-alert')).toHaveTextContent(
+      'report:documentUploadFailed'
+    )
+    expect(screen.queryByText('test.pdf')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Unsupported file type/)).not.toBeInTheDocument()
 
     consoleSpy.mockRestore()
+  })
+
+  test('shows API replacement guidance and retains the existing diagram', async ({
+    render,
+    theme,
+    router
+  }) => {
+    useDocuments.mockReturnValue({
+      data: [{ documentId: 7, fileName: 'existing.pdf', fileSize: 100 }],
+      isLoading: false
+    })
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    mockUploadMutate.mockImplementation((_file, { onError }) => {
+      onError({
+        response: {
+          status: 409,
+          data: { detail: 'Refresh before replacing this diagram.' }
+        }
+      })
+    })
+    render(
+      <DocumentTable
+        parentType="fuel_production_facility"
+        parentID="12"
+        maxFiles={1}
+      />,
+      [theme, router]
+    )
+    fireEvent.change(screen.getByTestId('file-input'), {
+      target: { files: [createMockFile('replacement.pdf')] }
+    })
+    fireEvent.click(await screen.findByText('Replace'))
+
+    expect(screen.getByTestId('file-upload-error-alert')).toHaveTextContent(
+      'Refresh before replacing this diagram.'
+    )
+    expect(screen.getByText('existing.pdf')).toBeInTheDocument()
+    expect(screen.queryByText('replacement.pdf')).not.toBeInTheDocument()
+    expect(mockDeleteMutate).not.toHaveBeenCalled()
+    consoleSpy.mockRestore()
+  })
+
+  test('prevents browser navigation when dropping during a pending single-file upload', ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<DocumentTable {...defaultProps} maxFiles={1} />, [theme, router])
+    fireEvent.change(screen.getByTestId('file-input'), {
+      target: { files: [createMockFile('first.pdf')] }
+    })
+    const drop = createDragEvent('drop', [createMockFile('second.pdf')])
+    const card = screen
+      .getByText('Click or drag one file here to upload')
+      .closest('.MuiCard-root')
+    fireEvent(card, drop)
+
+    expect(drop.defaultPrevented).toBe(true)
+    expect(mockUploadMutate).toHaveBeenCalledTimes(1)
   })
 
   test('should handle file size display correctly', async ({
@@ -1132,6 +1200,144 @@ describe('DocumentTable', () => {
 
     await waitFor(() => {
       expect(mockUploadMutate).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  describe('maxFiles={1}', () => {
+    const existingFile = {
+      documentId: 7,
+      fileName: 'old-diagram.pdf',
+      fileSize: 1024,
+      createDate: '2024-01-01T10:00:00Z',
+      createUser: 'testuser'
+    }
+
+    test('does not allow multi-select and uploads directly when empty', async ({
+      render,
+      theme,
+      router
+    }) => {
+      render(<DocumentTable {...defaultProps} maxFiles={1} />, [theme, router])
+
+      expect(screen.getByTestId('file-input')).not.toHaveAttribute('multiple')
+      expect(
+        screen.getByText('Click or drag one file here to upload')
+      ).toBeInTheDocument()
+
+      fireEvent.change(screen.getByTestId('file-input'), {
+        target: { files: [createMockFile('new-diagram.pdf')] }
+      })
+
+      await waitFor(() => expect(mockUploadMutate).toHaveBeenCalledTimes(1))
+      expect(screen.queryByText('Replace existing file?')).toBeNull()
+    })
+
+    test('warns that an existing file will be replaced and replaces it on confirm', async ({
+      render,
+      theme,
+      router
+    }) => {
+      useDocuments.mockReturnValue({ data: [existingFile], isLoading: false })
+      render(<DocumentTable {...defaultProps} maxFiles={1} />, [theme, router])
+      await screen.findByText('old-diagram.pdf')
+
+      fireEvent.change(screen.getByTestId('file-input'), {
+        target: { files: [createMockFile('new-diagram.pdf')] }
+      })
+
+      expect(
+        await screen.findByText('Replace existing file?')
+      ).toBeInTheDocument()
+      expect(screen.getByTestId('replace-document-text')).toHaveTextContent(
+        'Uploading new-diagram.pdf will replace old-diagram.pdf.'
+      )
+      expect(mockUploadMutate).not.toHaveBeenCalled()
+
+      fireEvent.click(screen.getByRole('button', { name: 'Replace' }))
+
+      await waitFor(() => {
+        expect(mockDeleteMutate).toHaveBeenCalledWith(7)
+        expect(mockUploadMutate).toHaveBeenCalledTimes(1)
+      })
+    })
+
+    test('keeps the existing file when the replacement is cancelled', async ({
+      render,
+      theme,
+      router
+    }) => {
+      useDocuments.mockReturnValue({ data: [existingFile], isLoading: false })
+      render(<DocumentTable {...defaultProps} maxFiles={1} />, [theme, router])
+      await screen.findByText('old-diagram.pdf')
+
+      fireEvent.change(screen.getByTestId('file-input'), {
+        target: { files: [createMockFile('new-diagram.pdf')] }
+      })
+      await screen.findByText('Replace existing file?')
+
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+      await waitFor(() =>
+        expect(screen.queryByText('Replace existing file?')).toBeNull()
+      )
+      expect(mockDeleteMutate).not.toHaveBeenCalled()
+      expect(mockUploadMutate).not.toHaveBeenCalled()
+      expect(screen.getByText('old-diagram.pdf')).toBeInTheDocument()
+    })
+
+    test('uploads facility replacements before removing the existing document', async ({
+      render,
+      theme,
+      router
+    }) => {
+      const newFile = createMockFile('new-diagram.pdf')
+      useDocuments.mockReturnValue({ data: [existingFile], isLoading: false })
+      render(
+        <DocumentTable
+          parentType="fuel_production_facility"
+          parentID="456"
+          maxFiles={1}
+        />,
+        [theme, router]
+      )
+      await screen.findByText('old-diagram.pdf')
+
+      fireEvent.change(screen.getByTestId('file-input'), {
+        target: { files: [newFile] }
+      })
+      fireEvent.click(await screen.findByRole('button', { name: 'Replace' }))
+
+      await waitFor(() =>
+        expect(mockUploadMutate).toHaveBeenCalledWith(
+          { file: newFile, replaceDocumentId: 7 },
+          expect.objectContaining({ onSuccess: expect.any(Function) })
+        )
+      )
+      expect(mockDeleteMutate).not.toHaveBeenCalled()
+      expect(screen.getByText('old-diagram.pdf')).toBeInTheDocument()
+    })
+
+    test('does not upload the new file when deleting the old one fails', async ({
+      render,
+      theme,
+      router
+    }) => {
+      mockDeleteMutate.mockRejectedValueOnce(new Error('Delete failed'))
+      useDocuments.mockReturnValue({ data: [existingFile], isLoading: false })
+      render(<DocumentTable {...defaultProps} maxFiles={1} />, [theme, router])
+      await screen.findByText('old-diagram.pdf')
+
+      fireEvent.change(screen.getByTestId('file-input'), {
+        target: { files: [createMockFile('new-diagram.pdf')] }
+      })
+      fireEvent.click(await screen.findByRole('button', { name: 'Replace' }))
+
+      await waitFor(() =>
+        expect(screen.getByTestId('file-upload-error-alert')).toHaveTextContent(
+          'Delete failed'
+        )
+      )
+      expect(mockUploadMutate).not.toHaveBeenCalled()
     })
   })
 })

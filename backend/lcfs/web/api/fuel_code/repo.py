@@ -49,6 +49,7 @@ from lcfs.db.models.fuel.FeedstockFuelTransportMode import FeedstockFuelTranspor
 from lcfs.db.models.fuel.FinishedFuelTransportMode import FinishedFuelTransportMode
 from lcfs.db.models.fuel.FuelCategory import FuelCategory
 from lcfs.db.models.fuel.FuelCode import FuelCode
+from lcfs.db.models.fuel.FuelProductionFacility import FuelProductionFacility
 from lcfs.db.models.fuel.FuelCodePrefix import FuelCodePrefix
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus, FuelCodeStatusEnum
 from lcfs.db.models.fuel.FuelInstance import FuelInstance
@@ -381,6 +382,9 @@ class FuelCodeRepository:
                     ),
                     joinedload(FuelCode.fuel_type).joinedload(FuelType.provision_1),
                     joinedload(FuelCode.fuel_type).joinedload(FuelType.provision_2),
+                    selectinload(FuelCode.fuel_production_facility).selectinload(
+                        FuelProductionFacility.fuel_codes
+                    ),
                 )
                 .where(FuelCode.fuel_code_id == latest_row.fuel_code_id)
             )
@@ -948,6 +952,9 @@ class FuelCodeRepository:
                 ),
                 joinedload(FuelCode.fuel_type).joinedload(FuelType.provision_1),
                 joinedload(FuelCode.fuel_type).joinedload(FuelType.provision_2),
+                selectinload(FuelCode.fuel_production_facility).selectinload(
+                    FuelProductionFacility.fuel_codes
+                ),
             )
             .where(FuelCode.fuel_code_id == fuel_code_id)
         )
@@ -1309,9 +1316,7 @@ class FuelCodeRepository:
         is used for table options so one exhausted prefix doesn't block the
         rest of the Add/Edit grid.
         """
-        base_code = cast(
-            func.split_part(FuelCode.fuel_suffix, ".", 1), BigInteger
-        )
+        base_code = cast(func.split_part(FuelCode.fuel_suffix, ".", 1), BigInteger)
 
         if prefix in {"BCLCF", "C-BCLCF"}:
             highest_used_query = (
@@ -1348,29 +1353,22 @@ class FuelCodeRepository:
             select(literal(min_code - 1, type_=BigInteger).label("base_code")),
             select(parsed_codes.c.base_code),
         ).cte("codes_with_start")
-        ordered_codes = (
-            select(
-                codes_with_start.c.base_code,
-                func.lead(codes_with_start.c.base_code)
-                .over(order_by=codes_with_start.c.base_code)
-                .label("next_base_code"),
-            )
-            .cte("ordered_codes")
-        )
+        ordered_codes = select(
+            codes_with_start.c.base_code,
+            func.lead(codes_with_start.c.base_code)
+            .over(order_by=codes_with_start.c.base_code)
+            .label("next_base_code"),
+        ).cte("ordered_codes")
         first_gap = (
             select(func.min(ordered_codes.c.base_code + 1))
-            .where(
-                ordered_codes.c.next_base_code > ordered_codes.c.base_code + 1
-            )
+            .where(ordered_codes.c.next_base_code > ordered_codes.c.base_code + 1)
             .scalar_subquery()
         )
         highest_used_plus_one = select(
             func.coalesce(func.max(parsed_codes.c.base_code), min_code - 1) + 1
         ).scalar_subquery()
         next_base_code = func.coalesce(first_gap, highest_used_plus_one)
-        query = select(
-            (cast(next_base_code, String) + ".0").label("next_fuel_code")
-        )
+        query = select((cast(next_base_code, String) + ".0").label("next_fuel_code"))
         result = (await self.db.execute(query)).scalar_one_or_none()
         next_base_number = int(str(result).split(".", 1)[0])
         return _format_main_fuel_suffix(
@@ -1390,9 +1388,7 @@ class FuelCodeRepository:
         main number.
         """
         main_version_int = int(input_version)
-        main_version = cast(
-            func.split_part(FuelCode.fuel_suffix, ".", 1), BigInteger
-        )
+        main_version = cast(func.split_part(FuelCode.fuel_suffix, ".", 1), BigInteger)
         sub_version = cast(func.split_part(FuelCode.fuel_suffix, ".", 2), Integer)
         reserved_sub_versions = {
             int(suffix.split(".", 1)[1])

@@ -439,6 +439,55 @@ async def test_upload_file_size_exceeded(
 
 
 @pytest.mark.anyio
+async def test_facility_upload_rejects_second_document_without_replacement(
+    document_service, db_mock, s3_client_mock, mock_file, user_supplier
+):
+    db_mock.scalar = AsyncMock(side_effect=[MagicMock(), 1])
+
+    with pytest.raises(HTTPException) as exc_info:
+        await document_service.upload_file(
+            mock_file, 1, "fuel_production_facility", user_supplier
+        )
+
+    assert exc_info.value.status_code == 409
+    s3_client_mock.upload_fileobj.assert_not_called()
+
+
+@pytest.mark.anyio
+@patch("os.fstat")
+async def test_facility_replacement_stores_new_document_before_removing_old(
+    mock_fstat,
+    document_service,
+    db_mock,
+    s3_client_mock,
+    mock_file,
+    user_supplier,
+):
+    mock_stat = MagicMock()
+    mock_stat.st_size = 1024
+    mock_fstat.return_value = mock_stat
+    db_mock.scalar = AsyncMock(return_value=MagicMock())
+    query_result = MagicMock()
+    query_result.all.return_value = [7]
+    db_mock.scalars = AsyncMock(return_value=query_result)
+    document_service.delete_file = AsyncMock(return_value=True)
+
+    result = await document_service.upload_file(
+        mock_file,
+        1,
+        "fuel_production_facility",
+        user_supplier,
+        replace_document_id=7,
+    )
+
+    assert isinstance(result, Document)
+    s3_client_mock.upload_fileobj.assert_called_once()
+    document_service.delete_file.assert_awaited_once_with(
+        7, 1, "fuel_production_facility"
+    )
+
+
+@pytest.mark.anyio
 async def test_verify_compliance_report_access_not_found(
     document_service, user_supplier
 ):
