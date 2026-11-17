@@ -26,13 +26,13 @@ There are two engines:
 |---|---|---|---|
 | API requests (`app` engine) | 30 s | `LCFS_DB_STATEMENT_TIMEOUT_MS` | `SET LOCAL` at the start of every transaction |
 | Export / report endpoints | 5 min | `LCFS_DB_EXPORT_STATEMENT_TIMEOUT_MS` | `SET LOCAL` for the request's transaction (see below) |
-| `lifetime` engine (auth + scheduled jobs) | unlimited (`0`) | `LCFS_DB_BACKGROUND_STATEMENT_TIMEOUT_MS` | `SET LOCAL` at the start of every transaction |
+| `lifetime` engine (auth + scheduled jobs) | unlimited (`0`) | `LCFS_DB_BACKGROUND_STATEMENT_TIMEOUT_MS` | `SET LOCAL` at the start of every transaction; not the `AUTOCOMMIT` maintenance jobs (see Notes and limits) |
 
 The engine defaults come from `register_statement_timeout` in `backend/lcfs/db/engine_config.py`: a SQLAlchemy `begin` listener that runs `SET LOCAL statement_timeout = <ms>` as the first statement of each transaction. They are deliberately **not** sent as asyncpg `server_settings` startup parameters: the deployed environments connect through PgBouncer, which rejects startup parameters it does not track (`unsupported startup parameter: statement_timeout`), and that fails every connection.
 
 A value of `0` disables the timeout; it is sent to PostgreSQL as an explicit `statement_timeout = 0`, so it also overrides any server/database/role level default. The export override is skipped when `LCFS_DB_STATEMENT_TIMEOUT_MS=0`, or when the export value is nonzero and no larger than the normal one, so an export can never get a *tighter* limit than a normal request (an export value of `0` stays unlimited). Invalid values (negative timeouts, a budget below 1, a warn ratio outside `(0, 1]`) are rejected at startup. When a statement exceeds the limit PostgreSQL cancels it (`canceling statement due to statement timeout`, SQLSTATE `57014`) and the request fails with a server error; the transaction is rolled back and the connection is released.
 
-The `lifetime` engine is intentionally unlimited by default: scheduled maintenance jobs such as `REINDEX TABLE CONCURRENTLY` legitimately run for minutes. Set `LCFS_DB_BACKGROUND_STATEMENT_TIMEOUT_MS` only if you have measured your longest job.
+The `lifetime` engine is intentionally unlimited by default: scheduled maintenance jobs such as `REINDEX TABLE CONCURRENTLY` legitimately run for minutes. Set `LCFS_DB_BACKGROUND_STATEMENT_TIMEOUT_MS` only if you have measured your longest job. It covers the engine's transactional work (auth lookups, supplemental report and credit market jobs), not the `AUTOCOMMIT` reindex and materialized view refresh jobs.
 
 ### Extended timeout for exports and reports
 
@@ -64,6 +64,7 @@ Not extended (they remain at 30 s): blank Excel *template* downloads (they load 
 * The timeout is per **statement**, not per request. A request that runs many fast queries is not affected.
 * `SET LOCAL` is discarded at commit/rollback. The engine default is applied again to the next transaction, but the export override is not, so export paths must not commit mid-request; they currently do not.
 * Do not move the timeout back to a connection-level setting. PgBouncer's transaction pooling hands the server connection to another client after each transaction, so a session-level `SET` would leak, and a startup parameter is rejected outright. Adding it to PgBouncer's `ignore_startup_parameters` would only silence the error: the timeout would be dropped.
+* `AUTOCOMMIT` work is not covered: the `REINDEX TABLE CONCURRENTLY` and FSE materialized view refresh jobs run outside a transaction block, where `SET LOCAL` has no effect, so the listener skips them and they run with the server/database/role default, as they did before these settings existed. `REINDEX CONCURRENTLY` cannot run inside a transaction, and through PgBouncer there is no safe per-connection setting (see the point above). Covering them needs a direct, non-PgBouncer connection for maintenance jobs.
 * Migrations (`alembic`), the importers and scripts create their own engines and are not subject to these timeouts.
 
 ## Slow query logging

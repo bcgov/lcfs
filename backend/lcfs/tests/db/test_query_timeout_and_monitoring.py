@@ -463,6 +463,25 @@ class TestStatementTimeoutAgainstPostgres:
             )
             assert session_value != "300ms"
 
+    async def test_autocommit_connections_are_skipped(self, pg_engine):
+        """REINDEX CONCURRENTLY and the MV refresh jobs run in AUTOCOMMIT, where
+        SET LOCAL has no effect, so nothing is sent and they keep the server
+        default. A later transaction on the engine still gets the timeout."""
+        statements = []
+
+        @sa.event.listens_for(pg_engine.sync_engine, "before_cursor_execute")
+        def _capture(conn, cursor, statement, *args):
+            statements.append(statement)
+
+        async with pg_engine.connect() as conn:
+            conn = await conn.execution_options(isolation_level="AUTOCOMMIT")
+            value = await conn.scalar(sa.text("SHOW statement_timeout"))
+        assert value != "300ms"
+        assert not [s for s in statements if "SET LOCAL statement_timeout" in s]
+
+        async with pg_engine.connect() as conn:
+            assert (await conn.scalar(sa.text("SHOW statement_timeout"))) == "300ms"
+
     @pytest.mark.parametrize("value", [0, -1])
     async def test_zero_or_negative_explicitly_disables_timeout(self, value):
         """An explicit "0" overrides any inherited server/database/role timeout."""

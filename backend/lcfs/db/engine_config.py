@@ -29,9 +29,18 @@ def register_statement_timeout(engine: Engine, statement_timeout_ms: int) -> Non
 
     An explicit ``0`` disables the timeout; omitting it would inherit any
     server/database/role level statement_timeout.
+
+    ``AUTOCOMMIT`` connections (the reindex and materialized view refresh
+    jobs) are skipped: outside a transaction block ``SET LOCAL`` does nothing
+    but raise a warning, so those statements run with the server/database/role
+    default. Through PgBouncer there is no safe per-connection alternative: a
+    session ``SET`` would stay on a pooled server connection and leak to other
+    clients, and a startup parameter is refused.
     """
     sql = f"SET LOCAL statement_timeout = {max(int(statement_timeout_ms), 0)}"
 
     @event.listens_for(engine, "begin")
     def _set_statement_timeout(conn: Connection) -> None:
+        if conn.get_execution_options().get("isolation_level") == "AUTOCOMMIT":
+            return
         conn.exec_driver_sql(sql)
