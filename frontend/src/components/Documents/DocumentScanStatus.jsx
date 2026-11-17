@@ -86,6 +86,8 @@ const ScanReview = ({ document, parentType, parentID }) => {
     setDecision(null)
   }
 
+  const showFindings = isGovernment && findings.length > 0
+
   const chipElement = (
     <Chip
       size="small"
@@ -93,6 +95,8 @@ const ScanReview = ({ document, parentType, parentID }) => {
       color={chip.color}
       icon={chip.icon}
       label={chip.label}
+      // Keyboard users reach the findings tooltip by focusing the chip
+      tabIndex={showFindings ? 0 : undefined}
       data-test="document-scan-status"
     />
   )
@@ -107,7 +111,7 @@ const ScanReview = ({ document, parentType, parentID }) => {
         mt: 0.5
       }}
     >
-      {isGovernment && findings.length > 0 ? (
+      {showFindings ? (
         <Tooltip
           title={
             <>

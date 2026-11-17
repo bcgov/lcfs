@@ -1,5 +1,6 @@
 import { test } from '@/tests/utils/fixtures'
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { vi, describe, expect, beforeEach } from 'vite-plus/test'
 import DocumentScanStatus from '../DocumentScanStatus'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -88,6 +89,34 @@ describe('DocumentScanStatus', () => {
     ).toBeInTheDocument()
     expect(screen.queryByTestId('document-scan-approve')).toBeNull()
     expect(screen.queryByTestId('document-scan-reject')).toBeNull()
+  })
+
+  test('staff can open the findings from the keyboard', async ({
+    render,
+    theme,
+    i18n
+  }) => {
+    asUser({ government: true })
+    renderStatus(render, [theme, i18n])
+
+    const chip = await screen.findByTestId('document-scan-status')
+    expect(chip).toHaveAttribute('tabindex', '0')
+    await userEvent.tab()
+
+    expect(chip).toHaveFocus()
+    expect(await screen.findByText(FINDINGS[0])).toBeInTheDocument()
+  })
+
+  test('a chip without findings is not a tab stop', async ({
+    render,
+    theme,
+    i18n
+  }) => {
+    asUser()
+    renderStatus(render, [theme, i18n])
+
+    const chip = await screen.findByTestId('document-scan-status')
+    expect(chip).not.toHaveAttribute('tabindex')
   })
 
   test('an administrator approves after seeing the findings', async ({
