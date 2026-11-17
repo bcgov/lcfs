@@ -14,6 +14,7 @@ from lcfs.db.models.initiative_agreement.DesignatedActionHistory import (
     EVENT_ANALYST_UNASSIGNED,
     EVENT_CREDITS_ISSUED,
     EVENT_DETAILS_EDITED,
+    EVENT_INFORMATION_REQUESTED,
     DesignatedActionHistory,
 )
 from lcfs.db.models.initiative_agreement.EvidenceRequirement import (
@@ -1639,24 +1640,52 @@ class InitiativeAgreementServices:
             prior is not None
             and self._submission_sub_status(prior) == "Information requested"
         )
-        if latest is None or latest.status == "Draft":
-            return (
-                status in ("Not started", "Information requested", "Returned")
-                or requested
-            )
-        event = self._submission_event(latest)
-        returned = status == "Returned" and (
-            not event
-            or (event.snapshot or {}).get("da_return_token")
-            != str(getattr(action, "update_date", None))
+        action_history = getattr(action, "_eoc_action_history", ())
+        info_request_id = self._latest_da_history_id(
+            action_history, event=EVENT_INFORMATION_REQUESTED
         )
+        return_id = self._latest_da_history_id(
+            action_history, event="STATUS_CHANGE", status="Returned"
+        )
+        prior_event = self._submission_event(prior) if prior is not None else None
+        prior_snapshot = prior_event.snapshot or {} if prior_event else {}
+        consumed_info_request_id = (
+            prior_snapshot.get("da_information_request_history_id") or 0
+        )
+        consumed_return_id = prior_snapshot.get("da_return_history_id") or 0
+        requested = requested or bool(
+            info_request_id and info_request_id > consumed_info_request_id
+        )
+
+        # A new return is a concrete workflow event. `action.update_date` is
+        # unsuitable here because routine analyst edits also update it and
+        # would silently authorize another revision.
+        returned = bool(
+            status == "Returned" and return_id and return_id > consumed_return_id
+        )
+        if prior is None:
+            # Permit the first portal response for a DA that has not yet had a
+            # portal submission, including legacy evidence returned/requested
+            # through the existing DA workflow.
+            return status in ("Not started", "Information requested", "Returned")
         return requested or returned
+
+    @staticmethod
+    def _latest_da_history_id(action_history, *, event, status=None):
+        for entry in action_history:
+            entry_status = getattr(getattr(entry, "status", None), "status", None)
+            if entry.event == event and (status is None or entry_status == status):
+                return entry.designated_action_history_id
+        return None
 
     async def get_eoc(self, designated_action_id: int):
         from lcfs.web.api.initiative_agreement.schema import EOCSchema
 
         action = await self._get_action_or_404(designated_action_id)
         rows = await self.repo.get_portal_evidence_submissions(designated_action_id)
+        action._eoc_action_history = await self.repo.get_designated_action_history(
+            designated_action_id
+        )
         editable = self._eoc_is_editable(action, rows)
         latest = rows[0] if rows else None
         agreement = await self.repo.get_initiative_agreement_by_id(
@@ -1737,6 +1766,9 @@ class InitiativeAgreementServices:
         rows = await self.repo.get_portal_evidence_submissions(
             designated_action_id, for_update=True
         )
+        action._eoc_action_history = await self.repo.get_designated_action_history(
+            designated_action_id
+        )
         if any(
             row.organization_id != action.initiative_agreement.to_organization_id
             for row in rows
@@ -1777,6 +1809,7 @@ class InitiativeAgreementServices:
                 status_code=422, detail="Signing authority declaration is required"
             )
         action = await self.validate_eoc_write(designated_action_id)
+        action_history = getattr(action, "_eoc_action_history", ())
         rows = await self.repo.get_portal_evidence_submissions(
             designated_action_id, for_update=True
         )
@@ -1844,6 +1877,12 @@ class InitiativeAgreementServices:
                         )
                     )
             current.status = "Submitted"
+            latest_info_request_id = self._latest_da_history_id(
+                action_history, event=EVENT_INFORMATION_REQUESTED
+            )
+            latest_return_id = self._latest_da_history_id(
+                action_history, event="STATUS_CHANGE", status="Returned"
+            )
             self.repo.db.add(
                 DaEocSubmissionHistory(
                     da_eoc_submission_id=current.da_eoc_submission_id,
@@ -1857,7 +1896,8 @@ class InitiativeAgreementServices:
                         },
                         "documents": documents,
                         "previous_evidence_review": old_review["evidence_requirements"],
-                        "da_return_token": str(getattr(action, "update_date", None)),
+                        "da_information_request_history_id": latest_info_request_id,
+                        "da_return_history_id": latest_return_id,
                     },
                 )
             )

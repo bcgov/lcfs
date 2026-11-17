@@ -40,11 +40,15 @@ def service():
         organization=NS(organization_id=4),
     )
     rows = []
+    action_history = []
     repo = MagicMock()
     repo.get_designated_action_by_id = AsyncMock(return_value=action)
     repo.get_initiative_agreement_by_id = AsyncMock(return_value=agreement)
     repo.get_portal_evidence_submissions = AsyncMock(
         side_effect=lambda *args, **kwargs: rows
+    )
+    repo.get_designated_action_history = AsyncMock(
+        side_effect=lambda *args, **kwargs: action_history
     )
     repo.get_evidence_requirements = AsyncMock(return_value=[])
     repo.get_eoc_document_snapshot = AsyncMock(return_value=[])
@@ -69,6 +73,7 @@ def service():
             ).history.append(value)
 
     repo.db.add.side_effect = add
+    repo.action_history = action_history
     return InitiativeAgreementServices(repo=repo, request=NS(user=user))
 
 
@@ -125,6 +130,14 @@ async def test_revision_creates_new_row_preserves_history_and_relocks(service, r
         action = service.repo.get_designated_action_by_id.return_value
         action.current_status.status = "Returned"
         action.update_date += timedelta(seconds=1)
+        service.repo.action_history.insert(
+            0,
+            NS(
+                designated_action_history_id=1,
+                event="STATUS_CHANGE",
+                status=NS(status="Returned"),
+            ),
+        )
     assert (await service.get_eoc(3)).can_edit
     await service.save_eoc(3, EOCSaveSchema(summary_of_work_completed="Revision"))
     rows = await service.repo.get_portal_evidence_submissions(3)
@@ -140,6 +153,19 @@ async def test_revision_creates_new_row_preserves_history_and_relocks(service, r
     assert original.status == "Submitted"
     assert service._submission_sub_status(original) is None
     assert result.submissions[1]["content"]["summary_of_work_completed"] == "Original"
+    if reason == "Returned":
+        action = service.repo.get_designated_action_by_id.return_value
+        action.update_date += timedelta(seconds=1)
+        assert not (await service.get_eoc(3)).can_edit
+        service.repo.action_history.insert(
+            0,
+            NS(
+                designated_action_history_id=2,
+                event="STATUS_CHANGE",
+                status=NS(status="Returned"),
+            ),
+        )
+        assert (await service.get_eoc(3)).can_edit
 
 
 @pytest.mark.anyio

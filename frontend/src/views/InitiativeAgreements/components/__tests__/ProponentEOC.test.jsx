@@ -7,24 +7,41 @@ import { ProponentEOC } from '../ProponentEOC'
 let signer = false
 let submitted = false
 const api = { get: vi.fn(), put: vi.fn(), post: vi.fn() }
+const navigationBlocker = vi.hoisted(() => ({
+  state: 'unblocked',
+  shouldBlock: false,
+  reset: vi.fn(),
+  proceed: vi.fn()
+}))
 vi.mock('@/services/useApiService', () => ({ useApiService: () => api }))
 vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: () => ({ hasRoles: () => signer })
 }))
 vi.mock('react-router-dom', async (original) => ({
   ...(await original()),
-  useParams: () => ({ initiativeAgreementId: '2' })
+  useParams: () => ({ initiativeAgreementId: '2' }),
+  useBlocker: (shouldBlock) => {
+    navigationBlocker.shouldBlock = shouldBlock()
+    return navigationBlocker
+  }
 }))
 vi.mock('../DocumentTree', () => ({
-  DocumentTree: ({ readOnly }) => (
-    <div data-test="document-tree" data-read-only={String(readOnly)} />
+  DocumentTree: ({ readOnly, headerAction }) => (
+    <div data-test="document-tree" data-read-only={String(readOnly)}>
+      {headerAction}
+    </div>
   )
 }))
 vi.mock('@/components/Comments', () => ({
-  default: () => <div>Shared comments</div>
+  default: (props) => (
+    <div data-enable-attachments={String(props.enableAttachments)}>
+      Shared comments
+    </div>
+  )
 }))
 vi.mock('@/components/Documents/DocumentUploadDialog', () => ({
-  default: () => null
+  default: ({ open, close }) =>
+    open ? <button onClick={close}>Finish upload</button> : null
 }))
 vi.mock('react-quill', () => ({
   default: ({ value, onChange, readOnly }) => (
@@ -41,6 +58,8 @@ beforeEach(() => {
   signer = false
   submitted = false
   vi.clearAllMocks()
+  navigationBlocker.state = 'unblocked'
+  navigationBlocker.shouldBlock = false
   api.get.mockImplementation(async () => ({
     data: {
       initiativeAgreementId: 2,
@@ -137,6 +156,9 @@ test('signers accept declaration and submitted evidence becomes read-only', asyn
   )
   expect(screen.getByLabelText('Evidence response')).toBeDisabled()
   expect(screen.getByText('Shared comments')).toBeInTheDocument()
+  expect(
+    screen.getByText('Shared comments').closest('[data-enable-attachments]')
+  ).toHaveAttribute('data-enable-attachments', 'false')
 })
 
 test('failed saves preserve content and show an error', async ({
@@ -151,6 +173,89 @@ test('failed saves preserve content and show an error', async ({
   expect(screen.getByLabelText('Evidence response')).toHaveValue(
     'Existing evidence'
   )
+})
+
+test('draft saves refresh the EOC cache and later query data updates the editor', async ({
+  render,
+  app,
+  query
+}) => {
+  let serverContent = 'Existing evidence'
+  const savedData = {
+    initiativeAgreementId: 2,
+    iaCode: 'IA-2',
+    actionNumber: 1,
+    name: 'Install equipment',
+    organizationName: 'Example company',
+    status: 'Draft',
+    content: { summary_of_work_completed: 'Saved evidence' },
+    requirements: [{ id: 'summary_of_work_completed', title: 'Equipment' }]
+  }
+  api.get.mockImplementation(async () => ({
+    data: {
+      ...savedData,
+      content: { summary_of_work_completed: serverContent }
+    }
+  }))
+  api.put.mockResolvedValue({ data: savedData })
+  const view = render(<ProponentEOC designatedActionId="3" />, app)
+  await screen.findByText('Organization: Example company')
+  fireEvent.click(screen.getByRole('button', { name: 'Save to draft' }))
+  await waitFor(() => expect(api.put).toHaveBeenCalledTimes(1))
+  expect(query.client.getQueryData(['designated-action-eoc', '3'])).toEqual(
+    savedData
+  )
+
+  serverContent = 'Newer saved evidence'
+  await act(async () => {
+    await query.client.invalidateQueries({
+      queryKey: ['designated-action-eoc', '3']
+    })
+  })
+  await waitFor(() =>
+    expect(screen.getByLabelText('Evidence response')).toHaveValue(
+      'Newer saved evidence'
+    )
+  )
+  view.unmount()
+})
+
+test('blocks dirty in-app navigation and offers save or discard actions', async ({
+  render,
+  app
+}) => {
+  signer = true
+  const view = render(<ProponentEOC designatedActionId="3" />, app)
+  await screen.findByText('Organization: Example company')
+  fireEvent.change(screen.getByLabelText('Evidence response'), {
+    target: { value: 'Unsaved evidence' }
+  })
+  expect(navigationBlocker.shouldBlock).toBe(true)
+
+  navigationBlocker.state = 'blocked'
+  view.rerender(<ProponentEOC designatedActionId="3" />)
+  expect(
+    await screen.findByRole('dialog', { name: 'Unsaved evidence changes' })
+  ).toBeInTheDocument()
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Discard changes and leave' })
+  )
+  expect(navigationBlocker.proceed).toHaveBeenCalled()
+})
+
+test('refreshes the evidence document tree when the upload dialog closes', async ({
+  render,
+  app,
+  query
+}) => {
+  const invalidateQueries = vi.spyOn(query.client, 'invalidateQueries')
+  render(<ProponentEOC designatedActionId="3" />, app)
+  await screen.findByText('Organization: Example company')
+  fireEvent.click(screen.getByRole('button', { name: 'Manage documents' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Finish upload' }))
+  expect(invalidateQueries).toHaveBeenCalledWith({
+    queryKey: ['document-tree', 'designatedAction', '3']
+  })
 })
 
 test('government review locks disable draft edits and document management', async ({

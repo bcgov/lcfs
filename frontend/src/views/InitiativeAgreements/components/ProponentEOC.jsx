@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { useParams } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useBlocker, useParams } from 'react-router-dom'
 import {
   Accordion,
   AccordionSummary,
@@ -9,6 +9,11 @@ import {
   Button,
   Checkbox,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   FormControlLabel,
   Stack,
   Stepper,
@@ -31,18 +36,23 @@ import { DocumentTree } from './DocumentTree'
 
 export const ProponentEOC = ({ designatedActionId, readOnly = false }) => {
   const api = useApiService()
+  const queryClient = useQueryClient()
   const { hasRoles } = useCurrentUser()
   const { initiativeAgreementId } = useParams()
   const url = apiRoutes.getDesignatedActionProfile
     .replace(':designatedActionId', designatedActionId)
     .replace('/profile', '/eoc')
+  const queryKey = useMemo(
+    () => ['designated-action-eoc', String(designatedActionId)],
+    [designatedActionId]
+  )
   const {
     data: serverData,
     isLoading,
     error,
     refetch
   } = useQuery({
-    queryKey: ['designated-action-eoc', String(designatedActionId)],
+    queryKey,
     queryFn: async () => (await api.get(url)).data
   })
   // IDIR reads the latest immutable submission while a revision is drafted.
@@ -64,19 +74,46 @@ export const ProponentEOC = ({ designatedActionId, readOnly = false }) => {
   const [message, setMessage] = useState('')
   const [failure, setFailure] = useState('')
   const [saving, setSaving] = useState(false)
+  const editorRefs = useRef({})
   const dirty = useRef(false)
   const latest = useRef({})
   const queue = useRef(Promise.resolve())
-  const mountedData = useRef(false)
   const locked =
     readOnly || data?.canEdit === false || data?.status === 'Submitted'
+  const blocker = useBlocker(() => !readOnly && dirty.current)
   useEffect(() => {
-    if (data && (readOnly || !mountedData.current)) {
-      mountedData.current = true
+    if (data && (readOnly || !dirty.current)) {
       latest.current = data.content || {}
       setContent(latest.current)
     }
   }, [data, readOnly])
+  useEffect(() => {
+    for (const [requirementId, editorRef] of Object.entries(
+      editorRefs.current
+    )) {
+      const editor = editorRef?.getEditor?.()
+      const toolbar = editor?.getModule('toolbar')?.container
+      if (!toolbar) continue
+      toolbar.setAttribute('role', 'toolbar')
+      toolbar.setAttribute('aria-label', 'Evidence formatting toolbar')
+      toolbar.querySelectorAll('button').forEach((button) => {
+        const format = button.className
+          .split(/\s+/)
+          .find((className) => className.startsWith('ql-'))
+          ?.slice(3)
+        const labels = {
+          bold: 'Bold',
+          italic: 'Italic',
+          list: button.value === 'ordered' ? 'Numbered list' : 'Bulleted list',
+          link: 'Insert link'
+        }
+        if (format && labels[format]) {
+          button.setAttribute('aria-label', labels[format])
+        }
+      })
+      toolbar.setAttribute('data-requirement-id', requirementId)
+    }
+  }, [content, expanded, locked, saving])
   const downloadSubmissionDocument = async (submissionId, document) => {
     try {
       const response = await api.get(
@@ -109,10 +146,17 @@ export const ProponentEOC = ({ designatedActionId, readOnly = false }) => {
               snapshot.exceptions_limitations_and_context || '',
             declarationAccepted: submit && declaration
           }
-          if (submit) await api.post(`${url}/submit`, body)
-          else await api.put(url, body)
-          if (JSON.stringify(latest.current) === JSON.stringify(snapshot))
+          const response = submit
+            ? await api.post(`${url}/submit`, body)
+            : await api.put(url, body)
+          if (response.data?.content) {
+            queryClient.setQueryData(queryKey, response.data)
+          }
+          if (JSON.stringify(latest.current) === JSON.stringify(snapshot)) {
             dirty.current = false
+            latest.current = response.data?.content || snapshot
+            setContent(latest.current)
+          }
           setMessage(submit ? 'Evidence submitted.' : 'Draft saved.')
           if (submit) {
             setDeclaration(false)
@@ -130,7 +174,7 @@ export const ProponentEOC = ({ designatedActionId, readOnly = false }) => {
         .finally(() => setSaving(false))
       return task
     },
-    [api, url, declaration, refetch]
+    [api, url, declaration, queryClient, queryKey, refetch]
   )
   useEffect(() => {
     if (locked || !dirty.current) return
@@ -229,7 +273,16 @@ export const ProponentEOC = ({ designatedActionId, readOnly = false }) => {
           />
           <DocumentUploadDialog
             open={uploadOpen && !locked}
-            close={() => setUploadOpen(false)}
+            close={() => {
+              setUploadOpen(false)
+              queryClient.invalidateQueries({
+                queryKey: [
+                  'document-tree',
+                  'designatedAction',
+                  String(designatedActionId)
+                ]
+              })
+            }}
             parentType="designatedAction"
             parentID={designatedActionId}
           />
@@ -274,6 +327,9 @@ export const ProponentEOC = ({ designatedActionId, readOnly = false }) => {
             </label>
             <div role="group" aria-labelledby={`eoc-label-${requirement.id}`}>
               <ReactQuill
+                ref={(editor) => {
+                  editorRefs.current[String(requirement.id)] = editor
+                }}
                 theme="snow"
                 readOnly={locked || saving}
                 value={content[String(requirement.id)] || ''}
@@ -384,9 +440,53 @@ export const ProponentEOC = ({ designatedActionId, readOnly = false }) => {
             entityType="designatedAction"
             entityId={Number(designatedActionId)}
             commentMode="dual"
+            enableAttachments={false}
           />
         </BCBox>
       )}
+      <Dialog
+        open={blocker.state === 'blocked'}
+        onClose={() => blocker.reset?.()}
+        aria-labelledby="eoc-navigation-dialog-title"
+      >
+        <DialogTitle id="eoc-navigation-dialog-title">
+          Unsaved evidence changes
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {failure
+              ? 'Your latest changes could not be saved. Save them again or discard them before leaving.'
+              : 'Save your evidence before leaving this page, or discard your changes.'}
+          </DialogContentText>
+          {failure && <Alert severity="error">{failure}</Alert>}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => blocker.reset?.()}>Stay on page</Button>
+          <Button
+            color="error"
+            onClick={() => {
+              dirty.current = false
+              blocker.proceed?.()
+            }}
+          >
+            Discard changes and leave
+          </Button>
+          <Button
+            variant="contained"
+            disabled={saving}
+            onClick={async () => {
+              try {
+                if (dirty.current) await save()
+                blocker.proceed?.()
+              } catch {
+                // Keep the navigation blocked so the user can retry or discard.
+              }
+            }}
+          >
+            {saving ? 'Saving…' : 'Save and leave'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </BCBox>
   )
 }
