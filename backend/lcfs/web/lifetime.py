@@ -9,8 +9,11 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
+from lcfs.db.engine_config import build_connect_args
+from lcfs.db.pool_monitor import register_pool_monitor
 from lcfs.services.redis.lifetime import init_redis, shutdown_redis
 from lcfs.settings import settings
+from lcfs.utils.query_analyzer import register_query_analyzer
 
 
 def _setup_db(app: FastAPI) -> None:  # pragma: no cover
@@ -27,11 +30,11 @@ def _setup_db(app: FastAPI) -> None:  # pragma: no cover
         str(settings.db_url),
         echo=settings.db_echo,
         poolclass=NullPool,
-        connect_args={
-            "prepared_statement_cache_size": 0,
-            "statement_cache_size": 0,
-        },
+        # Auth and scheduled jobs: separate, by default unlimited, timeout.
+        connect_args=build_connect_args(settings.db_background_statement_timeout_ms),
     )
+    register_query_analyzer(engine.sync_engine, name="lifetime")
+    register_pool_monitor(engine.sync_engine, name="lifetime")
     session_factory = async_sessionmaker(
         engine,
         expire_on_commit=False,

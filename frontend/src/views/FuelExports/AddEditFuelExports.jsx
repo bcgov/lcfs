@@ -7,7 +7,7 @@ import {
   useGetFuelExportsList,
   useSaveFuelExport
 } from '@/hooks/useFuelExport'
-import { isArrayEmpty } from '@/utils/array.js'
+import { isArrayEmpty } from '@/utils/array'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
 import Grid2 from '@mui/material/Grid2'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'

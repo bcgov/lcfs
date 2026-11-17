@@ -46,7 +46,7 @@ async def test_bulletin_export_success():
     assert response.media_type == "text/csv"
     assert "BC-LCFS-Current-Fuel-Codes" in response.headers["Content-Disposition"]
     repo_mock.get_fuel_code_bulletin_pagination_params.assert_called_once_with(
-        pagination
+        pagination, include_internal=False
     )
     repo_mock.get_fuel_code_bulletin_rows.assert_awaited_once()
     call_kwargs = repo_mock.get_fuel_code_bulletin_rows.await_args.kwargs

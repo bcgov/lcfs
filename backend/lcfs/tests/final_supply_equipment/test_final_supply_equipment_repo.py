@@ -1,4 +1,5 @@
 import pytest
+from fastapi import HTTPException
 from pathlib import Path
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
@@ -258,8 +259,16 @@ async def test_get_fse_paginated(repo, fake_db):
 @pytest.mark.anyio
 async def test_get_final_supply_equipment_by_id(repo, fake_db):
     fake_db.execute.return_value = FakeResult(["fse_item"])
-    result = await repo.get_final_supply_equipment_by_id(final_supply_equipment_id=5)
+    result = await repo.get_final_supply_equipment_by_id(
+        final_supply_equipment_id=5, compliance_report_id=10
+    )
     assert result == "fse_item"
+    statement = str(
+        fake_db.execute.call_args.args[0].compile(
+            compile_kwargs={"literal_binds": True}
+        )
+    )
+    assert "final_supply_equipment.compliance_report_id = 10" in statement
 
 
 @pytest.mark.anyio
@@ -290,9 +299,28 @@ async def test_create_final_supply_equipment(repo, fake_db):
 
 @pytest.mark.anyio
 async def test_delete_final_supply_equipment(repo, fake_db):
-    await repo.delete_final_supply_equipment(final_supply_equipment_id=99)
+    fake_db.execute.return_value = MagicMock(rowcount=1)
+    await repo.delete_final_supply_equipment(
+        final_supply_equipment_id=99, compliance_report_id=10
+    )
     fake_db.execute.assert_called_once()  # delete statement was executed
+    statement = str(
+        fake_db.execute.call_args.args[0].compile(
+            compile_kwargs={"literal_binds": True}
+        )
+    )
+    assert "final_supply_equipment.compliance_report_id = 10" in statement
     fake_db.flush.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_delete_final_supply_equipment_of_another_report_is_404(repo, fake_db):
+    fake_db.execute.return_value = MagicMock(rowcount=0)
+    with pytest.raises(HTTPException) as exc_info:
+        await repo.delete_final_supply_equipment(
+            final_supply_equipment_id=99, compliance_report_id=10
+        )
+    assert exc_info.value.status_code == 404
 
 
 @pytest.mark.anyio
@@ -1012,24 +1040,62 @@ async def test_resolve_reporting_record_reuses_existing_latest_equipment_row(
 @pytest.mark.anyio
 async def test_delete_fse_reporting(repo, fake_db):
     """Test deleting FSE reporting"""
-    await repo.delete_fse_reporting(1)
+    fake_db.execute.return_value = MagicMock(rowcount=1)
+    await repo.delete_fse_reporting(1, 10, 7)
 
     fake_db.execute.assert_called_once()
+    statement = str(
+        fake_db.execute.call_args.args[0].compile(
+            compile_kwargs={"literal_binds": True}
+        )
+    )
+    assert "compliance_report_charging_equipment.compliance_report_id = 10" in statement
+    assert "compliance_report_charging_equipment.organization_id = 7" in statement
     fake_db.flush.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_delete_fse_reporting_outside_report_is_404(repo, fake_db):
+    fake_db.execute.return_value = MagicMock(rowcount=0)
+    with pytest.raises(HTTPException) as exc_info:
+        await repo.delete_fse_reporting(1, 10, 7)
+    assert exc_info.value.status_code == 404
 
 
 @pytest.mark.anyio
 async def test_delete_fse_reporting_batch(repo, fake_db):
     """Test batch deletion of FSE reporting"""
+    fake_db.scalar.return_value = 3
     mock_result = MagicMock()
     mock_result.rowcount = 3
     fake_db.execute.return_value = mock_result
 
-    result = await repo.delete_fse_reporting_batch([1, 2, 3])
+    result = await repo.delete_fse_reporting_batch([1, 2, 3], 10, 7)
 
     assert result == 3
     fake_db.execute.assert_called_once()
+    statement = str(
+        fake_db.execute.call_args.args[0].compile(
+            compile_kwargs={"literal_binds": True}
+        )
+    )
+    assert "compliance_report_charging_equipment.compliance_report_id = 10" in statement
+    assert "compliance_report_charging_equipment.organization_id = 7" in statement
     fake_db.flush.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_delete_fse_reporting_batch_with_foreign_id_deletes_nothing(
+    repo, fake_db
+):
+    """One ID outside the report and organization: 404 before any delete."""
+    fake_db.scalar.return_value = 2
+
+    with pytest.raises(HTTPException) as exc_info:
+        await repo.delete_fse_reporting_batch([1, 2, 3], 10, 7)
+
+    assert exc_info.value.status_code == 404
+    fake_db.execute.assert_not_called()
 
 
 @pytest.mark.anyio
