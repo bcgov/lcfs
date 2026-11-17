@@ -194,6 +194,38 @@ class CITableOptionsSchema(BaseSchema):
     field_options: Dict[str, List[str]] = {}
 
 
+class FuelProductionFacilitySchema(BaseSchema):
+    fuel_production_facility_id: int
+    organization_id: Optional[int] = None
+    name: Optional[str] = None
+    city: Optional[str] = None
+    province_state: Optional[str] = None
+    country: Optional[str] = None
+    iso: Optional[str] = None
+    nameplate_capacity: Optional[int] = None
+    nameplate_capacity_unit: Optional[str] = None
+    contact_name: Optional[str] = None
+    contact_email: Optional[str] = None
+    documents: List[FileResponseSchema] = Field(default_factory=list)
+
+
+class FuelProductionFacilityCreateSchema(BaseSchema):
+    name: str = Field(..., min_length=1, max_length=500)
+    city: str = Field(..., min_length=1, max_length=1000)
+    province_state: str = Field(..., min_length=1, max_length=1000)
+    country: str = Field(..., min_length=1, max_length=1000)
+    iso: Optional[str] = Field(default=None, max_length=10)
+    nameplate_capacity: int = Field(..., gt=0)
+    nameplate_capacity_unit: FuelTypeQuantityUnitsEnumSchema
+    contact_name: Optional[str] = Field(default=None, max_length=500)
+    contact_email: Optional[EmailStr] = Field(default=None, max_length=500)
+
+    @field_validator("contact_email", mode="before")
+    @classmethod
+    def _empty_contact_email_is_null(cls, value):
+        return None if isinstance(value, str) and not value.strip() else value
+
+
 # ---------------------------------------------------------------------------
 # Step 1 — Application information
 # ---------------------------------------------------------------------------
@@ -209,13 +241,24 @@ class CIApplicationStep1Schema(BaseSchema):
 
     model_config = ConfigDict(str_strip_whitespace=True)
 
-    facility_city: str = Field(..., min_length=1, max_length=500)
-    facility_province_state: str = Field(..., min_length=1, max_length=500)
-    facility_country: str = Field(..., min_length=1, max_length=500)
+    fuel_production_facility_id: Optional[int] = Field(default=None, gt=0)
+    facility_name: Optional[str] = Field(default=None, min_length=1, max_length=500)
+    facility_city: Optional[str] = Field(default=None, min_length=1, max_length=500)
+    facility_province_state: Optional[str] = Field(
+        default=None, min_length=1, max_length=500
+    )
+    facility_country: Optional[str] = Field(default=None, min_length=1, max_length=500)
     facility_iso: Optional[str] = Field(default=None, max_length=10)
-    facility_nameplate_capacity: int = Field(..., gt=0)
-    facility_nameplate_capacity_unit: FuelTypeQuantityUnitsEnumSchema
+    facility_nameplate_capacity: Optional[int] = Field(default=None, gt=0)
+    facility_nameplate_capacity_unit: Optional[FuelTypeQuantityUnitsEnumSchema] = None
+    facility_contact_name: Optional[str] = Field(default=None, max_length=500)
+    facility_contact_email: Optional[EmailStr] = Field(default=None, max_length=500)
     proposed_fuel_code_effective_date: Optional[date] = None
+
+    @field_validator("facility_contact_email", mode="before")
+    @classmethod
+    def _empty_facility_contact_email_is_null(cls, value):
+        return None if isinstance(value, str) and not value.strip() else value
 
     @model_validator(mode="before")
     @classmethod
@@ -234,8 +277,15 @@ class CIApplicationStep1Schema(BaseSchema):
         def _get(camel: str, snake: str):
             return data.get(camel) if data.get(camel) is not None else data.get(snake)
 
+        facility_id = _get(
+            "fuelProductionFacilityId", "fuel_production_facility_id"
+        )
+        if facility_id:
+            return data
+
         string_fields = [
-            ("facilityCity", "facility_city", "City"),
+            ("facilityName", "facility_name", "Fuel production facility name"),
+            ("facilityCity", "facility_city", "City/Town"),
             ("facilityProvinceState", "facility_province_state", "Province/State"),
             ("facilityCountry", "facility_country", "Country"),
         ]
@@ -360,6 +410,7 @@ class PathwaySchema(BaseSchema):
 
     pathway_id: int
     ci_application_id: int
+    fuel_production_facility_id: Optional[int] = None
     group_uuid: Optional[str] = None
     version: Optional[int] = None
     action_type: Optional[str] = None
@@ -424,6 +475,7 @@ class CIGeneratedFuelCodeSchema(BaseSchema):
     facility_nameplate_capacity_unit: Optional[
         Union[FuelTypeQuantityUnitsEnumSchema, str]
     ] = None
+    fuel_production_facility_id: Optional[int] = None
     former_company: Optional[str] = None
     notes: Optional[str] = None
     feedstock_fuel_transport_mode: List[NullableTransportModeSelection] = Field(
@@ -480,6 +532,7 @@ class CIApplicationBaseSchema(BaseSchema):
     organization_id: int
     organization: Optional[OrganizationInfoSchema] = None
     status: CIApplicationStatusSchema
+    fuel_production_facility_id: Optional[int] = None
     facility_city: Optional[str] = None
     facility_province_state: Optional[str] = None
     facility_country: Optional[str] = None
@@ -508,6 +561,8 @@ class CIApplicationSchema(BaseSchema):
     status: CIApplicationStatusSchema
 
     # Step 1
+    fuel_production_facility_id: Optional[int] = None
+    fuel_production_facility: Optional[FuelProductionFacilitySchema] = None
     facility_city: Optional[str] = None
     facility_province_state: Optional[str] = None
     facility_country: Optional[str] = None
