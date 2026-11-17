@@ -278,6 +278,37 @@ def test_zip_bomb_entry_is_rejected():
     assert "damaged" in rejected(data, "model.xlsx")
 
 
+def _set_encrypted_flag(data: bytes, name: str) -> bytes:
+    """Set general purpose bit 0 on one entry, as a zip encryptor would."""
+    out = bytearray(data)
+    encoded = name.encode()
+    # (signature, flag offset, name length offset, name offset) for the local
+    # file header and the central directory record
+    headers = ((b"PK\x03\x04", 6, 26, 30), (b"PK\x01\x02", 8, 28, 46))
+    for signature, flag_at, length_at, name_at in headers:
+        pos = out.find(signature)
+        while pos != -1:
+            length = struct.unpack_from("<H", out, pos + length_at)[0]
+            if out[pos + name_at : pos + name_at + length] == encoded:
+                flags = struct.unpack_from("<H", out, pos + flag_at)[0]
+                struct.pack_into("<H", out, pos + flag_at, flags | 0x1)
+            pos = out.find(signature, pos + 1)
+    return bytes(out)
+
+
+def test_encrypted_entry_is_rejected_before_parsing(monkeypatch):
+    parsed = []
+    monkeypatch.setattr(
+        ooxml_module, "_ContentTypes", lambda *args: parsed.append(args)
+    )
+    data = _set_encrypted_flag(xlsx_bytes(), "xl/workbook.xml")
+    info = zipfile.ZipFile(io.BytesIO(data)).getinfo("xl/workbook.xml")
+    assert info.flag_bits & 0x1
+
+    assert "Password-protected" in rejected(data, "model.xlsx")
+    assert parsed == []
+
+
 def test_read_part_stops_at_its_limit():
     package = zipfile.ZipFile(io.BytesIO(xlsx_bytes()))
     with pytest.raises(FileRejectedException):

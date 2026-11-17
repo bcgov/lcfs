@@ -17,6 +17,7 @@ from lcfs.services.file_inspection.common import (
     DDE_MESSAGE,
     DOCM,
     DOCX,
+    ENCRYPTED_MESSAGE,
     EXTERNAL_CONTENT_MESSAGE,
     MISMATCH_MESSAGE,
     STRICT_MESSAGE,
@@ -38,6 +39,8 @@ RATIO_CHECK_MIN_SIZE = 10 * 1024 * 1024
 ALLOWED_COMPRESSION = {zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED}
 # Office XML nests a few dozen elements deep
 MAX_XML_DEPTH = 256
+# General purpose bit 0: the entry is encrypted, so it can't be inspected
+ZIP_ENCRYPTED_FLAG = 0x1
 
 # Raised while reading a damaged or hostile package
 PACKAGE_ERRORS = (
@@ -188,7 +191,10 @@ def _active_kind(rel_type: str) -> str | None:
 
 
 def _check_entries(infos: list[zipfile.ZipInfo]) -> dict[str, zipfile.ZipInfo]:
-    """Reject zip bombs and unsafe names. Returns entries keyed by lower-case name."""
+    """
+    Reject encrypted entries, zip bombs and unsafe names. Returns entries keyed
+    by lower-case name.
+    """
     if len(infos) > MAX_ENTRIES:
         raise FileRejectedException(DAMAGED_MESSAGE)
     if sum(info.file_size for info in infos) > MAX_TOTAL_UNCOMPRESSED:
@@ -196,6 +202,8 @@ def _check_entries(infos: list[zipfile.ZipInfo]) -> dict[str, zipfile.ZipInfo]:
 
     parts = {}
     for info in infos:
+        if info.flag_bits & ZIP_ENCRYPTED_FLAG:
+            raise FileRejectedException(ENCRYPTED_MESSAGE)
         name = info.filename
         if (
             name.startswith("/")
