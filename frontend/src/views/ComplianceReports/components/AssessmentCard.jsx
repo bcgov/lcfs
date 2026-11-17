@@ -1,7 +1,7 @@
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
-import Loading from '@/components/Loading.jsx'
+import Loading from '@/components/Loading'
 import { Role } from '@/components/Role'
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
 import { roles } from '@/constants/roles'
