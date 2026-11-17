@@ -67,6 +67,46 @@ jobs:
               sys.exit(1)
           PY
 
+  local-keycloak-stack-tests:
+    name: "Local Keycloak Stack Tests"
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      LCFS_LOCAL_KEYCLOAK_START_TIMEOUT: "600"
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v6.2.0
+        with:
+          python-version: "3.13"
+
+      - name: Test local Keycloak stack launcher
+        run: python -m unittest scripts.tests.test_local_keycloak_stack -v
+
+      - name: Start isolated local Keycloak stacks
+        run: |
+          ./scripts/local-keycloak-stack.sh start ci-a
+          ./scripts/local-keycloak-stack.sh start ci-b
+        env:
+          LCFS_LOCAL_KEYCLOAK_STATE_DIR: ${{ runner.temp }}/lcfs-local-keycloak
+
+      - name: Test local Keycloak authentication across stacks
+        run: python -m unittest scripts.tests.test_local_keycloak_auth -v
+        env:
+          LCFS_LOCAL_KEYCLOAK_INTEGRATION: "1"
+          LCFS_LOCAL_KEYCLOAK_STATE_DIR: ${{ runner.temp }}/lcfs-local-keycloak
+
+      - name: Remove local Keycloak stacks
+        if: always()
+        run: |
+          ./scripts/local-keycloak-stack.sh destroy ci-a || true
+          ./scripts/local-keycloak-stack.sh destroy ci-b || true
+        env:
+          LCFS_LOCAL_KEYCLOAK_STATE_DIR: ${{ runner.temp }}/lcfs-local-keycloak
+
   backend-setup:
     name: "Backend Setup"
     runs-on: ubuntu-24.04
@@ -673,14 +713,15 @@ jobs:
           fi
 
   teams-notification:
-    needs: [post-backend-tests, post-frontend-tests]
+    needs:
+      [post-backend-tests, post-frontend-tests, local-keycloak-stack-tests]
     runs-on: ubuntu-latest
     if: always()
     steps:
       - name: Determine Test Status
         id: test_status
         run: |
-          if [[ "${{ contains(needs.post-backend-tests.result, 'failure') }}" == "true" || "${{ contains(needs.post-frontend-tests.result, 'failure') }}" == "true" ]]; then
+          if [[ "${{ contains(needs.post-backend-tests.result, 'failure') }}" == "true" || "${{ contains(needs.post-frontend-tests.result, 'failure') }}" == "true" || "${{ contains(needs.local-keycloak-stack-tests.result, 'failure') }}" == "true" ]]; then
             echo "status=failure" >> $GITHUB_OUTPUT
             echo "theme_color=FF0000" >> $GITHUB_OUTPUT
           else
@@ -704,7 +745,7 @@ jobs:
           THREAD_ID="pr-${PR_NUMBER}"
           WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           FRONTEND_SUMMARY="${{ steps.test_status.outputs.frontend_summary }}"
-          MESSAGE="**Test Results**\n- Backend Tests: ${{ needs.post-backend-tests.result }}\n- Frontend Tests: ${{ needs.post-frontend-tests.result }}\n\n**Status:** $([[ '${{ steps.test_status.outputs.status }}' == 'failure' ]] && echo '❌ Failed' || echo '✅ Passed')"
+          MESSAGE="**Test Results**\n- Backend Tests: ${{ needs.post-backend-tests.result }}\n- Frontend Tests: ${{ needs.post-frontend-tests.result }}\n- Local Keycloak Stack Tests: ${{ needs.local-keycloak-stack-tests.result }}\n\n**Status:** $([[ '${{ steps.test_status.outputs.status }}' == 'failure' ]] && echo '❌ Failed' || echo '✅ Passed')"
           COLOR="${{ steps.test_status.outputs.theme_color }}"
 
           cat <<EOF > teams_card.json

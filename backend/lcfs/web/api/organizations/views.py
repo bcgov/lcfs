@@ -16,6 +16,7 @@ from fastapi_cache.decorator import cache
 from starlette import status
 
 from lcfs.db import dependencies
+from lcfs.db.dependencies import extended_statement_timeout
 
 from lcfs.web.core.decorators import view_handler
 from lcfs.web.api.base import PaginationRequestSchema
@@ -57,7 +58,12 @@ router = APIRouter()
 get_async_db = dependencies.get_async_db_session
 
 
-@router.get("/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
+@router.get(
+    "/export",
+    response_class=StreamingResponse,
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(extended_statement_timeout)],
+)
 @view_handler([RoleEnum.GOVERNMENT])
 async def export_organizations(
     request: Request, service: OrganizationsService = Depends()

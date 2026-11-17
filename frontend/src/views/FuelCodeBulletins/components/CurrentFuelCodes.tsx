@@ -47,7 +47,9 @@ export const CurrentFuelCodes = () => {
 
   const { data, isLoading, isError, error } = useFuelCodeBulletins(
     'current',
-    paginationOptions as PaginationParams
+    paginationOptions as PaginationParams,
+    {},
+    isIdirView
   )
 
   const colDefs = useMemo(() => buildColumnDefs(t, isIdirView), [t, isIdirView])
