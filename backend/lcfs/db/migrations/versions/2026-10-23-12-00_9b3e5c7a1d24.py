@@ -5,7 +5,7 @@ uploaded to CI applications wait as pending_approval until an IDIR
 Administrator approves or rejects them. Existing rows become `legacy`.
 
 Revision ID: 9b3e5c7a1d24
-Revises: 4dab1d106b2b
+Revises: 8b3e6a1c5d90
 Create Date: 2026-10-23 12:00:00.000000
 """
 
@@ -15,7 +15,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "9b3e5c7a1d24"
-down_revision = "4dab1d106b2b"
+down_revision = "8b3e6a1c5d90"
 branch_labels = None
 depends_on = None
 
