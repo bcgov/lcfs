@@ -10,6 +10,7 @@ from openpyxl import load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from starlette.concurrency import run_in_threadpool
 from typing import List
 
 from lcfs.db.base import current_user_var
@@ -82,8 +83,10 @@ class AllocationAgreementImporter:
                 detail=f"File size exceeds the maximum limit of {MAX_FILE_SIZE_MB} MB.",
             )
 
-        # Validate the file's real type, not the type the browser claimed
-        inspect_upload(
+        # Validate the file's real type, not the type the browser claimed.
+        # Parsing a large workbook is CPU-bound, so keep it off the event loop.
+        await run_in_threadpool(
+            inspect_upload,
             file_contents,
             file.filename,
             SCHEDULE_IMPORT_MIME_TYPES,
