@@ -1,0 +1,5 @@
+.env
+AGENTS.md
+backend/.env
+frontend/.env
+frontend/cypress.env.json
