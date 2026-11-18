@@ -90,8 +90,7 @@ describe('renewableClaimEligibility utilities', () => {
           }
         ],
         mockOptionsData,
-        '2024',
-        APPROVED_FUEL_CODE
+        '2024'
       )
 
       expect(result).toEqual({
@@ -111,8 +110,7 @@ describe('renewableClaimEligibility utilities', () => {
           }
         ],
         mockOptionsData,
-        '2025',
-        APPROVED_FUEL_CODE
+        '2025'
       )
 
       expect(result.shouldShowIsCanadaProduced).toBe(true)
@@ -130,8 +128,7 @@ describe('renewableClaimEligibility utilities', () => {
           }
         ],
         mockOptionsData,
-        '2026',
-        APPROVED_FUEL_CODE
+        '2026'
       )
 
       expect(result.shouldShowIsCanadaProduced).toBe(true)
@@ -140,26 +137,33 @@ describe('renewableClaimEligibility utilities', () => {
   })
 
   describe('applyRenewableClaimColumnVisibility', () => {
-    const columnVisibilityState = {
+    const columnVisibilityState: Record<string, boolean> = {
       isCanadaProduced: false,
       isQ1Supplied: false
     }
 
-    let setColumnsVisible
-    let getColumn
-    let gridRef
+    let setColumnsVisible: (columns: string[], visible: boolean) => void
+    let getColumn: (column: string) => { isVisible: () => boolean }
+    let gridRef: {
+      current: {
+        api: {
+          setColumnsVisible: typeof setColumnsVisible
+          getColumn: typeof getColumn
+        }
+      }
+    }
 
     beforeEach(() => {
       columnVisibilityState.isCanadaProduced = false
       columnVisibilityState.isQ1Supplied = false
 
-      setColumnsVisible = vi.fn((columns, visible) => {
+      setColumnsVisible = vi.fn((columns: string[], visible: boolean) => {
         columns.forEach((column) => {
           columnVisibilityState[column] = visible
         })
       })
 
-      getColumn = vi.fn((column) => ({
+      getColumn = vi.fn((column: string) => ({
         isVisible: () => columnVisibilityState[column]
       }))
 
