@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from starlette.responses import StreamingResponse
 
-from lcfs.db.dependencies import get_async_db_session
+from lcfs.db.dependencies import extended_statement_timeout, get_async_db_session
 from lcfs.db.models.form.Form import Form
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.forms.registry import FORM_REGISTRY
@@ -111,7 +111,10 @@ async def get_form_by_link_key(
 # ── Export endpoints ───────────────────────────────────────────────────────────
 
 
-@router.post("/{form_slug}/export")
+@router.post(
+    "/{form_slug}/export",
+    dependencies=[Depends(extended_statement_timeout)],
+)
 @anonymous_form_handler(
     allowed_roles=None,
     allow_link_key_access=False,
@@ -129,7 +132,10 @@ async def export_form_authenticated(
     return await _export(form, body, format)
 
 
-@router.post("/{form_slug}/{link_key}/export")
+@router.post(
+    "/{form_slug}/{link_key}/export",
+    dependencies=[Depends(extended_statement_timeout)],
+)
 @anonymous_form_handler(
     allowed_roles=[RoleEnum.GOVERNMENT, RoleEnum.ADMINISTRATOR],
     allow_link_key_access=True,

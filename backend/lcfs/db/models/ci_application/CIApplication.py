@@ -88,6 +88,16 @@ class CIApplication(BaseModel, Auditable, Versioning):
         nullable=False,
         comment="Organization submitting the CI application",
     )
+    fuel_production_facility_id = Column(
+        Integer,
+        ForeignKey(
+            "fuel_production_facility.fuel_production_facility_id",
+            ondelete="SET NULL",
+        ),
+        nullable=True,
+        index=True,
+        comment="Facility selected for this CI application",
+    )
 
     # ---------- Assigned IDIR analyst ----------
     assigned_analyst_id = Column(
@@ -313,6 +323,11 @@ class CIApplication(BaseModel, Auditable, Versioning):
     )
     organization = relationship(
         "Organization",
+        back_populates="ci_applications",
+        lazy="selectin",
+    )
+    fuel_production_facility = relationship(
+        "FuelProductionFacility",
         back_populates="ci_applications",
         lazy="selectin",
     )

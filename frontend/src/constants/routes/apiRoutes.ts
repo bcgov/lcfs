@@ -132,10 +132,14 @@ export const apiRoutes = {
   getMyFuelCodes: '/fuel-codes/my-list',
   exportFuelCodes: '/fuel-codes/export',
   fuelCodeBulletins: '/fuel-codes/bulletins',
+  governmentFuelCodeBulletins: '/fuel-codes/government/bulletins',
   exportFuelCodeBulletins: '/fuel-codes/bulletins/export',
+  exportGovernmentFuelCodeBulletins: '/fuel-codes/government/bulletins/export',
 
   // ci-applications (Carbon Intensity)
   ciApplicationOptions: '/ci-applications/table-options',
+  ciApplicationFacilities: '/ci-applications/facilities',
+  createCIApplicationFacility: '/ci-applications/facilities',
   ciApplicationFuelCodeFieldSearch: '/ci-applications/fuel-code-field-search?',
   ciApplicationLocationSearch: '/ci-applications/location-search?',
   getCIApplications: '/ci-applications/list',

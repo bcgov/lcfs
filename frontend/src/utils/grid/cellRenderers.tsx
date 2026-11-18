@@ -11,7 +11,10 @@ import {
   TRANSACTION_STATUSES,
   TRANSFER_STATUSES
 } from '@/constants/statuses'
-import { getOrgTypeDisplayLabel } from '@/utils/organizationTypes'
+import {
+  getOrgTypeDisplayLabel,
+  type OrganizationTypeInput
+} from '@/utils/organizationTypes'
 import { Link, useLocation } from 'react-router-dom'
 import {
   ReactElement,
@@ -365,7 +368,7 @@ export const OrgTypeRenderer: RendererWithFilterPill = (
   // Multi-type organizations (#4565): one chip per type with overflow, the
   // same treatment RoleRenderer gives the Users table. Falls back to the
   // legacy single type when the list is absent.
-  const orgTypes: unknown[] = props.data?.orgTypes?.length
+  const orgTypes: OrganizationTypeInput[] = props.data?.orgTypes?.length
     ? props.data.orgTypes
     : props.data?.orgType
       ? [props.data.orgType]
