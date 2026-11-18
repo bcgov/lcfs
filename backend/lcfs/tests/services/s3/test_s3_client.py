@@ -1118,3 +1118,17 @@ async def test_review_scan_rechecks_the_locked_row(document_service):
     sql = str(statement.compile(dialect=postgresql.dialect()))
     assert sql.rstrip().endswith("FOR UPDATE")
     assert statement.get_execution_options()["populate_existing"] is True
+
+
+@pytest.mark.anyio
+async def test_shared_submission_document_is_not_destroyed(
+    document_service, document_mock, db_mock
+):
+    counts = [0] * _TABLES
+    keys = list(DOCUMENT_PARENT_ASSOCIATIONS)
+    counts[keys.index("compliance_report")] = 1
+    counts[keys.index("daEocSubmission")] = 1
+    _link_document(db_mock, document_mock, counts)
+    assert await document_service.delete_file(1, 1, "compliance_report") is False
+    document_service.s3_client.delete_object.assert_not_called()
+    db_mock.delete.assert_not_called()

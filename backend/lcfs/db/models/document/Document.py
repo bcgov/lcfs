@@ -17,6 +17,9 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
 from lcfs.db.models.initiative_agreement.DesignatedAction import (
     designated_action_document_association,
 )
+from lcfs.db.models.initiative_agreement.DaEocSubmission import (
+    da_eoc_submission_document_association,
+)
 from lcfs.db.models.compliance.ChargingSite import (
     charging_site_document_association,
 )
@@ -131,6 +134,10 @@ class Document(BaseModel, Auditable):
     designated_actions = relationship(
         "DesignatedAction",
         secondary=designated_action_document_association,
+        back_populates="documents",
+    )
+    da_eoc_submissions = relationship(
+        "DaEocSubmission", secondary=da_eoc_submission_document_association,
         back_populates="documents",
     )
     admin_adjustments = relationship(
