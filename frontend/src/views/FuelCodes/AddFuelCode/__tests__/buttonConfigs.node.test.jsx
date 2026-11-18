@@ -499,6 +499,30 @@ describe('buttonConfigs', () => {
       // Should only have edit and delete buttons (save and recommend filtered out)
       expect(result.DRAFT).toHaveLength(2)
     })
+
+    // A fuel code the legacy pages can no longer process (#5308) gets no
+    // actions, whatever its status and whoever is looking at it.
+    it.each([
+      ['analyst', 'DRAFT'],
+      ['analyst', 'RECOMMENDED'],
+      ['director', 'DRAFT'],
+      ['director', 'RECOMMENDED']
+    ])(
+      'should return no buttons for a locked fuel code (%s, %s)',
+      (role, status) => {
+        mockContext.hasRoles.mockImplementation((r) => r === role)
+        mockContext.currentStatus = status
+        mockContext.status = status
+        mockContext.isLocked = true
+
+        expect(fuelCodeButtonConfigFn(mockContext)).toEqual({ [status]: [] })
+
+        mockContext.isLocked = false
+        expect(
+          fuelCodeButtonConfigFn(mockContext)[status].length
+        ).toBeGreaterThan(0)
+      }
+    )
   })
 
   describe('buildFuelCodeButtonContext', () => {
@@ -582,6 +606,19 @@ describe('buttonConfigs', () => {
 
       expect(result.currentStatus).toBe('DRAFT')
       expect(result.status).toBeUndefined()
+    })
+
+    it('should pass the legacy lock through, unlocked by default', () => {
+      const base = {
+        fuelCode: { fuelCodeStatus: { status: 'DRAFT' } },
+        hasRoles: vi.fn(),
+        t: vi.fn()
+      }
+
+      expect(buildFuelCodeButtonContext(base).isLocked).toBe(false)
+      expect(
+        buildFuelCodeButtonContext({ ...base, isLocked: true }).isLocked
+      ).toBe(true)
     })
   })
 })
