@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vite-plus/test'
 import { createRef, useEffect, type PropsWithChildren } from 'react'
 import { BrowserRouter } from 'react-router-dom'
@@ -277,6 +277,18 @@ describe('BCGridViewer Component', () => {
           </TestWrapper>
         )
       }).not.toThrow()
+    })
+
+    it('handles pagination actions when onPaginationChange is null', () => {
+      render(
+        <TestWrapper>
+          <BCGridViewer {...defaultProps} onPaginationChange={null} />
+        </TestWrapper>
+      )
+
+      expect(() =>
+        fireEvent.click(screen.getByTestId('bc-pagination'))
+      ).not.toThrow()
     })
   })
 

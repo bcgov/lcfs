@@ -14,7 +14,14 @@ vi.mock('@/utils/grid/eventHandlers', () => ({
   isEqual: vi.fn((a: unknown, b: unknown) => a === b)
 }))
 vi.mock('papaparse', () => ({
-  default: { parse: vi.fn(() => ({ data: [{ field: 'value' }] })) }
+  default: {
+    parse: vi.fn(() => ({
+      data: [
+        { field: 'value', length: 2 },
+        { field: 'value', length: 2 }
+      ]
+    }))
+  }
 }))
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -371,6 +378,27 @@ describe('BCGridEditorPaginated - Simplified Coverage Test Suite', () => {
     )
 
     expect(screen.getByTestId('bc-grid-base')).toBeInTheDocument()
+  })
+
+  it('handles Excel paste when onCellEditingStopped is null', async () => {
+    render(
+      <BCGridEditorPaginated
+        {...defaultProps}
+        enablePaste={true}
+        onCellEditingStopped={null}
+      />
+    )
+    const event = new Event('paste', { bubbles: true, cancelable: true })
+    Object.defineProperty(event, 'clipboardData', {
+      value: { getData: () => 'pasted value' }
+    })
+
+    await act(async () => {
+      window.dispatchEvent(event)
+      await Promise.resolve()
+    })
+
+    expect(mockGridApi.applyTransaction).toHaveBeenCalled()
   })
 
   it('passes the original clicked cell event to the action callback', async () => {
