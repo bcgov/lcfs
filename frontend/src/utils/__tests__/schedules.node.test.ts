@@ -1,5 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vite-plus/test'
-import { handleScheduleSave, handleScheduleDelete } from '../schedules'
+import type { GridErrors, GridWarnings } from '@/types/schema'
+import {
+  handleScheduleSave,
+  handleScheduleDelete,
+  type ScheduleGridApi,
+  type ScheduleGridNode,
+  type ScheduleGridParams,
+  type ScheduleRow,
+  type ScheduleSaveParams
+} from '../schedules'
 
 // Mock uuid to predictable value
 vi.mock('uuid', () => ({
@@ -7,10 +16,17 @@ vi.mock('uuid', () => ({
 }))
 
 describe('handleScheduleSave', () => {
-  const t = (key) => key // simple translator
-  let alertRef
-  let setErrors
-  let setWarnings
+  const t = (key: string) => key // simple translator
+  let alertRef: {
+    current: {
+      triggerAlert: (alert: {
+        message: string
+        severity: 'success' | 'warning' | 'error'
+      }) => void
+    }
+  }
+  let setErrors: (errors: GridErrors) => void
+  let setWarnings: (warnings: GridWarnings) => void
 
   beforeEach(() => {
     alertRef = { current: { triggerAlert: vi.fn() } }
@@ -44,13 +60,16 @@ describe('handleScheduleSave', () => {
   })
 
   it('handles warnings and errors when saveRow rejects with ERR_BAD_REQUEST', async () => {
-    const apiMock = {
-      forEachNode: (cb) => {
+    const apiMock: ScheduleGridApi<ScheduleRow> = {
+      forEachNode: (cb: (node: ScheduleGridNode<ScheduleRow>) => void) => {
         // Provide fake row node
         cb({ data: { fuelSupplyId: 99 }, updateData: vi.fn() })
       }
     }
-    const params = { node: { data: { id: 'temp' } }, api: apiMock }
+    const params: ScheduleSaveParams<ScheduleRow> = {
+      node: { data: { id: 'temp' } },
+      api: apiMock
+    }
     const errorResponse = {
       code: 'ERR_BAD_REQUEST',
       response: {
@@ -94,14 +113,14 @@ describe('handleScheduleDelete', () => {
   it('applies transaction and calls alert on successful delete', async () => {
     const alertRef = { current: { triggerAlert: vi.fn() } }
     const applyTransaction = vi.fn()
-    const params = {
-      node: { data: { id: 5, some: 'data' } },
+    const params: ScheduleGridParams<ScheduleRow> = {
+      node: { data: { id: 5, some: 'data' }, updateData: vi.fn() },
       api: { applyTransaction, isRowDataEmpty: () => true }
     }
 
     const saveRow = vi.fn().mockResolvedValue({})
     const setRowData = vi.fn()
-    const defaultRowData = { default: true }
+    const defaultRowData: ScheduleRow = { default: true }
 
     await handleScheduleDelete(
       params,
@@ -133,14 +152,14 @@ describe('handleScheduleDelete', () => {
   it('does not call setRowData when grid is not empty', async () => {
     const alertRef = { current: { triggerAlert: vi.fn() } }
     const applyTransaction = vi.fn()
-    const params = {
-      node: { data: { id: 5, some: 'data' } },
+    const params: ScheduleGridParams<ScheduleRow> = {
+      node: { data: { id: 5, some: 'data' }, updateData: vi.fn() },
       api: { applyTransaction, isRowDataEmpty: () => false }
     }
 
     const saveRow = vi.fn().mockResolvedValue({})
     const setRowData = vi.fn()
-    const defaultRowData = { default: true }
+    const defaultRowData: ScheduleRow = { default: true }
 
     await handleScheduleDelete(
       params,

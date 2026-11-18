@@ -17,6 +17,7 @@ type FuelCategoryValue = string | { category?: string }
 type FuelCodeValue = string | Pick<FuelCode, 'fuelCode'> | null | undefined
 
 interface RenewableClaimRow {
+  [key: string]: unknown
   fuelType?: FuelTypeValue
   fuelCategory?: FuelCategoryValue
   fuelCode?: FuelCodeValue
@@ -46,6 +47,9 @@ const getCategory = (value?: FuelCategoryValue): string | undefined =>
   typeof value === 'string' ? value : value?.category
 const getFuelCode = (value: FuelCodeValue): string | undefined =>
   typeof value === 'string' ? value : value?.fuelCode
+const getProvisionName = (
+  value: RenewableClaimRow['provisionOfTheAct']
+): string | undefined => (typeof value === 'string' ? value : value?.name)
 const findFuelTypeOption = (
   optionsData: RenewableClaimOptions | undefined,
   fuelTypeName?: string
@@ -126,9 +130,9 @@ export const getFuelCodeDetails = (
 export const calculateRenewableClaimColumnVisibility = (
   _rowData: RenewableClaimRow | RenewableClaimRow[],
   _optionsData: RenewableClaimOptions | undefined,
-  compliancePeriod: string
+  compliancePeriod: string | number
 ): RenewableClaimColumnVisibility => {
-  const complianceYear = parseInt(compliancePeriod, 10)
+  const complianceYear = parseInt(String(compliancePeriod), 10)
   if (Number.isNaN(complianceYear) || complianceYear < NEW_REGULATION_YEAR) {
     return {
       shouldShowIsCanadaProduced: false,
@@ -145,7 +149,7 @@ export const calculateRenewableClaimColumnVisibility = (
 export const canEditQ1Supplied = (
   row: RenewableClaimRow | null | undefined,
   optionsData: RenewableClaimOptions | undefined,
-  compliancePeriod: string,
+  compliancePeriod: string | number,
   approvedFuelCodeValue = 'Fuel code - section 19 (b) (i)',
   {
     isEligibleRenewableOverride,
@@ -166,11 +170,11 @@ export const canEditQ1Supplied = (
   if (!row) {
     return false
   }
-  const complianceYear = parseInt(compliancePeriod, 10)
+  const complianceYear = parseInt(String(compliancePeriod), 10)
   if (Number.isNaN(complianceYear) || complianceYear !== NEW_REGULATION_YEAR) {
     return false
   }
-  const provision = row.provisionOfTheAct?.name || row.provisionOfTheAct
+  const provision = getProvisionName(row.provisionOfTheAct)
   const hasProvision = typeof provision === 'string'
   if (
     requireApprovedProvision &&
@@ -234,10 +238,10 @@ export const applyRenewableClaimColumnVisibility = (
 
 export const canEditCanadianProduced = (
   row: RenewableClaimRow,
-  compliancePeriod: string,
+  compliancePeriod: string | number,
   optionsData: RenewableClaimOptions | undefined
 ): boolean => {
-  const complianceYear = parseInt(compliancePeriod, 10)
+  const complianceYear = parseInt(String(compliancePeriod), 10)
   if (Number.isNaN(complianceYear) || complianceYear < NEW_REGULATION_YEAR) {
     return false
   }
@@ -247,16 +251,16 @@ export const canEditCanadianProduced = (
     optionsData,
     complianceYear
   )
-  const provision = row.provisionOfTheAct?.name || row.provisionOfTheAct
+  const provision = getProvisionName(row.provisionOfTheAct)
   const isDefaultCI = provision === DEFAULT_CI_FUEL_CODE
   return complianceYear >= NEW_REGULATION_YEAR && isEligible && isDefaultCI
 }
 
 export const isNotionalTransferRenewableClaimEditable = (
   row: { fuelCategory?: string },
-  compliancePeriod: string
+  compliancePeriod: string | number
 ): boolean => {
-  const complianceYear = parseInt(compliancePeriod, 10)
+  const complianceYear = parseInt(String(compliancePeriod), 10)
   if (Number.isNaN(complianceYear) || complianceYear < NEW_REGULATION_YEAR) {
     return false
   }

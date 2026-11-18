@@ -38,13 +38,13 @@ interface ScheduleAlert {
   severity: 'success' | 'warning' | 'error'
 }
 
-interface ScheduleGridNode<Row extends ScheduleRow = ScheduleRow> {
+export interface ScheduleGridNode<Row extends ScheduleRow = ScheduleRow> {
   data: Row
   rowIndex?: number | null
-  updateData: (data: ScheduleRow) => void
+  updateData?: (data: ScheduleRow) => void
 }
 
-interface ScheduleGridApi<Row extends ScheduleRow = ScheduleRow> {
+export interface ScheduleGridApi<Row extends ScheduleRow = ScheduleRow> {
   forEachNode?: (callback: (node: ScheduleGridNode<Row>) => void) => void
   applyTransaction?: (transaction: { remove: Row[] }) => unknown
   isRowDataEmpty?: () => boolean
@@ -54,7 +54,7 @@ interface ScheduleGridApi<Row extends ScheduleRow = ScheduleRow> {
   }) => void
 }
 
-interface ScheduleGridParams<Row extends ScheduleRow = ScheduleRow> {
+export interface ScheduleGridParams<Row extends ScheduleRow = ScheduleRow> {
   node: ScheduleGridNode<Row>
   api: ScheduleGridApi<Row>
 }
@@ -63,7 +63,7 @@ interface ScheduleAlertRef {
   current?: { triggerAlert: (alert: ScheduleAlert) => void } | null
 }
 
-interface ScheduleSaveParams<Row extends ScheduleRow> {
+export interface ScheduleSaveParams<Row extends ScheduleRow> {
   node?: ScheduleGridNode<Row>
   api?: ScheduleGridApi<Row>
 }
@@ -125,7 +125,7 @@ export const handleScheduleSave = async <Row extends ScheduleRow>({
           rowNode.data.fuelSupplyId === newWarnings[0].id ||
           rowNode.data.notionalTransferId === newWarnings[0].id
         ) {
-          rowNode.updateData({
+          rowNode.updateData!({
             ...rowNode.data,
             validationStatus: 'warning'
           })
@@ -217,7 +217,7 @@ export const handleScheduleDelete = async <Row extends ScheduleRow>(
         severity: 'success'
       })
     } catch (error: unknown) {
-      params.node.updateData({
+      params.node.updateData!({
         ...params.node.data,
         validationStatus: 'warning'
       })
@@ -245,7 +245,7 @@ export const handleScheduleDelete = async <Row extends ScheduleRow>(
       id: currentRowId,
       validationStatus: undefined
     }
-    params.node.updateData(clearedRowData)
+    params.node.updateData!(clearedRowData)
     if (firstEditableColumn) {
       setTimeout(() => {
         const rowIndex = params.node.rowIndex
