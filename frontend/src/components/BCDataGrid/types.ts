@@ -45,7 +45,7 @@ export interface BCGridQueryData<TData extends BCGridRow = BCGridRow> {
     pagination?: BCPaginationOptions
     total_count?: number
     [key: string]: TData[] | BCPaginationOptions | number | undefined | unknown
-  }
+  } | null
   error?: unknown
   isError?: boolean
   isLoading?: boolean
@@ -65,7 +65,10 @@ export interface BCSaveButtonProps {
 
 export interface BCGridBaseProps<
   TData extends BCGridRow = BCGridRow
-> extends Omit<GridOptions<TData>, 'autoSizeStrategy'> {
+> extends Omit<
+  GridOptions<TData>,
+  'autoSizeStrategy' | 'onCellEditingStopped' | 'onCellValueChanged'
+> {
   autoSizeStrategy?: GridOptions<TData>['autoSizeStrategy'] | null
   autoHeight?: boolean
   className?: string
@@ -75,7 +78,11 @@ export interface BCGridBaseProps<
   enableCellTextSelection?: boolean
   gridOptions?: GridOptions<TData>
   loading?: boolean
-  onPaginationChange?: (pagination: BCPaginationOptions) => void
+  onPaginationChange?: ((pagination: BCPaginationOptions) => void) | null
+  onCellEditingStopped?:
+    | ((params: CellEditingStoppedEvent<TData>) => void)
+    | null
+  onCellValueChanged?: ((params: CellValueChangedEvent<TData>) => void) | null
   paginationOptions?: BCPaginationOptions
   queryData?: BCGridQueryData<TData>
   suppressMovableColumns?: boolean
@@ -91,7 +98,10 @@ export type BCGridEditContext<TData extends BCGridRow = BCGridRow> = Pick<
 
 export interface BCGridEditorProps<
   TData extends BCGridRow = BCGridRow
-> extends Omit<GridOptions<TData>, 'autoSizeStrategy'> {
+> extends Omit<
+  GridOptions<TData>,
+  'autoSizeStrategy' | 'onCellEditingStopped' | 'onCellValueChanged'
+> {
   autoSizeStrategy?: GridOptions<TData>['autoSizeStrategy'] | null
   addMultiRow?: boolean
   alertRef?:
@@ -104,18 +114,20 @@ export interface BCGridEditorProps<
   getRowId?: (params: GetRowIdParams<TData>) => string
   gridRef?: BCGridRef
   handlePaste?: (event: ClipboardEvent, context?: unknown) => void
-  onAction?: (
-    action: string,
-    params?: unknown
-  ) =>
-    | RowDataTransaction<TData>
-    | void
-    | Promise<RowDataTransaction<TData> | void>
+  onAction?:
+    | ((
+        action: string,
+        params?: unknown
+      ) =>
+        | RowDataTransaction<TData>
+        | void
+        | Promise<RowDataTransaction<TData> | void>)
+    | null
   onAddRows?: (rows: TData[]) => void
-  onCellEditingStopped?: (
-    params: BCGridEditContext<TData>
-  ) => void | Promise<unknown>
-  onCellValueChanged?: (params: CellValueChangedEvent<TData>) => void
+  onCellEditingStopped?:
+    | ((params: BCGridEditContext<TData>) => void | Promise<unknown>)
+    | null
+  onCellValueChanged?: ((params: CellValueChangedEvent<TData>) => void) | null
   saveButtonProps?: BCSaveButtonProps
   showAddRowsButton?: boolean
   showMandatoryColumns?: boolean
@@ -131,9 +143,9 @@ export interface BCGridEditorPaginatedProps<
   enablePageCaching?: boolean
   enableResetButton?: boolean
   exportName?: string
-  gridKey?: string
+  gridKey?: string | null
   loading?: boolean
-  onPaginationChange?: (pagination: BCPaginationOptions) => void
+  onPaginationChange?: ((pagination: BCPaginationOptions) => void) | null
   paginationOptions?: BCPaginationOptions
   paginationPageSizeSelector?: number[]
   queryData?: BCGridQueryData<TData>
@@ -162,7 +174,7 @@ export interface BCGridViewerProps<
     selectFilters?: FilterSelectConfig[]
     additionalPills?: FilterToolbarPill[]
   }
-  gridKey?: string
+  gridKey?: string | null
   gridRef?: BCGridRef
   loading?: boolean
   onClearFilters?: () => void

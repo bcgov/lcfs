@@ -1,0 +1,673 @@
+/**
+ * @vitest-environment jsdom
+ */
+import { render, screen, fireEvent, act } from '@testing-library/react'
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vite-plus/test'
+import { createRef } from 'react'
+import type {
+  ComponentProps,
+  ComponentRef,
+  HTMLAttributes,
+  ReactNode
+} from 'react'
+import Autocomplete from '@mui/material/Autocomplete'
+import { AutocompleteCellEditor } from '../AutocompleteCellEditor'
+import type { AutocompleteCellEditorProps } from '../AutocompleteCellEditor'
+
+interface AutocompleteMockProps extends Omit<
+  ComponentProps<'div'>,
+  'onChange'
+> {
+  onClose?: () => void
+  onChange?: (event: object, value: unknown) => void
+  onOpen?: () => void
+  onKeyDown?: ComponentProps<'div'>['onKeyDown']
+  onHighlightChange?: (event: object, value: unknown) => void
+  getOptionLabel?: (option: unknown) => string
+  renderOption?: (
+    props: HTMLAttributes<HTMLLIElement>,
+    option: unknown,
+    state: { selected: boolean }
+  ) => ReactNode
+  renderInput?: (params: {
+    inputProps: HTMLAttributes<HTMLInputElement>
+  }) => ReactNode
+  renderTags?: (
+    values: unknown[],
+    getTagProps: (args: { index: number }) => Record<string, unknown>
+  ) => ReactNode
+  isOptionEqualToValue?: (option: unknown, value: unknown) => boolean
+  multiple?: boolean
+  options?: unknown[]
+  inputValue?: string
+  onInputChange?: (event: object, value: string, reason: string) => void
+}
+
+// Mock MUI components
+vi.mock('@mui/material/Autocomplete', () => ({
+  default: vi.fn(
+    ({
+      onChange,
+      onOpen,
+      onKeyDown,
+      onHighlightChange,
+      getOptionLabel,
+      renderOption,
+      renderInput,
+      renderTags,
+      isOptionEqualToValue,
+      multiple,
+      options: autocompleteOptions = [],
+      inputValue,
+      onInputChange,
+      ...props
+    }: AutocompleteMockProps) => {
+      delete props.children
+      delete props.onClose
+
+      // Test getOptionLabel if provided
+      if (getOptionLabel) {
+        getOptionLabel('test')
+        getOptionLabel({ label: 'test' })
+        getOptionLabel(null)
+      }
+
+      // Test isOptionEqualToValue if provided
+      if (isOptionEqualToValue) {
+        isOptionEqualToValue('option', 'value')
+      }
+
+      return (
+        <div
+          data-test="autocomplete"
+          data-input-value={inputValue ?? ''}
+          onClick={() => {
+            const defaultValue = multiple
+              ? autocompleteOptions.length > 0
+                ? [autocompleteOptions[0]]
+                : ['new value']
+              : autocompleteOptions.length > 0
+                ? autocompleteOptions[0]
+                : 'new value'
+            // In multiple mode, MUI Autocomplete passes an array; in single mode, a single value
+            if (onChange) onChange({}, defaultValue)
+            if (onOpen) onOpen()
+          }}
+          onKeyDown={(e) => {
+            if (onKeyDown) onKeyDown(e)
+          }}
+          {...props}
+        >
+          {renderInput && renderInput({ inputProps: {} })}
+          {renderOption && renderOption({}, 'option', { selected: false })}
+          {renderTags && renderTags(['tag1', 'tag2'], () => ({ index: 0 }))}
+          <button
+            data-test="autocomplete-highlight-option"
+            onClick={(event) => {
+              event.stopPropagation()
+              const defaultValue =
+                autocompleteOptions.length > 0
+                  ? autocompleteOptions[0]
+                  : 'new value'
+              onHighlightChange?.({}, defaultValue)
+            }}
+          >
+            highlight option
+          </button>
+          <button
+            data-test="autocomplete-input-change"
+            onClick={(event) => {
+              event.stopPropagation()
+              const customValue =
+                event.currentTarget.getAttribute('data-value') || 'typed input'
+              if (onInputChange) {
+                onInputChange({}, customValue, 'input')
+              }
+            }}
+          >
+            change input
+          </button>
+          Autocomplete
+        </div>
+      )
+    }
+  )
+}))
+
+vi.mock('@mui/material/TextField', () => ({
+  default: vi.fn(
+    ({
+      onBlur,
+      inputRef,
+      ...props
+    }: ComponentProps<'input'> & {
+      inputRef?: ComponentProps<'input'>['ref']
+    }) => (
+      <input data-test="textfield" ref={inputRef} onBlur={onBlur} {...props} />
+    )
+  )
+}))
+
+vi.mock('@mui/material/Checkbox', () => ({
+  default: vi.fn((props: ComponentProps<'input'>) => (
+    <input type="checkbox" data-test="checkbox" {...props} />
+  ))
+}))
+
+vi.mock('@mui/material/Box', () => ({
+  default: vi.fn(({ children, ...props }: ComponentProps<'div'>) => (
+    <div data-test="box" {...props}>
+      {children}
+    </div>
+  ))
+}))
+
+vi.mock('@mui/material/Chip', () => ({
+  default: vi.fn(
+    ({ label, ...props }: ComponentProps<'span'> & { label?: ReactNode }) => (
+      <span data-test="chip" {...props}>
+        {label}
+      </span>
+    )
+  )
+}))
+
+vi.mock('@mui/material/Stack', () => ({
+  default: vi.fn(({ children, ...props }: ComponentProps<'div'>) => (
+    <div data-test="stack" {...props}>
+      {children}
+    </div>
+  ))
+}))
+
+vi.mock('@mui/material/Divider', () => ({
+  default: vi.fn((props: ComponentProps<'hr'>) => (
+    <hr data-test="divider" {...props} />
+  ))
+}))
+
+vi.mock('@mui/icons-material/CheckBox', () => ({
+  default: vi.fn(() => <span data-test="checkbox-icon">CheckBox</span>)
+}))
+
+vi.mock('@mui/icons-material/CheckBoxOutlineBlank', () => ({
+  default: vi.fn(() => (
+    <span data-test="checkbox-outline-icon">CheckBoxOutlineBlank</span>
+  ))
+}))
+
+// Mock AgGrid API
+const mockApi: NonNullable<AutocompleteCellEditorProps['api']> = {
+  getFocusedCell: () => null,
+  startEditingCell: vi.fn(),
+  stopEditing: vi.fn(),
+  tabToNextCell: vi.fn(),
+  tabToPreviousCell: vi.fn()
+}
+
+describe('AutocompleteCellEditor Component', () => {
+  let mockProps: AutocompleteCellEditorProps
+  let mockRef: ReturnType<
+    typeof createRef<ComponentRef<typeof AutocompleteCellEditor>>
+  >
+  const mockGetFocusedCell =
+    vi.fn<() => { rowIndex: number; column: { getId: () => string } } | null>()
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+
+    mockRef = createRef()
+
+    mockProps = {
+      value: '',
+      options: ['Option 1', 'Option 2', 'Option 3'],
+      api: mockApi,
+      column: { getId: () => 'testColumn' },
+      node: { data: {} },
+      onValueChange: vi.fn(),
+      onKeyDownCapture: vi.fn(),
+      onBlur: vi.fn(),
+      onPaste: vi.fn(),
+      colDef: {
+        cellEditorParams: {
+          label: 'Test Label'
+        }
+      }
+    }
+
+    mockGetFocusedCell.mockReturnValue({
+      rowIndex: 0,
+      column: { getId: () => 'testColumn' }
+    })
+    mockApi.getFocusedCell = mockGetFocusedCell
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  describe('Component Rendering', () => {
+    it('renders with default props', () => {
+      render(<AutocompleteCellEditor {...mockProps} ref={mockRef} />)
+
+      expect(screen.getAllByTestId('box')).toHaveLength(2) // Container box + renderOption box
+      expect(screen.getByTestId('autocomplete')).toBeInTheDocument()
+      expect(screen.getByTestId('textfield')).toBeInTheDocument()
+    })
+
+    it('renders with multiple selection enabled', () => {
+      const props = { ...mockProps, multiple: true }
+      render(<AutocompleteCellEditor {...props} ref={mockRef} />)
+
+      expect(screen.getByTestId('autocomplete')).toBeInTheDocument()
+    })
+
+    it('renders with freeSolo enabled', () => {
+      const props = { ...mockProps, freeSolo: true }
+      render(<AutocompleteCellEditor {...props} ref={mockRef} />)
+
+      expect(screen.getByTestId('autocomplete')).toBeInTheDocument()
+    })
+
+    it('formats numeric option labels as strings', () => {
+      render(<AutocompleteCellEditor {...mockProps} ref={mockRef} />)
+
+      const autocompleteProps = vi.mocked(Autocomplete).mock.lastCall?.[0]
+      expect(autocompleteProps?.getOptionLabel?.(42)).toBe('42')
+    })
+  })
+
+  describe('parseInitialValue Function', () => {
+    it('returns correct value for null/undefined input in single mode', () => {
+      const props = { ...mockProps, value: null, multiple: false }
+      render(<AutocompleteCellEditor {...props} ref={mockRef} />)
+
+      expect(mockRef.current!.getValue()).toBe('')
+    })
+
+    it('returns correct value for null/undefined input in multiple mode', () => {
+      const props = { ...mockProps, value: null, multiple: true }
+      render(<AutocompleteCellEditor {...props} ref={mockRef} />)
+
+      expect(mockRef.current!.getValue()).toEqual([])
+    })
+
+    it('returns array as-is when array input provided', () => {
+      const props = {
+        ...mockProps,
+        value: ['Option 1', 'Option 2'],
+        multiple: true
+      }
+      render(<AutocompleteCellEditor {...props} ref={mockRef} />)
+
+      expect(mockRef.current!.getValue()).toEqual(['Option 1', 'Option 2'])
+    })
+
+    it('handles string input in single mode', () => {
+      const props = { ...mockProps, value: 'Option 1', multiple: false }
+      render(<AutocompleteCellEditor {...props} ref={mockRef} />)
+
+      expect(mockRef.current!.getValue()).toBe('Option 1')
+    })
+
+    it('handles comma-separated string input in multiple mode', () => {
+      const props = {
+        ...mockProps,
+        value: 'Option 1, Option 2',
+        multiple: true
+      }
+      render(<AutocompleteCellEditor {...props} ref={mockRef} />)
+
+      expect(mockRef.current!.getValue()).toEqual(['Option 1', 'Option 2'])
+    })
+
+    it('handles comma-separated string input in single mode', () => {
+      const props = {
+        ...mockProps,
+        value: 'Option 1, Option 2',
+        multiple: false
+      }
+      render(<AutocompleteCellEditor {...props} ref={mockRef} />)
+
+      expect(mockRef.current!.getValue()).toBe('Option 1')
+    })
+
+    it('handles non-string/non-array input in multiple mode', () => {
+      const props = { ...mockProps, value: 123, multiple: true }
+      render(<AutocompleteCellEditor {...props} ref={mockRef} />)
+
+      expect(mockRef.current!.getValue()).toEqual([])
+    })
+
+    it('handles non-string/non-array input in single mode', () => {
+      const props = { ...mockProps, value: 123, multiple: false }
+      render(<AutocompleteCellEditor {...props} ref={mockRef} />)
+
+      expect(mockRef.current!.getValue()).toBe('')
+    })
+  })
+
+  describe('Imperative Handle Methods', () => {
+    it('getValue returns correct value for single mode', () => {
+      render(<AutocompleteCellEditor {...mockProps} ref={mockRef} />)
+
+      expect(mockRef.current!.getValue()).toBe('')
+    })
+
+    it('getValue returns correct value for multiple mode', () => {
+      const props = { ...mockProps, multiple: true }
+      render(<AutocompleteCellEditor {...props} ref={mockRef} />)
+
+      expect(mockRef.current!.getValue()).toEqual([])
+    })
+
+    it('getValue handles non-array selectedValues in multiple mode', () => {
+      const props = { ...mockProps, value: 'test', multiple: true }
+      render(<AutocompleteCellEditor {...props} ref={mockRef} />)
+
+      // Manually set selectedValues to non-array to test the safety check
+      act(() => {
+        const autocomplete = screen.getByTestId('autocomplete')
+        fireEvent.click(autocomplete)
+      })
+
+      expect(typeof mockRef.current!.getValue()).toBe('object')
+    })
+
+    it('isCancelBeforeStart returns false', () => {
+      render(<AutocompleteCellEditor {...mockProps} ref={mockRef} />)
+
+      expect(mockRef.current!.isCancelBeforeStart()).toBe(false)
+    })
+
+    it('isCancelAfterEnd returns false', () => {
+      render(<AutocompleteCellEditor {...mockProps} ref={mockRef} />)
+
+      expect(mockRef.current!.isCancelAfterEnd()).toBe(false)
+    })
+
+    it('afterGuiAttached focuses input when ref exists', () => {
+      render(<AutocompleteCellEditor {...mockProps} ref={mockRef} />)
+
+      const input = screen.getByTestId('textfield')
+      const focusSpy = vi.spyOn(input, 'focus')
+
+      mockRef.current!.afterGuiAttached()
+
+      expect(focusSpy).toHaveBeenCalled()
+    })
+  })
+
+  describe('handleChange Function', () => {
+    it('updates selectedValues and calls onValueChange in single mode', () => {
+      render(<AutocompleteCellEditor {...mockProps} ref={mockRef} />)
+
+      const autocomplete = screen.getByTestId('autocomplete')
+      fireEvent.click(autocomplete)
+
+      expect(mockProps.onValueChange).toHaveBeenCalledWith('Option 1')
+    })
+
+    it('updates selectedValues and calls onValueChange in multiple mode', () => {
+      const props = { ...mockProps, multiple: true }
+      render(<AutocompleteCellEditor {...props} ref={mockRef} />)
+
+      const autocomplete = screen.getByTestId('autocomplete')
+      fireEvent.click(autocomplete)
+
+      expect(props.onValueChange).toHaveBeenCalledWith(['Option 1'])
+    })
+
+    it('honours returnObject from colDef params when grabbing selected value', () => {
+      const props = {
+        ...mockProps,
+        options: [{ label: 'Org A', value: 'org-a' }],
+        colDef: {
+          cellEditorParams: {
+            label: 'Test Label',
+            returnObject: true
+          }
+        },
+        returnObject: undefined
+      }
+      render(<AutocompleteCellEditor {...props} ref={mockRef} />)
+
+      const autocomplete = screen.getByTestId('autocomplete')
+      fireEvent.click(autocomplete)
+
+      expect(props.onValueChange).toHaveBeenCalledWith(
+        expect.objectContaining({ label: 'Org A', value: 'org-a' })
+      )
+    })
+  })
+
+  describe('handleKeyDown Function', () => {
+    it('calls onKeyDownCapture when provided', () => {
+      render(<AutocompleteCellEditor {...mockProps} ref={mockRef} />)
+
+      const autocomplete = screen.getByTestId('autocomplete')
+      fireEvent.keyDown(autocomplete, { key: 'Enter' })
+
+      expect(mockProps.onKeyDownCapture).toHaveBeenCalled()
+    })
+
+    it('commits the highlighted option when Enter is pressed', () => {
+      vi.useFakeTimers()
+      render(<AutocompleteCellEditor {...mockProps} ref={mockRef} />)
+
+      fireEvent.click(screen.getByTestId('autocomplete-highlight-option'))
+      fireEvent.keyDown(screen.getByTestId('autocomplete'), { key: 'Enter' })
+      act(() => {
+        vi.runAllTimers()
+      })
+
+      expect(mockProps.onValueChange).toHaveBeenCalledWith('Option 1')
+      expect(mockApi.stopEditing).toHaveBeenCalled()
+      expect(mockApi.tabToNextCell).toHaveBeenCalled()
+      expect(mockApi.startEditingCell).toHaveBeenCalledWith({
+        rowIndex: 0,
+        colKey: 'testColumn'
+      })
+      vi.useRealTimers()
+    })
+  })
+
+  describe('freeSolo + returnObject handling', () => {
+    it('emits custom text when user types without selecting an option', () => {
+      const props = {
+        ...mockProps,
+        freeSolo: true,
+        returnObject: true
+      }
+      render(<AutocompleteCellEditor {...props} ref={mockRef} />)
+
+      const changeButton = screen.getByTestId('autocomplete-input-change')
+      changeButton.setAttribute('data-value', 'Custom Org')
+      fireEvent.click(changeButton)
+
+      expect(mockRef.current!.getValue()).toBe('Custom Org')
+
+      const autocomplete = screen.getByTestId('autocomplete')
+      fireEvent.keyDown(autocomplete, { key: 'Tab' })
+
+      expect(mockProps.onValueChange).toHaveBeenCalledWith('Custom Org')
+    })
+  })
+
+  describe('handleBlur Function', () => {
+    it('calls onBlur callback and stops editing', () => {
+      render(<AutocompleteCellEditor {...mockProps} ref={mockRef} />)
+
+      const input = screen.getByTestId('textfield')
+      fireEvent.blur(input)
+
+      expect(mockProps.onBlur).toHaveBeenCalled()
+      expect(mockApi.stopEditing).toHaveBeenCalled()
+    })
+
+    it('handles case when onBlur callback is not provided', () => {
+      const props = { ...mockProps, onBlur: undefined }
+      render(<AutocompleteCellEditor {...props} ref={mockRef} />)
+
+      const input = screen.getByTestId('textfield')
+      fireEvent.blur(input)
+
+      expect(mockApi.stopEditing).toHaveBeenCalled()
+    })
+  })
+
+  describe('isOptionEqualToValue Function', () => {
+    it('returns false for null/undefined option or value', () => {
+      render(<AutocompleteCellEditor {...mockProps} ref={mockRef} />)
+
+      // Function is tested indirectly through Autocomplete mock
+      expect(screen.getByTestId('autocomplete')).toBeInTheDocument()
+    })
+
+    it('compares string options and values correctly', () => {
+      const props = { ...mockProps, options: ['test1', 'test2'] }
+      render(<AutocompleteCellEditor {...props} ref={mockRef} />)
+
+      expect(screen.getByTestId('autocomplete')).toBeInTheDocument()
+    })
+
+    it('compares object options and values correctly', () => {
+      const props = {
+        ...mockProps,
+        options: [{ label: 'test1' }, { label: 'test2' }]
+      }
+      render(<AutocompleteCellEditor {...props} ref={mockRef} />)
+
+      expect(screen.getByTestId('autocomplete')).toBeInTheDocument()
+    })
+
+    it('compares object option with string value correctly', () => {
+      const props = {
+        ...mockProps,
+        options: [{ label: 'test1' }],
+        value: 'test1'
+      }
+      render(<AutocompleteCellEditor {...props} ref={mockRef} />)
+
+      expect(screen.getByTestId('autocomplete')).toBeInTheDocument()
+    })
+
+    it('compares string option with object value correctly', () => {
+      const props = {
+        ...mockProps,
+        options: ['test1'],
+        value: { label: 'test1' }
+      }
+      render(<AutocompleteCellEditor {...props} ref={mockRef} />)
+
+      expect(screen.getByTestId('autocomplete')).toBeInTheDocument()
+    })
+  })
+
+  describe('getOptionLabel Function', () => {
+    it('returns empty string for null/undefined option', () => {
+      render(<AutocompleteCellEditor {...mockProps} ref={mockRef} />)
+
+      // Function is tested through the Autocomplete mock
+      expect(screen.getByTestId('autocomplete')).toBeInTheDocument()
+    })
+
+    it('returns string option as-is', () => {
+      const props = { ...mockProps, options: ['test'] }
+      render(<AutocompleteCellEditor {...props} ref={mockRef} />)
+
+      expect(screen.getByTestId('autocomplete')).toBeInTheDocument()
+    })
+
+    it('returns object.label for object options', () => {
+      const props = {
+        ...mockProps,
+        options: [{ label: 'test' }]
+      }
+      render(<AutocompleteCellEditor {...props} ref={mockRef} />)
+
+      expect(screen.getByTestId('autocomplete')).toBeInTheDocument()
+    })
+  })
+
+  describe('Label Handling', () => {
+    it('shows custom label when provided', () => {
+      const props = {
+        ...mockProps,
+        colDef: {
+          cellEditorParams: {
+            label: 'Custom Label'
+          }
+        }
+      }
+      render(<AutocompleteCellEditor {...props} ref={mockRef} />)
+
+      expect(screen.getByTestId('textfield')).toBeInTheDocument()
+    })
+
+    it('shows no label when noLabel is true', () => {
+      const props = {
+        ...mockProps,
+        colDef: {
+          cellEditorParams: {
+            noLabel: true
+          }
+        }
+      }
+      render(<AutocompleteCellEditor {...props} ref={mockRef} />)
+
+      expect(screen.getByTestId('textfield')).toBeInTheDocument()
+    })
+
+    it('shows default Select label when no custom label provided', () => {
+      const props = {
+        ...mockProps,
+        colDef: {
+          cellEditorParams: {}
+        }
+      }
+      render(<AutocompleteCellEditor {...props} ref={mockRef} />)
+
+      expect(screen.getByTestId('textfield')).toBeInTheDocument()
+    })
+  })
+
+  describe('State Management', () => {
+    it('manages open/close state correctly', () => {
+      render(<AutocompleteCellEditor {...mockProps} ref={mockRef} />)
+
+      const autocomplete = screen.getByTestId('autocomplete')
+      fireEvent.click(autocomplete) // Should trigger onOpen
+
+      expect(screen.getByTestId('autocomplete')).toBeInTheDocument()
+    })
+  })
+
+  describe('Props Validation', () => {
+    it('handles missing optional props gracefully', () => {
+      const minimalProps = {
+        options: ['Option 1'],
+        api: mockApi
+      }
+
+      render(<AutocompleteCellEditor {...minimalProps} ref={mockRef} />)
+
+      expect(screen.getByTestId('autocomplete')).toBeInTheDocument()
+      expect(mockRef.current!.getValue()).toBe('')
+    })
+
+    it('handles all boolean props correctly', () => {
+      const booleanProps = {
+        ...mockProps,
+        multiple: true,
+        disableCloseOnSelect: true,
+        openOnFocus: false,
+        freeSolo: true
+      }
+
+      render(<AutocompleteCellEditor {...booleanProps} ref={mockRef} />)
+
+      expect(screen.getByTestId('autocomplete')).toBeInTheDocument()
+    })
+  })
+})

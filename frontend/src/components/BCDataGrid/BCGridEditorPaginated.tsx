@@ -384,23 +384,24 @@ export const BCGridEditorPaginated = ({
 
       const { centerViewport, horizontalViewport, headerViewport } = info
 
-      handleGridScroll = () => {
+      const onGridScroll = () => {
         if (syncingFromCustomRef.current) return
 
         const latestInfo = getGridScrollInfo()
         syncCustomScrollbarToGrid(latestInfo ?? info)
       }
+      handleGridScroll = onGridScroll
 
       listeners = [centerViewport, horizontalViewport, headerViewport]
         .filter(Boolean)
         .map((element) => {
           if (!element) return null
-          element.addEventListener('scroll', handleGridScroll, {
+          element.addEventListener('scroll', onGridScroll, {
             passive: true
           })
           return element
         })
-        .filter((element): element is Element => element !== null)
+        .filter((element): element is HTMLElement => element !== null)
 
       handleGridScroll()
       updateScrollMetrics()
