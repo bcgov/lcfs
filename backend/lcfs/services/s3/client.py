@@ -19,6 +19,9 @@ from lcfs.db.models.initiative_agreement.DesignatedAction import (
     DesignatedAction,
     designated_action_document_association,
 )
+from lcfs.db.models.initiative_agreement.DaEocSubmission import (
+    da_eoc_submission_document_association,
+)
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.admin_adjustment.services import AdminAdjustmentServices
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
@@ -93,6 +96,10 @@ DOCUMENT_PARENT_ASSOCIATIONS = {
     "designatedAction": (
         designated_action_document_association,
         "designated_action_id",
+    ),
+    "daEocSubmission": (
+        da_eoc_submission_document_association,
+        "da_eoc_submission_id",
     ),
     "charging_site": (
         charging_site_document_association,
