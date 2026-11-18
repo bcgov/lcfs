@@ -828,17 +828,25 @@ class UserRepository:
             (combined_query.c.transaction_type == "ComplianceReport", "CR"),
             else_="",
         ) + cast(combined_query.c.transaction_id, String)
+
+        def _transaction_id_filter(filter_model):
+            filter_value = (
+                filter_model.values
+                if filter_model.filter_type == "set"
+                and filter_model.values is not None
+                else filter_model.filter
+            )
+            return apply_filter_conditions(
+                displayed_transaction_id,
+                filter_value,
+                filter_model.type,
+                filter_model.filter_type,
+            )
+
         builder = PaginatedQueryBuilder(
             combined_query.c,
             custom_sorts={"transaction_id": displayed_transaction_id},
-            custom_filters={
-                "transaction_id": lambda filter_model: apply_filter_conditions(
-                    displayed_transaction_id,
-                    filter_model.filter,
-                    filter_model.type,
-                    filter_model.filter_type,
-                )
-            },
+            custom_filters={"transaction_id": _transaction_id_filter},
         )
         known_fields = set(combined_query.c.keys())
         # FilterModel normalizes incoming camelCase grid fields to snake_case.

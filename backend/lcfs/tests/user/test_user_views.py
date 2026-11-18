@@ -361,6 +361,19 @@ async def test_get_all_user_activities_as_administrator(
             )
             assert filtered_content.activities[0].transaction_type == expected_type
 
+    pagination["filters"] = [
+        {
+            "field": "transactionId",
+            "filterType": "set",
+            "values": ["CT1"],
+        }
+    ]
+    response = await client.post(url, json=pagination)
+    assert response.status_code == status.HTTP_200_OK
+    set_filtered_content = UserActivitiesResponseSchema(**response.json())
+    assert len(set_filtered_content.activities) == 1
+    assert set_filtered_content.activities[0].transaction_type == "Transfer"
+
     pagination["filters"] = []
     pagination["sortOrders"] = [{"field": "transactionId", "direction": "asc"}]
     response = await client.post(url, json=pagination)
