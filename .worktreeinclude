@@ -1,4 +1,5 @@
 .env
+.mcp.json
 AGENTS.md
 backend/.env
 frontend/.env
