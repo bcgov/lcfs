@@ -22,9 +22,10 @@ Application data:
   - lcjfip_application_internal_comment      link to the shared comment framework
   - lcjfip_application_document_association  link to the shared document table
 
-Also seeds the "LCJFIP application notes" Comment Log category and creates
+Also seeds the "LCJFIP application notes" Comment Log category, creates
 the Metabase views vw_lcjfip_application_base and
-vw_lcjfip_purchase_detail_base from sql/views/metabase.sql.
+vw_lcjfip_purchase_detail_base from sql/views/metabase.sql, and revokes any
+reporting-role access to the base tables that default privileges granted.
 
 Revision ID: 810923914d50
 Revises: 9e0e5741b48f
@@ -63,6 +64,25 @@ VIEW_SECTIONS = [
 VIEW_NAMES = [
     "vw_lcjfip_application_base",
     "vw_lcjfip_purchase_detail_base",
+]
+
+# Every base table created here. Metabase reads LCJFIP only through the views,
+# which leave out Drafts and contact details.
+BASE_TABLES = [
+    "lcjfip_application_status",
+    "lcjfip_application_period",
+    "lcjfip_car_type",
+    "lcjfip_certificate_type",
+    "lcjfip_feedstock_source",
+    "lcjfip_incentive_option",
+    "lcjfip_incentive_rate",
+    "lcjfip_application",
+    "lcjfip_application_car_type",
+    "lcjfip_purchase_detail",
+    "lcjfip_purchase_detail_feedstock",
+    "lcjfip_application_history",
+    "lcjfip_application_internal_comment",
+    "lcjfip_application_document_association",
 ]
 
 # (status, description), seeded in display order.
@@ -961,11 +981,35 @@ def _create_reporting_views() -> None:
     execute_sql_sections(sections, VIEW_SECTIONS)
 
 
+def _revoke_reporting_access_to_base_tables() -> None:
+    """
+    Keep the reporting role on the views only.
+
+    Where the role was created by create_role_if_not_exists (here or in
+    manage_views.py), ALTER DEFAULT PRIVILEGES gives it SELECT on every new
+    table, which would expose Drafts, contact details and history snapshots.
+    The views keep working: they read the base tables with their owner's
+    privileges.
+    """
+    op.execute(f"""
+        DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM pg_roles WHERE rolname = 'basic_lcfs_reporting_role'
+            ) THEN
+                REVOKE ALL ON TABLE {", ".join(BASE_TABLES)}
+                    FROM basic_lcfs_reporting_role;
+            END IF;
+        END $$;
+        """)
+
+
 def upgrade() -> None:
     _create_lookup_tables()
     _create_application_tables()
     _seed_reference_data()
     _create_reporting_views()
+    _revoke_reporting_access_to_base_tables()
 
 
 # ---------------------------------------------------------------------------

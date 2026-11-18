@@ -147,7 +147,7 @@ Validation reads these flags rather than matching on option labels.
 
 **Application period.** The form says staff review applications "at the close of the current application period", and the letters quote an "[Application Period]". `lcjfip_application_period` models those intake rounds. The period is assigned on submission, not on creation, so a draft started in one round and submitted in the next belongs to the next. `compliance_period` was considered and not reused: it is a calendar supply year, not an intake window with open and close dates.
 
-**Incentive rates are reference data, not code.** The "Carbon intensity baseline incentive rates" table on the form is seeded into `lcjfip_incentive_rate` with effective dates. The form, the submission check and the reporting view all read the same numbers. A rate change expires the old row and adds a new one.
+**Incentive rates are reference data, not code.** The "Carbon intensity baseline incentive rates" table on the form is seeded into `lcjfip_incentive_rate` with effective dates. The form, the submission check and the reporting view all read the same numbers. A rate applies on a date when `effective_date <= date < expiration_date`: as for fuel codes, `expiration_date` is the first day the rate no longer applies. To change a rate, set the old row's `expiration_date` to the new row's `effective_date`.
 
 **Comments and documents reuse the shared frameworks.** `lcjfip_application_internal_comment` follows `ci_application_internal_comment`. The "Comments to the Government of B.C." thread is the same `internal_comment` table with `visibility = 'Public'`. A new Comment Log category, "LCJFIP application notes", is seeded. `lcjfip_application_document_association` follows the other `*_document_association` tables for uploads and generated letters.
 
@@ -207,7 +207,7 @@ These are computed, not stored:
 | Price premium validation | `price_premium_to - price_premium_from <= 0.25` CAD/L (see open question 4) |
 | Application number | `'LCJFIP-' \|\| lcjfip_application_id`, like CT/AA/IA display codes |
 | Incentive unit | `incentive_option.incentive_type`: Cash → CAD, Credit → credits |
-| Maximum rate | the `lcjfip_incentive_rate` row for that type where `ci > ci_lower_bound` and `ci <= ci_upper_bound`, in effect on the submission date |
+| Maximum rate | the `lcjfip_incentive_rate` row for that type where `ci > ci_lower_bound` and `ci <= ci_upper_bound`, in effect on the Pacific submission date (`effective_date <= date < expiration_date`) |
 | Maximum eligible incentive | `requested_incentive_volume × maximum rate` |
 | Submitted date | `signed_date`. First submission and decision dates come from history |
 | Fuel supplier name, when linked | `organization.name` |
@@ -250,7 +250,9 @@ Rules in both views:
 
 Metabase imports PostgreSQL column comments as field descriptions, and every new column has one.
 
-Only the views are granted, not the base tables. In each deployed environment, check whether `ALTER DEFAULT PRIVILEGES` already gives the reporting role `SELECT` on new tables, which would expose Drafts through the base tables. Run `\ddp` and `has_table_privilege('basic_lcfs_reporting_role', 'lcjfip_application', 'SELECT')`. In the local database it does not. After deployment, run a Metabase schema sync so the views appear.
+**The reporting role reads LCJFIP only through the views.** Where the role was created by `create_role_if_not_exists` (in migrations or `manage_views.py`), `ALTER DEFAULT PRIVILEGES` gives it `SELECT` on every new table. That would expose Drafts, contact details and history snapshots through the base tables. So the migration revokes the role's access to all 14 base tables after creating them. The views keep working, because they read the base tables with their owner's privileges. A test checks that only the two views are readable. Any LCJFIP table added later needs the same revoke, and the test fails until it is added to its list.
+
+After deployment, run a Metabase schema sync so the views appear.
 
 ## Migration and reference data
 
@@ -259,6 +261,7 @@ Only the views are granted, not the base tables. In each deployed environment, c
 2. Seeds the lookups: 4 statuses, 4 CAR types, 5 certificate types, 12 feedstock sources, 3 incentive options and 4 rates.
 3. Seeds the "LCJFIP application notes" comment category.
 4. Creates the two views from `metabase.sql`.
+5. Revokes the reporting role's access to the 14 base tables.
 
 Downgrade drops all of this, including any LCJFIP comments.
 

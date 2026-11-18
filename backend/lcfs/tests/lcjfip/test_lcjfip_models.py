@@ -134,14 +134,15 @@ async def _purchase(dbsession, application, feedstocks=(), **overrides):
     return purchase
 
 
-async def _submit(dbsession, application, period):
+async def _submit(dbsession, application, period, day=datetime.date(2026, 3, 2)):
+    """Submit at 18:00 UTC, which is 10:00 Pacific on the same day."""
     user = await _bceid_user(dbsession)
     submitted = await _status(dbsession, LCJFIPApplicationStatusEnum.Submitted)
     application.status_id = submitted.lcjfip_application_status_id
     application.application_period_id = period.lcjfip_application_period_id
     application.signed_by_user_profile_id = user.user_profile_id
-    application.signed_date = datetime.datetime(
-        2026, 3, 2, 18, 0, tzinfo=datetime.timezone.utc
+    application.signed_date = datetime.datetime.combine(
+        day, datetime.time(18, 0), tzinfo=datetime.timezone.utc
     )
     dbsession.add(
         LCJFIPApplicationHistory(
@@ -802,3 +803,111 @@ async def test_application_view_reports_credit_transfer_to_lcfs_supplier(dbsessi
     assert row["purchase_detail_count"] == 0
     # Contact details stay out of the reporting views.
     assert "fuel_supplier_contact_email" not in row
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "submitted_on, expected_rate",
+    [
+        (datetime.date(2026, 3, 1), Decimal("1.1250")),
+        # expiration_date is the first day a rate no longer applies.
+        (datetime.date(2026, 3, 2), None),
+        (datetime.date(2026, 3, 3), Decimal("1.0000")),
+    ],
+)
+async def test_application_view_treats_rate_expiration_as_exclusive(
+    dbsession, submitted_on, expected_rate
+):
+    # The seeded "CI <= 10" cash rate stops applying on 2026-03-02, and its
+    # replacement starts a day later, leaving 2026-03-02 without a rate.
+    await dbsession.execute(
+        text(
+            "UPDATE lcjfip_incentive_rate SET expiration_date = '2026-03-02' "
+            "WHERE incentive_type = 'Cash' AND ci_upper_bound = 10"
+        )
+    )
+    dbsession.add(
+        LCJFIPIncentiveRate(
+            incentive_type=LCJFIPIncentiveTypeEnum.Cash,
+            ci_upper_bound=Decimal("10"),
+            max_rate_per_litre=Decimal("1.0000"),
+            effective_date=datetime.date(2026, 3, 3),
+        )
+    )
+    period = await _period(dbsession)
+    application = await _application(
+        dbsession,
+        incentive_option_id=(
+            await _by_name(dbsession, LCJFIPIncentiveOption, CASH)
+        ).lcjfip_incentive_option_id,
+        estimated_carbon_intensity=Decimal("8.50"),
+        requested_incentive_volume=1_000,
+    )
+    await _submit(dbsession, application, period, day=submitted_on)
+
+    (row,) = await _view_row(
+        dbsession,
+        "vw_lcjfip_application_base",
+        "lcjfip_application_id",
+        application.lcjfip_application_id,
+    )
+    assert row["max_incentive_rate_per_litre"] == expected_rate
+
+
+# ---------------------------------------------------------------------------
+# Reporting role access
+# ---------------------------------------------------------------------------
+
+BASE_TABLES = (
+    "lcjfip_application_status",
+    "lcjfip_application_period",
+    "lcjfip_car_type",
+    "lcjfip_certificate_type",
+    "lcjfip_feedstock_source",
+    "lcjfip_incentive_option",
+    "lcjfip_incentive_rate",
+    "lcjfip_application",
+    "lcjfip_application_car_type",
+    "lcjfip_purchase_detail",
+    "lcjfip_purchase_detail_feedstock",
+    "lcjfip_application_history",
+    "lcjfip_application_internal_comment",
+    "lcjfip_application_document_association",
+)
+VIEWS = ("vw_lcjfip_application_base", "vw_lcjfip_purchase_detail_base")
+
+
+@pytest.mark.anyio
+async def test_reporting_role_reads_lcjfip_only_through_the_views(dbsession):
+    """
+    Default privileges can give the reporting role SELECT on every new table,
+    which would bypass the views' Draft and contact filtering. CI builds its
+    database from a fresh role with those default privileges, so this catches
+    a base table that is not revoked.
+    """
+    tables = (
+        (
+            await dbsession.execute(
+                text(
+                    "SELECT tablename FROM pg_tables "
+                    "WHERE schemaname = 'public' AND tablename LIKE 'lcjfip%'"
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert sorted(tables) == sorted(BASE_TABLES)
+
+    privileges = (
+        await dbsession.execute(
+            text(
+                "SELECT relname, has_table_privilege("
+                "'basic_lcfs_reporting_role', oid, 'SELECT') "
+                "FROM pg_class WHERE relname = ANY(:names)"
+            ),
+            {"names": list(BASE_TABLES + VIEWS)},
+        )
+    ).all()
+    readable = {name for name, can_select in privileges if can_select}
+    assert readable == set(VIEWS)

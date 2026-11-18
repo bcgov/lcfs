@@ -11,8 +11,12 @@ class LCJFIPIncentiveRate(BaseModel, Auditable, DisplayOrder, EffectiveDates):
 
     A band matches a carbon intensity ``ci`` when
     ``(ci_lower_bound IS NULL OR ci > ci_lower_bound) AND
-    (ci_upper_bound IS NULL OR ci <= ci_upper_bound)``. Rates change by
-    expiring a row and adding a new one with a later ``effective_date``.
+    (ci_upper_bound IS NULL OR ci <= ci_upper_bound)``.
+
+    A rate applies on date ``d`` when ``effective_date <= d < expiration_date``
+    (either end may be NULL). ``expiration_date`` is the first day the rate no
+    longer applies, as for fuel codes. To change a rate, set the old row's
+    ``expiration_date`` to the new row's ``effective_date``.
     """
 
     __tablename__ = "lcjfip_incentive_rate"

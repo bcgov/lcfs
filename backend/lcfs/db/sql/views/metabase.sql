@@ -964,7 +964,8 @@ LEFT JOIN car_types ct
     ON ct.lcjfip_application_id = a.lcjfip_application_id
 LEFT JOIN status_dates sd
     ON sd.lcjfip_application_id = a.lcjfip_application_id
--- The rate band in effect on the (Pacific) submission date.
+-- The rate band in effect on the (Pacific) submission date. expiration_date is
+-- the first day a rate no longer applies, so it is compared exclusively.
 LEFT JOIN LATERAL (
     SELECT r.max_rate_per_litre
     FROM lcjfip_incentive_rate r
@@ -974,7 +975,7 @@ LEFT JOIN LATERAL (
       AND (r.effective_date IS NULL
            OR r.effective_date <= (COALESCE(a.signed_date, now()) AT TIME ZONE 'America/Vancouver')::date)
       AND (r.expiration_date IS NULL
-           OR r.expiration_date >= (COALESCE(a.signed_date, now()) AT TIME ZONE 'America/Vancouver')::date)
+           OR r.expiration_date > (COALESCE(a.signed_date, now()) AT TIME ZONE 'America/Vancouver')::date)
     ORDER BY r.effective_date DESC NULLS LAST
     LIMIT 1
 ) rate ON TRUE
