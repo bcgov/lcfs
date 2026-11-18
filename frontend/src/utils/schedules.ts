@@ -7,6 +7,12 @@ export interface ScheduleRow {
   validationStatus?: string
 }
 
+export type ScheduleValidationStatus = 'success' | 'warning' | 'error'
+export type ScheduleSaveResult<Row extends ScheduleRow = ScheduleRow> = Row & {
+  validationStatus: ScheduleValidationStatus
+  modified?: boolean
+}
+
 export interface ScheduleSaveResponse {
   data?: Partial<ScheduleRow>
 }
@@ -35,7 +41,7 @@ interface ScheduleFailure {
 
 interface ScheduleAlert {
   message: string
-  severity: 'success' | 'warning' | 'error'
+  severity: ScheduleValidationStatus
 }
 
 export interface ScheduleGridNode<Row extends ScheduleRow = ScheduleRow> {
@@ -93,14 +99,14 @@ export const handleScheduleSave = async <Row extends ScheduleRow>({
   setWarnings,
   saveRow,
   t
-}: ScheduleSaveOptions<Row>): Promise<ScheduleRow> => {
+}: ScheduleSaveOptions<Row>): Promise<ScheduleSaveResult<Row>> => {
   try {
     setErrors({})
     setWarnings({})
 
     const response = await saveRow(updatedData)
     const data = response?.data
-    const finalData: ScheduleRow = {
+    const finalData: ScheduleSaveResult<Row> = {
       ...updatedData,
       ...(data || {}),
       validationStatus: 'success',
