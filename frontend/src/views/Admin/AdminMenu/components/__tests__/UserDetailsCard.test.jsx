@@ -690,15 +690,24 @@ describe('UserDetailsCard Component', () => {
       expect(screen.getByText('admin:UserActivity')).toBeInTheDocument()
 
       const gridProps = BCGridViewer.mock.calls.at(-1)[0]
-      expect(
-        gridProps.getRowId({
-          data: {
-            transactionType: 'ComplianceReport',
-            transactionId: 5521,
-            actionTaken: 'Submitted'
-          }
-        })
-      ).toBe('compliancereport-5521-submitted')
+      const submittedRowId = gridProps.getRowId({
+        data: {
+          transactionType: 'ComplianceReport',
+          transactionId: 5521,
+          actionTaken: 'Submitted'
+        }
+      })
+      const adjustmentRowId = gridProps.getRowId({
+        data: {
+          transactionType: 'ComplianceReport',
+          transactionId: 5521,
+          actionTaken: 'Analyst adjustment'
+        }
+      })
+
+      expect(submittedRowId).toBe('compliancereport-5521-submitted')
+      expect(adjustmentRowId).toBe('compliancereport-5521-analyst adjustment')
+      expect(adjustmentRowId).not.toBe(submittedRowId)
     })
 
     test('does not show user activity grid in add mode', ({
