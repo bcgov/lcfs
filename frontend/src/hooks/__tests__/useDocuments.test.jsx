@@ -9,6 +9,7 @@ import {
   useDownloadDocument,
   useFetchDocument,
   useGetDocumentInfo,
+  useReviewDocumentScan,
   useUpdateDocument
 } from '../useDocuments'
 
@@ -29,20 +30,23 @@ vi.mock('@/constants/routes', () => ({
     getDocuments: '/documents/:parentType/:parentID',
     documentFolderDeleteDocument:
       '/document-folders/:parentType/:parentID/documents/:documentId',
-    getDocument: '/documents/:parentType/:parentID/:documentID'
+    getDocument: '/documents/:parentType/:parentID/:documentID',
+    reviewDocumentScan:
+      '/documents/:parentType/:parentID/:documentID/scan-review'
   }
 }))
 
-const mockInvalidateQueries = vi.fn()
-
 // Mock TanStack Query
+const mockQueryClient = vi.hoisted(() => ({
+  invalidateQueries: vi.fn(),
+  removeQueries: vi.fn()
+}))
+const mockInvalidateQueries = mockQueryClient.invalidateQueries
+
 vi.mock('@tanstack/react-query', () => ({
   useQuery: vi.fn(),
   useMutation: vi.fn(),
-  useQueryClient: () => ({
-    invalidateQueries: mockInvalidateQueries,
-    removeQueries: vi.fn()
-  })
+  useQueryClient: () => mockQueryClient
 }))
 
 // Get the mocked functions
@@ -318,6 +322,55 @@ describe('useDocuments', () => {
       ]) {
         expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey })
       }
+    })
+  })
+
+  describe('useReviewDocumentScan', () => {
+    it('sends the decision and refreshes the CI application', async () => {
+      let options
+      mockUseMutation.mockImplementation((opts) => {
+        options = opts
+        return { mutateAsync: vi.fn() }
+      })
+      mockApiService.put.mockResolvedValue({ data: {} })
+
+      useReviewDocumentScan('ci_application', 5)
+      await options.mutationFn({ documentID: 9, decision: 'approve' })
+      options.onSuccess({}, {}, undefined)
+
+      expect(mockApiService.put).toHaveBeenCalledWith(
+        '/documents/ci_application/5/9/scan-review',
+        { decision: 'approve' }
+      )
+      expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith({
+        queryKey: ['documents', 'ci_application', 5]
+      })
+      expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith({
+        queryKey: ['ci-application', '5']
+      })
+    })
+    it('refreshes the CI application views after a facility file review', async () => {
+      let options
+      mockUseMutation.mockImplementation((opts) => {
+        options = opts
+        return { mutateAsync: vi.fn() }
+      })
+      mockApiService.put.mockResolvedValue({ data: {} })
+
+      useReviewDocumentScan('fuel_production_facility', 12)
+      await options.mutationFn({ documentID: 9, decision: 'reject' })
+      options.onSuccess({}, {}, undefined)
+
+      expect(mockApiService.put).toHaveBeenCalledWith(
+        '/documents/fuel_production_facility/12/9/scan-review',
+        { decision: 'reject' }
+      )
+      expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith({
+        queryKey: ['documents', 'fuel_production_facility', 12]
+      })
+      expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith({
+        queryKey: ['ci-application']
+      })
     })
   })
 
