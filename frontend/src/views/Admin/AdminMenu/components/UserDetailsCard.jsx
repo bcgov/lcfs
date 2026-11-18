@@ -80,7 +80,7 @@ export const UserDetailsCard = ({ addMode = false, userType = 'idir' }) => {
       cellRendererParams: {
         isAbsolute: true,
         url: (data) => {
-          const { transactionType, transactionId } = data.data
+          const { transactionType, transactionId, compliancePeriod } = data.data
           switch (transactionType) {
             case 'Transfer':
               return buildPath(ROUTES.TRANSFERS.VIEW, {
@@ -93,6 +93,11 @@ export const UserDetailsCard = ({ addMode = false, userType = 'idir' }) => {
             case 'InitiativeAgreement':
               return buildPath(ROUTES.TRANSACTIONS.INITIATIVE_AGREEMENT.VIEW, {
                 transactionId
+              })
+            case 'ComplianceReport':
+              return buildPath(ROUTES.REPORTS.VIEW, {
+                compliancePeriod,
+                complianceReportId: transactionId
               })
           }
         }

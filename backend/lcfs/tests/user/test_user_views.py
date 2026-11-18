@@ -17,6 +17,16 @@ from lcfs.db.models.admin_adjustment.AdminAdjustment import AdminAdjustment
 from lcfs.db.models.admin_adjustment.AdminAdjustmentHistory import (
     AdminAdjustmentHistory,
 )
+from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
+from lcfs.db.models.compliance.ComplianceReport import (
+    ComplianceReport,
+    ReportingFrequency,
+)
+from lcfs.db.models.compliance.ComplianceReportHistory import ComplianceReportHistory
+from lcfs.db.models.compliance.ComplianceReportStatus import (
+    ComplianceReportStatus,
+    ComplianceReportStatusEnum,
+)
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.user.schema import (
     UserActivitiesResponseSchema,
@@ -231,6 +241,7 @@ async def test_get_all_user_activities_as_administrator(
         transfer_id=transfer.transfer_id,
         transfer_status_id=3,  # Sent
         user_profile_id=7,  # LCFS 1
+        create_date=datetime(2024, 1, 15),
     )
 
     initiative = InitiativeAgreement(
@@ -246,7 +257,40 @@ async def test_get_all_user_activities_as_administrator(
         initiative_agreement_id=initiative.initiative_agreement_id,
         initiative_agreement_status_id=2,  # Approved
         user_profile_id=7,  # LCFS 1
+        create_date=datetime(2024, 2, 15),
     )
+
+    compliance_period = CompliancePeriod(compliance_period_id=5521, description="2025")
+    submitted_status = ComplianceReportStatus(
+        compliance_report_status_id=5521,
+        status=ComplianceReportStatusEnum.Submitted,
+    )
+    draft_status = ComplianceReportStatus(
+        compliance_report_status_id=5522, status=ComplianceReportStatusEnum.Draft
+    )
+    compliance_report = ComplianceReport(
+        compliance_report_id=5521,
+        compliance_period_id=compliance_period.compliance_period_id,
+        organization_id=1,
+        current_status_id=submitted_status.compliance_report_status_id,
+        compliance_report_group_uuid="5521-activity-filter-test",
+        reporting_frequency=ReportingFrequency.ANNUAL,
+        version=1,
+    )
+    compliance_report_history = [
+        ComplianceReportHistory(
+            compliance_report_id=compliance_report.compliance_report_id,
+            status_id=submitted_status.compliance_report_status_id,
+            user_profile_id=7,
+            create_date=datetime(2024, 3, 15),
+        ),
+        ComplianceReportHistory(
+            compliance_report_id=compliance_report.compliance_report_id,
+            status_id=draft_status.compliance_report_status_id,
+            user_profile_id=7,
+            create_date=datetime(2024, 3, 16),
+        ),
+    ]
 
     await add_models(
         [
@@ -254,6 +298,11 @@ async def test_get_all_user_activities_as_administrator(
             transfer_history,
             initiative,
             initiative_history,
+            compliance_period,
+            submitted_status,
+            draft_status,
+            compliance_report,
+            *compliance_report_history,
         ]
     )
 
@@ -271,7 +320,73 @@ async def test_get_all_user_activities_as_administrator(
 
     assert response.status_code == status.HTTP_200_OK
     content = UserActivitiesResponseSchema(**response.json())
-    assert len(content.activities) == 2  # Should have 2 activity records
+    assert len(content.activities) == 3  # Draft report history is excluded.
+    compliance_activities = [
+        activity
+        for activity in content.activities
+        if activity.transaction_type == "ComplianceReport"
+    ]
+    assert len(compliance_activities) == 1
+    assert compliance_activities[0].transaction_id == 5521
+    assert compliance_activities[0].action_taken == "Submitted"
+    assert compliance_activities[0].user_id == 7
+    assert compliance_activities[0].compliance_period == "2025"
+
+    # Grid filters arrive in camelCase while the activity union columns use
+    # snake_case. Each visible filter should be applied to the union query.
+    for field, value in (
+        ("transactionType", "Transfer"),
+        ("actionTaken", "Sent"),
+        ("transactionId", "CT1"),
+        ("transactionType", "ComplianceReport"),
+        ("actionTaken", "Submitted"),
+        ("transactionId", "CR5521"),
+        ("actionTaken", "Draft"),
+    ):
+        pagination["filters"] = [
+            {"field": field, "filter": value, "filterType": "text", "type": "equals"}
+        ]
+        response = await client.post(url, json=pagination)
+        assert response.status_code == status.HTTP_200_OK
+        filtered_content = UserActivitiesResponseSchema(**response.json())
+        if field == "actionTaken" and value == "Draft":
+            assert filtered_content.activities == []
+            assert filtered_content.pagination.total == 0
+        else:
+            assert len(filtered_content.activities) == 1
+            expected_type = (
+                "ComplianceReport"
+                if value in ("ComplianceReport", "Submitted", "CR5521")
+                else "Transfer"
+            )
+            assert filtered_content.activities[0].transaction_type == expected_type
+
+    pagination["filters"] = []
+    pagination["sortOrders"] = [{"field": "transactionId", "direction": "asc"}]
+    response = await client.post(url, json=pagination)
+    assert response.status_code == status.HTTP_200_OK
+    sorted_content = UserActivitiesResponseSchema(**response.json())
+    assert [activity.transaction_type for activity in sorted_content.activities] == [
+        "ComplianceReport",
+        "Transfer",
+        "InitiativeAgreement",
+    ]
+
+    pagination["sortOrders"] = []
+    pagination["filters"] = [
+        {
+            "field": "createDate",
+            "filterType": "date",
+            "type": "inRange",
+            "dateFrom": "2024-01-01",
+            "dateTo": "2024-01-31",
+        }
+    ]
+    response = await client.post(url, json=pagination)
+    assert response.status_code == status.HTTP_200_OK
+    date_filtered_content = UserActivitiesResponseSchema(**response.json())
+    assert date_filtered_content.pagination.total == 1
+    assert date_filtered_content.activities[0].transaction_type == "Transfer"
 
 
 @pytest.mark.anyio
