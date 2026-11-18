@@ -61,6 +61,20 @@ describe('StandardCellErrors', () => {
     )
   })
 
+  it('preserves the column definition as the editable callback receiver', () => {
+    const params = {
+      data: { id: 2 },
+      colDef: {
+        field: 'quantity',
+        editable(this: { field: string }) {
+          return this.field === 'quantity'
+        }
+      }
+    }
+
+    expect(StandardCellErrors(params, {}).backgroundColor).toBe('#fff')
+  })
+
   it('does not treat other fields on the same row as errors', () => {
     const errors = { 1: ['quantity'] }
     const style = StandardCellErrors(baseParams, errors)

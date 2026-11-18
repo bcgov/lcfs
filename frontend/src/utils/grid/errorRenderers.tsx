@@ -34,7 +34,7 @@ export const StandardCellErrors = (
 
   const editable = params.colDef.editable
   const isEditable = isEditableCallback<GridErrorParams>(editable)
-    ? editable(params)
+    ? editable.call(params.colDef, params)
     : editable
 
   if (isEditable) {
