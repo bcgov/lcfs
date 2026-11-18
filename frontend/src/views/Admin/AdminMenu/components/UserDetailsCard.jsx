@@ -64,7 +64,7 @@ export const UserDetailsCard = ({ addMode = false, userType = 'idir' }) => {
   const getRowId = useCallback((params) => {
     return `${params.data.transactionType.toLowerCase()}-${
       params.data.transactionId
-    }`
+    }-${params.data.actionTaken.toLowerCase()}`
   }, [])
 
   const orgName = useMemo(() => {
