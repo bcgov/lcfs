@@ -22,7 +22,7 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
 }))
 
 export interface NumberEditorProps {
-  value?: string | number
+  value?: string | number | null
   onValueChange: (value: number) => void
   eventKey?: string
   rowIndex?: number
@@ -55,7 +55,7 @@ export const NumberEditor = forwardRef<unknown, NumberEditorProps>(
       }
     })
 
-    const formatNumber = (num: string | number | undefined) => {
+    const formatNumber = (num: string | number | null | undefined) => {
       if (num === undefined || num === null || Number.isNaN(Number(num)))
         return 0
       return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
