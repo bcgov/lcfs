@@ -111,11 +111,13 @@ async def bulletin_app(fake_redis_client, bulletin_signing_key):
                 {
                     "preferred_username": "bulletin-test-user",
                     "aud": settings.keycloak_audience,
+                    "azp": settings.keycloak_audience,
+                    "iss": settings.keycloak_issuer,
                     "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
                 },
                 bulletin_signing_key,
                 algorithm="RS256",
-                headers={"kid": public_key["kid"]},
+                headers={"kid": public_key["kid"], "typ": "Bearer"},
             )
             headers = {"Authorization": f"Bearer {token}"}
 
@@ -227,7 +229,7 @@ async def test_government_bulletin_routes_require_government_role(
         response = await client.post(
             f"/api/fuel-codes/government/bulletins{suffix}?bulletinType=current&format=csv&idir=false"
         )
-    assert response.status_code == expected
+    assert response.status_code == expected, response.text
     if expected != 200:
         repo.get_fuel_code_bulletin_rows.assert_not_awaited()
     else:
