@@ -114,6 +114,9 @@ class UserAuthentication(AuthenticationBackend):
             except jwt.DecodeError as exc:
                 raise HTTPException(status_code=401, detail=str(exc))
 
+            if unverified_header.get("typ") != "Bearer":
+                raise HTTPException(status_code=401, detail="Token type must be Bearer")
+
             kid = unverified_header.get("kid")
             if not kid:
                 raise HTTPException(status_code=401, detail="Token header missing kid")
@@ -155,6 +158,10 @@ class UserAuthentication(AuthenticationBackend):
                     options={"verify_exp": True},
                     leeway=5,  # Allows for 5 seconds of clock skew
                 )
+                if user_token.get("azp") != self.settings.keycloak_audience:
+                    raise HTTPException(
+                        status_code=401, detail="Token client is not authorized"
+                    )
             except jwt.ExpiredSignatureError:
                 raise HTTPException(status_code=401, detail="Token has expired")
             except (jwt.InvalidTokenError, jwt.DecodeError) as exc:
