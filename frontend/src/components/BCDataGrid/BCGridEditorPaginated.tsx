@@ -667,14 +667,17 @@ export const BCGridEditorPaginated = ({
         newData.push(newRow)
       })
       const transactions = ref.current!.api.applyTransaction({ add: newData })
-      transactions!.add.forEach((node) => {
-        onCellEditingStopped!({
-          node,
-          oldValue: '',
-          newValue: node.data![findFirstEditableColumn() as unknown as string],
-          ...gridProps
-        } as import('./types').BCGridEditContext<BCGridRow>)
-      })
+      if (onCellEditingStopped) {
+        transactions!.add.forEach((node) => {
+          onCellEditingStopped({
+            node,
+            oldValue: '',
+            newValue:
+              node.data![findFirstEditableColumn() as unknown as string],
+            ...gridProps
+          } as import('./types').BCGridEditContext<BCGridRow>)
+        })
+      }
     },
     [findFirstEditableColumn, onCellEditingStopped, props, ref]
   )

@@ -413,7 +413,7 @@ export const BCGridViewer = forwardRef<
             ...cachedOptions
           }
           hasInitializedFromCache.current = true
-          onPaginationChange!(restoredOptions)
+          onPaginationChange?.(restoredOptions)
         }
       }
     }, [enablePageCaching, gridKey, cacheMode])
@@ -684,7 +684,7 @@ export const BCGridViewer = forwardRef<
 
     const handleChangePage = (_event: unknown, newPage: number) => {
       const updatedOptions = { ...paginationOptions, page: newPage + 1 }
-      onPaginationChange!(updatedOptions)
+      onPaginationChange?.(updatedOptions)
       if (enablePageCaching) {
         cachePaginationOptions(updatedOptions)
       }
@@ -696,7 +696,7 @@ export const BCGridViewer = forwardRef<
         page: 1,
         size: parseInt(event.target.value, 10)
       }
-      onPaginationChange!(updatedOptions)
+      onPaginationChange?.(updatedOptions)
       if (enablePageCaching) {
         cachePaginationOptions(updatedOptions)
       }
@@ -718,7 +718,7 @@ export const BCGridViewer = forwardRef<
           page: 1, // Always reset to page 1 when filters change
           filters: filterArr as unknown as BCPaginationFilter[]
         }
-        onPaginationChange!(updatedOptions)
+        onPaginationChange?.(updatedOptions)
         if (enablePageCaching) {
           cachePaginationOptions(updatedOptions)
         }
@@ -773,7 +773,7 @@ export const BCGridViewer = forwardRef<
         ...paginationOptionsRef.current,
         sortOrders: sortTemp
       } as BCPaginationOptions
-      onPaginationChange!(updatedOptions)
+      onPaginationChange?.(updatedOptions)
       if (enablePageCaching) {
         cachePaginationOptions(updatedOptions)
       }
