@@ -43,7 +43,7 @@ vi.mock('@/utils/formatters', () => ({
   cleanEmptyStringValues: (data) => data
 }))
 
-vi.mock('@/utils/schedules.js', () => ({
+vi.mock('@/utils/schedules', () => ({
   handleScheduleDelete: vi.fn(),
   handleScheduleSave: vi.fn()
 }))

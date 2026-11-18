@@ -43,6 +43,7 @@ export interface FuelType {
   defaultCarbonIntensity: number
   unrecognized?: boolean
   fossilDerived?: boolean
+  renewable?: boolean
   fuelCategories: FuelCategory[]
   fuelCodes: FuelCode[]
   provisions: Provision[]
