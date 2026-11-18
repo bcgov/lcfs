@@ -89,6 +89,7 @@ async def bulletin_app(fake_redis_client, bulletin_signing_key):
     )
 
     def build(role=None):
+        issuer = settings.keycloak_issuer or "https://identity.example.test"
         app = get_app()
         session = MagicMock()
         session.begin.return_value.__aenter__ = AsyncMock()
@@ -99,7 +100,7 @@ async def bulletin_app(fake_redis_client, bulletin_signing_key):
         session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
         app.state.db_session_factory = session_factory
         app.state.redis_client = fake_redis_client
-        app.state.settings = settings
+        app.state.settings = settings.model_copy(update={"keycloak_issuer": issuer})
         headers = {}
         if role is not None:
             user = UserProfile(user_profile_id=1, is_active=True)
@@ -112,7 +113,7 @@ async def bulletin_app(fake_redis_client, bulletin_signing_key):
                     "preferred_username": "bulletin-test-user",
                     "aud": settings.keycloak_audience,
                     "azp": settings.keycloak_audience,
-                    "iss": settings.keycloak_issuer,
+                    "iss": issuer,
                     "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
                 },
                 bulletin_signing_key,
