@@ -64,6 +64,10 @@ class Settings(BaseSettings):
     db_connection_hold_warn_seconds: float = Field(30.0, ge=0)
     db_pool_stats_log_interval_seconds: float = Field(60.0, ge=0)
 
+    # Anonymous form link keys
+    link_key_ttl_days: int = Field(90, ge=1)
+    pdf_render_timeout_seconds: float = Field(30.0, gt=0)
+
     compliance_reindex_enabled: bool = True
     compliance_reindex_months: str = "1,4,7,10"
     compliance_reindex_day: int = 1
