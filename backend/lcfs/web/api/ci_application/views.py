@@ -223,6 +223,7 @@ async def list_ci_applications(
         pagination,
         organization_id,
         exclude_draft=is_government,
+        requesting_user=request.user,
     )
 
 

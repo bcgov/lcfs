@@ -159,6 +159,25 @@ async def test_get_all_transfers_success(transfer_service, mock_transfer_repo):
 
 
 @pytest.mark.anyio
+async def test_transfer_recommendation_is_supplier_masked_and_government_visible(
+    transfer_service, mock_transfer_repo
+):
+    transfer = _make_mock_transfer()
+    transfer.recommendation = TransferRecommendationEnum.Record
+    mock_transfer_repo.get_all_transfers.return_value = [transfer]
+
+    [supplier_snapshot] = await transfer_service.get_all_transfers(
+        _make_supplier_user()
+    )
+    [government_snapshot] = await transfer_service.get_all_transfers(
+        _make_govt_user()
+    )
+
+    assert supplier_snapshot.recommendation is None
+    assert government_snapshot.recommendation.value == "Record"
+
+
+@pytest.mark.anyio
 async def test_get_transfer_success(transfer_service, mock_transfer_repo):
     transfer_id = 1
 

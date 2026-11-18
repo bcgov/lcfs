@@ -536,6 +536,29 @@ class TestToListItem:
         assert out.priority_score == 511
         assert out.verification_level == "VX2"
 
+    def test_supplier_list_projection_omits_internal_triage_fields(self):
+        ci = _application(
+            assigned_analyst=_user(user_profile_id=2, first="Internal", last="Analyst"),
+            priority_score=511,
+            verification_1_date=datetime(2026, 5, 19, tzinfo=timezone.utc),
+        )
+        ci.preliminary_risk_assessment = "High"
+
+        supplier_snapshot = _to_list_item(
+            ci, last_comment_entry=None, include_internal_fields=False
+        ).model_dump(by_alias=True)
+        government_snapshot = _to_list_item(
+            ci, last_comment_entry=None, include_internal_fields=True
+        ).model_dump(by_alias=True)
+
+        assert supplier_snapshot["preliminaryRiskAssessment"] is None
+        assert supplier_snapshot["priorityScore"] is None
+        assert supplier_snapshot["assignedAnalyst"] is None
+        assert supplier_snapshot["verificationLevel"] is None
+        assert government_snapshot["preliminaryRiskAssessment"] == "High"
+        assert government_snapshot["priorityScore"] == 511
+        assert government_snapshot["assignedAnalyst"]["firstName"] == "Internal"
+
     def test_priority_score_prefers_verification_2_score(self):
         ci = _application(
             priority_score=511,

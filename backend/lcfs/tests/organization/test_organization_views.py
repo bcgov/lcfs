@@ -267,6 +267,7 @@ async def test_create_transfer_success(
         "quantity": 1,
         "price_per_unit": 1,
         "current_status": {"transfer_status_id": 1, "status": "status"},
+        "recommendation": "Record",
     }
 
     fastapi_app.dependency_overrides[OrganizationValidation] = (
@@ -280,6 +281,7 @@ async def test_create_transfer_success(
     )
 
     assert response.status_code == 201
+    assert response.json()["recommendation"] is None
 
 
 @pytest.mark.anyio
@@ -305,6 +307,7 @@ async def test_update_transfer_success(
         "quantity": 1,
         "price_per_unit": 1,
         "current_status": {"transfer_status_id": 1, "status": "status"},
+        "recommendation": "Record",
     }
 
     fastapi_app.dependency_overrides[OrganizationValidation] = (
@@ -323,6 +326,7 @@ async def test_update_transfer_success(
 
     assert "transferId" in data
     assert data["transferId"] == 1
+    assert data["recommendation"] is None
 
 
 @pytest.mark.anyio
