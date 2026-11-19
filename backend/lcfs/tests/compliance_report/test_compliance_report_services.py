@@ -682,8 +682,33 @@ async def test_delete_supplemental_report_success(compliance_report_service, moc
     result = await compliance_report_service.delete_compliance_report(996, mock_user)
 
     assert result is True
-    mock_repo.get_compliance_report_by_id.assert_called_once_with(996)
+    mock_repo.lock_compliance_report_group.assert_awaited_once_with(996)
+    mock_repo.lock_compliance_report_row.assert_awaited_once_with(996)
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(996, refresh=True)
     mock_repo.delete_compliance_report.assert_called_once_with(996)
+
+
+@pytest.mark.anyio
+async def test_delete_rechecks_status_after_lock_without_transaction(
+    compliance_report_service, mock_repo
+):
+    report = MagicMock(
+        organization_id=998,
+        transaction_id=None,
+        current_status=MagicMock(status=ComplianceReportStatusEnum.Submitted),
+    )
+
+    async def refreshed_report(report_id, refresh=False):
+        mock_repo.lock_compliance_report_row.assert_awaited_once_with(report_id)
+        assert refresh
+        return report
+
+    mock_repo.get_compliance_report_by_id.side_effect = refreshed_report
+    with pytest.raises(ServiceException):
+        await compliance_report_service.delete_compliance_report(
+            996, MagicMock(organization_id=998)
+        )
+    mock_repo.delete_compliance_report.assert_not_awaited()
 
 
 @pytest.mark.anyio
@@ -698,7 +723,7 @@ async def test_delete_compliance_report_not_found(compliance_report_service, moc
     with pytest.raises(DataNotFoundException, match="Compliance report not found."):
         await compliance_report_service.delete_compliance_report(1000, mock_user)
 
-    mock_repo.get_compliance_report_by_id.assert_called_once_with(1000)
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(1000, refresh=True)
     mock_repo.delete_compliance_report.assert_not_called()  # Ensure delete is not called
 
 
@@ -719,7 +744,7 @@ async def test_delete_compliance_report_supplier_no_permission(
         await compliance_report_service.delete_compliance_report(996, mock_user)
     assert exc.typename == "ServiceException"
 
-    mock_repo.get_compliance_report_by_id.assert_called_once_with(996)
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(996, refresh=True)
     mock_repo.delete_compliance_report.assert_not_called()
 
 
@@ -739,7 +764,7 @@ async def test_delete_compliance_report_idir_no_permission(
         await compliance_report_service.delete_compliance_report(996, mock_user)
     assert exc.typename == "ServiceException"
 
-    mock_repo.get_compliance_report_by_id.assert_called_once_with(996)
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(996, refresh=True)
     mock_repo.delete_compliance_report.assert_not_called()
 
 
@@ -761,7 +786,7 @@ async def test_delete_compliance_report_wrong_status(
 
     assert exc_info.typename == "ServiceException"
 
-    mock_repo.get_compliance_report_by_id.assert_called_once_with(996)
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(996, refresh=True)
     mock_repo.delete_compliance_report.assert_not_called()
 
 
@@ -865,7 +890,7 @@ async def test_create_government_initiated_supplemental_report_success(
         # Assert
         # Check repository calls
         mock_repo.get_compliance_report_by_id.assert_called_once_with(
-            existing_report_id
+            existing_report_id, refresh=True
         )
         mock_repo.get_draft_report_by_group_uuid.assert_called_once_with(group_uuid)
         mock_repo.get_latest_report_by_group_uuid.assert_called_once_with(group_uuid)
@@ -2660,6 +2685,9 @@ class TestIsSupplementalRequestedByGovUser:
         """Helper to create a mock chained report"""
         chained_report = MagicMock()
         chained_report.history = history_items or []
+        chained_report.supplemental_initiator = None
+        for i, item in enumerate(chained_report.history):
+            item.create_date = i
         return chained_report
 
     def test_returns_true_when_draft_status_created_by_gov_user(self, service):
@@ -2821,7 +2849,8 @@ async def test_create_analyst_adjustment_from_submitted_status_success(
 
     # Assert
     assert result is not None
-    mock_repo.get_compliance_report_by_id.assert_called_once_with(1)
+    mock_repo.lock_compliance_report_group.assert_awaited_once_with(1)
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(1, refresh=True)
     mock_repo.create_compliance_report.assert_called_once()
 
 
@@ -3005,7 +3034,7 @@ async def test_create_analyst_adjustment_from_assessed_status_success(
 
     # Assert
     assert result is not None
-    mock_repo.get_compliance_report_by_id.assert_called_once_with(1)
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(1, refresh=True)
     mock_repo.create_compliance_report.assert_called_once()
 
 

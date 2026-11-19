@@ -305,7 +305,9 @@ class ComplianceReportServices:
         Analyst adjustments are only allowed if the status of the current report is 'Submitted' or 'Assessed'
         """
         # Fetch the current report using the provided report_id
-        current_report = await self.repo.get_compliance_report_by_id(existing_report_id)
+        await self.repo.lock_compliance_report_group(existing_report_id)
+        await self.repo.lock_compliance_report_row(existing_report_id)
+        current_report = await self.repo.get_compliance_report_by_id(existing_report_id, refresh=True)
         if not current_report:
             raise DataNotFoundException("Compliance report not found.")
 
@@ -396,7 +398,9 @@ class ComplianceReportServices:
         Supplemental reports are only allowed if the status of the current report is 'Assessed'.
         """
         # Fetch the current report using the provided report_id
-        current_report = await self.repo.get_compliance_report_by_id(original_report_id)
+        await self.repo.lock_compliance_report_group(original_report_id)
+        await self.repo.lock_compliance_report_row(original_report_id)
+        current_report = await self.repo.get_compliance_report_by_id(original_report_id, refresh=True)
         if not current_report:
             raise DataNotFoundException("Compliance report not found.")
         # Get the group_uuid from the current report
@@ -512,7 +516,9 @@ class ComplianceReportServices:
         This new report starts in 'Draft' status for the supplier to edit.
         """
         # 1. Fetch the current report the Analyst is viewing
-        current_report = await self.repo.get_compliance_report_by_id(existing_report_id)
+        await self.repo.lock_compliance_report_group(existing_report_id)
+        await self.repo.lock_compliance_report_row(existing_report_id)
+        current_report = await self.repo.get_compliance_report_by_id(existing_report_id, refresh=True)
         if not current_report:
             raise DataNotFoundException("Compliance report not found.")
 
@@ -644,7 +650,9 @@ class ComplianceReportServices:
           status then allow Gov users to delete the report.
         """
         # Fetch the current report using the provided report_id
-        current_report = await self.repo.get_compliance_report_by_id(report_id)
+        await self.repo.lock_compliance_report_group(report_id)
+        await self.repo.lock_compliance_report_row(report_id)
+        current_report = await self.repo.get_compliance_report_by_id(report_id, refresh=True)
         if not current_report:
             raise DataNotFoundException("Compliance report not found.")
 
@@ -698,20 +706,7 @@ class ComplianceReportServices:
         if not report.transaction_id:
             return
 
-        transaction = await self.transaction_repo.get_transaction_by_id(
-            report.transaction_id
-        )
-        if transaction is None:
-            return
-        if transaction.transaction_action == TransactionActionEnum.Adjustment:
-            logger.warning(
-                "compliance_report.delete.adjustment_transaction_kept",
-                report_id=report.compliance_report_id,
-                transaction_id=report.transaction_id,
-            )
-            return
-
-        await self.transaction_repo.delete_transaction(
+        await self.transaction_repo.delete_reserved_transaction(
             report.transaction_id, report.compliance_report_id
         )
 
@@ -813,10 +808,16 @@ class ComplianceReportServices:
         """
         Check if the supplemental report was requested by gov user:
         """
+        initiator = getattr(chained_report, "supplemental_initiator", None)
+        if initiator is not None:
+            return initiator in (
+                SupplementalInitiatorType.GOVERNMENT_INITIATED,
+                SupplementalInitiatorType.GOVERNMENT_INITIATED.value,
+            )
         if not hasattr(chained_report, "history") or not chained_report.history:
             return False
 
-        for history_item in chained_report.history:
+        for history_item in sorted(chained_report.history, key=lambda h: h.create_date):
             if (
                 hasattr(history_item, "status")
                 and hasattr(history_item.status, "status")
@@ -826,6 +827,8 @@ class ComplianceReportServices:
                 and history_item.user_profile.organization is None
             ):
                 return True
+            if hasattr(history_item, "status") and getattr(history_item.status, "status", None) == ComplianceReportStatusEnum.Draft.value:
+                return False
 
         return False
 

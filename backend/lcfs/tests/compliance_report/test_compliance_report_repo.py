@@ -1,7 +1,7 @@
 import pytest
 import uuid
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from sqlalchemy import select
 
 from lcfs.db.models.compliance import (
@@ -30,9 +30,31 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportViewSchema,
 )
 from lcfs.web.exception.exceptions import DatabaseException
+from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 
 
 # Fixtures
+@pytest.mark.anyio
+async def test_history_repository_appends_repeated_status_events():
+    db = AsyncMock()
+    db.add = MagicMock()
+    repo = ComplianceReportRepository(db=db)
+    report = SimpleNamespace(compliance_report_id=10, current_status_id=2)
+    original = SimpleNamespace(user_profile_id=1, first_name="First", last_name="User")
+    returning = SimpleNamespace(user_profile_id=2, first_name="Second", last_name="User")
+
+    first = await repo.add_compliance_report_history(report, original)
+    second = await repo.add_compliance_report_history(report, returning, is_return=True)
+
+    assert first is not second
+    assert (first.user_profile_id, first.display_name) == (1, "First User")
+    assert (second.user_profile_id, second.display_name) == (2, "Second User")
+    assert first.is_return is False
+    assert second.is_return is True
+    assert db.add.call_count == 2
+    assert db.flush.await_count == 2
+
+
 @pytest.fixture
 async def users(dbsession):
     users = [
@@ -238,6 +260,26 @@ async def test_add_compliance_report_history_success(
     assert history.compliance_report_id == compliance_reports[0].compliance_report_id
     assert history.user_profile_id == users[0].user_profile_id
     assert history.status_id == compliance_reports[0].current_status_id
+
+
+@pytest.mark.anyio
+async def test_history_preserves_repeated_destination_events(
+    compliance_report_repo, users, compliance_reports, dbsession
+):
+    report = compliance_reports[0]
+    first = await compliance_report_repo.add_compliance_report_history(report, users[0])
+    first_name = first.display_name
+    second = await compliance_report_repo.add_compliance_report_history(
+        report, users[1], is_return=True
+    )
+
+    assert first.compliance_report_history_id != second.compliance_report_history_id
+    assert first.status_id == second.status_id
+    await dbsession.refresh(first)
+    assert first.display_name == first_name
+    assert first.user_profile_id == users[0].user_profile_id
+    assert not first.is_return
+    assert second.is_return
 
 
 @pytest.mark.anyio

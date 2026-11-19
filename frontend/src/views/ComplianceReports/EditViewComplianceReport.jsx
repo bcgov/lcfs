@@ -260,9 +260,13 @@ export const EditViewComplianceReport = ({ isError, error }) => {
     if (isQuarterly) {
       const isDraft = currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT
       const now = new Date()
-      const submittedHistory = reportData?.report?.history?.find(
-        (h) => h.status.status === COMPLIANCE_REPORT_STATUSES.SUBMITTED
-      )
+      const submittedHistory = (reportData?.report?.history ?? [])
+        .filter(
+          (h) =>
+            h.status.status === COMPLIANCE_REPORT_STATUSES.SUBMITTED &&
+            !h.isReturn
+        )
+        .sort((a, b) => new Date(b.createDate) - new Date(a.createDate))[0]
       const createDateFromHistory = submittedHistory?.createDate
       const updateDate = reportData?.report?.updateDate
 

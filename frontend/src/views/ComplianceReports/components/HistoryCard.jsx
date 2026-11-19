@@ -317,7 +317,7 @@ export const HistoryCard = ({
                       <span
                         dangerouslySetInnerHTML={{
                           __html: t(
-                            `report:complianceReportHistory.${item.status.status}`,
+                            `report:complianceReportHistory.${item.isReturn ? 'Returned' : item.status.status}`,
                             {
                               createDate: timezoneFormatter({
                                 value: item.createDate

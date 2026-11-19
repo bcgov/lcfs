@@ -454,46 +454,25 @@ class ComplianceReportRepository:
 
     @repo_handler
     async def add_compliance_report_history(
-        self, report: ComplianceReport, user: UserProfile
+        self, report: ComplianceReport, user: UserProfile, *, is_return: bool = False
     ):
         """
         Add a new compliance report history record to the database
         """
-        history = await self._get_existing_history_for_status(
-            report.compliance_report_id, report.current_status_id
+        history = ComplianceReportHistory(
+            compliance_report_id=report.compliance_report_id,
+            status_id=report.current_status_id,
+            user_profile_id=user.user_profile_id,
+            display_name=f"{user.first_name} {user.last_name}",
+            is_return=is_return,
         )
-        if history:
-            history.update_date = datetime.now(timezone.utc)
-            history.create_date = datetime.now(timezone.utc)
-            history.status_id = report.current_status_id
-            history.user_profile_id = user.user_profile_id
-            history.display_name = f"{user.first_name} {user.last_name}"
-        else:
-            history = ComplianceReportHistory(
-                compliance_report_id=report.compliance_report_id,
-                status_id=report.current_status_id,
-                user_profile_id=user.user_profile_id,
-                display_name=f"{user.first_name} {user.last_name}",
-            )
         self.db.add(history)
         await self.db.flush()
+        # The report may already have its history loaded in this session.
+        # Reload it for the response rather than returning the stale collection.
+        if isinstance(report, ComplianceReport):
+            self.db.expire(report, ["history"])
         return history
-
-    async def _get_existing_history_for_status(
-        self, compliance_report_id: int, current_status_id: int
-    ):
-        history = await self.db.execute(
-            select(ComplianceReportHistory)
-            .where(
-                and_(
-                    ComplianceReportHistory.compliance_report_id
-                    == compliance_report_id,
-                    ComplianceReportHistory.status_id == current_status_id,
-                )
-            )
-            .order_by(ComplianceReportHistory.create_date.desc())
-        )
-        return history.scalar_one_or_none()
 
     @repo_handler
     async def get_reports_paginated(
@@ -830,7 +809,7 @@ class ComplianceReportRepository:
         return apply_filter_conditions(field, filter_value, filter_option, filter_type)
 
     @repo_handler
-    async def get_compliance_report_by_id(self, report_id: int) -> ComplianceReport:
+    async def get_compliance_report_by_id(self, report_id: int, refresh: bool = False) -> ComplianceReport:
         """
         Retrieve a compliance report from the database by ID
         """
@@ -838,10 +817,26 @@ class ComplianceReportRepository:
             select(ComplianceReport)
             .options(*self._get_base_report_options())
             .where(ComplianceReport.compliance_report_id == report_id)
+            .execution_options(populate_existing=refresh)
         )
 
         compliance_report = result.scalars().unique().first()
         return compliance_report
+
+    @repo_handler
+    async def lock_compliance_report_group(self, report_id: int) -> None:
+        """Serialize changes to existing versions in the same report group.
+
+        Acquire this transaction-scoped lock before any report row lock. The
+        initial lookup takes no row lock, so deleting a report while a caller
+        waits is safe: the caller re-reads the report after taking its row lock.
+        A hash collision only serializes unrelated groups.
+        """
+        await self.db.execute(
+            select(func.pg_advisory_xact_lock(
+                func.hashtextextended(ComplianceReport.compliance_report_group_uuid, 0)
+            )).where(ComplianceReport.compliance_report_id == report_id)
+        )
 
     @repo_handler
     async def lock_compliance_report_row(self, report_id: int) -> Optional[int]:
@@ -1602,22 +1597,18 @@ class ComplianceReportRepository:
         Retrieve a draft compliance report for a given group_uuid if one exists.
         This is used to check if a draft already exists before creating a new one.
         """
-        # Get the Draft status ID
-        draft_status = await self.get_compliance_report_status_by_desc(
-            ComplianceReportStatusEnum.Draft.value
-        )
-        if not draft_status:
-            return None
-
         # Query for a draft report in the group
         result = await self.db.execute(
             select(ComplianceReport)
             .options(*self._get_minimal_report_options())
             .where(
                 ComplianceReport.compliance_report_group_uuid == group_uuid,
-                ComplianceReport.current_status_id
-                == draft_status.compliance_report_status_id,
+                ComplianceReport.current_status.has(ComplianceReportStatus.status.in_([
+                    ComplianceReportStatusEnum.Draft,
+                    ComplianceReportStatusEnum.Analyst_adjustment,
+                ])),
             )
+            .order_by(ComplianceReport.version.desc())
         )
         return result.scalars().first()
 
