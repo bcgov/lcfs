@@ -28,8 +28,8 @@ vw_lcjfip_purchase_detail_base from sql/views/metabase.sql, and revokes any
 reporting-role access to the base tables that default privileges granted.
 
 Revision ID: 810923914d50
-Revises: 9b3e5c7a1d24
-Create Date: 2026-11-17 10:00:00.000000
+Revises: 5d2e9b7c4a1f
+Create Date: 2026-11-19 11:00:00.000000
 """
 
 import sqlalchemy as sa
@@ -45,7 +45,7 @@ from lcfs.db.dependencies import (
 
 # revision identifiers, used by Alembic.
 revision = "810923914d50"
-down_revision = "9b3e5c7a1d24"
+down_revision = "5d2e9b7c4a1f"
 branch_labels = None
 depends_on = None
 

@@ -13,7 +13,7 @@ from lcfs.db.models import (
 from lcfs.db.models.compliance.FuelSupply import FuelSupply
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
-from lcfs.web.api.fuel_code.repo import FuelCodeRepository
+from lcfs.web.api.fuel_code.repo import CarbonIntensityResult, FuelCodeRepository
 from lcfs.web.api.fuel_supply.actions_service import FuelSupplyActionService
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from lcfs.web.api.fuel_supply.schema import (
@@ -47,6 +47,15 @@ fuel_category = FuelCategoryResponseSchema(
 def fuel_supply_action_service():
     mock_repo = MagicMock(spec=FuelSupplyRepository)
     mock_fuel_code_repo = MagicMock(spec=FuelCodeRepository)
+    mock_fuel_code_repo.get_standardized_fuel_data = AsyncMock(
+        return_value=CarbonIntensityResult(
+            effective_carbon_intensity=50.0,
+            target_ci=80.0,
+            eer=1.0,
+            energy_density=35.0,
+            uci=None,
+        )
+    )
     service = FuelSupplyActionService(
         repo=mock_repo,
         fuel_repo=mock_fuel_code_repo,
@@ -310,7 +319,7 @@ async def test_update_fuel_supply_success(fuel_supply_action_service, mock_fuel_
 
     # Ensure that the appropriate methods were called with correct arguments
     mock_repo.get_fuel_supply_by_group_version.assert_awaited_once_with(
-        fs_data.group_uuid, fs_data.version
+        fs_data.group_uuid, fs_data.version, fs_data.compliance_report_id
     )
     mock_fuel_code_repo.get_standardized_fuel_data.assert_awaited_once_with(
         fuel_type_id=fs_data.fuel_type_id,
@@ -353,7 +362,9 @@ async def test_delete_fuel_supply(fuel_supply_action_service):
 
     assert response.success is True
     assert response.message == "Marked as deleted."
-    mock_repo.get_latest_fuel_supply_by_group_uuid.assert_awaited_once_with("some-uuid")
+    mock_repo.get_latest_fuel_supply_by_group_uuid.assert_awaited_once_with(
+        "some-uuid", fs_data.compliance_report_id
+    )
     mock_repo.delete_fuel_supply.assert_awaited_once()
 
 
@@ -388,7 +399,9 @@ async def test_delete_fuel_supply_changelog(fuel_supply_action_service):
 
     assert response.success is True
     assert response.message == "Marked as deleted."
-    mock_repo.get_latest_fuel_supply_by_group_uuid.assert_awaited_once_with("some-uuid")
+    mock_repo.get_latest_fuel_supply_by_group_uuid.assert_awaited_once_with(
+        "some-uuid", fs_data.compliance_report_id
+    )
     mock_repo.create_fuel_supply.assert_awaited_once()
 
 

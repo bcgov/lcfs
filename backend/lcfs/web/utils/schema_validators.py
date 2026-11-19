@@ -5,6 +5,27 @@ from fastapi.exceptions import RequestValidationError
 # iteration digit.
 MAX_FUEL_SUFFIX_MAIN_DIGITS = 18
 
+# An unrecognized ("Other") fuel is reported in litres with the energy density
+# the supplier enters. The densest standard liquid fuel is about 39 MJ/L, so a
+# value above this is a typo or an inflated figure, not a real fuel.
+MAX_OTHER_FUEL_ENERGY_DENSITY = 100
+
+
+def other_fuel_energy_density_valid(energy_density) -> None:
+    """422 unless an Other fuel's energy density is above zero and in range."""
+    if energy_density is None or energy_density <= 0:
+        message = "Energy Density must be greater than zero when using Other fuel type"
+    elif energy_density > MAX_OTHER_FUEL_ENERGY_DENSITY:
+        message = (
+            "Energy Density must be at most "
+            f"{MAX_OTHER_FUEL_ENERGY_DENSITY} when using Other fuel type"
+        )
+    else:
+        return
+    raise RequestValidationError(
+        [{"loc": ("energyDensity",), "msg": message, "type": "value_error"}]
+    )
+
 
 def fuel_quantity_required(values: dict) -> dict:
     quantity = values.get("quantity")

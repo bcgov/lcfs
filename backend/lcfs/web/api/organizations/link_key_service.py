@@ -4,6 +4,7 @@ from fastapi import Depends
 from lcfs.db.models.organization.Organization import generate_secure_link_key
 from lcfs.db.models.organization.OrganizationLinkKey import OrganizationLinkKey
 from lcfs.web.core.decorators import service_handler
+from lcfs.web.core.link_key_auth import is_link_key_usable, link_key_expiry_from_now
 from lcfs.web.exception.exceptions import DataNotFoundException
 
 from .repo import OrganizationsRepository
@@ -111,6 +112,7 @@ class OrganizationLinkKeyService:
             organization_id=organization_id,
             form_id=form_id,
             link_key=new_link_key,
+            expiry_date=link_key_expiry_from_now(),
         )
 
         created_link_key = await self.repo.create_link_key(link_key_record)
@@ -146,6 +148,7 @@ class OrganizationLinkKeyService:
 
         new_link_key = generate_secure_link_key()
         existing_link_key.link_key = new_link_key
+        existing_link_key.expiry_date = link_key_expiry_from_now()
 
         updated_link_key = await self.repo.update_link_key(existing_link_key)
 
@@ -164,7 +167,7 @@ class OrganizationLinkKeyService:
         """
         link_key_record = await self.repo.get_link_key_by_key(link_key)
 
-        if not link_key_record:
+        if not link_key_record or not is_link_key_usable(link_key_record):
             return LinkKeyValidationSchema(
                 organization_id=0,
                 form_id=0,
