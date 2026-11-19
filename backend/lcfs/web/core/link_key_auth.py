@@ -10,11 +10,13 @@ from functools import wraps
 from fastapi import Request, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.organization.OrganizationLinkKey import OrganizationLinkKey
+from lcfs.db.models.organization.OrganizationStatus import OrgStatusEnum
 from lcfs.db.models.form.Form import Form
+from lcfs.settings import settings
 from lcfs.web.core.decorators import request_var, session_var
 
 
@@ -40,21 +42,63 @@ class LinkKeyUser:
         self.role_names = ["ANONYMOUS"]
 
 
+def link_key_expiry_from_now() -> datetime:
+    """
+    Default expiry for a newly issued or regenerated link key.
+
+    The column is a naive DateTime that is read back as UTC, so this returns a
+    naive UTC value.
+    """
+    return (
+        datetime.now(timezone.utc) + timedelta(days=settings.link_key_ttl_days)
+    ).replace(tzinfo=None)
+
+
+def is_link_key_usable(
+    link_key_record: OrganizationLinkKey, form_slug: Optional[str] = None
+) -> bool:
+    """
+    Single source of truth for whether a link key may grant access.
+
+    A key is usable only when it
+    - has an expiry date that is still in the future (a key with no expiry is
+      rejected, not treated as permanent),
+    - belongs to a Registered organization, and
+    - when ``form_slug`` is given, was issued for that exact form.
+    """
+    if form_slug is not None and link_key_record.form_slug != form_slug:
+        return False
+
+    expiry = link_key_record.expiry_date
+    if expiry is None:
+        return False
+    if expiry.tzinfo is None:
+        expiry = expiry.replace(tzinfo=timezone.utc)
+    if expiry <= datetime.now(timezone.utc):
+        return False
+
+    organization = link_key_record.organization
+    org_status = getattr(organization, "org_status", None)
+    if org_status is None or org_status.status != OrgStatusEnum.Registered:
+        return False
+
+    return True
+
+
 async def validate_link_key_access(
     request: Request, db: AsyncSession
 ) -> Optional[LinkKeyUser]:
     """
-    Validate link key from query parameters and return anonymous user
+    Validate the link key in the request path and return an anonymous user.
+
+    The key must have been issued for the form named in the same path. Callers
+    get ``None`` for every kind of rejection so the response does not reveal
+    why a key was refused. Key material is never logged.
     """
-    # Accept link key from query parameter or path parameter (mounted routes pass path params)
-    link_key = request.path_params.get("link_key") or request.query_params.get("key")
+    link_key = request.path_params.get("link_key")
+    form_slug = request.path_params.get("form_slug")
 
-    logger.info(
-        "Validating link key access",
-        link_key=link_key[:20] + "..." if link_key else None,
-    )
-
-    if not link_key:
+    if not link_key or not form_slug:
         logger.info("No link key provided")
         return None
 
@@ -67,20 +111,9 @@ async def validate_link_key_access(
     )
     link_key_record = result.scalar_one_or_none()
 
-    logger.info("Link key query result", found=link_key_record is not None)
-
-    if not link_key_record:
+    if not link_key_record or not is_link_key_usable(link_key_record, form_slug):
+        logger.info("Link key rejected", form_slug=form_slug)
         return None
-
-    # Enforce expiry if set
-    if getattr(link_key_record, "expiry_date", None):
-        now = datetime.now(timezone.utc)
-        expiry = link_key_record.expiry_date
-        # Ensure both are timezone-aware for safe comparison
-        if expiry.tzinfo is None:
-            expiry = expiry.replace(tzinfo=timezone.utc)
-        if expiry <= now:
-            return None
 
     logger.info(
         "Link key access granted",
