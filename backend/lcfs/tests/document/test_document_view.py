@@ -1,9 +1,15 @@
 import io
+from types import SimpleNamespace
+
 import pytest
 from fastapi import UploadFile
 from starlette import status
 
 from lcfs.db.models.document.Document import DocumentScanStatusEnum
+from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
+    RECORD_KIND_AGREEMENT,
+    RECORD_KIND_LEGACY_AWARD,
+)
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.services.clamav.client import (
     FileTooLargeToScanException,
@@ -124,7 +130,19 @@ class FakeComplianceReportValidation:
         return
 
 
+class FakeInitiativeAgreementRepo:
+    # The shared delete route reads record_kind; legacy credit awards are
+    # the initiativeAgreement rows it still serves.
+    record_kind = RECORD_KIND_LEGACY_AWARD
+
+    async def get_initiative_agreement_by_id(self, initiative_agreement_id: int):
+        return SimpleNamespace(record_kind=FakeInitiativeAgreementRepo.record_kind)
+
+
 class FakeInitiativeAgreementValidation:
+    def __init__(self):
+        self.repo = FakeInitiativeAgreementRepo()
+
     async def validate_organization_access(self, parent_id: int):
         return
 
@@ -396,6 +414,46 @@ async def test_delete_file_refuses_folder_enabled_parent_type(
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert "document bin" in response.json()["detail"]
     assert FakeRecordingDocumentService.deleted == []
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "record_kind,expected_status,deleted",
+    [
+        # An agreement has a bin (#5337), so this route must refuse it.
+        (RECORD_KIND_AGREEMENT, status.HTTP_403_FORBIDDEN, []),
+        # A legacy credit award has no bin; the transaction pages delete
+        # its files here.
+        (
+            RECORD_KIND_LEGACY_AWARD,
+            status.HTTP_200_OK,
+            [("initiativeAgreement", 1, 100)],
+        ),
+    ],
+)
+async def test_delete_file_initiative_agreement_by_record_kind(
+    fastapi_app,
+    client,
+    set_mock_user,
+    monkeypatch,
+    record_kind,
+    expected_status,
+    deleted,
+):
+    set_mock_user(fastapi_app, [RoleEnum.IA_ANALYST])
+    monkeypatch.setattr(FakeInitiativeAgreementRepo, "record_kind", record_kind)
+    FakeRecordingDocumentService.deleted = []
+    fastapi_app.dependency_overrides[DocumentService] = (
+        lambda: FakeRecordingDocumentService()
+    )
+
+    url = fastapi_app.url_path_for(
+        "delete_file", parent_type="initiativeAgreement", parent_id=1, document_id=100
+    )
+    response = await client.delete(url)
+
+    assert response.status_code == expected_status
+    assert FakeRecordingDocumentService.deleted == deleted
 
 
 # --- internal_comment attachments (issue #4514) ------------------------------
