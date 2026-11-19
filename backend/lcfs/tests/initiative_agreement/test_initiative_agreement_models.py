@@ -54,6 +54,9 @@ NEW_TABLES = (
     "designated_action_internal_comment",
     "initiative_agreement_note",
     "initiative_agreement_note_designated_action",
+    "da_eoc_submission",
+    "da_eoc_submission_history",
+    "da_eoc_submission_document_association",
 )
 
 
@@ -438,3 +441,158 @@ async def test_evidence_submissions_append_only_history(dbsession):
     assert len(submissions) == 2
     await dbsession.refresh(submissions[0])
     assert submissions[0].cover_letter_received is False
+
+
+@pytest.mark.anyio
+async def test_da_eoc_sub_status_history_uses_latest_event_including_clear(dbsession):
+    from lcfs.db.models.initiative_agreement.DaEocSubmission import (
+        DaEocSubmission,
+        DaEocSubmissionHistory,
+        EVENT_SUB_STATUS_CHANGE,
+        current_sub_status_query,
+    )
+
+    agreement = await _create_agreement(dbsession)
+    action = await _create_designated_action(dbsession, agreement)
+    submission = DaEocSubmission(
+        designated_action_id=action.designated_action_id, organization_id=1
+    )
+    dbsession.add(submission)
+    await dbsession.flush()
+    submission_id = submission.da_eoc_submission_id
+    assert (
+        await dbsession.execute(current_sub_status_query(submission_id))
+    ).scalar() is None
+
+    async def add_event(event, sub_status=None):
+        dbsession.add(
+            DaEocSubmissionHistory(
+                da_eoc_submission_id=submission_id, event=event, sub_status=sub_status
+            )
+        )
+        await dbsession.flush()
+
+    await add_event(EVENT_SUB_STATUS_CHANGE, "Assigned")
+    await add_event("DETAILS_EDITED")
+    assert (
+        await dbsession.execute(current_sub_status_query(submission_id))
+    ).scalar() == "Assigned"
+    await add_event(EVENT_SUB_STATUS_CHANGE, "Under Review")
+    assert (
+        await dbsession.execute(current_sub_status_query(submission_id))
+    ).scalar() == "Under Review"
+    await add_event(
+        EVENT_SUB_STATUS_CHANGE
+    )  # Explicit clear must not revive older states.
+    assert (
+        await dbsession.execute(current_sub_status_query(submission_id))
+    ).scalar() is None
+    await add_event(EVENT_SUB_STATUS_CHANGE, "Information requested")
+    assert (
+        await dbsession.execute(current_sub_status_query(submission_id))
+    ).scalar() == "Information requested"
+
+    with pytest.raises(IntegrityError):
+        async with dbsession.begin_nested():
+            await add_event(EVENT_SUB_STATUS_CHANGE, "Unknown")
+    with pytest.raises(IntegrityError):
+        async with dbsession.begin_nested():
+            await add_event("DETAILS_EDITED", "Assigned")
+
+
+@pytest.mark.anyio
+async def test_da_eoc_submission_integrity_and_attachment_links(dbsession):
+    """Exercise database constraints and parent/document deletion semantics."""
+    from lcfs.db.models.document.Document import Document
+    from lcfs.db.models.initiative_agreement.DaEocSubmission import (
+        DaEocSubmission,
+        da_eoc_submission_document_association,
+    )
+
+    agreement = await _create_agreement(dbsession)
+    action = await _create_designated_action(dbsession, agreement)
+    submission = DaEocSubmission(
+        designated_action_id=action.designated_action_id,
+        organization_id=1,
+        summary_of_work_completed="<p>Completed</p>",
+    )
+    second = DaEocSubmission(
+        designated_action_id=action.designated_action_id,
+        organization_id=1,
+        status="Submitted",
+    )
+    dbsession.add_all([submission, second])
+    await dbsession.flush()
+    assert submission.status == "Draft"
+    assert submission.da_eoc_submission_id != second.da_eoc_submission_id
+
+    documents = [
+        Document(
+            file_key=f"test-5499-{n}",
+            file_name=f"{n}.txt",
+            file_size=1,
+            mime_type="text/plain",
+        )
+        for n in range(2)
+    ]
+    dbsession.add_all(documents)
+    await dbsession.flush()
+    await dbsession.execute(
+        da_eoc_submission_document_association.insert(),
+        [
+            {
+                "da_eoc_submission_id": submission.da_eoc_submission_id,
+                "document_id": d.document_id,
+            }
+            for d in documents
+        ],
+    )
+    count = await dbsession.scalar(
+        select(text("count(*)"))
+        .select_from(da_eoc_submission_document_association)
+        .where(
+            da_eoc_submission_document_association.c.da_eoc_submission_id
+            == submission.da_eoc_submission_id
+        )
+    )
+    assert count == 2
+
+    for values in (
+        {
+            "designated_action_id": action.designated_action_id,
+            "organization_id": 1,
+            "status": "Invalid",
+        },
+        {"designated_action_id": -1, "organization_id": 1},
+        {"designated_action_id": action.designated_action_id, "organization_id": -1},
+    ):
+        with pytest.raises(IntegrityError):
+            async with dbsession.begin_nested():
+                dbsession.add(DaEocSubmission(**values))
+                await dbsession.flush()
+
+    with pytest.raises(IntegrityError):
+        async with dbsession.begin_nested():
+            await dbsession.execute(
+                text("DELETE FROM designated_action WHERE designated_action_id = :id"),
+                {"id": action.designated_action_id},
+            )
+
+    # Database cascade removes links, not documents.
+    await dbsession.execute(
+        text("DELETE FROM da_eoc_submission WHERE da_eoc_submission_id = :id"),
+        {"id": submission.da_eoc_submission_id},
+    )
+    assert (
+        await dbsession.scalar(
+            select(text("count(*)"))
+            .select_from(da_eoc_submission_document_association)
+            .where(
+                da_eoc_submission_document_association.c.da_eoc_submission_id
+                == submission.da_eoc_submission_id
+            )
+        )
+        == 0
+    )
+    for document in documents:
+        assert await dbsession.get(Document, document.document_id) is not None

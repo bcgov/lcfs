@@ -66,7 +66,7 @@ vi.mock('@/components/BCBox/index.jsx', () => ({
   default: ({ children, ...props }) => <div {...props}>{children}</div>
 }))
 
-vi.mock('@/components/BCModal.jsx', () => ({
+vi.mock('@/components/BCModal', () => ({
   default: ({ open, data, onClose, ...props }) =>
     open ? (
       <div data-test="modal" {...props}>

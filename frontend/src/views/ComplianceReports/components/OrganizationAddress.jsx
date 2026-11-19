@@ -16,7 +16,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
 import * as Yup from 'yup'
 import { PHONE_REGEX } from '@/constants/common'
-import BCModal from '@/components/BCModal.jsx'
+import BCModal from '@/components/BCModal'
 import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/routes/routes.js'
 import {

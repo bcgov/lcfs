@@ -3,18 +3,6 @@ import type { ButtonProps } from '@mui/material/Button'
 import BCButtonRoot from './BCButtonRoot'
 import CircularProgress from '@mui/material/CircularProgress'
 
-type BCButtonColor =
-  | 'white'
-  | 'primary'
-  | 'secondary'
-  | 'info'
-  | 'success'
-  | 'warning'
-  | 'error'
-  | 'light'
-  | 'dark'
-  | 'smoky'
-
 type BCButtonVariant = 'text' | 'contained' | 'outlined' | 'gradient'
 
 type BCButtonSize = 'small' | 'medium' | 'large'
@@ -23,7 +11,7 @@ interface BCButtonProps extends Omit<
   ButtonProps,
   'color' | 'variant' | 'size'
 > {
-  color?: BCButtonColor
+  color?: string
   variant?: BCButtonVariant
   size?: BCButtonSize
   circular?: boolean

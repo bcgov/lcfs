@@ -13,7 +13,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import BCAlert from '@/components/BCAlert'
 import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
 import { Role } from '@/components/Role'
-import { TogglePanel } from '@/components/TogglePanel.jsx'
+import { TogglePanel } from '@/components/TogglePanel'
 import {
   REPORT_SCHEDULES,
   LEGISLATION_TRANSITION_YEAR
@@ -33,7 +33,7 @@ import { useGetAllNotionalTransfers } from '@/hooks/useNotionalTransfer'
 import { useGetAllOtherUses } from '@/hooks/useOtherUses'
 import { ROUTES, buildPath } from '@/routes/routes'
 import colors from '@/themes/base/colors'
-import { isArrayEmpty } from '@/utils/array.js'
+import { isArrayEmpty } from '@/utils/array'
 import { AllocationAgreementChangelog } from '@/views/AllocationAgreements/AllocationAgreementChangelog.jsx'
 import { AllocationAgreementSummary } from '@/views/AllocationAgreements/AllocationAgreementSummary'
 import { FinalSupplyEquipmentSummary } from '@/views/FinalSupplyEquipments/FinalSupplyEquipmentSummary'
