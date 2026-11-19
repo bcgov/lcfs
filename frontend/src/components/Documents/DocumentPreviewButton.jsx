@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import PropTypes from 'prop-types'
+import { useTranslation } from 'react-i18next'
 import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
 import Visibility from '@mui/icons-material/Visibility'
 
 import DocumentPreviewDialog from '@/components/Documents/DocumentPreviewDialog'
-import { getDocumentDisplayName } from '@/utils/documents'
+import { getDocumentDisplayName, isDocumentLocked } from '@/utils/documents'
 
 const DocumentPreviewButton = ({
   parentType,
@@ -13,11 +14,30 @@ const DocumentPreviewButton = ({
   document,
   size = 'small'
 }) => {
+  const { t } = useTranslation(['report'])
   const [open, setOpen] = useState(false)
   const fileName = getDocumentDisplayName(document || {})
 
   if (!document?.documentId || parentID == null || !parentType) {
     return null
+  }
+
+  // A macro-enabled workbook can't be opened until it's approved
+  if (isDocumentLocked(document)) {
+    return (
+      <Tooltip title={t('report:documentScan.lockedTooltip')}>
+        <span>
+          <IconButton
+            aria-label={`Preview ${fileName}`}
+            size={size}
+            disabled
+            data-test="document-preview-button"
+          >
+            <Visibility fontSize="inherit" />
+          </IconButton>
+        </span>
+      </Tooltip>
+    )
   }
 
   return (

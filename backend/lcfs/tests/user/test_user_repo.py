@@ -13,6 +13,19 @@ def user_repo(dbsession):
     return UserRepository(db=dbsession)
 
 
+def test_activity_queries_include_compliance_report_history():
+    repo = UserRepository(db=MagicMock())
+    combined_query, conditions = repo._build_activity_queries()
+
+    query_sql = str(
+        combined_query.element.compile(compile_kwargs={"literal_binds": True})
+    )
+
+    assert "compliance_report_history" in query_sql
+    assert "'ComplianceReport'" in query_sql
+    assert conditions == []
+
+
 # Tests for get_full_name
 @pytest.mark.anyio
 async def test_get_full_name_success(dbsession, user_repo):
