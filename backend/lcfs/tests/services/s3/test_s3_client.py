@@ -44,6 +44,32 @@ from lcfs.web.exception.exceptions import DataNotFoundException
 PDF_BYTES = b"%PDF-1.7\nfile-bytes"
 
 
+@pytest.mark.anyio
+async def test_get_document_for_parent_excludes_soft_deleted_documents():
+    result = MagicMock()
+    result.scalar_one_or_none.return_value = None
+    db = AsyncMock()
+    db.execute = AsyncMock(return_value=result)
+    service = DocumentService.__new__(DocumentService)
+    service.db = db
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service._get_document_for_parent(
+            document_id=10,
+            parent_id=20,
+            parent_type="compliance_report",
+        )
+
+    assert exc_info.value.status_code == 404
+    statement = db.execute.await_args.args[0]
+    compiled = str(
+        statement.compile(
+            dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
+        )
+    )
+    assert "document.deleted_date IS NULL" in compiled
+
+
 @pytest.fixture
 def db_mock():
     db = AsyncMock()

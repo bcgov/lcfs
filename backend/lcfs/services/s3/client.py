@@ -721,7 +721,11 @@ class DocumentService:
         return comment
 
     async def _get_document_for_parent(
-        self, document_id: int, parent_id: int, parent_type: str
+        self,
+        document_id: int,
+        parent_id: int,
+        parent_type: str,
+        include_deleted: bool = False,
     ) -> Document:
         association_info = DOCUMENT_PARENT_ASSOCIATIONS.get(parent_type)
         if not association_info:
@@ -731,16 +735,20 @@ class DocumentService:
             )
 
         association_table, parent_column = association_info
+        filters = [
+            Document.document_id == document_id,
+            getattr(association_table.c, parent_column) == parent_id,
+        ]
+        if not include_deleted:
+            filters.append(Document.deleted_date.is_(None))
+
         result = await self.db.execute(
             select(Document)
             .join(
                 association_table,
                 association_table.c.document_id == Document.document_id,
             )
-            .where(
-                Document.document_id == document_id,
-                getattr(association_table.c, parent_column) == parent_id,
-            )
+            .where(*filters)
         )
         document = result.scalar_one_or_none()
         if not document:
@@ -762,7 +770,9 @@ class DocumentService:
             )
 
         document = await self._get_document_for_parent(
-            document_id, parent_id, parent_type
+            document_id,
+            parent_id,
+            parent_type,
         )
         new_display_name = _normalize_display_name(display_name, document.file_name)
 
@@ -855,7 +865,10 @@ class DocumentService:
         # The caller was authorized for the parent, so the document must hang
         # off that parent; one linked elsewhere reads as missing.
         document = await self._get_document_for_parent(
-            document_id, parent_id, parent_type
+            document_id,
+            parent_id,
+            parent_type,
+            include_deleted=require_physical_delete,
         )
         association_table, parent_column = DOCUMENT_PARENT_ASSOCIATIONS[parent_type]
 

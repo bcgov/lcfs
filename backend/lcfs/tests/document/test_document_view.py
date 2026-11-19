@@ -2,7 +2,9 @@ import io
 import pytest
 from fastapi import UploadFile
 from starlette import status
+from types import SimpleNamespace
 
+from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.db.models.document.Document import DocumentScanStatusEnum
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.services.clamav.client import (
@@ -121,7 +123,9 @@ class FakeForbiddenDocumentService(FakeDocumentService):
 
 class FakeComplianceReportValidation:
     async def validate_organization_access(self, parent_id: int):
-        return
+        return SimpleNamespace(
+            current_status=SimpleNamespace(status=ComplianceReportStatusEnum.Draft)
+        )
 
 
 class FakeInitiativeAgreementValidation:
@@ -194,6 +198,21 @@ async def test_upload_file_success(fastapi_app, client):
     assert data["createDate"] == "2024-01-01T00:00:00Z"
     assert data["createUser"] == "tester"
 
+
+@pytest.mark.anyio
+async def test_upload_file_uses_shared_write_access_rules(
+    fastapi_app, client, set_mock_user
+):
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+    url = fastapi_app.url_path_for(
+        "upload_file", parent_type="designatedAction", parent_id=1
+    )
+    files = {"file": ("test.txt", io.BytesIO(b"file content"), "text/plain")}
+
+    response = await client.post(url, files=files)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert "Government Staff" in response.json()["detail"]
 
 
 @pytest.mark.anyio
@@ -328,10 +347,15 @@ async def test_stream_document_admin_adjustment(fastapi_app, client):
 
 @pytest.mark.anyio
 @pytest.mark.parametrize(
-    "parent_type",
-    ["compliance_report", "initiativeAgreement", "administrativeAdjustment"],
+    ("parent_type", "roles"),
+    [
+        ("compliance_report", [RoleEnum.SUPPLIER]),
+        ("initiativeAgreement", [RoleEnum.GOVERNMENT]),
+        ("administrativeAdjustment", [RoleEnum.GOVERNMENT]),
+    ],
 )
-async def test_delete_file_valid(fastapi_app, client, parent_type):
+async def test_delete_file_valid(fastapi_app, client, set_mock_user, parent_type, roles):
+    set_mock_user(fastapi_app, roles)
     url = fastapi_app.url_path_for(
         "delete_file", parent_type=parent_type, parent_id=1, document_id=100
     )
@@ -357,6 +381,54 @@ async def test_delete_file_invalid_parent_type(fastapi_app, client):
     response = await client.delete(url)
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert "Unsupported document parent type" in response.json()["detail"]
+
+
+@pytest.mark.anyio
+async def test_delete_file_rejects_read_only_role(fastapi_app, client, set_mock_user):
+    set_mock_user(fastapi_app, [RoleEnum.READ_ONLY])
+    url = fastapi_app.url_path_for(
+        "delete_file", parent_type="compliance_report", parent_id=1, document_id=100
+    )
+
+    response = await client.delete(url)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.json()["detail"] == "Insufficient permissions"
+
+
+@pytest.mark.anyio
+async def test_delete_file_supplier_requires_draft_compliance_report(
+    fastapi_app, client, set_mock_user
+):
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+
+    class SubmittedComplianceReportValidation(FakeComplianceReportValidation):
+        async def validate_organization_access(self, parent_id: int):
+            return SimpleNamespace(
+                current_status=SimpleNamespace(
+                    status=ComplianceReportStatusEnum.Submitted
+                )
+            )
+
+    fastapi_app.dependency_overrides[ComplianceReportValidation] = (
+        lambda: SubmittedComplianceReportValidation()
+    )
+
+    class FailingDocumentService(FakeDocumentService):
+        async def delete_file(self, *args, **kwargs):
+            pytest.fail("delete_file must not run when the report is not editable")
+
+    fastapi_app.dependency_overrides[DocumentService] = (
+        lambda: FailingDocumentService()
+    )
+    url = fastapi_app.url_path_for(
+        "delete_file", parent_type="compliance_report", parent_id=1, document_id=100
+    )
+
+    response = await client.delete(url)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert "Draft" in response.json()["detail"]
 
 
 class FakeRecordingDocumentService(FakeDocumentService):
@@ -457,7 +529,9 @@ async def test_get_internal_comment_documents_forbidden(fastapi_app, client):
 
 
 @pytest.mark.anyio
-async def test_rename_file_for_designated_action(fastapi_app, client):
+async def test_rename_file_for_designated_action(
+    fastapi_app, client, set_mock_user
+):
     """
     Renaming a designated action's document is allowed.
 
@@ -466,6 +540,7 @@ async def test_rename_file_for_designated_action(fastapi_app, client):
     rename on the initiative agreements document tree fell through to the
     catch-all 403. It delegates to the shared guard now.
     """
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
     url = fastapi_app.url_path_for(
         "rename_file",
         parent_type="designatedAction",
