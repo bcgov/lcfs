@@ -13,6 +13,7 @@ import DialogContent from '@mui/material/DialogContent'
 import DialogTitle from '@mui/material/DialogTitle'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import IconButton from '@mui/material/IconButton'
+import Link from '@mui/material/Link'
 import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
 import Step from '@mui/material/Step'
@@ -383,14 +384,19 @@ export const EOCSubmissionPage = ({
                 readOnly={locked}
                 headerAction={
                   !locked && (
-                    <Button
+                    <Link
+                      component="button"
+                      type="button"
+                      variant="body2"
                       onClick={() => onUploadOpen(true)}
-                      size="small"
-                      variant="text"
-                      sx={{ textDecoration: 'underline' }}
+                      sx={{
+                        textDecoration: 'underline',
+                        color: 'primary.main',
+                        '&:hover': { color: 'primary.dark' }
+                      }}
                     >
                       {t('initiativeAgreement:submission.manageDocuments')}
-                    </Button>
+                    </Link>
                   )
                 }
               />
@@ -416,20 +422,29 @@ export const EOCSubmissionPage = ({
                 {t('initiativeAgreement:submission.evidenceSectionTitle')}
               </BCTypography>
               <Stack direction="row" spacing={0.75}>
-                <Button
-                  size="small"
+                <Link
+                  component="button"
+                  type="button"
+                  variant="body2"
+                  sx={{ textDecoration: 'underline', color: 'primary.main' }}
                   onClick={() =>
                     setExpanded(sections.map((section) => section.id))
                   }
                 >
                   {t('initiativeAgreement:submission.expandAll')}
-                </Button>
+                </Link>
                 <BCTypography component="span" color="text.secondary">
                   |
                 </BCTypography>
-                <Button size="small" onClick={() => setExpanded([])}>
+                <Link
+                  component="button"
+                  type="button"
+                  variant="body2"
+                  sx={{ textDecoration: 'underline', color: 'primary.main' }}
+                  onClick={() => setExpanded([])}
+                >
                   {t('initiativeAgreement:submission.collapseAll')}
-                </Button>
+                </Link>
               </Stack>
             </BCBox>
 

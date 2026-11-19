@@ -1,9 +1,9 @@
 import Accordion from '@mui/material/Accordion'
 import AccordionDetails from '@mui/material/AccordionDetails'
 import AccordionSummary from '@mui/material/AccordionSummary'
-import Button from '@mui/material/Button'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { useTranslation } from 'react-i18next'
+import BCButton from '@/components/BCButton'
 import BCBox from '@/components/BCBox'
 import { evidencePlainText } from './evidenceRichText'
 import { EOCRequirementResponses } from './EOCRequirementResponses'
@@ -63,14 +63,16 @@ export const EOCRequirementSection = ({
         />
         {!readOnly && (
           <BCBox mt={2}>
-            <Button
+            <BCButton
               variant="contained"
+              color="primary"
+              size="small"
               disabled={saving}
               onClick={onSave}
               data-test={`eoc-response-save-${requirement.id}`}
             >
               {t('initiativeAgreement:submission.save')}
-            </Button>
+            </BCButton>
           </BCBox>
         )}
       </AccordionDetails>
