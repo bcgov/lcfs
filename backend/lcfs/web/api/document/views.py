@@ -11,6 +11,7 @@ from starlette.responses import StreamingResponse
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.services.s3.client import DocumentService
 from lcfs.db.models.document.Document import DocumentScanStatusEnum
 from lcfs.services.s3.schema import (
@@ -65,6 +66,29 @@ async def ci_application_validator(
 router = APIRouter()
 logger = structlog.get_logger(__name__)
 
+DOCUMENT_READ_ROLES = [
+    RoleEnum.SUPPLIER,
+    RoleEnum.GOVERNMENT,
+    RoleEnum.ANALYST,
+    RoleEnum.COMPLIANCE_MANAGER,
+    RoleEnum.DIRECTOR,
+    RoleEnum.COMPLIANCE_REPORTING,
+    RoleEnum.SIGNING_AUTHORITY,
+    RoleEnum.CI_APPLICANT,
+    RoleEnum.IA_PROPONENT,
+    RoleEnum.IA_ANALYST,
+    RoleEnum.IA_MANAGER,
+]
+DOCUMENT_WRITE_ROLES = [
+    RoleEnum.SUPPLIER,
+    RoleEnum.GOVERNMENT,
+    RoleEnum.ANALYST,
+    RoleEnum.CI_APPLICANT,
+    RoleEnum.IA_ANALYST,
+    RoleEnum.IA_MANAGER,
+    RoleEnum.DIRECTOR,
+]
+
 
 async def validate_parent_access(
     parent_type: str,
@@ -83,25 +107,50 @@ async def validate_parent_access(
 
     Every document route funnels through this, so a parent type that is not
     handled fails closed rather than silently skipping validation. *write*
-    distinguishes internal comment edits from reads, applies the supplier
-    upload window for CI applications, and blocks government writes to fuel
-    production facility documents; the other surfaces grant both together.
+    applies each parent's module-specific mutation rules, including the
+    supplier Draft window for compliance reports, government-only agreement
+    surfaces, CI application upload windows, and facility restrictions.
     """
     if parent_type == "compliance_report":
-        await cr_validate.validate_organization_access(parent_id)
+        compliance_report = await cr_validate.validate_organization_access(parent_id)
+        if (
+            write
+            and RoleEnum.SUPPLIER in request.user.role_names
+            and compliance_report.current_status.status
+            != ComplianceReportStatusEnum.Draft
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Suppliers can only change files when the compliance report status is Draft.",
+            )
     elif parent_type == "initiativeAgreement":
         await ia_validate.validate_organization_access(parent_id)
+        if write and RoleEnum.GOVERNMENT not in request.user.role_names:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only Government Staff can change files on Initiative Agreements.",
+            )
     elif parent_type in ("adminAdjustment", "administrativeAdjustment"):
         # The service layer and the delete route spell this
         # "administrativeAdjustment"; the frontend sends the same. Accept both
         # so the guard cannot be bypassed by choosing the other spelling.
         await aa_validate.validate_organization_access(parent_id)
+        if write and RoleEnum.GOVERNMENT not in request.user.role_names:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only Government Staff can change files on Administrative Adjustments.",
+            )
     elif parent_type == "designatedAction":
         # An action's audience is its agreement's audience.
         agreement_id = await document_service.get_designated_action_agreement_id(
             parent_id
         )
         await ia_validate.validate_organization_access(agreement_id)
+        if write and RoleEnum.GOVERNMENT not in request.user.role_names:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only Government Staff can change files on designated actions.",
+            )
     elif parent_type == "charging_site":
         await cs_validate.validate_organization_access(parent_id)
     elif parent_type == "ci_application":
@@ -129,7 +178,7 @@ async def validate_parent_access(
     response_model=List[FileResponseSchema],
     status_code=status.HTTP_200_OK,
 )
-@view_handler(["*"])
+@view_handler(DOCUMENT_READ_ROLES)
 async def get_all_documents(
     request: Request,
     parent_id: int,
@@ -180,12 +229,7 @@ async def get_all_documents(
     status_code=status.HTTP_201_CREATED,
 )
 @view_handler(
-    [
-        RoleEnum.SUPPLIER,
-        RoleEnum.ANALYST,
-        RoleEnum.GOVERNMENT,
-        RoleEnum.CI_APPLICANT,
-    ]
+    DOCUMENT_WRITE_ROLES
 )
 async def upload_file(
     request: Request,
@@ -212,22 +256,18 @@ async def upload_file(
     cs_validate: ChargingSiteValidation = Depends(),
     ci_validate=Depends(ci_application_validator),
 ) -> FileResponseSchema:
-    if parent_type == "compliance_report":
-        await cr_validate.validate_organization_access(parent_id)
-
-    if parent_type == "initiativeAgreement":
-        await ia_validate.validate_organization_access(parent_id)
-
-    if parent_type == "adminAdjustment":
-        await aa_validate.validate_organization_access(parent_id)
-
-    if parent_type == "charging_site":
-        await cs_validate.validate_organization_access(parent_id)
-
-    if parent_type == "ci_application":
-        await ci_validate.validate_document_write_access(parent_id)
-    elif parent_type == "fuel_production_facility":
-        await ci_validate.validate_facility_access(parent_id, write=True)
+    await validate_parent_access(
+        parent_type,
+        parent_id,
+        request,
+        document_service,
+        cr_validate,
+        ia_validate,
+        aa_validate,
+        cs_validate,
+        ci_validate,
+        write=True,
+    )
 
     document = await document_service.upload_file(
         file,
@@ -244,7 +284,7 @@ async def upload_file(
     "/{parent_type}/{parent_id}/{document_id}",
     status_code=status.HTTP_200_OK,
 )
-@view_handler(["*"])
+@view_handler(DOCUMENT_READ_ROLES)
 async def stream_document(
     request: Request,
     parent_id: int,
@@ -303,14 +343,7 @@ async def stream_document(
     response_model=FileResponseSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler(
-    [
-        RoleEnum.SUPPLIER,
-        RoleEnum.ANALYST,
-        RoleEnum.GOVERNMENT,
-        RoleEnum.CI_APPLICANT,
-    ]
-)
+@view_handler(DOCUMENT_WRITE_ROLES)
 async def rename_file(
     request: Request,
     parent_type: str,
@@ -397,6 +430,7 @@ async def review_document_scan(
 @router.delete(
     "/{parent_type}/{parent_id}/{document_id}",
 )
+@view_handler(DOCUMENT_WRITE_ROLES)
 async def delete_file(
     request: Request,
     parent_type: str,
