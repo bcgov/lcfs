@@ -256,7 +256,7 @@ After deployment, run a Metabase schema sync so the views appear.
 
 ## Migration and reference data
 
-`810923914d50` (on `9e0e5741b48f`) does the following:
+`810923914d50` (on `9b3e5c7a1d24`) does the following:
 1. Creates the `lcjfip_incentive_type_enum` type and the 14 tables.
 2. Seeds the lookups: 4 statuses, 4 CAR types, 5 certificate types, 12 feedstock sources, 3 incentive options and 4 rates.
 3. Seeds the "LCJFIP application notes" comment category.
@@ -266,8 +266,6 @@ After deployment, run a Metabase schema sync so the views appear.
 Downgrade drops all of this, including any LCJFIP comments.
 
 No application period is seeded: the first intake round's name and dates are still to be confirmed (open question 5). Until a period exists, submission has no period to assign. Development data can insert one.
-
-Each open PR that adds a migration on `9e0e5741b48f` will need its `down_revision` re-pointed at whichever lands second.
 
 ## Planned extensions
 
