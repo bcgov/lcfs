@@ -2,6 +2,8 @@ from unittest.mock import MagicMock, AsyncMock
 import pytest
 from fastapi.exceptions import RequestValidationError
 
+from lcfs.db.models.compliance.ComplianceReport import QuantityUnitsEnum
+from lcfs.db.models.compliance.FuelSupply import FuelSupply
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.fuel_supply.schema import FuelSupplyCreateUpdateSchema
@@ -313,3 +315,46 @@ async def test_validate_other_end_use_provided_2024(fuel_supply_validation):
     await validation.validate_other(fuel_supply_data, compliance_period_year=2024)
     await validation.validate_other(fuel_supply_data, compliance_period_year=2025)
     await validation.validate_other(fuel_supply_data, compliance_period_year=2030)
+
+
+@pytest.mark.anyio
+async def test_check_duplicate_of_prev_data_reads_a_negative_stored_quantity(
+    fuel_supply_validation,
+):
+    # A previous version saved before the quantity CHECK can hold a negative
+    # quantity. Undoing the newer version must still check it for duplicates.
+    validation, mock_fs_repo, _ = fuel_supply_validation
+    mock_fs_repo.get_prev_fuel_supply_by_group_uuid = AsyncMock(
+        return_value=FuelSupply(
+            compliance_report_id=1,
+            group_uuid="group-1",
+            version=0,
+            fuel_type_id=1,
+            fuel_category_id=1,
+            end_use_id=24,
+            provision_of_the_act_id=1,
+            quantity=-500,
+            units=QuantityUnitsEnum.Litres,
+        )
+    )
+    mock_fs_repo.check_duplicate = AsyncMock(return_value=None)
+
+    result = await validation.check_duplicate_of_prev_data(
+        FuelSupplyCreateUpdateSchema(
+            compliance_report_id=2,
+            fuel_supply_id=10,
+            group_uuid="group-1",
+            version=1,
+            fuel_type_id=1,
+            fuel_category_id=1,
+            end_use_id=24,
+            provision_of_the_act_id=1,
+            quantity=500,
+            units="L",
+            deleted=True,
+        )
+    )
+
+    assert result is None
+    [prev_data] = mock_fs_repo.check_duplicate.await_args.args
+    assert prev_data.quantity == -500

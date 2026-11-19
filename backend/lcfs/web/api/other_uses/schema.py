@@ -108,7 +108,7 @@ class OtherUsesCreateSchema(BaseSchema):
     fuel_type: str
     fuel_category: str
     provision_of_the_act: str
-    quantity_supplied: int
+    quantity_supplied: int = Field(ge=0)
     units: str
     expected_use: str
     fuel_code: Optional[str] = None
