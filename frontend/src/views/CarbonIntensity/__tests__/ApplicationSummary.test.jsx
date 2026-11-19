@@ -23,6 +23,16 @@ vi.mock('@/components/Documents/DocumentPreviewButton', () => ({
   )
 }))
 
+vi.mock('@/components/Documents/DocumentScanStatus', () => ({
+  __esModule: true,
+  default: ({ document, parentType, parentID }) =>
+    document.scanStatus ? (
+      <span data-test="document-scan-status">
+        {`${document.scanStatus} ${parentType} ${parentID}`}
+      </span>
+    ) : null
+}))
+
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: () => <div data-test="grid-stub" />
 }))
@@ -158,6 +168,43 @@ describe('ApplicationSummary', () => {
 
     fireEvent.click(screen.getByText('process-flow.pdf'))
     expect(mockDownloadDocument).toHaveBeenCalledWith(9, 'process-flow.pdf')
+  })
+
+  test('locks a facility diagram that is waiting for macro approval', ({
+    render,
+    query,
+    theme,
+    localization,
+    router
+  }) => {
+    mockDownloadDocument.mockClear()
+    render(
+      <ApplicationSummary
+        ciApplication={{
+          ...baseApplication,
+          fuelProductionFacilityId: 4,
+          fuelProductionFacility: {
+            fuelProductionFacilityId: 4,
+            documents: [
+              {
+                documentId: 9,
+                fileName: 'process-flow.xlsm',
+                fileSize: 2048,
+                scanStatus: 'pending_approval'
+              }
+            ]
+          }
+        }}
+      />,
+      [query, theme, localization, router]
+    )
+
+    const facilityRow = screen.getByTestId('ci-summary-facility-document-row')
+    expect(facilityRow).toHaveTextContent(
+      'pending_approval fuel_production_facility 4'
+    )
+    fireEvent.click(screen.getByText('process-flow.xlsm'))
+    expect(mockDownloadDocument).not.toHaveBeenCalled()
   })
 
   test('omits the facility diagram section when the facility has no documents', ({

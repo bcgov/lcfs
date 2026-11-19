@@ -2,6 +2,7 @@ from openpyxl.styles import Alignment, Font
 from openpyxl.utils import get_column_letter
 from openpyxl.workbook import Workbook
 from openpyxl.worksheet.table import Table, TableStyleInfo
+from lcfs.utils.spreadsheet_sanitizer import append_spreadsheet_row
 
 from lcfs.web.api.compliance_report.schema import (
     LOW_CARBON_SUMMARY_TITLE,
@@ -32,7 +33,7 @@ class SummarySheetExporter(SheetExporter, SheetExporterSupport):
         bold = Font(bold=True)
 
         def append_and_bold(row):
-            ws.append(row)
+            append_spreadsheet_row(ws, row)
             for i, _ in enumerate(row):
                 cell = ws.cell(row=ws.max_row, column=i + 1)
                 cell.font = bold
@@ -52,7 +53,7 @@ class SummarySheetExporter(SheetExporter, SheetExporterSupport):
                 line.diesel,
                 line.jet_fuel,
             ]
-            ws.append(row)
+            append_spreadsheet_row(ws, row)
             for col_idx, val in enumerate(row, start=1):
                 cell = ws.cell(row=ws.max_row, column=col_idx)
                 if line.line == 11 and col_idx > 2:
@@ -79,7 +80,7 @@ class SummarySheetExporter(SheetExporter, SheetExporterSupport):
 
         for line in summary.low_carbon_fuel_target_summary:
             row = [line.line, line.description, line.value]
-            ws.append(row)
+            append_spreadsheet_row(ws, row)
             cell = ws.cell(row=ws.max_row, column=len(row))
             cell.number_format = "#,##0"
             if line.line == 21:
@@ -145,7 +146,7 @@ class SummarySheetExporter(SheetExporter, SheetExporterSupport):
                         ),
                     ]
                 )
-            ws.append(row)
+            append_spreadsheet_row(ws, row)
             cell = ws.cell(row=ws.max_row, column=3)
             cell.number_format = '"$"#,##0.00'
 

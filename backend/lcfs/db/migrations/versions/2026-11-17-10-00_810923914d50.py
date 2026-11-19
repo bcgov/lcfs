@@ -28,7 +28,7 @@ vw_lcjfip_purchase_detail_base from sql/views/metabase.sql, and revokes any
 reporting-role access to the base tables that default privileges granted.
 
 Revision ID: 810923914d50
-Revises: 9e0e5741b48f
+Revises: 9b3e5c7a1d24
 Create Date: 2026-11-17 10:00:00.000000
 """
 
@@ -45,7 +45,7 @@ from lcfs.db.dependencies import (
 
 # revision identifiers, used by Alembic.
 revision = "810923914d50"
-down_revision = "9e0e5741b48f"
+down_revision = "9b3e5c7a1d24"
 branch_labels = None
 depends_on = None
 

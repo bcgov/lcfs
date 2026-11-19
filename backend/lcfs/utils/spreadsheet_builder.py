@@ -7,6 +7,11 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.worksheet.worksheet import Worksheet
 from typing import Literal, TypedDict, List, Dict, Any, Optional
+from lcfs.utils.spreadsheet_sanitizer import (
+    is_formula_like_string,
+    sanitize_spreadsheet_value,
+    set_spreadsheet_cell_value,
+)
 
 logger = structlog.get_logger(__name__)
 MAX_XLS_WIDTH = 65535
@@ -133,9 +138,25 @@ class SpreadsheetBuilder:
             # Process raw sheets.
             for sheet in self.raw_sheets:
                 header, *data = sheet.data
-                df = pd.DataFrame(data, columns=header)
+                df = pd.DataFrame(
+                    [
+                        [sanitize_spreadsheet_value(value) for value in row]
+                        for row in data
+                    ],
+                    columns=[sanitize_spreadsheet_value(value) for value in header],
+                )
                 df.to_excel(writer, index=False, sheet_name=sheet.label)
                 worksheet: Worksheet = writer.sheets[sheet.label]
+
+                for col_idx, value in enumerate(header, start=1):
+                    if is_formula_like_string(value):
+                        set_spreadsheet_cell_value(worksheet.cell(1, col_idx), value)
+                for row_idx, row in enumerate(data, start=2):
+                    for col_idx, value in enumerate(row, start=1):
+                        if is_formula_like_string(value):
+                            set_spreadsheet_cell_value(
+                                worksheet.cell(row_idx, col_idx), value
+                            )
 
                 # Apply formatting based on the provided styles.
                 for row_idx, row in enumerate(
@@ -154,10 +175,28 @@ class SpreadsheetBuilder:
             writer.book.calculation.fullCalcOnLoad = True
 
     def _write_sheet_to_excel(self, writer, sheet: SheetData):
-        columns = [column.label for column in sheet["columns"]]
-        df = pd.DataFrame(sheet["rows"], columns=columns)
+        columns = [
+            sanitize_spreadsheet_value(column.label) for column in sheet["columns"]
+        ]
+        rows = [
+            [sanitize_spreadsheet_value(value) for value in row]
+            for row in sheet["rows"]
+        ]
+        df = pd.DataFrame(rows, columns=columns)
         df.to_excel(writer, index=False, sheet_name=sheet["sheet_name"])
         worksheet: Worksheet = writer.sheets[sheet["sheet_name"]]
+
+        for col_idx, column in enumerate(sheet["columns"], start=1):
+            if is_formula_like_string(column.label):
+                set_spreadsheet_cell_value(
+                    worksheet.cell(1, col_idx), column.label
+                )
+        for row_idx, row in enumerate(sheet["rows"], start=2):
+            for col_idx, value in enumerate(row, start=1):
+                if is_formula_like_string(value):
+                    set_spreadsheet_cell_value(
+                        worksheet.cell(row_idx, col_idx), value
+                    )
 
         # Add data validations.
         for validator in sheet["validators"]:
@@ -362,6 +401,13 @@ class SpreadsheetBuilder:
 
     def _write_csv(self, output):
         if self.sheets_data:
-            columns = [col.label for col in self.sheets_data[0]["columns"]]
-            df = pd.DataFrame(self.sheets_data[0]["rows"], columns=columns)
+            columns = [
+                sanitize_spreadsheet_value(col.label)
+                for col in self.sheets_data[0]["columns"]
+            ]
+            rows = [
+                [sanitize_spreadsheet_value(value) for value in row]
+                for row in self.sheets_data[0]["rows"]
+            ]
+            df = pd.DataFrame(rows, columns=columns)
             df.to_csv(output, index=False)
