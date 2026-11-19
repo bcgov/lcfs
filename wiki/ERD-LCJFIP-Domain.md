@@ -2,7 +2,7 @@
 
 Data model for the Low Carbon Jet Fuel Incentive Program (LCJFIP) application (#5501), in `backend/lcfs/db/models/lcjfip/`. It covers the application form (applicant, LCJF purchase details, preferred incentive, fuel supplier transfer, signing authority), the workflow around it (status, intake period, history, comments, documents), and the Metabase views. It was designed so the later stages — award letter (#5284), disbursement letters (#5285, #5286) and delivery verification — attach to it without reshaping it. Those later tables are proposed under [Planned extensions](#planned-extensions), not built.
 
-Migration: `810923914d50` (`2026-11-17-10-00_810923914d50.py`).
+Migration: `810923914d50` (`2026-11-19-11-00_810923914d50.py`).
 
 See also: [Organization Domain](ERD-Organization-Domain.md), [Fuel Domain](ERD-Fuel-Domain.md), [Database Schema Overview](Database-Schema-Overview.md).
 
@@ -256,7 +256,7 @@ After deployment, run a Metabase schema sync so the views appear.
 
 ## Migration and reference data
 
-`810923914d50` (on `9b3e5c7a1d24`) does the following:
+`810923914d50` (on `5d2e9b7c4a1f`) does the following:
 1. Creates the `lcjfip_incentive_type_enum` type and the 14 tables.
 2. Seeds the lookups: 4 statuses, 4 CAR types, 5 certificate types, 12 feedstock sources, 3 incentive options and 4 rates.
 3. Seeds the "LCJFIP application notes" comment category.
