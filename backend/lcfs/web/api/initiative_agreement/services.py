@@ -1,8 +1,9 @@
 import json
 import math
 from datetime import datetime, timezone
+from decimal import Decimal
 from html import unescape
-from typing import List, Optional
+from typing import List, Optional, Sequence
 
 import structlog
 from fastapi import Depends, HTTPException, Request
@@ -31,6 +32,9 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
 from lcfs.db.models.initiative_agreement.InitiativeAgreementLifecycleHistory import (
     InitiativeAgreementLifecycleHistory,
 )
+from lcfs.db.models.initiative_agreement.InitiativeAgreementNote import (
+    InitiativeAgreementNote,
+)
 from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
     InitiativeAgreementStatusEnum,
 )
@@ -46,14 +50,14 @@ from lcfs.web.api.base import (
 )
 from lcfs.web.api.initiative_agreement.repo import InitiativeAgreementRepository
 from lcfs.web.api.initiative_agreement.schema import (
-    AllDesignatedActionsListSchema,
-    DesignatedActionListItemSchema,
     AgreementCreateSchema,
     AgreementUpdateSchema,
+    AllDesignatedActionsListSchema,
     AnalystAssignmentSchema,
     CreateInitiativeAgreementHistorySchema,
     DesignatedActionCreateSchema,
     DesignatedActionHistorySchema,
+    DesignatedActionListItemSchema,
     DesignatedActionProfileSchema,
     DesignatedActionSchema,
     DesignatedActionsListSchema,
@@ -1193,6 +1197,27 @@ class InitiativeAgreementServices:
             )
         )
         return EvidenceRequirementSchema.model_validate(requirement)
+
+    @service_handler
+    async def create_initiative_agreement_note(
+        self,
+        initiative_agreement_id: int,
+        note_text: str,
+        note_number: Optional[Decimal] = None,
+        designated_action_ids: Sequence[int] = (),
+        user=None,
+    ) -> InitiativeAgreementNote:
+        """Persist a note and translate known input conflicts into validation errors."""
+        try:
+            return await self.repo.add_initiative_agreement_note(
+                initiative_agreement_id=initiative_agreement_id,
+                note_text=note_text,
+                note_number=note_number,
+                designated_action_ids=designated_action_ids,
+                username=getattr(user, "keycloak_username", None),
+            )
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
 
     @service_handler
     async def update_evidence_requirement(

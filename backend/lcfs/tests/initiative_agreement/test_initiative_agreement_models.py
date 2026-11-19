@@ -52,6 +52,8 @@ NEW_TABLES = (
     "evidence_submission",
     "evidence_submission_status",
     "designated_action_internal_comment",
+    "initiative_agreement_note",
+    "initiative_agreement_note_designated_action",
     "da_eoc_submission",
     "da_eoc_submission_history",
     "da_eoc_submission_document_association",
@@ -195,16 +197,12 @@ async def test_evidence_submission_statuses_seeded(dbsession):
 
 @pytest.mark.anyio
 async def test_audit_triggers_present_on_new_tables(dbsession):
-    result = await dbsession.execute(
-        text(
-            """
+    result = await dbsession.execute(text("""
             SELECT c.relname
             FROM pg_trigger t
             JOIN pg_class c ON c.oid = t.tgrelid
             WHERE NOT t.tgisinternal AND t.tgname LIKE 'audit_%'
-            """
-        )
-    )
+            """))
     audited = {row[0] for row in result.all()}
     missing = set(NEW_TABLES) - audited
     assert not missing, f"tables without row-level audit triggers: {sorted(missing)}"
@@ -297,14 +295,12 @@ async def test_designated_action_group_uuid_has_server_default(dbsession):
     agreement = await _create_agreement(dbsession)
     status_id = await _action_status_id(dbsession, "Issued (legacy)")
     await dbsession.execute(
-        text(
-            """
+        text("""
             INSERT INTO designated_action
                 (initiative_agreement_id, action_number, name,
                  current_status_id, credit_allocation)
             VALUES (:ia, 1, 'Legacy award', :status, 1000)
-            """
-        ),
+            """),
         {"ia": agreement.initiative_agreement_id, "status": status_id},
     )
     result = await dbsession.execute(
