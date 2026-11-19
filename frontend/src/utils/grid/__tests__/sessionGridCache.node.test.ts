@@ -7,26 +7,37 @@ import {
   readSessionJson,
   writeGridCache
 } from '../sessionGridCache'
+import type { BCPaginationOptions } from '@/components/BCDataGrid/types'
 
-const defaults = {
+const defaults: BCPaginationOptions = {
   page: 1,
   size: 10,
   sortOrders: [{ field: 'updateDate', direction: 'desc' }],
   filters: []
 }
 
-const localStore = new Map()
-const sessionStore = new Map()
+const localStore = new Map<string, string>()
+const sessionStore = new Map<string, string>()
 
-const createMemoryStorage = (store) => ({
-  getItem: (key) => (store.has(key) ? store.get(key) : null),
-  setItem: (key, value) => store.set(key, String(value)),
+const createMemoryStorage = (store: Map<string, string>): Storage => ({
+  get length() {
+    return store.size
+  },
+  key: (index) => Array.from(store.keys())[index] ?? null,
+  getItem: (key: string) => (store.has(key) ? store.get(key)! : null),
+  setItem: (key: string, value: string) => store.set(key, String(value)),
   removeItem: (key) => store.delete(key),
   clear: () => store.clear()
 })
 
-global.localStorage = createMemoryStorage(localStore)
-global.sessionStorage = createMemoryStorage(sessionStore)
+Object.defineProperty(globalThis, 'localStorage', {
+  value: createMemoryStorage(localStore),
+  configurable: true
+})
+Object.defineProperty(globalThis, 'sessionStorage', {
+  value: createMemoryStorage(sessionStore),
+  configurable: true
+})
 
 describe('sessionGridCache', () => {
   beforeEach(() => {

@@ -5,8 +5,16 @@ import {
   StandardCellStyle
 } from '../errorRenderers'
 
+interface TestParams {
+  data: { id: number; actionType?: string }
+  colDef: {
+    field: string
+    editable: boolean | ((params: TestParams) => boolean)
+  }
+}
+
 describe('StandardCellErrors', () => {
-  const baseParams = {
+  const baseParams: TestParams = {
     data: { id: 1 },
     colDef: { field: 'name', editable: false }
   }
@@ -51,6 +59,20 @@ describe('StandardCellErrors', () => {
     expect(StandardCellErrors(readOnlyParams, {}).backgroundColor).toBe(
       '#f2f2f2'
     )
+  })
+
+  it('preserves the column definition as the editable callback receiver', () => {
+    const params = {
+      data: { id: 2 },
+      colDef: {
+        field: 'quantity',
+        editable(this: { field: string }) {
+          return this.field === 'quantity'
+        }
+      }
+    }
+
+    expect(StandardCellErrors(params, {}).backgroundColor).toBe('#fff')
   })
 
   it('does not treat other fields on the same row as errors', () => {
@@ -104,7 +126,9 @@ describe('StandardCellWarningAndErrors', () => {
 describe('StandardCellStyle', () => {
   const params = { data: { id: 4 }, colDef: { field: 'bar', editable: false } }
   it('merges conditional styles', () => {
-    const conditional = () => ({ color: 'blue' })
+    const conditional: (params: TestParams) => { color: string } = () => ({
+      color: 'blue'
+    })
     const style = StandardCellStyle(params, {}, {}, conditional)
     expect(style.color).toBe('blue')
   })
@@ -116,7 +140,8 @@ describe('StandardCellStyle', () => {
   })
 
   it('ignores a non-function conditional style argument', () => {
-    const style = StandardCellStyle(params, {}, {}, { color: 'red' })
+    const nonFunctionConditional: unknown = { color: 'red' }
+    const style = StandardCellStyle(params, {}, {}, nonFunctionConditional)
     expect(style.color).toBeUndefined()
   })
 })

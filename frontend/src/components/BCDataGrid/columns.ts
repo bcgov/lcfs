@@ -1,9 +1,16 @@
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
+import type {
+  CellClassParams,
+  CellStyle,
+  ColDef,
+  ICellRendererParams
+} from 'ag-grid-community'
+import type { BCGridRow } from './types'
 import { ActionsRenderer } from './components/Renderers/ActionsRenderer'
 import { ValidationRenderer2 } from './components/Renderers/ValidationRenderer2'
 import colors from '@/themes/base/colors'
 /** @type {import('ag-grid-community').ColDef} */
-export const validation = {
+export const validation: ColDef<BCGridRow> = {
   colId: 'validation',
   cellRenderer: ValidationRenderer2,
   cellStyle: {
@@ -32,31 +39,42 @@ export const validation = {
  * } props
  * @returns {import('ag-grid-community').ColDef}
  */
-export const actions = (props) => ({
+type ActionFlags = Pick<
+  import('./components/Renderers/ActionsRenderer').ActionsRendererProps,
+  | 'enableDuplicate'
+  | 'enableEdit'
+  | 'enableDelete'
+  | 'enableUndo'
+  | 'enableStatus'
+>
+
+type ActionsColumnRow = {
+  isNewSupplementalEntry?: boolean
+  actionType?: string
+}
+
+type ActionsColumnProps =
+  | (ActionFlags & { hide?: boolean })
+  | ((params: { data: ActionsColumnRow }) => ActionFlags)
+  | ((params: ICellRendererParams) => ActionFlags)
+
+export const actions = (props: ActionsColumnProps): ColDef<BCGridRow> => ({
   colId: 'action',
   headerName: 'Action',
   cellRenderer: ActionsRenderer,
   cellRendererParams: props,
-  cellStyle: (params) => {
+  cellStyle: (params: CellClassParams<BCGridRow>): CellStyle => {
+    const data = params.data!
     // Apply yellow background to Action column for edited rows in supplemental reports
-    if (
-      params.data.isNewSupplementalEntry &&
-      params.data.actionType === 'UPDATE'
-    ) {
+    if (data.isNewSupplementalEntry && data.actionType === 'UPDATE') {
       return { backgroundColor: colors.alerts.warning.background }
     }
     // Apply green background to Action column for added rows in supplemental reports
-    if (
-      params.data.isNewSupplementalEntry &&
-      params.data.actionType === 'CREATE'
-    ) {
+    if (data.isNewSupplementalEntry && data.actionType === 'CREATE') {
       return { backgroundColor: colors.alerts.success.background }
     }
     // Apply red background to Action column for deleted rows in supplemental reports
-    if (
-      params.data.isNewSupplementalEntry &&
-      params.data.actionType === 'DELETE'
-    ) {
+    if (data.isNewSupplementalEntry && data.actionType === 'DELETE') {
       return { backgroundColor: colors.alerts.error.background }
     }
     return {}
@@ -67,5 +85,5 @@ export const actions = (props) => ({
   editable: false,
   suppressKeyboardEvent,
   filter: false,
-  hide: /** @type {{ hide?: boolean }} */ (props).hide
+  hide: typeof props === 'function' ? undefined : props.hide
 })

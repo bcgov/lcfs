@@ -1,4 +1,22 @@
-export const runOnNextFrame = (cb) => {
+import type { RefObject } from 'react'
+
+export interface GridScrollInfo {
+  centerViewport: HTMLElement | null | undefined
+  horizontalViewport: HTMLElement | null | undefined
+  headerViewport: HTMLElement | null | undefined
+  contentWidth: number
+  scrollLeft: number
+  maxScrollLeft: number
+}
+
+export interface GridScrollInfoOverride {
+  scrollLeft: number
+  maxScrollLeft: number
+}
+
+type GridContainerRef = RefObject<HTMLElement | null> | null | undefined
+
+export const runOnNextFrame = (cb: FrameRequestCallback) => {
   if (
     typeof window !== 'undefined' &&
     typeof window.requestAnimationFrame === 'function'
@@ -9,22 +27,26 @@ export const runOnNextFrame = (cb) => {
   }
 }
 
-export const getGridScrollInfo = (gridContainerRef) => {
+export const getGridScrollInfo = (
+  gridContainerRef?: GridContainerRef
+): GridScrollInfo | null => {
   if (!gridContainerRef?.current) return null
 
-  const centerViewport = gridContainerRef.current.querySelector(
+  const centerViewport = gridContainerRef.current.querySelector<HTMLElement>(
     '.ag-center-cols-viewport'
   )
-  const centerContainer = gridContainerRef.current.querySelector(
+  const centerContainer = gridContainerRef.current.querySelector<HTMLElement>(
     '.ag-center-cols-container'
   )
-  const horizontalViewport = gridContainerRef.current.querySelector(
-    '.ag-body-horizontal-scroll-viewport'
-  )
-  const horizontalContainer = gridContainerRef.current.querySelector(
-    '.ag-body-horizontal-scroll-container'
-  )
-  const headerViewport = gridContainerRef.current.querySelector(
+  const horizontalViewport =
+    gridContainerRef.current.querySelector<HTMLElement>(
+      '.ag-body-horizontal-scroll-viewport'
+    )
+  const horizontalContainer =
+    gridContainerRef.current.querySelector<HTMLElement>(
+      '.ag-body-horizontal-scroll-container'
+    )
+  const headerViewport = gridContainerRef.current.querySelector<HTMLElement>(
     '.ag-header-viewport'
   )
 
@@ -55,16 +77,20 @@ export const getGridScrollInfo = (gridContainerRef) => {
   }
 }
 
-export const syncGridScrollPositions = (gridContainerRef, scrollLeft) => {
+export const syncGridScrollPositions = (
+  gridContainerRef: GridContainerRef,
+  scrollLeft: number
+) => {
   if (!gridContainerRef?.current) return
 
-  const centerViewport = gridContainerRef.current.querySelector(
+  const centerViewport = gridContainerRef.current.querySelector<HTMLElement>(
     '.ag-center-cols-viewport'
   )
-  const horizontalViewport = gridContainerRef.current.querySelector(
-    '.ag-body-horizontal-scroll-viewport'
-  )
-  const headerViewport = gridContainerRef.current.querySelector(
+  const horizontalViewport =
+    gridContainerRef.current.querySelector<HTMLElement>(
+      '.ag-body-horizontal-scroll-viewport'
+    )
+  const headerViewport = gridContainerRef.current.querySelector<HTMLElement>(
     '.ag-header-viewport'
   )
 
@@ -84,6 +110,11 @@ export const syncCustomScrollbarToGrid = ({
   customScrollbarRef,
   showScrollbar = true,
   infoOverride
+}: {
+  gridContainerRef?: GridContainerRef
+  customScrollbarRef: RefObject<HTMLElement | null>
+  showScrollbar?: boolean
+  infoOverride?: GridScrollInfoOverride | null
 }) => {
   if (!showScrollbar || !customScrollbarRef?.current) return
 

@@ -1,21 +1,27 @@
 import { describe, it, expect, vi, beforeEach } from 'vite-plus/test'
 import { render, screen, fireEvent } from '@testing-library/react'
+import type { ReactNode } from 'react'
 import { ThemeProvider, createTheme } from '@mui/material/styles'
 import { ValidationRenderer } from '../ValidationRenderer'
+import type { ValidationRendererProps } from '../ValidationRenderer'
 
 const theme = createTheme()
 
-const renderWithTheme = (component) => {
+const renderWithTheme = (component: ReactNode) => {
   return render(<ThemeProvider theme={theme}>{component}</ThemeProvider>)
 }
 
 describe('ValidationRenderer', () => {
-  let mockApi
-  let defaultProps
+  let mockApi: NonNullable<ValidationRendererProps['api']> & {
+    stopEditing: ReturnType<typeof vi.fn<() => void>>
+  }
+  let defaultProps: ValidationRendererProps
 
   beforeEach(() => {
     mockApi = {
       stopEditing: vi.fn()
+    } as unknown as NonNullable<ValidationRendererProps['api']> & {
+      stopEditing: ReturnType<typeof vi.fn<() => void>>
     }
     defaultProps = {
       data: {

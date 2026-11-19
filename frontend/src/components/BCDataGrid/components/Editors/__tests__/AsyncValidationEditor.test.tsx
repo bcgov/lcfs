@@ -1,31 +1,33 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vite-plus/test'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { createRef } from 'react'
+import type { ComponentRef, ReactNode } from 'react'
 import { ThemeProvider, createTheme } from '@mui/material/styles'
 import { AsyncValidationEditor } from '../AsyncValidationEditor'
+import type { AsyncValidationEditorProps } from '../AsyncValidationEditor'
 
 // Mock the useDebounce hook
 vi.mock('@/utils/debounce', () => ({
-  useDebounce: vi.fn((value) => value)
+  useDebounce: vi.fn(<T,>(value: T): T => value)
 }))
 
 const theme = createTheme()
 
-const renderWithTheme = (component) => {
+const renderWithTheme = (component: ReactNode) => {
   return render(<ThemeProvider theme={theme}>{component}</ThemeProvider>)
 }
 
 describe('AsyncValidationEditor', () => {
-  let mockOnValueChange
-  let mockCondition
-  let defaultProps
+  const mockOnValueChange = vi.fn<(value: string) => void>()
+  const mockCondition = vi.fn<(value: string) => Promise<boolean>>()
+  let defaultProps: AsyncValidationEditorProps
 
   beforeEach(() => {
     vi.useFakeTimers()
     vi.clearAllMocks()
 
-    mockOnValueChange = vi.fn()
-    mockCondition = vi.fn().mockResolvedValue(true)
+    mockOnValueChange.mockClear()
+    mockCondition.mockReset().mockResolvedValue(true)
 
     defaultProps = {
       value: '',
@@ -103,10 +105,9 @@ describe('AsyncValidationEditor', () => {
     })
 
     it('sets touched state to true after input change', () => {
-      let rendered
-      act(() => {
-        rendered = renderWithTheme(<AsyncValidationEditor {...defaultProps} />)
-      })
+      const rendered = renderWithTheme(
+        <AsyncValidationEditor {...defaultProps} />
+      )
 
       const input = screen.getByRole('textbox')
 
@@ -124,10 +125,9 @@ describe('AsyncValidationEditor', () => {
     })
 
     it('sets validating state to true during input change', () => {
-      let rendered
-      act(() => {
-        rendered = renderWithTheme(<AsyncValidationEditor {...defaultProps} />)
-      })
+      const rendered = renderWithTheme(
+        <AsyncValidationEditor {...defaultProps} />
+      )
 
       const input = screen.getByRole('textbox')
       act(() => {
@@ -143,7 +143,7 @@ describe('AsyncValidationEditor', () => {
 
   describe('useImperativeHandle Ref Methods', () => {
     it('getValue method returns current inputValue', () => {
-      const ref = createRef()
+      const ref = createRef<ComponentRef<typeof AsyncValidationEditor>>()
       act(() => {
         renderWithTheme(<AsyncValidationEditor {...defaultProps} ref={ref} />)
       })
@@ -153,11 +153,11 @@ describe('AsyncValidationEditor', () => {
         fireEvent.change(input, { target: { value: 'test value' } })
       })
 
-      expect(ref.current.getValue()).toBe('test value')
+      expect(ref.current!.getValue()).toBe('test value')
     })
 
     it('afterGuiAttached method sets inputValue to initial value', () => {
-      const ref = createRef()
+      const ref = createRef<ComponentRef<typeof AsyncValidationEditor>>()
       const props = { ...defaultProps, value: 'initial value' }
       act(() => {
         renderWithTheme(<AsyncValidationEditor {...props} ref={ref} />)
@@ -172,14 +172,14 @@ describe('AsyncValidationEditor', () => {
 
       // Call afterGuiAttached should reset to initial value
       act(() => {
-        ref.current.afterGuiAttached()
+        ref.current!.afterGuiAttached()
       })
 
       expect(input).toHaveValue('initial value')
     })
 
     it('isCancelAfterEnd returns true when invalid', async () => {
-      const ref = createRef()
+      const ref = createRef<ComponentRef<typeof AsyncValidationEditor>>()
       mockCondition.mockResolvedValue(false)
       act(() => {
         renderWithTheme(<AsyncValidationEditor {...defaultProps} ref={ref} />)
@@ -195,11 +195,11 @@ describe('AsyncValidationEditor', () => {
         await vi.runAllTimersAsync()
       })
 
-      expect(ref.current.isCancelAfterEnd()).toBe(true)
+      expect(ref.current!.isCancelAfterEnd()).toBe(true)
     })
 
     it('isCancelAfterEnd returns true when validating', () => {
-      const ref = createRef()
+      const ref = createRef<ComponentRef<typeof AsyncValidationEditor>>()
       act(() => {
         renderWithTheme(<AsyncValidationEditor {...defaultProps} ref={ref} />)
       })
@@ -210,11 +210,11 @@ describe('AsyncValidationEditor', () => {
       })
 
       // While validating, should return true
-      expect(ref.current.isCancelAfterEnd()).toBe(true)
+      expect(ref.current!.isCancelAfterEnd()).toBe(true)
     })
 
     it('isCancelAfterEnd returns false when valid and not validating', async () => {
-      const ref = createRef()
+      const ref = createRef<ComponentRef<typeof AsyncValidationEditor>>()
       mockCondition.mockResolvedValue(true)
       act(() => {
         renderWithTheme(<AsyncValidationEditor {...defaultProps} ref={ref} />)
@@ -230,7 +230,7 @@ describe('AsyncValidationEditor', () => {
         await vi.runAllTimersAsync()
       })
 
-      expect(ref.current.isCancelAfterEnd()).toBe(false)
+      expect(ref.current!.isCancelAfterEnd()).toBe(false)
     })
   })
 
@@ -276,10 +276,9 @@ describe('AsyncValidationEditor', () => {
     })
 
     it('renders loading indicator when validating', () => {
-      let rendered
-      act(() => {
-        rendered = renderWithTheme(<AsyncValidationEditor {...defaultProps} />)
-      })
+      const rendered = renderWithTheme(
+        <AsyncValidationEditor {...defaultProps} />
+      )
 
       const input = screen.getByRole('textbox')
       act(() => {
@@ -292,10 +291,9 @@ describe('AsyncValidationEditor', () => {
     })
 
     it('renders no indicator when untouched', () => {
-      let rendered
-      act(() => {
-        rendered = renderWithTheme(<AsyncValidationEditor {...defaultProps} />)
-      })
+      const rendered = renderWithTheme(
+        <AsyncValidationEditor {...defaultProps} />
+      )
 
       const input = screen.getByRole('textbox')
       expect(input).toHaveStyle({ color: 'rgb(0, 0, 0)' })

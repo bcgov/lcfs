@@ -4,59 +4,103 @@
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vite-plus/test'
 import { createRef } from 'react'
+import type {
+  ChangeEventHandler,
+  KeyboardEventHandler,
+  ReactNode,
+  Ref
+} from 'react'
+import type { GridApi } from 'ag-grid-community'
 import { LargeTextareaEditor } from '../LargeTextareaEditor'
+import type { LargeTextareaEditorProps } from '../LargeTextareaEditor'
 
 // Mock MUI components
 vi.mock('@mui/material/InputBase', () => ({
-  default: vi.fn(({ value, onChange, onKeyDown, inputRef, ...props }) => {
-    delete props.multiline
-    return (
-      <textarea
-        data-test="input-base"
-        value={value}
-        onChange={onChange}
-        onKeyDown={onKeyDown}
-        ref={inputRef}
-        {...props}
-      />
-    )
-  })
+  default: vi.fn(
+    ({
+      value,
+      onChange,
+      onKeyDown,
+      inputRef,
+      ...props
+    }: {
+      value?: string | number | readonly string[]
+      onChange?: ChangeEventHandler<HTMLTextAreaElement>
+      onKeyDown?: KeyboardEventHandler<HTMLTextAreaElement>
+      inputRef?: Ref<HTMLTextAreaElement>
+      multiline?: boolean
+      rows?: number
+      [prop: string]: unknown
+    }) => {
+      delete props.multiline
+      return (
+        <textarea
+          data-test="input-base"
+          value={value}
+          onChange={onChange}
+          onKeyDown={onKeyDown}
+          ref={inputRef}
+          {...props}
+        />
+      )
+    }
+  )
 }))
 
 vi.mock('@mui/material/Popper', () => ({
-  default: vi.fn(({ children, open, anchorEl, ...props }) =>
-    open && anchorEl ? (
-      <div data-test="popper" {...props}>
-        {children}
-      </div>
-    ) : null
+  default: vi.fn(
+    ({
+      children,
+      open,
+      anchorEl,
+      ...props
+    }: {
+      children?: ReactNode
+      open?: boolean
+      anchorEl?: Element | null
+      [prop: string]: unknown
+    }) =>
+      open && anchorEl ? (
+        <div data-test="popper" {...props}>
+          {children}
+        </div>
+      ) : null
   )
 }))
 
 vi.mock('@mui/material/Paper', () => ({
-  default: vi.fn(({ children, ...props }) => (
-    <div data-test="paper" {...props}>
-      {children}
-    </div>
-  ))
+  default: vi.fn(
+    ({
+      children,
+      ...props
+    }: {
+      children?: ReactNode
+      [prop: string]: unknown
+    }) => (
+      <div data-test="paper" {...props}>
+        {children}
+      </div>
+    )
+  )
 }))
 
 // Mock AgGrid API
-const mockApi = {
-  getFocusedCell: vi.fn(),
+const mockGetFocusedCell = vi.fn(() => null)
+const mockApi: Pick<GridApi, 'getFocusedCell' | 'tabToNextCell'> = {
+  getFocusedCell: mockGetFocusedCell,
   tabToNextCell: vi.fn()
 }
 
 describe('LargeTextareaEditor Component', () => {
-  let mockProps
-  let mockRef
-  let mockOnValueChange
+  let mockProps: LargeTextareaEditorProps
+  let mockRef: ReturnType<typeof createRef<unknown>>
+  const mockOnValueChange = vi.fn<(value: string) => void>()
 
   beforeEach(() => {
     vi.clearAllMocks()
 
     mockRef = createRef()
-    mockOnValueChange = vi.fn()
+    mockOnValueChange.mockClear()
 
     mockProps = {
       value: 'initial value',
@@ -65,10 +109,7 @@ describe('LargeTextareaEditor Component', () => {
       api: mockApi
     }
 
-    mockApi.getFocusedCell.mockReturnValue({
-      rowIndex: 0,
-      column: { getId: () => 'testColumn' }
-    })
+    mockGetFocusedCell.mockReset().mockReturnValue(null)
   })
 
   afterEach(() => {
@@ -105,7 +146,7 @@ describe('LargeTextareaEditor Component', () => {
       })
 
       expect(mockOnValueChange).toHaveBeenCalledWith('new text value')
-      expect(input.value).toBe('new text value')
+      expect((input as HTMLTextAreaElement).value).toBe('new text value')
     })
   })
 
@@ -175,7 +216,7 @@ describe('LargeTextareaEditor Component', () => {
       render(<LargeTextareaEditor {...mockProps} ref={mockRef} />)
 
       const input = screen.getByTestId('input-base')
-      expect(input.value).toBe('initial value')
+      expect((input as HTMLTextAreaElement).value).toBe('initial value')
     })
 
     it('calls api.getFocusedCell in useLayoutEffect', () => {

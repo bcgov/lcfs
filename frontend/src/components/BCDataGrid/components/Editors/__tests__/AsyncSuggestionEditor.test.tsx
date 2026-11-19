@@ -6,6 +6,9 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vite-plus/test'
 import { createElement } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AsyncSuggestionEditor } from '../AsyncSuggestionEditor'
+import type { AsyncSuggestionEditorProps } from '../AsyncSuggestionEditor'
+import type { ComponentProps } from 'react'
+import type { GridApi } from 'ag-grid-community'
 
 // Mock dependencies
 vi.mock('@/services/useApiService', () => ({
@@ -17,7 +20,7 @@ vi.mock('@/services/useApiService', () => ({
 
 vi.mock('@/components/BCBox', () => ({
   __esModule: true,
-  default: ({ children, ...props }) => (
+  default: ({ children, ...props }: ComponentProps<'div'>) => (
     <div data-test="bc-box" {...props}>
       {children}
     </div>
@@ -25,31 +28,39 @@ vi.mock('@/components/BCBox', () => ({
 }))
 
 vi.mock('lodash', () => ({
-  debounce: vi.fn((fn) => {
+  debounce: vi.fn((fn: (...args: string[]) => void) => {
     // Simple debounce mock that executes immediately for testing
-    const debounced = (...args) => fn(...args)
+    const debounced = (...args: string[]) => fn(...args)
     debounced.cancel = vi.fn()
     return debounced
   })
 }))
 
 vi.mock('autosuggest-highlight/match', () => ({
-  default: vi.fn((text, query) => [{ start: 0, end: query.length }])
-}))
-
-vi.mock('autosuggest-highlight/parse', () => ({
-  default: vi.fn((text, matches) => [
-    { text: text.substring(0, matches[0]?.end || 0), highlight: true },
-    { text: text.substring(matches[0]?.end || 0), highlight: false }
+  default: vi.fn((_text: string, query: string) => [
+    { start: 0, end: query.length }
   ])
 }))
 
+vi.mock('autosuggest-highlight/parse', () => ({
+  default: vi.fn(
+    (text: string, matches: Array<{ start: number; end: number }>) => [
+      { text: text.substring(0, matches[0]?.end || 0), highlight: true },
+      { text: text.substring(matches[0]?.end || 0), highlight: false }
+    ]
+  )
+}))
+
 describe('AsyncSuggestionEditor', () => {
-  let queryClient
-  let mockOnValueChange
-  let mockOnKeyDownCapture
-  let mockQueryFn
-  let mockApi
+  let queryClient: QueryClient
+  const mockOnValueChange = vi.fn<(value: unknown) => void>()
+  const mockOnKeyDownCapture =
+    vi.fn<NonNullable<AsyncSuggestionEditorProps['onKeyDownCapture']>>()
+  const mockQueryFn = vi.fn<AsyncSuggestionEditorProps['queryFn']>()
+  let mockApi: Pick<
+    GridApi,
+    'tabToNextCell' | 'tabToPreviousCell' | 'stopEditing'
+  >
 
   beforeEach(() => {
     queryClient = new QueryClient({
@@ -59,10 +70,12 @@ describe('AsyncSuggestionEditor', () => {
       }
     })
 
-    mockOnValueChange = vi.fn()
-    mockOnKeyDownCapture = vi.fn()
-    mockQueryFn = vi.fn().mockImplementation(({ queryKey }) => {
-      const searchValue = queryKey[1] || ''
+    mockOnValueChange.mockClear()
+    mockOnKeyDownCapture.mockClear()
+    mockQueryFn.mockReset().mockImplementation(({ queryKey }) => {
+      const rawSearchValue = queryKey[1]
+      const searchValue =
+        typeof rawSearchValue === 'string' ? rawSearchValue : ''
       if (searchValue === 'no results') {
         return Promise.resolve([])
       }
@@ -85,7 +98,7 @@ describe('AsyncSuggestionEditor', () => {
     vi.clearAllMocks()
   })
 
-  const renderComponent = (props = {}) => {
+  const renderComponent = (props: Partial<AsyncSuggestionEditorProps> = {}) => {
     const defaultProps = {
       value: '',
       onValueChange: mockOnValueChange,

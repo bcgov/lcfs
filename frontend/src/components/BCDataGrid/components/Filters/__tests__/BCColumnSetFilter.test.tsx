@@ -4,7 +4,31 @@
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vite-plus/test'
 import { createRef } from 'react'
+import type { ReactNode } from 'react'
 import { BCColumnSetFilter } from '../BCColumnSetFilter'
+import type { BCColumnSetFilterProps } from '../BCColumnSetFilter'
+
+interface MockFilterRef {
+  onParentModelChanged: (model: { filter?: unknown } | null) => void
+}
+
+interface MockAutocompleteProps {
+  [key: string]: unknown
+  onChange?: (event: unknown, value: unknown) => void
+  isOptionEqualToValue?: (
+    option: { name: string },
+    value: { name: string }
+  ) => boolean
+  getOptionLabel?: (option: { name: string }) => string
+  renderOption?: (
+    props: Record<string, unknown>,
+    option: { name: string },
+    state: { selected: boolean }
+  ) => ReactNode
+  renderInput?: (params: { inputProps: Record<string, unknown> }) => ReactNode
+  multiple?: boolean
+  loading?: boolean
+}
 
 // Mock MUI components
 vi.mock('@mui/material/Autocomplete', () => ({
@@ -18,7 +42,7 @@ vi.mock('@mui/material/Autocomplete', () => ({
       multiple,
       loading,
       ...props
-    }) => {
+    }: MockAutocompleteProps) => {
       delete props.options
 
       // Test isOptionEqualToValue function
@@ -63,26 +87,47 @@ vi.mock('@mui/material/Autocomplete', () => ({
 }))
 
 vi.mock('@mui/material/TextField', () => ({
-  default: vi.fn(({ value, ...props }) => (
-    <input data-test="textfield" value={value || ''} {...props} />
-  ))
+  default: vi.fn(
+    ({
+      value,
+      ...props
+    }: {
+      value?: string | number
+      [key: string]: unknown
+    }) => <input data-test="textfield" value={value || ''} {...props} />
+  )
 }))
 
 vi.mock('@mui/material/Box', () => ({
-  default: vi.fn(({ children, ...props }) => {
-    delete props.component
-    return (
-      <div data-test="box" {...props}>
-        {children}
-      </div>
-    )
-  })
+  default: vi.fn(
+    ({
+      children,
+      ...props
+    }: {
+      children?: ReactNode
+      [key: string]: unknown
+    }) => {
+      delete props.component
+      return (
+        <div data-test="box" {...props}>
+          {children}
+        </div>
+      )
+    }
+  )
 }))
 
 vi.mock('@mui/material/Checkbox', () => ({
-  default: vi.fn(({ checked, ...props }) => (
-    <input type="checkbox" data-test="checkbox" checked={checked} {...props} />
-  ))
+  default: vi.fn(
+    ({ checked, ...props }: { checked?: boolean; [key: string]: unknown }) => (
+      <input
+        type="checkbox"
+        data-test="checkbox"
+        checked={checked}
+        {...props}
+      />
+    )
+  )
 }))
 
 vi.mock('@mui/icons-material/CheckBox', () => ({
@@ -96,23 +141,31 @@ vi.mock('@mui/icons-material/CheckBoxOutlineBlank', () => ({
 }))
 
 describe('BCColumnSetFilter Component', () => {
-  let mockProps
-  let mockRef
-  let mockApiQuery
-  let mockParentFilterInstance
+  let mockProps: BCColumnSetFilterProps & { params: { test: string } }
+  let mockRef: ReturnType<typeof createRef<MockFilterRef>>
+  let mockApiQuery: BCColumnSetFilterProps['apiQuery'] & {
+    mockReturnValue: (
+      value: ReturnType<BCColumnSetFilterProps['apiQuery']>
+    ) => unknown
+  }
+  let mockParentFilterInstance: BCColumnSetFilterProps['parentFilterInstance'] & {
+    mockImplementation: (
+      implementation: BCColumnSetFilterProps['parentFilterInstance']
+    ) => unknown
+  }
 
   beforeEach(() => {
     vi.clearAllMocks()
 
-    mockRef = createRef()
+    mockRef = createRef<MockFilterRef>()
 
-    mockApiQuery = vi.fn()
-    mockParentFilterInstance = vi.fn()
+    mockApiQuery = vi.fn<BCColumnSetFilterProps['apiQuery']>()
+    mockParentFilterInstance =
+      vi.fn<BCColumnSetFilterProps['parentFilterInstance']>()
 
     mockProps = {
       apiQuery: mockApiQuery,
       apiOptionField: 'name',
-      column: { getId: () => 'testColumn' },
       parentFilterInstance: mockParentFilterInstance,
       params: { test: 'param' }
     }
@@ -169,7 +222,7 @@ describe('BCColumnSetFilter Component', () => {
       render(<BCColumnSetFilter {...mockProps} ref={mockRef} />)
 
       act(() => {
-        mockRef.current.onParentModelChanged(null)
+        mockRef.current!.onParentModelChanged(null)
       })
 
       // Verify the currentValue is reflected in the TextField
@@ -180,7 +233,7 @@ describe('BCColumnSetFilter Component', () => {
       render(<BCColumnSetFilter {...mockProps} ref={mockRef} />)
 
       act(() => {
-        mockRef.current.onParentModelChanged({ filter: 'test filter' })
+        mockRef.current!.onParentModelChanged({ filter: 'test filter' })
       })
 
       expect(screen.getByTestId('textfield')).toHaveValue('test filter')
@@ -356,7 +409,7 @@ describe('BCColumnSetFilter Component', () => {
 
       // Set a value through onParentModelChanged
       act(() => {
-        mockRef.current.onParentModelChanged({ filter: 'test value' })
+        mockRef.current!.onParentModelChanged({ filter: 'test value' })
       })
 
       expect(screen.getByTestId('textfield')).toHaveValue('test value')
@@ -390,7 +443,7 @@ describe('BCColumnSetFilter Component', () => {
       render(<BCColumnSetFilter {...mockProps} ref={mockRef} />)
 
       expect(mockRef.current).toBeDefined()
-      expect(mockRef.current.onParentModelChanged).toBeDefined()
+      expect(mockRef.current!.onParentModelChanged).toBeDefined()
     })
   })
 })

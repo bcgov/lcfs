@@ -6,7 +6,11 @@ import {
   syncCustomScrollbarToGrid
 } from '@/components/BCDataGrid/floatingScrollbarUtils'
 
-const defineDimension = (element, prop, value) => {
+const defineDimension = (
+  element: HTMLElement,
+  prop: 'clientWidth' | 'scrollWidth',
+  value: number
+) => {
   Object.defineProperty(element, prop, {
     value,
     configurable: true
@@ -17,6 +21,10 @@ const createGridContainerRef = ({
   scrollLeft = 25,
   viewportWidth = 100,
   contentWidth = 400
+}: {
+  scrollLeft?: number
+  viewportWidth?: number
+  contentWidth?: number
 } = {}) => {
   const container = document.createElement('div')
 
@@ -67,7 +75,10 @@ describe('floatingScrollbarUtils', () => {
     })
 
     it('uses requestAnimationFrame when available', () => {
-      const rafSpy = vi.fn((cb) => cb())
+      const rafSpy = vi.fn((cb: FrameRequestCallback): number => {
+        cb(0)
+        return 1
+      })
       globalThis.requestAnimationFrame = rafSpy
       const cb = vi.fn()
 
@@ -78,7 +89,7 @@ describe('floatingScrollbarUtils', () => {
     })
 
     it('falls back to setTimeout when requestAnimationFrame is missing', () => {
-      globalThis.requestAnimationFrame = undefined
+      vi.stubGlobal('requestAnimationFrame', undefined)
       vi.useFakeTimers()
       const cb = vi.fn()
 
@@ -91,7 +102,7 @@ describe('floatingScrollbarUtils', () => {
 
   describe('getGridScrollInfo', () => {
     it('returns null when the ref is missing', () => {
-      expect(getGridScrollInfo()).toBeNull()
+      expect(getGridScrollInfo({ current: null })).toBeNull()
       expect(getGridScrollInfo({ current: null })).toBeNull()
     })
 
@@ -102,13 +113,15 @@ describe('floatingScrollbarUtils', () => {
         contentWidth: 520
       })
 
-      const info = getGridScrollInfo(gridRef)
+      const info = getGridScrollInfo(gridRef)!
 
       expect(info).not.toBeNull()
       expect(info.contentWidth).toBe(520)
       expect(info.scrollLeft).toBe(50)
       expect(info.maxScrollLeft).toBe(400)
-      expect(info.centerViewport.className).toContain('ag-center-cols-viewport')
+      expect(info.centerViewport?.className).toContain(
+        'ag-center-cols-viewport'
+      )
     })
   })
 
@@ -118,20 +131,20 @@ describe('floatingScrollbarUtils', () => {
 
       syncGridScrollPositions(gridRef, 180)
 
-      const info = getGridScrollInfo(gridRef)
+      const info = getGridScrollInfo(gridRef)!
       expect(info.scrollLeft).toBe(180)
     })
   })
 
   describe('syncCustomScrollbarToGrid', () => {
-    let customScrollbarRef
+    let customScrollbarRef: { current: HTMLDivElement | null }
 
     beforeEach(() => {
       customScrollbarRef = {
         current: document.createElement('div')
       }
-      defineDimension(customScrollbarRef.current, 'clientWidth', 100)
-      defineDimension(customScrollbarRef.current, 'scrollWidth', 300)
+      defineDimension(customScrollbarRef.current!, 'clientWidth', 100)
+      defineDimension(customScrollbarRef.current!, 'scrollWidth', 300)
     })
 
     it('updates the custom scrollbar to match grid scroll ratios', () => {
@@ -148,7 +161,7 @@ describe('floatingScrollbarUtils', () => {
       })
 
       // Grid ratio = 100 / (500-100) = 0.25 -> custom scrollLeft = 0.25 * (300-100)
-      expect(customScrollbarRef.current.scrollLeft).toBeCloseTo(50)
+      expect(customScrollbarRef.current?.scrollLeft).toBeCloseTo(50)
     })
 
     it('does nothing when showScrollbar is false', () => {
@@ -157,7 +170,7 @@ describe('floatingScrollbarUtils', () => {
         viewportWidth: 100,
         contentWidth: 500
       })
-      customScrollbarRef.current.scrollLeft = 0
+      customScrollbarRef.current!.scrollLeft = 0
 
       syncCustomScrollbarToGrid({
         gridContainerRef: gridRef,
@@ -165,7 +178,7 @@ describe('floatingScrollbarUtils', () => {
         showScrollbar: false
       })
 
-      expect(customScrollbarRef.current.scrollLeft).toBe(0)
+      expect(customScrollbarRef.current?.scrollLeft).toBe(0)
     })
   })
 })

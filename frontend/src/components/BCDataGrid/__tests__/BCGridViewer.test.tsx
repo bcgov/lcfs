@@ -1,10 +1,19 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vite-plus/test'
-import { createRef, useEffect } from 'react'
+import { createRef, useEffect, type PropsWithChildren } from 'react'
 import { BrowserRouter } from 'react-router-dom'
 import { BCGridViewer } from '../BCGridViewer'
 import { BCGridBase } from '@/components/BCDataGrid/BCGridBase'
 import { createAgGridFilterPills } from '@/components/FilterToolbar/filterUtils'
+import type { BCGridViewerProps, BCGridRow } from '../types'
+import type { AgGridReact } from 'ag-grid-react'
+import type { FloatingAlertHandle } from '@/components/BCAlert/FloatingAlert'
+import type {
+  ColumnResizedEvent,
+  ColumnState,
+  ColumnVisibleEvent,
+  GridApi
+} from 'ag-grid-community'
 
 // Unmock the components we're testing (overrides global mocks)
 vi.unmock('@/components/BCDataGrid/BCGridViewer')
@@ -21,12 +30,18 @@ const mockGridApi = {
   setFilterModel: vi.fn(),
   getFilterModel: vi.fn(() => ({})),
   applyColumnState: vi.fn(),
-  getColumnState: vi.fn(() => []),
+  getColumnState: vi.fn<() => ColumnState[]>(() => []),
   setColumnState: vi.fn()
 }
+const mockAgGridApi = mockGridApi as unknown as GridApi<BCGridRow>
 
 vi.mock('@/components/BCDataGrid/BCGridBase', () => ({
-  BCGridBase: vi.fn().mockImplementation(function MockBCGridBase(props) {
+  BCGridBase: vi.fn().mockImplementation(function MockBCGridBase(props: {
+    onGridReady?: (event: { api: typeof mockGridApi }) => void
+    onFirstDataRendered?: (event: { api: typeof mockGridApi }) => void
+    onFilterChanged?: (event: { api: typeof mockGridApi }) => void
+    onSortChanged?: () => void
+  }) {
     const { onGridReady, onFirstDataRendered, onFilterChanged, onSortChanged } =
       props
 
@@ -50,6 +65,13 @@ vi.mock('@/components/BCDataGrid/BCGridBase', () => ({
   })
 }))
 
+const getLastGridProps = () => {
+  const calls = vi.mocked(BCGridBase).mock.calls
+  const props = calls[calls.length - 1]?.[0]
+  if (!props) throw new Error('Expected BCGridBase to render')
+  return props
+}
+
 vi.mock(
   '@/components/BCDataGrid/components/Renderers/AccessibleHeader',
   () => ({
@@ -58,18 +80,25 @@ vi.mock(
 )
 
 vi.mock('@/components/BCDataGrid/components/StatusBar/BCPagination', () => ({
-  BCPagination: vi.fn().mockImplementation((props) => (
-    <div
-      data-test="bc-pagination"
-      onClick={() => {
-        if (props.handleChangePage) props.handleChangePage({}, 1)
-        if (props.handleChangeRowsPerPage)
-          props.handleChangeRowsPerPage({ target: { value: '20' } })
-      }}
-    >
-      Pagination
-    </div>
-  ))
+  BCPagination: vi
+    .fn()
+    .mockImplementation(
+      (props: {
+        handleChangePage?: (event: object, page: number) => void
+        handleChangeRowsPerPage?: (event: { target: { value: string } }) => void
+      }) => (
+        <div
+          data-test="bc-pagination"
+          onClick={() => {
+            if (props.handleChangePage) props.handleChangePage({}, 1)
+            if (props.handleChangeRowsPerPage)
+              props.handleChangeRowsPerPage({ target: { value: '20' } })
+          }}
+        >
+          Pagination
+        </div>
+      )
+    )
 }))
 
 // Mock sessionStorage
@@ -84,14 +113,14 @@ Object.defineProperty(window, 'sessionStorage', {
 })
 
 // Test wrapper component
-const TestWrapper = ({ children }) => {
+const TestWrapper = ({ children }: PropsWithChildren) => {
   return <BrowserRouter>{children}</BrowserRouter>
 }
 
 // Default props for testing
-const defaultProps = {
-  gridRef: createRef(),
-  alertRef: createRef(),
+const defaultProps: BCGridViewerProps = {
+  gridRef: createRef<AgGridReact<BCGridRow>>(),
+  alertRef: createRef<FloatingAlertHandle>(),
   loading: false,
   defaultColDef: {},
   columnDefs: [],
@@ -249,13 +278,25 @@ describe('BCGridViewer Component', () => {
         )
       }).not.toThrow()
     })
+
+    it('handles pagination actions when onPaginationChange is null', () => {
+      render(
+        <TestWrapper>
+          <BCGridViewer {...defaultProps} onPaginationChange={null} />
+        </TestWrapper>
+      )
+
+      expect(() =>
+        fireEvent.click(screen.getByTestId('bc-pagination'))
+      ).not.toThrow()
+    })
   })
 
   describe('Utility Function Coverage', () => {
     it('should handle missing IntersectionObserver gracefully', async () => {
       // Temporarily remove IntersectionObserver
       const originalIntersectionObserver = window.IntersectionObserver
-      delete window.IntersectionObserver
+      Reflect.deleteProperty(window, 'IntersectionObserver')
 
       const props = {
         ...defaultProps,
@@ -295,7 +336,7 @@ describe('BCGridViewer Component', () => {
     })
 
     it('should handle prop variations', () => {
-      const props = {
+      const props: BCGridViewerProps = {
         ...defaultProps,
         enableExportButton: true,
         enableCopyButton: true,
@@ -525,9 +566,9 @@ describe('BCGridViewer Component', () => {
 
   describe('Session preference persistence', () => {
     it('fits columns when an empty controlled state overrides a cached layout', async () => {
-      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
-        width: 1000
-      })
+      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(
+        DOMRect.fromRect({ width: 1000 })
+      )
       mockSessionStorage.getItem.mockImplementation((key) =>
         key === 'test-grid-column'
           ? JSON.stringify([{ colId: 'iaCode', width: 400 }])
@@ -550,11 +591,11 @@ describe('BCGridViewer Component', () => {
           applyOrder: true
         })
       })
-      const gridProps = BCGridBase.mock.calls.at(-1)[0]
+      const gridProps = getLastGridProps()
       expect(gridProps.autoSizeStrategy).toEqual(
         expect.objectContaining({ type: 'fitGridWidth' })
       )
-      expect(gridProps.columnDefs[0].flex).toBe(1)
+      expect(gridProps.columnDefs?.[0]).toMatchObject({ flex: 1 })
     })
 
     it.each([
@@ -567,7 +608,7 @@ describe('BCGridViewer Component', () => {
       async (enablePageCaching, restoreFilters) => {
         const onPaginationChange = vi.fn()
         const onColumnStateChange = vi.fn()
-        const columnState = [
+        const columnState: ColumnState[] = [
           { colId: 'fuelType', sort: 'asc', sortIndex: 1 },
           { colId: 'complianceUnits', sort: 'desc', sortIndex: 0 },
           { colId: 'quantity', sort: null }
@@ -637,7 +678,9 @@ describe('BCGridViewer Component', () => {
 
     it('restores saved column layout without resetting cached pagination', async () => {
       const onPaginationChange = vi.fn()
-      const columnState = [{ colId: 'iaCode', width: 320, hide: false }]
+      const columnState: ColumnState[] = [
+        { colId: 'iaCode', width: 320, hide: false }
+      ]
       mockSessionStorage.getItem.mockImplementation((key) => {
         if (key === 'test-grid-column') return JSON.stringify(columnState)
         if (key === 'test-grid-pagination') {
@@ -672,7 +715,7 @@ describe('BCGridViewer Component', () => {
     })
 
     it('persists column widths after a user resize', () => {
-      const columnState = [{ colId: 'iaCode', width: 400 }]
+      const columnState: ColumnState[] = [{ colId: 'iaCode', width: 400 }]
       mockGridApi.getColumnState.mockReturnValue(columnState)
 
       render(
@@ -681,12 +724,16 @@ describe('BCGridViewer Component', () => {
         </TestWrapper>
       )
 
-      const gridProps = BCGridBase.mock.calls.at(-1)[0]
-      gridProps.onColumnResized({
+      const gridProps = getLastGridProps()
+      const onColumnResized = gridProps.onColumnResized
+      if (!onColumnResized) {
+        throw new Error('Expected BCGridBase to receive onColumnResized')
+      }
+      onColumnResized({
         finished: true,
         source: 'uiColumnResized',
-        api: mockGridApi
-      })
+        api: mockAgGridApi
+      } as ColumnResizedEvent<BCGridRow>)
 
       expect(mockSessionStorage.setItem).toHaveBeenCalledWith(
         'test-grid-column',
@@ -695,7 +742,7 @@ describe('BCGridViewer Component', () => {
     })
 
     it('persists column visibility changes', () => {
-      const columnState = [{ colId: 'contactName', hide: true }]
+      const columnState: ColumnState[] = [{ colId: 'contactName', hide: true }]
       mockGridApi.getColumnState.mockReturnValue(columnState)
 
       render(
@@ -704,8 +751,12 @@ describe('BCGridViewer Component', () => {
         </TestWrapper>
       )
 
-      const gridProps = BCGridBase.mock.calls.at(-1)[0]
-      gridProps.onColumnVisible({ api: mockGridApi })
+      const gridProps = getLastGridProps()
+      const onColumnVisible = gridProps.onColumnVisible
+      if (!onColumnVisible) {
+        throw new Error('Expected BCGridBase to receive onColumnVisible')
+      }
+      onColumnVisible({ api: mockAgGridApi } as ColumnVisibleEvent<BCGridRow>)
 
       expect(mockSessionStorage.setItem).toHaveBeenCalledWith(
         'test-grid-column',
@@ -715,7 +766,7 @@ describe('BCGridViewer Component', () => {
 
     it('writes column state to localStorage for login-session grids', () => {
       localStorage.clear()
-      const columnState = [{ colId: 'iaCode', width: 400 }]
+      const columnState: ColumnState[] = [{ colId: 'iaCode', width: 400 }]
       mockGridApi.getColumnState.mockReturnValue(columnState)
 
       render(
@@ -724,16 +775,20 @@ describe('BCGridViewer Component', () => {
         </TestWrapper>
       )
 
-      const gridProps = BCGridBase.mock.calls.at(-1)[0]
-      gridProps.onColumnResized({
+      const gridProps = getLastGridProps()
+      const onColumnResized = gridProps.onColumnResized
+      if (!onColumnResized) {
+        throw new Error('Expected BCGridBase to receive onColumnResized')
+      }
+      onColumnResized({
         finished: true,
         source: 'uiColumnResized',
-        api: mockGridApi
-      })
+        api: mockAgGridApi
+      } as ColumnResizedEvent<BCGridRow>)
 
-      expect(JSON.parse(localStorage.getItem('test-grid-column'))).toEqual(
-        columnState
-      )
+      const storedColumnState = localStorage.getItem('test-grid-column')
+      expect(storedColumnState).not.toBeNull()
+      expect(JSON.parse(storedColumnState!)).toEqual(columnState)
     })
   })
 })
@@ -767,7 +822,7 @@ describe('Compound filter pill regressions', () => {
       ['Fuel type', 'renewable']
     ])
 
-    pills[1].onRemove()
+    pills[1]?.onRemove?.()
     expect(onRemove).toHaveBeenCalledWith('fuelType', 'renewable')
   })
 })

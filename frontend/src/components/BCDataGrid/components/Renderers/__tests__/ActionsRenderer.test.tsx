@@ -1,10 +1,19 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vite-plus/test'
+import type { HTMLAttributes, ReactNode } from 'react'
 import { ActionsRenderer } from '../ActionsRenderer'
+import type { ActionsRendererProps } from '../ActionsRenderer'
 
 // Mock BCTypography
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, variant, ...props }) => (
+  default: ({
+    children,
+    variant,
+    ...props
+  }: HTMLAttributes<HTMLDivElement> & {
+    variant?: string
+    children?: ReactNode
+  }) => (
     <div data-test="bc-typography" data-variant={variant} {...props}>
       {children}
     </div>
@@ -33,21 +42,29 @@ vi.mock('@mui/icons-material/Replay', () => ({
 }))
 
 describe('ActionsRenderer', () => {
-  let mockApi
-  let mockNode
-  let defaultProps
+  type MockApi = ActionsRendererProps['api'] & {
+    getEditingCells: ReturnType<typeof vi.fn<() => Array<{ rowIndex: number }>>>
+    startEditingCell: ReturnType<
+      typeof vi.fn<(params: { rowIndex: number; colKey: string }) => void>
+    >
+    stopEditing: ReturnType<typeof vi.fn<(cancel?: boolean) => void>>
+  }
+  let mockApi: MockApi
+  let mockNode: ActionsRendererProps['node']
+  let defaultProps: ActionsRendererProps
 
   beforeEach(() => {
     mockApi = {
-      getEditingCells: vi.fn(() => []),
-      startEditingCell: vi.fn(),
-      stopEditing: vi.fn(),
+      getEditingCells: vi.fn<() => Array<{ rowIndex: number }>>(() => []),
+      startEditingCell:
+        vi.fn<(params: { rowIndex: number; colKey: string }) => void>(),
+      stopEditing: vi.fn<(cancel?: boolean) => void>(),
       getDisplayedCenterColumns: vi.fn(() => [
         { colId: 'col1' },
         { colId: 'col2' },
         { colId: 'col3' }
       ])
-    }
+    } as unknown as MockApi
 
     mockNode = {
       rowIndex: 5
@@ -73,7 +90,7 @@ describe('ActionsRenderer', () => {
 
     it('should render empty when no buttons are enabled', () => {
       const { container } = render(<ActionsRenderer {...defaultProps} />)
-      const stack = container.querySelector('.MuiStack-root')
+      const stack = container.querySelector('.MuiStack-root')!
       expect(stack.children).toHaveLength(0)
     })
   })

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vite-plus/test'
 import { isQuarterEditable } from '../cellEditables'
 
 // Helper to set system time easily
-const setDate = (dateStr) => {
+const setDate = (dateStr: string) => {
   vi.setSystemTime(new Date(dateStr))
 }
 

@@ -1,6 +1,7 @@
 import { omitProperties } from '@/utils/omitProperties'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vite-plus/test'
 import { render, screen, fireEvent, cleanup, act } from '@testing-library/react'
+import type { ReactNode } from 'react'
 import { BCDateFloatingFilter } from '../BCDateFloatingFilter'
 
 // Mock date-fns
@@ -78,9 +79,36 @@ vi.mock('@mui/icons-material/CalendarToday', () => ({
 }))
 
 // Mock @mui/x-date-pickers
-const mockDatePickerProps = {}
+interface MockDatePickerProps {
+  minDate?: Date
+  maxDate?: Date
+  format?: string
+  sx?: Record<string, unknown>
+  id?: string
+  openTo?: string
+  views?: string[]
+  slotProps?: {
+    textField?: {
+      placeholder?: string
+      inputProps?: Record<string, unknown>
+      onKeyDown?: (event: { stopPropagation: () => void }) => void
+      InputProps?: { startAdornment?: ReactNode; endAdornment?: ReactNode }
+    }
+  }
+}
+
+interface MockDatePickerComponentProps extends MockDatePickerProps {
+  value?: Date | null
+  onChange?: (value: Date | null) => void
+  onOpen?: () => void
+  onClose?: () => void
+  open?: boolean
+  disabled?: boolean
+}
+
+const mockDatePickerProps = {} as MockDatePickerProps
 vi.mock('@mui/x-date-pickers/DatePicker', () => ({
-  DatePicker: vi.fn((props) => {
+  DatePicker: vi.fn((props: MockDatePickerComponentProps) => {
     Object.assign(mockDatePickerProps, props)
     const { value, onChange, onOpen, onClose, open, slotProps, disabled } =
       omitProperties(props, ['minDate', 'maxDate', 'format', 'sx', 'id'])
@@ -288,7 +316,7 @@ describe('BCDateFloatingFilter', () => {
       }
 
       await act(async () => {
-        fireEvent.click(clearButton, mockEvent)
+        fireEvent.click(clearButton!, mockEvent)
       })
 
       expect(mockOnModelChange).toHaveBeenCalledWith(undefined)
@@ -395,7 +423,7 @@ describe('BCDateFloatingFilter', () => {
       )
 
       await act(async () => {
-        fireEvent.click(calendarButton)
+        fireEvent.click(calendarButton!)
       })
 
       expect(screen.getByTestId('close-picker-button')).toBeVisible()
@@ -437,7 +465,7 @@ describe('BCDateFloatingFilter', () => {
       }
 
       await act(async () => {
-        fireEvent.mouseDown(clearButton, mockEvent)
+        fireEvent.mouseDown(clearButton!, mockEvent)
       })
 
       // The component should handle the event without errors
@@ -470,7 +498,7 @@ describe('BCDateFloatingFilter', () => {
       render(<BCDateFloatingFilter {...defaultProps} />)
       const event = { stopPropagation: vi.fn() }
 
-      mockDatePickerProps.slotProps.textField.onKeyDown(event)
+      mockDatePickerProps.slotProps!.textField!.onKeyDown!(event)
 
       expect(event.stopPropagation).toHaveBeenCalled()
     })

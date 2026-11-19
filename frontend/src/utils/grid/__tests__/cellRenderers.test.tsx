@@ -1,4 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vite-plus/test'
+import { createElement } from 'react'
+import type { HTMLAttributes, ReactNode } from 'react'
+import type { RendererProps } from '../cellRenderers'
 import { roles } from '@/constants/roles'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -25,7 +28,13 @@ import {
 // Provide stub implementations for BCBadge and BCBox to avoid heavy MUI rendering
 vi.mock('@/components/BCBadge', () => ({
   __esModule: true,
-  default: ({ badgeContent, children, ...rest }) => (
+  default: ({
+    badgeContent,
+    children,
+    ...rest
+  }: HTMLAttributes<HTMLSpanElement> & {
+    badgeContent?: ReactNode
+  }) => (
     <span data-testid="bc-badge" {...rest}>
       {badgeContent}
       {children}
@@ -35,10 +44,13 @@ vi.mock('@/components/BCBadge', () => ({
 
 vi.mock('@/components/BCBox', () => ({
   __esModule: true,
-  default: ({ children, component = 'div', ...rest }) => {
-    const Comp = component
-    return <Comp {...rest}>{children}</Comp>
-  }
+  default: ({
+    children,
+    component = 'div',
+    ...rest
+  }: HTMLAttributes<HTMLElement> & {
+    component?: keyof JSX.IntrinsicElements
+  }) => createElement(component, rest, children)
 }))
 
 vi.mock('@/components/BCUserInitials/BCUserInitials', () => ({
@@ -48,8 +60,10 @@ vi.mock('@/components/BCUserInitials/BCUserInitials', () => ({
 
 // ResizeObserver is not implemented in JSDOM by default
 beforeEach(() => {
-  global.ResizeObserver = class {
-    observe() {}
+  global.ResizeObserver = class implements ResizeObserver {
+    constructor(_callback: ResizeObserverCallback) {}
+    observe(_target: Element, _options?: ResizeObserverOptions) {}
+    unobserve(_target: Element) {}
     disconnect() {}
   }
 
@@ -59,6 +73,9 @@ beforeEach(() => {
     value: 300
   })
 })
+
+const mockRowNode = (id: string): RendererProps['node'] =>
+  ({ id }) as RendererProps['node']
 
 describe('TextRenderer', () => {
   it('renders formatted value when provided', () => {
@@ -117,7 +134,7 @@ describe('OrgTypeRenderer', () => {
         <OrgTypeRenderer
           value="Supplier"
           data={{ orgType: { orgType: 'fuel_supplier' } }}
-          node={{ id: '99' }}
+          node={mockRowNode('99')}
         />
       </MemoryRouter>
     )
@@ -139,7 +156,7 @@ describe('OrgTypeRenderer', () => {
               { orgType: 'aggregator' }
             ]
           }}
-          node={{ id: '7' }}
+          node={mockRowNode('7')}
           colDef={{}}
         />
       </MemoryRouter>
@@ -161,7 +178,7 @@ describe('CommonArrayRenderer', () => {
         <CommonArrayRenderer
           value="Apple, Banana, Cherry"
           data={{}}
-          node={{ id: '1' }}
+          node={mockRowNode('1')}
           colDef={{}}
         />
       </MemoryRouter>
@@ -177,7 +194,7 @@ describe('LinkRenderer', () => {
   it('creates a link to node id when no custom url provided', () => {
     render(
       <MemoryRouter initialEntries={['/base']}>
-        <LinkRenderer value="Link Text" node={{ id: '123' }} />
+        <LinkRenderer value="Link Text" node={mockRowNode('123')} />
       </MemoryRouter>
     )
     const link = screen.getByRole('link')
@@ -211,7 +228,7 @@ describe('SelectRenderer & MultiSelectRenderer', () => {
       ...baseParams,
       value: 'X',
       data: {},
-      node: { id: '1' }
+      node: mockRowNode('1')
     }
     render(
       <MemoryRouter>
@@ -240,7 +257,7 @@ describe('Additional cellRenderers components', () => {
     const CondRenderer = ConditionalLinkRenderer(() => true)
     render(
       <MemoryRouter>
-        <CondRenderer value="Hi" node={{ id: '1' }} />
+        <CondRenderer value="Hi" node={mockRowNode('1')} />
       </MemoryRouter>
     )
     expect(screen.getByRole('link')).toHaveTextContent('Hi')
@@ -271,7 +288,7 @@ describe('Additional cellRenderers components', () => {
       <MemoryRouter initialEntries={['/orgs']}>
         <OrgStatusRenderer
           data={{ orgStatus: { status: 'Registered' } }}
-          node={{ id: '10' }}
+          node={mockRowNode('10')}
         />
       </MemoryRouter>
     )
@@ -283,7 +300,7 @@ describe('Additional cellRenderers components', () => {
       <MemoryRouter initialEntries={['/fuel']}>
         <FuelCodeStatusRenderer
           data={{ status: 'Approved' }}
-          node={{ id: '11' }}
+          node={mockRowNode('11')}
         />
       </MemoryRouter>
     )
@@ -295,7 +312,7 @@ describe('Additional cellRenderers components', () => {
       <MemoryRouter initialEntries={['/prefix']}>
         <FuelCodePrefixRenderer
           data={{ prefix: 'ABC', fuelProductionFacilityCountry: 'Canada' }}
-          node={{ id: '12' }}
+          node={mockRowNode('12')}
         />
       </MemoryRouter>
     )
@@ -343,7 +360,7 @@ describe('Additional cellRenderers components', () => {
         <RoleRenderer
           value={rolesString}
           data={{}}
-          node={{ id: '20' }}
+          node={mockRowNode('20')}
           colDef={{}}
         />
       </MemoryRouter>
@@ -358,7 +375,7 @@ describe('Additional cellRenderers components', () => {
         <CommonArrayRenderer
           value="Apple, Banana, Cherry, Dragonfruit, Elderberry, Fig"
           data={{}}
-          node={{ id: '99' }}
+          node={mockRowNode('99')}
           colDef={{}}
         />
       </MemoryRouter>

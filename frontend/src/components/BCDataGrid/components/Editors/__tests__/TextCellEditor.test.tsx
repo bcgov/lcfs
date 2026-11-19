@@ -2,12 +2,26 @@ import { describe, it, expect, vi, beforeEach } from 'vite-plus/test'
 import { render, screen, fireEvent } from '@testing-library/react'
 import '@testing-library/user-event'
 import { createRef } from 'react'
+import type { ReactNode } from 'react'
 import { ThemeProvider, createTheme } from '@mui/material/styles'
 import { TextCellEditor } from '../TextCellEditor'
+import type { TextCellEditorProps } from '../TextCellEditor'
 
 // Mock InputMask since it's an external library
 vi.mock('react-input-mask', () => ({
-  default: ({ onChange, mask, formatChars, children, disabled }) => {
+  default: ({
+    onChange,
+    mask,
+    formatChars,
+    children,
+    disabled
+  }: {
+    onChange?: (event: { target: { value: string } }) => void
+    mask?: string
+    formatChars?: Record<string, string>
+    children: (inputProps: Record<string, unknown>) => ReactNode
+    disabled?: boolean
+  }) => {
     // Create a test button that triggers the onChange to test handleTextFieldChange
     const handleTestChange = () => {
       if (onChange) {
@@ -33,16 +47,16 @@ vi.mock('react-input-mask', () => ({
 
 const theme = createTheme()
 
-const renderWithTheme = (component) => {
+const renderWithTheme = (component: ReactNode) => {
   return render(<ThemeProvider theme={theme}>{component}</ThemeProvider>)
 }
 
 describe('TextCellEditor', () => {
-  let mockOnValueChange
-  let defaultProps
+  const mockOnValueChange = vi.fn<(value: string) => void>()
+  let defaultProps: TextCellEditorProps
 
   beforeEach(() => {
-    mockOnValueChange = vi.fn()
+    mockOnValueChange.mockClear()
     defaultProps = {
       value: 'test value',
       onValueChange: mockOnValueChange,
@@ -153,7 +167,7 @@ describe('TextCellEditor', () => {
 
   describe('forwardRef Functionality', () => {
     it('forwards ref correctly', () => {
-      const ref = createRef()
+      const ref = createRef<HTMLDivElement>()
       renderWithTheme(<TextCellEditor {...defaultProps} ref={ref} />)
 
       expect(ref.current).toBeTruthy()

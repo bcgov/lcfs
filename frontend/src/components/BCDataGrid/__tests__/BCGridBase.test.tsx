@@ -3,6 +3,9 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vite-plus/test'
 import React, { createRef } from 'react'
 import { BrowserRouter } from 'react-router-dom'
 import { BCGridBase } from '../BCGridBase'
+import type { BCGridBaseHandle } from '../BCGridBase'
+import type { BCGridBaseProps } from '../types'
+import type { GridApi } from 'ag-grid-community'
 
 // Mock AgGridReact
 const mockGridApi = {
@@ -10,42 +13,78 @@ const mockGridApi = {
   setFilterModel: vi.fn(),
   getColumnDefs: vi.fn(),
   destroyFilter: vi.fn()
-}
+} satisfies Partial<GridApi>
 
 let shouldTriggerCallbacks = true
 let shouldAttachApiRef = true
-let capturedGridProps
+type MockGridProps = Omit<
+  Partial<BCGridBaseProps>,
+  'getRowStyle' | 'onGridReady' | 'onRowDataUpdated' | 'onCellKeyDown'
+> & {
+  onGridReady?: (event: { api: typeof mockGridApi }) => void
+  onRowDataUpdated?: () => void
+  getRowStyle?: (params: { node: { id: string } }) => unknown
+  onCellKeyDown?: (params: {
+    event: {
+      code: string
+      target: HTMLElement
+      preventDefault: () => void
+      stopPropagation: () => void
+    }
+    node: { id: string }
+    rowIndex: number
+    column: { getColId: () => string }
+    api: {
+      getEditingCells: () => {
+        rowIndex: number
+        column: { getColId: () => string }
+      }[]
+    }
+  }) => void
+  loadingOverlayComponentParams?: { loadingMessage?: string }
+  [key: string]: unknown
+}
+let capturedGridProps: MockGridProps = {}
 
 vi.mock('ag-grid-react', () => {
-  const MockAgGridReact = React.forwardRef((props, ref) => {
-    capturedGridProps = props
-    const { onGridReady, onRowDataUpdated, getRowStyle } = props
+  const MockAgGridReact = React.forwardRef<BCGridBaseHandle, MockGridProps>(
+    (props, ref) => {
+      capturedGridProps = props
+      const { onGridReady, onRowDataUpdated, getRowStyle } = props
 
-    React.useImperativeHandle(ref, () =>
-      shouldAttachApiRef ? { api: mockGridApi } : {}
-    )
+      React.useImperativeHandle(ref, () =>
+        shouldAttachApiRef
+          ? {
+              // The mock provides the GridApi members exercised by this component.
+              api: mockGridApi as unknown as NonNullable<
+                BCGridBaseHandle['api']
+              >
+            }
+          : {}
+      )
 
-    // Only trigger callbacks when enabled
-    if (shouldTriggerCallbacks) {
-      // Trigger onGridReady if provided
-      if (onGridReady) {
-        setTimeout(() => onGridReady({ api: mockGridApi }), 0)
+      // Only trigger callbacks when enabled
+      if (shouldTriggerCallbacks) {
+        // Trigger onGridReady if provided
+        if (typeof onGridReady === 'function') {
+          setTimeout(() => onGridReady({ api: mockGridApi }), 0)
+        }
+
+        // Trigger onRowDataUpdated if provided
+        if (typeof onRowDataUpdated === 'function') {
+          setTimeout(() => onRowDataUpdated(), 0)
+        }
       }
 
-      // Trigger onRowDataUpdated if provided
-      if (onRowDataUpdated) {
-        setTimeout(() => onRowDataUpdated(), 0)
+      // Test getRowStyle if provided
+      if (typeof getRowStyle === 'function') {
+        const testParams = { node: { id: 'test' } }
+        getRowStyle(testParams)
       }
-    }
 
-    // Test getRowStyle if provided
-    if (getRowStyle) {
-      const testParams = { node: { id: 'test' } }
-      getRowStyle(testParams)
+      return <div data-testid="ag-grid-react">AgGrid</div>
     }
-
-    return <div data-testid="ag-grid-react">AgGrid</div>
-  })
+  )
   MockAgGridReact.displayName = 'AgGridReact'
   return { AgGridReact: MockAgGridReact }
 })
@@ -64,12 +103,17 @@ vi.mock('react-router-dom', async () => {
   return {
     ...actual,
     useSearchParams: vi.fn(() => [mockSearchParams, mockSetSearchParams]),
-    BrowserRouter: ({ children }) => <div>{children}</div>
+    BrowserRouter: ({ children }: React.PropsWithChildren) => (
+      <div>{children}</div>
+    )
   }
 })
 
 // Test wrapper component
-const TestWrapper = ({ children, searchParams = '' }) => {
+const TestWrapper = ({
+  children,
+  searchParams = ''
+}: React.PropsWithChildren<{ searchParams?: string }>) => {
   // Clear existing params manually since clear() may not exist
   for (const key of mockSearchParams.keys()) {
     mockSearchParams.delete(key)
@@ -85,7 +129,7 @@ const TestWrapper = ({ children, searchParams = '' }) => {
 }
 
 describe('BCGridBase Component', () => {
-  let originalInnerHeight
+  let originalInnerHeight = 0
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -93,7 +137,7 @@ describe('BCGridBase Component', () => {
     window.innerHeight = 800
     shouldTriggerCallbacks = true
     shouldAttachApiRef = true
-    capturedGridProps = undefined
+    capturedGridProps = {}
     mockGridApi.getDisplayedRowCount.mockReturnValue(10)
     mockGridApi.getColumnDefs.mockReturnValue([
       { field: 'test1' },
@@ -129,7 +173,7 @@ describe('BCGridBase Component', () => {
 
   describe('Row Styling', () => {
     it('returns highlighted background when params.node.id matches highlightedId', () => {
-      const ref = createRef()
+      const ref = createRef<BCGridBaseHandle>()
 
       render(
         <TestWrapper searchParams="hid=test123">
@@ -139,13 +183,13 @@ describe('BCGridBase Component', () => {
 
       // Access the getRowStyle callback through AgGridReact mock
       const getRowStyleCall = capturedGridProps.getRowStyle
-      const result = getRowStyleCall({ node: { id: 'test123' } })
+      const result = getRowStyleCall!({ node: { id: 'test123' } })
 
       expect(result).toEqual({ backgroundColor: '#fade81' })
     })
 
     it('returns undefined when params.node.id does not match highlightedId', () => {
-      const ref = createRef()
+      const ref = createRef<BCGridBaseHandle>()
 
       render(
         <TestWrapper searchParams="hid=test123">
@@ -154,13 +198,13 @@ describe('BCGridBase Component', () => {
       )
 
       const getRowStyleCall = capturedGridProps.getRowStyle
-      const result = getRowStyleCall({ node: { id: 'different123' } })
+      const result = getRowStyleCall!({ node: { id: 'different123' } })
 
       expect(result).toEqual({})
     })
 
     it('handles null/undefined highlightedId', () => {
-      const ref = createRef()
+      const ref = createRef<BCGridBaseHandle>()
 
       render(
         <TestWrapper>
@@ -169,7 +213,7 @@ describe('BCGridBase Component', () => {
       )
 
       const getRowStyleCall = capturedGridProps.getRowStyle
-      const result = getRowStyleCall({ node: { id: 'test123' } })
+      const result = getRowStyleCall!({ node: { id: 'test123' } })
 
       expect(result).toEqual({})
     })
@@ -187,7 +231,7 @@ describe('BCGridBase Component', () => {
       )
 
       const getRowStyleCall = capturedGridProps.getRowStyle
-      const result = getRowStyleCall({ node: { id: 'test123' } })
+      const result = getRowStyleCall!({ node: { id: 'test123' } })
 
       expect(result).toEqual({
         backgroundColor: '#fade81',
@@ -206,7 +250,7 @@ describe('BCGridBase Component', () => {
       )
 
       const getRowStyleCall = capturedGridProps.getRowStyle
-      const result = getRowStyleCall({ node: { id: 'test123' } })
+      const result = getRowStyleCall!({ node: { id: 'test123' } })
 
       expect(result).toEqual({ backgroundColor: '#fade81' })
     })
@@ -214,7 +258,7 @@ describe('BCGridBase Component', () => {
 
   describe('Height Management', () => {
     it('does not call determineHeight when gridApiRef.current is null', async () => {
-      const ref = createRef()
+      const ref = createRef<BCGridBaseHandle>()
 
       render(
         <TestWrapper>
@@ -249,7 +293,7 @@ describe('BCGridBase Component', () => {
       // Verify the AgGrid received domLayout: 'autoHeight' and height: 'auto'
       const agGridProps = capturedGridProps
       expect(agGridProps.domLayout).toBe('autoHeight')
-      expect(agGridProps.containerStyle.height).toBe('auto')
+      expect(agGridProps.containerStyle?.height).toBe('auto')
     })
 
     it('sets normal layout when displayedRowCount > maxVisibleRows', async () => {
@@ -306,7 +350,7 @@ describe('BCGridBase Component', () => {
 
   describe('Grid Ready Handler', () => {
     it('sets gridApiRef and calls determineHeight on grid ready', async () => {
-      const ref = createRef()
+      const ref = createRef<BCGridBaseHandle>()
 
       render(
         <TestWrapper>
@@ -362,7 +406,10 @@ describe('BCGridBase Component', () => {
 
       render(
         <TestWrapper>
-          <BCGridBase onGridReady="not-a-function" autoHeight={true} />
+          <BCGridBase
+            onGridReady={'not-a-function' as never}
+            autoHeight={true}
+          />
         </TestWrapper>
       )
 
@@ -378,7 +425,7 @@ describe('BCGridBase Component', () => {
 
   describe('Filter Management', () => {
     it('does nothing when API not available', async () => {
-      const ref = createRef()
+      const ref = createRef<BCGridBaseHandle>()
 
       // Mock ref.current to have no api
       shouldAttachApiRef = false
@@ -395,7 +442,7 @@ describe('BCGridBase Component', () => {
 
       // clearFilters should not throw when api is not available
       act(() => {
-        ref.current?.clearFilters()
+        ref.current?.clearFilters?.()
       })
 
       // No API calls should be made
@@ -404,7 +451,7 @@ describe('BCGridBase Component', () => {
     })
 
     it('clears filters after the nested grid ref becomes available', () => {
-      const ref = createRef()
+      const ref = createRef<BCGridBaseHandle>()
       shouldAttachApiRef = false
       const { rerender } = render(
         <TestWrapper>
@@ -412,7 +459,7 @@ describe('BCGridBase Component', () => {
         </TestWrapper>
       )
 
-      expect(() => ref.current.clearFilters()).not.toThrow()
+      expect(() => ref.current?.clearFilters?.()).not.toThrow()
       expect(mockGridApi.setFilterModel).not.toHaveBeenCalled()
 
       shouldAttachApiRef = true
@@ -422,7 +469,7 @@ describe('BCGridBase Component', () => {
         </TestWrapper>
       )
 
-      act(() => ref.current.clearFilters())
+      act(() => ref.current?.clearFilters?.())
       expect(mockGridApi.setFilterModel).toHaveBeenCalledWith(null)
       expect(mockGridApi.destroyFilter).toHaveBeenCalledWith('test1')
       expect(mockGridApi.destroyFilter).toHaveBeenCalledWith('test2')
@@ -490,7 +537,7 @@ describe('BCGridBase Component', () => {
     })
 
     it('exposes clearFilters method through ref via useImperativeHandle', async () => {
-      const ref = createRef()
+      const ref = createRef<BCGridBaseHandle>()
 
       render(
         <TestWrapper>
@@ -510,7 +557,10 @@ describe('BCGridBase Component', () => {
 
   describe('Props Integration', () => {
     it('merges autoSizeStrategy with default fitCellContents', () => {
-      const customAutoSizeStrategy = { skipHeader: true }
+      const customAutoSizeStrategy = {
+        type: 'fitGridWidth',
+        skipHeader: true
+      } as const
 
       render(
         <TestWrapper>
@@ -556,7 +606,7 @@ describe('BCGridBase Component', () => {
 
       // Verify essential props
       expect(agGridProps.domLayout).toBe('autoHeight')
-      expect(agGridProps.containerStyle.height).toBe('auto')
+      expect(agGridProps.containerStyle?.height).toBe('auto')
       expect(agGridProps.animateRows).toBe(true)
       expect(agGridProps.overlayNoRowsTemplate).toContain('No rows found')
       expect(agGridProps.overlayNoRowsTemplate).toContain('min-height: 45px')
@@ -570,7 +620,7 @@ describe('BCGridBase Component', () => {
       expect(agGridProps.suppressScrollOnNewData).toBe(true)
       expect(agGridProps.rowHeight).toBe(45)
       expect(agGridProps.headerHeight).toBe(40)
-      expect(agGridProps.loadingOverlayComponentParams.loadingMessage).toBe(
+      expect(agGridProps.loadingOverlayComponentParams?.loadingMessage).toBe(
         'One moment please...'
       )
     })
@@ -590,7 +640,9 @@ describe('BCGridBase Component', () => {
   describe('Enter key in a cell', () => {
     const column = { getColId: () => 'supplyFromDate' }
 
-    const pressEnterInCell = (editingCells) => {
+    const pressEnterInCell: (
+      editingCells: { rowIndex: number; column: typeof column }[]
+    ) => HTMLButtonElement = (editingCells) => {
       const cell = document.createElement('div')
       cell.className = 'ag-cell'
       const input = document.createElement('input')
@@ -604,7 +656,7 @@ describe('BCGridBase Component', () => {
           <BCGridBase />
         </TestWrapper>
       )
-      capturedGridProps.onCellKeyDown({
+      capturedGridProps.onCellKeyDown?.({
         event: {
           code: 'Enter',
           target: input,

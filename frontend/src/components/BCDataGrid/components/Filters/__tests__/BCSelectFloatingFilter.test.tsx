@@ -1,30 +1,52 @@
 import { describe, it, expect, vi, beforeEach } from 'vite-plus/test'
 import { render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import type { MouseEventHandler, ReactNode } from 'react'
 import { BCSelectFloatingFilter } from '../BCSelectFloatingFilter'
+import type { BCSelectFloatingFilterProps } from '../BCSelectFloatingFilter'
 
 // Mock Material-UI components
 vi.mock('@mui/material/IconButton', () => ({
-  default: vi.fn(({ children, onClick, onMouseDown, ...props }) => (
-    <button
-      data-test="icon-button"
-      onClick={onClick}
-      onMouseDown={onMouseDown}
-      {...props}
-    >
-      {children}
-    </button>
-  ))
+  default: vi.fn(
+    ({
+      children,
+      onClick,
+      onMouseDown,
+      ...props
+    }: {
+      children?: ReactNode
+      onClick?: MouseEventHandler<HTMLButtonElement>
+      onMouseDown?: MouseEventHandler<HTMLButtonElement>
+      [key: string]: unknown
+    }) => (
+      <button
+        data-test="icon-button"
+        onClick={onClick}
+        onMouseDown={onMouseDown}
+        {...props}
+      >
+        {children}
+      </button>
+    )
+  )
 }))
 
 vi.mock('@mui/icons-material/Clear', () => ({
   default: vi.fn(() => <span data-test="clear-icon">Clear</span>)
 }))
 
+const getSelectElement = (): HTMLSelectElement => {
+  const select = document.getElementById('select-filter')
+  if (!(select instanceof HTMLSelectElement)) {
+    throw new Error('Expected select-filter element')
+  }
+  return select
+}
+
 describe('BCSelectFloatingFilter', () => {
-  let mockOnModelChange
-  let mockOptionsQuery
-  let defaultProps
+  let mockOnModelChange: BCSelectFloatingFilterProps['onModelChange']
+  let mockOptionsQuery: BCSelectFloatingFilterProps['optionsQuery']
+  let defaultProps: BCSelectFloatingFilterProps
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -67,7 +89,7 @@ describe('BCSelectFloatingFilter', () => {
 
       expect(screen.getByRole('group')).toBeInTheDocument()
       expect(screen.getAllByRole('combobox')).toHaveLength(2) // div and select both have combobox role
-      const select = document.getElementById('select-filter')
+      const select = getSelectElement()
       expect(select).toBeInTheDocument()
       expect(select.tagName).toBe('SELECT')
     })
@@ -75,7 +97,7 @@ describe('BCSelectFloatingFilter', () => {
     it('renders with all default props', () => {
       render(<BCSelectFloatingFilter {...defaultProps} />)
 
-      const select = document.getElementById('select-filter')
+      const select = getSelectElement()
       expect(select).toBeInTheDocument()
       expect(select).not.toHaveAttribute('multiple')
       expect(select).not.toHaveAttribute('disabled')
@@ -94,7 +116,7 @@ describe('BCSelectFloatingFilter', () => {
       const props = { ...defaultProps, multiple: true }
       render(<BCSelectFloatingFilter {...props} />)
 
-      const select = document.getElementById('select-filter')
+      const select = getSelectElement()
       expect(select).toBeInTheDocument()
       expect(select).toHaveAttribute('multiple')
       expect(select).toHaveAttribute('aria-multiselectable', 'true')
@@ -139,7 +161,7 @@ describe('BCSelectFloatingFilter', () => {
 
       expect(screen.getByText('Loading...')).toBeInTheDocument()
 
-      const select = document.getElementById('select-filter')
+      const select = getSelectElement()
       expect(select).toHaveAttribute('disabled')
     })
   })
@@ -160,7 +182,7 @@ describe('BCSelectFloatingFilter', () => {
         screen.getByText('Error loading options: Failed to load options')
       ).toBeInTheDocument()
 
-      const select = document.getElementById('select-filter')
+      const select = getSelectElement()
       expect(select).toHaveAttribute('aria-describedby', 'select-filter-error')
     })
 
@@ -192,7 +214,7 @@ describe('BCSelectFloatingFilter', () => {
       render(<BCSelectFloatingFilter {...props} />)
 
       // This test ensures the early return branch in useEffect is covered
-      const select = document.getElementById('select-filter')
+      const select = getSelectElement()
       expect(select).toBeInTheDocument()
     })
 
@@ -205,7 +227,7 @@ describe('BCSelectFloatingFilter', () => {
 
       render(<BCSelectFloatingFilter {...props} />)
 
-      const select = document.getElementById('select-filter')
+      const select = getSelectElement()
       expect(select.value).toBe('option1')
     })
 
@@ -218,7 +240,7 @@ describe('BCSelectFloatingFilter', () => {
 
       render(<BCSelectFloatingFilter {...props} />)
 
-      const select = document.getElementById('select-filter')
+      const select = getSelectElement()
       expect(Array.from(select.selectedOptions).map((o) => o.value)).toEqual([
         'option1',
         'option2'
@@ -231,7 +253,7 @@ describe('BCSelectFloatingFilter', () => {
       const user = userEvent.setup()
       render(<BCSelectFloatingFilter {...defaultProps} />)
 
-      const select = document.getElementById('select-filter')
+      const select = getSelectElement()
 
       // Use userEvent to actually trigger the change event and handleChange function
       await user.selectOptions(select, 'option1')
@@ -247,7 +269,7 @@ describe('BCSelectFloatingFilter', () => {
       const props = { ...defaultProps, multiple: true }
       render(<BCSelectFloatingFilter {...props} />)
 
-      const select = document.getElementById('select-filter')
+      const select = getSelectElement()
 
       // Use userEvent to select multiple options and trigger handleChange
       await user.selectOptions(select, ['option1', 'option2'])
@@ -326,7 +348,7 @@ describe('BCSelectFloatingFilter', () => {
       const props = { ...defaultProps, disabled: true }
       render(<BCSelectFloatingFilter {...props} />)
 
-      const select = document.getElementById('select-filter')
+      const select = getSelectElement()
       expect(select).toHaveAttribute('disabled')
       expect(select).toHaveAttribute('aria-disabled', 'true')
     })
@@ -342,7 +364,7 @@ describe('BCSelectFloatingFilter', () => {
       const props = { ...defaultProps, optionsQuery: loadingOptionsQuery }
       render(<BCSelectFloatingFilter {...props} />)
 
-      const select = document.getElementById('select-filter')
+      const select = getSelectElement()
       expect(select).toHaveAttribute('disabled')
       expect(select).toHaveAttribute('aria-disabled', 'true')
     })
@@ -360,7 +382,7 @@ describe('BCSelectFloatingFilter', () => {
       expect(container).toHaveAttribute('aria-controls', 'select-filter')
       expect(container).toHaveAttribute('aria-expanded', 'false')
 
-      const select = document.getElementById('select-filter')
+      const select = getSelectElement()
       expect(select).toHaveAttribute('aria-multiselectable', 'false')
       expect(select).toHaveAttribute(
         'aria-describedby',
@@ -372,7 +394,7 @@ describe('BCSelectFloatingFilter', () => {
       const props = { ...defaultProps, multiple: true }
       render(<BCSelectFloatingFilter {...props} />)
 
-      const select = document.getElementById('select-filter')
+      const select = getSelectElement()
       expect(select).toHaveAttribute('aria-multiselectable', 'true')
     })
 
@@ -387,7 +409,7 @@ describe('BCSelectFloatingFilter', () => {
       const props = { ...defaultProps, optionsQuery: errorOptionsQuery }
       render(<BCSelectFloatingFilter {...props} />)
 
-      const select = document.getElementById('select-filter')
+      const select = getSelectElement()
       expect(select).toHaveAttribute('aria-describedby', 'select-filter-error')
     })
 
@@ -458,7 +480,7 @@ describe('BCSelectFloatingFilter', () => {
       const props = { ...defaultProps, initialFilterType: 'contains' }
       render(<BCSelectFloatingFilter {...props} />)
 
-      const select = document.getElementById('select-filter')
+      const select = getSelectElement()
       expect(select).toBeInTheDocument()
       // Test that component renders with custom filter type
       expect(select).toHaveAttribute('id', 'select-filter')
@@ -480,7 +502,7 @@ describe('BCSelectFloatingFilter', () => {
       render(<BCSelectFloatingFilter {...props} />)
 
       // Should split on commas and handle each part
-      const select = document.getElementById('select-filter')
+      const select = getSelectElement()
       expect(select).toBeInTheDocument()
     })
   })

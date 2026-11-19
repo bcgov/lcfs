@@ -1,19 +1,51 @@
-import { omitProperties } from '@/utils/omitProperties'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vite-plus/test'
 import { render, screen, fireEvent, cleanup, act } from '@testing-library/react'
-import { DatePicker } from '@mui/x-date-pickers/DatePicker'
+import type {
+  FocusEvent,
+  KeyboardEvent,
+  ReactElement,
+  SyntheticEvent
+} from 'react'
 import { DateEditor } from '../DateEditor'
+import type { DateEditorProps } from '../DateEditor'
+
+interface DatePickerMockProps {
+  value?: Date | null
+  onChange?: (value: Date | null, context: { validationError: unknown }) => void
+  onAccept?: (value: Date | null, context: { validationError: unknown }) => void
+  onOpen?: () => void
+  onViewChange?: (view: string) => void
+  onClose?: (event: SyntheticEvent) => void
+  open?: boolean
+  slotProps: {
+    textField: {
+      onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void
+      onBlur?: (event: FocusEvent) => void
+      placeholder?: string
+      inputProps: { inputMode?: string }
+    }
+    openPickerButton: { onClick?: () => void }
+    clearButton: { onClick?: () => void }
+    popper: Record<string, unknown>
+    desktopTrapFocus: { disableRestoreFocus?: boolean }
+  }
+  [property: string]: unknown
+}
+
+const { mockDatePicker } = vi.hoisted(() => ({
+  mockDatePicker: vi.fn<(props: DatePickerMockProps) => ReactElement | null>()
+}))
 
 // Mock date-fns
 const { mockFormat, mockParseISO } = vi.hoisted(() => ({
-  mockFormat: vi.fn((date, formatStr) => {
+  mockFormat: vi.fn((date: Date, formatStr: string) => {
     if (!date) return null
     if (formatStr === 'yyyy-MM-dd') {
       return date.toISOString().split('T')[0]
     }
     return date.toISOString()
   }),
-  mockParseISO: vi.fn((dateString) => {
+  mockParseISO: vi.fn((dateString: string) => {
     if (!dateString || dateString === 'YYYY-MM-DD') return null
     const [year, month, day] = dateString.split('-').map(Number)
     return new Date(year, month - 1, day)
@@ -23,14 +55,14 @@ const { mockFormat, mockParseISO } = vi.hoisted(() => ({
 vi.mock('date-fns', () => ({
   format: mockFormat,
   isValid: vi.fn(
-    (date) => date instanceof Date && !Number.isNaN(date.getTime())
+    (date: unknown) => date instanceof Date && !Number.isNaN(date.getTime())
   ),
   parseISO: mockParseISO
 }))
 
 // Mock @mui/x-date-pickers
 vi.mock('@mui/x-date-pickers/DatePicker', () => ({
-  DatePicker: vi.fn(
+  DatePicker: mockDatePicker.mockImplementation(
     ({
       value,
       onChange,
@@ -40,13 +72,13 @@ vi.mock('@mui/x-date-pickers/DatePicker', () => ({
       open,
       slotProps,
       ...restProps
-    }) => {
+    }: DatePickerMockProps) => {
       delete restProps.onViewChange
       delete restProps.minDate
       delete restProps.maxDate
 
       // Filter out MUI-specific props that shouldn't go on DOM elements
-      const { ...domProps } = omitProperties(restProps, [
+      const omittedProps = new Set([
         'fullWidth',
         'margin',
         'format',
@@ -56,6 +88,9 @@ vi.mock('@mui/x-date-pickers/DatePicker', () => ({
         'className',
         'id'
       ])
+      const domProps = Object.fromEntries(
+        Object.entries(restProps).filter(([key]) => !omittedProps.has(key))
+      )
       const inputValue = value
         ? [
             value.getFullYear(),
@@ -72,13 +107,16 @@ vi.mock('@mui/x-date-pickers/DatePicker', () => ({
             onChange={(e) => {
               const [year, month, day] = e.target.value.split('-').map(Number)
               const val = e.target.value ? new Date(year, month - 1, day) : null
-              onChange?.(val)
+              onChange?.(val, { validationError: null })
             }}
             onKeyDown={slotProps?.textField?.onKeyDown}
             onBlur={slotProps?.textField?.onBlur}
             {...domProps}
           />
-          <button data-test="accept-button" onClick={() => onAccept?.(value)}>
+          <button
+            data-test="accept-button"
+            onClick={() => onAccept?.(value ?? null, { validationError: null })}
+          >
             Accept
           </button>
           <button
@@ -94,7 +132,7 @@ vi.mock('@mui/x-date-pickers/DatePicker', () => ({
             data-test="clear-button"
             onClick={() => {
               slotProps?.clearButton?.onClick?.()
-              onChange?.(null)
+              onChange?.(null, { validationError: null })
             }}
           >
             Clear
@@ -113,28 +151,34 @@ vi.mock('@mui/x-date-pickers/DatePicker', () => ({
 }))
 
 describe('DateEditor', () => {
-  const mockOnValueChange = vi.fn()
-  const mockApi = {
-    getLastDisplayedRowIndex: vi.fn(() => 5),
+  const mockOnValueChange = vi.fn<(value: string | null) => void>()
+  const mockGetLastDisplayedRowIndex = vi.fn(() => 5)
+  const mockApi: NonNullable<DateEditorProps['api']> = {
+    getLastDisplayedRowIndex: mockGetLastDisplayedRowIndex,
     stopEditing: vi.fn(),
     setFocusedCell: vi.fn()
   }
 
-  const defaultProps = {
+  const defaultProps: DateEditorProps = {
     value: null,
     onValueChange: mockOnValueChange,
     rowIndex: 0,
     api: mockApi,
-    column: { getColId: vi.fn(() => 'approvalDate') }
+    column: {
+      getColId: vi.fn(() => 'approvalDate'),
+      getColDef: vi.fn(() => ({ field: 'approvalDate' }))
+    }
   }
+  const addEventListenerSpy = vi.spyOn(document, 'addEventListener')
+  const scrollToSpy = vi.spyOn(window, 'scrollTo')
 
   beforeEach(() => {
     vi.clearAllMocks()
-    document.addEventListener = vi.fn()
-    document.removeEventListener = vi.fn()
-    window.scrollTo = vi.fn()
-    window.requestAnimationFrame = vi.fn((callback) => {
-      callback()
+    addEventListenerSpy.mockImplementation(() => {})
+    vi.spyOn(document, 'removeEventListener').mockImplementation(() => {})
+    scrollToSpy.mockImplementation(() => {})
+    window.requestAnimationFrame = vi.fn((callback: FrameRequestCallback) => {
+      callback(0)
       return 1
     })
   })
@@ -196,7 +240,7 @@ describe('DateEditor', () => {
     })
 
     it('initializes isOpen as true with autoOpenLastRow on last row', () => {
-      mockApi.getLastDisplayedRowIndex.mockReturnValue(5)
+      mockGetLastDisplayedRowIndex.mockReturnValue(5)
 
       render(
         <DateEditor {...defaultProps} autoOpenLastRow={true} rowIndex={5} />
@@ -207,7 +251,7 @@ describe('DateEditor', () => {
     })
 
     it('initializes isOpen as false with autoOpenLastRow not on last row', () => {
-      mockApi.getLastDisplayedRowIndex.mockReturnValue(5)
+      mockGetLastDisplayedRowIndex.mockReturnValue(5)
 
       render(
         <DateEditor {...defaultProps} autoOpenLastRow={true} rowIndex={3} />
@@ -222,7 +266,7 @@ describe('DateEditor', () => {
     it('adds and removes event listener on mount/unmount', () => {
       const { unmount } = render(<DateEditor {...defaultProps} />)
 
-      expect(document.addEventListener).toHaveBeenCalledWith(
+      expect(addEventListenerSpy).toHaveBeenCalledWith(
         'mousedown',
         expect.any(Function),
         { passive: true }
@@ -243,20 +287,21 @@ describe('DateEditor', () => {
         <DateEditor {...defaultProps} autoOpenLastRow={true} rowIndex={5} />
       )
 
-      const container = screen.getByTestId('date-picker').parentElement
-      const mockEvent = {
-        target: container
-      }
+      const container = screen.getByTestId('date-picker').parentElement!
+      const mockEvent = new MouseEvent('mousedown')
+      Object.defineProperty(mockEvent, 'target', { value: container })
 
       container.contains = vi.fn(() => true)
 
-      const addEventListenerCall = document.addEventListener.mock.calls.find(
+      const addEventListenerCall = addEventListenerSpy.mock.calls.find(
         (call) => call[0] === 'mousedown'
       )
-      const handleClickOutside = addEventListenerCall[1]
+      const handleClickOutside = addEventListenerCall?.[1]
 
       act(() => {
-        handleClickOutside(mockEvent)
+        if (typeof handleClickOutside === 'function') {
+          handleClickOutside.call(document, mockEvent)
+        }
       })
 
       expect(screen.getByTestId('close-button')).toBeVisible()
@@ -267,20 +312,21 @@ describe('DateEditor', () => {
         <DateEditor {...defaultProps} autoOpenLastRow={true} rowIndex={5} />
       )
 
-      const container = screen.getByTestId('date-picker').parentElement
-      const mockEvent = {
-        target: document.body
-      }
+      const container = screen.getByTestId('date-picker').parentElement!
+      const mockEvent = new MouseEvent('mousedown')
+      Object.defineProperty(mockEvent, 'target', { value: document.body })
 
       container.contains = vi.fn(() => false)
 
-      const addEventListenerCall = document.addEventListener.mock.calls.find(
+      const addEventListenerCall = addEventListenerSpy.mock.calls.find(
         (call) => call[0] === 'mousedown'
       )
-      const handleClickOutside = addEventListenerCall[1]
+      const handleClickOutside = addEventListenerCall?.[1]
 
       act(() => {
-        handleClickOutside(mockEvent)
+        if (typeof handleClickOutside === 'function') {
+          handleClickOutside.call(document, mockEvent)
+        }
       })
 
       expect(screen.queryByTestId('close-button')).not.toBeVisible()
@@ -325,10 +371,7 @@ describe('DateEditor', () => {
       })
       expect(mockApi.stopEditing).toHaveBeenCalled()
       expect(mockApi.setFocusedCell).toHaveBeenCalledWith(0, 'approvalDate')
-      expect(window.scrollTo).toHaveBeenCalledWith(
-        window.scrollX,
-        window.scrollY
-      )
+      expect(scrollToSpy).toHaveBeenCalledWith(window.scrollX, window.scrollY)
       vi.useRealTimers()
     })
 
@@ -439,11 +482,11 @@ describe('DateEditor', () => {
     it('handles null/undefined event gracefully', () => {
       render(<DateEditor {...defaultProps} />)
 
-      const container = screen.getByTestId('date-picker').parentElement
+      const container = screen.getByTestId('date-picker').parentElement!
 
       expect(() => {
         act(() => {
-          fireEvent.mouseDown(container, null)
+          fireEvent.mouseDown(container)
         })
       }).not.toThrow()
     })
@@ -485,10 +528,7 @@ describe('DateEditor', () => {
       })
       expect(mockApi.stopEditing).toHaveBeenCalled()
       expect(mockApi.setFocusedCell).toHaveBeenCalledWith(0, 'approvalDate')
-      expect(window.scrollTo).toHaveBeenCalledWith(
-        window.scrollX,
-        window.scrollY
-      )
+      expect(scrollToSpy).toHaveBeenCalledWith(window.scrollX, window.scrollY)
       vi.useRealTimers()
     })
   })
@@ -509,7 +549,8 @@ describe('DateEditor', () => {
     it('keeps the calendar popper portal enabled while stopping grid event bubbling', () => {
       render(<DateEditor {...defaultProps} />)
 
-      const datePickerProps = DatePicker.mock.calls.at(-1)[0]
+      const datePickerProps =
+        mockDatePicker.mock.calls[mockDatePicker.mock.calls.length - 1]![0]
 
       expect(datePickerProps.slotProps.popper.disablePortal).toBeUndefined()
       expect(datePickerProps.slotProps.popper.onMouseDown).toEqual(
@@ -523,7 +564,8 @@ describe('DateEditor', () => {
     it('marks the calendar popper as part of the cell editor for AG Grid', () => {
       render(<DateEditor {...defaultProps} />)
 
-      const datePickerProps = DatePicker.mock.calls.at(-1)[0]
+      const datePickerProps =
+        mockDatePicker.mock.calls[mockDatePicker.mock.calls.length - 1]![0]
 
       // Without this, grids with stopEditingWhenCellsLoseFocus close the
       // editor as soon as the calendar takes focus.
@@ -535,7 +577,8 @@ describe('DateEditor', () => {
     it('disables picker focus restoration so closing the calendar does not scroll to another grid', () => {
       render(<DateEditor {...defaultProps} />)
 
-      const datePickerProps = DatePicker.mock.calls.at(-1)[0]
+      const datePickerProps =
+        mockDatePicker.mock.calls[mockDatePicker.mock.calls.length - 1]![0]
 
       expect(
         datePickerProps.slotProps.desktopTrapFocus.disableRestoreFocus
@@ -545,7 +588,8 @@ describe('DateEditor', () => {
     it('uses year, month, and day views so selecting a year continues to month selection', () => {
       render(<DateEditor {...defaultProps} />)
 
-      const datePickerProps = DatePicker.mock.calls.at(-1)[0]
+      const datePickerProps =
+        mockDatePicker.mock.calls[mockDatePicker.mock.calls.length - 1]![0]
 
       expect(datePickerProps.views).toEqual(['year', 'month', 'day'])
       expect(datePickerProps.onAccept).toEqual(expect.any(Function))
@@ -566,14 +610,15 @@ describe('DateEditor', () => {
 
       render(<DateEditor {...defaultProps} />)
 
-      const datePickerProps = DatePicker.mock.calls.at(-1)[0]
+      const datePickerProps =
+        mockDatePicker.mock.calls[mockDatePicker.mock.calls.length - 1]![0]
 
       act(() => {
-        datePickerProps.onViewChange('month')
+        datePickerProps.onViewChange!('month')
         vi.runOnlyPendingTimers()
       })
 
-      expect(window.scrollTo).toHaveBeenCalledWith(12, 640)
+      expect(scrollToSpy).toHaveBeenCalledWith(12, 640)
 
       act(() => {
         vi.runOnlyPendingTimers()
@@ -584,7 +629,8 @@ describe('DateEditor', () => {
     it('keeps manual text entry enabled with an explicit date placeholder', () => {
       render(<DateEditor {...defaultProps} />)
 
-      const datePickerProps = DatePicker.mock.calls.at(-1)[0]
+      const datePickerProps =
+        mockDatePicker.mock.calls[mockDatePicker.mock.calls.length - 1]![0]
 
       expect(datePickerProps.slotProps.textField.placeholder).toBe('yyyy-mm-dd')
       expect(datePickerProps.slotProps.textField.inputProps.inputMode).toBe(

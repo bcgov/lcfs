@@ -2,21 +2,23 @@ import { describe, it, expect, vi, beforeEach } from 'vite-plus/test'
 import { render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createRef } from 'react'
+import type { ReactNode } from 'react'
 import { ThemeProvider, createTheme } from '@mui/material/styles'
 import { NumberEditor } from '../NumberEditor'
+import type { NumberEditorProps } from '../NumberEditor'
 
 const theme = createTheme()
 
-const renderWithTheme = (component) => {
+const renderWithTheme = (component: ReactNode) => {
   return render(<ThemeProvider theme={theme}>{component}</ThemeProvider>)
 }
 
 describe('NumberEditor', () => {
-  let mockOnValueChange
-  let defaultProps
+  const mockOnValueChange = vi.fn<(value: number) => void>()
+  let defaultProps: NumberEditorProps
 
   beforeEach(() => {
-    mockOnValueChange = vi.fn()
+    mockOnValueChange.mockClear()
     defaultProps = {
       value: '1000',
       onValueChange: mockOnValueChange,
@@ -144,25 +146,37 @@ describe('NumberEditor', () => {
 
   describe('useImperativeHandle Methods', () => {
     it('getValue method removes commas', () => {
-      const ref = createRef()
+      const ref = createRef<{
+        getValue: () => string
+        isCancelBeforeStart: () => boolean
+        isCancelAfterEnd: () => boolean
+      }>()
       const props = { ...defaultProps, value: '1,234,567' }
       renderWithTheme(<NumberEditor {...props} ref={ref} />)
 
-      expect(ref.current.getValue()).toBe('1234567')
+      expect(ref.current!.getValue()).toBe('1234567')
     })
 
     it('isCancelBeforeStart returns false', () => {
-      const ref = createRef()
+      const ref = createRef<{
+        getValue: () => string
+        isCancelBeforeStart: () => boolean
+        isCancelAfterEnd: () => boolean
+      }>()
       renderWithTheme(<NumberEditor {...defaultProps} ref={ref} />)
 
-      expect(ref.current.isCancelBeforeStart()).toBe(false)
+      expect(ref.current!.isCancelBeforeStart()).toBe(false)
     })
 
     it('isCancelAfterEnd returns false', () => {
-      const ref = createRef()
+      const ref = createRef<{
+        getValue: () => string
+        isCancelBeforeStart: () => boolean
+        isCancelAfterEnd: () => boolean
+      }>()
       renderWithTheme(<NumberEditor {...defaultProps} ref={ref} />)
 
-      expect(ref.current.isCancelAfterEnd()).toBe(false)
+      expect(ref.current!.isCancelAfterEnd()).toBe(false)
     })
   })
 })

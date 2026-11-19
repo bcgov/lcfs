@@ -1,7 +1,39 @@
 import { describe, it, expect, vi, beforeEach } from 'vite-plus/test'
 import { render, screen, within } from '@testing-library/react'
 import { ThemeProvider, createTheme } from '@mui/material/styles'
+import type { HTMLAttributes, ReactNode } from 'react'
+import type { BCPaginationProps } from '../BCPagination'
 import { BCPagination } from '../BCPagination'
+
+interface MockActionsProps extends HTMLAttributes<HTMLDivElement> {
+  enableResetButton?: boolean
+  enableCopyButton?: boolean
+  enableExportButton?: boolean
+  exportName?: string
+  gridRef?: BCPaginationProps['gridRef']
+}
+
+interface MockTablePaginationProps extends HTMLAttributes<HTMLDivElement> {
+  count: number
+  page: number
+  rowsPerPage: number
+  onPageChange?: (...args: unknown[]) => void
+  onRowsPerPageChange?: (...args: unknown[]) => void
+  ActionsComponent?: (props: {
+    count: number
+    page: number
+    rowsPerPage: number
+  }) => ReactNode
+  labelDisplayedRows?: (props: {
+    from: number
+    to: number
+    count: number
+    page: number
+  }) => ReactNode
+  slotProps?: {
+    select?: { IconComponent?: (props: Record<string, unknown>) => ReactNode }
+  }
+}
 
 // Mock BCPaginationActions component
 vi.mock('../BCPaginationActions', () => ({
@@ -12,7 +44,7 @@ vi.mock('../BCPaginationActions', () => ({
     exportName,
     gridRef,
     ...props
-  }) => (
+  }: MockActionsProps) => (
     <div
       data-test="bc-pagination-actions"
       data-enable-reset={String(enableResetButton)}
@@ -28,64 +60,70 @@ vi.mock('../BCPaginationActions', () => ({
 }))
 
 // Mock MUI TablePagination for detailed prop testing
-vi.mock('@mui/material/TablePagination', async (importOriginal) => {
-  const actual = await importOriginal()
-  return {
-    ...actual,
-    default: ({
-      count,
-      page,
-      rowsPerPage,
-      onPageChange,
-      onRowsPerPageChange,
-      ActionsComponent,
-      labelDisplayedRows,
-      slotProps,
-      ...props
-    }) => (
-      <div
-        data-test="table-pagination"
-        data-count={count}
-        data-page={page}
-        data-rows-per-page={rowsPerPage}
-        data-on-page-change={onPageChange ? 'present' : 'null'}
-        data-on-rows-per-page-change={onRowsPerPageChange ? 'present' : 'null'}
-        {...props}
-      >
-        <div data-test="label-displayed-rows">
-          {labelDisplayedRows &&
-            labelDisplayedRows({
-              from: count === 0 ? 0 : page * rowsPerPage + 1,
-              to:
-                count === -1
-                  ? (page + 1) * rowsPerPage
-                  : Math.min(count, (page + 1) * rowsPerPage),
-              count,
-              page
-            })}
+vi.mock(
+  '@mui/material/TablePagination',
+  async (importOriginal: () => Promise<unknown>) => {
+    const actual =
+      (await importOriginal()) as typeof import('@mui/material/TablePagination')
+    return {
+      ...actual,
+      default: ({
+        count,
+        page,
+        rowsPerPage,
+        onPageChange,
+        onRowsPerPageChange,
+        ActionsComponent,
+        labelDisplayedRows,
+        slotProps,
+        ...props
+      }: MockTablePaginationProps) => (
+        <div
+          data-test="table-pagination"
+          data-count={count}
+          data-page={page}
+          data-rows-per-page={rowsPerPage}
+          data-on-page-change={onPageChange ? 'present' : 'null'}
+          data-on-rows-per-page-change={
+            onRowsPerPageChange ? 'present' : 'null'
+          }
+          {...props}
+        >
+          <div data-test="label-displayed-rows">
+            {labelDisplayedRows &&
+              labelDisplayedRows({
+                from: count === 0 ? 0 : page * rowsPerPage + 1,
+                to:
+                  count === -1
+                    ? (page + 1) * rowsPerPage
+                    : Math.min(count, (page + 1) * rowsPerPage),
+                count,
+                page
+              })}
+          </div>
+          <div data-test="actions-component">
+            {ActionsComponent && ActionsComponent({ count, page, rowsPerPage })}
+          </div>
+          <div data-test="icon-component">
+            {slotProps?.select?.IconComponent &&
+              slotProps.select.IconComponent({})}
+          </div>
         </div>
-        <div data-test="actions-component">
-          {ActionsComponent && ActionsComponent({ count, page, rowsPerPage })}
-        </div>
-        <div data-test="icon-component">
-          {slotProps?.select?.IconComponent &&
-            slotProps.select.IconComponent({})}
-        </div>
-      </div>
-    )
+      )
+    }
   }
-})
+)
 
 const theme = createTheme()
 
-const renderWithTheme = (component) => {
+const renderWithTheme = (component: ReactNode) => {
   return render(<ThemeProvider theme={theme}>{component}</ThemeProvider>)
 }
 
 describe('BCPagination', () => {
-  let mockHandleChangePage
-  let mockHandleChangeRowsPerPage
-  let defaultProps
+  let mockHandleChangePage: BCPaginationProps['handleChangePage']
+  let mockHandleChangeRowsPerPage: BCPaginationProps['handleChangeRowsPerPage']
+  let defaultProps: BCPaginationProps
 
   beforeEach(() => {
     mockHandleChangePage = vi.fn()
@@ -96,7 +134,7 @@ describe('BCPagination', () => {
       handleChangePage: mockHandleChangePage,
       size: 10,
       handleChangeRowsPerPage: mockHandleChangeRowsPerPage,
-      gridRef: { current: {} }
+      gridRef: { current: null }
     }
   })
 
@@ -122,7 +160,7 @@ describe('BCPagination', () => {
         enableCopyButton: true,
         enableExportButton: true,
         exportName: 'CustomExport',
-        gridRef: { current: { api: {} } }
+        gridRef: { current: null }
       }
 
       renderWithTheme(<BCPagination {...customProps} />)
@@ -151,7 +189,7 @@ describe('BCPagination', () => {
     it('renders with valid gridRef object', () => {
       const props = {
         ...defaultProps,
-        gridRef: { current: { api: {}, columnApi: {} } }
+        gridRef: { current: null }
       }
       renderWithTheme(<BCPagination {...props} />)
 
@@ -165,7 +203,7 @@ describe('BCPagination', () => {
       const minimalProps = {
         handleChangePage: mockHandleChangePage,
         handleChangeRowsPerPage: mockHandleChangeRowsPerPage,
-        gridRef: { current: {} }
+        gridRef: { current: null }
       }
 
       renderWithTheme(<BCPagination {...minimalProps} />)

@@ -2,6 +2,13 @@ import { describe, it, expect } from 'vite-plus/test'
 import { changelogCellStyle, changelogRowStyle } from '../changelogCellStyle'
 import colors from '@/themes/base/colors'
 
+interface TestRow {
+  actionType: string
+  diff?: string[]
+  updated?: boolean
+  isNewSupplementalEntry?: boolean
+}
+
 describe('changelogCellStyle', () => {
   it('returns warning background for UPDATE diff and no strike-through', () => {
     const params = {
@@ -64,7 +71,7 @@ describe('changelogCellStyle', () => {
 })
 
 describe('changelogRowStyle', () => {
-  const makeParams = (actionType) => ({
+  const makeParams = (actionType: string): { data: TestRow } => ({
     data: { actionType, isNewSupplementalEntry: true }
   })
 

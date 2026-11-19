@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vite-plus/test'
+import type { ColDef } from 'ag-grid-community'
 import {
   addFlexToColumns,
   getColumnMinWidthSum,
@@ -7,24 +8,24 @@ import {
 
 describe('addFlexToColumns', () => {
   it('adds flex:1 to columns that have neither flex nor width', () => {
-    const cols = [{ colId: 'name' }, { colId: 'date' }]
+    const cols: ColDef[] = [{ colId: 'name' }, { colId: 'date' }]
     const { columnDefs, hasFlexColumns } = addFlexToColumns(cols)
-    expect(columnDefs[0]).toEqual({ colId: 'name', flex: 1 })
-    expect(columnDefs[1]).toEqual({ colId: 'date', flex: 1 })
+    expect(columnDefs![0]).toEqual({ colId: 'name', flex: 1 })
+    expect(columnDefs![1]).toEqual({ colId: 'date', flex: 1 })
     expect(hasFlexColumns).toBe(true)
   })
 
   it('leaves columns with an explicit flex value unchanged', () => {
-    const cols = [{ colId: 'a', flex: 2 }]
+    const cols: ColDef[] = [{ colId: 'a', flex: 2 }]
     const { columnDefs, hasFlexColumns } = addFlexToColumns(cols)
-    expect(columnDefs[0].flex).toBe(2)
+    expect(columnDefs![0].flex).toBe(2)
     expect(hasFlexColumns).toBe(true)
   })
 
   it('leaves columns with an explicit width value unchanged (no flex added)', () => {
-    const cols = [{ colId: 'b', width: 200 }]
+    const cols: ColDef[] = [{ colId: 'b', width: 200 }]
     const { columnDefs, hasFlexColumns } = addFlexToColumns(cols)
-    expect(columnDefs[0].flex).toBeUndefined()
+    expect(columnDefs![0].flex).toBeUndefined()
     expect(hasFlexColumns).toBe(false)
   })
 

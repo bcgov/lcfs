@@ -1,55 +1,72 @@
 import { describe, it, expect, vi, beforeEach } from 'vite-plus/test'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import '@testing-library/user-event'
+import type { ReactNode } from 'react'
+import type { BCPaginationActionsProps } from '../BCPaginationActions'
 import { ThemeProvider, createTheme } from '@mui/material/styles'
 import { BCPaginationActions } from '../BCPaginationActions'
 
 const theme = createTheme()
 
-const renderWithTheme = (component) => {
+const renderWithTheme = (component: ReactNode) => {
   return render(<ThemeProvider theme={theme}>{component}</ThemeProvider>)
 }
 
 // Mock Material-UI components
-vi.mock('@mui/material/Pagination', async (importOriginal) => {
-  const actual = await importOriginal()
+vi.mock('@mui/material/Pagination', () => {
   return {
-    ...actual,
-    default: vi.fn(({ onChange, ...props }) => {
-      delete props.showFirstButton
-      delete props.showLastButton
-      delete props.component
-      delete props.color
-      return (
-        <div
-          data-test="pagination"
-          onClick={() => onChange && onChange(null, 2)}
-          {...props}
-        >
-          Mock Pagination
-        </div>
+    default: vi.fn(
+      ({
+        onChange,
+        ...props
+      }: {
+        onChange?: (event: unknown, page: number) => void
+        [key: string]: unknown
+      }) => {
+        delete props.showFirstButton
+        delete props.showLastButton
+        delete props.component
+        delete props.color
+        return (
+          <div
+            data-test="pagination"
+            onClick={() => onChange && onChange(null, 2)}
+            {...props}
+          >
+            Mock Pagination
+          </div>
+        )
+      }
+    )
+  }
+})
+
+vi.mock('@mui/material/IconButton', () => {
+  return {
+    default: vi.fn(
+      ({
+        onClick,
+        children,
+        ...props
+      }: {
+        onClick?: React.MouseEventHandler<HTMLButtonElement>
+        children?: ReactNode
+        id?: string
+        [key: string]: unknown
+      }) => (
+        <button data-test={props.id} onClick={onClick} {...props}>
+          {children}
+        </button>
       )
-    })
+    )
   }
 })
 
-vi.mock('@mui/material/IconButton', async (importOriginal) => {
-  const actual = await importOriginal()
+vi.mock('@mui/material/Tooltip', () => {
   return {
-    ...actual,
-    default: vi.fn(({ onClick, children, ...props }) => (
-      <button data-test={props.id} onClick={onClick} {...props}>
-        {children}
-      </button>
+    default: vi.fn(({ children }: { children?: ReactNode }) => (
+      <div>{children}</div>
     ))
-  }
-})
-
-vi.mock('@mui/material/Tooltip', async (importOriginal) => {
-  const actual = await importOriginal()
-  return {
-    ...actual,
-    default: vi.fn(({ children }) => <div>{children}</div>)
   }
 })
 
@@ -68,11 +85,19 @@ vi.mock('@mui/icons-material/FileDownloadOutlined', () => ({
 
 // Mock BCBox component
 vi.mock('@/components/BCBox', () => ({
-  default: vi.fn(({ children, ...props }) => (
-    <div data-test="bc-box" {...props}>
-      {children}
-    </div>
-  ))
+  default: vi.fn(
+    ({
+      children,
+      ...props
+    }: {
+      children?: ReactNode
+      [key: string]: unknown
+    }) => (
+      <div data-test="bc-box" {...props}>
+        {children}
+      </div>
+    )
+  )
 }))
 
 // Mock XLSX library
@@ -88,7 +113,7 @@ vi.mock('xlsx', () => ({
 // Mock navigator.clipboard
 Object.assign(navigator, {
   clipboard: {
-    writeText: vi.fn().mockResolvedValue()
+    writeText: vi.fn().mockResolvedValue(undefined)
   }
 })
 
@@ -98,9 +123,22 @@ Object.defineProperty(window, 'isSecureContext', {
 })
 
 describe('BCPaginationActions', () => {
-  let mockOnPageChange
-  let mockGridRef
-  let defaultProps
+  let mockOnPageChange: BCPaginationActionsProps['onPageChange']
+  let mockGridRef: {
+    current: {
+      api: {
+        resetColumnState: ReturnType<typeof vi.fn>
+        setFilterModel: ReturnType<typeof vi.fn>
+        getDataAsCsv: ReturnType<typeof vi.fn>
+        showLoadingOverlay: ReturnType<typeof vi.fn>
+        forEachNodeAfterFilterAndSort: ReturnType<typeof vi.fn>
+        getColumnDefs: ReturnType<typeof vi.fn>
+      }
+    }
+  }
+  let defaultProps: BCPaginationActionsProps & {
+    gridRef: BCPaginationActionsProps['gridRef']
+  }
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -113,14 +151,16 @@ describe('BCPaginationActions', () => {
           setFilterModel: vi.fn(),
           getDataAsCsv: vi.fn(() => 'mock,csv,data'),
           showLoadingOverlay: vi.fn(),
-          forEachNodeAfterFilterAndSort: vi.fn((callback) => {
-            callback({
-              data: { id: 1, name: 'Test', date: '2023-01-01T10:00:00Z' }
-            })
-            callback({
-              data: { id: 2, name: 'Test2', date: '2023-01-02T11:00:00Z' }
-            })
-          }),
+          forEachNodeAfterFilterAndSort: vi.fn(
+            (callback: (node: { data: Record<string, unknown> }) => void) => {
+              callback({
+                data: { id: 1, name: 'Test', date: '2023-01-01T10:00:00Z' }
+              })
+              callback({
+                data: { id: 2, name: 'Test2', date: '2023-01-02T11:00:00Z' }
+              })
+            }
+          ),
           getColumnDefs: vi.fn(() => [
             { field: 'id', headerName: 'ID' },
             { field: 'name', headerName: 'Name' },
@@ -135,11 +175,14 @@ describe('BCPaginationActions', () => {
       page: 0,
       rowsPerPage: 10,
       onPageChange: mockOnPageChange,
+      getItemAriaLabel: (type) => type,
+      showFirstButton: true,
+      showLastButton: true,
       enableResetButton: true,
       enableCopyButton: true,
       enableExportButton: true,
       exportName: 'Test Export',
-      gridRef: mockGridRef
+      gridRef: mockGridRef as unknown as BCPaginationActionsProps['gridRef']
     }
   })
 
@@ -149,7 +192,10 @@ describe('BCPaginationActions', () => {
         count: 50,
         page: 1,
         rowsPerPage: 5,
-        onPageChange: mockOnPageChange
+        onPageChange: mockOnPageChange,
+        getItemAriaLabel: (type: string) => type,
+        showFirstButton: true,
+        showLastButton: true
       }
 
       renderWithTheme(<BCPaginationActions {...requiredProps} />)
@@ -328,7 +374,8 @@ describe('BCPaginationActions', () => {
 
       fireEvent.click(screen.getByTestId('downloadGridButton'))
 
-      const transformedData = XLSX.utils.json_to_sheet.mock.calls[0][0]
+      const transformedData = vi.mocked(XLSX.utils.json_to_sheet).mock
+        .calls[0][0] as Record<string, unknown>[]
       expect(transformedData[0].Date).toBe('2023-01-01') // Date part only
       expect(transformedData[1].Date).toBe('2023-01-02') // Date part only
     })
@@ -340,7 +387,8 @@ describe('BCPaginationActions', () => {
 
       fireEvent.click(screen.getByTestId('downloadGridButton'))
 
-      const transformedData = XLSX.utils.json_to_sheet.mock.calls[0][0]
+      const transformedData = vi.mocked(XLSX.utils.json_to_sheet).mock
+        .calls[0][0] as Record<string, unknown>[]
       expect(transformedData[0].ID).toBe(1)
       expect(transformedData[0].Name).toBe('Test')
     })

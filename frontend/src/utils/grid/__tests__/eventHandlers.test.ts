@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vite-plus/test'
 import { suppressKeyboardEvent, isEqual } from '../eventHandlers'
 
 // Helper to build a basic ag-cell DOM structure
-const createCell = ({ children = [] } = {}) => {
+const createCell = ({ children = [] }: { children?: HTMLElement[] } = {}) => {
   const cell = document.createElement('div')
   cell.className = 'ag-cell'
   children.forEach((child) => cell.appendChild(child))
@@ -10,11 +10,25 @@ const createCell = ({ children = [] } = {}) => {
   return cell
 }
 
+const createKeyboardEvent = (
+  source: HTMLElement,
+  code: string,
+  shiftKey = false
+): KeyboardEvent => {
+  const event = new KeyboardEvent('keydown', {
+    code,
+    key: code,
+    shiftKey
+  })
+  Object.defineProperty(event, 'srcElement', { value: source })
+  return event
+}
+
 describe('suppressKeyboardEvent', () => {
   beforeEach(() => {
     // JSDOM does not implement closest on elements not in DOM by default for some old versions
     if (!Element.prototype.closest) {
-      Element.prototype.closest = function (selector) {
+      Element.prototype.closest = function (selector: string) {
         if (this.matches(selector)) return this
         return this.parentElement?.closest(selector) ?? null
       }
@@ -23,14 +37,14 @@ describe('suppressKeyboardEvent', () => {
 
   it('returns false for Enter key when no focusable children', () => {
     const cell = createCell()
-    const event = { code: 'Enter', srcElement: cell }
+    const event = createKeyboardEvent(cell, 'Enter')
     expect(suppressKeyboardEvent({ event })).toBe(false)
   })
 
   it('returns true for Enter key when there are focusable children', () => {
     const button = document.createElement('button')
     const cell = createCell({ children: [button] })
-    const event = { code: 'Enter', srcElement: cell }
+    const event = createKeyboardEvent(cell, 'Enter')
     expect(suppressKeyboardEvent({ event })).toBe(true)
   })
 
@@ -40,21 +54,21 @@ describe('suppressKeyboardEvent', () => {
     createCell({ children: [input1, input2] })
 
     // Case: Tab pressed on last element -> should return false (allow move to next cell)
-    let event = { code: 'Tab', srcElement: input2, shiftKey: false, key: 'Tab' }
+    let event = createKeyboardEvent(input2, 'Tab')
     expect(suppressKeyboardEvent({ event })).toBe(false)
 
     // Case: Shift+Tab on first element -> false (move previous cell)
-    event = { code: 'Tab', srcElement: input1, shiftKey: true, key: 'Tab' }
+    event = createKeyboardEvent(input1, 'Tab', true)
     expect(suppressKeyboardEvent({ event })).toBe(false)
 
     // Case: Tab pressed on first element -> true (stay within cell)
-    event = { code: 'Tab', srcElement: input1, shiftKey: false, key: 'Tab' }
+    event = createKeyboardEvent(input1, 'Tab')
     expect(suppressKeyboardEvent({ event })).toBe(true)
   })
 
   it('triggers row navigation when Enter is pressed and keyboard navigation is enabled', () => {
     const cell = createCell()
-    const event = { code: 'Enter', srcElement: cell }
+    const event = createKeyboardEvent(cell, 'Enter')
     const mockOnRowClicked = vi.fn()
     const mockParams = {
       event,
@@ -79,7 +93,7 @@ describe('suppressKeyboardEvent', () => {
 
   it('does not trigger row navigation when Enter is pressed but keyboard navigation is disabled', () => {
     const cell = createCell()
-    const event = { code: 'Enter', srcElement: cell }
+    const event = createKeyboardEvent(cell, 'Enter')
     const mockOnRowClicked = vi.fn()
     const mockParams = {
       event,
@@ -98,7 +112,7 @@ describe('suppressKeyboardEvent', () => {
 
   it('does not trigger row navigation when Enter is pressed but no onRowClicked handler is provided', () => {
     const cell = createCell()
-    const event = { code: 'Enter', srcElement: cell }
+    const event = createKeyboardEvent(cell, 'Enter')
     const mockParams = {
       event,
       node: { id: 'test-row' },
@@ -115,7 +129,7 @@ describe('suppressKeyboardEvent', () => {
 
   it('does not trigger row navigation when Enter is pressed but no node is provided', () => {
     const cell = createCell()
-    const event = { code: 'Enter', srcElement: cell }
+    const event = createKeyboardEvent(cell, 'Enter')
     const mockOnRowClicked = vi.fn()
     const mockParams = {
       event,
