@@ -154,7 +154,9 @@ const Crumb = () => {
     'admin-adjustment': { label: 'Transactions', route: '/transactions' },
     'org-admin-adjustment': { label: 'Transactions', route: '/transactions' },
     'ci-applications': { label: 'CI applications', route: '/ci-applications' },
-    'fuel-codes': { label: 'Fuel codes', route: '/fuel-codes' }
+    'fuel-codes': { label: 'Fuel codes', route: '/fuel-codes' },
+    // There is no /jet-fuel page; LCJFIP is the only program beneath it.
+    'jet-fuel': { label: 'Jet fuel', route: '/jet-fuel/lcjfip' }
   }
 
   return (
