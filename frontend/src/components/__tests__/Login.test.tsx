@@ -5,6 +5,7 @@ import { screen, fireEvent } from '@testing-library/react'
 import { vi, describe, expect, beforeEach, afterEach } from 'vite-plus/test'
 import { test } from '@/tests/utils/fixtures'
 import 'react-router-dom'
+import type { ReactNode } from 'react'
 
 const mockNavigate = vi.fn()
 
@@ -32,7 +33,7 @@ vi.mock('@react-keycloak/web', () => keycloak)
 
 // Mock react-snowfall
 vi.mock('react-snowfall', () => ({
-  default: ({ children, ...props }) => (
+  default: ({ children, ...props }: { children?: ReactNode }) => (
     <div data-testid="snowfall" {...props}>
       {children}
     </div>
@@ -40,7 +41,7 @@ vi.mock('react-snowfall', () => ({
 }))
 
 // Mock react-router-dom location
-const mockLocation = {
+const mockLocation: { state: { message: string; severity: string } | null } = {
   state: null
 }
 
@@ -56,8 +57,8 @@ vi.mock('react-router-dom', async () => {
 // Mock i18n
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => {
-      const translations = {
+    t: (key: string) => {
+      const translations: Record<string, string> = {
         'login.loginMessage': 'Login with',
         Login: 'Login',
         'login.publicCreditCalculator': 'Public LCFS information'

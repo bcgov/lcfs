@@ -36,7 +36,7 @@ Cypress.on('uncaught:exception', (err) => {
   const isTrackLoginError =
     message.includes('Network Error') &&
     stack.includes('axios') &&
-    stack.includes('KeycloakProvider.jsx')
+    stack.includes('KeycloakProvider.tsx')
 
   const isGridTransactionRace =
     message.includes(
