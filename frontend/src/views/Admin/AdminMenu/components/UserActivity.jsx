@@ -42,7 +42,7 @@ export const UserActivity = () => {
       cellRendererParams: {
         isAbsolute: true,
         url: (data) => {
-          const { transactionType, transactionId } = data.data
+          const { transactionType, transactionId, compliancePeriod } = data.data
           switch (transactionType) {
             case 'Transfer':
               return buildPath(ROUTES.TRANSFERS.VIEW, {
@@ -55,6 +55,11 @@ export const UserActivity = () => {
             case 'InitiativeAgreement':
               return buildPath(ROUTES.TRANSACTIONS.INITIATIVE_AGREEMENT.VIEW, {
                 transactionId
+              })
+            case 'ComplianceReport':
+              return buildPath(ROUTES.REPORTS.VIEW, {
+                compliancePeriod,
+                complianceReportId: transactionId
               })
           }
         }
