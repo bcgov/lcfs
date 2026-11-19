@@ -60,8 +60,9 @@ const filterNonNullValues =
     return result
   })
 
-const { mockGridApi } = vi.hoisted(() => ({
-  mockGridApi: { sizeColumnsToFit: vi.fn() }
+const { mockGridApi, mockTriggerAlert } = vi.hoisted(() => ({
+  mockGridApi: { sizeColumnsToFit: vi.fn() },
+  mockTriggerAlert: vi.fn()
 }))
 
 // Mock hooks and update
@@ -77,126 +78,132 @@ vi.mock('react-router-dom', async () => ({
 // Mock components
 vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
   BCGridEditor: ({
+    alertRef,
     onGridReady,
     onCellValueChanged,
     onCellEditingStopped,
     onAction,
     handlePaste,
     loading
-  }) => (
-    <div data-testid="grid" data-loading={String(Boolean(loading))}>
-      <button onClick={() => onGridReady?.({ api: mockGridApi })}>Ready</button>
-      <button
-        onClick={() =>
-          onCellValueChanged?.({
-            data: { id: 'test' },
-            colDef: { field: 'prefix' },
-            newValue: 'BCLCF',
-            api: { applyTransaction: vi.fn() }
-          })
-        }
-      >
-        Change Cell
-      </button>
-      <button
-        onClick={() =>
-          onCellValueChanged?.({
-            data: { id: 'test' },
-            colDef: { field: 'other' },
-            newValue: 'value',
-            api: { applyTransaction: vi.fn() }
-          })
-        }
-      >
-        Change Other Cell
-      </button>
-      <button
-        onClick={() =>
-          onCellEditingStopped?.({
-            oldValue: 'old',
-            newValue: 'new',
-            node: {
-              data: { id: 'test', modified: true },
-              updateData: vi.fn()
-            }
-          })
-        }
-      >
-        Stop Edit
-      </button>
-      <button
-        onClick={() =>
-          onCellEditingStopped?.({
-            oldValue: 'same',
-            newValue: 'same',
-            node: {
-              data: { id: 'test', modified: true },
-              updateData: vi.fn()
-            }
-          })
-        }
-      >
-        Stop Edit Same
-      </button>
-      <button
-        onClick={() =>
-          onCellEditingStopped?.({
-            oldValue: '999.0',
-            newValue: '1000.0',
-            node: {
-              data: {
-                id: 'four-digit-row',
-                prefix: 'BCLCF',
-                prefixId: 1,
-                fuelSuffix: '1000.0',
-                modified: true
-              },
-              updateData: vi.fn()
-            }
-          })
-        }
-      >
-        Stop Edit Four Digit
-      </button>
-      <button
-        onClick={() => onAction?.('duplicate', { data: { fuelCodeId: 123 } })}
-      >
-        Duplicate
-      </button>
-      <button
-        onClick={() =>
-          onAction?.('delete', {
-            data: { fuelCodeId: 123 },
-            node: { data: { fuelCodeId: 123 } },
-            api: { applyTransaction: vi.fn() }
-          })
-        }
-      >
-        Delete
-      </button>
-      <button onClick={() => onAction?.('add', {})}>Add</button>
-      <button
-        onClick={() =>
-          handlePaste?.(
-            {
-              clipboardData: { getData: () => 'col1\tval1' },
-              preventDefault: vi.fn()
-            },
-            {
-              api: {
-                getAllDisplayedColumns: () => [{ colDef: { field: 'col1' } }],
-                applyTransaction: vi.fn().mockReturnValue({
-                  add: [{ node: { data: { id: 'test-id' } } }]
-                })
+  }) => {
+    if (alertRef) alertRef.current = { triggerAlert: mockTriggerAlert }
+    return (
+      <div data-testid="grid" data-loading={String(Boolean(loading))}>
+        <button onClick={() => onGridReady?.({ api: mockGridApi })}>
+          Ready
+        </button>
+        <button
+          onClick={() =>
+            onCellValueChanged?.({
+              data: { id: 'test' },
+              colDef: { field: 'prefix' },
+              newValue: 'BCLCF',
+              api: { applyTransaction: vi.fn() }
+            })
+          }
+        >
+          Change Cell
+        </button>
+        <button
+          onClick={() =>
+            onCellValueChanged?.({
+              data: { id: 'test' },
+              colDef: { field: 'other' },
+              newValue: 'value',
+              api: { applyTransaction: vi.fn() }
+            })
+          }
+        >
+          Change Other Cell
+        </button>
+        <button
+          onClick={() =>
+            onCellEditingStopped?.({
+              oldValue: 'old',
+              newValue: 'new',
+              node: {
+                data: { id: 'test', modified: true },
+                updateData: vi.fn()
               }
-            }
-          )
-        }
-      >
-        Paste
-      </button>
-    </div>
-  )
+            })
+          }
+        >
+          Stop Edit
+        </button>
+        <button
+          onClick={() =>
+            onCellEditingStopped?.({
+              oldValue: 'same',
+              newValue: 'same',
+              node: {
+                data: { id: 'test', modified: true },
+                updateData: vi.fn()
+              }
+            })
+          }
+        >
+          Stop Edit Same
+        </button>
+        <button
+          onClick={() =>
+            onCellEditingStopped?.({
+              oldValue: '999.0',
+              newValue: '1000.0',
+              node: {
+                data: {
+                  id: 'four-digit-row',
+                  prefix: 'BCLCF',
+                  prefixId: 1,
+                  fuelSuffix: '1000.0',
+                  modified: true
+                },
+                updateData: vi.fn()
+              }
+            })
+          }
+        >
+          Stop Edit Four Digit
+        </button>
+        <button
+          onClick={() => onAction?.('duplicate', { data: { fuelCodeId: 123 } })}
+        >
+          Duplicate
+        </button>
+        <button
+          onClick={() =>
+            onAction?.('delete', {
+              data: { fuelCodeId: 123 },
+              node: { data: { fuelCodeId: 123 } },
+              api: { applyTransaction: vi.fn() }
+            })
+          }
+        >
+          Delete
+        </button>
+        <button onClick={() => onAction?.('add', {})}>Add</button>
+        <button
+          onClick={() =>
+            handlePaste?.(
+              {
+                clipboardData: { getData: () => 'col1\tval1' },
+                preventDefault: vi.fn()
+              },
+              {
+                api: {
+                  getAllDisplayedColumns: () => [{ colDef: { field: 'col1' } }],
+                  applyTransaction: vi.fn().mockReturnValue({
+                    add: [{ node: { data: { id: 'test-id' } } }]
+                  })
+                }
+              }
+            )
+          }
+        >
+          Paste
+        </button>
+      </div>
+    )
+  }
 }))
 
 vi.mock('@/components/Loading', () => ({
@@ -1181,6 +1188,117 @@ describe('AddEditFuelCode', () => {
       fireEvent.click(screen.getByText('Stop Edit'))
       await waitFor(() => expect(saveButton()).not.toBeDisabled())
       expect(mockMutation.mutateAsync).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  // The CI application workflow now processes fuel codes through to approval,
+  // so these pages only edit approved codes and the drafts they started.
+  describe('Legacy fuel code lock (#5308)', () => {
+    const renderWith = (fuelCode) => {
+      vi.mocked(useFuelCodeHooks.useGetFuelCode).mockReturnValue({
+        data: fuelCode,
+        isLoading: false,
+        refetch: vi.fn()
+      })
+      render(
+        <TestWrapper>
+          <AddEditFuelCode />
+        </TestWrapper>
+      )
+    }
+    const button = (id) => document.querySelector(`[data-test="${id}"]`)
+    const lockAlert = () =>
+      document.querySelector('[data-test="fuel-code-legacy-lock"]')
+
+    it('keeps the actions on a draft these pages started', async () => {
+      renderWith({ ...mockExistingFuelCode, legacyLockReason: null })
+
+      await waitFor(() => expect(button('edit-fuel-code-btn')).toBeTruthy())
+      expect(button('approve-fuel-code-btn')).toBeTruthy()
+      expect(lockAlert()).toBeNull()
+    })
+
+    it('offers no actions on a CI application draft and links to it', async () => {
+      renderWith({
+        ...mockExistingFuelCode,
+        legacyLockReason: 'CI_APPLICATION',
+        openCiApplicationId: 42
+      })
+
+      await waitFor(() => expect(lockAlert()).toBeTruthy())
+      expect(lockAlert()).toHaveTextContent(
+        'fuelCode:legacyLock.CI_APPLICATION'
+      )
+      expect(
+        screen.getByRole('link', {
+          name: 'fuelCode:legacyLock.ciApplicationLink'
+        })
+      ).toHaveAttribute('href', '/ci-applications/42')
+      for (const id of [
+        'edit-fuel-code-btn',
+        'save-fuel-code-btn',
+        'recommend-fuel-code-btn',
+        'approve-fuel-code-btn',
+        'return-to-analyst-btn',
+        'delete-fuel-code-btn'
+      ]) {
+        expect(button(id)).toBeNull()
+      }
+    })
+
+    it('offers no actions on any other fuel code that is not approved', async () => {
+      renderWith({
+        ...mockExistingFuelCode,
+        fuelCodeStatus: { status: FUEL_CODE_STATUSES.RECOMMENDED },
+        legacyLockReason: 'NOT_APPROVED',
+        openCiApplicationId: null
+      })
+
+      await waitFor(() => expect(lockAlert()).toBeTruthy())
+      expect(lockAlert()).toHaveTextContent('fuelCode:legacyLock.NOT_APPROVED')
+      expect(screen.queryByRole('link')).toBeNull()
+      expect(button('approve-fuel-code-btn')).toBeNull()
+      expect(button('return-to-analyst-btn')).toBeNull()
+      expect(button('edit-fuel-code-btn')).toBeNull()
+    })
+
+    it('still lets an approved fuel code be reopened with Edit', async () => {
+      renderWith({
+        ...mockExistingFuelCode,
+        fuelCodeStatus: { status: FUEL_CODE_STATUSES.APPROVED },
+        legacyLockReason: null
+      })
+
+      await waitFor(() => expect(button('edit-fuel-code-btn')).toBeTruthy())
+      expect(lockAlert()).toBeNull()
+    })
+
+    it("shows the API's reason when an action is refused", async () => {
+      mockMutation.mutateAsync.mockRejectedValueOnce({
+        message: 'Request failed with status code 409',
+        response: {
+          status: 409,
+          data: { detail: 'Only approved fuel codes can be edited here.' }
+        }
+      })
+      renderWith({
+        ...mockExistingFuelCode,
+        fuelCodeStatus: { status: FUEL_CODE_STATUSES.APPROVED },
+        legacyLockReason: null
+      })
+
+      fireEvent.click(await screen.findByText('Ready'))
+      await waitFor(() => expect(button('edit-fuel-code-btn')).toBeTruthy())
+      fireEvent.click(button('edit-fuel-code-btn'))
+      fireEvent.click(await screen.findByText('Primary'))
+
+      await waitFor(() =>
+        expect(mockTriggerAlert).toHaveBeenCalledWith({
+          message:
+            'Error enabling edit mode: Only approved fuel codes can be edited here.',
+          severity: 'error'
+        })
+      )
     })
   })
 

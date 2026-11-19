@@ -138,6 +138,8 @@ export const apiRoutes = {
 
   // ci-applications (Carbon Intensity)
   ciApplicationOptions: '/ci-applications/table-options',
+  ciApplicationFacilities: '/ci-applications/facilities',
+  createCIApplicationFacility: '/ci-applications/facilities',
   ciApplicationFuelCodeFieldSearch: '/ci-applications/fuel-code-field-search?',
   ciApplicationLocationSearch: '/ci-applications/location-search?',
   getCIApplications: '/ci-applications/list',
@@ -299,6 +301,8 @@ export const apiRoutes = {
   getDocuments: '/documents/:parentType/:parentID',
   uploadDocument: '/documents/:parentType/:parentID',
   getDocument: '/documents/:parentType/:parentID/:documentID',
+  reviewDocumentScan:
+    '/documents/:parentType/:parentID/:documentID/scan-review',
 
   // compliance_snapshot
   getOrganizationSnapshot: '/organization_snapshot/:reportID',

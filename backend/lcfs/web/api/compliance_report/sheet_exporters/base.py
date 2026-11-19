@@ -8,6 +8,7 @@ from openpyxl.styles import Alignment, Font, Protection
 from openpyxl.utils import get_column_letter
 from openpyxl.workbook import Workbook
 from openpyxl.worksheet.table import Table, TableStyleInfo
+from lcfs.utils.spreadsheet_sanitizer import append_spreadsheet_row
 
 from lcfs.web.api.compliance_report.schema import (
     SHOW_COL_STRIPES,
@@ -133,10 +134,10 @@ class SheetExporterSupport:
             return
 
         ws = wb.create_sheet(title=title[:31])
-        ws.append(headers)
+        append_spreadsheet_row(ws, headers)
 
         for row_idx, row in enumerate(data_rows, start=2):
-            ws.append(row)
+            append_spreadsheet_row(ws, row)
             for col_idx, val in enumerate(row, start=1):
                 cell = ws.cell(row=row_idx, column=col_idx)
                 self._format_cell(cell, val)
@@ -144,8 +145,8 @@ class SheetExporterSupport:
         self._add_table(ws, title, len(headers), len(data_rows))
 
         if has_total_row:
-            ws.append(empty_row)
-            ws.append(total_row)
+            append_spreadsheet_row(ws, empty_row)
+            append_spreadsheet_row(ws, total_row)
             total_row_idx = len(data_rows) + 3
             for col_idx, val in enumerate(total_row, start=1):
                 cell = ws.cell(row=total_row_idx, column=col_idx)

@@ -10,6 +10,7 @@ from starlette.responses import StreamingResponse
 
 from lcfs.db.models import Organization, UserProfile
 from lcfs.utils.constants import FILE_MEDIA_TYPE
+from lcfs.utils.spreadsheet_sanitizer import set_spreadsheet_cell_value
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
 from lcfs.web.core.decorators import service_handler
@@ -167,7 +168,8 @@ class FSEReportingExporter:
         # Pre-populated data rows
         for row_idx, row_data in enumerate(rows, start=2):
             for col_idx, value in enumerate(row_data, start=1):
-                cell = ws.cell(row=row_idx, column=col_idx, value=value)
+                cell = ws.cell(row=row_idx, column=col_idx)
+                set_spreadsheet_cell_value(cell, value)
                 if col_idx in (1, 2, 3):
                     # Site name, Registration # & Serial # – locked (read-only)
                     cell.protection = Protection(locked=True)
