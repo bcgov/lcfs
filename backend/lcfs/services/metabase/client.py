@@ -20,6 +20,7 @@ except ImportError:  # pragma: no cover - chart fallback is table-only without P
     Image = ImageDraw = ImageFont = None
 
 from lcfs.settings import settings
+from lcfs.utils.spreadsheet_sanitizer import set_spreadsheet_cell_value
 
 logger = structlog.get_logger(__name__)
 
@@ -275,10 +276,9 @@ class CreditMarketReportBuilder:
         border = Border(bottom=Side(style="thin", color="B7C9D6"))
 
         for column_index, column_name in enumerate(table.columns, start=1):
-            cell = sheet.cell(
-                row=1,
-                column=column_index,
-                value=self._display_column_name(column_name),
+            cell = sheet.cell(row=1, column=column_index)
+            set_spreadsheet_cell_value(
+                cell, self._display_column_name(column_name)
             )
             cell.fill = header_fill
             cell.font = header_font
@@ -291,10 +291,10 @@ class CreditMarketReportBuilder:
                     if len(table.columns) >= column_index
                     else ""
                 )
-                cell = sheet.cell(
-                    row=row_index,
-                    column=column_index,
-                    value=self._excel_value(
+                cell = sheet.cell(row=row_index, column=column_index)
+                set_spreadsheet_cell_value(
+                    cell,
+                    self._excel_value(
                         value,
                         table_name=table.name,
                         column_name=column_name,
