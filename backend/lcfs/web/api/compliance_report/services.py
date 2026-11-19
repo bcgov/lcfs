@@ -783,6 +783,19 @@ class ComplianceReportServices:
                             ComplianceReportStatusEnum.Submitted.value,
                             None,
                         )
+                    # Apply the same hidden-status mapping independently. The
+                    # latest report can have a different visible status from
+                    # the row's report status.
+                    if report.latest_status in (
+                        becid_only_statuses_regular | analyst_only_statuses_regular
+                    ):
+                        report.latest_status = ComplianceReportStatusEnum.Submitted.value
+                    report.assigned_analyst = None
+                    if report.report_status not in {
+                        ComplianceReportStatusEnum.Assessed.value,
+                        ComplianceReportStatusEnum.Exempted.value,
+                    }:
+                        report.assessment_statement = None
                 elif isinstance(report, ComplianceReportBaseSchema):
                     if (
                         is_supplier
@@ -807,6 +820,12 @@ class ComplianceReportServices:
                             ComplianceReportStatusEnum.Submitted.value,
                             None,
                         )
+                    report.assigned_analyst = None
+                    if report.current_status.status not in {
+                        ComplianceReportStatusEnum.Assessed.value,
+                        ComplianceReportStatusEnum.Exempted.value,
+                    }:
+                        report.assessment_statement = None
         return reports
 
     def is_supplemental_requested_by_gov_user(self, chained_report):
@@ -1085,13 +1104,15 @@ class ComplianceReportServices:
                         effective_creator_is_idir_for_masking = True
 
                 if effective_creator_is_idir_for_masking:
-                    # Create a copy or modify if mutable to avoid side effects
-                    # Assuming ComplianceReportHistorySchema allows modification or we create a new one
-                    # Let's assume we can modify display_name; adjust if schema is immutable
                     h.display_name = "Government of British Columbia"
-                    # We might also need to clear other PII like username/email if they exist on the schema
-                    # h.user_profile.username = None
-                    # h.user_profile.email = None
+                    # The nested profile is also serialized, so masking only
+                    # display_name still exposes IDIR first/last names.
+                    h.user_profile = h.user_profile.model_copy(
+                        update={
+                            "first_name": "Government",
+                            "last_name": "of British Columbia",
+                        }
+                    )
 
             filtered_history.append(h)
 
