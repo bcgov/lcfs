@@ -9,15 +9,15 @@
   validated when existing rows allow it, so new writes are always checked.
 
 Revision ID: 5d2e9b7c4a1f
-Revises: 9b3e5c7a1d24
-Create Date: 2026-11-10 10:00:00.000000
+Revises: a4c7d2e9b1f3
+Create Date: 2026-11-19 10:00:00.000000
 """
 
 import sqlalchemy as sa
 from alembic import op
 
 revision = "5d2e9b7c4a1f"
-down_revision = "9b3e5c7a1d24"
+down_revision = "a4c7d2e9b1f3"
 branch_labels = None
 depends_on = None
 
