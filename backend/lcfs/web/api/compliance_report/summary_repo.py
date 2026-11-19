@@ -529,6 +529,7 @@ class ComplianceReportSummaryRepository:
                 ),
                 InitiativeAgreement.to_organization_id == organization_id,
                 InitiativeAgreement.current_status_id == 3,  # Approved
+                InitiativeAgreement.transaction_id.is_not(None),
             )
         )
         return result or 0

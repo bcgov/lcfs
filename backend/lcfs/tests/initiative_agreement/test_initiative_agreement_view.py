@@ -1,7 +1,7 @@
 import datetime
 
 import pytest
-from fastapi import FastAPI, status
+from fastapi import FastAPI, HTTPException, status
 from httpx import AsyncClient
 from unittest.mock import AsyncMock, MagicMock
 
@@ -52,7 +52,7 @@ async def test_get_initiative_agreement(
         "lcfs.web.api.initiative_agreement.services.InitiativeAgreementServices",
         mock_initiative_agreement_services,
     ):
-        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
+        set_mock_user(fastapi_app, [RoleEnum.ANALYST])
         initiative_agreement_id = 1
 
         # Mock the service method
@@ -97,11 +97,11 @@ async def test_create_initiative_agreement(
     mock_initiative_agreement_services,
     mock_initiative_agreement_validation,
 ):
-    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
+    set_mock_user(fastapi_app, [RoleEnum.ANALYST])
     url = fastapi_app.url_path_for("create_initiative_agreement")
     initiative_agreement_payload = InitiativeAgreementCreateSchema(
         compliance_units=150,
-        current_status="Updated",
+        current_status="Draft",
         to_organization_id=3,
     )
 
@@ -140,13 +140,13 @@ async def test_update_initiative_agreement(
     mock_initiative_agreement_services,
     mock_initiative_agreement_validation,
 ):
-    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
+    set_mock_user(fastapi_app, [RoleEnum.ANALYST])
     initiative_agreement_id = 1
     url = fastapi_app.url_path_for("update_initiative_agreement")
     initiative_agreement_update_payload = InitiativeAgreementUpdateSchema(
         initiative_agreement_id=initiative_agreement_id,
         compliance_units=150,
-        current_status="Updated",
+        current_status="Draft",
         to_organization_id=3,
     )
 
@@ -179,3 +179,59 @@ async def test_update_initiative_agreement(
 
     assert response.status_code == status.HTTP_200_OK
     assert data["complianceUnits"] == 150
+
+
+@pytest.mark.anyio
+async def test_create_initiative_agreement_rejects_approved_status():
+    validation = InitiativeAgreementValidation()
+    request = MagicMock(user=MagicMock(role_names={RoleEnum.ANALYST}))
+    payload = InitiativeAgreementCreateSchema(
+        compliance_units=150,
+        current_status="Approved",
+        to_organization_id=3,
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await validation.validate_initiative_agreement_create(request, payload)
+
+    assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
+
+
+@pytest.mark.anyio
+async def test_create_initiative_agreement_rejects_general_government_user(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
+    url = fastapi_app.url_path_for("create_initiative_agreement")
+
+    response = await client.post(
+        url,
+        json={
+            "complianceUnits": 150,
+            "currentStatus": "Draft",
+            "toOrganizationId": 3,
+        },
+    )
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.anyio
+async def test_update_initiative_agreement_rejects_approved_record():
+    service = MagicMock(spec=InitiativeAgreementServices)
+    service.get_initiative_agreement = AsyncMock(
+        return_value=MagicMock(current_status=MagicMock(status="Approved"))
+    )
+    validation = InitiativeAgreementValidation(service=service)
+    request = MagicMock()
+    payload = InitiativeAgreementUpdateSchema(
+        initiative_agreement_id=1,
+        compliance_units=150,
+        current_status="Draft",
+        to_organization_id=3,
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await validation.validate_initiative_agreement_update(request, payload)
+
+    assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN

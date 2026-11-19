@@ -669,6 +669,18 @@ class ComplianceReportServices:
                 "A supplemental report can only be deleted if the status is 'Draft/Analyst_adjustment'."
             )
 
+        is_analyst = user_has_roles(user, [RoleEnum.ANALYST])
+        is_director = user_has_roles(user, [RoleEnum.DIRECTOR])
+        if current_report.current_status.status == ComplianceReportStatusEnum.Draft:
+            if user.organization_id is None and not is_analyst:
+                raise ServiceException(
+                    "Only an analyst can delete a supplier draft report."
+                )
+        elif not (is_analyst or is_director):
+            raise ServiceException(
+                "Only an analyst or director can delete an analyst adjustment report."
+            )
+
         # Reinstate the previous report's transaction if we are deleting a superseding report
         if current_report.current_status.status in [
             ComplianceReportStatusEnum.Analyst_adjustment,

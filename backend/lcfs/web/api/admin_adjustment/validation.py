@@ -25,7 +25,30 @@ class AdminAdjustmentValidation:
     async def validate_admin_adjustment_create(
         self, request, adjustment_data: AdminAdjustmentCreateSchema
     ):
-        pass
+        try:
+            status = AdminAdjustmentStatusEnum(adjustment_data.current_status)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=400,
+                detail="Admin adjustments can only be created as Draft or Recommended.",
+            ) from exc
+
+        if status not in {
+            AdminAdjustmentStatusEnum.Draft,
+            AdminAdjustmentStatusEnum.Recommended,
+        }:
+            raise HTTPException(
+                status_code=400,
+                detail="Admin adjustments can only be created as Draft or Recommended.",
+            )
+
+        if status == AdminAdjustmentStatusEnum.Recommended and not user_has_roles(
+            request.user, [RoleEnum.ANALYST]
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="Only an analyst can create a recommended admin adjustment.",
+            )
 
     async def validate_admin_adjustment_update(
         self, request, adjustment_data: AdminAdjustmentSchema
@@ -35,10 +58,9 @@ class AdminAdjustmentValidation:
             adjustment_data.admin_adjustment_id
         )
 
-        if (
-            admin_adjustment.current_status.status
-            == AdminAdjustmentStatusEnum.Approved.name
-        ):
+        current_status = admin_adjustment.current_status.status
+        current_status = getattr(current_status, "value", current_status)
+        if current_status == AdminAdjustmentStatusEnum.Approved.value:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Editing a processed admin adjustment is not allowed.",
