@@ -209,6 +209,23 @@ def test_headers_match_spec():
     assert actual == HEADERS
 
 
+def test_workbook_sanitizes_untrusted_text_cells():
+    row = _sample_row()
+    row[0] = "=HYPERLINK(\"https://example.invalid\",\"site\")"
+    row[1] = "+ORG-001"
+    row[6] = "@SUM(A1:A2)"
+    workbook = _make_exporter()._build_workbook([row], _compliance_period())
+    output = io.BytesIO()
+    workbook.save(output)
+    output.seek(0)
+    ws = load_workbook(output, data_only=True)[FSE_UPDATE_SHEETNAME]
+    assert ws["A2"].value.startswith("=HYPERLINK(")
+    assert ws["A2"].data_type == "s"
+    assert ws["B2"].value == "+ORG-001"
+    assert ws["G2"].value == "@SUM(A1:A2)"
+    assert ws["G2"].data_type == "s"
+
+
 def test_site_name_cell_is_locked():
     """Col A (site name) must be locked for existing data rows."""
     exp = _make_exporter()

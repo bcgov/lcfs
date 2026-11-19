@@ -673,7 +673,8 @@ jobs:
           fi
 
   teams-notification:
-    needs: [post-backend-tests, post-frontend-tests]
+    needs:
+      [post-backend-tests, post-frontend-tests]
     runs-on: ubuntu-latest
     if: always()
     steps:

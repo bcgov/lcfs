@@ -16,6 +16,15 @@ export type CommentLogVisibility = 'Internal' | 'Public'
 export type CommentLogSortField = 'create_date' | 'update_date'
 export type CommentLogSortOrder = 'asc' | 'desc'
 
+export interface CommentDocument {
+  documentId: number
+  fileName: string
+  fileSize: number
+  createDate: string | null
+  createUser: string | null
+  displayName: string | null
+}
+
 export interface OrganizationCommentRecord {
   internalCommentId: number
   comment: string | null
@@ -35,6 +44,7 @@ export interface OrganizationCommentRecord {
   updateUser: string | null
   updateFullName: string | null
   canEdit: boolean
+  documents: CommentDocument[]
 }
 
 export interface OrganizationCommentsResponse {
@@ -292,6 +302,10 @@ export const useEditOrganizationComment = (
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['organization-comments', orgID]
+      })
+      queryClient.invalidateQueries({
+        queryKey: ['internal-comments', 'penaltyLog'],
+        predicate: ({ queryKey }) => String(queryKey[2]) === String(orgID)
       })
     }
   })

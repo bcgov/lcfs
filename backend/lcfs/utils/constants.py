@@ -123,6 +123,15 @@ transaction_type_to_id_prefix_map = {
     "AggregatorIssuance": "AG",
 }
 
+transaction_type_to_display_name_map = {
+    "Transfer": "Transfer",
+    "AdminAdjustment": "Admin Adjustment",
+    "InitiativeAgreement": "Initiative Agreement",
+    "ComplianceReport": "Compliance Report",
+    "StandaloneTransaction": "Legacy Transaction",
+    "AggregatorIssuance": "Aggregator Issuance",
+}
+
 id_prefix_to_transaction_type_map = {
     "CT": "Transfer",
     "AA": "AdminAdjustment",
@@ -148,6 +157,18 @@ ALLOWED_MIME_TYPES = [
     "text/plain",
 ]
 ALLOWED_FILE_TYPES = "PDF, PNG, JPG/JPEG, Word Documents (.doc/.docx), Excel Spreadsheets (.xls/.xlsx), CSV, TXT"
+
+# Macro-enabled workbooks are accepted only for these parent types, behind
+# settings.feature_macro_uploads, and only after macro analysis
+MACRO_UPLOAD_PARENT_TYPES = {"ci_application"}
+MACRO_ENABLED_MIME_TYPES = ["application/vnd.ms-excel.sheet.macroEnabled.12"]
+MACRO_ENABLED_FILE_TYPES = "Macro-enabled Excel Spreadsheets (.xlsm)"
+
+# Schedule importers only read .xlsx workbooks
+SCHEDULE_IMPORT_MIME_TYPES = [
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+]
+SCHEDULE_IMPORT_FILE_TYPES = "Excel Spreadsheets (.xlsx)"
 
 # File size limits
 MAX_FILE_SIZE_MB = 50

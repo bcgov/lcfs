@@ -144,6 +144,27 @@ def test_builds_workbook_with_only_report_data_tabs():
     assert attachment["encoding"] == "base64"
 
 
+def test_metabase_workbook_sanitizes_untrusted_cells():
+    report = MetabaseDashboardReport(
+        dashboard_name="Credit Market",
+        dashboard_description=None,
+        dashboard_url="https://metabase.example/dashboard/1",
+        tables=[
+            MetabaseTable(
+                name="Monthly Market Report",
+                columns=["Comment"],
+                rows=[["=HYPERLINK(\"https://example.invalid\",\"open\")"]],
+            )
+        ],
+    )
+
+    workbook_bytes = CreditMarketReportBuilder().build_workbook(report)
+    workbook = load_workbook(io.BytesIO(workbook_bytes))
+    cell = workbook["Monthly Market Report"]["A2"]
+    assert cell.value.startswith("=HYPERLINK(")
+    assert cell.data_type == "s"
+
+
 def test_workbook_formats_annual_year_and_quarter_effective_dates():
     report = MetabaseDashboardReport(
         dashboard_name="Credit Market",

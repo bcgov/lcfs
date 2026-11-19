@@ -25,7 +25,21 @@ const OFFICE_MIME_TYPES = {
   doc: 'application/msword',
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   xls: 'application/vnd.ms-excel',
-  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  xlsm: 'application/vnd.ms-excel.sheet.macroEnabled.12'
+}
+
+// Blob requests deliver error bodies as a Blob, so read the JSON out of it
+const getErrorDetail = async (err) => {
+  const data = err?.response?.data
+  if (data && typeof data.text === 'function') {
+    try {
+      return JSON.parse(await data.text())?.detail
+    } catch {
+      return undefined
+    }
+  }
+  return data?.detail
 }
 
 const getExtension = (fileName = '') =>
@@ -51,7 +65,9 @@ const getPreviewKind = (fileName, contentType = '') => {
   if (
     type === OFFICE_MIME_TYPES.xlsx ||
     type === OFFICE_MIME_TYPES.xls ||
-    ['xlsx', 'xls'].includes(extension)
+    type === OFFICE_MIME_TYPES.xlsm ||
+    // SheetJS reads cell values only; it never runs macros
+    ['xlsx', 'xls', 'xlsm'].includes(extension)
   ) {
     return 'spreadsheet'
   }
@@ -237,7 +253,7 @@ const DocumentPreviewDialog = ({
       } catch (err) {
         if (!cancelled) {
           setError(
-            err?.response?.data?.detail ||
+            (await getErrorDetail(err)) ||
               err?.message ||
               'Unable to load document preview.'
           )

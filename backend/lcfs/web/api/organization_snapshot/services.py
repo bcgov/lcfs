@@ -1,16 +1,29 @@
 import structlog
-from fastapi import Depends, Request
+from fastapi import Depends, HTTPException, Request
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette import status
 from typing import Optional, Tuple
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models import ComplianceReportOrganizationSnapshot
+from lcfs.db.models.compliance.ComplianceReportStatus import (
+    ComplianceReportStatusEnum,
+)
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.services.geocoder.client import BCGeocoderService
 from lcfs.services.geocoder.dependency import get_geocoder_service_async
 from lcfs.web.api.organization_snapshot.repo import OrganizationSnapshotRepository
+from lcfs.web.api.role.schema import user_has_roles
+from lcfs.web.core.ownership import ensure_matches
 
 logger = structlog.get_logger(__name__)
+
+SUPPLIER_SNAPSHOT_EDIT_STATUSES = {ComplianceReportStatusEnum.Draft}
+ANALYST_SNAPSHOT_EDIT_STATUSES = {
+    ComplianceReportStatusEnum.Submitted,
+    ComplianceReportStatusEnum.Analyst_adjustment,
+}
 
 
 class OrganizationSnapshotService:
@@ -196,11 +209,46 @@ class OrganizationSnapshotService:
         org_snapshot = await self.repo.save_snapshot(org_snapshot)
         return org_snapshot
 
+    async def _ensure_snapshot_editable(self, compliance_report_id: int) -> None:
+        """403 unless the caller may edit this report's organization details now.
+
+        Suppliers edit them while the report is a Draft. IDIR analysts correct
+        them on a Submitted report without starting an adjustment (#2515), and
+        in their own Analyst adjustment. Every other status is read-only.
+        """
+        report_status = await self.repo.get_compliance_report_status(
+            compliance_report_id
+        )
+        user = getattr(self.request, "user", None)
+        if user_has_roles(user, [RoleEnum.GOVERNMENT]):
+            editable = (
+                ANALYST_SNAPSHOT_EDIT_STATUSES
+                if user_has_roles(user, [RoleEnum.ANALYST])
+                else set()
+            )
+        else:
+            editable = SUPPLIER_SNAPSHOT_EDIT_STATUSES
+
+        if report_status not in editable:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="The organization details on this report cannot be edited in its current status.",
+            )
+
     async def update(self, request_data, compliance_report_id):
         """
         Updates the snapshot fields for the specified compliance report using `request_data`.
         Re-geocodes the address if any address field has changed.
+
+        The snapshot stays attached to the report in the path: a body naming a
+        different report is rejected (400), never applied.
         """
+        ensure_matches(
+            compliance_report_id,
+            request_data.compliance_report_id,
+            field="compliance_report_id",
+        )
+        await self._ensure_snapshot_editable(compliance_report_id)
 
         snapshot = await self.repo.get_by_compliance_report_id(compliance_report_id)
         if not snapshot:
@@ -215,7 +263,6 @@ class OrganizationSnapshotService:
             or snapshot.head_office_address != request_data.head_office_address
         )
 
-        snapshot.compliance_report_id = request_data.compliance_report_id
         snapshot.name = request_data.name
         snapshot.operating_name = request_data.operating_name
         snapshot.email = request_data.email

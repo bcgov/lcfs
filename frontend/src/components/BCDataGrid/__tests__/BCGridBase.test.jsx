@@ -586,4 +586,52 @@ describe('BCGridBase Component', () => {
       expect(agGridProps.rowHeight).toBe(45) // ROW_HEIGHT constant
     })
   })
+
+  describe('Enter key in a cell', () => {
+    const column = { getColId: () => 'supplyFromDate' }
+
+    const pressEnterInCell = (editingCells) => {
+      const cell = document.createElement('div')
+      cell.className = 'ag-cell'
+      const input = document.createElement('input')
+      const button = document.createElement('button')
+      button.click = vi.fn()
+      cell.append(input, button)
+      document.body.append(cell)
+
+      render(
+        <TestWrapper>
+          <BCGridBase />
+        </TestWrapper>
+      )
+      capturedGridProps.onCellKeyDown({
+        event: {
+          code: 'Enter',
+          target: input,
+          preventDefault: vi.fn(),
+          stopPropagation: vi.fn()
+        },
+        node: { id: '0' },
+        rowIndex: 0,
+        column,
+        api: { getEditingCells: () => editingCells }
+      })
+      cell.remove()
+      return button
+    }
+
+    it('clicks the button in a cell that is not being edited', () => {
+      const button = pressEnterInCell([])
+
+      expect(button.click).toHaveBeenCalledTimes(1)
+    })
+
+    it('leaves Enter to the editor while the cell is being edited', () => {
+      // A date editor's first button is its clear button; clicking it on
+      // Enter wiped the date that was just typed.
+      const button = pressEnterInCell([{ rowIndex: 0, column }])
+
+      expect(button.click).not.toHaveBeenCalled()
+    })
+  })
 })

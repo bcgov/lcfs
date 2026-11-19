@@ -40,6 +40,8 @@ const actionsTab = {
   isActive: isOnActionsTab
 }
 
+const isOnIndex = (loc, tab) => loc.pathname.replace(/\/+$/, '') === tab.path
+
 export const InitiativeAgreementTabs = () => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const navigate = useNavigate()
@@ -52,6 +54,10 @@ export const InitiativeAgreementTabs = () => {
         : [agreementsTab],
     [hasAnyRole]
   )
+
+  const goToIndex = (tab) => {
+    if (!isOnIndex(location, tab)) navigate(tab.path)
+  }
 
   const matchedIndex = tabs.findIndex((tab) => tab.isActive(location))
   const activeIndex = matchedIndex === -1 ? false : matchedIndex
@@ -77,13 +83,13 @@ export const InitiativeAgreementTabs = () => {
         }}
         orientation={tabsOrientation}
         value={activeIndex}
-        onChange={(_, idx) => navigate(tabs[idx].path)}
         aria-label={t('initiativeAgreement:tabs.ariaLabel')}
       >
         {tabs.map((tab) => (
           <Tab
             key={tab.key}
             label={t(tab.labelKey)}
+            onClick={() => goToIndex(tab)}
             data-test={`initiative-agreements-tab-${tab.key}`}
           />
         ))}

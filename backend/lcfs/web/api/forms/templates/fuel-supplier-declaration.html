@@ -8,11 +8,13 @@
       size: Letter;
       margin: 2cm 2.5cm 2.5cm;
       @bottom-center {
-        content: "{{ organization_name }}  ·  Period {{ reporting_period }}  ·  {{ generated_date }}";
-        font-size: 7pt;
-        color: #999;
+        content: element(page-footer);
       }
     }
+    /* Page footer: a running element, so the text is HTML (auto-escaped) and
+       never part of this stylesheet. Keep Jinja expressions out of <style>. */
+    .page-footer { position: running(page-footer); font-size: 7pt; color: #999;
+                   text-align: center; }
     body  { font-family: Arial, sans-serif; font-size: 10pt; color: #111; margin: 0; }
     h1    { font-size: 16pt; margin: 6px 0 4px; }
     h2    { font-size: 9pt; font-weight: bold; text-transform: uppercase;
@@ -26,6 +28,8 @@
   </style>
 </head>
 <body>
+
+<div class="page-footer">{{ organization_name }}  ·  Period {{ reporting_period }}  ·  {{ generated_date }}</div>
 
 <p style="font-size:9pt; margin:0 0 4px;">Government of British Columbia &mdash; Low Carbon Fuels Act</p>
 <h1>{{ form_name }}</h1>

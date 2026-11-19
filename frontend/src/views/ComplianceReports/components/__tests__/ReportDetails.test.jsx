@@ -111,7 +111,7 @@ vi.mock('@/constants/roles', () => ({
 }))
 
 // Mock other components to prevent rendering issues
-vi.mock('@/components/TogglePanel.jsx', () => ({
+vi.mock('@/components/TogglePanel', () => ({
   TogglePanel: ({ label, offComponent, disabled }) => (
     <div data-testid="toggle-panel">
       <div>{label}</div>

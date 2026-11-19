@@ -4,6 +4,7 @@ import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import { v4 as uuid } from 'uuid'
+import isEqual from 'lodash/isEqual'
 
 import BCButton from '@/components/BCButton'
 import BCModal from '@/components/BCModal'
@@ -62,13 +63,21 @@ export const ProposedFuelPathwaysStep = ({
   )
   const [errors, setErrors] = useState({})
   const [rowPendingDelete, setRowPendingDelete] = useState(null)
+  const previousSeed = useRef(null)
 
-  // Re-seed local state when the parent reloads the application (e.g. after save)
+  // Document-only refetches must not replace the grid's unsaved transactions.
   useEffect(() => {
-    if (ciApplication?.pathways?.length) {
-      setRowData(ciApplication.pathways.map(apiToRow))
+    const seed = {
+      id: ciApplication?.ciApplicationId,
+      pathways: ciApplication?.pathways ?? [],
+      description: ciApplication?.pathwayDescription ?? ''
     }
-    setDescription(ciApplication?.pathwayDescription || '')
+    if (isEqual(previousSeed.current, seed)) return
+    previousSeed.current = seed
+    setRowData(
+      seed.pathways.length ? seed.pathways.map(apiToRow) : [createEmptyRow()]
+    )
+    setDescription(seed.description)
   }, [ciApplication])
 
   const columnDefs = useMemo(

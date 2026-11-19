@@ -1,6 +1,9 @@
 import structlog
-from fastapi import APIRouter, Body, Depends, Query, Request, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
 
+from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
+    RECORD_KIND_AGREEMENT,
+)
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.services.s3.client import DocumentService
 from lcfs.web.api.document_folder.schema import (
@@ -18,9 +21,10 @@ from lcfs.web.core.decorators import view_handler
 logger = structlog.get_logger(__name__)
 router = APIRouter()
 
-# The tree renders on the IDIR designated action page; the proponent view
-# arrives with the BCeID story, like the rest of the module.
+# On agreement and designated action pages, proponents can view and manage
+# their own document bin; folder organization remains an IDIR function.
 FOLDER_ROLES = [RoleEnum.IA_ANALYST, RoleEnum.IA_MANAGER, RoleEnum.DIRECTOR]
+DOCUMENT_ROLES = FOLDER_ROLES + [RoleEnum.IA_PROPONENT]
 
 
 async def _validate_parent_access(
@@ -33,8 +37,29 @@ async def _validate_parent_access(
     """Allow-list first, then the same access resolution the shared
     document routes use: a designated action's audience is its agreement's."""
     service.ensure_parent_type_enabled(parent_type)
-    agreement_id = await document_service.get_designated_action_agreement_id(parent_id)
-    await ia_validate.validate_organization_access(agreement_id)
+    if parent_type == "designatedAction":
+        agreement_id = await document_service.get_designated_action_agreement_id(
+            parent_id
+        )
+        await ia_validate.validate_organization_access(agreement_id)
+    elif parent_type == "initiativeAgreement":
+        await ia_validate.validate_organization_access(parent_id)
+        # Legacy credit awards share the table and the parent type, but
+        # their documents are managed on the transaction pages, which have
+        # no bin. A file binned through here would simply vanish there.
+        agreement = await ia_validate.repo.get_initiative_agreement_by_id(parent_id)
+        if agreement.record_kind != RECORD_KIND_AGREEMENT:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Folders are not enabled for legacy credit awards.",
+            )
+    else:
+        # Enabled in the allow-list but given no access rule here: refuse
+        # rather than let it through unchecked.
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Unsupported document parent type.",
+        )
 
 
 @router.get(
@@ -42,7 +67,7 @@ async def _validate_parent_access(
     response_model=DocumentFolderTreeSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler(FOLDER_ROLES)
+@view_handler(DOCUMENT_ROLES)
 async def get_document_folder_tree(
     request: Request,
     parent_type: str,
@@ -64,7 +89,7 @@ async def get_document_folder_tree(
     response_model=DeletedDocumentsSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler(FOLDER_ROLES)
+@view_handler(DOCUMENT_ROLES)
 async def get_deleted_documents(
     request: Request,
     parent_type: str,
@@ -75,12 +100,12 @@ async def get_deleted_documents(
     document_service: DocumentService = Depends(),
     ia_validate: InitiativeAgreementValidation = Depends(),
 ) -> DeletedDocumentsSchema:
-    """Documents removed from this parent's tree. Nothing ever leaves."""
+    """Deleted documents visible to this user for this parent."""
     await _validate_parent_access(
         parent_type, parent_id, service, document_service, ia_validate
     )
     return await service.get_deleted_documents(
-        parent_type, parent_id, limit=limit, offset=offset
+        parent_type, parent_id, request.user, limit=limit, offset=offset
     )
 
 
@@ -88,7 +113,7 @@ async def get_deleted_documents(
     "/{parent_type}/{parent_id}/documents/{document_id}",
     status_code=status.HTTP_204_NO_CONTENT,
 )
-@view_handler(FOLDER_ROLES)
+@view_handler(DOCUMENT_ROLES)
 async def soft_delete_document(
     request: Request,
     parent_type: str,
@@ -115,7 +140,7 @@ async def soft_delete_document(
     "/{parent_type}/{parent_id}/documents/{document_id}/restore",
     status_code=status.HTTP_204_NO_CONTENT,
 )
-@view_handler(FOLDER_ROLES)
+@view_handler(DOCUMENT_ROLES)
 async def restore_document(
     request: Request,
     parent_type: str,
@@ -131,6 +156,29 @@ async def restore_document(
         parent_type, parent_id, service, document_service, ia_validate
     )
     await service.restore_document(parent_type, parent_id, document_id, request.user)
+
+
+@router.delete(
+    "/{parent_type}/{parent_id}/documents/{document_id}/hard-delete",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+@view_handler(DOCUMENT_ROLES)
+async def hard_delete_document(
+    request: Request,
+    parent_type: str,
+    parent_id: int,
+    document_id: int,
+    service: DocumentFolderServices = Depends(),
+    document_service: DocumentService = Depends(),
+    ia_validate: InitiativeAgreementValidation = Depends(),
+) -> None:
+    """Permanently remove a deleted file owned and removed by this user."""
+    await _validate_parent_access(
+        parent_type, parent_id, service, document_service, ia_validate
+    )
+    await service.hard_delete_document(
+        parent_type, parent_id, document_id, request.user, document_service
+    )
 
 
 @router.post(
@@ -208,12 +256,6 @@ async def delete_document_folder(
     parent_type: str,
     parent_id: int,
     folder_id: int,
-    strategy: str = Query(
-        "reparent",
-        description="reparent moves contents up one level, leaving nothing "
-        "in the bin; cascade sends the subtree and everything filed in it "
-        "to the bin together, restorable as a unit.",
-    ),
     service: DocumentFolderServices = Depends(),
     document_service: DocumentService = Depends(),
     ia_validate: InitiativeAgreementValidation = Depends(),
@@ -221,9 +263,7 @@ async def delete_document_folder(
     await _validate_parent_access(
         parent_type, parent_id, service, document_service, ia_validate
     )
-    await service.delete_folder(
-        parent_type, parent_id, folder_id, strategy, request.user
-    )
+    await service.delete_folder(parent_type, parent_id, folder_id, request.user)
 
 
 @router.put(

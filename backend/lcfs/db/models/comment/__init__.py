@@ -5,7 +5,9 @@ from .DesignatedActionInternalComment import DesignatedActionInternalComment
 from .InitiativeAgreementInternalComment import InitiativeAgreementInternalComment
 from .InternalComment import InternalComment
 from .ComplianceReportInternalComment import ComplianceReportInternalComment
+from .LCJFIPApplicationInternalComment import LCJFIPApplicationInternalComment
 from .OrganizationInternalComment import OrganizationInternalComment
+from .PenaltyLogInternalComment import PenaltyLogInternalComment
 
 __all__ = [
     "AdminAdjustmentInternalComment",
@@ -15,5 +17,7 @@ __all__ = [
     "InitiativeAgreementInternalComment",
     "InternalComment",
     "ComplianceReportInternalComment",
+    "LCJFIPApplicationInternalComment",
     "OrganizationInternalComment",
+    "PenaltyLogInternalComment",
 ]
