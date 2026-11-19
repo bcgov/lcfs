@@ -5,14 +5,14 @@ change get a 90-day grace period from the time of this migration so links alread
 shared with suppliers keep working until they are regenerated.
 
 Revision ID: a4c7d2e9b1f3
-Revises: 9e0e5741b48f
+Revises: 5499daec0001
 Create Date: 2026-11-18 09:00:00.000000
 """
 
 from alembic import op
 
 revision = "a4c7d2e9b1f3"
-down_revision = "9e0e5741b48f"
+down_revision = "5499daec0001"
 branch_labels = None
 depends_on = None
 
