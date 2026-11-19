@@ -141,6 +141,15 @@ export const DOCUMENT_FILE_TYPES = createFileTypeConfig(
 )
 
 // File upload constants for schedule imports
+// CI applications also take macro-enabled workbooks, which wait for an
+// administrator's approval before anyone can open them
+export const MACRO_ENABLED_MIME_TYPE =
+  'application/vnd.ms-excel.sheet.macroEnabled.12'
+export const CI_APPLICATION_FILE_TYPES = createFileTypeConfig(
+  [...UPLOAD_MIME_TYPES, MACRO_ENABLED_MIME_TYPE],
+  `${UPLOAD_TYPES_DESCRIPTION}, Macro-enabled Excel (.xlsm)`
+)
+
 export const SCHEDULE_IMPORT_FILE_TYPES = createFileTypeConfig(
   ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
   'Excel files (.xlsx)'
