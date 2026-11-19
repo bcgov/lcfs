@@ -14,10 +14,10 @@
 // ***********************************************************
 
 import type { Result as AxeResult } from 'axe-core'
-import 'cypress-axe'
 import 'cypress-real-events/support'
 import 'cypress-react-selector'
 import './commands'
+import { isKnownTransientException } from '../../e2e/known-page-errors.js'
 
 // Suppress specific transient application exceptions that are unrelated to test
 // correctness.  Returning false from this handler tells Cypress not to fail the
@@ -30,20 +30,7 @@ import './commands'
 //    after React has already unmounted the grid on navigation.  The save itself
 //    completed successfully; this error is purely a cleanup-timing artefact.
 Cypress.on('uncaught:exception', (err) => {
-  const message = err?.message || ''
-  const stack = err?.stack || ''
-
-  const isTrackLoginError =
-    message.includes('Network Error') &&
-    stack.includes('axios') &&
-    stack.includes('KeycloakProvider.jsx')
-
-  const isGridTransactionRace =
-    message.includes(
-      "Cannot read properties of undefined (reading 'applyTransaction')"
-    ) && stack.includes('BCGridEditor.jsx')
-
-  if (isTrackLoginError || isGridTransactionRace) {
+  if (isKnownTransientException(err)) {
     return false
   }
 })

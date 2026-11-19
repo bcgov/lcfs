@@ -1,11 +1,7 @@
 import { Given, When, Then } from '@badeball/cypress-cucumber-preprocessor'
 
 Given('the analyst logs in with valid credentials', () => {
-  cy.loginWith(
-    'idir',
-    Cypress.env('ADMIN_IDIR_USERNAME'),
-    Cypress.env('ADMIN_IDIR_PASSWORD')
-  )
+  cy.loginWithEnv('idir')
   cy.wait(5000)
   cy.setIDIRRoles('analyst')
   cy.visit('/')
@@ -85,11 +81,7 @@ Given('the director is on the login page', () => {
 })
 
 When('the director logs in with valid credentials', () => {
-  cy.loginWith(
-    'idir',
-    Cypress.env('ADMIN_IDIR_USERNAME'),
-    Cypress.env('ADMIN_IDIR_PASSWORD')
-  )
+  cy.loginWithEnv('idir')
   cy.wait(5000)
   cy.getByDataTest('dashboard-container').should('exist')
   cy.setIDIRRoles('director')

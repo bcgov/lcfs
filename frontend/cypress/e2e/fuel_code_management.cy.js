@@ -1,8 +1,3 @@
-const idirCreds = () => ({
-  username: Cypress.env('IDIR_TEST_USER') || Cypress.env('ADMIN_IDIR_USERNAME'),
-  password: Cypress.env('IDIR_TEST_PASS') || Cypress.env('ADMIN_IDIR_PASSWORD')
-})
-
 const fuelCodeOptions = {
   fuelCodePrefixes: [
     {
@@ -129,15 +124,8 @@ const setGridTextCell = (field, value) => {
 }
 
 describe('Fuel Code management', () => {
-  const creds = idirCreds()
-
   before(() => {
-    expect(creds.username, 'IDIR username is configured').to.be.a('string').and
-      .not.be.empty
-    expect(creds.password, 'IDIR password is configured').to.be.a('string').and
-      .not.be.empty
-
-    cy.loginWith('idir', creds.username, creds.password)
+    cy.loginWithEnv('idir')
     cy.get('.main-layout-navbar', { timeout: 30000 }).should('be.visible')
   })
 

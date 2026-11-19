@@ -14,11 +14,7 @@ Given(
     cy.visit('/')
     cy.getByDataTest('login-container').should('exist')
     // Login with the updated user
-    cy.loginWith(
-      'bceid',
-      Cypress.env(`${userType}_username`.toLocaleUpperCase()),
-      Cypress.env(`${userType}_password`.toLocaleUpperCase())
-    )
+    cy.loginWithEnv(userType)
     cy.getByDataTest('dashboard-container', { timeout: 30000 }).should('exist')
   }
 )
@@ -118,11 +114,7 @@ Given('bceid transfer accounts are setup with roles', () => {
   cy.setBCeIDRoles('org1_bceid', ['Transfer', 'Signing authority'], 'idir1')
   cy.setBCeIDRoles('org2_bceid', ['Transfer', 'Signing authority'], 'idir2')
 
-  cy.loginWith(
-    'bceid',
-    Cypress.env('ORG1_BCEID_USERNAME'),
-    Cypress.env('ORG1_BCEID_PASSWORD')
-  )
+  cy.loginWithEnv('org1_bceid')
   cy.wait(5000)
   cy.getByDataTest('dashboard-container').should('exist')
 })
@@ -135,11 +127,7 @@ When('I login as receiving org and submit', () => {
   cy.visit('/')
   cy.getByDataTest('login-container').should('exist')
   // Login with the updated user
-  cy.loginWith(
-    'bceid',
-    Cypress.env('ORG2_BCEID_USERNAME'),
-    Cypress.env('ORG2_BCEID_PASSWORD')
-  )
+  cy.loginWithEnv('org2_bceid')
   cy.wait(5000)
   cy.getByDataTest('dashboard-container').should('exist')
 
@@ -164,11 +152,7 @@ When('I login as analyst and recommend', () => {
   cy.visit('/')
   cy.getByDataTest('login-container').should('exist')
   // Login with the updated user
-  cy.loginWith(
-    'idir',
-    Cypress.env('ADMIN_IDIR_USERNAME'),
-    Cypress.env('ADMIN_IDIR_PASSWORD')
-  )
+  cy.loginWithEnv('idir')
 
   cy.wait(5000)
   cy.setIDIRRoles('analyst')
@@ -196,11 +180,7 @@ When('I login as director and records transfer', () => {
   cy.visit('/')
   cy.getByDataTest('login-container').should('exist')
   // Login with the updated user
-  cy.loginWith(
-    'idir',
-    Cypress.env('ADMIN_IDIR_USERNAME'),
-    Cypress.env('ADMIN_IDIR_PASSWORD')
-  )
+  cy.loginWithEnv('idir')
   cy.wait(5000)
   cy.setIDIRRoles('director')
   cy.visit('/')
@@ -224,11 +204,7 @@ When('I login as director and refuse transfer', () => {
   cy.visit('/')
   cy.getByDataTest('login-container').should('exist')
   // Login with the updated user
-  cy.loginWith(
-    'idir',
-    Cypress.env('ADMIN_IDIR_USERNAME'),
-    Cypress.env('ADMIN_IDIR_PASSWORD')
-  )
+  cy.loginWithEnv('idir')
   cy.wait(5000)
   cy.setIDIRRoles('director')
   cy.visit('/')

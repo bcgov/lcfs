@@ -1,19 +1,3 @@
-const supplierCreds = () => ({
-  username:
-    Cypress.env('ORG1_BCEID_USERNAME') ||
-    Cypress.env('BCEID_TEST_USER') ||
-    Cypress.env('ORG2_BCEID_USERNAME'),
-  password:
-    Cypress.env('ORG1_BCEID_PASSWORD') ||
-    Cypress.env('BCEID_TEST_PASS') ||
-    Cypress.env('ORG2_BCEID_PASSWORD')
-})
-
-const idirCreds = () => ({
-  username: Cypress.env('IDIR_TEST_USER') || Cypress.env('ADMIN_IDIR_USERNAME'),
-  password: Cypress.env('IDIR_TEST_PASS') || Cypress.env('ADMIN_IDIR_PASSWORD')
-})
-
 const interceptCurrentUser = (type = 'supplier') => {
   const body =
     type === 'idir'
@@ -80,20 +64,8 @@ const setAgTextCell = (colId, value, rowIndex = 0) => {
 }
 
 describe('ChargingEquipment create/edit/list filters/download', () => {
-  const supplier = supplierCreds()
-  const idir = idirCreds()
-
-  before(() => {
-    expect(supplier.username, 'BCeID username').to.be.a('string').and.not.be
-      .empty
-    expect(supplier.password, 'BCeID password').to.be.a('string').and.not.be
-      .empty
-    expect(idir.username, 'IDIR username').to.be.a('string').and.not.be.empty
-    expect(idir.password, 'IDIR password').to.be.a('string').and.not.be.empty
-  })
-
   it('creates and edits charging equipment (supplier)', () => {
-    cy.loginWith('bceid', supplier.username, supplier.password)
+    cy.loginWithEnv('bceid')
     cy.get('.main-layout-navbar', { timeout: 30000 }).should('be.visible')
 
     interceptCurrentUser('supplier')
@@ -163,7 +135,7 @@ describe('ChargingEquipment create/edit/list filters/download', () => {
   })
 
   it('applies list filter and downloads charging equipment export (IDIR)', () => {
-    cy.loginWith('idir', idir.username, idir.password)
+    cy.loginWithEnv('idir')
     cy.get('.main-layout-navbar', { timeout: 30000 }).should('be.visible')
 
     interceptCurrentUser('idir')
@@ -235,17 +207,8 @@ describe('ChargingEquipment create/edit/list filters/download', () => {
 })
 
 describe('FSE Reporting grid interactions + save flow', () => {
-  const supplier = supplierCreds()
-
-  before(() => {
-    expect(supplier.username, 'BCeID username').to.be.a('string').and.not.be
-      .empty
-    expect(supplier.password, 'BCeID password').to.be.a('string').and.not.be
-      .empty
-  })
-
   it('supports selecting FSE rows, setting defaults, editing values, and save changes', () => {
-    cy.loginWith('bceid', supplier.username, supplier.password)
+    cy.loginWithEnv('bceid')
     cy.get('.main-layout-navbar', { timeout: 30000 }).should('be.visible')
 
     interceptCurrentUser('supplier')

@@ -6,11 +6,7 @@ describe('Organization Test Suite', () => {
   before(() => {
     cy.visit('/')
     // Login and visit the page
-    cy.loginWith(
-      'idir',
-      Cypress.env('ADMIN_IDIR_USERNAME'),
-      Cypress.env('ADMIN_IDIR_PASSWORD')
-    )
+    cy.loginWithEnv('idir')
     cy.get('.main-layout-navbar', { timeout: 30000 }).should('be.visible')
   })
   beforeEach(() => {

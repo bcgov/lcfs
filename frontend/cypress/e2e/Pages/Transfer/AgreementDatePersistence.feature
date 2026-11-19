@@ -1,6 +1,6 @@
 Feature: Draft transfer agreement date
 
-  @transfer
+  @transfer @agreement-date-persistence
   Scenario: updating the agreement date persists when a draft is reopened
     Given the seeded org1 transfer user is logged in
     And a new draft transfer is open

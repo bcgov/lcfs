@@ -12,11 +12,6 @@
  * real session, so the `pathname` matchers below accept any numeric org id.
  */
 
-const BCEID_USER =
-  Cypress.env('ORG1_BCEID_USERNAME') || Cypress.env('BCEID_TEST_USER')
-const BCEID_PASS =
-  Cypress.env('ORG1_BCEID_PASSWORD') || Cypress.env('BCEID_TEST_PASS')
-
 // --- Stubbed responses -------------------------------------------------------
 
 const ORG = {
@@ -131,7 +126,7 @@ const stubOrg = () => {
 
 describe('BCeID organization self-service pages (#4092)', () => {
   before(() => {
-    cy.loginWith('bceid', BCEID_USER, BCEID_PASS)
+    cy.loginWithEnv('bceid')
     cy.get('.main-layout-navbar', { timeout: 30000 }).should('be.visible')
   })
 
@@ -174,7 +169,7 @@ describe('BCeID organization self-service pages (#4092)', () => {
       stubOrg()
       // A supplier hitting another org's IDIR route is bounced to /organization.
       cy.visit('/organizations/9999')
-      cy.location('pathname', { timeout: 15000 }).should('eq', '/organization')
+      cy.url({ timeout: 15000 }).should('match', /\/organization$/)
     })
   })
 

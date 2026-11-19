@@ -76,11 +76,7 @@ Given('the user is on the login page, while retaining previous data', () => {
 })
 
 When('the supplier logs in with valid credentials', () => {
-  cy.loginWith(
-    'becid',
-    Cypress.env('BCEID_TEST_USER'),
-    Cypress.env('BCEID_TEST_PASS')
-  )
+  cy.loginWithEnv('bceid')
   cy.visit('/', { timeout: 60000 })
   cy.get(SELECTORS.dashboard, { timeout: 10000 }).should('exist')
 })
@@ -953,11 +949,7 @@ When('the analyst recommends to the compliance manager', () => {
 })
 
 When('the analyst logs in with valid IDIR credentials', () => {
-  cy.loginWith(
-    'idir',
-    Cypress.env('ADMIN_IDIR_USERNAME'),
-    Cypress.env('ADMIN_IDIR_PASSWORD')
-  )
+  cy.loginWithEnv('idir')
   cy.wait(5000)
   cy.setIDIRRoles('analyst')
   cy.visit('/', { timeout: 60000 })
@@ -965,11 +957,7 @@ When('the analyst logs in with valid IDIR credentials', () => {
 })
 
 When('the compliance manager logs in with valid IDIR credentials', () => {
-  cy.loginWith(
-    'idir',
-    Cypress.env('ADMIN_IDIR_USERNAME'),
-    Cypress.env('ADMIN_IDIR_PASSWORD')
-  )
+  cy.loginWithEnv('idir')
   cy.wait(5000)
   cy.setIDIRRoles('compliance manager')
   cy.visit('/', { timeout: 60000 })
@@ -977,11 +965,7 @@ When('the compliance manager logs in with valid IDIR credentials', () => {
 })
 
 When('the director logs in with valid IDIR credentials', () => {
-  cy.loginWith(
-    'idir',
-    Cypress.env('ADMIN_IDIR_USERNAME'),
-    Cypress.env('ADMIN_IDIR_PASSWORD')
-  )
+  cy.loginWithEnv('idir')
   cy.wait(5000)
   cy.setIDIRRoles('director')
   cy.visit('/', { timeout: 60000 })

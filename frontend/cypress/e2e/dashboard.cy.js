@@ -1,9 +1,6 @@
 describe('Dashboard view coverage', () => {
-  const idirUsername = Cypress.env('ADMIN_IDIR_USERNAME')
-  const idirPassword = Cypress.env('ADMIN_IDIR_PASSWORD')
-
   beforeEach(() => {
-    cy.loginWith('idir', idirUsername, idirPassword)
+    cy.loginWithEnv('idir')
     cy.setIDIRRoles('director')
     cy.visit('/', { timeout: 30000 })
     cy.getByDataTest('dashboard-container', { timeout: 30000 }).should('exist')

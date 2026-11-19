@@ -8,24 +8,21 @@ import {
 const agreementDateInput = "[data-test='transfer-agreement-date-input']"
 
 Given('the seeded org1 transfer user is logged in', () => {
-  cy.visit('/')
-  cy.getByDataTest('login-container').should('exist')
-  cy.loginWith(
-    'bceid',
-    Cypress.env('ORG1_BCEID_USERNAME'),
-    Cypress.env('ORG1_BCEID_PASSWORD')
-  )
+  cy.loginWithEnv('org1_bceid')
   cy.getByDataTest('dashboard-container', { timeout: 30000 }).should('exist')
 })
 
-Given('a new draft transfer is open', () => {
-  cy.task('createDraftTransfer', { agreementDate: '2024-04-06' }).then(
-    (transferId) => {
-      Cypress.env('TRANSFER_ID', transferId)
-      cy.visit(`/transfers/edit/${transferId}`)
-      cy.get(agreementDateInput).should('have.value', '2024-04-06')
-    }
-  )
+Given('a new draft transfer is open', function () {
+  return cy
+    .task('createDraftTransfer', { agreementDate: '2024-04-06' })
+    .then((transferId) => {
+      this.transferId = transferId
+      return cy
+        .visit(`/transfers/edit/${transferId}`)
+        .then(() =>
+          cy.get(agreementDateInput).should('have.value', '2024-04-06')
+        )
+    })
 })
 
 When(
@@ -50,7 +47,6 @@ Then(
   }
 )
 
-After(() => {
-  const transferId = Cypress.env('TRANSFER_ID')
-  if (transferId) cy.task('deleteTransfer', transferId)
+After({ tags: '@agreement-date-persistence' }, function () {
+  if (this.transferId) return cy.task('deleteTransfer', this.transferId)
 })
