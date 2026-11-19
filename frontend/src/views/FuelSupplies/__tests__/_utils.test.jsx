@@ -24,7 +24,7 @@ vi.mock('@/utils/formatters', () => ({
 }))
 
 // Mock schedules
-vi.mock('@/utils/schedules.js', () => ({
+vi.mock('@/utils/schedules', () => ({
   handleScheduleSave: vi.fn().mockResolvedValue({ saved: true })
 }))
 
