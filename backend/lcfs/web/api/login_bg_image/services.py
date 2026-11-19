@@ -5,6 +5,7 @@ from typing import List, Optional
 
 from fastapi import Depends, HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.login_bg_image.LoginBgImage import LoginBgImage
@@ -82,7 +83,8 @@ class LoginBgImageService:
         image_key = f"{S3_PREFIX}/{file_id}"
 
         file.file.seek(0)
-        self.s3_client.upload_fileobj(
+        await run_in_threadpool(
+            self.s3_client.upload_fileobj,
             Fileobj=file.file,
             Bucket=BUCKET_NAME,
             Key=image_key,
