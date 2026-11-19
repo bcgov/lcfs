@@ -15,6 +15,7 @@ from sqlalchemy import (
     cast,
     String,
     text,
+    case,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
@@ -24,6 +25,10 @@ from lcfs.db.models.admin_adjustment.AdminAdjustmentHistory import (
     AdminAdjustmentHistory,
 )
 from lcfs.db.models.admin_adjustment.AdminAdjustmentStatus import AdminAdjustmentStatus
+from lcfs.db.models.compliance.ComplianceReportHistory import ComplianceReportHistory
+from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatus
+from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
 from lcfs.db.models.initiative_agreement.InitiativeAgreementHistory import (
     InitiativeAgreementHistory,
 )
@@ -684,6 +689,7 @@ class UserRepository:
                 literal_column("'Transfer'").label("transaction_type"),
                 TransferHistory.create_date.label("create_date"),
                 TransferHistory.user_profile_id.label("user_id"),
+                literal_column("NULL").label("compliance_period"),
             )
             .select_from(TransferHistory)
             .join(
@@ -707,6 +713,7 @@ class UserRepository:
                 literal_column("'InitiativeAgreement'").label("transaction_type"),
                 InitiativeAgreementHistory.create_date.label("create_date"),
                 InitiativeAgreementHistory.user_profile_id.label("user_id"),
+                literal_column("NULL").label("compliance_period"),
             )
             .select_from(InitiativeAgreementHistory)
             .join(
@@ -731,6 +738,7 @@ class UserRepository:
                 literal_column("'AdminAdjustment'").label("transaction_type"),
                 AdminAdjustmentHistory.create_date.label("create_date"),
                 AdminAdjustmentHistory.user_profile_id.label("user_id"),
+                literal_column("NULL").label("compliance_period"),
             )
             .select_from(AdminAdjustmentHistory)
             .join(
@@ -745,9 +753,49 @@ class UserRepository:
             )
         )
 
+        # ComplianceReportHistory Query
+        compliance_report_query = (
+            select(
+                cast(ComplianceReportHistory.compliance_report_id, String).label(
+                    "transaction_id"
+                ),
+                func.replace(
+                    cast(ComplianceReportStatus.status, String), "_", " "
+                ).label("action_taken"),
+                literal_column("'ComplianceReport'").label("transaction_type"),
+                ComplianceReportHistory.create_date.label("create_date"),
+                ComplianceReportHistory.user_profile_id.label("user_id"),
+                CompliancePeriod.description.label("compliance_period"),
+            )
+            .select_from(ComplianceReportHistory)
+            .join(
+                ComplianceReport,
+                ComplianceReportHistory.compliance_report_id
+                == ComplianceReport.compliance_report_id,
+            )
+            .join(
+                CompliancePeriod,
+                ComplianceReport.compliance_period_id
+                == CompliancePeriod.compliance_period_id,
+            )
+            .join(
+                ComplianceReportStatus,
+                ComplianceReportHistory.status_id
+                == ComplianceReportStatus.compliance_report_status_id,
+            )
+            .where(
+                cast(ComplianceReportStatus.status, String).notin_(
+                    self.EXCLUDED_USER_ACTIVITY_STATUSES
+                )
+            )
+        )
+
         # Combine all queries using union_all
         combined_query = union_all(
-            transfer_query, initiative_query, admin_adjustment_query
+            transfer_query,
+            initiative_query,
+            admin_adjustment_query,
+            compliance_report_query,
         ).alias("activities")
 
         # If a specific user_id is provided, filter by that user_id
@@ -773,8 +821,35 @@ class UserRepository:
         """
         # Apply filters from pagination, silently skipping any field not
         # present on the unioned activity query.
-        builder = PaginatedQueryBuilder(combined_query.c)
+        displayed_transaction_id = case(
+            (combined_query.c.transaction_type == "Transfer", "CT"),
+            (combined_query.c.transaction_type == "AdminAdjustment", "AA"),
+            (combined_query.c.transaction_type == "InitiativeAgreement", "IA"),
+            (combined_query.c.transaction_type == "ComplianceReport", "CR"),
+            else_="",
+        ) + cast(combined_query.c.transaction_id, String)
+
+        def _transaction_id_filter(filter_model):
+            filter_value = (
+                filter_model.values
+                if filter_model.filter_type == "set"
+                and filter_model.values is not None
+                else filter_model.filter
+            )
+            return apply_filter_conditions(
+                displayed_transaction_id,
+                filter_value,
+                filter_model.type,
+                filter_model.filter_type,
+            )
+
+        builder = PaginatedQueryBuilder(
+            combined_query.c,
+            custom_sorts={"transaction_id": displayed_transaction_id},
+            custom_filters={"transaction_id": _transaction_id_filter},
+        )
         known_fields = set(combined_query.c.keys())
+        # FilterModel normalizes incoming camelCase grid fields to snake_case.
         relevant_filters = [f for f in pagination.filters if f.field in known_fields]
         conditions.extend(builder.build_conditions(relevant_filters))
 
