@@ -50,6 +50,13 @@ from lcfs.db.models.comment.InternalComment import (
 )
 from lcfs.db.models.comment.PenaltyLogInternalComment import PenaltyLogInternalComment
 from lcfs.services.comment_permissions import can_manage_penalty_comment
+from lcfs.db.models.comment.LCJFIPApplicationInternalComment import (
+    LCJFIPApplicationInternalComment,
+)
+from lcfs.db.models.lcjfip.LCJFIPApplication import (
+    LCJFIPApplication,
+    lcjfip_application_document_association,
+)
 from lcfs.db.models.comment.CIApplicationInternalComment import (
     CIApplicationInternalComment,
 )
@@ -109,6 +116,10 @@ DOCUMENT_PARENT_ASSOCIATIONS = {
     "internal_comment": (
         internal_comment_document_association,
         "internal_comment_id",
+    ),
+    "lcjfip_application": (
+        lcjfip_application_document_association,
+        "lcjfip_application_id",
     ),
 }
 
@@ -541,9 +552,10 @@ class DocumentService:
         Organizations owning the entities a comment hangs off, restricted to
         the entity types a non-government caller may read.
 
-        Only compliance report and CI application threads are resolved, because
-        those are the only ones InternalCommentService.get_internal_comments
-        exposes to a non-government caller. A comment on any other entity — or
+        Only compliance report, CI application and LCJFIP application threads
+        are resolved, because those are the only ones
+        InternalCommentService.get_internal_comments exposes to a
+        non-government caller. A comment on any other entity — or
         on none — resolves to an empty set and is refused.
 
         The organization is derived live from the association tables rather than
@@ -574,7 +586,19 @@ class DocumentService:
                 CIApplicationInternalComment.internal_comment_id == internal_comment_id
             )
         )
-        result = await self.db.execute(report_orgs.union(application_orgs))
+        lcjfip_orgs = (
+            select(LCJFIPApplication.organization_id)
+            .join(
+                LCJFIPApplicationInternalComment,
+                LCJFIPApplicationInternalComment.lcjfip_application_id
+                == LCJFIPApplication.lcjfip_application_id,
+            )
+            .where(
+                LCJFIPApplicationInternalComment.internal_comment_id
+                == internal_comment_id
+            )
+        )
+        result = await self.db.execute(report_orgs.union(application_orgs, lcjfip_orgs))
         return {row[0] for row in result.all() if row[0] is not None}
 
     async def verify_internal_comment_access(self, parent_id, user, write=False):

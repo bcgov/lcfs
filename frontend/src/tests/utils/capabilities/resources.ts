@@ -41,6 +41,7 @@ const namespaceFiles: Record<string, string> = {
   chargingSite: 'chargingSite',
   bulletins: 'bulletins',
   carbonIntensity: 'carbonIntensity',
+  lcjfip: 'lcjfip',
   releaseNotes: 'releaseNotes'
 }
 

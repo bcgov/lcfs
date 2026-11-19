@@ -32,11 +32,21 @@ describe('lcjfipRoutes', () => {
 
   test('serves the page under Jet fuel, titled LCJFIP for the breadcrumb', () => {
     expect(FEATURE_FLAGS.LCJFIP).toBe('lcjfip')
-    expect(lcjfipRoutes).toHaveLength(1)
     const [route] = lcjfipRoutes
     expect(route.path).toBe('/jet-fuel/lcjfip')
     expect(route.handle.title).toBe('LCJFIP')
     expect(route.handle.crumb()).toBe('LCJFIP')
+  })
+
+  test('serves the application form, titled for the breadcrumb (#5532)', () => {
+    const applicationRoutes = lcjfipRoutes.slice(1)
+    expect(applicationRoutes.map((r) => r.path)).toEqual([
+      '/jet-fuel/lcjfip/applications/new',
+      '/jet-fuel/lcjfip/applications/:applicationId'
+    ])
+    for (const applicationRoute of applicationRoutes) {
+      expect(applicationRoute.handle.title).toBe('LCJFIP application')
+    }
   })
 
   test('renders the page when the flag is on', async ({
