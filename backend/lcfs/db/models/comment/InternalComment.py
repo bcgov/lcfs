@@ -145,6 +145,9 @@ class InternalComment(BaseModel, Auditable):
     designated_action_internal_comments = relationship(
         "DesignatedActionInternalComment", back_populates="internal_comment"
     )
+    lcjfip_application_internal_comments = relationship(
+        "LCJFIPApplicationInternalComment", back_populates="internal_comment"
+    )
     documents = relationship(
         "Document",
         secondary=internal_comment_document_association,
