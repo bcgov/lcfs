@@ -1,15 +1,15 @@
 """Add scheduled_job_lease so one pod at a time runs a maintenance job.
 
 Revision ID: b7a04f59fdf3
-Revises: 9b3e5c7a1d24
-Create Date: 2026-11-18 10:00:00.000000
+Revises: 810923914d50
+Create Date: 2026-11-19 12:00:00.000000
 """
 
 from alembic import op
 import sqlalchemy as sa
 
 revision = "b7a04f59fdf3"
-down_revision = "9b3e5c7a1d24"
+down_revision = "810923914d50"
 branch_labels = None
 depends_on = None
 
