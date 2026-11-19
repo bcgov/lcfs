@@ -9,6 +9,7 @@ from lcfs.db.models.compliance.ComplianceReport import ReportingFrequency
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatus
 from lcfs.db.models import Organization, CompliancePeriod
 from lcfs.web.api.compliance_report.export import ComplianceReportExporter
+from lcfs.web.api.compliance_report.sheet_exporters.base import SheetExporterSupport
 from lcfs.web.api.compliance_report.sheet_exporters.summary import SummarySheetExporter
 from lcfs.web.api.compliance_report.schema import (
     FUEL_SUPPLY_COLUMNS,
@@ -24,6 +25,40 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportSummaryRowSchema,
     ComplianceReportSummarySchema,
 )
+
+
+def test_compliance_sheet_writer_sanitizes_untrusted_text():
+    workbook = Workbook()
+    SheetExporterSupport()._add_sheet(
+        workbook,
+        "Fuel Export",
+        [["Description"], ["+SUM(A1:A2)"]],
+    )
+    cell = workbook["Fuel Export"]["A2"]
+    assert cell.value == "+SUM(A1:A2)"
+    assert cell.data_type == "s"
+
+
+@pytest.mark.anyio
+async def test_compliance_summary_writer_sanitizes_untrusted_text():
+    workbook = Workbook()
+    summary = ComplianceReportSummarySchema(
+        renewable_fuel_target_summary=[
+            ComplianceReportSummaryRowSchema(
+                line=1, description="=HYPERLINK(\"https://example.invalid\",\"x\")"
+            )
+        ],
+        low_carbon_fuel_target_summary=[],
+        non_compliance_penalty_summary=[],
+    )
+
+    await SummarySheetExporter().export_to_workbook(
+        workbook, Mock(), summary=summary
+    )
+
+    cell = workbook["Summary"]["B4"]
+    assert cell.value.startswith("=HYPERLINK(")
+    assert cell.data_type == "s"
 
 
 @pytest.fixture

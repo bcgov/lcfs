@@ -173,6 +173,7 @@ class DesignatedAction(BaseModel, Auditable, Versioning):
     evidence_submissions = relationship(
         "EvidenceSubmission", back_populates="designated_action"
     )
+    da_eoc_submissions = relationship("DaEocSubmission", back_populates="designated_action")
     documents = relationship(
         "Document",
         secondary=designated_action_document_association,

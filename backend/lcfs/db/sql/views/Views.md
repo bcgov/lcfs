@@ -118,3 +118,40 @@ Both views exclude Draft applications and leave out contact details. Timestamps 
 -   Views use `CASCADE` drops to handle dependencies automatically
 -   Index creation statements are included for performance optimization
 -   Complex versioning logic is centralized in base views and reused by dependent views
+
+### DA/EOC submission reporting
+
+`da_eoc_submission` is independent of IA, DA and evidence-submission workflow
+statuses. Join submission `designated_action_id` to `designated_action`, then
+`initiative_agreement_id` to `initiative_agreement`: one IA has many concrete
+DA version rows, and one DA row has many submissions. The IA is deliberately
+derived through the DA, so mismatched IA/DA pairs cannot be stored. DA change
+orders create new rows sharing `group_uuid`; group by that value when reporting
+across versions, and do not assume a submission belongs to the latest row.
+Join `organization_id` to `organization`. Audit usernames `create_user` and
+`update_user` can be joined to `user_profile.keycloak_username`; history actors
+join by `user_profile_id` (nullable for system events).
+
+Attachments are many-to-many through `da_eoc_submission_document_association`
+to `document`. History is one-to-many through `da_eoc_submission_history`.
+Aggregate attachments and history separately before joining when counting
+submissions to avoid multiplying rows. A submission deletion cascades only its
+association rows; referenced documents remain. DA, organization, document and
+history foreign keys restrict deletion while referenced. Content snapshots are
+supported by the history table. Internal review state is
+recorded only by `SUB_STATUS_CHANGE` events: `Assigned`, `Under Review` or
+`Information requested`; a NULL value explicitly clears it. To determine the
+current state, select the latest such event by descending
+`da_eoc_submission_history_id`, including NULL values. Other events do not
+change the state. Writers must lock the parent submission row before recording
+transitions, including the clear when leaving Submitted, and commit the status
+and history together; otherwise concurrent transactions can invert event order.
+The future workflow must enforce this protocol and append-only history.
+
+Metabase metadata sync, relationships, visibility, and reporting access require
+follow-up in the target instance. Review the reporting policy before granting
+access to submission content, draft records, internal sub-statuses, and history.
+Existing default privileges may grant the reporting role SELECT on new base
+tables; verify effective privileges in each deployment. Some existing related
+tables may not be accessible to that role, so verify the documented joins with
+the actual reporting account. No Metabase configuration is changed here.
