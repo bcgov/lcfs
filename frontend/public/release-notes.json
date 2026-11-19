@@ -1,5 +1,76 @@
 [
   {
+    "version": "1.3.13",
+    "tag": "v1.3.13",
+    "date": "2026-11-19",
+    "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/v1.3.13",
+    "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/v1.3.12...v1.3.13",
+    "summary": "This release includes 11 new features, 11 bug fixes, 3 dependency updates and 25 other changes. Highlights: LCJFIP security groups; Upload utility document deletion and restore; Add allocation agreements index page; Add comments and attachments to organization penalty log.",
+    "sections": {
+      "features": [
+        "LCFS - LCJFIP security groups",
+        "Upload utility document deletion and restore",
+        "Add allocation agreements index page - 5311",
+        "Add comments and attachments to organization penalty log - 5130",
+        "Add calculated credit columns to IA index - 5339",
+        "add production facility to CI application step 1",
+        "limit legacy fuel code pages to approved codes (#5308)",
+        "add DA/EOC submission database structure",
+        "folder tree and deleted items for initiative agreement documents",
+        "add LCJFIP nav tab and placeholder page",
+        "add LCJFIP application data model"
+      ],
+      "fixes": [
+        "exclude release notes JSON from format check",
+        "Charging sites and FSE map crash after the Vite+ upgrade (release)",
+        "keep FSE equipment excluded after its newest row is unchecked",
+        "keep typed and picked dates in grid date cells",
+        "check FSE, charging equipment and CI application writes against the stored records",
+        "address fuel code bulletin security review (#5411)",
+        "Keep expired fuel codes current through reporting period",
+        "align transaction export type labels with the UI",
+        "apply DB statement timeout per transaction so PgBouncer accepts connections",
+        "neutralize formulas in spreadsheet exports (#5428)",
+        "pin organization snapshots to their report and validate schedule writes"
+      ],
+      "security": [],
+      "breaking": [],
+      "dependencies": [
+        "bump dnspython from 2.9.1 to 2.9.2 in /backend in the pip-security group across 1 directory by @dependabot[bot] in https://github.com/bcgov/lcfs/pull/5504",
+        "bump @hono/node-server from 2.1.5 to 2.1.8 in /mcp-server in the npm-security group across 1 directory by @dependabot[bot] in https://github.com/bcgov/lcfs/pull/5497",
+        "bump hono from 4.13.14 to 4.13.19 in /mcp-server in the npm-security group across 1 directory by @dependabot[bot] in https://github.com/bcgov/lcfs/pull/5505"
+      ],
+      "other": [
+        "Test Release v1.3.10+1",
+        "Hotfix release v1.3.9+1: keep TFRS-era (2019-2023) penalties intact in report summaries and the Penalty log (#5257)",
+        "Hotfix release v1.3.9+2: replace the withdrawn Bitnami nginx image in the frontend build",
+        "Merge back Main -> Release (v1.3.9+1 and v1.3.9+2 hotfixes)",
+        "Test Release v1.3.11",
+        "Hotfix: Remove low-count suppression from public Credit Market data",
+        "Test Release v1.3.11+1",
+        "Test Release v1.3.12",
+        "Show FSE rows as soon as a new report version is created (#5132) [release]",
+        "Accept .xlsm on CI applications with inline admin approval (#5239)",
+        "Test Release v1.3.12+1",
+        "Test Release v1.3.12+2",
+        "LCFS - CI application changes requested (#4830)",
+        "Add query timeouts and connection pool monitoring - 4100",
+        "TS migration PR 03/44: Theme overrides and entry point",
+        "TS migration PR 04/44: Utilities",
+        "TS migration PR 05/44: Shared UI primitives",
+        "🧪 Experimental: Add isolated local Keycloak stacks for parallel development",
+        "remove local Keycloak PR checks",
+        "carry local files into worktrees",
+        "Harden file upload checks (#5239)",
+        "Fix user activity filters for compliance reports",
+        "Address internal tech debt - 5426",
+        "LCFS - Make maintenance jobs and the audit username safe under PgBouncer transaction pooling",
+        "TS migration PR 06/44: Authentication and authorization"
+      ]
+    },
+    "contributors": []
+  },
+  {
     "version": "1.3.12",
     "tag": "v1.3.12",
     "date": "2026-11-05",
