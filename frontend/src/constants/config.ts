@@ -15,6 +15,7 @@ export interface FeatureFlagsConfig {
   creditMarketLoginPage?: boolean
   publicMarketData?: boolean
   initiativeAgreements?: boolean
+  lcjfip?: boolean
   macroEnabledUploads?: boolean
 }
 
@@ -100,6 +101,7 @@ export const FEATURE_FLAGS = {
   CREDIT_MARKET_LOGIN_PAGE: 'creditMarketLoginPage',
   PUBLIC_MARKET_DATA: 'publicMarketData',
   INITIATIVE_AGREEMENTS: 'initiativeAgreements',
+  LCJFIP: 'lcjfip',
   MACRO_ENABLED_UPLOADS: 'macroEnabledUploads'
 } as const
 
@@ -211,6 +213,10 @@ export const CONFIG: AppConfig = {
     initiativeAgreements:
       window.lcfs_config.feature_flags.initiativeAgreements ??
       !isProductionEnvironment,
+    // The LCJFIP program area is a placeholder until later cards add its
+    // content — default ON for dev/test, OFF in prod until the tenant repo
+    // flag flips it on.
+    lcjfip: window.lcfs_config.feature_flags.lcjfip ?? !isProductionEnvironment,
     deterministicReportSummary:
       window.lcfs_config.feature_flags.deterministicReportSummary ??
       !isProductionEnvironment,
