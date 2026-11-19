@@ -5,7 +5,6 @@ export interface KeycloakContextValue {
   keycloak: {
     authenticated?: boolean
     token?: string
-    [key: string]: unknown
   }
 }
 

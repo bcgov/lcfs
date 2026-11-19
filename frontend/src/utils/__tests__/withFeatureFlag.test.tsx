@@ -1,21 +1,25 @@
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vite-plus/test'
-import withFeatureFlag from '../withFeatureFlag.jsx' // Adjust the import path as necessary
-import { isFeatureEnabled } from '@/constants/config'
+import withFeatureFlag from '../withFeatureFlag' // Adjust the import path as necessary
+const isFeatureEnabled = vi.hoisted(() => vi.fn())
 
 // Mock the isFeatureEnabled function
 vi.mock('@/constants/config', () => ({
-  isFeatureEnabled: vi.fn()
+  isFeatureEnabled
 }))
 
 // Mock Navigate component
 vi.mock('react-router-dom', () => ({
   ...vi.importActual('react-router-dom'),
-  Navigate: ({ to }) => <div data-test="navigate">Navigate to {to}</div>
+  Navigate: ({ to }: { to: string }) => (
+    <div data-test="navigate">Navigate to {to}</div>
+  )
 }))
 
 // Define a mock component to be wrapped
-const MockComponent = () => <div>Feature Enabled Content</div>
+const MockComponent = (_props: { prop1?: null }) => (
+  <div>Feature Enabled Content</div>
+)
 
 describe('withFeatureFlag HOC', () => {
   beforeEach(() => {
@@ -27,7 +31,7 @@ describe('withFeatureFlag HOC', () => {
 
     const WrappedComponent = withFeatureFlag(
       MockComponent,
-      'new-feature',
+      'initiativeAgreements',
       '/fallback'
     )
 
@@ -41,7 +45,7 @@ describe('withFeatureFlag HOC', () => {
 
     const WrappedComponent = withFeatureFlag(
       MockComponent,
-      'new-feature',
+      'initiativeAgreements',
       '/fallback'
     )
 
@@ -55,7 +59,10 @@ describe('withFeatureFlag HOC', () => {
   it('renders null when the feature flag is disabled and no redirect is provided', () => {
     isFeatureEnabled.mockReturnValue(false)
 
-    const WrappedComponent = withFeatureFlag(MockComponent, 'new-feature')
+    const WrappedComponent = withFeatureFlag(
+      MockComponent,
+      'initiativeAgreements'
+    )
 
     const { container } = render(<WrappedComponent />)
 
@@ -67,7 +74,7 @@ describe('withFeatureFlag HOC', () => {
 
     const WrappedComponent = withFeatureFlag(
       MockComponent,
-      'new-feature',
+      'initiativeAgreements',
       '/fallback'
     )
 
@@ -97,7 +104,7 @@ describe('withFeatureFlag HOC', () => {
 
     const WrappedComponent = withFeatureFlag(
       MockComponent,
-      'new-feature',
+      'initiativeAgreements',
       '/fallback'
     )
 

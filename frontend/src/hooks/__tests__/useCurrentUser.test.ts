@@ -1,32 +1,26 @@
 import { waitFor } from '@testing-library/react'
 import { describe, expect, vi, beforeEach, afterEach } from 'vite-plus/test'
-import { useApiService } from '@/services/useApiService'
 import { test } from '@/tests/utils/fixtures'
 import { useCurrentUser } from '../useCurrentUser'
 
-vi.mock('@/services/useApiService')
-vi.mock('@react-keycloak/web')
+const mocks = vi.hoisted(() => ({ get: vi.fn() }))
+vi.mock('@/services/useApiService', () => ({
+  useApiService: () => ({ get: mocks.get })
+}))
+vi.mock('@react-keycloak/web', () => ({
+  useKeycloak: () => ({
+    keycloak: { authenticated: true, token: 'mock-token' },
+    initialized: true
+  })
+}))
 vi.mock('@/stores/useUserStore')
 
 describe('useCurrentUser', () => {
-  const mockGet = vi.fn()
+  const mockGet = mocks.get
   const mockSetUser = vi.fn()
 
   beforeEach(async () => {
     vi.clearAllMocks()
-    vi.mocked(useApiService).mockReturnValue({
-      get: mockGet
-    })
-
-    // Mock useKeycloak
-    const { useKeycloak } = await import('@react-keycloak/web')
-    vi.mocked(useKeycloak).mockReturnValue({
-      keycloak: {
-        authenticated: true,
-        token: 'mock-token'
-      },
-      initialized: true
-    })
 
     // Mock useUserStore
     const { useUserStore } = await import('@/stores/useUserStore')
@@ -82,7 +76,10 @@ describe('useCurrentUser', () => {
     mockGet.mockResolvedValue({ data: mockData })
     const customOptions = { staleTime: 10000 }
 
-    const { result } = renderHook(() => useCurrentUser(customOptions), [query])
+    const { result } = renderHook(
+      () => Reflect.apply(useCurrentUser, null, [customOptions]),
+      [query]
+    )
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true)
