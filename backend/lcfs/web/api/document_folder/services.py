@@ -5,6 +5,7 @@ from typing import Dict, List, Optional, Set
 from fastapi import Depends, HTTPException, Request
 
 from lcfs.db.models.document import DocumentFolder
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.document_folder.constants import (
     FOLDER_ENABLED_PARENT_TYPES,
     max_folder_depth,
@@ -57,6 +58,25 @@ class DocumentFolderServices:
             raise HTTPException(status_code=403, detail="User identity is required.")
         return username
 
+    def _can_manage_subtree_without_checks(self):
+        user = getattr(self.request, "user", None)
+        return user is None or RoleEnum.GOVERNMENT in user.role_names
+
+    def _can_manage(self, resource, user=None):
+        user = user or getattr(self.request, "user", None)
+        if user is None or RoleEnum.GOVERNMENT in user.role_names:
+            return True
+        return bool(
+            resource
+            and resource.create_user == getattr(user, "keycloak_username", None)
+        )
+
+    def _require_owned(self, resource, user=None):
+        if not self._can_manage(resource, user):
+            raise HTTPException(
+                status_code=403, detail="Only the creator may manage this evidence item"
+            )
+
     async def _get_scoped_folder(
         self,
         folder_id: int,
@@ -74,6 +94,7 @@ class DocumentFolderServices:
             # A folder belonging to another parent — or sitting in the bin
             # — is indistinguishable from a missing one on purpose.
             raise DataNotFoundException(f"Folder {folder_id} not found")
+        self._require_owned(folder)
         return folder
 
     @staticmethod
@@ -140,6 +161,7 @@ class DocumentFolderServices:
         )
         if document is None:
             raise DataNotFoundException(f"Document {document_id} not found")
+        self._require_owned(document, user)
         if document.deleted_date is not None:
             # Already in the bin; deleting twice is not an error, but it
             # must not overwrite who removed it or when.
@@ -173,6 +195,7 @@ class DocumentFolderServices:
             or username not in {document.create_user, document.deleted_by}
         ):
             raise DataNotFoundException(f"Document {document_id} not found")
+        self._require_owned(document, user)
         placement = await self.repo.get_placement(document_id)
         if placement is not None:
             folder = await self.repo.get_folder(placement.folder_id)
@@ -182,6 +205,9 @@ class DocumentFolderServices:
                 or folder.parent_id != parent_id
             ):
                 # Belongs to another parent, or the row is simply gone.
+                await self.repo.set_placements([document_id], None)
+            elif not self._can_manage(folder, user):
+                # Restoring an owned file must not mutate a government folder.
                 await self.repo.set_placements([document_id], None)
             elif folder.deleted_date is not None:
                 # Its folder is in the bin. Restore the folder itself and
@@ -307,6 +333,8 @@ class DocumentFolderServices:
 
         # Outermost first, so a folder's parent is live before its own name
         # is checked against that parent's living children.
+        for shell in binned:
+            self._require_owned(shell)
         for shell in reversed(binned):
             shell.name = await self._free_sibling_name(
                 shell, shell.parent_folder_id, folders
@@ -360,6 +388,11 @@ class DocumentFolderServices:
             and by_id[fid].deleted_group_uuid == group_uuid
         ]
 
+        documents = await self.repo.get_deleted_documents_in_folders(
+            [f.folder_id for f in restoring], group_uuid
+        )
+        for resource in [*restoring, *documents]:
+            self._require_owned(resource, user)
         await self._restore_ancestor_path(folder, folders)
 
         for restored in restoring:
@@ -589,6 +622,7 @@ class DocumentFolderServices:
                 file_size=document.file_size,
                 create_date=document.create_date,
                 create_user=document.create_user,
+                can_manage=self._can_manage(document),
                 uploading_organization_code=org_codes.get(document.create_user),
             )
             folder_id = placements.get(document.document_id)
@@ -606,7 +640,8 @@ class DocumentFolderServices:
                 parent_folder_id=folder.parent_folder_id,
                 sort_order=folder.sort_order,
                 is_system=folder.is_system,
-                can_delete=can_delete(folder),
+                can_manage=self._can_manage(folder),
+                can_delete=can_delete(folder) and self._can_manage(folder),
                 document_count=len(documents_in_folder),
                 documents=documents_in_folder,
             )
@@ -668,6 +703,18 @@ class DocumentFolderServices:
             raise HTTPException(
                 status_code=400, detail="System folders cannot be modified."
             )
+        # Moving/renaming a container also changes the paths of its contents.
+        # A portal-owned parent cannot be used to move government material.
+        if not self._can_manage_subtree_without_checks():
+            all_folders = await self.repo.get_all_folders_including_deleted(
+                parent_type, parent_id
+            )
+            subtree = self._subtree_ids(folder_id, all_folders)
+            for child in all_folders:
+                if child.folder_id in subtree:
+                    self._require_owned(child)
+            for document in await self.repo.get_documents_in_folders(subtree):
+                self._require_owned(document)
         if data.name is not None:
             name = data.name.strip()
             if not name:
@@ -703,6 +750,8 @@ class DocumentFolderServices:
         )
         subtree = self._subtree_ids(folder_id, folders)
         by_id = {f.folder_id: f for f in folders}
+        for fid in subtree:
+            self._require_owned(by_id[fid], user)
         live_descendants = [
             fid
             for fid in subtree
@@ -746,4 +795,9 @@ class DocumentFolderServices:
                     f"be placed in its folders: {strays}"
                 ),
             )
+        for document_id in data.document_ids:
+            document = await self.repo.get_document_for_parent(
+                document_id, parent_id, for_update=True
+            )
+            self._require_owned(document)
         await self.repo.set_placements(data.document_ids, data.folder_id)

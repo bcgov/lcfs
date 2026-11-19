@@ -37,7 +37,8 @@ export const Navbar = () => {
       initiativeAgreementsEnabled &&
       hasAnyRole(roles.ia_analyst, roles.ia_manager, roles.director)
     const canSeeInitiativeAgreementsBceid =
-      initiativeAgreementsEnabled && hasAnyRole(roles.ia_proponent)
+      initiativeAgreementsEnabled &&
+      hasAnyRole(roles.ia_proponent, roles.ia_signer)
     const idirRoutes: NavItem[] = [
       { name: t('Dashboard'), route: ROUTES.DASHBOARD },
       { name: t('Organizations'), route: ROUTES.ORGANIZATIONS.LIST },

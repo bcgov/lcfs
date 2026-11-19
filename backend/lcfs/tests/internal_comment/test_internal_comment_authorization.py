@@ -241,6 +241,66 @@ async def test_bceid_can_read_own_orgs_ci_application_comments(
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize("ia_role", [RoleEnum.IA_PROPONENT, RoleEnum.IA_SIGNER])
+@pytest.mark.parametrize(
+    "entity_type,entity_id",
+    [
+        (EntityTypeEnum.COMPLIANCE_REPORT, 8820),
+        (EntityTypeEnum.CI_APPLICATION, 8821),
+    ],
+)
+async def test_ia_only_users_cannot_reach_non_da_comment_threads(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    add_models,
+    ia_role,
+    entity_type,
+    entity_id,
+):
+    """IA endpoint access is limited to DA comments, including edits."""
+    set_mock_user(
+        fastapi_app,
+        [ia_role],
+        user_details={"keycloak_username": "IAUSER", "organization_id": 1},
+    )
+    await _seed_author(add_models)
+    if entity_type == EntityTypeEnum.COMPLIANCE_REPORT:
+        comment = await _seed_report_comment(
+            add_models, compliance_report_id=entity_id, organization_id=1
+        )
+    else:
+        comment = await _seed_ci_application_comment(
+            add_models, ci_application_id=entity_id, organization_id=1
+        )
+
+    read_url = fastapi_app.url_path_for(
+        "get_comments", entity_type=entity_type.value, entity_id=entity_id
+    )
+    assert (await client.get(read_url)).status_code == status.HTTP_403_FORBIDDEN
+
+    create_response = await _post_comment(
+        client,
+        fastapi_app,
+        entity_type=entity_type.value,
+        entity_id=entity_id,
+    )
+    assert create_response.status_code == status.HTTP_403_FORBIDDEN
+
+    update_url = fastapi_app.url_path_for(
+        "update_comment", internal_comment_id=comment.internal_comment_id
+    )
+    assert (
+        await client.put(update_url, json={"comment": "Unauthorized edit"})
+    ).status_code == status.HTTP_403_FORBIDDEN
+
+    delete_url = fastapi_app.url_path_for(
+        "delete_comment", internal_comment_id=comment.internal_comment_id
+    )
+    assert (await client.delete(delete_url)).status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.anyio
 async def test_government_can_read_any_orgs_compliance_report_comments(
     client: AsyncClient,
     fastapi_app: FastAPI,
@@ -312,6 +372,85 @@ async def _post_comment(
             "visibility": visibility,
         },
     )
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "entity_type,entity_id",
+    [
+        (EntityTypeEnum.COMPLIANCE_REPORT, 8822),
+        (EntityTypeEnum.CI_APPLICATION, 8823),
+    ],
+)
+async def test_ci_applicant_retains_existing_non_da_comment_access(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    add_models,
+    entity_type,
+    entity_id,
+):
+    set_mock_user(
+        fastapi_app,
+        [RoleEnum.CI_APPLICANT],
+        user_details={"keycloak_username": "CIAPPLICANT", "organization_id": 1},
+    )
+    await _seed_author(add_models)
+    if entity_type == EntityTypeEnum.COMPLIANCE_REPORT:
+        await _seed_report_comment(
+            add_models, compliance_report_id=entity_id, organization_id=1
+        )
+    else:
+        await _seed_ci_application_comment(
+            add_models, ci_application_id=entity_id, organization_id=1
+        )
+
+    read_url = fastapi_app.url_path_for(
+        "get_comments", entity_type=entity_type.value, entity_id=entity_id
+    )
+    assert (await client.get(read_url)).status_code == status.HTTP_200_OK
+    posted = await _post_comment(
+        client,
+        fastapi_app,
+        entity_type=entity_type.value,
+        entity_id=entity_id,
+    )
+    assert posted.status_code == status.HTTP_201_CREATED
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("ia_role", [RoleEnum.IA_PROPONENT, RoleEnum.IA_SIGNER])
+async def test_ci_applicant_with_ia_role_keeps_compliance_report_comment_access(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    add_models,
+    ia_role,
+):
+    """An IA role must not suppress a separately held CI Applicant permission."""
+    set_mock_user(
+        fastapi_app,
+        [RoleEnum.CI_APPLICANT, ia_role],
+        user_details={"keycloak_username": "MIXEDROLE", "organization_id": 1},
+    )
+    await _seed_author(add_models)
+    await _seed_report_comment(add_models, compliance_report_id=8824, organization_id=1)
+
+    read_url = fastapi_app.url_path_for(
+        "get_comments",
+        entity_type=EntityTypeEnum.COMPLIANCE_REPORT.value,
+        entity_id=8824,
+    )
+    response = await client.get(read_url)
+    assert response.status_code == status.HTTP_200_OK
+
+    posted = await _post_comment(
+        client,
+        fastapi_app,
+        entity_type=EntityTypeEnum.COMPLIANCE_REPORT.value,
+        entity_id=8824,
+    )
+    assert posted.status_code == status.HTTP_201_CREATED
 
 
 @pytest.mark.anyio

@@ -5,6 +5,7 @@ from lcfs.web.api.base import BaseSchema
 
 
 class FolderDocumentSchema(BaseSchema):
+    can_manage: bool = True
     """A document row inside the tree.
 
     Deliberately its own schema rather than FileResponseSchema: the shared
@@ -24,6 +25,7 @@ class FolderDocumentSchema(BaseSchema):
 
 
 class FolderNodeSchema(BaseSchema):
+    can_manage: bool = True
     folder_id: int
     name: str
     parent_folder_id: Optional[int] = None

@@ -3,8 +3,11 @@ from typing import List
 from fastapi import APIRouter, Body, Depends, Request, status
 
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.services.s3.dependency import get_s3_client
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.initiative_agreement.schema import (
+    EOCSaveSchema,
+    EOCSchema,
     AllDesignatedActionsListSchema,
     AgreementCreateSchema,
     AgreementUpdateSchema,
@@ -41,6 +44,7 @@ IA_MODULE_ROLES = [
     RoleEnum.IA_MANAGER,
     RoleEnum.DIRECTOR,
     RoleEnum.IA_PROPONENT,
+    RoleEnum.IA_SIGNER,
 ]
 
 # The designated-action grid and analyst tools are the IDIR story (#4896);
@@ -444,3 +448,69 @@ async def create_initiative_agreement(
         request, initiative_agreement_create
     )
     return await service.create_initiative_agreement(initiative_agreement_create)
+
+
+@router.get("/designated-actions/{designated_action_id}/eoc", response_model=EOCSchema)
+@view_handler(IA_MODULE_ROLES)
+async def get_eoc(
+    request: Request,
+    designated_action_id: int,
+    service: InitiativeAgreementServices = Depends(),
+):
+    return await service.get_eoc(designated_action_id)
+
+
+@router.put("/designated-actions/{designated_action_id}/eoc", response_model=EOCSchema)
+@view_handler([RoleEnum.IA_PROPONENT, RoleEnum.IA_SIGNER])
+async def save_eoc(
+    request: Request,
+    designated_action_id: int,
+    data: EOCSaveSchema,
+    service: InitiativeAgreementServices = Depends(),
+):
+    return await service.save_eoc(designated_action_id, data)
+
+
+@router.post(
+    "/designated-actions/{designated_action_id}/eoc/submit", response_model=EOCSchema
+)
+@view_handler([RoleEnum.IA_SIGNER])
+async def submit_eoc(
+    request: Request,
+    designated_action_id: int,
+    data: EOCSaveSchema,
+    service: InitiativeAgreementServices = Depends(),
+):
+    return await service.save_eoc(designated_action_id, data, submit=True)
+
+
+@router.get(
+    "/designated-actions/{designated_action_id}/eoc/submissions/{submission_id}/documents/{document_id}"
+)
+@view_handler(IA_MODULE_ROLES)
+async def download_eoc_submission_document(
+    request: Request,
+    designated_action_id: int,
+    submission_id: int,
+    document_id: int,
+    service: InitiativeAgreementServices = Depends(),
+    s3_client=Depends(get_s3_client),
+):
+    # Resolve storage lazily to avoid the S3/initiative agreement import cycle.
+    from lcfs.services.s3.client import DocumentService
+    from lcfs.web.api.document.views import _content_disposition
+    from starlette.responses import StreamingResponse
+
+    snapshot = await service.get_eoc_submission_document(
+        designated_action_id, submission_id, document_id
+    )
+    storage = DocumentService(db=service.repo.db, s3_client=s3_client)
+    file, _ = await storage.get_object(document_id)
+    return StreamingResponse(
+        content=file["Body"],
+        media_type=snapshot.mime_type,
+        headers={
+            "Content-Disposition": _content_disposition(snapshot.file_name),
+            "content-length": str(file["ContentLength"]),
+        },
+    )

@@ -22,6 +22,7 @@ from lcfs.db.models.admin_adjustment.AdminAdjustment import (
 )
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
+    InitiativeAgreement,
     initiative_agreement_document_association,
 )
 from lcfs.db.models.initiative_agreement.DesignatedAction import (
@@ -62,6 +63,9 @@ from lcfs.db.models.comment.InternalComment import (
     internal_comment_document_association,
 )
 from lcfs.db.models.comment.PenaltyLogInternalComment import PenaltyLogInternalComment
+from lcfs.db.models.comment.DesignatedActionInternalComment import (
+    DesignatedActionInternalComment,
+)
 from lcfs.services.comment_permissions import can_manage_penalty_comment
 from lcfs.db.models.comment.CIApplicationInternalComment import (
     CIApplicationInternalComment,
@@ -564,13 +568,27 @@ class DocumentService:
         action = await self.db.get(DesignatedAction, parent_id)
         if not action:
             raise HTTPException(status_code=404, detail="Designated action not found")
-
         if RoleEnum.GOVERNMENT in user.role_names:
             return
-        raise HTTPException(
-            status_code=400,
-            detail="Only Government Staff can upload files to designated actions.",
-        )
+        # Portal proponents and signers upload evidence for their own DA.
+        # The view applies the EOC submission lock before storage is written.
+        if any(
+            role in user.role_names
+            for role in (RoleEnum.IA_PROPONENT, RoleEnum.IA_SIGNER)
+        ):
+            agreement = await self.db.get(
+                InitiativeAgreement, action.initiative_agreement_id
+            )
+            org_id = getattr(
+                getattr(user, "organization", None), "organization_id", None
+            )
+            if (
+                agreement
+                and org_id is not None
+                and agreement.to_organization_id == org_id
+            ):
+                return
+        raise HTTPException(status_code=403, detail="Forbidden designated action")
 
     async def get_designated_action_agreement_id(self, designated_action_id: int):
         """Resolve an action's agreement for parent-access checks."""
@@ -610,10 +628,9 @@ class DocumentService:
         Organizations owning the entities a comment hangs off, restricted to
         the entity types a non-government caller may read.
 
-        Only compliance report and CI application threads are resolved, because
-        those are the only ones InternalCommentService.get_internal_comments
-        exposes to a non-government caller. A comment on any other entity — or
-        on none — resolves to an empty set and is refused.
+        Resolve compliance reports, CI applications and designated actions.
+        DA comments additionally require an IA role below. Other entities
+        resolve to an empty set and are refused.
 
         The organization is derived live from the association tables rather than
         read from ``internal_comment.organization_id``: that column is a
@@ -643,7 +660,24 @@ class DocumentService:
                 CIApplicationInternalComment.internal_comment_id == internal_comment_id
             )
         )
-        result = await self.db.execute(report_orgs.union(application_orgs))
+        action_orgs = (
+            select(InitiativeAgreement.to_organization_id)
+            .join(
+                DesignatedAction,
+                DesignatedAction.initiative_agreement_id
+                == InitiativeAgreement.initiative_agreement_id,
+            )
+            .join(
+                DesignatedActionInternalComment,
+                DesignatedActionInternalComment.designated_action_id
+                == DesignatedAction.designated_action_id,
+            )
+            .where(
+                DesignatedActionInternalComment.internal_comment_id
+                == internal_comment_id
+            )
+        )
+        result = await self.db.execute(report_orgs.union(application_orgs, action_orgs))
         return {row[0] for row in result.all() if row[0] is not None}
 
     async def verify_internal_comment_access(self, parent_id, user, write=False):
@@ -672,6 +706,25 @@ class DocumentService:
             raise HTTPException(status_code=404, detail="Internal comment not found")
 
         is_government = RoleEnum.GOVERNMENT in user.role_names
+        if not is_government and agreement is not None:
+            entity = await InternalCommentRepository(db=self.db).get_comment_entity(
+                parent_id
+            )
+            if entity and entity[0].value == "designatedAction":
+                org_id = getattr(
+                    getattr(user, "organization", None), "organization_id", None
+                )
+                visibility = getattr(comment.visibility, "value", comment.visibility)
+                if (
+                    not any(
+                        role in user.role_names
+                        for role in (RoleEnum.IA_PROPONENT, RoleEnum.IA_SIGNER)
+                    )
+                    or org_id is None
+                    or org_id != agreement.to_organization_id
+                    or visibility != "Public"
+                ):
+                    raise HTTPException(status_code=403, detail="Forbidden comment")
 
         if write:
             is_penalty_log = (

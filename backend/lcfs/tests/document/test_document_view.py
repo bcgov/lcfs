@@ -125,6 +125,14 @@ class FakeComplianceReportValidation:
 
 
 class FakeInitiativeAgreementValidation:
+    last_write_parent_id = None
+
+    def __init__(self):
+        self.service = self
+
+    async def validate_eoc_write(self, parent_id: int):
+        type(self).last_write_parent_id = parent_id
+
     async def validate_organization_access(self, parent_id: int):
         return
 
@@ -480,6 +488,7 @@ async def test_rename_file_for_designated_action(fastapi_app, client):
     assert response.json()["displayName"] == "Signed permit.pdf"
     assert response.json()["fileName"] == "stored.pdf"
     assert FakeDocumentService.last_rename["display_name"] == "Signed permit.pdf"
+    assert FakeInitiativeAgreementValidation.last_write_parent_id == 9
 
 
 @pytest.mark.anyio
@@ -490,3 +499,175 @@ async def test_rename_file_rejects_an_unsupported_parent_type(fastapi_app, clien
     response = await client.put(url, json={"displayName": "anything.pdf"})
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+def _set_exact_document_roles(application, set_mock_user, roles):
+    """Exercise IA-only permission grants without the fixture's Supplier role."""
+    application.middleware_stack = None
+    set_mock_user(application, roles, {"organization_id": 1})
+    backend = next(
+        item.kwargs["backend"]
+        for item in application.user_middleware
+        if "backend" in item.kwargs
+    )
+    authenticate = backend.authenticate
+
+    async def exact_authenticate(request):
+        credentials, user = await authenticate(request)
+        user.user_roles = [link for link in user.user_roles if link.role.name in roles]
+        return credentials, user
+
+    backend.authenticate = exact_authenticate
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("role", [RoleEnum.IA_PROPONENT, RoleEnum.IA_SIGNER])
+@pytest.mark.parametrize(
+    "parent_type",
+    [
+        "compliance_report",
+        "initiativeAgreement",
+        "charging_site",
+        "ci_application",
+        "adminAdjustment",
+        "internal_comment",
+    ],
+)
+@pytest.mark.parametrize("operation", ["upload", "rename"])
+async def test_ia_only_document_write_roles_do_not_grant_other_parent_access(
+    fastapi_app, client, set_mock_user, role, parent_type, operation
+):
+    # The user and allowed parent validators are in the same organization;
+    # a missing legacy role must still be rejected before any document write.
+    _set_exact_document_roles(fastapi_app, set_mock_user, [role])
+    if operation == "upload":
+        url = fastapi_app.url_path_for(
+            "upload_file", parent_type=parent_type, parent_id=1
+        )
+        response = await client.post(
+            url, files={"file": ("evidence.pdf", b"test", "application/pdf")}
+        )
+    else:
+        url = fastapi_app.url_path_for(
+            "rename_file", parent_type=parent_type, parent_id=1, document_id=88
+        )
+        response = await client.put(url, json={"displayName": "Changed.pdf"})
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("role", [RoleEnum.IA_PROPONENT, RoleEnum.IA_SIGNER])
+@pytest.mark.parametrize("operation", ["upload", "rename"])
+async def test_ia_only_document_write_roles_allow_designated_action(
+    fastapi_app, client, set_mock_user, monkeypatch, role, operation
+):
+    _set_exact_document_roles(fastapi_app, set_mock_user, [role])
+
+    async def owned_document(self, *args):
+        document = DummyDocument("stored.pdf", 88, 123)
+        document.create_user = "mockuser"
+        return document
+
+    monkeypatch.setattr(
+        FakeDocumentService, "_get_document_for_parent", owned_document, raising=False
+    )
+    if operation == "upload":
+        url = fastapi_app.url_path_for(
+            "upload_file", parent_type="designatedAction", parent_id=9
+        )
+        response = await client.post(
+            url, files={"file": ("evidence.pdf", b"test", "application/pdf")}
+        )
+        assert response.status_code == status.HTTP_201_CREATED
+    else:
+        url = fastapi_app.url_path_for(
+            "rename_file", parent_type="designatedAction", parent_id=9, document_id=88
+        )
+        response = await client.put(url, json={"displayName": "Signed.pdf"})
+        assert response.status_code == status.HTTP_200_OK
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "role", [RoleEnum.SUPPLIER, RoleEnum.CI_APPLICANT, RoleEnum.GOVERNMENT]
+)
+@pytest.mark.parametrize("operation", ["upload", "rename"])
+async def test_legacy_document_roles_keep_same_org_compliance_report_access(
+    fastapi_app, client, set_mock_user, role, operation
+):
+    _set_exact_document_roles(fastapi_app, set_mock_user, [role])
+    if operation == "upload":
+        url = fastapi_app.url_path_for(
+            "upload_file", parent_type="compliance_report", parent_id=1
+        )
+        response = await client.post(
+            url, files={"file": ("evidence.pdf", b"test", "application/pdf")}
+        )
+        assert response.status_code == status.HTTP_201_CREATED
+    else:
+        url = fastapi_app.url_path_for(
+            "rename_file", parent_type="compliance_report", parent_id=1, document_id=88
+        )
+        response = await client.put(url, json={"displayName": "Signed.pdf"})
+        assert response.status_code == status.HTTP_200_OK
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("role", [RoleEnum.IA_PROPONENT, RoleEnum.IA_SIGNER])
+@pytest.mark.parametrize(
+    "parent_type",
+    [
+        "compliance_report",
+        "initiativeAgreement",
+        "charging_site",
+        "ci_application",
+        "administrativeAdjustment",
+        "internal_comment",
+    ],
+)
+async def test_ia_only_roles_cannot_delete_documents_of_other_parents(
+    fastapi_app, client, set_mock_user, role, parent_type
+):
+    _set_exact_document_roles(fastapi_app, set_mock_user, [role])
+    FakeRecordingDocumentService.deleted = []
+    fastapi_app.dependency_overrides[DocumentService] = (
+        lambda: FakeRecordingDocumentService()
+    )
+    url = fastapi_app.url_path_for(
+        "delete_file", parent_type=parent_type, parent_id=1, document_id=88
+    )
+    response = await client.delete(url)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert FakeRecordingDocumentService.deleted == []
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "user_roles",
+    [
+        [RoleEnum.SUPPLIER],
+        [RoleEnum.CI_APPLICANT],
+        [RoleEnum.GOVERNMENT],
+        [RoleEnum.ANALYST],
+        [RoleEnum.IA_PROPONENT, RoleEnum.SUPPLIER],
+        [RoleEnum.IA_SIGNER, RoleEnum.SUPPLIER],
+    ],
+)
+@pytest.mark.parametrize(
+    "parent_type",
+    ["compliance_report", "initiativeAgreement", "administrativeAdjustment"],
+)
+async def test_legacy_and_mixed_ia_supplier_roles_keep_document_deletion_access(
+    fastapi_app, client, set_mock_user, user_roles, parent_type
+):
+    _set_exact_document_roles(fastapi_app, set_mock_user, user_roles)
+    FakeRecordingDocumentService.deleted = []
+    fastapi_app.dependency_overrides[DocumentService] = (
+        lambda: FakeRecordingDocumentService()
+    )
+    url = fastapi_app.url_path_for(
+        "delete_file", parent_type=parent_type, parent_id=1, document_id=88
+    )
+    response = await client.delete(url)
+    assert response.status_code == status.HTTP_200_OK
+    assert FakeRecordingDocumentService.deleted == [(parent_type, 1, 88)]
