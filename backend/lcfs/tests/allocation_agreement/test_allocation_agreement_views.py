@@ -233,7 +233,9 @@ async def test_export_allocation_agreements_view(
     with patch.object(
         ComplianceReportValidation,
         "validate_organization_access",
-        new=AsyncMock(return_value=True),
+        new=AsyncMock(return_value=MagicMock(
+            current_status=MagicMock(status="Submitted"), supplemental_initiator=None
+        )),
     ), patch.object(
         AllocationAgreementExporter,
         "export",
@@ -362,7 +364,9 @@ async def test_get_allocation_agreement_template(
     with patch.object(
         ComplianceReportValidation,
         "validate_organization_access",
-        new=AsyncMock(return_value=True),
+        new=AsyncMock(return_value=MagicMock(
+            current_status=MagicMock(status="Submitted"), supplemental_initiator=None
+        )),
     ), patch.object(
         AllocationAgreementExporter,
         "export",
