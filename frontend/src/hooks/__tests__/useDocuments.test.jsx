@@ -323,6 +323,38 @@ describe('useDocuments', () => {
         expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey })
       }
     })
+
+    it('keeps initiative-agreement deletes on the shared route unless asked for the bin', async () => {
+      // Legacy credit awards share the parent type and have no bin, so the
+      // transaction pages keep the shared route; the agreement page opts in.
+      const mutations = []
+      mockUseMutation.mockImplementation((options) => {
+        mutations.push(options)
+        return { mutate: vi.fn() }
+      })
+      mockApiService.delete.mockResolvedValue({ data: {} })
+
+      useDeleteDocument('initiativeAgreement', 123)
+      useDeleteDocument('initiativeAgreement', 123, { deleteToBin: true })
+      await mutations[0].mutationFn(456)
+      const response = await mutations[1].mutationFn(456)
+      mutations[1].onSuccess(response, 456)
+
+      expect(mockApiService.delete).toHaveBeenNthCalledWith(
+        1,
+        '/documents/initiativeAgreement/123/456'
+      )
+      expect(mockApiService.delete).toHaveBeenNthCalledWith(
+        2,
+        '/document-folders/initiativeAgreement/123/documents/456'
+      )
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: ['document-tree', 'initiativeAgreement', '123']
+      })
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: ['document-tree-deleted', 'initiativeAgreement', '123']
+      })
+    })
   })
 
   describe('useReviewDocumentScan', () => {

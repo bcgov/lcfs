@@ -244,7 +244,7 @@ async def test_get_latest_other_uses_by_group_uuid(other_uses_repo, mock_db_sess
     mock_db_session.execute = AsyncMock(return_value=mock_result)
     other_uses_repo.db = mock_db_session
 
-    result = await other_uses_repo.get_latest_other_uses_by_group_uuid(group_uuid)
+    result = await other_uses_repo.get_latest_other_uses_by_group_uuid(group_uuid, 1)
 
     assert result.version == 2
 

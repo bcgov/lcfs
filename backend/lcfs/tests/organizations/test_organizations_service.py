@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 import unittest
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from types import SimpleNamespace
 from lcfs.web.api.organizations.services import OrganizationsService
@@ -1487,6 +1487,7 @@ async def test_validate_link_key_success(link_key_service):
 
     mock_organization = MagicMock()
     mock_organization.name = "Test Organization"
+    mock_organization.org_status.status = OrgStatusEnum.Registered
 
     mock_link_key_record = MagicMock()
     mock_link_key_record.organization_id = 1
@@ -1494,6 +1495,9 @@ async def test_validate_link_key_success(link_key_service):
     mock_link_key_record.form_name = "Test Form"
     mock_link_key_record.form_slug = "test-form"
     mock_link_key_record.organization = mock_organization
+    mock_link_key_record.expiry_date = datetime.now(timezone.utc).replace(
+        tzinfo=None
+    ) + timedelta(days=1)
 
     link_key_service.repo.get_link_key_by_key = AsyncMock(
         return_value=mock_link_key_record
