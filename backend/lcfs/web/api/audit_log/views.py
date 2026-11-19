@@ -17,7 +17,7 @@ router = APIRouter()
     response_model=AuditLogListSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.GOVERNMENT, RoleEnum.ADMINISTRATOR])
+@view_handler([RoleEnum.ADMINISTRATOR])
 async def get_audit_logs_paginated(
     request: Request,
     pagination: PaginationRequestSchema = Body(..., embed=False),
@@ -34,7 +34,7 @@ async def get_audit_logs_paginated(
     response_model=AuditLogSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.GOVERNMENT, RoleEnum.ADMINISTRATOR])
+@view_handler([RoleEnum.ADMINISTRATOR])
 async def get_audit_log_by_id(
     request: Request,
     audit_log_id: int,
