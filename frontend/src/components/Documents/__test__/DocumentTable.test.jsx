@@ -861,7 +861,10 @@ describe('DocumentTable', () => {
 
     expect(useDocuments).toHaveBeenCalledWith('fuel-export', '456')
     expect(useUploadDocument).toHaveBeenCalledWith('fuel-export', '456')
-    expect(useDeleteDocument).toHaveBeenCalledWith('fuel-export', '456')
+    // No deleteToBin prop: the hook picks the route from the parent type.
+    expect(useDeleteDocument).toHaveBeenCalledWith('fuel-export', '456', {
+      deleteToBin: undefined
+    })
   })
 
   test('should clear error message when new file is uploaded', async ({
