@@ -1528,3 +1528,25 @@ async def test_get_available_analysts_unauthorized(
     response = await client.get(url)
 
     assert response.status_code == 403
+@pytest.mark.anyio
+async def test_create_government_adjustment_requires_analyst(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
+    url = fastapi_app.url_path_for("create_government_adjustment", report_id=1)
+
+    response = await client.post(url)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.anyio
+async def test_delete_compliance_report_rejects_general_government_user(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
+    url = fastapi_app.url_path_for("delete_compliance_report", report_id=1)
+
+    response = await client.delete(url)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN

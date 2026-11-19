@@ -51,6 +51,15 @@ IA_IDIR_ROLES = [RoleEnum.IA_ANALYST, RoleEnum.IA_MANAGER, RoleEnum.DIRECTOR]
 # them; directors see the review but do not author it (#4899).
 IA_REVIEW_ROLES = [RoleEnum.IA_ANALYST, RoleEnum.IA_MANAGER]
 
+# Legacy award routes are not general Government endpoints. They are limited
+# to staff who work in the IA or analyst workflow.
+IA_LEGACY_ROLES = [
+    RoleEnum.ANALYST,
+    RoleEnum.IA_ANALYST,
+    RoleEnum.IA_MANAGER,
+    RoleEnum.DIRECTOR,
+]
+
 router = APIRouter()
 
 
@@ -411,7 +420,7 @@ async def get_initiative_agreement(
 @router.put(
     "/", response_model=InitiativeAgreementSchema, status_code=status.HTTP_200_OK
 )
-@view_handler([RoleEnum.GOVERNMENT])
+@view_handler(IA_LEGACY_ROLES)
 async def update_initiative_agreement(
     request: Request,
     initiative_agreement_data: InitiativeAgreementUpdateSchema = ...,
@@ -432,7 +441,7 @@ async def update_initiative_agreement(
 @router.post(
     "/", response_model=InitiativeAgreementSchema, status_code=status.HTTP_201_CREATED
 )
-@view_handler([RoleEnum.GOVERNMENT])
+@view_handler(IA_LEGACY_ROLES)
 async def create_initiative_agreement(
     request: Request,
     initiative_agreement_create: InitiativeAgreementCreateSchema = ...,

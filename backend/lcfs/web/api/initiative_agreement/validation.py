@@ -29,7 +29,30 @@ class InitiativeAgreementValidation:
     async def validate_initiative_agreement_create(
         self, request, initiative_agreement: InitiativeAgreementCreateSchema
     ):
-        pass
+        try:
+            status = InitiativeAgreementStatusEnum(initiative_agreement.current_status)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=400,
+                detail="Initiative agreements can only be created as Draft or Recommended.",
+            ) from exc
+
+        if status not in {
+            InitiativeAgreementStatusEnum.Draft,
+            InitiativeAgreementStatusEnum.Recommended,
+        }:
+            raise HTTPException(
+                status_code=400,
+                detail="Initiative agreements can only be created as Draft or Recommended.",
+            )
+
+        if status == InitiativeAgreementStatusEnum.Recommended and not user_has_roles(
+            request.user, [RoleEnum.ANALYST]
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="Only an analyst can create a recommended initiative agreement.",
+            )
 
     async def validate_initiative_agreement_update(
         self, request, updated_data: InitiativeAgreementSchema
@@ -40,10 +63,9 @@ class InitiativeAgreementValidation:
         )
 
         # Check if the current status is "Approved"
-        if (
-            initiative_agreement.current_status.status
-            == InitiativeAgreementStatusEnum.Approved
-        ):
+        current_status = initiative_agreement.current_status.status
+        current_status = getattr(current_status, "value", current_status)
+        if current_status == InitiativeAgreementStatusEnum.Approved.value:
             raise HTTPException(
                 status_code=403,
                 detail="Editing an approved initiative agreement is not allowed.",
