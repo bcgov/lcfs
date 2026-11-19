@@ -280,7 +280,9 @@ class InitiativeAgreementRepository:
         query = (
             select(InitiativeAgreement)
             .options(
-                selectinload(InitiativeAgreement.to_organization),
+                selectinload(InitiativeAgreement.to_organization).selectinload(
+                    Organization.org_address
+                ),
                 selectinload(InitiativeAgreement.current_status),
                 # Agreement-management callers read the lifecycle status;
                 # a lazy load of it here raises MissingGreenlet.
@@ -954,6 +956,15 @@ class InitiativeAgreementRepository:
             )
         )
         return list(result.scalars().all())
+
+    @repo_handler
+    async def get_user_profile_by_id(
+        self, user_profile_id: int
+    ) -> Optional[UserProfile]:
+        result = await self.db.execute(
+            select(UserProfile).where(UserProfile.user_profile_id == user_profile_id)
+        )
+        return result.scalars().first()
 
     @repo_handler
     async def get_evidence_requirement(

@@ -211,6 +211,98 @@ async def test_portal_draft_submission_revision_and_document_retention(
 
 
 @pytest.mark.anyio
+async def test_eoc_api_saves_requirement_responses_and_immutable_metadata(
+    client, fastapi_app, set_mock_user, dbsession
+):
+    org, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(dbsession, org, "IA-5454-REQUIREMENTS")
+    action = await _seed_action(dbsession, agreement, 1, "Equipment")
+    sibling = await _seed_action(dbsession, agreement, 2, "Permitting")
+    await _ensure_author_profile(dbsession)
+    signer = (
+        (
+            await dbsession.execute(
+                select(UserProfile).where(UserProfile.keycloak_username == "mockuser")
+            )
+        )
+        .scalars()
+        .one()
+    )
+    requirements = [
+        EvidenceRequirement(
+            designated_action_id=action.designated_action_id,
+            requirement_number=1,
+            title="Permits and approvals",
+            description="List major project permits.",
+            is_active=True,
+        ),
+        EvidenceRequirement(
+            designated_action_id=action.designated_action_id,
+            requirement_number=2,
+            title="Environmental review",
+            description="Provide environmental studies.",
+            is_active=True,
+        ),
+    ]
+    dbsession.add_all(requirements)
+    await dbsession.flush()
+    details = {"organization_id": org, "user_profile_id": signer.user_profile_id}
+
+    def authenticate(roles):
+        fastapi_app.middleware_stack = None
+        set_mock_user(fastapi_app, roles, details)
+
+    authenticate([RoleEnum.IA_SIGNER])
+    url = str(
+        fastapi_app.url_path_for(
+            "get_eoc", designated_action_id=action.designated_action_id
+        )
+    )
+    initial = (await client.get(url)).json()
+    assert [item["id"] for item in initial["requirements"]] == [
+        item.evidence_requirement_id for item in requirements
+    ]
+    assert initial["siblingActionIds"] == [
+        action.designated_action_id,
+        sibling.designated_action_id,
+    ]
+
+    evidence_responses = {
+        str(requirements[0].evidence_requirement_id): {
+            "summaryOfWorkCompleted": "Permit granted",
+            "howEvidenceMeetsAgreementRequirements": "All permits are listed",
+            "exceptionsLimitationsAndContext": "None",
+        },
+        str(requirements[1].evidence_requirement_id): {
+            "summaryOfWorkCompleted": "Studies completed",
+            "howEvidenceMeetsAgreementRequirements": "All required studies attached",
+            "exceptionsLimitationsAndContext": "Seasonal data limitation",
+        },
+    }
+    saved = await client.put(url, json={"evidenceResponses": evidence_responses})
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["evidenceResponses"] == evidence_responses
+    submitted = await client.post(
+        f"{url}/submit",
+        json={"evidenceResponses": evidence_responses, "declarationAccepted": True},
+    )
+    assert submitted.status_code == 200, submitted.text
+    first_snapshot = submitted.json()["submissions"][0]
+    assert first_snapshot["requirements"][0]["title"] == "Permits and approvals"
+    assert first_snapshot["evidenceResponses"] == evidence_responses
+
+    requirements[0].title = "Updated current requirement"
+    await dbsession.flush()
+    authenticate(IDIR_IA_ANALYST)
+    historical = (await client.get(url)).json()
+    assert historical["applicant"]["name"] == "Mock User"
+    assert historical["submissions"][0]["requirements"][0]["title"] == (
+        "Permits and approvals"
+    )
+    assert historical["submissions"][0]["evidenceResponses"] == evidence_responses
+
+
+@pytest.mark.anyio
 async def test_idir_request_information_authorizes_one_portal_revision(
     client, fastapi_app, set_mock_user, dbsession
 ):

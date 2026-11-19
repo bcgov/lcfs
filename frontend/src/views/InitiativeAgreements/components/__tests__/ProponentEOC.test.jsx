@@ -26,6 +26,11 @@ vi.mock('react-router-dom', async (original) => ({
   }
 }))
 vi.mock('../DocumentTree', () => ({
+  default: ({ readOnly, headerAction }) => (
+    <div data-test="document-tree" data-read-only={String(readOnly)}>
+      {headerAction}
+    </div>
+  ),
   DocumentTree: ({ readOnly, headerAction }) => (
     <div data-test="document-tree" data-read-only={String(readOnly)}>
       {headerAction}
@@ -91,14 +96,15 @@ test('proponents save and autosave but cannot sign or submit', async ({
   app
 }) => {
   render(<ProponentEOC designatedActionId="3" />, app)
-  await screen.findByText('Organization: Example company')
-  expect(screen.getByText('Initiative agreement: IA-2')).toBeInTheDocument()
+  await screen.findByText('Example company')
+  expect(screen.getByText('Initiative agreement:')).toBeInTheDocument()
+  expect(screen.getAllByText('IA-2').length).toBeGreaterThan(0)
   expect(
-    screen.getByRole('button', { name: 'Submit application' })
-  ).toBeDisabled()
+    screen.queryByRole('button', { name: 'Submit evidence' })
+  ).not.toBeInTheDocument()
   expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'Expand all' }))
-  fireEvent.change(screen.getByLabelText('Evidence response'), {
+  fireEvent.change(screen.getAllByLabelText('Evidence response')[0], {
     target: { value: 'Updated evidence' }
   })
   await waitFor(
@@ -106,18 +112,22 @@ test('proponents save and autosave but cannot sign or submit', async ({
       expect(api.put).toHaveBeenCalledWith(
         '/initiative-agreements/designated-actions/3/eoc',
         {
-          summaryOfWorkCompleted: 'Updated evidence',
-          howEvidenceMeetsAgreementRequirements: '',
-          exceptionsLimitationsAndContext: '',
+          evidenceResponses: {
+            summary_of_work_completed: {
+              summaryOfWorkCompleted: 'Updated evidence',
+              howEvidenceMeetsAgreementRequirements: '',
+              exceptionsLimitationsAndContext: ''
+            }
+          },
           declarationAccepted: false
         }
       ),
     { timeout: 2500 }
   )
   await waitFor(() =>
-    expect(screen.getByRole('button', { name: 'Save to draft' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
   )
-  fireEvent.click(screen.getByRole('button', { name: 'Save to draft' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
   await waitFor(() => expect(api.put).toHaveBeenCalledTimes(2))
   expect(api.post).not.toHaveBeenCalled()
 })
@@ -128,33 +138,35 @@ test('signers accept declaration and submitted evidence becomes read-only', asyn
 }) => {
   signer = true
   render(<ProponentEOC designatedActionId="3" />, app)
-  await screen.findByText('Organization: Example company')
-  expect(
-    screen.getByRole('button', { name: 'Submit application' })
-  ).toBeDisabled()
+  await screen.findByText('Example company')
+  expect(screen.getByRole('button', { name: 'Submit evidence' })).toBeDisabled()
   fireEvent.click(screen.getByRole('checkbox'))
-  fireEvent.click(screen.getByRole('button', { name: 'Submit application' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Submit evidence' }))
   await waitFor(() =>
     expect(api.post).toHaveBeenCalledWith(
       '/initiative-agreements/designated-actions/3/eoc/submit',
       {
-        summaryOfWorkCompleted: 'Existing evidence',
-        howEvidenceMeetsAgreementRequirements: '',
-        exceptionsLimitationsAndContext: '',
+        evidenceResponses: {
+          summary_of_work_completed: {
+            summaryOfWorkCompleted: 'Existing evidence',
+            howEvidenceMeetsAgreementRequirements: '',
+            exceptionsLimitationsAndContext: ''
+          }
+        },
         declarationAccepted: true
       }
     )
   )
   await waitFor(() =>
     expect(
-      screen.queryByRole('button', { name: 'Save to draft' })
+      screen.queryByRole('button', { name: 'Save' })
     ).not.toBeInTheDocument()
   )
   expect(screen.getByTestId('document-tree')).toHaveAttribute(
     'data-read-only',
     'true'
   )
-  expect(screen.getByLabelText('Evidence response')).toBeDisabled()
+  expect(screen.getAllByLabelText('Evidence response')[0]).toBeDisabled()
   expect(screen.getByText('Shared comments')).toBeInTheDocument()
   expect(
     screen.getByText('Shared comments').closest('[data-enable-attachments]')
@@ -198,7 +210,7 @@ test('does not show revision instructions on a normal draft', async ({
   app
 }) => {
   render(<ProponentEOC designatedActionId="3" />, app)
-  await screen.findByText('Organization: Example company')
+  await screen.findByText('Example company')
   expect(screen.queryByText(/Revision requested:/)).not.toBeInTheDocument()
 })
 
@@ -208,10 +220,10 @@ test('failed saves preserve content and show an error', async ({
 }) => {
   api.put.mockRejectedValue(new Error('Network error'))
   render(<ProponentEOC designatedActionId="3" />, app)
-  await screen.findByText('Organization: Example company')
-  fireEvent.click(screen.getByRole('button', { name: 'Save to draft' }))
+  await screen.findByText('Example company')
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
   await screen.findByText(/Unable to save evidence/)
-  expect(screen.getByLabelText('Evidence response')).toHaveValue(
+  expect(screen.getAllByLabelText('Evidence response')[0]).toHaveValue(
     'Existing evidence'
   )
 })
@@ -222,18 +234,18 @@ test('manual save cancels the debounce and failed saves are not retried', async 
 }) => {
   api.put.mockRejectedValue(new Error('Network error'))
   render(<ProponentEOC designatedActionId="3" />, app)
-  await screen.findByText('Organization: Example company')
-  fireEvent.change(screen.getByLabelText('Evidence response'), {
+  await screen.findByText('Example company')
+  fireEvent.change(screen.getAllByLabelText('Evidence response')[0], {
     target: { value: 'Unsaved evidence' }
   })
-  fireEvent.click(screen.getByRole('button', { name: 'Save to draft' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
   await screen.findByText(/Unable to save evidence/)
   await act(async () => {
     await new Promise((resolve) => setTimeout(resolve, 1100))
   })
 
   expect(api.put).toHaveBeenCalledTimes(1)
-  expect(screen.getByLabelText('Evidence response')).toHaveValue(
+  expect(screen.getAllByLabelText('Evidence response')[0]).toHaveValue(
     'Unsaved evidence'
   )
 })
@@ -254,12 +266,12 @@ test('submitting cancels a pending autosave while the submission is in flight', 
       })
   )
   render(<ProponentEOC designatedActionId="3" />, app)
-  await screen.findByText('Organization: Example company')
-  fireEvent.change(screen.getByLabelText('Evidence response'), {
+  await screen.findByText('Example company')
+  fireEvent.change(screen.getAllByLabelText('Evidence response')[0], {
     target: { value: 'Evidence being submitted' }
   })
   fireEvent.click(screen.getByRole('checkbox'))
-  fireEvent.click(screen.getByRole('button', { name: 'Submit application' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Submit evidence' }))
   await waitFor(() => expect(api.post).toHaveBeenCalledTimes(1))
 
   await act(async () => {
@@ -289,19 +301,23 @@ test('draft saves refresh the EOC cache and later query data updates the editor'
     name: 'Install equipment',
     organizationName: 'Example company',
     status: 'Draft',
-    content: { summary_of_work_completed: 'Saved evidence' },
+    evidenceResponses: {
+      summary_of_work_completed: { summaryOfWorkCompleted: 'Saved evidence' }
+    },
     requirements: [{ id: 'summary_of_work_completed', title: 'Equipment' }]
   }
   api.get.mockImplementation(async () => ({
     data: {
       ...savedData,
-      content: { summary_of_work_completed: serverContent }
+      evidenceResponses: {
+        summary_of_work_completed: { summaryOfWorkCompleted: serverContent }
+      }
     }
   }))
   api.put.mockResolvedValue({ data: savedData })
   const view = render(<ProponentEOC designatedActionId="3" />, app)
-  await screen.findByText('Organization: Example company')
-  fireEvent.click(screen.getByRole('button', { name: 'Save to draft' }))
+  await screen.findByText('Example company')
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
   await waitFor(() => expect(api.put).toHaveBeenCalledTimes(1))
   expect(query.client.getQueryData(['designated-action-eoc', '3'])).toEqual(
     savedData
@@ -314,7 +330,7 @@ test('draft saves refresh the EOC cache and later query data updates the editor'
     })
   })
   await waitFor(() =>
-    expect(screen.getByLabelText('Evidence response')).toHaveValue(
+    expect(screen.getAllByLabelText('Evidence response')[0]).toHaveValue(
       'Newer saved evidence'
     )
   )
@@ -327,8 +343,8 @@ test('blocks dirty in-app navigation and offers save or discard actions', async 
 }) => {
   signer = true
   const view = render(<ProponentEOC designatedActionId="3" />, app)
-  await screen.findByText('Organization: Example company')
-  fireEvent.change(screen.getByLabelText('Evidence response'), {
+  await screen.findByText('Example company')
+  fireEvent.change(screen.getAllByLabelText('Evidence response')[0], {
     target: { value: 'Unsaved evidence' }
   })
   expect(navigationBlocker.shouldBlock).toBe(true)
@@ -351,7 +367,7 @@ test('refreshes the evidence document tree when the upload dialog closes', async
 }) => {
   const invalidateQueries = vi.spyOn(query.client, 'invalidateQueries')
   render(<ProponentEOC designatedActionId="3" />, app)
-  await screen.findByText('Organization: Example company')
+  await screen.findByText('Example company')
   fireEvent.click(screen.getByRole('button', { name: 'Manage documents' }))
   fireEvent.click(screen.getByRole('button', { name: 'Finish upload' }))
   expect(invalidateQueries).toHaveBeenCalledWith({
@@ -379,15 +395,13 @@ test('government review locks disable draft edits and document management', asyn
     }
   })
   render(<ProponentEOC designatedActionId="3" />, app)
-  await screen.findByText('Organization: Example company')
+  await screen.findByText('Example company')
+  expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
   expect(
-    screen.queryByRole('button', { name: 'Save to draft' })
-  ).not.toBeInTheDocument()
-  expect(
-    screen.queryByRole('button', { name: 'Submit application' })
+    screen.queryByRole('button', { name: 'Submit evidence' })
   ).not.toBeInTheDocument()
   expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
-  expect(screen.getByLabelText('Evidence response')).toBeDisabled()
+  expect(screen.getAllByLabelText('Evidence response')[0]).toBeDisabled()
   expect(screen.getByTestId('document-tree')).toHaveAttribute(
     'data-read-only',
     'true'
@@ -418,7 +432,9 @@ test('IDIR read-only evidence updates when the latest submitted package refetche
         {
           id: 7,
           submittedAt: '2026-11-17T18:00:00Z',
-          content: { summary_of_work_completed: text },
+          evidenceResponses: {
+            summary_of_work_completed: { summaryOfWorkCompleted: text }
+          },
           requirements: [
             {
               id: 'summary_of_work_completed',
@@ -444,7 +460,7 @@ test('IDIR read-only evidence updates when the latest submitted package refetche
     )
   )
   expect(
-    screen.getByRole('button', { name: 'Original.pdf' })
+    screen.getByRole('button', { name: /Original folder \/ Original.pdf/ })
   ).toBeInTheDocument()
   text = 'Newly submitted evidence'
   await act(async () => {
@@ -459,7 +475,7 @@ test('IDIR read-only evidence updates when the latest submitted package refetche
   )
   expect(screen.getAllByLabelText('Evidence response')[0]).toBeDisabled()
   expect(
-    screen.getByRole('button', { name: 'Original.pdf' })
+    screen.getByRole('button', { name: /Original folder \/ Original.pdf/ })
   ).toBeInTheDocument()
 })
 
@@ -470,9 +486,9 @@ test('a reopened revision requires a fresh signing declaration', async ({
 }) => {
   signer = true
   render(<ProponentEOC designatedActionId="3" />, app)
-  await screen.findByText('Organization: Example company')
+  await screen.findByText('Example company')
   fireEvent.click(screen.getByRole('checkbox'))
-  fireEvent.click(screen.getByRole('button', { name: 'Submit application' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Submit evidence' }))
   await waitFor(() =>
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
   )
@@ -483,7 +499,5 @@ test('a reopened revision requires a fresh signing declaration', async ({
     })
   })
   expect(await screen.findByRole('checkbox')).not.toBeChecked()
-  expect(
-    screen.getByRole('button', { name: 'Submit application' })
-  ).toBeDisabled()
+  expect(screen.getByRole('button', { name: 'Submit evidence' })).toBeDisabled()
 })

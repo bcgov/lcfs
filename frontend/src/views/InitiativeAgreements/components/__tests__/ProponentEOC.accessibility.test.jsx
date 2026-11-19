@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import { beforeEach, expect, vi } from 'vite-plus/test'
 import { test } from '@/tests/utils/fixtures'
 import { ProponentEOC } from '../ProponentEOC'
@@ -14,6 +14,7 @@ vi.mock('react-router-dom', async (original) => ({
   useBlocker: () => ({ state: 'unblocked' })
 }))
 vi.mock('../DocumentTree', () => ({
+  default: () => <div data-test="document-tree" />,
   DocumentTree: () => <div data-test="document-tree" />
 }))
 vi.mock('@/components/Comments', () => ({ default: () => null }))
@@ -54,8 +55,8 @@ test('names the actual Quill formatting toolbar and its controls', async ({
   app
 }) => {
   render(<ProponentEOC designatedActionId="3" />, app)
-  await screen.findByText('Organization: Example company')
-  fireEvent.click(screen.getByRole('button', { name: 'Expand all' }))
+  await screen.findByText('Example company')
+  // The first evidence requirement is expanded by default, matching the Figma export.
 
   const textbox = await screen.findByRole('textbox', {
     name: 'Summary of work completed'
@@ -63,19 +64,19 @@ test('names the actual Quill formatting toolbar and its controls', async ({
   expect(textbox).toHaveAttribute('aria-multiline', 'true')
 
   const toolbar = await screen.findByRole('toolbar', {
-    name: 'Evidence formatting toolbar'
+    name: 'Summary of work completed formatting toolbar'
   })
   expect(toolbar.querySelector('.ql-bold')).toHaveAccessibleName('Bold')
   expect(toolbar.querySelector('.ql-italic')).toHaveAccessibleName('Italic')
   await waitFor(() => {
     expect(
-      screen.getByRole('button', { name: 'Bulleted list' })
-    ).toBeInTheDocument()
+      toolbar.querySelector('.ql-list[value="bullet"]')
+    ).toHaveAccessibleName('Bulleted list')
     expect(
-      screen.getByRole('button', { name: 'Numbered list' })
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole('button', { name: 'Insert link' })
-    ).toBeInTheDocument()
+      toolbar.querySelector('.ql-list[value="ordered"]')
+    ).toHaveAccessibleName('Numbered list')
+    expect(toolbar.querySelector('.ql-link')).toHaveAccessibleName(
+      'Insert link'
+    )
   })
 })

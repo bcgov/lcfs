@@ -11,6 +11,7 @@ def test_existing_eoc_model_supports_multiple_submissions_and_three_fields():
     assert DaEocSubmission.__table__.schema is None
     assert DaEocSubmissionHistory.__table__.schema is None
     assert {
+        "evidence_responses",
         "summary_of_work_completed",
         "how_evidence_meets_agreement_requirements",
         "exceptions_limitations_and_context",

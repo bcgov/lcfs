@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from pydantic import Field, field_validator
 
@@ -436,10 +436,39 @@ class AgreementUpdateSchema(BaseSchema):
     agreement_end_date: Optional[date] = None
 
 
+class EOCRequirementResponseSchema(BaseSchema):
+    summary_of_work_completed: str = ""
+    how_evidence_meets_agreement_requirements: str = ""
+    exceptions_limitations_and_context: str = ""
+
+
+class EOCRequirementSchema(BaseSchema):
+    id: Union[int, str]
+    requirement_number: Optional[int] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+
+
+class EOCApplicantSchema(BaseSchema):
+    name: Optional[str] = None
+    title: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+
+
+class EOCOrganizationDetailsSchema(BaseSchema):
+    address: Optional[AgreementOrganizationAddressSchema] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+
+
 class EOCSaveSchema(BaseSchema):
     summary_of_work_completed: str = ""
     how_evidence_meets_agreement_requirements: str = ""
     exceptions_limitations_and_context: str = ""
+    evidence_responses: dict[str, EOCRequirementResponseSchema] = Field(
+        default_factory=dict
+    )
     declaration_accepted: bool = False
 
 
@@ -453,6 +482,9 @@ class EOCSchema(BaseSchema):
     submissions: List[dict] = Field(default_factory=list)
     can_edit: bool = False
     revision_request: Optional[EOCRevisionRequestSchema] = None
+    applicant: Optional[EOCApplicantSchema] = None
+    organization_details: Optional[EOCOrganizationDetailsSchema] = None
+    sibling_action_ids: List[int] = Field(default_factory=list)
     da_status: str
     initiative_agreement_id: int
     ia_code: Optional[str] = None
@@ -464,4 +496,7 @@ class EOCSchema(BaseSchema):
     submitted_at: Optional[datetime] = None
     submitted_by_user_id: Optional[int] = None
     organization_name: Optional[str] = None
-    requirements: List[dict] = Field(default_factory=list)
+    requirements: List[EOCRequirementSchema] = Field(default_factory=list)
+    evidence_responses: dict[str, EOCRequirementResponseSchema] = Field(
+        default_factory=dict
+    )

@@ -37,8 +37,16 @@ def service():
         role_names=[RoleEnum.IA_SIGNER],
         user_profile_id=17,
         keycloak_username="signer",
+        first_name="Alex",
+        last_name="Signer",
+        title="Supplier",
+        email="alex@example.com",
+        phone="604-555-0100",
         organization=NS(organization_id=4),
     )
+    agreement.to_organization.org_address = None
+    agreement.to_organization.email = "org@example.com"
+    agreement.to_organization.phone = "604-555-0199"
     rows = []
     action_history = []
     repo = MagicMock()
@@ -47,6 +55,8 @@ def service():
     repo.get_portal_evidence_submissions = AsyncMock(
         side_effect=lambda *args, **kwargs: rows
     )
+    repo.get_current_designated_actions = AsyncMock(return_value=[action])
+    repo.get_user_profile_by_id = AsyncMock(return_value=user)
     repo.get_designated_action_history = AsyncMock(
         side_effect=lambda *args, **kwargs: action_history
     )
@@ -104,6 +114,76 @@ async def test_autosave_reuses_draft_and_submission_owns_lifecycle(service):
     with pytest.raises(HTTPException) as exc:
         await service.save_eoc(3, EOCSaveSchema())
     assert exc.value.status_code == 409
+
+
+@pytest.mark.anyio
+async def test_requirement_responses_are_saved_and_snapshotted(service):
+    requirements = [
+        EvidenceRequirement(
+            evidence_requirement_id=41,
+            designated_action_id=3,
+            requirement_number=1,
+            title="Permits",
+            description="List permits and approvals.",
+            is_active=True,
+        ),
+        EvidenceRequirement(
+            evidence_requirement_id=42,
+            designated_action_id=3,
+            requirement_number=2,
+            title="Environmental review",
+            description="Submit environmental studies.",
+            is_active=True,
+        ),
+    ]
+    service.repo.get_evidence_requirements.return_value = requirements
+    answers = {
+        "41": {
+            "summaryOfWorkCompleted": "Permit issued",
+            "howEvidenceMeetsAgreementRequirements": "It covers the required permits",
+            "exceptionsLimitationsAndContext": "No exceptions",
+        },
+        "42": {
+            "summaryOfWorkCompleted": "Studies completed",
+            "howEvidenceMeetsAgreementRequirements": "All studies attached",
+            "exceptionsLimitationsAndContext": "Seasonal limitation",
+        },
+    }
+    data = EOCSaveSchema(
+        evidence_responses=answers,
+        declaration_accepted=True,
+    )
+
+    result = await service.save_eoc(3, data, submit=True)
+
+    row = (await service.repo.get_portal_evidence_submissions(3))[0]
+    assert row.evidence_responses["41"]["summary_of_work_completed"] == "Permit issued"
+    assert result.requirements[0].id == 41
+    assert result.evidence_responses["42"].exceptions_limitations_and_context == (
+        "Seasonal limitation"
+    )
+    assert result.sibling_action_ids == [3]
+    assert result.applicant.name == "Alex Signer"
+    assert result.applicant.title == "Supplier"
+    assert result.organization_details.email == "org@example.com"
+
+    submission_history = result.submissions[0]
+    assert submission_history["requirements"][0] == {
+        "id": 41,
+        "requirementNumber": 1,
+        "title": "Permits",
+        "description": "List permits and approvals.",
+    }
+    assert (
+        submission_history["evidenceResponses"]["42"][
+            "howEvidenceMeetsAgreementRequirements"
+        ]
+        == "All studies attached"
+    )
+    # Later edits to requirement metadata cannot change the submitted snapshot.
+    requirements[0].title = "Renamed permit requirement"
+    reread = await service.get_eoc(3)
+    assert reread.submissions[0]["requirements"][0]["title"] == "Permits"
 
 
 @pytest.mark.anyio

@@ -1598,6 +1598,107 @@ class InitiativeAgreementServices:
     }
 
     @staticmethod
+    def _empty_eoc_response():
+        return {
+            "summary_of_work_completed": "",
+            "how_evidence_meets_agreement_requirements": "",
+            "exceptions_limitations_and_context": "",
+        }
+
+    def _eoc_response_map(self, submission, requirements, *, legacy_history=False):
+        """Return per-requirement responses, adapting #5499's scalar fields."""
+        stored = getattr(submission, "evidence_responses", None) if submission else None
+        if isinstance(stored, dict) and stored:
+            response_map = {
+                str(requirement_id): {
+                    field: (response or {}).get(field, "") or ""
+                    for field in self.EOC_FIELDS
+                }
+                for requirement_id, response in stored.items()
+            }
+            for requirement in requirements:
+                response_map.setdefault(
+                    str(requirement.evidence_requirement_id),
+                    self._empty_eoc_response(),
+                )
+            return response_map
+
+        scalar_response = (
+            {field: getattr(submission, field, None) or "" for field in self.EOC_FIELDS}
+            if submission
+            else self._empty_eoc_response()
+        )
+        requirement_ids = [
+            str(requirement.evidence_requirement_id) for requirement in requirements
+        ]
+        if not requirement_ids:
+            requirement_ids = ["completion"]
+        if legacy_history and not stored:
+            requirement_ids = ["completion"]
+        response_map = {
+            requirement_id: self._empty_eoc_response()
+            for requirement_id in requirement_ids
+        }
+        response_map[requirement_ids[0]] = scalar_response
+        return response_map
+
+    @staticmethod
+    def _eoc_response_api_map(response_map):
+        from lcfs.web.api.initiative_agreement.schema import (
+            EOCRequirementResponseSchema,
+        )
+
+        return {
+            str(requirement_id): EOCRequirementResponseSchema.model_validate(
+                response
+            ).model_dump(by_alias=True)
+            for requirement_id, response in response_map.items()
+        }
+
+    @staticmethod
+    def _eoc_requirement_snapshot(requirements):
+        return [
+            {
+                "id": requirement.evidence_requirement_id,
+                "requirementNumber": requirement.requirement_number,
+                "title": requirement.title,
+                "description": requirement.description,
+            }
+            for requirement in requirements
+        ]
+
+    def _eoc_response_payload(self, data, requirements):
+        """Validate nested response IDs and keep old scalar clients working."""
+        active_ids = [
+            str(requirement.evidence_requirement_id) for requirement in requirements
+        ]
+        if data.evidence_responses:
+            response_map = {
+                str(requirement_id): response.model_dump()
+                for requirement_id, response in data.evidence_responses.items()
+            }
+            allowed_ids = set(active_ids or ["completion"])
+            if set(response_map) - allowed_ids:
+                raise HTTPException(
+                    status_code=422,
+                    detail="Evidence responses contain an unknown requirement.",
+                )
+            for requirement_id in allowed_ids:
+                response_map.setdefault(requirement_id, self._empty_eoc_response())
+        else:
+            legacy_response = {
+                field: getattr(data, field) or "" for field in self.EOC_FIELDS
+            }
+            response_map = {
+                requirement_id: self._empty_eoc_response()
+                for requirement_id in (active_ids or ["completion"])
+            }
+            response_map[active_ids[0] if active_ids else "completion"] = (
+                legacy_response
+            )
+        return response_map
+
+    @staticmethod
     def _submission_event(submission):
         events = [
             event
@@ -1735,9 +1836,24 @@ class InitiativeAgreementServices:
         )
         editable = self._eoc_is_editable(action, rows)
         latest = rows[0] if rows else None
+        requirements = await self.repo.get_evidence_requirements(designated_action_id)
         agreement = await self.repo.get_initiative_agreement_by_id(
             action.initiative_agreement_id
         )
+        siblings = await self.repo.get_current_designated_actions(
+            action.initiative_agreement_id
+        )
+        sibling_action_ids = [
+            sibling.designated_action_id
+            for sibling in sorted(
+                siblings,
+                key=lambda sibling: (
+                    sibling.action_number,
+                    sibling.designated_action_id,
+                ),
+            )
+        ]
+        requirement_snapshot = self._eoc_requirement_snapshot(requirements)
         history = []
         for row in rows:
             if row.organization_id != agreement.to_organization_id:
@@ -1749,6 +1865,17 @@ class InitiativeAgreementServices:
             if row.status == "Draft" or event is None:
                 continue
             snapshot = event.snapshot or {}
+            submission_requirements = snapshot.get("requirements") or [
+                {
+                    "id": "completion",
+                    "requirementNumber": None,
+                    "title": "Evidence of completion",
+                    "description": None,
+                }
+            ]
+            responses = snapshot.get("evidence_responses") or self._eoc_response_map(
+                row, [], legacy_history=True
+            )
             history.append(
                 {
                     "id": row.da_eoc_submission_id,
@@ -1761,10 +1888,8 @@ class InitiativeAgreementServices:
                         "content",
                         {key: getattr(row, key) or "" for key in self.EOC_FIELDS},
                     ),
-                    "requirements": [
-                        {"id": key, "title": label}
-                        for key, label in self.EOC_FIELDS.items()
-                    ],
+                    "requirements": submission_requirements,
+                    "evidenceResponses": self._eoc_response_api_map(responses),
                     "documents": [
                         {
                             "documentId": doc["document_id"],
@@ -1776,16 +1901,76 @@ class InitiativeAgreementServices:
                     ],
                 }
             )
-        event = self._submission_event(latest) if latest else None
+        latest_event = next(
+            (
+                self._submission_event(row)
+                for row in rows
+                if row.status != "Draft" and self._submission_event(row) is not None
+            ),
+            None,
+        )
+        portal_user = bool(
+            self.request
+            and self.request.user
+            and user_has_roles(
+                self.request.user, [RoleEnum.IA_PROPONENT, RoleEnum.IA_SIGNER]
+            )
+        )
+        applicant_profile_id = (
+            self.request.user.user_profile_id
+            if portal_user and editable
+            else (latest_event.user_profile_id if latest_event else None)
+        )
+        applicant_profile = (
+            await self.repo.get_user_profile_by_id(applicant_profile_id)
+            if applicant_profile_id is not None
+            else None
+        )
+        applicant_name = (
+            " ".join(
+                value
+                for value in (
+                    getattr(applicant_profile, "first_name", None),
+                    getattr(applicant_profile, "last_name", None),
+                )
+                if value
+            )
+            or None
+        )
+        current_responses = self._eoc_response_map(latest, requirements)
+        legacy_content = (
+            {key: getattr(latest, key) or "" for key in self.EOC_FIELDS}
+            if latest
+            else {}
+        )
+        organization = agreement.to_organization
         return EOCSchema(
             designated_action_id=designated_action_id,
             initiative_agreement_id=action.initiative_agreement_id,
             ia_code=agreement.ia_code,
             action_number=action.action_number,
             name=action.name,
-            organization_name=(
-                agreement.to_organization.name if agreement.to_organization else None
+            organization_name=organization.name if organization else None,
+            applicant=(
+                {
+                    "name": applicant_name,
+                    "title": getattr(applicant_profile, "title", None),
+                    "email": getattr(applicant_profile, "email", None),
+                    "phone": getattr(applicant_profile, "phone", None),
+                }
+                if applicant_profile
+                else None
             ),
+            organization_details=(
+                {
+                    "address": getattr(organization, "org_address", None),
+                    "email": getattr(organization, "email", None),
+                    "phone": getattr(organization, "phone", None),
+                }
+                if organization
+                else None
+            ),
+            sibling_action_ids=sibling_action_ids,
             da_status=action.current_status.status,
             status=(
                 "Draft"
@@ -1793,16 +1978,13 @@ class InitiativeAgreementServices:
                 else latest.status
             ),
             can_edit=editable,
-            content=(
-                {key: getattr(latest, key) or "" for key in self.EOC_FIELDS}
-                if latest
-                else {}
+            content=legacy_content,
+            evidence_responses=current_responses,
+            submitted_at=latest_event.create_date if latest_event else None,
+            submitted_by_user_id=(
+                latest_event.user_profile_id if latest_event else None
             ),
-            submitted_at=event.create_date if event else None,
-            submitted_by_user_id=event.user_profile_id if event else None,
-            requirements=[
-                {"id": key, "title": label} for key, label in self.EOC_FIELDS.items()
-            ],
+            requirements=requirement_snapshot,
             submissions=history,
             revision_request=(
                 self._eoc_revision_request(action._eoc_action_history, rows)
@@ -1862,6 +2044,8 @@ class InitiativeAgreementServices:
             )
         action = await self.validate_eoc_write(designated_action_id)
         action_history = getattr(action, "_eoc_action_history", ())
+        requirements = await self.repo.get_evidence_requirements(designated_action_id)
+        evidence_responses = self._eoc_response_payload(data, requirements)
         rows = await self.repo.get_portal_evidence_submissions(
             designated_action_id, for_update=True
         )
@@ -1878,15 +2062,18 @@ class InitiativeAgreementServices:
                 status_code=403,
                 detail="Submission organization does not match agreement",
             )
+        current.evidence_responses = evidence_responses
+        first_response = next(
+            iter(evidence_responses.values()), self._empty_eoc_response()
+        )
         for key in self.EOC_FIELDS:
-            setattr(current, key, getattr(data, key))
+            # Retain the original scalar columns for older clients and
+            # downstream consumers; the JSON map is the per-requirement source.
+            setattr(current, key, first_response[key])
         current.update_user = getattr(user, "keycloak_username", None)
         await self.repo.db.flush()
         if submit:
             old_review = await self._evidence_snapshot(designated_action_id)
-            requirements = await self.repo.get_evidence_requirements(
-                designated_action_id
-            )
             for requirement in requirements:
                 for key in (
                     "analyst_review",
@@ -1946,6 +2133,8 @@ class InitiativeAgreementServices:
                         "content": {
                             key: getattr(current, key) for key in self.EOC_FIELDS
                         },
+                        "requirements": self._eoc_requirement_snapshot(requirements),
+                        "evidence_responses": evidence_responses,
                         "documents": documents,
                         "previous_evidence_review": old_review["evidence_requirements"],
                         "da_information_request_history_id": latest_info_request_id,

@@ -9,7 +9,10 @@ vi.mock('@/services/useApiService', () => ({ useApiService: () => api }))
 vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: () => ({ hasRoles: () => true })
 }))
-vi.mock('../DocumentTree', () => ({ DocumentTree: () => null }))
+vi.mock('../DocumentTree', () => ({
+  default: () => null,
+  DocumentTree: () => null
+}))
 vi.mock('@/components/Comments', () => ({ default: () => null }))
 vi.mock('@/components/Documents/DocumentUploadDialog', () => ({
   default: () => null
@@ -86,8 +89,8 @@ test('in-app navigation waits for the user to save or discard dirty evidence', a
     ...app.filter(({ kind }) => kind !== 'router'),
     routerProvider
   ])
-  await screen.findByText('Organization: Example company')
-  fireEvent.change(screen.getByLabelText('Evidence response'), {
+  await screen.findByText('Example company')
+  fireEvent.change(screen.getAllByLabelText('Evidence response')[0], {
     target: { value: 'Unsaved update' }
   })
   fireEvent.click(screen.getByRole('link', { name: 'Open another page' }))
