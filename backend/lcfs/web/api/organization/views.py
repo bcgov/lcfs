@@ -249,13 +249,12 @@ async def update_transfer(
     transfer_id: int,
     transfer_create: TransferCreateSchema = ...,
     transfer_service: TransferServices = Depends(),
-    validate: OrganizationValidation = Depends(),
 ) -> Transfer:
     """
-    Endpoint to create a new transfer
-    This endpoint creates a new transfer and returns the information of the created transfer.
+    Endpoint to update a transfer
+    The service checks the caller's side, the move and the organizations
+    against the stored transfer, never against organization IDs in the body.
     """
-    await validate.update_transfer(organization_id, transfer_create)
     transfer_create.transfer_id = transfer_id
     return await transfer_service.update_transfer(transfer_create, request.user)
 

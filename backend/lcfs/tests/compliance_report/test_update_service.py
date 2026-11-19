@@ -294,6 +294,38 @@ async def test_create_or_update_reserve_uses_persisted_transaction(
 
 
 @pytest.mark.anyio
+async def test_create_or_update_reserve_locks_the_balance_before_reading_it(
+    compliance_report_update_service,
+):
+    """The reserve is capped against the available balance, so that balance
+    is read under the organization's lock, before any concurrent request can
+    spend it."""
+    calls = []
+    org_service = compliance_report_update_service.org_service
+    org_service.lock_balance = AsyncMock(
+        side_effect=lambda org_id: calls.append(("lock", org_id))
+    )
+
+    async def available(org_id):
+        calls.append(("read", org_id))
+        return 0
+
+    org_service.calculate_available_balance = AsyncMock(side_effect=available)
+    org_service.adjust_balance = AsyncMock()
+
+    report = MagicMock(spec=ComplianceReport)
+    report.organization_id = 7
+    report.transaction_id = None
+    report.transaction = None
+
+    await compliance_report_update_service._create_or_update_reserve_transaction(
+        credit_change=50, report=report
+    )
+
+    assert calls[:2] == [("lock", 7), ("read", 7)]
+
+
+@pytest.mark.anyio
 async def test_update_compliance_report_not_found(
     compliance_report_update_service, mock_repo
 ):
@@ -1144,6 +1176,7 @@ def org_service_instance():
     service.calculate_reserved_balance = AsyncMock(return_value=20)
     dummy_transaction = MagicMock()  # a dummy Transaction instance
     service.transaction_repo = MagicMock()
+    service.transaction_repo.lock_organization_balance = AsyncMock()
     service.transaction_repo.create_transaction = AsyncMock(
         return_value=dummy_transaction
     )
@@ -1436,6 +1469,10 @@ async def test_handle_assessed_status_caps_to_pre_deadline(
 
     # Now recalculates available balance for negative credit changes
     compliance_report_update_service.org_service.calculate_available_balance.assert_awaited_once_with(
+        mock_report.organization_id
+    )
+    # ...under the organization's balance lock.
+    compliance_report_update_service.org_service.lock_balance.assert_awaited_once_with(
         mock_report.organization_id
     )
     assert (

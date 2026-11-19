@@ -4,10 +4,12 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     String,
     Table,
     Text,
+    text,
 )
 from sqlalchemy.orm import relationship
 
@@ -63,6 +65,14 @@ class InitiativeAgreement(BaseModel, Auditable, EffectiveDates):
 
     __tablename__ = "initiative_agreement"
     __table_args__ = (
+        # One record may claim a given ledger transaction at most once
+        # (created by migration d7e2f4a9b1c6).
+        Index(
+            "uq_initiative_agreement_transaction_id",
+            "transaction_id",
+            unique=True,
+            postgresql_where=text("transaction_id IS NOT NULL"),
+        ),
         {
             "comment": (
                 "Initiative agreements (s.15 Low Carbon Fuels Act): parent "

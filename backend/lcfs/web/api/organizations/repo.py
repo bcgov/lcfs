@@ -760,10 +760,16 @@ class OrganizationsRepository:
     @repo_handler
     async def is_registered_for_transfer(self, organization_id: int):
         """
-        Check if an organization is registered in the database.
+        Check if an organization's own status is Registered.
         """
         result = await self.db.scalar(
-            select(Organization.organization_id).where(
+            select(Organization.organization_id)
+            .join(
+                OrganizationStatus,
+                Organization.organization_status_id
+                == OrganizationStatus.organization_status_id,
+            )
+            .where(
                 and_(
                     Organization.organization_id == organization_id,
                     OrganizationStatus.status == OrgStatusEnum.Registered,

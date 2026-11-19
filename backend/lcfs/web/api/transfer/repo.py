@@ -83,11 +83,17 @@ class TransferRepository:
     #     return transfers
 
     @repo_handler
-    async def get_transfer_by_id(self, transfer_id: int) -> Transfer:
+    async def get_transfer_by_id(
+        self, transfer_id: int, for_update: bool = False
+    ) -> Transfer:
         """
         Queries the database for a transfer by its ID and returns the ORM model.
         Eagerly loads related entities to prevent lazy loading issues.
         Orders the transfer history by create_date.
+
+        With ``for_update`` the transfer row stays locked until the
+        transaction ends, so concurrent moves of one transfer run one at a
+        time and each sees the status the previous one left.
         """
         query = (
             select(Transfer)
@@ -114,6 +120,11 @@ class TransferRepository:
             )
             .where(Transfer.transfer_id == transfer_id)
         )
+        if for_update:
+            # Re-read after the wait, even if the row is in the identity map.
+            query = query.with_for_update(of=Transfer).execution_options(
+                populate_existing=True
+            )
 
         result = await self.db.execute(query)
         transfer = result.scalars().first()
@@ -228,19 +239,27 @@ class TransferRepository:
 
     @repo_handler
     async def upsert_transfer_comment(
-        self, transfer_id: int, comment: str, comment_source: TransferCommentSourceEnum
+        self,
+        transfer_id: int,
+        comment: str,
+        comment_source: TransferCommentSourceEnum,
+        author: Optional[str] = None,
     ) -> Optional[TransferComment]:
         """
         Finds or creates a TransferComment row for the given `transfer_id` and `comment_source`.
 
         - If 'comment' is blank or None, do nothing (skip).
-        - If there's an existing row, update its 'comment'.
+        - If there's an existing row with the same text, leave it untouched.
+        - If there's an existing row with different text, update it and credit
+          `author` (when given), so the comment never shows under the name
+          of someone who did not write it.
         - If no existing row, create a new one.
         - Returns the updated/created TransferComment, or None if skipped.
         """
         # If the comment is blank or None, skip entirely
         if not comment or not comment.strip():
             return None
+        text = comment.strip()
 
         # Try to find existing
         stmt = select(TransferComment).where(
@@ -249,9 +268,12 @@ class TransferRepository:
         )
         existing = await self.db.scalar(stmt)
 
-        # If existing, update
         if existing:
-            existing.comment = comment.strip()
+            if existing.comment == text:
+                return existing
+            existing.comment = text
+            if author:
+                existing.create_user = author
             existing.update_date = datetime.now(timezone.utc)
             self.db.add(existing)
             await self.db.flush()
@@ -260,9 +282,11 @@ class TransferRepository:
         # Otherwise create new
         new_comment = TransferComment(
             transfer_id=transfer_id,
-            comment=comment.strip(),
+            comment=text,
             comment_source=comment_source,
         )
+        if author:
+            new_comment.create_user = author
         self.db.add(new_comment)
         await self.db.flush()
         return new_comment

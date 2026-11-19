@@ -62,6 +62,7 @@ def dummy_transfer():
 
     transfer = SimpleNamespace(
         transfer_id="t1",
+        from_organization_id="org1",
         from_transaction=object(),  # non-None so that check passes
         from_transaction_id="ft1",
         transfer_category=SimpleNamespace(),  # No 'category' attribute by default.
@@ -222,7 +223,8 @@ async def test_create_transfer_success(transfer_service, mock_transfer_repo):
 async def test_update_transfer_success(transfer_service, mock_transfer_repo):
     """
     DB object is 'Sent'. The receiving organization accepts it: 'Submitted'.
-    We'll also change recommendation from 'Record' to 'Refuse' (both valid).
+    The page sends the stored recommendation back unchanged, which is not a
+    write and so is allowed.
     """
     receiver = _make_signer(org_id=2)
     # DB current status is "Sent"
@@ -264,14 +266,17 @@ async def test_update_transfer_success(transfer_service, mock_transfer_repo):
         agreement_date=date.today(),
         quantity=1,
         price_per_unit=7.99,
-        recommendation="Refuse",  # valid
+        recommendation="Record",  # the stored value, sent back unchanged
     )
 
     result = await transfer_service.update_transfer(update_data, receiver)
     assert result.transfer_id == transfer_id
     assert isinstance(result, Transfer)
+    assert transfer_obj.recommendation == TransferRecommendationEnum.Record
 
-    mock_transfer_repo.get_transfer_by_id.assert_called_once_with(transfer_id)
+    mock_transfer_repo.get_transfer_by_id.assert_called_once_with(
+        transfer_id, for_update=True
+    )
     mock_transfer_repo.update_transfer.assert_called_once_with(transfer_obj)
     transfer_service._perform_notification_call.assert_awaited_once_with(
         transfer_obj, status="Submitted", user=receiver
@@ -474,7 +479,7 @@ async def test_update_category_flow(
 
     transfer_service.update_category = dummy_update_category_fn
 
-    async def confirm_success(tx_id):
+    async def confirm_success(tx_id, *, organization_id):
         return True
 
     transfer_service.transaction_repo.confirm_transaction = confirm_success
@@ -499,7 +504,7 @@ async def test_no_category_update_when_category_exists(
     # Pre-set a category on the transfer_category attribute.
     dummy_transfer.transfer_category.category = "Existing"
 
-    async def confirm_success(tx_id):
+    async def confirm_success(tx_id, *, organization_id):
         return True
 
     transfer_service.transaction_repo.confirm_transaction = confirm_success
@@ -600,7 +605,7 @@ async def test_director_record_transfer_with_none_category(
 
     transfer_service.update_category = dummy_update_category_fn
 
-    async def confirm_success(tx_id):
+    async def confirm_success(tx_id, *, organization_id):
         return True
 
     transfer_service.transaction_repo.confirm_transaction = confirm_success
@@ -641,6 +646,7 @@ async def test_director_record_transfer_persists_to_transaction_id(
     from_transaction = SimpleNamespace(transaction_id=101)
     transfer = SimpleNamespace(
         transfer_id=1,
+        from_organization_id=1,
         from_transaction=from_transaction,
         from_transaction_id=from_transaction.transaction_id,
         transfer_category=SimpleNamespace(category="A"),
