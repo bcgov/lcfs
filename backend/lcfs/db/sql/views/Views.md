@@ -50,7 +50,7 @@ Level 3 (Depends on Level 2)
 ### Core Compliance Views
 
 -   **v_compliance_report**: Main compliance report listing with complex versioning logic
--   **vw_compliance_report_status_timeline**: Ordered lifecycle history with per-stage durations
+-   **vw_compliance_report_status_timeline**: Ordered lifecycle history with per-stage durations for reports not currently in Draft
 -   **vw_compliance_report_analytics_base**: Analytics foundation for compliance reports
 -   **vw_compliance_report_status_medians**: Median number of days spent in each status, filterable by period
 -   **vw_compliance_report_flow_metrics**: Lead/cycle times with submission/final decision stamps by period
@@ -59,19 +59,22 @@ Level 3 (Depends on Level 2)
 -   **vw_compliance_report_service_levels**: % completed within 60 days overall and by year per period
 -   **vw_compliance_report_assignee_breakdown**: Assignment workload and average lead times per period
 -   **vw_compliance_report_queue_flow**: Monthly submissions vs. completions trend per period
--   **vw_compliance_report_base**: Comprehensive report view with summary and transaction data
+-   **vw_compliance_report_base**: Comprehensive view of the latest non-draft report per chain, with summary and transaction data
 -   **vw_reports_waiting_review**: Reports pending review with timing metrics
--   **vw_compliance_reports_time_per_status**: Process timing analysis
+-   **vw_compliance_reports_time_per_status**: Process timing analysis for reports not currently in Draft
+-   **vw_compliance_report_versions**: Submitted, non-draft report versions
+-   **vw_compliance_report_wip_summary**: Work-in-progress counts excluding Draft reports
 
 ### Fuel Code & Compliance schedule data Views
 
 -   **vw_fuel_supply_base**: Clean fuel supply data (latest versions only)
--   **vw_fuel_supply_analytics_base**: Analytics-ready fuel supply with metadata
--   **vw_fuel_export_analytics_base**: Fuel export data for analytics
+-   **vw_fuel_supply_analytics_base**: Analytics-ready fuel supply with metadata, using the latest applicable non-draft report action per line; deleted lines are excluded and `co_processed` comes from `fuel_code.co_processed` (null defaults to `No`, matching Portal behavior)
+-   **vw_fuel_export_analytics_base**: Fuel export data for analytics, with the latest action selected before deleted rows are excluded
 -   **vw_fuel_code_base**: Comprehensive fuel code information
--   **vw_fuels_other_use_base**: Non-standard fuel usage tracking
+-   **vw_fuels_other_use_base**: Non-standard fuel usage tracking, excluding deleted latest rows and Draft reports
 -   **vw_fse_base**: Final Supply Equipment reporting
--   **vw_allocation_agreement_base**: Latest allocation agreements
+-   **vw_allocation_agreement_base**: Latest non-deleted allocation agreements for eligible reports
+-   **vw_allocation_agreement_extended_base**: Allocation agreement details excluding deleted rows and reports currently in Draft
 -   **vw_notional_transfer_base**: Notional transfer tracking
 
 ### User & System Analytics Views
@@ -106,6 +109,8 @@ Level 3 (Depends on Level 2)
 ## Execution Notes
 
 -   All views grant SELECT permissions to `basic_lcfs_reporting_role`
+-   Report-detail views granted to the reporting role exclude reports whose current status is Draft. Lifecycle metrics may still include a historical Draft transition for a report that has since advanced to a non-draft status.
+-   Versioned fuel-supply, fuel-export, and allocation-agreement views select the latest eligible schedule action per `group_uuid` before excluding `DELETE`, so deleted lines cannot reappear from an older report version.
 -   Views use `CASCADE` drops to handle dependencies automatically
 -   Index creation statements are included for performance optimization
 -   Complex versioning logic is centralized in base views and reused by dependent views
