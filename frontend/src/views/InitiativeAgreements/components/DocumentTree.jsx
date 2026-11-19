@@ -70,10 +70,10 @@ import {
   resolveDrop
 } from './documentTreeDnd'
 
-// Folder tree for a designated action's evidence files (#4925). Phase 3
-// adds dragging: files and folders move by pointer, multi-selections
-// travel as one unit, OS file drops upload into the target folder, and
-// every move offers an undo.
+// Folder tree for a designated action's evidence files (#4925), and since
+// #5337 for an agreement's own documents too. Phase 3 adds dragging: files
+// and folders move by pointer, multi-selections travel as one unit, OS file
+// drops upload into the target folder, and every move offers an undo.
 
 const AUTO_EXPAND_MS = 700
 
