@@ -226,6 +226,9 @@ export const CommentLog = ({ organizationId }) => {
                             index={groupIdx}
                             showInternalBadge={isGovernment}
                             showOrganizationName={false}
+                            allowPublicVisibility={
+                              c.entityType !== 'penaltyLog'
+                            }
                             searchQuery={filters.search}
                             onEdit={(commentId, comment, visibility) =>
                               editMutation.mutate({

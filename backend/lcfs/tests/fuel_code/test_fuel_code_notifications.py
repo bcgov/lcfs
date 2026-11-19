@@ -84,7 +84,8 @@ def mock_fuel_code():
     fuel_code.notes = None
     fuel_code.deleted = False
     fuel_code.action_type = "CREATE"
-    fuel_code.history_records = []
+    # Created on the legacy fuel code pages, which record history
+    fuel_code.history_records = [MagicMock(fuel_status_id=1)]
     
     # Mock the prefix relationship
     fuel_code.fuel_code_prefix = MagicMock()
@@ -158,6 +159,7 @@ def fuel_code_service_with_notifications():
     """Create FuelCodeServices with mocked dependencies"""
     # Mock repository
     mock_repo = MagicMock(spec=FuelCodeRepository)
+    mock_repo.get_open_ci_application_id = AsyncMock(return_value=None)
     
     # Mock notification service
     mock_notification_service = MagicMock(spec=NotificationService)

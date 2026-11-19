@@ -27,17 +27,21 @@ import { dateFormatter } from '@/utils/formatters'
 import withRole from '@/utils/withRole'
 
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useGetInitiativeAgreement } from '@/hooks/useInitiativeAgreements'
+import {
+  useGetInitiativeAgreement,
+  useInitiativeAgreementDocumentRestoreTargets
+} from '@/hooks/useInitiativeAgreements'
 import { useInitiativeAgreementPageStore } from '@/stores/useInitiativeAgreementPageStore'
 import { DesignatedActionsGrid } from './components/DesignatedActionsGrid'
 import { AddDesignatedAction } from './components/AddDesignatedAction'
 import { AgreementEditForm } from './components/AgreementEditForm'
+import { DeletedItems } from './components/DeletedItems'
 import { DocumentTree } from './components/DocumentTree'
 
 // The shared document machinery keys on this string for initiative agreements.
 const PARENT_TYPE = 'initiativeAgreement'
 
-// The roles the folder API serves; everyone else on this page is a proponent.
+// The roles that organize folders; everyone else on this page is a proponent.
 const DOCUMENT_MANAGER_ROLES = [
   roles.ia_analyst,
   roles.ia_manager,
@@ -49,6 +53,31 @@ const LabelValue = ({ label, value }) => (
     <strong>{label}</strong> {value || '—'}
   </BCTypography>
 )
+
+const DeletedActionRestoreBins = ({ initiativeAgreementId }) => {
+  const { t } = useTranslation(['initiativeAgreement'])
+  const { data: targets = [], isError } =
+    useInitiativeAgreementDocumentRestoreTargets(initiativeAgreementId)
+
+  if (isError) {
+    return (
+      <BCAlert severity="error" data-test="document-restore-targets-error">
+        {t('initiativeAgreement:detail.documentRestoreTargetsError')}
+      </BCAlert>
+    )
+  }
+
+  return targets.map((target) => (
+    <DeletedItems
+      key={target.designatedActionId}
+      parentType="designatedAction"
+      parentID={target.designatedActionId}
+      heading={t('initiativeAgreement:detail.actionDeletedItems', {
+        actionNumber: target.actionNumber
+      })}
+    />
+  ))
+}
 
 const InitiativeAgreementDetailBase = () => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
@@ -65,8 +94,8 @@ const InitiativeAgreementDetailBase = () => {
   } = useGetInitiativeAgreement(initiativeAgreementId)
 
   // IDIR staff get the same folder tree and bin as a designated action
-  // (#5337). The folder API is IDIR-only, so a proponent keeps the flat
-  // list until the BCeID story; it already leaves out binned files.
+  // (#5337). Folder organization is IDIR-only, so a proponent keeps the
+  // flat list until the BCeID story; it already leaves out binned files.
   const { hasAnyRole } = useCurrentUser()
   const managesDocuments = hasAnyRole?.(...DOCUMENT_MANAGER_ROLES) ?? false
   const { data: documents } = useDocuments(PARENT_TYPE, initiativeAgreementId, {
@@ -328,8 +357,15 @@ const InitiativeAgreementDetailBase = () => {
           }}
           parentType={PARENT_TYPE}
           parentID={initiativeAgreementId}
+          deleteToBin
         />
       )}
+
+      <Role roles={[roles.ia_proponent]}>
+        <DeletedActionRestoreBins
+          initiativeAgreementId={initiativeAgreementId}
+        />
+      </Role>
 
       {/* The designated-action grid is the IDIR story (#4896); the
           proponent's view arrives with the BCeID story. */}

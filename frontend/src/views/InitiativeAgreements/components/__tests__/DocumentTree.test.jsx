@@ -41,7 +41,8 @@ vi.mock('@/hooks/useDocumentFolders', () => ({
   useSoftDeleteDocument: () => ({ mutate: mockSoftDelete }),
   useDeletedDocuments: () => ({ data: { documents: [], total: 0 } }),
   useRestoreDocument: () => ({ mutate: vi.fn() }),
-  useRestoreFolder: () => ({ mutate: mockRestoreFolder })
+  useRestoreFolder: () => ({ mutate: mockRestoreFolder }),
+  useHardDeleteDocument: () => ({ mutate: vi.fn() })
 }))
 
 const mockDownload = vi.fn()
@@ -59,6 +60,7 @@ const tree = {
       parentFolderId: null,
       sortOrder: 0,
       isSystem: false,
+      canDelete: false,
       documentCount: 1,
       documents: [
         {
@@ -77,6 +79,7 @@ const tree = {
           parentFolderId: 12,
           sortOrder: 0,
           isSystem: false,
+          canDelete: false,
           documentCount: 0,
           documents: [],
           children: []
@@ -368,34 +371,45 @@ describe('DocumentTree', () => {
     )
   })
 
-  test('asks before sending a folder and its files to the bin', ({
-    render,
-    app
-  }) => {
+  test('only offers deletion for empty folders', ({ render, app }) => {
+    mockTree.mockReturnValue({
+      data: {
+        folders: [
+          tree.folders[0],
+          {
+            folderId: 14,
+            name: 'Empty folder',
+            parentFolderId: null,
+            canDelete: true,
+            documentCount: 0,
+            documents: [],
+            children: []
+          }
+        ],
+        rootDocuments: []
+      },
+      isLoading: false
+    })
     render(<DocumentTree parentType="designatedAction" parentID="9" />, app)
 
     fireEvent.click(screen.getByTestId('folder-menu-12'))
+    expect(screen.queryByTestId('menu-delete')).not.toBeInTheDocument()
+    fireEvent.keyDown(document.activeElement, { key: 'Escape' })
+
+    fireEvent.click(screen.getByTestId('folder-menu-14'))
     fireEvent.click(screen.getByTestId('menu-delete'))
 
-    // Nothing leaves until it is confirmed; the body names the folder and
-    // says how many files go with it. (The translation mock drops
-    // interpolations, so the key is what renders.)
+    // Empty-folder deletion still asks for confirmation.
     expect(mockDelete).not.toHaveBeenCalled()
     expect(screen.getByTestId('confirm-delete-folder-body')).toHaveTextContent(
-      'confirmDeleteFolderBody'
+      'confirmDeleteFolderEmpty'
     )
 
     fireEvent.click(
       screen.getByText('initiativeAgreement:folders.confirmDelete')
     )
 
-    // Cascade, never reparent: the folder and its files go to the bin as
-    // one unit, rather than the files scattering up a level and the
-    // folder being destroyed with no way back.
-    expect(mockDelete).toHaveBeenCalledWith({
-      folderId: 12,
-      strategy: 'cascade'
-    })
+    expect(mockDelete).toHaveBeenCalledWith(14)
   })
 
   test('offers no subfolder option by default — one level, per the PO', ({

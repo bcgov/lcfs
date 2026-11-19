@@ -15,6 +15,7 @@ export interface FeatureFlagsConfig {
   creditMarketLoginPage?: boolean
   publicMarketData?: boolean
   initiativeAgreements?: boolean
+  macroEnabledUploads?: boolean
 }
 
 export interface KeycloakConfig {
@@ -23,6 +24,7 @@ export interface KeycloakConfig {
   AUTH_URL?: string
   POST_LOGOUT_URL?: string
   SM_LOGOUT_URL?: string
+  LOCAL_AUTH?: boolean
 }
 
 export interface LcfsWindowConfig {
@@ -97,7 +99,8 @@ export const FEATURE_FLAGS = {
   DETERMINISTIC_REPORT_SUMMARY: 'deterministicReportSummary',
   CREDIT_MARKET_LOGIN_PAGE: 'creditMarketLoginPage',
   PUBLIC_MARKET_DATA: 'publicMarketData',
-  INITIATIVE_AGREEMENTS: 'initiativeAgreements'
+  INITIATIVE_AGREEMENTS: 'initiativeAgreements',
+  MACRO_ENABLED_UPLOADS: 'macroEnabledUploads'
 } as const
 
 export type FeatureFlagValue =
@@ -129,17 +132,46 @@ const getAnalystReviewAssistantName = (): string => {
   return assistantName?.trim() || 'Fuelbert'
 }
 
-const getKeycloakConfig = (
-  config: KeycloakConfig
-): Required<KeycloakConfig> => ({
-  REALM: config.REALM ?? 'standard',
-  CLIENT_ID: config.CLIENT_ID ?? 'low-carbon-fuel-standard-5147',
-  AUTH_URL: config.AUTH_URL ?? 'https://dev.loginproxy.gov.bc.ca/auth',
-  POST_LOGOUT_URL: config.POST_LOGOUT_URL ?? 'http://localhost:3000/',
-  SM_LOGOUT_URL:
-    config.SM_LOGOUT_URL ??
-    'https://logontest7.gov.bc.ca/clp-cgi/logoff.cgi?retnow=1&returl='
-})
+export const getKeycloakConfig = (
+  config: KeycloakConfig,
+  environment?: {
+    hostname?: string
+    origin?: string
+    viteEnv?: Record<string, string | undefined>
+  }
+): Required<KeycloakConfig> => {
+  const viteEnv =
+    environment?.viteEnv ??
+    (
+      import.meta as ImportMeta & {
+        env?: Record<string, string | undefined>
+      }
+    ).env
+  const hostname = environment?.hostname ?? window.location.hostname
+  const origin = environment?.origin ?? window.location.origin
+  const localAuth =
+    hostname === 'localhost' && viteEnv?.VITE_LOCAL_KEYCLOAK === 'true'
+
+  return {
+    REALM: localAuth
+      ? (viteEnv?.VITE_KEYCLOAK_REALM ?? 'lcfs-local')
+      : (config.REALM ?? 'standard'),
+    CLIENT_ID: localAuth
+      ? (viteEnv?.VITE_KEYCLOAK_CLIENT_ID ?? 'low-carbon-fuel-standard-5147')
+      : (config.CLIENT_ID ?? 'low-carbon-fuel-standard-5147'),
+    AUTH_URL: localAuth
+      ? (viteEnv?.VITE_KEYCLOAK_AUTH_URL ?? 'http://localhost:8180')
+      : (config.AUTH_URL ?? 'https://dev.loginproxy.gov.bc.ca/auth'),
+    POST_LOGOUT_URL: localAuth
+      ? `${origin}/`
+      : (config.POST_LOGOUT_URL ?? 'http://localhost:3000/'),
+    SM_LOGOUT_URL: localAuth
+      ? ''
+      : (config.SM_LOGOUT_URL ??
+        'https://logontest7.gov.bc.ca/clp-cgi/logoff.cgi?retnow=1&returl='),
+    LOCAL_AUTH: localAuth
+  }
+}
 
 export const CONFIG: AppConfig = {
   API_BASE: getApiBaseUrl(),
@@ -184,6 +216,11 @@ export const CONFIG: AppConfig = {
       !isProductionEnvironment,
     creditMarketLoginPage:
       window.lcfs_config.feature_flags.creditMarketLoginPage ?? false,
-    publicMarketData: window.lcfs_config.feature_flags.publicMarketData ?? false
+    publicMarketData:
+      window.lcfs_config.feature_flags.publicMarketData ?? false,
+    // .xlsm uploads on CI applications; must match the backend's
+    // LCFS_FEATURE_MACRO_UPLOADS, so both default off
+    macroEnabledUploads:
+      window.lcfs_config.feature_flags.macroEnabledUploads ?? false
   }
 }

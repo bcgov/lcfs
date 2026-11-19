@@ -191,6 +191,11 @@ class DesignatedActionSchema(BaseSchema):
         from_attributes = True
 
 
+class DesignatedActionDocumentTargetSchema(BaseSchema):
+    designated_action_id: int
+    action_number: int
+
+
 class EvidenceRequirementSchema(BaseSchema):
     evidence_requirement_id: int
     designated_action_id: int
@@ -364,6 +369,10 @@ class InitiativeAgreementListItemSchema(BaseSchema):
     # (#5186).
     organization: Optional[OrganizationSchema] = None
     last_comment: Optional[LastCommentSchema] = None
+    # Calculated from the designated actions by the grid endpoint only; the
+    # profile endpoint leaves them unset.
+    total_credits: Optional[int] = None
+    awarded_credits: Optional[int] = None
 
     class Config:
         from_attributes = True

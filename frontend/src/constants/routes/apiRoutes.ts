@@ -80,6 +80,8 @@ export const apiRoutes = {
   getInitiativeAgreementStatuses: '/initiative-agreements/statuses',
   getInitiativeAgreement:
     '/initiative-agreements/:initiativeAgreementId/profile',
+  getInitiativeAgreementDocumentRestoreTargets:
+    '/initiative-agreements/:initiativeAgreementId/document-restore-targets',
   getInitiativeAgreementAnalysts: '/initiative-agreements/analysts',
   getDesignatedActionsList:
     '/initiative-agreements/:initiativeAgreementId/designated-actions/list',
@@ -108,6 +110,8 @@ export const apiRoutes = {
   documentFolderDeleted: '/document-folders/:parentType/:parentID/deleted',
   documentFolderDeleteDocument:
     '/document-folders/:parentType/:parentID/documents/:documentId',
+  documentFolderHardDeleteDocument:
+    '/document-folders/:parentType/:parentID/documents/:documentId/hard-delete',
   documentFolderRestoreDocument:
     '/document-folders/:parentType/:parentID/documents/:documentId/restore',
   documentFolderRestoreFolder:
@@ -128,10 +132,14 @@ export const apiRoutes = {
   getMyFuelCodes: '/fuel-codes/my-list',
   exportFuelCodes: '/fuel-codes/export',
   fuelCodeBulletins: '/fuel-codes/bulletins',
+  governmentFuelCodeBulletins: '/fuel-codes/government/bulletins',
   exportFuelCodeBulletins: '/fuel-codes/bulletins/export',
+  exportGovernmentFuelCodeBulletins: '/fuel-codes/government/bulletins/export',
 
   // ci-applications (Carbon Intensity)
   ciApplicationOptions: '/ci-applications/table-options',
+  ciApplicationFacilities: '/ci-applications/facilities',
+  createCIApplicationFacility: '/ci-applications/facilities',
   ciApplicationFuelCodeFieldSearch: '/ci-applications/fuel-code-field-search?',
   ciApplicationLocationSearch: '/ci-applications/location-search?',
   getCIApplications: '/ci-applications/list',
@@ -279,6 +287,7 @@ export const apiRoutes = {
   // allocation-agreement
   getAllAllocationAgreements: '/allocation-agreement/list-all',
   getAllocationAgreements: '/allocation-agreement/list',
+  getAllocationAgreementsIndex: '/allocation-agreement/index',
   allocationAgreementOptions: '/allocation-agreement/table-options?',
   saveAllocationAgreements: '/allocation-agreement/save',
   allocationAgreementSearch: '/allocation-agreement/search?',
@@ -292,6 +301,8 @@ export const apiRoutes = {
   getDocuments: '/documents/:parentType/:parentID',
   uploadDocument: '/documents/:parentType/:parentID',
   getDocument: '/documents/:parentType/:parentID/:documentID',
+  reviewDocumentScan:
+    '/documents/:parentType/:parentID/:documentID/scan-review',
 
   // compliance_snapshot
   getOrganizationSnapshot: '/organization_snapshot/:reportID',

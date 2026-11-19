@@ -451,6 +451,45 @@ async def test_save_after_equipment_change_on_the_same_draft_shows(
 
 
 @pytest.mark.anyio
+async def test_unchecking_the_row_saved_last_on_a_draft_excludes_it(
+    dbsession, add_models, report_versions
+):
+    """
+    Unchecking the row saved last deactivates it, so the Draft leaves the
+    equipment out rather than showing an older, still-active row saved before
+    the equipment changed.
+    """
+    organization_id = report_versions.organization_id
+    equipment = report_versions.submitted_equipment
+    original, draft = await _report_group(
+        dbsession,
+        organization_id,
+        "2025",
+        [ComplianceReportStatusEnum.Assessed, ComplianceReportStatusEnum.Draft],
+    )
+    await add_models([original, draft])
+    await add_models(
+        [
+            _selection(equipment, original, 0, 1000.0, 2025),
+            _selection(equipment, draft, 1, 1100.0, 2025),
+        ]
+    )
+    edited_equipment = await _new_equipment_version(add_models, equipment)
+    saved_last = _selection(edited_equipment, draft, 0, 2000.0, 2025)
+    await add_models([saved_last])
+
+    await FinalSupplyEquipmentRepository(db=dbsession).update_reporting_active_status(
+        [saved_last.charging_equipment_compliance_id],
+        False,
+        draft.compliance_report_id,
+    )
+
+    assert await _draft_page_rows(
+        dbsession, organization_id, draft.compliance_report_id
+    ) == ([], 0)
+
+
+@pytest.mark.anyio
 @pytest.mark.parametrize("source", ["base_pref", "vw_fse_base"])
 async def test_rows_have_the_view_columns_in_order(dbsession, report_versions, source):
     """text().columns() matches the declared columns by position."""

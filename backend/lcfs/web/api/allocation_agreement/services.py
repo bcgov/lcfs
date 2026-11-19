@@ -13,6 +13,9 @@ from lcfs.web.api.allocation_agreement.schema import (
     AllocationAgreementListSchema,
     AllocationAgreementTableOptionsSchema,
     AllocationAgreementAllSchema,
+    AllocationAgreementIndexItemSchema,
+    AllocationAgreementIndexRequestSchema,
+    AllocationAgreementIndexResponseSchema,
     AllocationTransactionTypeSchema,
     DeleteAllocationAgreementResponseSchema,
     AllocationAgreementResponseSchema,
@@ -195,6 +198,43 @@ class AllocationAgreementServices:
         return AllocationAgreementAllSchema(
             allocation_agreements=allocation_agreements_response,
             was_edited=was_edited,
+        )
+
+    @service_handler
+    async def get_allocation_agreements_index(
+        self, request: AllocationAgreementIndexRequestSchema
+    ) -> AllocationAgreementIndexResponseSchema:
+        """
+        Allocation agreements from all non-Draft compliance report versions,
+        for the IDIR index page.
+        """
+        pagination = PaginationRequestSchema(
+            page=request.page,
+            size=request.size,
+            sort_orders=request.sort_orders,
+            filters=request.filters,
+        )
+        rows, total_count = await self.repo.get_allocation_agreements_index(
+            pagination, request.organization_id
+        )
+        items = []
+        for row in rows:
+            item = {
+                key: value
+                for key, value in row._mapping.items()
+                if key != "total_count"
+            }
+            item["status"] = item["status"].value
+            items.append(AllocationAgreementIndexItemSchema.model_validate(item))
+
+        return AllocationAgreementIndexResponseSchema(
+            allocation_agreements=items,
+            pagination=PaginationResponseSchema(
+                total=total_count,
+                page=pagination.page,
+                size=pagination.size,
+                total_pages=calculate_total_pages(total_count, pagination.size),
+            ),
         )
 
     @service_handler

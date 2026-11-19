@@ -507,8 +507,7 @@ export const DocumentTree = ({
   // Deleting is reversible — the file goes to the bin — but it still
   // disappears from the tree, so it asks first.
   const [pendingDelete, setPendingDelete] = useState(null)
-  // Deleting a folder sends it and everything in it to the bin as one
-  // restorable unit, so the confirmation says how much is going.
+  // Folder deletion is only offered for empty folders.
   const [pendingFolderDelete, setPendingFolderDelete] = useState(null)
   const [selectedItems, setSelectedItems] = useState([])
   const [expandedItems, setExpandedItems] = useState([])
@@ -1012,13 +1011,7 @@ export const DocumentTree = ({
           title: t('initiativeAgreement:folders.confirmDeleteFolderTitle'),
           primaryButtonText: t('initiativeAgreement:folders.confirmDelete'),
           primaryButtonAction: () => {
-            // Cascade, never reparent: reparent scatters the files up a
-            // level and destroys the folder with no way back, which is
-            // not what "delete" means once a bin exists.
-            deleteFolder({
-              folderId: pendingFolderDelete.folderId,
-              strategy: 'cascade'
-            })
+            deleteFolder(pendingFolderDelete.folderId)
             setPendingFolderDelete(null)
           },
           secondaryButtonText: t('common:cancelBtn'),
@@ -1027,14 +1020,9 @@ export const DocumentTree = ({
               variant="body4"
               data-test="confirm-delete-folder-body"
             >
-              {pendingFolderDelete?.count
-                ? t('initiativeAgreement:folders.confirmDeleteFolderBody', {
-                    name: pendingFolderDelete?.name ?? '',
-                    count: pendingFolderDelete?.count ?? 0
-                  })
-                : t('initiativeAgreement:folders.confirmDeleteFolderEmpty', {
-                    name: pendingFolderDelete?.name ?? ''
-                  })}
+              {t('initiativeAgreement:folders.confirmDeleteFolderEmpty', {
+                name: pendingFolderDelete?.name ?? ''
+              })}
             </BCTypography>
           )
         }}
@@ -1157,22 +1145,28 @@ export const DocumentTree = ({
           </ListItemIcon>
           <ListItemText>{t('initiativeAgreement:folders.rename')}</ListItemText>
         </MenuItem>
-        <MenuItem
-          data-test="menu-delete"
-          onClick={() => {
-            setPendingFolderDelete({
-              folderId: menu.folder.folderId,
-              name: menu.folder.name,
-              count: menu.folder.documentCount ?? 0
-            })
-            closeMenu()
-          }}
-        >
-          <ListItemIcon>
-            <DeleteOutlineIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>{t('initiativeAgreement:folders.delete')}</ListItemText>
-        </MenuItem>
+        {menu?.folder?.canDelete === true &&
+          menu.folder.documentCount === 0 &&
+          !menu.folder.children?.length &&
+          !menu.folder.documents?.length && (
+            <MenuItem
+              data-test="menu-delete"
+              onClick={() => {
+                setPendingFolderDelete({
+                  folderId: menu.folder.folderId,
+                  name: menu.folder.name
+                })
+                closeMenu()
+              }}
+            >
+              <ListItemIcon>
+                <DeleteOutlineIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText>
+                {t('initiativeAgreement:folders.delete')}
+              </ListItemText>
+            </MenuItem>
+          )}
       </Menu>
 
       {/* A rejected upload is not a passing notice — it means a file the

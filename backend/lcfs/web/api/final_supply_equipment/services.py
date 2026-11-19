@@ -26,11 +26,13 @@ from lcfs.web.api.final_supply_equipment.schema import (
     FSEReportingBaseSchema,
     FSEReportingDefaultDates,
     FSEReportingActiveStatusSchema,
+    FSEReportingBatchDeleteSchema,
 )
 from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
 from lcfs.web.api.fuel_code.schema import EndUseTypeSchema, EndUserTypeSchema
 from lcfs.web.api.organizations.repo import OrganizationsRepository
 from lcfs.web.core.decorators import service_handler
+from lcfs.web.core.ownership import ensure_matches, is_government_user
 
 logger = structlog.get_logger(__name__)
 
@@ -41,6 +43,16 @@ class FinalSupplyEquipmentServices:
     # FSE reporting did not exist before this compliance year. Reports for
     # earlier years must not gain or mutate FSE reporting data.
     MIN_FSE_COMPLIANCE_YEAR = 2024
+    # Body fields a reporting row may be created from. The report, its group
+    # and organization, and the equipment version come from the database.
+    REPORTING_CREATE_FIELDS = {
+        "charging_equipment_id",
+        "supply_from_date",
+        "supply_to_date",
+        "kwh_usage",
+        "compliance_notes",
+        "is_active",
+    }
 
     def __init__(
         self,
@@ -159,10 +171,13 @@ class FinalSupplyEquipmentServices:
         """Update an existing final supply equipment"""
 
         existing_fse = await self.repo.get_final_supply_equipment_by_id(
-            fse_data.final_supply_equipment_id
+            fse_data.final_supply_equipment_id, fse_data.compliance_report_id
         )
         if not existing_fse:
-            raise ValueError("final supply equipment not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Final supply equipment not found",
+            )
 
         existing_fse.organization_name = fse_data.organization_name
         existing_fse.kwh_usage = fse_data.kwh_usage
@@ -258,10 +273,12 @@ class FinalSupplyEquipmentServices:
 
     @service_handler
     async def delete_final_supply_equipment(
-        self, final_supply_equipment_id: int
+        self, final_supply_equipment_id: int, compliance_report_id: int
     ) -> str:
-        """Delete a final supply equipment"""
-        return await self.repo.delete_final_supply_equipment(final_supply_equipment_id)
+        """Delete a final supply equipment row of this report"""
+        return await self.repo.delete_final_supply_equipment(
+            final_supply_equipment_id, compliance_report_id
+        )
 
     @service_handler
     async def generate_registration_number(
@@ -397,21 +414,90 @@ class FinalSupplyEquipmentServices:
             )
 
     async def _validate_reporting_record_is_not_decommissioned(
-        self, reporting_id: int
-    ) -> ComplianceReportChargingEquipment:
-        reporting_record = await self.repo.get_reporting_record_by_id(reporting_id)
-        if not reporting_record:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="FSE reporting record not found",
-            )
-
+        self, reporting_record: ComplianceReportChargingEquipment
+    ) -> None:
         compliance_year = await self._get_report_compliance_year(
             reporting_record.compliance_report_id
         )
         await self._validate_equipment_is_not_decommissioned(
             reporting_record.charging_equipment_id, compliance_year
         )
+
+    @staticmethod
+    def _reporting_record_not_found() -> HTTPException:
+        return HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="FSE reporting record not found",
+        )
+
+    @staticmethod
+    def ensure_body_matches_report(
+        compliance_report,
+        compliance_report_id: int | None,
+        organization_id: int | None,
+        compliance_report_group_uuid: str | None = None,
+    ) -> None:
+        """400 when the body names a different report or organization than
+        the report the caller was validated for."""
+        ensure_matches(
+            compliance_report.compliance_report_id,
+            compliance_report_id,
+            field="complianceReportId",
+        )
+        ensure_matches(
+            compliance_report.organization_id,
+            organization_id,
+            field="organizationId",
+        )
+        ensure_matches(
+            compliance_report.compliance_report_group_uuid,
+            compliance_report_group_uuid,
+            field="complianceReportGroupUuid",
+        )
+
+    @staticmethod
+    def _record_in_report_chain(
+        reporting_record: ComplianceReportChargingEquipment, compliance_report
+    ) -> bool:
+        """A record is writable from a report when it is that organization's
+        and belongs to the report or to an earlier version of it (same group);
+        the repo carries an earlier version's record forward as a revision."""
+        if reporting_record.organization_id != compliance_report.organization_id:
+            return False
+        if (
+            reporting_record.compliance_report_id
+            == compliance_report.compliance_report_id
+        ):
+            return True
+        return (
+            reporting_record.compliance_report_group_uuid is not None
+            and reporting_record.compliance_report_group_uuid
+            == compliance_report.compliance_report_group_uuid
+        )
+
+    async def _get_reporting_record_in_report(
+        self, reporting_id: int, compliance_report
+    ) -> ComplianceReportChargingEquipment:
+        reporting_record = await self.repo.get_reporting_record_by_id(reporting_id)
+        if reporting_record is None or not self._record_in_report_chain(
+            reporting_record, compliance_report
+        ):
+            raise self._reporting_record_not_found()
+        return reporting_record
+
+    @service_handler
+    async def get_reporting_record_for_write(
+        self, reporting_id: int, user
+    ) -> ComplianceReportChargingEquipment:
+        """The reporting record, if the caller's organization owns it
+        (government users pass); 404 otherwise."""
+        reporting_record = await self.repo.get_reporting_record_by_id(reporting_id)
+        if reporting_record is None or (
+            not is_government_user(user)
+            and reporting_record.organization_id
+            != getattr(user, "organization_id", None)
+        ):
+            raise self._reporting_record_not_found()
         return reporting_record
 
     @service_handler
@@ -520,7 +606,7 @@ class FinalSupplyEquipmentServices:
             return {"created": 0}
 
         try:
-            await self.create_fse_reporting_batch(reporting_payload)
+            await self.create_fse_reporting_batch(reporting_payload, report)
             return {"created": len(reporting_payload)}
         except Exception as exc:
             # error should not block report creation; log and continue
@@ -605,76 +691,169 @@ class FinalSupplyEquipmentServices:
 
     @service_handler
     async def create_fse_reporting_batch(
-        self, data: List[FSEReportingBaseSchema]
+        self,
+        data: List[FSEReportingBaseSchema] | FSEReportingBaseSchema,
+        compliance_report,
     ) -> dict:
         """
-        Create FSE compliance reporting data
+        Create FSE compliance reporting data for *compliance_report*, the
+        report the caller was validated for. Every row is that report's and
+        organization's, and its equipment must be the organization's.
         """
-        for report_id in {item.compliance_report_id for item in data}:
-            await self._validate_report_supports_fse(report_id)
+        if not isinstance(data, list):
+            data = [data]
+
+        for item in data:
+            self.ensure_body_matches_report(
+                compliance_report,
+                item.compliance_report_id,
+                item.organization_id,
+                item.compliance_report_group_uuid,
+            )
+
+        await self._validate_report_supports_fse(compliance_report.compliance_report_id)
+
+        equipment_owners = await self.repo.get_charging_equipment_owners(
+            [item.charging_equipment_id for item in data]
+        )
+        for item in data:
+            owner = equipment_owners.get(item.charging_equipment_id)
+            if (
+                owner is None
+                or owner.organization_id != compliance_report.organization_id
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Charging equipment not found",
+                )
 
         if data:
             compliance_year = await self._get_report_compliance_year(
-                data[0].compliance_report_id
+                compliance_report.compliance_report_id
             )
             for item in data:
                 await self._validate_equipment_is_not_decommissioned(
                     item.charging_equipment_id, compliance_year
                 )
 
-        # Convert Pydantic schemas to dict format for SQLAlchemy
-        model_data = [item.model_dump() for item in data]
+        model_data = [
+            {
+                **item.model_dump(include=self.REPORTING_CREATE_FIELDS),
+                "charging_equipment_version": equipment_owners[
+                    item.charging_equipment_id
+                ].version,
+                "compliance_report_id": compliance_report.compliance_report_id,
+                "compliance_report_group_uuid": (
+                    compliance_report.compliance_report_group_uuid
+                ),
+                "organization_id": compliance_report.organization_id,
+            }
+            for item in data
+        ]
         return await self.repo.create_fse_reporting_batch(model_data)
 
     @service_handler
     async def update_fse_reporting(
-        self, reporting_id: int, data: FSEReportingBaseSchema
+        self, reporting_id: int, data: FSEReportingBaseSchema, compliance_report
     ) -> dict:
         """
-        Update FSE compliance reporting data
+        Update FSE compliance reporting data from *compliance_report*, the
+        report the caller was validated for. The record must be in that
+        report's chain and organization.
         """
-        reporting_record = await self._validate_reporting_record_is_not_decommissioned(
-            reporting_id
+        self.ensure_body_matches_report(
+            compliance_report,
+            data.compliance_report_id,
+            data.organization_id,
+            data.compliance_report_group_uuid,
         )
+        reporting_record = await self._get_reporting_record_in_report(
+            reporting_id, compliance_report
+        )
+        await self._validate_reporting_record_is_not_decommissioned(reporting_record)
         await self._validate_report_supports_fse(
             reporting_record.compliance_report_id
         )
-        return await self.repo.update_fse_reporting(reporting_id, data.model_dump())
+        update_data = {
+            **data.model_dump(),
+            "compliance_report_id": compliance_report.compliance_report_id,
+            "organization_id": compliance_report.organization_id,
+            "compliance_report_group_uuid": (
+                compliance_report.compliance_report_group_uuid
+            ),
+        }
+        return await self.repo.update_fse_reporting(reporting_id, update_data)
 
     @service_handler
-    async def delete_fse_reporting(self, reporting_id: int) -> None:
+    async def delete_fse_reporting(self, reporting_id: int, compliance_report) -> None:
         """
-        Delete FSE compliance reporting data
+        Delete an FSE compliance reporting record of *compliance_report*
         """
-        await self.repo.delete_fse_reporting(reporting_id)
+        await self.repo.delete_fse_reporting(
+            reporting_id,
+            compliance_report.compliance_report_id,
+            compliance_report.organization_id,
+        )
 
     @service_handler
-    async def delete_fse_reporting_batch(self, reporting_ids: List[int]) -> dict:
+    async def delete_fse_reporting_batch(
+        self, data: FSEReportingBatchDeleteSchema, compliance_report
+    ) -> dict:
         """
-        Delete multiple FSE compliance reporting records
+        Delete FSE compliance reporting records of *compliance_report*. If any
+        ID is not one of its records, nothing is deleted.
         """
-        deleted_count = await self.repo.delete_fse_reporting_batch(reporting_ids)
+        self.ensure_body_matches_report(
+            compliance_report,
+            data.compliance_report_id,
+            data.organization_id,
+            data.compliance_report_group_uuid,
+        )
+        deleted_count = 0
+        if data.reporting_ids:
+            deleted_count = await self.repo.delete_fse_reporting_batch(
+                data.reporting_ids,
+                compliance_report.compliance_report_id,
+                compliance_report.organization_id,
+            )
         return {
             "message": f"{deleted_count} FSE reporting records deleted successfully"
         }
 
     @service_handler
     async def update_fse_reporting_active_status(
-        self, data: FSEReportingActiveStatusSchema
+        self, data: FSEReportingActiveStatusSchema, compliance_report
     ) -> dict:
+        self.ensure_body_matches_report(
+            compliance_report,
+            data.compliance_report_id,
+            data.organization_id,
+            data.compliance_report_group_uuid,
+        )
         if not data.reporting_ids:
             return {"updated": 0, "is_active": data.is_active}
 
-        await self._validate_report_supports_fse(data.compliance_report_id)
+        await self._validate_report_supports_fse(compliance_report.compliance_report_id)
+
+        records = {
+            record.charging_equipment_compliance_id: record
+            for record in await self.repo.get_reporting_records_by_ids(
+                data.reporting_ids
+            )
+        }
+        for reporting_id in set(data.reporting_ids):
+            record = records.get(reporting_id)
+            if record is None or not self._record_in_report_chain(
+                record, compliance_report
+            ):
+                raise self._reporting_record_not_found()
 
         if data.is_active:
-            for reporting_id in data.reporting_ids:
-                await self._validate_reporting_record_is_not_decommissioned(
-                    reporting_id
-                )
+            for record in records.values():
+                await self._validate_reporting_record_is_not_decommissioned(record)
 
         updated_count = await self.repo.update_reporting_active_status(
-            data.reporting_ids, data.is_active, data.compliance_report_id
+            data.reporting_ids, data.is_active, compliance_report.compliance_report_id
         )
         state = "activated" if data.is_active else "deactivated"
         return {

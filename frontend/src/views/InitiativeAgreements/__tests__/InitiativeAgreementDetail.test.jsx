@@ -35,6 +35,13 @@ vi.mock('react-router-dom', async (importOriginal) => {
 const mockAgreement = vi.fn()
 vi.mock('@/hooks/useInitiativeAgreements', () => ({
   useGetInitiativeAgreement: () => mockAgreement(),
+  useInitiativeAgreementDocumentRestoreTargets: () => ({
+    data: [
+      { designatedActionId: 17, actionNumber: 3 },
+      { designatedActionId: 18, actionNumber: 4 }
+    ],
+    isError: false
+  }),
   useUpdateAgreement: () => ({ mutate: vi.fn(), isPending: false })
 }))
 
@@ -63,6 +70,14 @@ vi.mock('../components/AddDesignatedAction', () => ({
     canAdd ? <div data-test="add-designated-action" /> : null
 }))
 
+vi.mock('../components/DeletedItems', () => ({
+  DeletedItems: ({ parentID, heading }) => (
+    <div data-test="deleted-items-for-action" data-parent-id={parentID}>
+      {heading}
+    </div>
+  )
+}))
+
 const daGridProps = vi.fn()
 vi.mock('../components/DesignatedActionsGrid', () => ({
   DesignatedActionsGrid: (props) => {
@@ -72,7 +87,13 @@ vi.mock('../components/DesignatedActionsGrid', () => ({
 }))
 
 vi.mock('@/components/Documents/DocumentUploadDialog', () => ({
-  default: ({ open }) => (open ? <div data-test="upload-dialog" /> : null)
+  default: ({ open, deleteToBin }) =>
+    open ? (
+      <div
+        data-test="upload-dialog"
+        data-delete-to-bin={String(!!deleteToBin)}
+      />
+    ) : null
 }))
 
 const treeProps = vi.fn()
@@ -156,6 +177,30 @@ describe('InitiativeAgreementDetail', () => {
   test('offers document upload to an IA analyst', ({ render, app }) => {
     render(<InitiativeAgreementDetail />, app)
     expect(screen.getByTestId('upload-documents-button')).toBeInTheDocument()
+  })
+
+  test('shows designated-action restore bins to the agreement proponent', ({
+    render,
+    app
+  }) => {
+    mockRoles = [{ name: roles.ia_proponent }]
+    mockAgreement.mockReturnValue({
+      data: {
+        ...agreement
+      },
+      isLoading: false,
+      isError: false,
+      error: null
+    })
+
+    render(<InitiativeAgreementDetail />, app)
+
+    const bins = screen.getAllByTestId('deleted-items-for-action')
+    expect(bins).toHaveLength(2)
+    expect(bins[0]).toHaveAttribute('data-parent-id', '17')
+    expect(bins[0]).toHaveTextContent(
+      'initiativeAgreement:detail.actionDeletedItems'
+    )
   })
 
   test('offers Edit in the card header to analysts, not proponents', ({
@@ -300,13 +345,18 @@ describe('InitiativeAgreementDetail', () => {
     fireEvent.click(screen.getByTestId('upload-documents-button'))
 
     expect(screen.getByTestId('upload-dialog')).toBeInTheDocument()
+    // The shared delete route refuses agreements, so the dialog bins files.
+    expect(screen.getByTestId('upload-dialog')).toHaveAttribute(
+      'data-delete-to-bin',
+      'true'
+    )
   })
 
   test('keeps a BCeID proponent on the flat list, without folders', ({
     render,
     app
   }) => {
-    // The folder API is IDIR-only, like the designated action page.
+    // Folder organization is IDIR-only, like the designated action page.
     mockRoles = [{ name: roles.ia_proponent }]
     render(<InitiativeAgreementDetail />, app)
 

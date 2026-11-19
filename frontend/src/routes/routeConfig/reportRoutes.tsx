@@ -9,6 +9,7 @@ import { AddEditFuelSupplies } from '@/views/FuelSupplies/AddEditFuelSupplies'
 import { AddEditFuelExports } from '@/views/FuelExports/AddEditFuelExports'
 import { ReportsMenu } from '@/views/ComplianceReports/ReportsMenu'
 import { AddEditChargingSite } from '@/views/ChargingSite/AddEditChargingSite'
+import { AllocationAgreementsIndex } from '@/views/AllocationAgreements/AllocationAgreementsIndex'
 import { ChargingSitesList } from '@/views/ChargingSite/ChargingSitesList'
 import { ChargingEquipment as ChargingEquipmentList } from '@/views/ChargingEquipment'
 import { AddEditChargingEquipment } from '@/views/ChargingEquipment/AddEditChargingEquipment'
@@ -25,6 +26,11 @@ export const reportRoutes: AppRouteObject[] = [
     element: <ReportsMenu />,
     handle: { title: 'Compliance reporting' },
     children: [
+      {
+        path: 'allocation-agreements',
+        element: <AllocationAgreementsIndex />,
+        handle: { title: 'Allocation agreements' }
+      },
       {
         path: 'charging-sites',
         element: <ChargingSitesList />,
