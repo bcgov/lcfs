@@ -34,13 +34,15 @@ const toDate = (value: string | null) => {
 
 const fieldId = (key: string) => `lcjfip-purchase-${key}`
 
-// Five fields share the first line on wide screens, as in the mock-up; the
-// price premium range takes the second line.
+// Five fields share the first line on wide screens, at the mock-up's widths
+// (258, 249, 236, 187 and 236 px at full size); the price premium range
+// takes the second line.
 const FIRST_LINE_COLUMNS = {
   xs: 'minmax(0, 1fr)',
   sm: 'repeat(2, minmax(0, 1fr))',
-  lg: 'repeat(5, minmax(0, 1fr))'
+  lg: 'minmax(0, 258fr) minmax(0, 249fr) minmax(0, 236fr) minmax(0, 187fr) minmax(0, 236fr)'
 }
+const FIRST_LINE_MAX_WIDTH = 258 + 249 + 236 + 187 + 236 + 4 * 16
 const SECOND_LINE_COLUMNS = {
   xs: 'minmax(0, 1fr)',
   sm: 'repeat(2, minmax(0, 320px))'
@@ -142,7 +144,7 @@ export const PurchaseDetails = ({
       </BCTypography>
       {!readOnly && <RequiredLegend />}
 
-      <FieldGrid columns={FIRST_LINE_COLUMNS}>
+      <FieldGrid columns={FIRST_LINE_COLUMNS} maxWidth={FIRST_LINE_MAX_WIDTH}>
         <FieldCell
           label={
             <FieldLabel
@@ -196,7 +198,9 @@ export const PurchaseDetails = ({
                     size: 'small',
                     fullWidth: true,
                     error: !!fieldState.error,
-                    helperText: fieldState.error?.message
+                    helperText: fieldState.error?.message,
+                    // The mock-up centres the date in its field.
+                    sx: { '& .MuiInputBase-input': { textAlign: 'center' } }
                   }
                 }}
               />

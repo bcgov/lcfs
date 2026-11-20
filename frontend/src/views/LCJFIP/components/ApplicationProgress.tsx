@@ -9,25 +9,31 @@ const STEP_KEYS = [
   'governmentDecision'
 ] as const
 
-/** Index of the current step; past the last step means all are complete. */
-const activeStepForStatus = (status: string | null | undefined) => {
-  if (!status || status === 'Draft') return 0
+/**
+ * How many steps the application has reached. A reached step shows a check
+ * mark, as in the mock-up, where a draft has reached "Application
+ * information"; the Initiative Agreement steppers mark their steps the same
+ * way.
+ */
+const stepsReachedForStatus = (status: string | null | undefined) => {
+  if (!status || status === 'Draft') return 1
   if (status === 'Submitted') return 2
   return STEP_KEYS.length
 }
 
 export const ApplicationProgress = ({ status }: { status?: string | null }) => {
   const { t } = useTranslation(['lcjfip'])
+  const reached = stepsReachedForStatus(status)
   return (
     <Stepper
-      activeStep={activeStepForStatus(status)}
+      activeStep={reached - 1}
       alternativeLabel
       aria-label={t('lcjfip:steps.label')}
       data-test="lcjfip-progress"
       sx={{ my: 3 }}
     >
-      {STEP_KEYS.map((key) => (
-        <Step key={key}>
+      {STEP_KEYS.map((key, index) => (
+        <Step key={key} completed={index < reached}>
           <StepLabel>{t(`lcjfip:steps.${key}`)}</StepLabel>
         </Step>
       ))}

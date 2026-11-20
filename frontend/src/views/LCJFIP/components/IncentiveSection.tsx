@@ -36,12 +36,20 @@ import {
 } from './fields'
 import { visuallyHidden } from './visuallyHidden'
 
-// Three fields to a line on wide screens, as in the mock-up.
-const THREE_COLUMNS = {
+// Three fields to a line on wide screens, at the mock-up's widths: the
+// incentive fields are 257, 257 and 293 px, the fuel supplier's 248 each.
+const INCENTIVE_COLUMNS = {
+  xs: 'minmax(0, 1fr)',
+  sm: 'repeat(2, minmax(0, 1fr))',
+  md: 'minmax(0, 257fr) minmax(0, 257fr) minmax(0, 293fr)'
+}
+const INCENTIVE_MAX_WIDTH = 257 + 257 + 293 + 2 * 16
+const SUPPLIER_COLUMNS = {
   xs: 'minmax(0, 1fr)',
   sm: 'repeat(2, minmax(0, 1fr))',
   md: 'repeat(3, minmax(0, 1fr))'
 }
+const SUPPLIER_MAX_WIDTH = 3 * 248 + 2 * 16
 
 export type SupplierOrganization = { organizationId: number; name: string }
 
@@ -292,6 +300,8 @@ export const IncentiveSection = ({
               value={field.value === null ? '' : String(field.value)}
               onChange={(event) => field.onChange(Number(event.target.value))}
               onBlur={field.onBlur}
+              // The mock-up indents the options and spaces them 32 px apart.
+              sx={{ pl: 1.5, rowGap: 0.75 }}
             >
               {incentiveOptions.map((o, index) => (
                 <FormControlLabel
@@ -316,7 +326,7 @@ export const IncentiveSection = ({
       />
 
       {!readOnly && <RequiredLegend />}
-      <FieldGrid columns={THREE_COLUMNS} maxWidth={900}>
+      <FieldGrid columns={INCENTIVE_COLUMNS} maxWidth={INCENTIVE_MAX_WIDTH}>
         <ReadOnlyValue
           id="lcjfip-total-estimated-volume"
           label={t('lcjfip:incentive.totalEstimatedVolume')}
@@ -341,6 +351,7 @@ export const IncentiveSection = ({
             id="estimatedCarbonIntensity"
             name="estimatedCarbonIntensity"
             decimalScale={2}
+            fixedDecimalScale
             allowNegative
             disabled={readOnly}
           />
@@ -447,7 +458,7 @@ export const IncentiveSection = ({
           >
             {t('lcjfip:fuelSupplier.heading')}
           </BCTypography>
-          <FieldGrid columns={THREE_COLUMNS} maxWidth={900}>
+          <FieldGrid columns={SUPPLIER_COLUMNS} maxWidth={SUPPLIER_MAX_WIDTH}>
             <FieldCell
               label={
                 <FieldLabel
@@ -507,7 +518,7 @@ export const IncentiveSection = ({
               />
             </FieldCell>
           </FieldGrid>
-          <FieldGrid columns={THREE_COLUMNS} maxWidth={900}>
+          <FieldGrid columns={SUPPLIER_COLUMNS} maxWidth={SUPPLIER_MAX_WIDTH}>
             <TextInput
               name="fuelSupplierContactFirstName"
               label={t('lcjfip:fuelSupplier.firstName')}
