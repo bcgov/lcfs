@@ -57,10 +57,42 @@ export const formatDisbursement = (
   return amount.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' })
 }
 
+/** An empty cell shows a dash, as in the mock-up and elsewhere in the portal. */
+export const EMPTY_CELL = '—'
+
+// The mock-up centres the dates and the disbursement in their cells.
+const CENTRED: Pick<ColDef, 'cellStyle'> = {
+  cellStyle: { textAlign: 'center' }
+}
+
 // When the columns fit, the grid shares the width by flex (each column's
 // minWidth then only applies once the grid scrolls). The portal theme
 // truncates header text rather than wrapping it, so the weights give the
 // longer headers room at desktop widths, and their tooltip names them in full.
+//
+// A supplier's weights are the mock-up's column widths in hundreds of pixels
+// (215, 160, 208, 232, 250 and 304 px at 1440 px wide). The mock-up has no
+// government view; with Organization added, those weights would cut off the
+// Application ID header, so government users get weights that leave every
+// header room.
+const SUPPLIER_FLEX = {
+  status: 2.15,
+  applicationNumber: 1.6,
+  contactName: 2.08,
+  submittedDate: 2.32,
+  incentiveAwardDate: 2.5,
+  authorizedDisbursement: 3.04
+}
+const GOVERNMENT_FLEX = {
+  status: 1.5,
+  applicationNumber: 1.5,
+  organizationName: 1.9,
+  contactName: 1.6,
+  submittedDate: 1.75,
+  incentiveAwardDate: 2,
+  authorizedDisbursement: 2.35
+}
+
 const longHeader = (headerName: string) => ({
   headerName,
   headerTooltip: headerName
@@ -90,13 +122,16 @@ export const lcjfipApplicationColDefs = (
   t: TFunction,
   { isGovernment }: { isGovernment: boolean }
 ): ColDef[] => {
+  const flex: typeof SUPPLIER_FLEX = isGovernment
+    ? GOVERNMENT_FLEX
+    : SUPPLIER_FLEX
   const columns: (ColDef | false)[] = [
     {
       field: 'status',
       headerName: t('lcjfip:index.columns.status'),
       cellRenderer: LCJFIPApplicationStatusRenderer,
       minWidth: 130,
-      flex: 0.85,
+      flex: flex.status,
       floatingFilterComponent: BCSelectFloatingFilter,
       floatingFilterComponentParams: {
         valueKey: 'status',
@@ -109,37 +144,45 @@ export const lcjfipApplicationColDefs = (
       'applicationNumber',
       t('lcjfip:index.columns.applicationNumber'),
       140,
-      0.9
+      flex.applicationNumber
     ),
     isGovernment &&
       textColumn(
         'organizationName',
         t('lcjfip:index.columns.organization'),
         180,
-        1.15
+        GOVERNMENT_FLEX.organizationName
       ),
-    textColumn('contactName', t('lcjfip:index.columns.contact'), 150),
+    textColumn(
+      'contactName',
+      t('lcjfip:index.columns.contact'),
+      150,
+      flex.contactName
+    ),
     {
       field: 'submittedDate',
       headerName: t('lcjfip:index.columns.submittedDate'),
       valueFormatter: (params: RowFormatterParams) =>
-        formatPacificDate(params.value),
+        formatPacificDate(params.value) || EMPTY_CELL,
+      ...CENTRED,
       filter: 'agDateColumnFilter',
       filterParams: DATE_FILTER_PARAMS,
       floatingFilterComponent: BCDateFloatingFilter,
       floatingFilterComponentParams: { initialFilterType: 'equals' },
       suppressFloatingFilterButton: true,
       minWidth: 150,
-      flex: 1
+      flex: flex.submittedDate
     },
     {
       field: 'incentiveAwardDate',
       ...longHeader(t('lcjfip:index.columns.incentiveAwardDate')),
-      valueFormatter: (params: RowFormatterParams) => params.value ?? '',
+      valueFormatter: (params: RowFormatterParams) =>
+        params.value || EMPTY_CELL,
+      ...CENTRED,
       filter: false,
       sortable: false,
       minWidth: 190,
-      flex: 1.25
+      flex: flex.incentiveAwardDate
     },
     {
       field: 'authorizedDisbursement',
@@ -147,12 +190,12 @@ export const lcjfipApplicationColDefs = (
       valueFormatter: (params: RowFormatterParams) =>
         formatDisbursement(params.value, params.data?.incentiveType, (amount) =>
           t('lcjfip:incentive.credits', { amount })
-        ),
-      type: 'numericColumn',
+        ) || EMPTY_CELL,
+      ...CENTRED,
       filter: false,
       sortable: false,
       minWidth: 220,
-      flex: 1.45
+      flex: flex.authorizedDisbursement
     }
   ]
   return columns.filter((column): column is ColDef => !!column)

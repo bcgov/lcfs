@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vite-plus/test'
 
 import {
   defaultSortModel,
+  EMPTY_CELL,
   formatDisbursement,
   formatPacificDate,
   lcjfipApplicationColDefs
@@ -71,8 +72,21 @@ describe('lcjfipApplicationColDefs', () => {
     for (const field of ['incentiveAwardDate', 'authorizedDisbursement']) {
       expect(column(field).filter).toBe(false)
       expect(column(field).sortable).toBe(false)
-      expect(column(field).valueFormatter({ value: null, data: {} })).toBe('')
     }
+  })
+
+  it('shows a dash in empty cells and centres the dates and amount', () => {
+    for (const field of [
+      'submittedDate',
+      'incentiveAwardDate',
+      'authorizedDisbursement'
+    ]) {
+      expect(column(field).valueFormatter({ value: null, data: {} })).toBe(
+        EMPTY_CELL
+      )
+      expect(column(field).cellStyle).toEqual({ textAlign: 'center' })
+    }
+    expect(EMPTY_CELL).toBe('—')
   })
 
   it('shows the disbursement in the unit of the preferred option', () => {
