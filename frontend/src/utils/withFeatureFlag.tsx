@@ -1,9 +1,14 @@
+import type { ComponentType } from 'react'
 import { Navigate } from 'react-router-dom'
-import { isFeatureEnabled } from '@/constants/config'
+import { isFeatureEnabled, type FeatureFlagValue } from '@/constants/config'
 
-export const withFeatureFlag = (WrappedComponent, featureFlag, redirect) => {
-  const WithFeatureFlag = (props) => {
-    const isEnabled = isFeatureEnabled(featureFlag)
+export const withFeatureFlag = <P extends object>(
+  WrappedComponent: ComponentType<P>,
+  featureFlag: FeatureFlagValue | undefined,
+  redirect?: string
+) => {
+  const WithFeatureFlag = (props: P) => {
+    const isEnabled = isFeatureEnabled(featureFlag as FeatureFlagValue)
 
     if (!isEnabled && redirect) {
       return <Navigate to={redirect} />
