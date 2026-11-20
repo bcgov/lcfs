@@ -136,6 +136,13 @@ export const apiRoutes = {
   exportFuelCodeBulletins: '/fuel-codes/bulletins/export',
   exportGovernmentFuelCodeBulletins: '/fuel-codes/government/bulletins/export',
 
+  // lcjfip (Low carbon jet fuel incentive program)
+  lcjfipReferenceData: '/lcjfip/reference-data',
+  lcjfipFuelCodes: '/lcjfip/fuel-codes',
+  lcjfipApplications: '/lcjfip/applications',
+  lcjfipApplication: '/lcjfip/applications/:applicationId',
+  submitLcjfipApplication: '/lcjfip/applications/:applicationId/submit',
+
   // ci-applications (Carbon Intensity)
   ciApplicationOptions: '/ci-applications/table-options',
   ciApplicationFacilities: '/ci-applications/facilities',

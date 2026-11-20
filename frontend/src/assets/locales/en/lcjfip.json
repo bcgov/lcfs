@@ -1,0 +1,129 @@
+{
+  "programEmail": "strategicinvestment.lcfs@gov.bc.ca",
+  "landing": {
+    "applicationsHeading": "Your applications",
+    "newApplication": "New application",
+    "noApplications": "Your organization has not started an LCJFIP application.",
+    "applicationColumn": "Application",
+    "statusColumn": "Status",
+    "lastUpdatedColumn": "Last updated",
+    "submittedColumn": "Submitted",
+    "loadError": "The applications could not be loaded."
+  },
+  "applicationTitle": "Low carbon jet fuel incentive program (LCJFIP) application",
+  "steps": {
+    "label": "Application progress",
+    "applicationInformation": "Application information",
+    "signAndSubmit": "Sign & submit",
+    "governmentDecision": "Government decision"
+  },
+  "eligibilityMessage": "Eligibility cannot be determined until all documentation is submitted. The requested information is used to determine your eligibility for assistance. Failure to submit all documentation requested may result in delays or the closure of your application. Information received may be verified by program staff. Additional documents specific to your situation may be requested throughout the assessment, as eligibility is determined.",
+  "required": "(required)",
+  "requiredLegend": "indicates a required field",
+  "applicant": {
+    "heading": "Applicant and organization information",
+    "addressChangePrefix": "To update address information, email",
+    "addressChangeSubject": "LCJFIP applicant organization address change",
+    "carTypes": "Canadian Aviation Regulations (CAR) type(s)",
+    "certificateType": "Certificate type",
+    "carGuidance": "Canadian Aviation Regulations (CAR) guidance",
+    "operatorListLink": "Canada Operator List Search Tool",
+    "opensInNewTab": "(opens in a new tab)",
+    "select": "Select",
+    "addressChangeSuffix": "and our team will assist you."
+  },
+  "purchase": {
+    "heading": "Low Carbon Jet Fuel (LCJF) Purchase Details",
+    "intro": "At the close of the current application period, program staff will review all submitted applications and issue letters to each eligible applicant detailing the estimated incentive amount, calculated based on overall program demand. After submitting the Delivery Verification Form, the final incentive will be calculated based on verified delivery details.",
+    "estimatedVolume": "Estimated total volume for support (L)",
+    "anticipatedDeliveryDate": "Anticipated delivery completion date",
+    "feedstockSources": "Anticipated feedstock source(s)",
+    "estimatedBlendPercentage": "Estimated blend ratio",
+    "assumedJetAPrice": "Assumed Jet-A price (CAD/L)",
+    "pricePremiumFrom": "Estimated price premium range - From (CAD/L)",
+    "pricePremiumTo": "Estimated price premium range - To (CAD/L)",
+    "premiumHeading": "Estimated Low Carbon Jet Fuel Price Premium (CAD)",
+    "premiumText": "Please provide an estimated Low Carbon Jet Fuel price premium (e.g., $/L above Jet-A), along with the Jet-A price assumed in your calculation. The price premium range must not exceed $0.25 CAD/L. Exact prices are not required, but ranges should reflect market conditions at the time of the planned uplift in B.C.",
+    "blendHelp": "Enter the low carbon jet fuel share of the blend as a percentage. The field shows the blend as LCJF to Jet-A, for example 30:70."
+  },
+  "incentive": {
+    "heading": "Incentive option selection",
+    "ratesTableLabel": "Carbon intensity baseline incentive rates",
+    "ratesHeader": "Carbon intensity baseline incentive rates",
+    "carbonIntensity": "Carbon intensity",
+    "cashOption": "Cash option",
+    "creditOption": "Credit option",
+    "cashRate": "Up to {{rate}} CAD/L",
+    "creditRate": "Up to {{rate}} credits/L",
+    "preferredOption": "Preferred incentive option",
+    "totalEstimatedVolume": "Estimated total volume for support (L)",
+    "totalEstimatedVolumeHelp": "From the purchase details above",
+    "estimatedCarbonIntensity": "Estimated carbon intensity (gCO2e/MJ)",
+    "requestedIncentiveVolume": "Total volume of LCJF incentive requested (L)",
+    "fuelCode": "BC-LCFS fuel code, if known",
+    "fuelCodeNoOptions": "No matching approved fuel code",
+    "fuelCodeHelp": "Selecting a fuel code fills in its carbon intensity.",
+    "estimatedIncentiveAmount": "Estimated incentive amount requested",
+    "estimatedIncentiveAmountHelp": "Volume requested × the maximum rate for the selected option and carbon intensity",
+    "baselineRateHelp": "Without an estimated carbon intensity, the rate for CI greater than 10 gCO2e/MJ applies.",
+    "credits": "{{amount}} credits",
+    "litres": "{{amount}} L",
+    "cad": "{{amount}} CAD"
+  },
+  "fuelSupplier": {
+    "heading": "LCFS credit option - Fuel supplier incentive transfer",
+    "legalName": "Fuel supplier legal name",
+    "legalNameHelp": "Select a supplier registered in the LCFS Portal, or type its legal name.",
+    "firstName": "Fuel supplier contact - First name",
+    "lastName": "Fuel supplier contact - Last name",
+    "email": "Fuel supplier contact email"
+  },
+  "signing": {
+    "heading": "Signing authority declaration",
+    "collectionNotice": "The information requested and disclosed pursuant to this form is collected under the authority of Low Carbon Fuels Act and will be used for the purpose of administering and reporting of the B.C. Low Carbon Jet Fuel Incentive Program. Collection, use and disclosure of personal information are subject to the Freedom of Information and Protection of Privacy Act. Questions about the collection, use and disclosure of this information should be directed to the Low Carbon Fuels Branch:",
+    "declarationAuthority": "I declare that I have the authority to submit this application on behalf of the organization named above and that the information provided in this application is true and accurate to the best of my knowledge. I understand that providing false or misleading information may result in the rejection of my application or withdrawal of the incentive.",
+    "declarationDocumentation": "I acknowledge that I may be required to provide additional documentation during the review process, such as contracts with producers/suppliers, or other relevant information.",
+    "declarationPublicRecognition": "I acknowledge that, in any public announcements regarding the fuel purchase described herein, the Applicant (1) shall recognize the support of the Vancouver Airport Authority and the Province of British Columbia through the British Columbia Low Carbon Jet Fuel Incentive Program, established under the Low Carbon Fuels Act, contingent upon the receipt of an incentive under said program.",
+    "declarationsLabel": "Declarations",
+    "submitHint": "Select all three declarations to submit the application.",
+    "submittedOn": "Submitted on {{date}} by {{name}}."
+  },
+  "actions": {
+    "save": "Save",
+    "submit": "Submit application",
+    "delete": "Delete draft application"
+  },
+  "comments": {
+    "toGovernment": "Comments to the Government of B.C.",
+    "toOrganization": "Comments to the organization",
+    "afterSave": "Save the application to add comments."
+  },
+  "messages": {
+    "saved": "Draft application saved.",
+    "submitted": "Application submitted.",
+    "deleted": "Draft application deleted.",
+    "fixErrors": "Some information is missing or invalid. Review the highlighted fields.",
+    "saveFailed": "The application could not be saved.",
+    "submitFailed": "The application could not be submitted.",
+    "deleteFailed": "The draft application could not be deleted.",
+    "loadFailed": "The application could not be loaded.",
+    "deleteConfirmTitle": "Delete draft application",
+    "deleteConfirmText": "Delete this draft application, its purchase details and its comments? This cannot be undone.",
+    "readOnly": "This application has been submitted and can no longer be edited."
+  },
+  "validation": {
+    "required": "This field is required.",
+    "number": "Enter a number.",
+    "nonNegative": "Enter a value of 0 or more.",
+    "positive": "Enter a value greater than 0.",
+    "blendRange": "Enter a percentage from 0 to 100.",
+    "date": "Enter a date as YYYY-MM-DD.",
+    "email": "Enter a valid email address.",
+    "premiumOrder": "The 'From' value must not be greater than 'To'.",
+    "premiumRange": "The price premium range must not exceed $0.25 CAD/L.",
+    "requestedExceedsTotal": "The volume requested must not exceed the estimated total volume for support.",
+    "purchaseRequired": "Enter the LCJF purchase details.",
+    "incentiveOption": "Select a preferred incentive option.",
+    "declarations": "Select all of the declarations."
+  }
+}
