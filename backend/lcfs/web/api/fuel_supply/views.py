@@ -115,6 +115,7 @@ async def save_fuel_supply_row(
     compliance_report = await report_validate.validate_organization_access(
         compliance_report_id
     )
+    await report_validate.validate_compliance_report_access(compliance_report)
     await report_validate.validate_compliance_report_editable(compliance_report)
 
     if request_data.deleted:

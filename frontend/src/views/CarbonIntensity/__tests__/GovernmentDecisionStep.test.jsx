@@ -1003,7 +1003,7 @@ describe('GovernmentDecisionStep', () => {
   }) => {
     mockUserRoles = [{ name: roles.analyst }]
     const onSupplierRequest = vi.fn()
-    render(
+    const { rerender } = render(
       <GovernmentDecisionStep
         ciApplication={baseCi}
         isGovernment={true}
@@ -1023,6 +1023,27 @@ describe('GovernmentDecisionStep', () => {
     )
     expect(onSupplierRequest).toHaveBeenCalledWith('documentation')
     expect(screen.getByTestId('ci-request-documentation-btn')).toBeDisabled()
+
+    rerender(
+      <GovernmentDecisionStep
+        ciApplication={{ ...baseCi, documentUploadEnabled: true }}
+        isGovernment={true}
+        onSupplierRequest={onSupplierRequest}
+      />
+    )
+    rerender(
+      <GovernmentDecisionStep
+        ciApplication={{ ...baseCi, documentUploadEnabled: false }}
+        isGovernment={true}
+        onSupplierRequest={onSupplierRequest}
+      />
+    )
+
+    await waitFor(() =>
+      expect(
+        screen.getByTestId('ci-request-documentation-btn')
+      ).not.toBeDisabled()
+    )
   })
 
   test('persists the latest assessment before requesting documentation', async ({

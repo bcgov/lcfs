@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from types import SimpleNamespace
 
 from unittest.mock import MagicMock, AsyncMock
 
@@ -10,6 +11,9 @@ from lcfs.db.models.compliance import FinalSupplyEquipment
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.final_supply_equipment.schema import (
+    FSEReportingActiveStatusSchema,
+    FSEReportingBaseSchema,
+    FSEReportingBatchDeleteSchema,
     LevelOfEquipmentSchema,
     FinalSupplyEquipmentsSchema,
 )
@@ -76,6 +80,50 @@ def service(mock_request, mock_repo, mock_comp_report_repo, mock_org_repo):
         compliance_report_repo=mock_comp_report_repo,
         organization_repo=mock_org_repo,
     )
+
+
+# The report a reporting write was validated for, and its records.
+REPORT = SimpleNamespace(
+    compliance_report_id=10, organization_id=1, compliance_report_group_uuid="group-10"
+)
+
+
+def _reporting_item(**overrides) -> FSEReportingBaseSchema:
+    values = {
+        "charging_equipment_id": 1,
+        "charging_equipment_version": 0,
+        "organization_id": REPORT.organization_id,
+        "compliance_report_id": REPORT.compliance_report_id,
+        "compliance_report_group_uuid": REPORT.compliance_report_group_uuid,
+        "supply_from_date": date(2024, 1, 1),
+        "supply_to_date": date(2024, 12, 31),
+        "kwh_usage": 0,
+    }
+    values.update(overrides)
+    return FSEReportingBaseSchema(**values)
+
+
+def _owners(*equipment_ids, organization_id=REPORT.organization_id, version=2):
+    return {
+        equipment_id: SimpleNamespace(
+            charging_equipment_id=equipment_id,
+            organization_id=organization_id,
+            version=version,
+        )
+        for equipment_id in equipment_ids
+    }
+
+
+def _reporting_record(record_id=1, **overrides):
+    values = {
+        "charging_equipment_compliance_id": record_id,
+        "charging_equipment_id": 1,
+        "compliance_report_id": REPORT.compliance_report_id,
+        "compliance_report_group_uuid": REPORT.compliance_report_group_uuid,
+        "organization_id": REPORT.organization_id,
+    }
+    values.update(overrides)
+    return MagicMock(**values)
 
 
 @pytest.fixture(autouse=True)
@@ -231,7 +279,8 @@ async def test_update_final_supply_equipment_success(
         valid_final_supply_equipment_create_schema
     )
     assert updated_fse is not None
-    mock_repo.get_final_supply_equipment_by_id.assert_awaited_once_with(1)
+    # Looked up within the report the request was validated for.
+    mock_repo.get_final_supply_equipment_by_id.assert_awaited_once_with(1, 123)
     mock_repo.update_final_supply_equipment.assert_awaited_once()
 
 
@@ -240,14 +289,16 @@ async def test_update_final_supply_equipment_not_found(
     service, mock_repo, valid_final_supply_equipment_create_schema
 ):
     """
-    Test updating an FSE that does not exist raises ValueError.
+    Updating an FSE row that is not in the report is a 404.
     """
     mock_repo.get_final_supply_equipment_by_id.return_value = None
 
-    with pytest.raises(ValueError, match="final supply equipment not found"):
+    with pytest.raises(HTTPException) as exc_info:
         await service.update_final_supply_equipment(
             valid_final_supply_equipment_create_schema
         )
+    assert exc_info.value.status_code == 404
+    mock_repo.update_final_supply_equipment.assert_not_awaited()
 
 
 @pytest.mark.anyio
@@ -284,9 +335,9 @@ async def test_delete_final_supply_equipment_success(service, mock_repo):
     Test successful deletion of an FSE.
     """
     mock_repo.delete_final_supply_equipment.return_value = "Deleted"
-    result = await service.delete_final_supply_equipment(999)
+    result = await service.delete_final_supply_equipment(999, 123)
     assert result == "Deleted"
-    mock_repo.delete_final_supply_equipment.assert_awaited_once_with(999)
+    mock_repo.delete_final_supply_equipment.assert_awaited_once_with(999, 123)
 
 
 @pytest.mark.anyio
@@ -415,12 +466,10 @@ async def test_create_fse_reporting_batch_rejected_for_legacy_year(
     legacy_report.compliance_period = MagicMock(description="2023")
     mock_comp_report_repo.get_compliance_report_by_id.return_value = legacy_report
 
-    item = MagicMock()
-    item.compliance_report_id = 42
-    item.charging_equipment_id = 7
-
     with pytest.raises(HTTPException) as exc_info:
-        await service.create_fse_reporting_batch([item])
+        await service.create_fse_reporting_batch(
+            [_reporting_item(charging_equipment_id=7)], REPORT
+        )
 
     assert exc_info.value.status_code == 400
     assert "before 2024" in exc_info.value.detail
@@ -567,24 +616,105 @@ async def test_get_fse_reporting_list_paginated_does_not_refresh_decommissioned_
 
 @pytest.mark.anyio
 async def test_create_fse_reporting_batch_success(service, mock_repo):
-    """Test successful creation of FSE reporting batch"""
+    """Rows take the report, group, organization and equipment version from
+    the database, not the body."""
     mock_repo.create_fse_reporting_batch.return_value = {"message": "Success"}
+    mock_repo.get_charging_equipment_owners.return_value = _owners(1, version=2)
 
     data = [
-        MagicMock(
-            model_dump=lambda: {
-                "charging_equipment_id": 1,
-                "compliance_report_id": 10,
-                "supply_from_date": "2024-01-01",
-                "supply_to_date": "2024-12-31",
-            }
+        _reporting_item(
+            charging_equipment_version=9, charging_equipment_compliance_id=555
         )
     ]
 
-    result = await service.create_fse_reporting_batch(data)
+    result = await service.create_fse_reporting_batch(data, REPORT)
 
     assert result["message"] == "Success"
-    mock_repo.create_fse_reporting_batch.assert_awaited_once()
+    (rows,) = mock_repo.create_fse_reporting_batch.await_args.args
+    assert rows == [
+        {
+            "charging_equipment_id": 1,
+            "supply_from_date": date(2024, 1, 1),
+            "supply_to_date": date(2024, 12, 31),
+            "kwh_usage": 0,
+            "compliance_notes": None,
+            "is_active": True,
+            "charging_equipment_version": 2,
+            "compliance_report_id": 10,
+            "compliance_report_group_uuid": "group-10",
+            "organization_id": 1,
+        }
+    ]
+
+
+@pytest.mark.anyio
+async def test_create_fse_reporting_batch_rejects_other_org_equipment(
+    service, mock_repo
+):
+    mock_repo.get_charging_equipment_owners.return_value = _owners(1, organization_id=2)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service.create_fse_reporting_batch([_reporting_item()], REPORT)
+
+    assert exc_info.value.status_code == 404
+    mock_repo.create_fse_reporting_batch.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_create_fse_reporting_batch_rejects_unknown_equipment(service, mock_repo):
+    mock_repo.get_charging_equipment_owners.return_value = {}
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service.create_fse_reporting_batch([_reporting_item()], REPORT)
+
+    assert exc_info.value.status_code == 404
+    mock_repo.create_fse_reporting_batch.assert_not_awaited()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "override",
+    [
+        {"compliance_report_id": 11},
+        {"organization_id": 2},
+        {"compliance_report_group_uuid": "other-group"},
+    ],
+)
+async def test_create_fse_reporting_batch_rejects_body_naming_another_report(
+    service, mock_repo, override
+):
+    mock_repo.get_charging_equipment_owners.return_value = _owners(1)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service.create_fse_reporting_batch([_reporting_item(**override)], REPORT)
+
+    assert exc_info.value.status_code == 400
+    mock_repo.create_fse_reporting_batch.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_copy_fse_to_new_report_creates_rows_for_the_new_report(
+    service, mock_repo
+):
+    """The new-version copy goes through the same scoped create."""
+    report = MagicMock(spec=ComplianceReport)
+    report.compliance_report_id = 42
+    report.organization_id = 1
+    report.compliance_report_group_uuid = "group-42"
+    report.compliance_period = MagicMock(description="2025")
+    mock_repo.get_latest_active_equipments.return_value = [
+        SimpleNamespace(charging_equipment_id=5, charging_equipment_version=3)
+    ]
+    mock_repo.get_charging_equipment_owners.return_value = _owners(5, version=3)
+
+    result = await service.copy_fse_to_new_report(report)
+
+    assert result == {"created": 1}
+    (rows,) = mock_repo.create_fse_reporting_batch.await_args.args
+    assert rows[0]["compliance_report_id"] == 42
+    assert rows[0]["compliance_report_group_uuid"] == "group-42"
+    assert rows[0]["organization_id"] == 1
+    assert rows[0]["charging_equipment_version"] == 3
 
 
 @pytest.mark.anyio
@@ -598,21 +728,11 @@ async def test_create_fse_reporting_batch_rejects_decommissioned_equipment(
         datetime(2023, 5, 1),
     )
 
-    data = [
-        MagicMock(
-            charging_equipment_id=99,
-            compliance_report_id=10,
-            model_dump=lambda: {
-                "charging_equipment_id": 99,
-                "compliance_report_id": 10,
-                "supply_from_date": "2024-01-01",
-                "supply_to_date": "2024-12-31",
-            },
-        )
-    ]
+    mock_repo.get_charging_equipment_owners.return_value = _owners(99)
+    data = [_reporting_item(charging_equipment_id=99)]
 
     with pytest.raises(HTTPException) as exc_info:
-        await service.create_fse_reporting_batch(data)
+        await service.create_fse_reporting_batch(data, REPORT)
 
     assert exc_info.value.status_code == 400
     assert "Decommissioned FSE" in exc_info.value.detail
@@ -631,21 +751,10 @@ async def test_create_fse_reporting_batch_allows_post_period_decommissioned_equi
         datetime(2025, 3, 1),
     )
     mock_repo.create_fse_reporting_batch.return_value = {"message": "Success"}
+    mock_repo.get_charging_equipment_owners.return_value = _owners(99)
+    data = [_reporting_item(charging_equipment_id=99)]
 
-    data = [
-        MagicMock(
-            charging_equipment_id=99,
-            compliance_report_id=10,
-            model_dump=lambda: {
-                "charging_equipment_id": 99,
-                "compliance_report_id": 10,
-                "supply_from_date": "2024-01-01",
-                "supply_to_date": "2024-12-31",
-            },
-        )
-    ]
-
-    result = await service.create_fse_reporting_batch(data)
+    result = await service.create_fse_reporting_batch(data, REPORT)
 
     assert result["message"] == "Success"
     mock_repo.create_fse_reporting_batch.assert_awaited_once()
@@ -654,17 +763,90 @@ async def test_create_fse_reporting_batch_allows_post_period_decommissioned_equi
 @pytest.mark.anyio
 async def test_update_fse_reporting_success(service, mock_repo):
     """Test successful update of FSE reporting"""
-    mock_repo.get_reporting_record_by_id.return_value = MagicMock(
-        charging_equipment_id=1, compliance_report_id=10
-    )
+    mock_repo.get_reporting_record_by_id.return_value = _reporting_record()
     mock_repo.update_fse_reporting.return_value = {"id": 1, "kwh_usage": 1500.0}
 
-    data = MagicMock(model_dump=lambda: {"kwh_usage": 1500.0})
-    result = await service.update_fse_reporting(1, data)
+    data = _reporting_item(kwh_usage=1500.0)
+    result = await service.update_fse_reporting(1, data, REPORT)
 
     assert result["id"] == 1
     assert result["kwh_usage"] == 1500.0
-    mock_repo.update_fse_reporting.assert_awaited_once_with(1, {"kwh_usage": 1500.0})
+    reporting_id, update_data = mock_repo.update_fse_reporting.await_args.args
+    assert reporting_id == 1
+    assert update_data["kwh_usage"] == 1500.0
+    assert update_data["compliance_report_id"] == REPORT.compliance_report_id
+    assert update_data["organization_id"] == REPORT.organization_id
+
+
+@pytest.mark.anyio
+async def test_update_fse_reporting_carries_earlier_version_record_forward(
+    service, mock_repo
+):
+    """A record of an earlier version of the report (same group) may be
+    edited from the current version; the repo writes it as a revision."""
+    mock_repo.get_reporting_record_by_id.return_value = _reporting_record(
+        compliance_report_id=9
+    )
+    mock_repo.update_fse_reporting.return_value = {"id": 2}
+
+    await service.update_fse_reporting(1, _reporting_item(), REPORT)
+
+    mock_repo.update_fse_reporting.assert_awaited_once()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "record",
+    [
+        None,
+        _reporting_record(organization_id=2),
+        _reporting_record(compliance_report_id=99, compliance_report_group_uuid="g"),
+    ],
+    ids=["missing", "other-organization", "other-report"],
+)
+async def test_update_fse_reporting_outside_report_is_404(service, mock_repo, record):
+    mock_repo.get_reporting_record_by_id.return_value = record
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service.update_fse_reporting(1, _reporting_item(), REPORT)
+
+    assert exc_info.value.status_code == 404
+    mock_repo.update_fse_reporting.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_update_fse_reporting_rejects_body_organization(service, mock_repo):
+    mock_repo.get_reporting_record_by_id.return_value = _reporting_record()
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service.update_fse_reporting(
+            1, _reporting_item(organization_id=2), REPORT
+        )
+
+    assert exc_info.value.status_code == 400
+    mock_repo.update_fse_reporting.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_get_reporting_record_for_write_other_org_is_404(service, mock_repo):
+    mock_repo.get_reporting_record_by_id.return_value = _reporting_record(
+        organization_id=2
+    )
+    user = MagicMock(organization_id=1, role_names=[RoleEnum.SUPPLIER])
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service.get_reporting_record_for_write(1, user)
+
+    assert exc_info.value.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_get_reporting_record_for_write_government_passes(service, mock_repo):
+    record = _reporting_record(organization_id=2)
+    mock_repo.get_reporting_record_by_id.return_value = record
+    user = MagicMock(organization_id=None, role_names=[RoleEnum.GOVERNMENT])
+
+    assert await service.get_reporting_record_for_write(1, user) is record
 
 
 @pytest.mark.anyio
@@ -672,9 +854,9 @@ async def test_delete_fse_reporting_success(service, mock_repo):
     """Test successful deletion of FSE reporting"""
     mock_repo.delete_fse_reporting.return_value = None
 
-    await service.delete_fse_reporting(1)
+    await service.delete_fse_reporting(1, REPORT)
 
-    mock_repo.delete_fse_reporting.assert_awaited_once_with(1)
+    mock_repo.delete_fse_reporting.assert_awaited_once_with(1, 10, 1)
 
 
 @pytest.mark.anyio
@@ -682,23 +864,44 @@ async def test_delete_fse_reporting_batch_success(service, mock_repo):
     """Test successful batch deletion of FSE reporting"""
     mock_repo.delete_fse_reporting_batch.return_value = 2
 
-    result = await service.delete_fse_reporting_batch([1, 2])
+    data = FSEReportingBatchDeleteSchema(
+        reporting_ids=[1, 2], compliance_report_id=10, organization_id=1
+    )
+    result = await service.delete_fse_reporting_batch(data, REPORT)
 
     assert "message" in result
     assert "2 FSE reporting records deleted successfully" in result["message"]
-    mock_repo.delete_fse_reporting_batch.assert_awaited_once_with([1, 2])
+    mock_repo.delete_fse_reporting_batch.assert_awaited_once_with([1, 2], 10, 1)
+
+
+@pytest.mark.anyio
+async def test_delete_fse_reporting_batch_rejects_body_organization(service, mock_repo):
+    data = FSEReportingBatchDeleteSchema(
+        reporting_ids=[1, 2], compliance_report_id=10, organization_id=2
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service.delete_fse_reporting_batch(data, REPORT)
+
+    assert exc_info.value.status_code == 400
+    mock_repo.delete_fse_reporting_batch.assert_not_awaited()
 
 
 @pytest.mark.anyio
 async def test_update_fse_reporting_active_status(service, mock_repo):
     """Test toggling FSE reporting active status"""
-    mock_repo.get_reporting_record_by_id.return_value = MagicMock(
-        charging_equipment_id=1, compliance_report_id=10
-    )
+    mock_repo.get_reporting_records_by_ids.return_value = [
+        _reporting_record(record_id) for record_id in (1, 2, 3)
+    ]
     mock_repo.update_reporting_active_status.return_value = 3
 
-    data = MagicMock(reporting_ids=[1, 2, 3], is_active=False, compliance_report_id=10)
-    result = await service.update_fse_reporting_active_status(data)
+    data = FSEReportingActiveStatusSchema(
+        reporting_ids=[1, 2, 3],
+        is_active=False,
+        compliance_report_id=10,
+        organization_id=1,
+    )
+    result = await service.update_fse_reporting_active_status(data, REPORT)
 
     assert result["updated"] == 3
     assert result["is_active"] is False
@@ -712,22 +915,63 @@ async def test_update_fse_reporting_active_status(service, mock_repo):
 async def test_update_fse_reporting_active_status_rejects_activating_decommissioned(
     service, mock_repo
 ):
-    mock_repo.get_reporting_record_by_id.return_value = MagicMock(
-        charging_equipment_id=1, compliance_report_id=10
-    )
+    mock_repo.get_reporting_records_by_ids.return_value = [_reporting_record()]
     # Decommissioned in 2023, report is for the 2024 period -> reject activation.
     mock_repo.get_latest_equipment_status_with_date.return_value = (
         "Decommissioned",
         datetime(2023, 5, 1),
     )
 
-    data = MagicMock(reporting_ids=[1], is_active=True)
+    data = FSEReportingActiveStatusSchema(
+        reporting_ids=[1], is_active=True, compliance_report_id=10, organization_id=1
+    )
 
     with pytest.raises(HTTPException) as exc_info:
-        await service.update_fse_reporting_active_status(data)
+        await service.update_fse_reporting_active_status(data, REPORT)
 
     assert exc_info.value.status_code == 400
     assert "Decommissioned FSE" in exc_info.value.detail
+    mock_repo.update_reporting_active_status.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_update_fse_reporting_active_status_with_other_org_record_is_404(
+    service, mock_repo
+):
+    mock_repo.get_reporting_records_by_ids.return_value = [
+        _reporting_record(1),
+        _reporting_record(2, organization_id=2),
+    ]
+    data = FSEReportingActiveStatusSchema(
+        reporting_ids=[1, 2],
+        is_active=False,
+        compliance_report_id=10,
+        organization_id=1,
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service.update_fse_reporting_active_status(data, REPORT)
+
+    assert exc_info.value.status_code == 404
+    mock_repo.update_reporting_active_status.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_update_fse_reporting_active_status_with_unknown_record_is_404(
+    service, mock_repo
+):
+    mock_repo.get_reporting_records_by_ids.return_value = [_reporting_record(1)]
+    data = FSEReportingActiveStatusSchema(
+        reporting_ids=[1, 404],
+        is_active=False,
+        compliance_report_id=10,
+        organization_id=1,
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service.update_fse_reporting_active_status(data, REPORT)
+
+    assert exc_info.value.status_code == 404
     mock_repo.update_reporting_active_status.assert_not_awaited()
 
 

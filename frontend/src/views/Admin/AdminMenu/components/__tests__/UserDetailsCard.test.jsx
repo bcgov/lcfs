@@ -2,6 +2,7 @@ import React from 'react'
 import { vi, describe, expect, beforeEach } from 'vite-plus/test'
 import { screen, fireEvent, waitFor } from '@testing-library/react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import * as useUserHook from '@/hooks/useUser.js'
 import * as useCurrentUserHook from '@/hooks/useCurrentUser.js'
 import * as useOrganizationHook from '@/hooks/useOrganization.js'
@@ -88,7 +89,7 @@ vi.mock('@/components/Role', () => ({
 }))
 
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  BCGridViewer: (props) => (
+  BCGridViewer: vi.fn((props) => (
     <div
       data-test="bc-grid-container"
       data-grid-key={props.gridKey}
@@ -96,7 +97,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
     >
       Mocked DataGrid
     </div>
-  )
+  ))
 }))
 
 vi.mock('@/components/BCAlert', () => ({
@@ -687,6 +688,26 @@ describe('UserDetailsCard Component', () => {
 
       expect(getByDataTest('bc-grid-container')).toBeInTheDocument()
       expect(screen.getByText('admin:UserActivity')).toBeInTheDocument()
+
+      const gridProps = BCGridViewer.mock.calls.at(-1)[0]
+      const submittedRowId = gridProps.getRowId({
+        data: {
+          transactionType: 'ComplianceReport',
+          transactionId: 5521,
+          actionTaken: 'Submitted'
+        }
+      })
+      const adjustmentRowId = gridProps.getRowId({
+        data: {
+          transactionType: 'ComplianceReport',
+          transactionId: 5521,
+          actionTaken: 'Analyst adjustment'
+        }
+      })
+
+      expect(submittedRowId).toBe('compliancereport-5521-submitted')
+      expect(adjustmentRowId).toBe('compliancereport-5521-analyst adjustment')
+      expect(adjustmentRowId).not.toBe(submittedRowId)
     })
 
     test('does not show user activity grid in add mode', ({

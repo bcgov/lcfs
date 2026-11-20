@@ -25,6 +25,8 @@ ORG_ROLE_SET: set[RoleEnum] = {
     RoleEnum.CI_APPLICANT,
     RoleEnum.IA_PROPONENT,
     RoleEnum.IA_SIGNER,
+    RoleEnum.LCJFIP_APPLICANT,
+    RoleEnum.LCJFIP_ADMINISTRATOR,
 }
 
 # Roles an analyst can enable/disable per organization (#4565). Stored in
@@ -34,6 +36,15 @@ ORG_CONTROLLABLE_ROLES: set[RoleEnum] = {
     RoleEnum.COMPLIANCE_REPORTING,
     RoleEnum.CI_APPLICANT,
     RoleEnum.IA_PROPONENT,
+    RoleEnum.LCJFIP_APPLICANT,
+}
+
+# Government-assigned BCeID roles that are never stored in
+# organization_available_role; each is allowed exactly when its parent
+# controllable role is available to the organization.
+DEPENDENT_ORG_ROLES: dict[RoleEnum, RoleEnum] = {
+    RoleEnum.IA_PROPONENT: RoleEnum.IA_SIGNER,
+    RoleEnum.LCJFIP_APPLICANT: RoleEnum.LCJFIP_ADMINISTRATOR,
 }
 
 ALWAYS_AVAILABLE_ORG_ROLES: set[RoleEnum] = {
@@ -47,12 +58,13 @@ ALWAYS_AVAILABLE_ORG_ROLES: set[RoleEnum] = {
 def allowed_roles_for_org(available_roles: set[RoleEnum]) -> set[RoleEnum]:
     """Roles assignable to an organization's BCeID users.
 
-    IA Signer is never directly toggleable: it is allowed exactly when
-    IA Proponent is available to the organization.
+    Dependent roles (IA Signer, LCJFIP Administrator) are never directly
+    toggleable: each is allowed exactly when its parent role is available.
     """
     allowed = ALWAYS_AVAILABLE_ORG_ROLES | (available_roles & ORG_CONTROLLABLE_ROLES)
-    if RoleEnum.IA_PROPONENT in allowed:
-        allowed.add(RoleEnum.IA_SIGNER)
+    for parent, dependent in DEPENDENT_ORG_ROLES.items():
+        if parent in allowed:
+            allowed.add(dependent)
     return allowed
 
 

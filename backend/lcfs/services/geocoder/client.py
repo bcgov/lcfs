@@ -22,6 +22,19 @@ from redis.asyncio import Redis
 logger = logging.getLogger(__name__)
 
 
+def _describe_error(error: Exception) -> str:
+    """Describe a lookup error for the logs without the request URL.
+
+    httpx errors carry the request, and an HTTPStatusError's message includes
+    the full URL: the address being looked up and the API key.
+    """
+    if isinstance(error, httpx.HTTPStatusError):
+        return f"HTTP {error.response.status_code}"
+    if isinstance(error, httpx.HTTPError):
+        return type(error).__name__
+    return f"{type(error).__name__}: {error}"
+
+
 @dataclass
 class Address:
     """Standardized address representation."""
@@ -136,7 +149,7 @@ class BCGeocoderService:
         cached_result = await self._cache.get(cache_key)
         if cached_result is not None:
             self._metrics["cache_hits"] += 1
-            logger.debug(f"Cache hit for address validation: {address_string[:50]}...")
+            logger.debug("Cache hit for address validation")
             return cached_result
 
         self._metrics["requests_made"] += 1
@@ -163,19 +176,19 @@ class BCGeocoderService:
         url = f"{self.bc_geocoder_url}/addresses.json"
         
         try:
-            logger.debug(f"Validating address: {address_string[:50]}... (score>={min_score})")
+            logger.debug(f"Validating address (score>={min_score})")
             result = await self._make_request(url, params)
             addresses = self._parse_bc_geocoder_response(result)
             
             # Cache successful results
             if addresses:
                 await self._cache.set(cache_key, addresses)
-                logger.debug(f"Cached {len(addresses)} addresses for: {address_string[:50]}...")
+                logger.debug(f"Cached {len(addresses)} validated addresses")
             
             return addresses
         except Exception as e:
             self._metrics["api_errors"] += 1
-            logger.error(f"Address validation failed for '{address_string}': {e}")
+            logger.error(f"Address validation failed: {_describe_error(e)}")
             return []
 
     async def forward_geocode(
@@ -217,7 +230,7 @@ class BCGeocoderService:
                 await self._cache.set(cache_key, result)
                 return result
             except Exception as e:
-                logger.warning(f"Nominatim fallback failed for '{address_string}': {e}")
+                logger.warning(f"Nominatim fallback failed: {_describe_error(e)}")
 
         result = GeocodingResult(
             success=False,
@@ -255,7 +268,7 @@ class BCGeocoderService:
             await self._cache.set(cache_key, result)
             return result
         except Exception as e:
-            logger.error(f"Reverse geocoding failed: {e}")
+            logger.error(f"Reverse geocoding failed: {_describe_error(e)}")
             result = GeocodingResult(
                 success=False,
                 error=f"Reverse geocoding failed: {e}"
@@ -467,7 +480,7 @@ class BCGeocoderService:
             addresses = self._parse_bc_geocoder_response(raw)
         except Exception as e:
             self._metrics["api_errors"] += 1
-            logger.error("BC Geocoder city search failed: %s", e)
+            logger.error("BC Geocoder city search failed: %s", _describe_error(e))
             return []
 
         seen_cities: set = set()
@@ -524,7 +537,7 @@ class BCGeocoderService:
             )
         except Exception as e:
             self._metrics["api_errors"] += 1
-            logger.error("Nominatim place search failed: %s", e)
+            logger.error("Nominatim place search failed: %s", _describe_error(e))
             return []
 
     def _parse_nominatim_place_response(
@@ -698,7 +711,7 @@ class BCGeocoderService:
     async def _nominatim_forward_geocode(self, address_string: str) -> GeocodingResult:
         """Forward geocode using Nominatim API."""
         self._metrics["nominatim_calls"] += 1
-        logger.debug(f"Using Nominatim fallback for: {address_string[:50]}...")
+        logger.debug("Using Nominatim fallback")
         
         params = {
             "q": address_string,

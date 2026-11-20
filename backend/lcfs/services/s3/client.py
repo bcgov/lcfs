@@ -1,10 +1,22 @@
+from datetime import datetime, timezone
+
 from fastapi import Depends, HTTPException
+from starlette.concurrency import run_in_threadpool
 from io import UnsupportedOperation
 import os
 import re
 import uuid
+from typing import List, Optional, Union
 
-from lcfs.utils.constants import ALLOWED_MIME_TYPES, ALLOWED_FILE_TYPES
+import structlog
+
+from lcfs.utils.constants import (
+    ALLOWED_MIME_TYPES,
+    ALLOWED_FILE_TYPES,
+    MACRO_ENABLED_FILE_TYPES,
+    MACRO_ENABLED_MIME_TYPES,
+    MACRO_UPLOAD_PARENT_TYPES,
+)
 from lcfs.db.models.admin_adjustment.AdminAdjustment import (
     admin_adjustment_document_association,
 )
@@ -15,6 +27,9 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
 from lcfs.db.models.initiative_agreement.DesignatedAction import (
     DesignatedAction,
     designated_action_document_association,
+)
+from lcfs.db.models.initiative_agreement.DaEocSubmission import (
+    da_eoc_submission_document_association,
 )
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.admin_adjustment.services import AdminAdjustmentServices
@@ -39,12 +54,15 @@ from lcfs.db.models.ci_application.CIApplication import (
     ci_application_document_association,
 )
 from lcfs.db.models.document import Document
+from lcfs.db.models.document.Document import DocumentScanStatusEnum
 from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.comment.InternalComment import (
     InternalComment,
     internal_comment_document_association,
 )
+from lcfs.db.models.comment.PenaltyLogInternalComment import PenaltyLogInternalComment
+from lcfs.services.comment_permissions import can_manage_penalty_comment
 from lcfs.db.models.comment.CIApplicationInternalComment import (
     CIApplicationInternalComment,
 )
@@ -52,13 +70,24 @@ from lcfs.db.models.comment.ComplianceReportInternalComment import (
     ComplianceReportInternalComment,
 )
 from lcfs.services.clamav.client import ClamAVService
+from lcfs.services.file_inspection import (
+    FileRejectedException,
+    analyze_workbook_macros,
+    inspect_upload,
+)
 from lcfs.settings import settings
 from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
 from lcfs.web.api.charging_site.repo import ChargingSiteRepository
 from lcfs.db.models.compliance.ChargingSite import charging_site_document_association
+from lcfs.db.models.fuel.FuelProductionFacility import (
+    FuelProductionFacility,
+    fuel_production_facility_document_association,
+)
 from lcfs.web.core.decorators import repo_handler
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 from botocore.exceptions import ClientError
+
+logger = structlog.get_logger(__name__)
 
 BUCKET_NAME = settings.s3_bucket
 MAX_FILE_SIZE_MB = 50
@@ -83,6 +112,10 @@ DOCUMENT_PARENT_ASSOCIATIONS = {
         designated_action_document_association,
         "designated_action_id",
     ),
+    "daEocSubmission": (
+        da_eoc_submission_document_association,
+        "da_eoc_submission_id",
+    ),
     "charging_site": (
         charging_site_document_association,
         "charging_site_id",
@@ -90,6 +123,10 @@ DOCUMENT_PARENT_ASSOCIATIONS = {
     "ci_application": (
         ci_application_document_association,
         "ci_application_id",
+    ),
+    "fuel_production_facility": (
+        fuel_production_facility_document_association,
+        "fuel_production_facility_id",
     ),
     "internal_comment": (
         internal_comment_document_association,
@@ -128,6 +165,17 @@ def _normalize_display_name(requested_name: str, original_file_name: str) -> str
     return requested_name
 
 
+def _upload_types(parent_type: str) -> tuple[list[str], str, list[str]]:
+    """Allowed MIME types, their description, and the types that may carry macros."""
+    if settings.feature_macro_uploads and parent_type in MACRO_UPLOAD_PARENT_TYPES:
+        return (
+            ALLOWED_MIME_TYPES + MACRO_ENABLED_MIME_TYPES,
+            f"{ALLOWED_FILE_TYPES}, {MACRO_ENABLED_FILE_TYPES}",
+            MACRO_ENABLED_MIME_TYPES,
+        )
+    return ALLOWED_MIME_TYPES, ALLOWED_FILE_TYPES, []
+
+
 class DocumentService:
     def __init__(
         self,
@@ -159,6 +207,7 @@ class DocumentService:
         parent_type,
         user=None,
         document_category: str | None = None,
+        replace_document_id: int | None = None,
     ):
         if parent_type == "compliance_report":
             await self._verify_compliance_report_access(parent_id, user)
@@ -181,17 +230,68 @@ class DocumentService:
                     status_code=400,
                     detail=f"Invalid document_category '{document_category}'.",
                 )
+        elif parent_type == "fuel_production_facility":
+            facility = await self.db.scalar(
+                select(FuelProductionFacility)
+                .where(FuelProductionFacility.fuel_production_facility_id == parent_id)
+                .with_for_update()
+            )
+            if not facility:
+                raise DataNotFoundException("Fuel production facility not found.")
+            if replace_document_id is not None:
+                existing_document_ids = list(
+                    (
+                        await self.db.scalars(
+                            select(
+                                fuel_production_facility_document_association.c.document_id
+                            ).where(
+                                fuel_production_facility_document_association.c.fuel_production_facility_id
+                                == parent_id
+                            )
+                        )
+                    ).all()
+                )
+                if existing_document_ids != [replace_document_id]:
+                    raise HTTPException(
+                        status_code=409,
+                        detail="The facility document changed. Refresh and try again.",
+                    )
+            elif await self.db.scalar(
+                select(func.count())
+                .select_from(fuel_production_facility_document_association)
+                .where(
+                    fuel_production_facility_document_association.c.fuel_production_facility_id
+                    == parent_id
+                )
+            ):
+                raise HTTPException(
+                    status_code=409,
+                    detail="A facility document already exists. Replace the current document.",
+                )
         else:
             raise ServiceException(f"Unknown parent type {parent_type} in upload_file")
+
+        if (
+            replace_document_id is not None
+            and parent_type != "fuel_production_facility"
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Document replacement is only supported for facility documents.",
+            )
 
         file_id = uuid.uuid4()
         file_key = f"{settings.s3_docs_path}/{parent_type}/{parent_id}/{file_id}"
 
-        # Validate MIME type
-        if file.content_type not in ALLOWED_MIME_TYPES:
+        allowed_types, allowed_description, macro_types = _upload_types(parent_type)
+
+        # Validate MIME type. Browsers send it lower-cased
+        # (application/vnd.ms-excel.sheet.macroenabled.12).
+        claimed_type = (file.content_type or "").lower()
+        if claimed_type not in {t.lower() for t in allowed_types}:
             raise HTTPException(
                 status_code=400,
-                detail=f"File type '{file.content_type or 'unknown'}' is not allowed. Please upload files of the following types: {ALLOWED_FILE_TYPES}",
+                detail=f"File type '{file.content_type or 'unknown'}' is not allowed. Please upload files of the following types: {allowed_description}",
             )
 
         # Scan file size
@@ -203,8 +303,36 @@ class DocumentService:
                 detail=f"File size exceeds the maximum limit of {MAX_FILE_SIZE_MB} MB.",
             )
 
+        # Check what the file really is; the browser's Content-Type is only a claim
+        file.file.seek(0)
+        data = file.file.read()
+        detected = await run_in_threadpool(
+            inspect_upload,
+            data,
+            file.filename,
+            allowed_types,
+            allowed_description,
+            macro_types,
+        )
+
         if settings.clamav_enabled:
-            self.clamav_service.scan_file(file)
+            await self.clamav_service.scan_file_async(file)
+
+        scan_status = DocumentScanStatusEnum.clean
+        scan_findings = None
+        reviewed_by = reviewed_date = None
+        if detected.has_macros:
+            report = await run_in_threadpool(analyze_workbook_macros, data, detected)
+            if report.block_reason:
+                raise FileRejectedException(report.block_reason)
+            scan_findings = report.findings
+            if user is not None and RoleEnum.GOVERNMENT in user.role_names:
+                # IDIR staff are trusted with their own uploads
+                scan_status = DocumentScanStatusEnum.approved
+                reviewed_by = user.keycloak_username
+                reviewed_date = datetime.now(timezone.utc)
+            else:
+                scan_status = DocumentScanStatusEnum.pending_approval
 
         # Upload file to S3
         file.file.seek(0)
@@ -213,7 +341,7 @@ class DocumentService:
                 Fileobj=file.file,
                 Bucket=BUCKET_NAME,
                 Key=file_key,
-                ExtraArgs={"ContentType": file.content_type},
+                ExtraArgs={"ContentType": detected.mime_type},
             )
         except ClientError as exc:
             error_code = exc.response.get("Error", {}).get("Code")
@@ -226,7 +354,7 @@ class DocumentService:
                 Body=file_bytes,
                 Bucket=BUCKET_NAME,
                 Key=file_key,
-                ContentType=file.content_type,
+                ContentType=detected.mime_type,
             )
         except Exception as exc:
             raise ServiceException(f"Error uploading file to S3: {exc}")
@@ -241,7 +369,11 @@ class DocumentService:
             file_key=file_key,
             file_name=file.filename,
             file_size=file_size,
-            mime_type=file.content_type,
+            mime_type=detected.mime_type,
+            scan_status=scan_status,
+            scan_findings=scan_findings,
+            scan_reviewed_by=reviewed_by,
+            scan_reviewed_date=reviewed_date,
         )
 
         if parent_type == "compliance_report":
@@ -339,11 +471,22 @@ class DocumentService:
                 document_category=document_category or CI_DOC_CATEGORY_SUPPORTING,
             )
             await self.db.execute(stmt)
+        elif parent_type == "fuel_production_facility":
+            self.db.add(document)
+            await self.db.flush()
+            stmt = fuel_production_facility_document_association.insert().values(
+                fuel_production_facility_id=parent_id,
+                document_id=document.document_id,
+            )
+            await self.db.execute(stmt)
+            if replace_document_id is not None:
+                await self.delete_file(replace_document_id, parent_id, parent_type)
         elif parent_type == "internal_comment":
             internal_comment = await self.db.get(InternalComment, parent_id)
             if not internal_comment:
                 raise Exception("Internal comment not found")
 
+            document.create_user = user.keycloak_username
             self.db.add(document)
             await self.db.flush()
 
@@ -509,8 +652,8 @@ class DocumentService:
         Attachment visibility follows the comment itself ("match comment
         permissions"):
 
-        * write (add/remove attachment): only the comment's author, mirroring
-          internal comment edit permissions.
+        * write (add/remove attachment): the comment's author; government
+          administrators may also manage penalty log comment attachments.
         * read (list/download): government staff see everything; everyone else
           only Public comments, on a compliance report or CI application
           belonging to their own organization.
@@ -531,10 +674,22 @@ class DocumentService:
         is_government = RoleEnum.GOVERNMENT in user.role_names
 
         if write:
-            if comment.create_user != user.keycloak_username:
+            is_penalty_log = (
+                await self.db.execute(
+                    select(PenaltyLogInternalComment.internal_comment_id).where(
+                        PenaltyLogInternalComment.internal_comment_id == parent_id
+                    )
+                )
+            ).scalar_one_or_none() is not None
+            can_write = (
+                can_manage_penalty_comment(user, comment)
+                if is_penalty_log
+                else comment.create_user == user.keycloak_username
+            )
+            if not can_write:
                 raise HTTPException(
                     status_code=403,
-                    detail="Only the comment author can modify its attachments.",
+                    detail="You do not have permission to modify this comment's attachments.",
                 )
         elif not is_government:
             visibility = (
@@ -628,21 +783,75 @@ class DocumentService:
         return document
 
     @repo_handler
-    async def generate_presigned_url(self, document_id: int):
-        document = await self.db.get_one(Document, document_id)
-
-        if not document:
-            raise Exception("Document not found")
-
-        presigned_url = self.s3_client.generate_presigned_url(
-            "get_object",
-            Params={"Bucket": BUCKET_NAME, "Key": document.file_key},
-            ExpiresIn=60,  # URL expiration in seconds
+    async def review_scan(
+        self,
+        document_id: int,
+        parent_id: int,
+        parent_type: str,
+        approve: bool,
+        user,
+    ) -> Document:
+        """Approve or reject a macro-enabled workbook that is waiting for review."""
+        document = next(
+            (
+                doc
+                for doc in (
+                    row[0] if isinstance(row, (tuple, Row)) else row
+                    for row in await self.get_by_id_and_type(parent_id, parent_type)
+                )
+                if doc.document_id == document_id
+            ),
+            None,
         )
-        return presigned_url
+        if document is None:
+            raise DataNotFoundException(
+                f"Document {document_id} does not belong to {parent_type} {parent_id}"
+            )
+        # Lock the row and reload it, so when two decisions arrive together
+        # only the first still finds the file waiting
+        document = (
+            await self.db.execute(
+                select(Document)
+                .where(Document.document_id == document.document_id)
+                .with_for_update()
+                .execution_options(populate_existing=True)
+            )
+        ).scalar_one()
+        if document.scan_status != DocumentScanStatusEnum.pending_approval:
+            raise HTTPException(
+                status_code=400, detail="This file isn't waiting for approval."
+            )
+
+        document.scan_status = (
+            DocumentScanStatusEnum.approved
+            if approve
+            else DocumentScanStatusEnum.rejected
+        )
+        document.scan_reviewed_by = user.keycloak_username
+        document.scan_reviewed_date = datetime.now(timezone.utc)
+        await self.db.flush()
+        await self.db.refresh(document)
+        return document
 
     @repo_handler
-    async def delete_file(self, document_id: int, parent_id: int, parent_type: str):
+    async def delete_file(
+        self,
+        document_id: int,
+        parent_id: int,
+        parent_type: str,
+        require_physical_delete: bool = False,
+        defer_storage_delete: bool = False,
+    ) -> Union[bool, Optional[str]]:
+        """Remove *parent_id*'s link to the document, and the document itself
+        when that was its last link. Returns whether the file was physically
+        deleted. With *require_physical_delete*, a document still linked
+        elsewhere is left untouched and ``False`` is returned instead.
+
+        With *defer_storage_delete* the S3 object is left in place and its key
+        is returned instead (``None`` when the file was not physically
+        deleted), so the caller can remove it once the database change has
+        been committed (see ``delete_storage_objects``).
+        """
         # The caller was authorized for the parent, so the document must hang
         # off that parent; one linked elsewhere reads as missing.
         document = await self._get_document_for_parent(
@@ -659,16 +868,22 @@ class DocumentService:
                 .select_from(table)
                 .where(table.c.document_id == document_id)
             )
+        has_other_links = link_count > 1
 
-        # If last link, delete the whole document
-        if link_count == 1:
-            # Delete the file from S3
-            self.s3_client.delete_object(Bucket=BUCKET_NAME, Key=document.file_key)
+        if has_other_links and require_physical_delete:
+            return None if defer_storage_delete else False
+
+        file_key = None
+        if not has_other_links:
+            file_key = document.file_key
+            if not defer_storage_delete:
+                # Delete the file from S3
+                self.s3_client.delete_object(Bucket=BUCKET_NAME, Key=file_key)
 
             # Delete the entry from the database
             await self.db.delete(document)
             await self.db.flush()
-        else:  # Delete the association
+        else:
             await self.db.execute(
                 delete(association_table).where(
                     and_(
@@ -677,6 +892,23 @@ class DocumentService:
                     )
                 )
             )
+        if defer_storage_delete:
+            return file_key
+        return not has_other_links
+
+    def delete_storage_objects(self, file_keys: List[str]) -> None:
+        """Remove S3 objects after their documents were deleted and committed.
+
+        A failure leaves an orphaned object, which is safer than a retained
+        record that points to a file that is gone, so it is logged, not raised.
+        """
+        for file_key in file_keys:
+            try:
+                self.s3_client.delete_object(Bucket=BUCKET_NAME, Key=file_key)
+            except Exception:
+                logger.error(
+                    "Failed to delete S3 object", file_key=file_key, exc_info=True
+                )
 
     @repo_handler
     async def get_by_id_and_type(self, parent_id: int, parent_type="compliance_report"):

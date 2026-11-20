@@ -3,7 +3,7 @@
 from datetime import date, datetime, timezone
 from decimal import Decimal
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, call
 
 import pytest
 from fastapi import HTTPException, status
@@ -433,8 +433,18 @@ def _ci_application(
     )
 
 
+def _persist_facility(facility):
+    """Stand-in for the repo flush: give a new facility its primary key and
+    empty collections, as the database/refresh would."""
+    facility.fuel_production_facility_id = 77
+    for name in ("documents", "fuel_codes", "ci_applications", "pathways"):
+        setattr(facility, name, [])
+    return facility
+
+
 def _step1_payload(**overrides):
     base = dict(
+        facility_name="Test facility",
         facility_city="San Martin",
         facility_province_state="Santa Fe",
         facility_country="Argentina",
@@ -538,9 +548,10 @@ async def test_search_fuel_code_field_options_uses_fuel_code_feedstock_columns(
         "Canola",
         "Corn",
     ]
-    assert await service.search_fuel_code_field_options(
-        "feedstockLocation", "Sa"
-    ) == ["Ontario", "Saskatchewan"]
+    assert await service.search_fuel_code_field_options("feedstockLocation", "Sa") == [
+        "Ontario",
+        "Saskatchewan",
+    ]
 
     fuel_repo.get_distinct_feedstocks.assert_awaited_once_with("Ca")
     fuel_repo.get_distinct_feedstock_locations.assert_awaited_once_with("Sa")
@@ -799,9 +810,7 @@ async def test_assign_analyst_noop_does_not_create_history(service, repo, mock_u
 
 
 @pytest.mark.anyio
-async def test_assign_analyst_rejects_inactive_idir_analyst(
-    service, repo, mock_user
-):
+async def test_assign_analyst_rejects_inactive_idir_analyst(service, repo, mock_user):
     inactive_analyst = _analyst(12, "Alex", "Analyst")
     inactive_analyst.is_active = False
     ci = _ci_application(status=_status("Submitted", 2))
@@ -885,6 +894,7 @@ async def test_create_draft_persists_with_draft_status(service, repo, mock_user)
     repo.create.side_effect = lambda ci: ci  # echo
     repo.add_history.return_value = MagicMock()
     repo.get_by_id.return_value = _ci_application(status=draft_status)
+    repo.create_facility = AsyncMock(side_effect=_persist_facility)
 
     result = await service.create_draft(
         organization_id=1,
@@ -922,8 +932,11 @@ async def test_create_draft_raises_when_no_draft_status(service, repo, mock_user
 @pytest.mark.anyio
 async def test_update_step1_writes_fields_and_marks_update(service, repo, mock_user):
     ci = _ci_application()
+    ci.pathways = []
     repo.update.side_effect = lambda obj: obj
     repo.get_by_id.return_value = ci
+    # No facility id in the payload: a facility is created inline for the org.
+    repo.create_facility = AsyncMock(side_effect=_persist_facility)
 
     payload = _step1_payload(
         facility_city="Vancouver",
@@ -941,10 +954,93 @@ async def test_update_step1_writes_fields_and_marks_update(service, repo, mock_u
     assert ci.facility_country == "Canada"
     assert ci.facility_nameplate_capacity == 2500
     assert ci.facility_nameplate_capacity_unit == QuantityUnitsEnum.Kilograms
+    created_facility = repo.create_facility.await_args.args[0]
+    assert created_facility.organization_id == ci.organization_id
+    assert created_facility.name == "Test facility"
+    assert created_facility.city == "Vancouver"
     assert ci.action_type == ActionTypeEnum.UPDATE
     assert ci.update_user == "ci_applicant_user"
     assert isinstance(result, CIApplicationSchema)
     repo.update.assert_awaited_once_with(ci)
+
+
+@pytest.mark.anyio
+async def test_update_step1_writes_facility_name_and_contact(service, repo, mock_user):
+    ci = _ci_application()
+    ci.pathways = []
+    fuel_code = SimpleNamespace(
+        contact_name=None,
+        contact_email=None,
+        fuel_production_facility_city="Approved city",
+        fuel_production_facility_province_state="Approved province",
+        fuel_production_facility_country="Approved country",
+        facility_nameplate_capacity=500,
+        facility_nameplate_capacity_unit=QuantityUnitsEnum.Kilograms,
+    )
+    facility = SimpleNamespace(
+        fuel_production_facility_id=4,
+        name="Old name",
+        city="Old city",
+        province_state="Old province",
+        country="Old country",
+        iso=None,
+        nameplate_capacity=1,
+        nameplate_capacity_unit=QuantityUnitsEnum.Litres,
+        contact_name=None,
+        contact_email=None,
+        fuel_codes=[fuel_code],
+    )
+    repo.get_facility_for_organization = AsyncMock(return_value=facility)
+    repo.update.side_effect = lambda obj: obj
+    repo.get_by_id.return_value = ci
+
+    payload = _step1_payload(
+        fuel_production_facility_id=4,
+        facility_name="Renamed facility",
+        facility_contact_name="Pat Example",
+        facility_contact_email="pat@example.com",
+    )
+
+    await service.update_step1(ci, payload, mock_user)
+
+    repo.get_facility_for_organization.assert_awaited_once_with(4, ci.organization_id)
+    assert facility.name == "Renamed facility"
+    assert facility.contact_name == "Pat Example"
+    assert facility.contact_email == "pat@example.com"
+    assert facility.city == "San Martin"
+    assert fuel_code.contact_name == "Pat Example"
+    assert fuel_code.contact_email == "pat@example.com"
+    assert fuel_code.fuel_production_facility_city == "Approved city"
+    assert fuel_code.fuel_production_facility_province_state == "Approved province"
+    assert fuel_code.fuel_production_facility_country == "Approved country"
+    assert fuel_code.facility_nameplate_capacity == 500
+    assert fuel_code.facility_nameplate_capacity_unit == QuantityUnitsEnum.Kilograms
+    assert ci.fuel_production_facility_id == 4
+
+
+def test_step1_schema_blank_contact_email_is_null():
+    payload = _step1_payload(facility_contact_email="   ")
+    assert payload.facility_contact_email is None
+
+
+SUBMITTED_OR_LATER = ["Submitted", "Recommended", "Completed", "Withdrawn"]
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("status_name", SUBMITTED_OR_LATER)
+async def test_update_step1_rejects_application_after_draft(
+    service, repo, mock_user, status_name
+):
+    ci = _ci_application(status=_status(status_name, 2))
+
+    with pytest.raises(HTTPException) as exc:
+        await service.update_step1(
+            ci, _step1_payload(facility_city="Vancouver"), mock_user
+        )
+
+    assert exc.value.status_code == status.HTTP_403_FORBIDDEN
+    assert ci.facility_city == "San Martin"
+    repo.update.assert_not_awaited()
 
 
 # ---------------------------------------------------------------------------
@@ -957,6 +1053,18 @@ async def test_delete_draft_calls_repo(service, repo):
     ci = _ci_application()
     await service.delete_draft(ci)
     repo.delete.assert_awaited_once_with(ci)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("status_name", SUBMITTED_OR_LATER)
+async def test_delete_draft_rejects_application_after_draft(service, repo, status_name):
+    ci = _ci_application(status=_status(status_name, 2))
+
+    with pytest.raises(HTTPException) as exc:
+        await service.delete_draft(ci)
+
+    assert exc.value.status_code == status.HTTP_403_FORBIDDEN
+    repo.delete.assert_not_awaited()
 
 
 # ---------------------------------------------------------------------------
@@ -997,9 +1105,11 @@ def _fuel_code_obj(
 ):
     return SimpleNamespace(
         fuel_code_id=ident,
-        prefix_id=prefix_id
-        if prefix_id is not None
-        else {"BCLCF": 1, "C-BCLCF": 3}.get(prefix, 1),
+        prefix_id=(
+            prefix_id
+            if prefix_id is not None
+            else {"BCLCF": 1, "C-BCLCF": 3}.get(prefix, 1)
+        ),
         fuel_suffix=suffix,
         carbon_intensity=23.23,
         fuel_type_id=1,
@@ -1342,6 +1452,9 @@ async def test_update_step2_allows_requested_supplemental_edit_and_adds_changelo
     ci.pathway_supplemental_edit_enabled = True
     ci.pathway_changes_requested_at = datetime(2026, 6, 10, tzinfo=timezone.utc)
     ci.pathway_changes_requested_by = "idir_user"
+    ci.document_upload_enabled = True
+    ci.document_changes_requested_at = datetime(2026, 6, 11, tzinfo=timezone.utc)
+    ci.document_changes_requested_by = "idir_user"
     ci.pathways = []
     ci.verification_1_user_id = 22
     ci.verification_1_date = datetime(2026, 5, 19, tzinfo=timezone.utc)
@@ -1363,6 +1476,11 @@ async def test_update_step2_allows_requested_supplemental_edit_and_adds_changelo
     assert ci.pathway_supplemental_edit_enabled is False
     assert ci.pathway_changes_requested_at is None
     assert ci.pathway_changes_requested_by is None
+    assert ci.document_upload_enabled is True
+    assert ci.document_changes_requested_at == datetime(
+        2026, 6, 11, tzinfo=timezone.utc
+    )
+    assert ci.document_changes_requested_by == "idir_user"
     repo.add_history.assert_awaited_once()
     snapshot = repo.add_history.await_args.kwargs["snapshot"]
     assert snapshot["event"] == "supplemental_pathways_updated"
@@ -1624,6 +1742,48 @@ async def test_update_step3_closes_documentation_request(service, repo, mock_use
     assert isinstance(result, CIApplicationSchema)
 
 
+@pytest.mark.anyio
+@pytest.mark.parametrize("status_name", SUBMITTED_OR_LATER)
+async def test_update_step3_rejects_application_after_draft_without_request(
+    service, repo, mock_user, status_name
+):
+    from lcfs.web.api.ci_application.schema import CIApplicationStep3Schema
+
+    ci = _ci_application(status=_status(status_name, 2))
+    ci.document_upload_enabled = False
+
+    with pytest.raises(HTTPException) as exc:
+        await service.update_step3(
+            ci, CIApplicationStep3Schema(supporting_document_other="X"), mock_user
+        )
+
+    assert exc.value.status_code == status.HTTP_403_FORBIDDEN
+    assert ci.supporting_document_other is None
+    repo.update.assert_not_awaited()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("status_name", ["Recommended", "Completed", "Withdrawn"])
+async def test_update_step3_only_closes_request_on_submitted_application(
+    service, repo, mock_user, status_name
+):
+    """Documentation is only ever requested on a Submitted application; a
+    flag left set past that cannot be used to edit or to clear it."""
+    from lcfs.web.api.ci_application.schema import CIApplicationStep3Schema
+
+    ci = _ci_application(status=_status(status_name, 2))
+    ci.document_upload_enabled = True
+
+    with pytest.raises(HTTPException) as exc:
+        await service.update_step3(
+            ci, CIApplicationStep3Schema(supporting_document_other="X"), mock_user
+        )
+
+    assert exc.value.status_code == status.HTTP_403_FORBIDDEN
+    assert ci.document_upload_enabled is True
+    repo.update.assert_not_awaited()
+
+
 # ---------------------------------------------------------------------------
 # Step 4 — Sign & submit
 # ---------------------------------------------------------------------------
@@ -1708,12 +1868,8 @@ async def test_generate_fuel_codes_reserves_iterations_per_prefix(
 ):
     mock_user.role_names = {RoleEnum.ANALYST}
     ci = _submitted_ci_for_generation("Low")
-    bclcf_source = _fuel_code_obj(
-        ident=10, suffix="1000.0", prefix="BCLCF"
-    )
-    c_bclcf_source = _fuel_code_obj(
-        ident=11, suffix="1000.0", prefix="C-BCLCF"
-    )
+    bclcf_source = _fuel_code_obj(ident=10, suffix="1000.0", prefix="BCLCF")
+    c_bclcf_source = _fuel_code_obj(ident=11, suffix="1000.0", prefix="C-BCLCF")
     ci.pathways = [
         _generation_pathway(pathway_id=1, fuel_code_id=10, fuel_code=bclcf_source),
         _generation_pathway(pathway_id=2, fuel_code_id=11, fuel_code=c_bclcf_source),
@@ -1840,6 +1996,90 @@ async def test_generate_fuel_codes_allows_high_after_verification_2(
     assert created_fuel_code.edrms == "EDRMS-123"
     assert created_fuel_code.fuel_code_status.status.value == "Draft"
     repo.update.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_generate_fuel_codes_copies_details_from_linked_pathway_facility(
+    service, repo, mock_user
+):
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _submitted_ci_for_generation("High")
+    application_facility = SimpleNamespace(
+        fuel_production_facility_id=77,
+        city="Application City",
+        province_state="Application Province",
+        country="Application Country",
+        nameplate_capacity=100,
+        nameplate_capacity_unit=QuantityUnitsEnum.Litres,
+        contact_name="Application Contact",
+        contact_email="application@example.com",
+    )
+    pathway_facility = SimpleNamespace(
+        fuel_production_facility_id=88,
+        city="Pathway City",
+        province_state="Pathway Province",
+        country="Pathway Country",
+        nameplate_capacity=200,
+        nameplate_capacity_unit=QuantityUnitsEnum.Kilograms,
+        contact_name="Pathway Contact",
+        contact_email="pathway@example.com",
+    )
+    ci.fuel_production_facility = application_facility
+    ci.pathways[0].fuel_production_facility_id = 88
+    ci.pathways[0].fuel_production_facility = pathway_facility
+    ci.verification_2_date = datetime(2026, 5, 3, tzinfo=timezone.utc)
+    ci.verification_2_risk_assessment = "High"
+    _stub_generation_dependencies(service, repo, ci)
+
+    await service.generate_fuel_codes(ci, mock_user)
+
+    generated = ci.generated_fuel_code_associations[0].fuel_code
+    assert generated.fuel_production_facility_id == 88
+    assert generated.fuel_production_facility_city == "Pathway City"
+    assert generated.fuel_production_facility_province_state == "Pathway Province"
+    assert generated.fuel_production_facility_country == "Pathway Country"
+    assert generated.facility_nameplate_capacity == 200
+    assert generated.facility_nameplate_capacity_unit == QuantityUnitsEnum.Kilograms
+    assert generated.contact_name == "Pathway Contact"
+    assert generated.contact_email == "pathway@example.com"
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("facility_source", ["application", "pathway", "legacy"])
+async def test_generate_fuel_codes_prefix_uses_the_effective_facility_country(
+    service, repo, mock_user, facility_source
+):
+    mock_user.role_names = {RoleEnum.ANALYST}
+    ci = _submitted_ci_for_generation("Low")
+    ci.facility_country = "Argentina"
+    facility = SimpleNamespace(
+        fuel_production_facility_id=77,
+        city="Example City",
+        province_state="BC",
+        country="Canada",
+        nameplate_capacity=100,
+        nameplate_capacity_unit=QuantityUnitsEnum.Litres,
+        contact_name="Example Contact",
+        contact_email="contact@example.com",
+    )
+    if facility_source == "application":
+        ci.fuel_production_facility = facility
+    elif facility_source == "pathway":
+        ci.pathways[0].fuel_production_facility = facility
+    _stub_generation_dependencies(service, repo, ci)
+    service.fuel_repo.get_fuel_code_prefixes.return_value.append(
+        SimpleNamespace(fuel_code_prefix_id=3, prefix="C-BCLCF")
+    )
+
+    await service.generate_fuel_codes(ci, mock_user)
+
+    generated = ci.generated_fuel_code_associations[0].fuel_code
+    if facility_source == "legacy":
+        assert generated.prefix_id == 1
+        assert generated.fuel_production_facility_country == "Argentina"
+    else:
+        assert generated.prefix_id == 3
+        assert generated.fuel_production_facility_country == "Canada"
 
 
 def _step4_payload(**overrides):
@@ -2197,6 +2437,31 @@ async def test_step4_submit_succeeds_when_documents_missing(service, repo, mock_
 
 
 @pytest.mark.anyio
+async def test_step4_submit_locks_application_and_pathway_diagrams_before_transition(
+    service, repo, mock_user
+):
+    _grant_signing_authority(mock_user)
+    ci = _draft_ci_with_pathways()
+    ci.fuel_production_facility_id = 77
+    ci.pathways = [
+        SimpleNamespace(fuel_production_facility_id=88),
+        SimpleNamespace(fuel_production_facility_id=77),
+    ]
+    repo.get_status_by_name.return_value = _status("Submitted", 2)
+    repo.get_by_id.return_value = _reloaded_ci(ci)
+
+    await service.submit_application(ci, _step4_payload(), mock_user)
+
+    assert repo.get_facility_by_id.await_args_list == [
+        call(77, for_update=True),
+        call(88, for_update=True),
+    ]
+    assert repo.mock_calls.index(call.get_facility_by_id(88, for_update=True)) < (
+        repo.mock_calls.index(call.update(ci))
+    )
+
+
+@pytest.mark.anyio
 async def test_step4_submit_succeeds_and_transitions_status(service, repo, mock_user):
     _grant_signing_authority(mock_user)
     ci = _draft_ci_with_pathways()
@@ -2463,9 +2728,7 @@ async def test_request_documentation_enables_upload_for_workflow_roles(
     ]
     assert request.notification_data.type == "CI Application Changes Requested"
     assert request.notification_data.related_organization_id == ci.organization_id
-    assert request.notification_data.related_transaction_id == str(
-        ci.ci_application_id
-    )
+    assert request.notification_data.related_transaction_id == str(ci.ci_application_id)
     assert isinstance(result, CIApplicationSchema)
 
 
@@ -2836,9 +3099,7 @@ async def test_request_pathway_changes_resets_review_and_preserves_assessment(
     ]
     assert request.notification_data.type == "CI Application Changes Requested"
     assert request.notification_data.related_organization_id == ci.organization_id
-    assert request.notification_data.related_transaction_id == str(
-        ci.ci_application_id
-    )
+    assert request.notification_data.related_transaction_id == str(ci.ci_application_id)
     assert isinstance(result, CIApplicationSchema)
 
 

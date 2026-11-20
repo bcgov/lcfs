@@ -1,4 +1,7 @@
-from sqlalchemy import TIMESTAMP, Column, Integer, String
+import enum
+
+from sqlalchemy import TIMESTAMP, Column, Enum, Integer, String
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from lcfs.db.base import BaseModel, Auditable
@@ -14,8 +17,14 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
 from lcfs.db.models.initiative_agreement.DesignatedAction import (
     designated_action_document_association,
 )
+from lcfs.db.models.initiative_agreement.DaEocSubmission import (
+    da_eoc_submission_document_association,
+)
 from lcfs.db.models.compliance.ChargingSite import (
     charging_site_document_association,
+)
+from lcfs.db.models.fuel.FuelProductionFacility import (
+    fuel_production_facility_document_association,
 )
 from lcfs.db.models.ci_application.CIApplication import (
     ci_application_document_association,
@@ -23,6 +32,19 @@ from lcfs.db.models.ci_application.CIApplication import (
 from lcfs.db.models.comment.InternalComment import (
     internal_comment_document_association,
 )
+from lcfs.db.models.lcjfip.LCJFIPApplication import (
+    lcjfip_application_document_association,
+)
+
+
+class DocumentScanStatusEnum(enum.Enum):
+    # Uploaded before macro checks existed
+    legacy = "legacy"
+    clean = "clean"
+    # Macro-enabled workbook waiting for an IDIR Administrator
+    pending_approval = "pending_approval"
+    approved = "approved"
+    rejected = "rejected"
 
 
 class Document(BaseModel, Auditable):
@@ -44,7 +66,38 @@ class Document(BaseModel, Auditable):
     mime_type = Column(String, nullable=False)
     display_name = Column(String, nullable=True)
 
-    # --- Soft deletion (nothing is ever purged) ------------------------
+    # --- Macro review ---------------------------------------------------
+    scan_status = Column(
+        Enum(
+            DocumentScanStatusEnum,
+            name="document_scan_status_enum",
+            values_callable=lambda members: [m.value for m in members],
+        ),
+        nullable=False,
+        default=DocumentScanStatusEnum.clean,
+        server_default=DocumentScanStatusEnum.legacy.value,
+        comment=(
+            "Macro review state; pending_approval and rejected files can't be "
+            "downloaded"
+        ),
+    )
+    scan_findings = Column(
+        JSONB,
+        nullable=True,
+        comment="Plain-language macro analysis findings shown to staff",
+    )
+    scan_reviewed_by = Column(
+        String(500),
+        nullable=True,
+        comment="Username of the administrator who approved or rejected the file",
+    )
+    scan_reviewed_date = Column(
+        TIMESTAMP(timezone=True),
+        nullable=True,
+        comment="When the file was approved or rejected",
+    )
+
+    # --- Soft deletion; authorized hard deletes remove the document row ---
     # Only folder-enabled parents have a route that sets these; for every
     # other surface they stay NULL and the read filter is inert.
     deleted_date = Column(
@@ -86,6 +139,10 @@ class Document(BaseModel, Auditable):
         secondary=designated_action_document_association,
         back_populates="documents",
     )
+    da_eoc_submissions = relationship(
+        "DaEocSubmission", secondary=da_eoc_submission_document_association,
+        back_populates="documents",
+    )
     admin_adjustments = relationship(
         "AdminAdjustment",
         secondary=admin_adjustment_document_association,
@@ -102,8 +159,19 @@ class Document(BaseModel, Auditable):
         secondary=ci_application_document_association,
         back_populates="documents",
     )
+    fuel_production_facilities = relationship(
+        "FuelProductionFacility",
+        secondary=fuel_production_facility_document_association,
+        back_populates="documents",
+    )
     internal_comments = relationship(
         "InternalComment",
         secondary=internal_comment_document_association,
         back_populates="documents",
+    )
+    lcjfip_applications = relationship(
+        "LCJFIPApplication",
+        secondary=lcjfip_application_document_association,
+        back_populates="documents",
+        passive_deletes=True,
     )
