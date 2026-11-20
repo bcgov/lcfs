@@ -4,7 +4,8 @@ import { apiRoutes } from '@/constants/routes'
 import { getKeycloak, logout } from '@/utils/keycloak'
 import { ReactKeycloakProvider } from '@react-keycloak/web'
 import axios from 'axios'
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, type ReactNode } from 'react'
+import type { AuthClientEvent } from '@react-keycloak/core'
 import { KeycloakContext } from '@/components/KeycloakContext'
 
 const keycloak = getKeycloak()
@@ -13,9 +14,11 @@ const keycloak = getKeycloak()
 const TOKEN_LIFESPAN_MS = 5 * 60 * 1000
 const REFRESH_THRESHOLD_MS = 60 * 1000
 
-export const KeycloakProvider = ({ children }) => {
-  const timeoutRef = useRef(null)
-  const refreshTokenRef = useRef(null)
+export const KeycloakProvider = ({ children }: { children: ReactNode }) => {
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const refreshTokenRef = useRef<((force?: boolean) => Promise<void>) | null>(
+    null
+  )
   const lastRefreshRef = useRef(Date.now())
 
   const scheduleRefreshCheck = useCallback(() => {
@@ -64,7 +67,9 @@ export const KeycloakProvider = ({ children }) => {
 
   useEffect(() => {
     scheduleRefreshCheck()
-    return () => timeoutRef.current && clearTimeout(timeoutRef.current)
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    }
   }, [scheduleRefreshCheck])
 
   useEffect(() => {
@@ -100,7 +105,7 @@ export const KeycloakProvider = ({ children }) => {
     )
   }
 
-  const handleOnEvent = async (event) => {
+  const handleOnEvent = async (event: AuthClientEvent) => {
     if (event === 'onAuthSuccess') {
       scheduleRefreshCheck()
 
