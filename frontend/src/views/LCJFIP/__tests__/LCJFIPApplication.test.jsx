@@ -452,6 +452,14 @@ describe('LCJFIP application form', () => {
       screen.getByRole('textbox', { name: /Estimated carbon intensity/ })
     ).toHaveValue('8.50')
 
+    // On a phone the rates table scrolls sideways in a region that keyboard
+    // users can focus.
+    const ratesRegion = screen.getByRole('region', {
+      name: 'Carbon intensity baseline incentive rates'
+    })
+    expect(ratesRegion).toHaveAttribute('tabindex', '0')
+    expect(within(ratesRegion).getByRole('table')).toBeInTheDocument()
+
     // The blend is shown as LCJF:Jet-A and follows what is typed.
     const blend = screen.getByTestId('lcjfip-purchase-estimatedBlendPercentage')
     expect(blend).toHaveValue('30:70')

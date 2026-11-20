@@ -9,6 +9,7 @@ import BCTypography from '@/components/BCTypography'
 import type { LCJFIPOption } from '@/hooks/useLCJFIP'
 import type { LCJFIPFormValues } from '../lcjfipForm'
 import { FieldLabel } from './fields'
+import { underlinedLink } from './underlinedLink'
 import { visuallyHidden } from './visuallyHidden'
 
 export const OPERATOR_LIST_URL =
@@ -145,7 +146,7 @@ export const ApplicantSection = ({
         <BCTypography variant="body2" mt={1} data-test="lcjfip-address-change">
           {t('lcjfip:applicant.addressChangePrefix')}{' '}
           <Link
-            sx={{ color: 'link.main', textDecoration: 'underline' }}
+            sx={underlinedLink}
             href={`mailto:${programEmail}?subject=${encodeURIComponent(
               t('lcjfip:applicant.addressChangeSubject')
             )}`}
@@ -166,7 +167,7 @@ export const ApplicantSection = ({
           gap: 2
         }}
       >
-        <BCBox sx={{ width: { xs: '100%', md: 320 } }}>
+        <BCBox sx={{ width: { xs: '100%', md: 313 } }}>
           <SelectField
             name="carTypeId"
             label={t('lcjfip:applicant.carTypes')}
@@ -195,11 +196,7 @@ export const ApplicantSection = ({
             target="_blank"
             rel="noopener noreferrer"
             variant="body2"
-            sx={{
-              fontWeight: 600,
-              color: 'link.main',
-              textDecoration: 'underline'
-            }}
+            sx={{ ...underlinedLink, fontWeight: 600 }}
             data-test="lcjfip-operator-list-link"
           >
             {t('lcjfip:applicant.operatorListLink')}

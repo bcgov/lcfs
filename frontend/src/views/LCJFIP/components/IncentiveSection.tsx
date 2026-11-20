@@ -36,14 +36,20 @@ import {
 } from './fields'
 import { visuallyHidden } from './visuallyHidden'
 
-// Three fields to a line on wide screens, at the mock-up's widths: the
-// incentive fields are 257, 257 and 293 px, the fuel supplier's 248 each.
+// The fields keep the mock-up's widths on wide screens: 258, 257 and 293 px
+// for the volumes and carbon intensity, 181 and 263 px for the fuel code and
+// amount, and 248 px for each fuel supplier field.
 const INCENTIVE_COLUMNS = {
   xs: 'minmax(0, 1fr)',
   sm: 'repeat(2, minmax(0, 1fr))',
-  md: 'minmax(0, 257fr) minmax(0, 257fr) minmax(0, 293fr)'
+  md: 'minmax(0, 258fr) minmax(0, 257fr) minmax(0, 293fr)'
 }
-const INCENTIVE_MAX_WIDTH = 257 + 257 + 293 + 2 * 16
+const INCENTIVE_MAX_WIDTH = 258 + 257 + 293 + 2 * 16
+const AMOUNT_COLUMNS = {
+  xs: 'minmax(0, 1fr)',
+  sm: 'minmax(0, 181fr) minmax(0, 263fr)'
+}
+const AMOUNT_MAX_WIDTH = 181 + 263 + 16
 const SUPPLIER_COLUMNS = {
   xs: 'minmax(0, 1fr)',
   sm: 'repeat(2, minmax(0, 1fr))',
@@ -80,62 +86,111 @@ const rateRows = (rates: LCJFIPIncentiveRate[]) => {
   return rows
 }
 
+// The mock-up's rates table: 14 px text, columns of 141, 266, 181 and 181 px
+// on wide screens, 63 px rows and a slim header row.
+const RATE_COLUMN_WIDTHS = [141, 266, 181, 181]
+
 const RatesTable = ({ rates }: { rates: LCJFIPIncentiveRate[] }) => {
   const { t } = useTranslation(['lcjfip'])
   const rows = rateRows(rates)
-  const cellSx = { border: 1, borderColor: 'grey.400' }
+  const cellSx = {
+    border: 1,
+    borderColor: 'grey.400',
+    fontSize: '0.875rem',
+    lineHeight: 1.4,
+    px: 1.5,
+    py: 0.5
+  }
+  const rateCellSx = { ...cellSx, px: 1 }
+  const width = (column: number) => ({
+    width: { md: RATE_COLUMN_WIDTHS[column] }
+  })
   return (
-    <Table
-      size="small"
+    // On a phone the table is wider than the card, so it scrolls sideways in
+    // its own region, which keyboard users can focus to scroll.
+    <BCBox
+      role="region"
       aria-label={t('lcjfip:incentive.ratesTableLabel')}
-      sx={{ width: 'auto', mb: 3, borderCollapse: 'collapse' }}
-      data-test="lcjfip-rates-table"
+      tabIndex={0}
+      sx={{ overflowX: 'auto', mb: 3 }}
     >
-      <TableHead>
-        <TableRow sx={{ backgroundColor: 'grey.100' }}>
-          <TableCell colSpan={2} sx={{ ...cellSx, fontWeight: 700 }}>
-            {t('lcjfip:incentive.ratesHeader')}
-          </TableCell>
-          <TableCell sx={{ ...cellSx, fontWeight: 700 }}>
-            {t('lcjfip:incentive.cashOption')}
-          </TableCell>
-          <TableCell sx={{ ...cellSx, fontWeight: 700 }}>
-            {t('lcjfip:incentive.creditOption')}
-          </TableCell>
-        </TableRow>
-      </TableHead>
-      <TableBody>
-        {rows.map((row, index) => (
-          <TableRow key={row.key}>
-            {index === 0 && (
-              <TableCell
-                component="th"
-                scope="rowgroup"
-                rowSpan={rows.length}
-                sx={{ ...cellSx, fontWeight: 700 }}
-              >
-                {t('lcjfip:incentive.carbonIntensity')}
-              </TableCell>
-            )}
-            <TableCell component="th" scope="row" sx={cellSx}>
-              {row.label}
+      <Table
+        size="small"
+        aria-label={t('lcjfip:incentive.ratesTableLabel')}
+        sx={{
+          width: 'auto',
+          borderCollapse: 'collapse',
+          '& tbody tr': { height: 63 }
+        }}
+        data-test="lcjfip-rates-table"
+      >
+        <TableHead>
+          <TableRow sx={{ backgroundColor: 'grey.100' }}>
+            <TableCell
+              colSpan={2}
+              sx={{
+                ...cellSx,
+                py: '2px',
+                fontWeight: 700,
+                textAlign: 'center'
+              }}
+            >
+              {t('lcjfip:incentive.ratesHeader')}
             </TableCell>
-            <TableCell sx={cellSx}>
-              {row.cash !== undefined &&
-                t('lcjfip:incentive.cashRate', {
-                  rate: `$${rateNumber(row.cash)}`
-                })}
+            <TableCell sx={{ ...rateCellSx, py: '2px', fontWeight: 700 }}>
+              {t('lcjfip:incentive.cashOption')}
             </TableCell>
-            <TableCell sx={cellSx}>
-              {row.credit !== undefined &&
-                t('lcjfip:incentive.creditRate', {
-                  rate: rateNumber(row.credit)
-                })}
+            <TableCell sx={{ ...rateCellSx, py: '2px', fontWeight: 700 }}>
+              {t('lcjfip:incentive.creditOption')}
             </TableCell>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHead>
+        <TableBody>
+          {rows.map((row, index) => (
+            <TableRow key={row.key}>
+              {index === 0 && (
+                <TableCell
+                  component="th"
+                  scope="rowgroup"
+                  rowSpan={rows.length}
+                  sx={{
+                    ...cellSx,
+                    ...width(0),
+                    fontWeight: 700,
+                    whiteSpace: { md: 'nowrap' }
+                  }}
+                >
+                  {t('lcjfip:incentive.carbonIntensity')}
+                </TableCell>
+              )}
+              <TableCell
+                component="th"
+                scope="row"
+                sx={{ ...cellSx, ...(index === 0 ? width(1) : {}) }}
+              >
+                {row.label}
+              </TableCell>
+              <TableCell
+                sx={{ ...rateCellSx, ...(index === 0 ? width(2) : {}) }}
+              >
+                {row.cash !== undefined &&
+                  t('lcjfip:incentive.cashRate', {
+                    rate: `$${rateNumber(row.cash)}`
+                  })}
+              </TableCell>
+              <TableCell
+                sx={{ ...rateCellSx, ...(index === 0 ? width(3) : {}) }}
+              >
+                {row.credit !== undefined &&
+                  t('lcjfip:incentive.creditRate', {
+                    rate: rateNumber(row.credit)
+                  })}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </BCBox>
   )
 }
 
@@ -371,6 +426,8 @@ export const IncentiveSection = ({
             suffix=" L"
           />
         </FieldCell>
+      </FieldGrid>
+      <FieldGrid columns={AMOUNT_COLUMNS} maxWidth={AMOUNT_MAX_WIDTH}>
         <FieldCell
           label={
             <FieldLabel htmlFor="fuelCodeId">
