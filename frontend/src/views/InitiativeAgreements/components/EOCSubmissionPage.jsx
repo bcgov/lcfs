@@ -1,6 +1,5 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -12,15 +11,12 @@ import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
 import DialogTitle from '@mui/material/DialogTitle'
 import FormControlLabel from '@mui/material/FormControlLabel'
-import IconButton from '@mui/material/IconButton'
 import Link from '@mui/material/Link'
 import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
 import Step from '@mui/material/Step'
 import StepLabel from '@mui/material/StepLabel'
 import Stepper from '@mui/material/Stepper'
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
-import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
@@ -31,20 +27,11 @@ import InitiativeAgreementTabs from './InitiativeAgreementTabs'
 import DocumentTree from './DocumentTree'
 import EOCRequirementSection from './EOCRequirementSection'
 import EOCSubmissionHistory from './EOCSubmissionHistory'
+import DesignatedActionNavigation from './DesignatedActionNavigation'
 import { constructAddress } from '@/utils/constructAddress'
 import { dateFormatter } from '@/utils/formatters'
-import { ROUTES, buildPath } from '@/routes/routes'
 
 const noValue = '—'
-
-const actionNavButtonSx = {
-  width: 24,
-  height: 24,
-  color: 'white',
-  bgcolor: 'primary.main',
-  '&:hover': { bgcolor: 'primary.dark' },
-  '&.Mui-disabled': { bgcolor: 'grey.500', color: 'white' }
-}
 
 const ApplicantSummary = ({ data, currentUser, readOnly }) => {
   const applicant =
@@ -141,15 +128,6 @@ export const EOCSubmissionPage = ({
   dirty
 }) => {
   const { t } = useTranslation(['initiativeAgreement', 'report'])
-  const navigate = useNavigate()
-  const siblings = data.siblingActionIds || []
-  const actionId = Number(data.designatedActionId)
-  const currentIndex = siblings.findIndex((id) => Number(id) === actionId)
-  const previousId = currentIndex > 0 ? siblings[currentIndex - 1] : null
-  const nextId =
-    currentIndex >= 0 && currentIndex < siblings.length - 1
-      ? siblings[currentIndex + 1]
-      : null
   const actionLabel =
     data.actionLabel || `DA${data.actionNumber}-IA${data.initiativeAgreementId}`
   const summaryDate =
@@ -162,16 +140,6 @@ export const EOCSubmissionPage = ({
     if (['Not started', 'Submission received'].includes(data.daStatus)) return 1
     return 2
   }, [data.daStatus, data.status])
-
-  const goToSibling = (siblingId) => {
-    if (!siblingId) return
-    navigate(
-      buildPath(ROUTES.INITIATIVE_AGREEMENTS.ACTION_VIEW, {
-        initiativeAgreementId: data.initiativeAgreementId,
-        designatedActionId: siblingId
-      })
-    )
-  }
 
   const renderResponseSections = (
     responseData,
@@ -290,36 +258,15 @@ export const EOCSubmissionPage = ({
                   sx={{ bgcolor: '#d8e9f7', minWidth: 112 }}
                 />
               </BCBox>
-              <Stack direction="row" spacing={1} alignItems="center">
-                <IconButton
-                  aria-label={t(
-                    'initiativeAgreement:actionDetail.previousAction'
-                  )}
-                  size="small"
-                  disabled={!previousId}
-                  onClick={() => goToSibling(previousId)}
-                  sx={actionNavButtonSx}
-                  data-test="eoc-previous-action"
-                >
-                  <ChevronLeftIcon fontSize="small" />
-                </IconButton>
-                <BCTypography
-                  variant="body4"
-                  sx={{ fontWeight: 700, color: 'primary.main' }}
-                >
-                  {actionLabel}
-                </BCTypography>
-                <IconButton
-                  aria-label={t('initiativeAgreement:actionDetail.nextAction')}
-                  size="small"
-                  disabled={!nextId}
-                  onClick={() => goToSibling(nextId)}
-                  sx={actionNavButtonSx}
-                  data-test="eoc-next-action"
-                >
-                  <ChevronRightIcon fontSize="small" />
-                </IconButton>
-              </Stack>
+              <DesignatedActionNavigation
+                siblingActionIds={data.siblingActionIds}
+                designatedActionId={data.designatedActionId}
+                initiativeAgreementId={data.initiativeAgreementId}
+                actionNumber={data.actionNumber}
+                actionLabel={actionLabel}
+                previousTestId="eoc-previous-action"
+                nextTestId="eoc-next-action"
+              />
             </BCBox>
 
             <BCBox
