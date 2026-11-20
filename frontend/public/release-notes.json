@@ -2,7 +2,7 @@
   {
     "version": "1.3.13",
     "tag": "v1.3.13",
-    "date": "2026-11-19",
+    "date": "2026-11-20",
     "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/v1.3.13",
     "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/v1.3.12...v1.3.13",
     "summary": "This release includes 11 new features, 11 bug fixes, 3 dependency updates and 25 other changes. Highlights: LCJFIP security groups; Upload utility document deletion and restore; Add allocation agreements index page; Add comments and attachments to organization penalty log.",
