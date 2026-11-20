@@ -55,7 +55,9 @@ DEFAULT_CATEGORY_BY_ENTITY: dict[EntityTypeEnum, str] = {
 }
 
 
-_HTML_TAG_RE = re.compile(r"<[^>]*>")
+# A tag never contains a raw "<" (editor HTML escapes it as &lt;), and leaving
+# it out of the class keeps the match linear on input like "<<<<...".
+_HTML_TAG_RE = re.compile(r"<[^<>]*>")
 _WHITESPACE_RE = re.compile(r"\s+")
 _MENTION_ID_RE = re.compile(r'data-mention-id="(\d+)"')
 

@@ -1,3 +1,5 @@
+import time
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 from types import SimpleNamespace
@@ -731,6 +733,14 @@ def test_sanitize_comment_text_strips_html_and_collapses_whitespace():
     assert sanitize_comment_text("") == ""
     assert sanitize_comment_text("<p>Hello <b>world</b></p>") == "Hello world"
     assert sanitize_comment_text("<p>a</p>\n<p>b   c</p>") == "a b c"
+
+
+def test_sanitize_comment_text_is_linear_on_unclosed_angle_brackets():
+    # "<[^>]*>" retried from every "<" and took quadratic time on this input.
+    started = time.perf_counter()
+    assert sanitize_comment_text("<" * 200_000) == "<" * 200_000
+    assert time.perf_counter() - started < 1
+    assert sanitize_comment_text("1 < 2 <b>bold</b>") == "1 < 2 bold"
 
 
 @pytest.mark.anyio

@@ -4,8 +4,9 @@ Tests for BC Geocoder service client.
 
 import pytest
 import asyncio
+import logging
 from unittest.mock import AsyncMock, patch, MagicMock
-from httpx import RequestError
+from httpx import HTTPStatusError, Request, RequestError, Response
 
 from lcfs.services.geocoder.client import BCGeocoderService, Address, GeocodingResult
 
@@ -146,6 +147,32 @@ class TestBCGeocoderService:
 
             assert addresses == []
             assert geocoder_service._metrics["api_errors"] >= 1
+
+    @pytest.mark.anyio
+    async def test_validate_address_error_log_has_no_address_or_api_key(
+        self, geocoder_service, caplog
+    ):
+        """An HTTP error's message carries the full URL; the log must not."""
+        geocoder_service.api_key = "test-key-value"
+        request = Request(
+            "GET",
+            "https://test.geocoder.api.gov.bc.ca/addresses.json",
+            params={"addressString": "123 Sample St", "apikey": "test-key-value"},
+        )
+        error = HTTPStatusError(
+            "Client error", request=request, response=Response(403, request=request)
+        )
+        with patch.object(
+            geocoder_service, "_make_request", new_callable=AsyncMock
+        ) as mock_request, caplog.at_level(
+            logging.DEBUG, logger="lcfs.services.geocoder"
+        ):
+            mock_request.side_effect = error
+            assert await geocoder_service.validate_address("123 Sample St") == []
+
+        assert "HTTP 403" in caplog.text
+        assert "Sample" not in caplog.text
+        assert "test-key-value" not in caplog.text
 
     @pytest.mark.anyio
     async def test_forward_geocode_success(
