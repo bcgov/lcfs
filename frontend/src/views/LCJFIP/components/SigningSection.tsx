@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import type { LCJFIPFormValues } from '../lcjfipForm'
+import { underlinedLink } from './underlinedLink'
 
 const DECLARATIONS = [
   { name: 'authority', textKey: 'declarationAuthority' },
@@ -61,10 +62,7 @@ export const SigningSection = ({
       </BCTypography>
       <BCTypography variant="body2" mb={3}>
         {t('lcjfip:signing.collectionNotice')}{' '}
-        <Link
-          sx={{ color: 'link.main', textDecoration: 'underline' }}
-          href={`mailto:${programEmail}`}
-        >
+        <Link sx={underlinedLink} href={`mailto:${programEmail}`}>
           {programEmail}
         </Link>
       </BCTypography>
@@ -82,7 +80,7 @@ export const SigningSection = ({
           <FormControl
             component="fieldset"
             error={!!declarationsError}
-            sx={{ mb: 3, maxWidth: 1100 }}
+            sx={{ mb: 3 }}
           >
             <FormLabel component="legend" sx={visuallyHidden}>
               {t('lcjfip:signing.declarationsLabel')}
