@@ -905,7 +905,7 @@ status_dates AS (
 )
 SELECT
     a.lcjfip_application_id,
-    'LCJFIP-' || a.lcjfip_application_id AS application_number,
+    'JF-' || a.lcjfip_application_id AS application_number,
     st.status AS application_status,
     a.application_period_id,
     ap.description AS application_period,
@@ -1004,7 +1004,7 @@ WITH feedstocks AS (
 SELECT
     pd.lcjfip_purchase_detail_id,
     a.lcjfip_application_id,
-    'LCJFIP-' || a.lcjfip_application_id AS application_number,
+    'JF-' || a.lcjfip_application_id AS application_number,
     st.status AS application_status,
     a.application_period_id,
     ap.description AS application_period,

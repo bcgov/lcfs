@@ -22,8 +22,10 @@ from lcfs.db.models.lcjfip import (
     LCJFIPIncentiveOption,
     LCJFIPPurchaseDetail,
 )
+from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.db.models.user.UserProfile import UserProfile
+from lcfs.utils.dates import to_pacific_date
 
 APPLICANT = [RoleEnum.LCJFIP_APPLICANT]
 IDIR_IA_ANALYST = [RoleEnum.IA_ANALYST, RoleEnum.GOVERNMENT]
@@ -238,7 +240,7 @@ async def test_create_draft_saves_the_form_and_calculates_the_incentive(
     created = await _create(client, fastapi_app, await _complete_form(dbsession))
 
     assert created["status"] == "Draft"
-    assert created["applicationNumber"] == f"LCJFIP-{created['lcjfipApplicationId']}"
+    assert created["applicationNumber"] == f"JF-{created['lcjfipApplicationId']}"
     assert created["organization"]["organizationId"] == 1
     assert created["contact"]["userProfileId"] == 1
     assert created["incentiveType"] == "Cash"
@@ -725,3 +727,262 @@ async def test_comment_thread_follows_the_application_visibility(
     government_thread = await client.get(thread_url)
     assert government_thread.status_code == status.HTTP_200_OK
     assert len(government_thread.json()) == 1
+
+
+# ---------------------------------------------------------------------------
+# Applications index (#5541)
+# ---------------------------------------------------------------------------
+
+
+async def _list(client, fastapi_app, **pagination):
+    body = {"page": 1, "size": 10, "sortOrders": [], "filters": []}
+    body.update(pagination)
+    response = await client.post(
+        _url(fastapi_app, "list_lcjfip_applications"), json=body
+    )
+    assert response.status_code == status.HTTP_200_OK, response.text
+    return response.json()
+
+
+def _numbers(page):
+    return [row["applicationNumber"] for row in page["applications"]]
+
+
+async def _index_fixture(client, fastapi_app, set_mock_user, dbsession):
+    """
+    Organizations 1 and 2 each have a Draft and a Submitted application.
+    Returns their ids by name.
+    """
+    set_mock_user(fastapi_app, APPLICANT)
+    ids = {}
+    ids["org1_draft"] = (await _create(client, fastapi_app, {}))["lcjfipApplicationId"]
+    ids["org1_submitted"] = (
+        await _create(client, fastapi_app, await _complete_form(dbsession))
+    )["lcjfipApplicationId"]
+    submitted = await _submit(client, fastapi_app, ids["org1_submitted"])
+    assert submitted.status_code == status.HTTP_200_OK, submitted.text
+
+    _switch_user(fastapi_app, APPLICANT, {"organization_id": 2})
+    ids["org2_draft"] = (await _create(client, fastapi_app, {}))["lcjfipApplicationId"]
+    credit_form = await _complete_form(
+        dbsession,
+        incentiveOptionId=await _id(dbsession, LCJFIPIncentiveOption, CREDIT),
+    )
+    ids["org2_submitted"] = (await _create(client, fastapi_app, credit_form))[
+        "lcjfipApplicationId"
+    ]
+    submitted = await _submit(client, fastapi_app, ids["org2_submitted"])
+    assert submitted.status_code == status.HTTP_200_OK, submitted.text
+    return ids
+
+
+BY_NUMBER = [{"field": "applicationNumber", "direction": "asc"}]
+
+
+@pytest.mark.anyio
+async def test_index_shows_an_applicant_only_its_own_applications(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    ids = await _index_fixture(client, fastapi_app, set_mock_user, dbsession)
+
+    _switch_user(fastapi_app, APPLICANT, {"organization_id": 1})
+    page = await _list(client, fastapi_app, sortOrders=BY_NUMBER)
+    assert _numbers(page) == [
+        f"JF-{ids['org1_draft']}",
+        f"JF-{ids['org1_submitted']}",
+    ]
+    assert page["pagination"] == {"total": 2, "page": 1, "size": 10, "totalPages": 1}
+
+    draft, submitted = page["applications"]
+    contact = await dbsession.get(UserProfile, 1)
+    organization = await dbsession.get(Organization, 1)
+    assert draft["status"] == "Draft"
+    assert draft["submittedDate"] is None
+    assert draft["incentiveType"] is None
+    assert submitted["status"] == "Submitted"
+    assert submitted["contactName"] == f"{contact.first_name} {contact.last_name}"
+    assert submitted["organizationName"] == organization.name
+    assert submitted["incentiveType"] == "Cash"
+    assert submitted["submittedDate"] is not None
+    # No award or disbursement exists yet, so nothing stands in for one.
+    for row in page["applications"]:
+        assert row["incentiveAwardDate"] is None
+        assert row["authorizedDisbursement"] is None
+
+
+@pytest.mark.anyio
+async def test_index_shows_government_every_organization_without_drafts(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    ids = await _index_fixture(client, fastapi_app, set_mock_user, dbsession)
+
+    _switch_user(fastapi_app, IDIR_IA_ANALYST, GOVERNMENT_USER)
+    page = await _list(client, fastapi_app, sortOrders=BY_NUMBER)
+    assert _numbers(page) == [
+        f"JF-{ids['org1_submitted']}",
+        f"JF-{ids['org2_submitted']}",
+    ]
+    assert {row["organizationName"] for row in page["applications"]} == {
+        (await dbsession.get(Organization, 1)).name,
+        (await dbsession.get(Organization, 2)).name,
+    }
+    assert [row["incentiveType"] for row in page["applications"]] == [
+        "Cash",
+        "Credit",
+    ]
+
+    # A Draft cannot be found through a filter either.
+    drafts = await _list(
+        client,
+        fastapi_app,
+        filters=[
+            {
+                "field": "status",
+                "filterType": "text",
+                "type": "equals",
+                "filter": "Draft",
+            }
+        ],
+    )
+    assert drafts["applications"] == []
+
+
+@pytest.mark.anyio
+async def test_index_status_options_are_the_statuses_the_user_can_see(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    set_mock_user(fastapi_app, APPLICANT)
+    applicant = await client.get(_url(fastapi_app, "get_lcjfip_statuses"))
+    assert applicant.status_code == status.HTTP_200_OK
+    assert applicant.json()[:2] == ["Draft", "Submitted"]
+
+    _switch_user(fastapi_app, IDIR_IA_ANALYST, GOVERNMENT_USER)
+    government = await client.get(_url(fastapi_app, "get_lcjfip_statuses"))
+    assert government.status_code == status.HTTP_200_OK
+    assert "Draft" not in government.json()
+    assert government.json()[0] == "Submitted"
+
+
+def _text(field, value, option="equals"):
+    return {"field": field, "filterType": "text", "type": option, "filter": value}
+
+
+def _date(value, option="equals"):
+    return {
+        "field": "submittedDate",
+        "filterType": "date",
+        "type": option,
+        "dateFrom": value,
+    }
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "filter_model, expected",
+    [
+        (_text("status", "Submitted"), ["org1_submitted"]),
+        # The number filter reads digits, so JF-12, jf12 and 12 all match.
+        (_text("applicationNumber", "JF-{org1_draft}"), ["org1_draft"]),
+        (_text("applicationNumber", "jf{org1_draft}"), ["org1_draft"]),
+        (_text("applicationNumber", "{org1_draft}"), ["org1_draft"]),
+        # Nothing to match on is no filter at all.
+        (_text("applicationNumber", "JF-"), ["org1_draft", "org1_submitted"]),
+        (
+            _text("contactName", "{contact_last_name}", "contains"),
+            ["org1_draft", "org1_submitted"],
+        ),
+        (_text("contactName", "nobody by this name", "contains"), []),
+        # Submission is filtered on its Pacific date.
+        (_date("{today}"), ["org1_submitted"]),
+        (_date("{today}", "lessThan"), []),
+        # Fields the index does not filter on are ignored.
+        (
+            _text("fuelSupplierContactEmail", "x", "contains"),
+            ["org1_draft", "org1_submitted"],
+        ),
+    ],
+)
+async def test_index_filters(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    dbsession,
+    filter_model,
+    expected,
+):
+    ids = await _index_fixture(client, fastapi_app, set_mock_user, dbsession)
+    contact = await dbsession.get(UserProfile, 1)
+    values = {
+        **ids,
+        "contact_last_name": contact.last_name,
+        "today": to_pacific_date(
+            datetime.datetime.now(datetime.timezone.utc)
+        ).isoformat(),
+    }
+    filter_model = {
+        key: value.format(**values) if isinstance(value, str) else value
+        for key, value in filter_model.items()
+    }
+
+    _switch_user(fastapi_app, APPLICANT, {"organization_id": 1})
+    page = await _list(
+        client, fastapi_app, filters=[filter_model], sortOrders=BY_NUMBER
+    )
+    assert _numbers(page) == [f"JF-{ids[name]}" for name in expected]
+
+
+@pytest.mark.anyio
+async def test_index_filters_government_rows_by_organization(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    ids = await _index_fixture(client, fastapi_app, set_mock_user, dbsession)
+    organization = await dbsession.get(Organization, 2)
+
+    _switch_user(fastapi_app, IDIR_IA_ANALYST, GOVERNMENT_USER)
+    page = await _list(
+        client,
+        fastapi_app,
+        filters=[_text("organizationName", organization.name, "contains")],
+    )
+    assert _numbers(page) == [f"JF-{ids['org2_submitted']}"]
+
+
+@pytest.mark.anyio
+async def test_index_sorts_and_pages(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    set_mock_user(fastapi_app, APPLICANT)
+    created = [
+        (await _create(client, fastapi_app, {}))["lcjfipApplicationId"]
+        for _ in range(3)
+    ]
+    newest_first = [f"JF-{application_id}" for application_id in reversed(created)]
+    by_number_desc = [{"field": "applicationNumber", "direction": "desc"}]
+
+    first = await _list(client, fastapi_app, size=2, sortOrders=by_number_desc)
+    second = await _list(client, fastapi_app, page=2, size=2, sortOrders=by_number_desc)
+    assert _numbers(first) == newest_first[:2]
+    assert _numbers(second) == newest_first[2:]
+    assert first["pagination"]["total"] == 3
+    assert first["pagination"]["totalPages"] == 2
+
+    # Without a sort, the most recently changed application comes first. The
+    # test runs in one transaction, where now() does not move, so the change
+    # time is set directly.
+    oldest = await dbsession.get(LCJFIPApplication, created[0])
+    oldest.update_date = oldest.update_date + datetime.timedelta(minutes=5)
+    await dbsession.flush()
+    unsorted = await _list(client, fastapi_app)
+    assert _numbers(unsorted) == [f"JF-{created[0]}", *newest_first[:2]]
+
+
+@pytest.mark.anyio
+async def test_index_is_closed_to_users_without_an_lcjfip_role(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+    response = await client.post(
+        _url(fastapi_app, "list_lcjfip_applications"),
+        json={"page": 1, "size": 10, "sortOrders": [], "filters": []},
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN

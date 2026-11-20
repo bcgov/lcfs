@@ -8,8 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db import dependencies
 from lcfs.services.s3.dependency import get_s3_client
+from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.lcjfip.schema import (
-    LCJFIPApplicationListItemSchema,
+    LCJFIPApplicationsListSchema,
     LCJFIPApplicationSaveSchema,
     LCJFIPApplicationSchema,
     LCJFIPFuelCodeOptionSchema,
@@ -22,6 +23,7 @@ from lcfs.web.api.lcjfip.validation import (
     READ_ROLES,
     LCJFIPValidation,
 )
+from lcfs.web.api.role.schema import is_government_user
 from lcfs.web.core.decorators import view_handler
 
 router = APIRouter()
@@ -55,19 +57,44 @@ async def get_lcjfip_fuel_codes(
 
 
 @router.get(
-    "/applications",
-    response_model=List[LCJFIPApplicationListItemSchema],
+    "/statuses",
+    response_model=List[str],
     status_code=status.HTTP_200_OK,
 )
-@view_handler(APPLICANT_ROLES)
+@view_handler(READ_ROLES)
+async def get_lcjfip_statuses(
+    request: Request, service: LCJFIPServices = Depends()
+) -> List[str]:
+    """Statuses the caller can see, for the index's status filter."""
+    return await service.get_statuses(exclude_draft=is_government_user(request.user))
+
+
+@router.post(
+    "/applications/list",
+    response_model=LCJFIPApplicationsListSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(READ_ROLES)
 async def list_lcjfip_applications(
     request: Request,
+    pagination: PaginationRequestSchema = Body(..., embed=False),
     service: LCJFIPServices = Depends(),
     validate: LCJFIPValidation = Depends(),
-) -> List[LCJFIPApplicationListItemSchema]:
-    """The applicant organization's applications, newest first."""
-    organization_id = validate.require_organization()
-    return await service.list_applications(organization_id)
+) -> LCJFIPApplicationsListSchema:
+    """
+    A page of the applications index (#5541). BCeID users see their own
+    organization's applications, Drafts included; government users see every
+    organization's, without Drafts.
+    """
+    if is_government_user(request.user):
+        return await service.list_applications(
+            pagination, organization_id=None, exclude_draft=True
+        )
+    return await service.list_applications(
+        pagination,
+        organization_id=validate.require_organization(),
+        exclude_draft=False,
+    )
 
 
 @router.post(
