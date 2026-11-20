@@ -440,6 +440,18 @@ describe('LCJFIP application form', () => {
     )
     await waitFor(() => expect(dateField).toHaveValue('2027-03-31'))
 
+    // A draft has reached the first step, which shows a check mark.
+    const progress = screen.getByTestId('lcjfip-progress')
+    const step = (name) =>
+      within(progress).getByText(name).closest('.MuiStep-root')
+    expect(step('Application information')).toHaveClass('Mui-completed')
+    expect(step('Sign & submit')).not.toHaveClass('Mui-completed')
+
+    // Carbon intensity always shows two decimal places.
+    expect(
+      screen.getByRole('textbox', { name: /Estimated carbon intensity/ })
+    ).toHaveValue('8.50')
+
     // The blend is shown as LCJF:Jet-A and follows what is typed.
     const blend = screen.getByTestId('lcjfip-purchase-estimatedBlendPercentage')
     expect(blend).toHaveValue('30:70')

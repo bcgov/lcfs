@@ -138,6 +138,8 @@ export const FieldCell = ({
 type NumberFieldProps = Omit<TextFieldProps, 'name' | 'value' | 'onChange'> & {
   name: string
   decimalScale: number
+  /** Always show every decimal place, e.g. 24.50 */
+  fixedDecimalScale?: boolean
   allowNegative?: boolean
   thousandSeparator?: boolean
   prefix?: string
@@ -153,6 +155,7 @@ type NumberFieldProps = Omit<TextFieldProps, 'name' | 'value' | 'onChange'> & {
 export const NumberField = ({
   name,
   decimalScale,
+  fixedDecimalScale = false,
   allowNegative = false,
   thousandSeparator = true,
   prefix,
@@ -179,6 +182,7 @@ export const NumberField = ({
           inputRef={field.ref}
           name={field.name}
           decimalScale={decimalScale}
+          fixedDecimalScale={fixedDecimalScale}
           allowNegative={allowNegative}
           thousandSeparator={thousandSeparator}
           prefix={prefix}
