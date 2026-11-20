@@ -19,22 +19,22 @@
   },
   "eligibilityMessage": "Eligibility cannot be determined until all documentation is submitted. The requested information is used to determine your eligibility for assistance. Failure to submit all documentation requested may result in delays or the closure of your application. Information received may be verified by program staff. Additional documents specific to your situation may be requested throughout the assessment, as eligibility is determined.",
   "required": "(required)",
+  "requiredLegend": "indicates a required field",
   "applicant": {
     "heading": "Applicant and organization information",
-    "addressChangePrefix": "To request a change to your organization's address information, email",
+    "addressChangePrefix": "To update address information, email",
     "addressChangeSubject": "LCJFIP applicant organization address change",
     "carTypes": "Canadian Aviation Regulations (CAR) type(s)",
     "certificateType": "Certificate type",
     "carGuidance": "Canadian Aviation Regulations (CAR) guidance",
     "operatorListLink": "Canada Operator List Search Tool",
     "opensInNewTab": "(opens in a new tab)",
-    "select": "Select"
+    "select": "Select",
+    "addressChangeSuffix": "and our team will assist you."
   },
   "purchase": {
     "heading": "Low Carbon Jet Fuel (LCJF) Purchase Details",
     "intro": "At the close of the current application period, program staff will review all submitted applications and issue letters to each eligible applicant detailing the estimated incentive amount, calculated based on overall program demand. After submitting the Delivery Verification Form, the final incentive will be calculated based on verified delivery details.",
-    "tableLabel": "LCJF purchase details",
-    "action": "Action",
     "estimatedVolume": "Estimated total volume for support (L)",
     "anticipatedDeliveryDate": "Anticipated delivery completion date",
     "feedstockSources": "Anticipated feedstock source(s)",
@@ -42,15 +42,9 @@
     "assumedJetAPrice": "Assumed Jet-A price (CAD/L)",
     "pricePremiumFrom": "Estimated price premium range - From (CAD/L)",
     "pricePremiumTo": "Estimated price premium range - To (CAD/L)",
-    "pricePremiumValidation": "Price premium validation",
-    "premiumValid": "Within range",
-    "premiumIncomplete": "Enter both values",
-    "addRow": "Add row",
-    "deleteRow": "Delete purchase row {{row}}",
-    "rowLabel": "{{field}}, row {{row}}",
-    "noRows": "No purchases added yet. Select Add row to enter a purchase.",
     "premiumHeading": "Estimated Low Carbon Jet Fuel Price Premium (CAD)",
-    "premiumText": "Please provide an estimated Low Carbon Jet Fuel price premium (e.g., $/L above Jet-A), along with the Jet-A price assumed in your calculation. The price premium range must not exceed $0.25 CAD/L. Exact prices are not required, but ranges should reflect market conditions at the time of the planned uplift in B.C."
+    "premiumText": "Please provide an estimated Low Carbon Jet Fuel price premium (e.g., $/L above Jet-A), along with the Jet-A price assumed in your calculation. The price premium range must not exceed $0.25 CAD/L. Exact prices are not required, but ranges should reflect market conditions at the time of the planned uplift in B.C.",
+    "blendHelp": "Enter the low carbon jet fuel share of the blend as a percentage. The field shows the blend as LCJF to Jet-A, for example 30:70."
   },
   "incentive": {
     "heading": "Incentive option selection",
@@ -63,7 +57,7 @@
     "creditRate": "Up to {{rate}} credits/L",
     "preferredOption": "Preferred incentive option",
     "totalEstimatedVolume": "Estimated total volume for support (L)",
-    "totalEstimatedVolumeHelp": "Total of the purchase rows",
+    "totalEstimatedVolumeHelp": "From the purchase details above",
     "estimatedCarbonIntensity": "Estimated carbon intensity (gCO2e/MJ)",
     "requestedIncentiveVolume": "Total volume of LCJF incentive requested (L)",
     "fuelCode": "BC-LCFS fuel code, if known",
@@ -72,10 +66,12 @@
     "estimatedIncentiveAmount": "Estimated incentive amount requested",
     "estimatedIncentiveAmountHelp": "Volume requested × the maximum rate for the selected option and carbon intensity",
     "baselineRateHelp": "Without an estimated carbon intensity, the rate for CI greater than 10 gCO2e/MJ applies.",
-    "credits": "{{amount}} credits"
+    "credits": "{{amount}} credits",
+    "litres": "{{amount}} L",
+    "cad": "{{amount}} CAD"
   },
   "fuelSupplier": {
-    "heading": "Fuel supplier incentive transfer information",
+    "heading": "LCFS credit option - Fuel supplier incentive transfer",
     "legalName": "Fuel supplier legal name",
     "legalNameHelp": "Select a supplier registered in the LCFS Portal, or type its legal name.",
     "firstName": "Fuel supplier contact - First name",
@@ -126,7 +122,7 @@
     "premiumOrder": "The 'From' value must not be greater than 'To'.",
     "premiumRange": "The price premium range must not exceed $0.25 CAD/L.",
     "requestedExceedsTotal": "The volume requested must not exceed the estimated total volume for support.",
-    "purchaseRequired": "Add at least one LCJF purchase.",
+    "purchaseRequired": "Enter the LCJF purchase details.",
     "incentiveOption": "Select a preferred incentive option.",
     "declarations": "Select all of the declarations."
   }

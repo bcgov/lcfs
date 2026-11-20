@@ -1,4 +1,3 @@
-import Grid2 from '@mui/material/Grid2'
 import Link from '@mui/material/Link'
 import MenuItem from '@mui/material/MenuItem'
 import Select from '@mui/material/Select'
@@ -10,6 +9,7 @@ import BCTypography from '@/components/BCTypography'
 import type { LCJFIPOption } from '@/hooks/useLCJFIP'
 import type { LCJFIPFormValues } from '../lcjfipForm'
 import { FieldLabel } from './fields'
+import { visuallyHidden } from './visuallyHidden'
 
 export const OPERATOR_LIST_URL =
   'https://wwwapps.tc.gc.ca/saf-sec-sur/2/CAS-SAC/olsrles.aspx?GoCTemplateCulture=en-CA'
@@ -43,7 +43,9 @@ const SelectField = ({
       control={control}
       render={({ field, fieldState }) => (
         <>
-          <FieldLabel id={labelId}>{label}</FieldLabel>
+          <FieldLabel id={labelId} strong>
+            {label}
+          </FieldLabel>
           {/* No FormControl wrapper: the theme's form-control select padding
               would shrink the select below the height of the inputs. */}
           <Select
@@ -149,33 +151,42 @@ export const ApplicantSection = ({
             )}`}
           >
             {programEmail}
-          </Link>
-          .
+          </Link>{' '}
+          {t('lcjfip:applicant.addressChangeSuffix')}
         </BCTypography>
       </BCBox>
 
-      <Grid2 container spacing={2} alignItems="flex-start">
-        <Grid2 size={{ xs: 12, md: 5 }}>
+      {/* The selects keep the mock-up's widths on wide screens and fill the
+          line on narrow ones. */}
+      <BCBox
+        sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
+          alignItems: { xs: 'stretch', md: 'flex-start' },
+          gap: 2
+        }}
+      >
+        <BCBox sx={{ width: { xs: '100%', md: 320 } }}>
           <SelectField
             name="carTypeId"
             label={t('lcjfip:applicant.carTypes')}
             options={carTypes}
             readOnly={readOnly}
           />
-        </Grid2>
-        <Grid2 size={{ xs: 12, md: 3 }}>
+        </BCBox>
+        <BCBox sx={{ width: { xs: '100%', md: 220 } }}>
           <SelectField
             name="certificateTypeId"
             label={t('lcjfip:applicant.certificateType')}
             options={certificateTypes}
             readOnly={readOnly}
           />
-        </Grid2>
-        <Grid2 size={{ xs: 12, md: 4 }}>
+        </BCBox>
+        <BCBox sx={{ pl: { md: 2 } }}>
           <BCTypography
             variant="body2"
             component="p"
-            sx={{ fontWeight: 600, pb: 1 }}
+            sx={{ fontWeight: 600, fontSize: '0.875rem', pb: 1 }}
           >
             {t('lcjfip:applicant.carGuidance')}
           </BCTypography>
@@ -197,20 +208,8 @@ export const ApplicantSection = ({
               {t('lcjfip:applicant.opensInNewTab')}
             </BCBox>
           </Link>
-        </Grid2>
-      </Grid2>
+        </BCBox>
+      </BCBox>
     </section>
   )
 }
-
-const visuallyHidden = {
-  border: 0,
-  clip: 'rect(0 0 0 0)',
-  height: '1px',
-  margin: '-1px',
-  overflow: 'hidden',
-  padding: 0,
-  position: 'absolute',
-  whiteSpace: 'nowrap',
-  width: '1px'
-} as const

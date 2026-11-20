@@ -40,7 +40,7 @@ import {
   IncentiveSection,
   type SupplierOrganization
 } from './components/IncentiveSection'
-import { PurchaseDetailsTable } from './components/PurchaseDetailsTable'
+import { PurchaseDetails } from './components/PurchaseDetails'
 import { SigningSection } from './components/SigningSection'
 import {
   DEFAULT_MAX_PREMIUM_RANGE,
@@ -336,16 +336,6 @@ export const LCJFIPApplicationBase = () => {
         data-test="lcjfip-application-title"
       >
         {t('lcjfip:applicationTitle')}
-        {application && (
-          <BCTypography
-            component="span"
-            variant="h6"
-            color="text.secondary"
-            ml={2}
-          >
-            {application.applicationNumber}
-          </BCTypography>
-        )}
       </BCTypography>
 
       <ApplicationProgress status={application?.status} />
@@ -369,7 +359,7 @@ export const LCJFIPApplicationBase = () => {
             readOnly={readOnly}
           />
           <Divider sx={{ my: 3 }} />
-          <PurchaseDetailsTable
+          <PurchaseDetails
             feedstockSources={referenceData.feedstockSources}
             maxPremiumRange={referenceData.maxPricePremiumRange}
             readOnly={readOnly}

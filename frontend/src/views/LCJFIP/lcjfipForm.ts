@@ -107,7 +107,12 @@ export const formValuesFromApplication = (
   fuelSupplierContactFirstName: application.fuelSupplierContactFirstName ?? '',
   fuelSupplierContactLastName: application.fuelSupplierContactLastName ?? '',
   fuelSupplierContactEmail: application.fuelSupplierContactEmail ?? '',
-  purchaseDetails: application.purchaseDetails.map((row) => ({
+  // The form edits one purchase (the mock-up has one set of fields), so an
+  // application saved without any gets an empty one.
+  purchaseDetails: (application.purchaseDetails.length
+    ? application.purchaseDetails
+    : [emptyPurchaseRow()]
+  ).map((row) => ({
     lcjfipPurchaseDetailId: row.lcjfipPurchaseDetailId,
     estimatedVolume: row.estimatedVolume,
     anticipatedDeliveryDate: row.anticipatedDeliveryDate,
@@ -206,18 +211,27 @@ export const estimatedIncentiveAmount = (
   return Math.round((requestedVolume * maxRate + Number.EPSILON) * 100) / 100
 }
 
-/** Cash amounts in CAD; credit amounts as "N credits" via the given label. */
+/**
+ * Cash amounts as "$625,000 CAD" (cents only when there are any); credit
+ * amounts as "N credits". The labels add the unit in the user's language.
+ */
 export const formatIncentiveAmount = (
   amount: number | null,
   incentiveType: string | null | undefined,
-  creditsLabel: (amount: string) => string
+  creditsLabel: (amount: string) => string,
+  cashLabel: (amount: string) => string = (value) => `${value} CAD`
 ) => {
   if (amount === null || !incentiveType) return ''
   if (incentiveType === 'Cash') {
-    return amount.toLocaleString('en-CA', {
-      style: 'currency',
-      currency: 'CAD'
-    })
+    const cents = Number.isInteger(amount) ? 0 : 2
+    return cashLabel(
+      amount.toLocaleString('en-CA', {
+        style: 'currency',
+        currency: 'CAD',
+        minimumFractionDigits: cents,
+        maximumFractionDigits: cents
+      })
+    )
   }
   return creditsLabel(
     amount.toLocaleString('en-CA', {

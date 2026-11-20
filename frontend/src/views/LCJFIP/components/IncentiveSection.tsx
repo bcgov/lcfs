@@ -3,7 +3,6 @@ import FormControl from '@mui/material/FormControl'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import FormHelperText from '@mui/material/FormHelperText'
 import FormLabel from '@mui/material/FormLabel'
-import Grid2 from '@mui/material/Grid2'
 import Radio from '@mui/material/Radio'
 import RadioGroup from '@mui/material/RadioGroup'
 import Table from '@mui/material/Table'
@@ -14,6 +13,7 @@ import TableRow from '@mui/material/TableRow'
 import TextField from '@mui/material/TextField'
 import { Controller, useFormContext, useWatch } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
+import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import type {
   LCJFIPFuelCodeOption,
@@ -27,7 +27,21 @@ import {
   totalEstimatedVolume,
   type LCJFIPFormValues
 } from '../lcjfipForm'
-import { FieldLabel, NumberField } from './fields'
+import {
+  FieldCell,
+  FieldGrid,
+  FieldLabel,
+  NumberField,
+  RequiredLegend
+} from './fields'
+import { visuallyHidden } from './visuallyHidden'
+
+// Three fields to a line on wide screens, as in the mock-up.
+const THREE_COLUMNS = {
+  xs: 'minmax(0, 1fr)',
+  sm: 'repeat(2, minmax(0, 1fr))',
+  md: 'repeat(3, minmax(0, 1fr))'
+}
 
 export type SupplierOrganization = { organizationId: number; name: string }
 
@@ -117,23 +131,28 @@ const RatesTable = ({ rates }: { rates: LCJFIPIncentiveRate[] }) => {
   )
 }
 
+// A calculated value. The mock-up marks it with the required asterisk, but
+// nobody types in it, so screen readers are not told it is required.
 const ReadOnlyValue = ({
   id,
   label,
   value,
   help,
-  required = false
+  marked = false
 }: {
   id: string
   label: string
   value: string
   help?: string
-  required?: boolean
+  marked?: boolean
 }) => (
-  <>
-    <FieldLabel htmlFor={id} required={required}>
-      {label}
-    </FieldLabel>
+  <FieldCell
+    label={
+      <FieldLabel htmlFor={id} marked={marked}>
+        {label}
+      </FieldLabel>
+    }
+  >
     <TextField
       id={id}
       value={value}
@@ -146,7 +165,7 @@ const ReadOnlyValue = ({
       helperText={help}
       sx={{ '& .MuiInputBase-root': { backgroundColor: 'grey.100' } }}
     />
-  </>
+  </FieldCell>
 )
 
 const TextInput = ({
@@ -167,14 +186,17 @@ const TextInput = ({
 }) => {
   const { control } = useFormContext<LCJFIPFormValues>()
   return (
-    <Controller
-      name={name}
-      control={control}
-      render={({ field, fieldState }) => (
-        <>
-          <FieldLabel htmlFor={name} required={required}>
-            {label}
-          </FieldLabel>
+    <FieldCell
+      label={
+        <FieldLabel htmlFor={name} required={required}>
+          {label}
+        </FieldLabel>
+      }
+    >
+      <Controller
+        name={name}
+        control={control}
+        render={({ field, fieldState }) => (
           <TextField
             {...field}
             value={field.value ?? ''}
@@ -187,9 +209,9 @@ const TextInput = ({
             error={!!fieldState.error}
             helperText={fieldState.error?.message}
           />
-        </>
-      )}
-    />
+        )}
+      />
+    </FieldCell>
   )
 }
 
@@ -244,20 +266,28 @@ export const IncentiveSection = ({
         control={control}
         render={({ field, fieldState }) => (
           <FormControl error={!!fieldState.error} sx={{ mb: 3 }}>
+            {/* Styled as a sub-heading, as in the mock-up; screen readers
+                still hear that a choice is required. */}
             <FormLabel
               id="lcjfip-incentive-option-label"
               sx={{
                 fontWeight: 700,
-                color: 'text.primary',
+                color: 'primary.main',
                 mb: 1,
-                fontSize: '0.95rem'
+                fontSize: '1rem',
+                '&.Mui-focused': { color: 'primary.main' }
               }}
             >
               {t('lcjfip:incentive.preferredOption')}
-              {!readOnly && ` ${t('lcjfip:required')}`}
+              {!readOnly && (
+                <BCBox component="span" sx={visuallyHidden}>
+                  {` ${t('lcjfip:required')}`}
+                </BCBox>
+              )}
             </FormLabel>
             <RadioGroup
               aria-labelledby="lcjfip-incentive-option-label"
+              aria-required={!readOnly}
               name={field.name}
               value={field.value === null ? '' : String(field.value)}
               onChange={(event) => field.onChange(Number(event.target.value))}
@@ -285,19 +315,28 @@ export const IncentiveSection = ({
         )}
       />
 
-      <Grid2 container spacing={2} sx={{ maxWidth: 900 }}>
-        <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
-          <ReadOnlyValue
-            id="lcjfip-total-estimated-volume"
-            label={t('lcjfip:incentive.totalEstimatedVolume')}
-            value={total === null ? '' : total.toLocaleString('en-CA')}
-            help={t('lcjfip:incentive.totalEstimatedVolumeHelp')}
-          />
-        </Grid2>
-        <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
-          <FieldLabel htmlFor="estimatedCarbonIntensity">
-            {t('lcjfip:incentive.estimatedCarbonIntensity')}
-          </FieldLabel>
+      {!readOnly && <RequiredLegend />}
+      <FieldGrid columns={THREE_COLUMNS} maxWidth={900}>
+        <ReadOnlyValue
+          id="lcjfip-total-estimated-volume"
+          label={t('lcjfip:incentive.totalEstimatedVolume')}
+          value={
+            total === null
+              ? ''
+              : t('lcjfip:incentive.litres', {
+                  amount: total.toLocaleString('en-CA')
+                })
+          }
+          help={t('lcjfip:incentive.totalEstimatedVolumeHelp')}
+          marked={!readOnly}
+        />
+        <FieldCell
+          label={
+            <FieldLabel htmlFor="estimatedCarbonIntensity">
+              {t('lcjfip:incentive.estimatedCarbonIntensity')}
+            </FieldLabel>
+          }
+        >
           <NumberField
             id="estimatedCarbonIntensity"
             name="estimatedCarbonIntensity"
@@ -305,88 +344,93 @@ export const IncentiveSection = ({
             allowNegative
             disabled={readOnly}
           />
-        </Grid2>
-        <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
-          <FieldLabel htmlFor="requestedIncentiveVolume" required={!readOnly}>
-            {t('lcjfip:incentive.requestedIncentiveVolume')}
-          </FieldLabel>
+        </FieldCell>
+        <FieldCell
+          label={
+            <FieldLabel htmlFor="requestedIncentiveVolume" required={!readOnly}>
+              {t('lcjfip:incentive.requestedIncentiveVolume')}
+            </FieldLabel>
+          }
+        >
           <NumberField
             id="requestedIncentiveVolume"
             name="requestedIncentiveVolume"
             decimalScale={0}
             disabled={readOnly}
+            suffix=" L"
           />
-        </Grid2>
-        <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
+        </FieldCell>
+        <FieldCell
+          label={
+            <FieldLabel htmlFor="fuelCodeId">
+              {t('lcjfip:incentive.fuelCode')}
+            </FieldLabel>
+          }
+        >
           <Controller
             name="fuelCodeId"
             control={control}
             render={({ field, fieldState }) => (
-              <>
-                <FieldLabel htmlFor="fuelCodeId">
-                  {t('lcjfip:incentive.fuelCode')}
-                </FieldLabel>
-                <Autocomplete
-                  id="fuelCodeId"
-                  options={fuelCodes}
-                  value={
-                    fuelCodes.find((o) => o.fuelCodeId === field.value) ?? null
-                  }
-                  getOptionLabel={(o) => o.fuelCode}
-                  isOptionEqualToValue={(o, v) => o.fuelCodeId === v.fuelCodeId}
-                  noOptionsText={t('lcjfip:incentive.fuelCodeNoOptions')}
-                  disabled={readOnly}
-                  onChange={(_event, selected) => {
-                    field.onChange(selected?.fuelCodeId ?? null)
-                    if (selected) {
-                      setValue(
-                        'estimatedCarbonIntensity',
-                        selected.carbonIntensity,
-                        {
-                          shouldDirty: true,
-                          shouldValidate: true
-                        }
-                      )
-                    }
-                  }}
-                  onBlur={field.onBlur}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      inputRef={field.ref}
-                      size="small"
-                      error={!!fieldState.error}
-                      helperText={
-                        fieldState.error?.message ??
-                        (readOnly
-                          ? undefined
-                          : t('lcjfip:incentive.fuelCodeHelp'))
+              <Autocomplete
+                id="fuelCodeId"
+                options={fuelCodes}
+                value={
+                  fuelCodes.find((o) => o.fuelCodeId === field.value) ?? null
+                }
+                getOptionLabel={(o) => o.fuelCode}
+                isOptionEqualToValue={(o, v) => o.fuelCodeId === v.fuelCodeId}
+                noOptionsText={t('lcjfip:incentive.fuelCodeNoOptions')}
+                disabled={readOnly}
+                onChange={(_event, selected) => {
+                  field.onChange(selected?.fuelCodeId ?? null)
+                  if (selected) {
+                    setValue(
+                      'estimatedCarbonIntensity',
+                      selected.carbonIntensity,
+                      {
+                        shouldDirty: true,
+                        shouldValidate: true
                       }
-                    />
-                  )}
-                />
-              </>
+                    )
+                  }
+                }}
+                onBlur={field.onBlur}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    inputRef={field.ref}
+                    size="small"
+                    error={!!fieldState.error}
+                    helperText={
+                      fieldState.error?.message ??
+                      (readOnly
+                        ? undefined
+                        : t('lcjfip:incentive.fuelCodeHelp'))
+                    }
+                  />
+                )}
+              />
             )}
           />
-        </Grid2>
-        <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
-          <ReadOnlyValue
-            id="lcjfip-estimated-incentive-amount"
-            label={t('lcjfip:incentive.estimatedIncentiveAmount')}
-            value={formatIncentiveAmount(
-              amount,
-              option?.incentiveType,
-              (value) => t('lcjfip:incentive.credits', { amount: value })
-            )}
-            help={
-              option &&
-              (carbonIntensity === null || carbonIntensity === undefined)
-                ? t('lcjfip:incentive.baselineRateHelp')
-                : t('lcjfip:incentive.estimatedIncentiveAmountHelp')
-            }
-          />
-        </Grid2>
-      </Grid2>
+        </FieldCell>
+        <ReadOnlyValue
+          id="lcjfip-estimated-incentive-amount"
+          label={t('lcjfip:incentive.estimatedIncentiveAmount')}
+          value={formatIncentiveAmount(
+            amount,
+            option?.incentiveType,
+            (value) => t('lcjfip:incentive.credits', { amount: value }),
+            (value) => t('lcjfip:incentive.cad', { amount: value })
+          )}
+          marked={!readOnly}
+          help={
+            option &&
+            (carbonIntensity === null || carbonIntensity === undefined)
+              ? t('lcjfip:incentive.baselineRateHelp')
+              : t('lcjfip:incentive.estimatedIncentiveAmountHelp')
+          }
+        />
+      </FieldGrid>
 
       {showSupplier && (
         <section
@@ -403,93 +447,87 @@ export const IncentiveSection = ({
           >
             {t('lcjfip:fuelSupplier.heading')}
           </BCTypography>
-          <Grid2 container spacing={2} sx={{ maxWidth: 900 }}>
-            <Grid2 size={{ xs: 12, md: 6 }}>
+          <FieldGrid columns={THREE_COLUMNS} maxWidth={900}>
+            <FieldCell
+              label={
+                <FieldLabel
+                  htmlFor="fuelSupplierLegalName"
+                  required={!readOnly}
+                >
+                  {t('lcjfip:fuelSupplier.legalName')}
+                </FieldLabel>
+              }
+            >
               <Controller
                 name="fuelSupplierLegalName"
                 control={control}
                 render={({ field, fieldState }) => (
-                  <>
-                    <FieldLabel
-                      htmlFor="fuelSupplierLegalName"
-                      required={!readOnly}
-                    >
-                      {t('lcjfip:fuelSupplier.legalName')}
-                    </FieldLabel>
-                    <Autocomplete
-                      id="fuelSupplierLegalName"
-                      freeSolo
-                      options={suppliers}
-                      getOptionLabel={(o) =>
-                        typeof o === 'string' ? o : o.name
+                  <Autocomplete
+                    id="fuelSupplierLegalName"
+                    freeSolo
+                    options={suppliers}
+                    getOptionLabel={(o) => (typeof o === 'string' ? o : o.name)}
+                    inputValue={field.value ?? ''}
+                    disabled={readOnly}
+                    onInputChange={(_event, value, reason) => {
+                      if (reason !== 'input' && reason !== 'clear') return
+                      field.onChange(value)
+                      // Typing a name unlinks any registered supplier.
+                      setValue('fuelSupplierOrganizationId', null, {
+                        shouldDirty: true
+                      })
+                    }}
+                    onChange={(_event, selected) => {
+                      if (selected && typeof selected !== 'string') {
+                        field.onChange(selected.name)
+                        setValue(
+                          'fuelSupplierOrganizationId',
+                          selected.organizationId,
+                          { shouldDirty: true }
+                        )
                       }
-                      inputValue={field.value ?? ''}
-                      disabled={readOnly}
-                      onInputChange={(_event, value, reason) => {
-                        if (reason !== 'input' && reason !== 'clear') return
-                        field.onChange(value)
-                        // Typing a name unlinks any registered supplier.
-                        setValue('fuelSupplierOrganizationId', null, {
-                          shouldDirty: true
-                        })
-                      }}
-                      onChange={(_event, selected) => {
-                        if (selected && typeof selected !== 'string') {
-                          field.onChange(selected.name)
-                          setValue(
-                            'fuelSupplierOrganizationId',
-                            selected.organizationId,
-                            { shouldDirty: true }
-                          )
+                    }}
+                    onBlur={field.onBlur}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        inputRef={field.ref}
+                        size="small"
+                        error={!!fieldState.error}
+                        helperText={
+                          fieldState.error?.message ??
+                          (readOnly
+                            ? undefined
+                            : t('lcjfip:fuelSupplier.legalNameHelp'))
                         }
-                      }}
-                      onBlur={field.onBlur}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          inputRef={field.ref}
-                          size="small"
-                          error={!!fieldState.error}
-                          helperText={
-                            fieldState.error?.message ??
-                            (readOnly
-                              ? undefined
-                              : t('lcjfip:fuelSupplier.legalNameHelp'))
-                          }
-                        />
-                      )}
-                    />
-                  </>
+                      />
+                    )}
+                  />
                 )}
               />
-            </Grid2>
-            <Grid2 size={{ xs: 12, md: 6 }} />
-            <Grid2 size={{ xs: 12, md: 4 }}>
-              <TextInput
-                name="fuelSupplierContactFirstName"
-                label={t('lcjfip:fuelSupplier.firstName')}
-                required={!readOnly}
-                readOnly={readOnly}
-              />
-            </Grid2>
-            <Grid2 size={{ xs: 12, md: 4 }}>
-              <TextInput
-                name="fuelSupplierContactLastName"
-                label={t('lcjfip:fuelSupplier.lastName')}
-                required={!readOnly}
-                readOnly={readOnly}
-              />
-            </Grid2>
-            <Grid2 size={{ xs: 12, md: 4 }}>
-              <TextInput
-                name="fuelSupplierContactEmail"
-                label={t('lcjfip:fuelSupplier.email')}
-                required={!readOnly}
-                readOnly={readOnly}
-                type="email"
-              />
-            </Grid2>
-          </Grid2>
+            </FieldCell>
+          </FieldGrid>
+          <FieldGrid columns={THREE_COLUMNS} maxWidth={900}>
+            <TextInput
+              name="fuelSupplierContactFirstName"
+              label={t('lcjfip:fuelSupplier.firstName')}
+              required={!readOnly}
+              readOnly={readOnly}
+            />
+            <TextInput
+              name="fuelSupplierContactLastName"
+              label={t('lcjfip:fuelSupplier.lastName')}
+              required={!readOnly}
+              readOnly={readOnly}
+            />
+            <TextInput
+              name="fuelSupplierContactEmail"
+              label={t('lcjfip:fuelSupplier.email')}
+              required={!readOnly}
+              readOnly={readOnly}
+              type="email"
+            />
+          </FieldGrid>
         </section>
       )}
     </section>

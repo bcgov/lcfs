@@ -152,10 +152,7 @@ const draftApplication = (overrides = {}) => ({
   applicationPeriod: null,
   signedBy: null,
   signedDate: null,
-  purchaseDetails: [
-    purchaseRow(11, { estimatedVolume: 600000 }),
-    purchaseRow(12, { estimatedVolume: 400000 })
-  ],
+  purchaseDetails: [purchaseRow(11, { estimatedVolume: 1000000 })],
   createDate: '2026-11-18T18:00:00Z',
   updateDate: '2026-11-18T18:00:00Z',
   ...overrides
@@ -355,10 +352,10 @@ describe('LCJFIP application form', () => {
     }
     const amount = () => screen.getByTestId('lcjfip-estimated-incentive-amount')
     expect(screen.getByTestId('lcjfip-total-estimated-volume')).toHaveValue(
-      '1,000,000'
+      '1,000,000 L'
     )
     // 1,000,000 L at the "10 or less" cash rate.
-    expect(amount()).toHaveValue('$1,125,000.00')
+    expect(amount()).toHaveValue('$1,125,000 CAD')
 
     await user.click(screen.getByRole('radio', { name: CREDIT }))
     expect(amount()).toHaveValue('7,500.00 credits')
@@ -389,20 +386,22 @@ describe('LCJFIP application form', () => {
       server
     }
     const { user } = await openDraft(fixtures)
-    const heading = 'Fuel supplier incentive transfer information'
+    const heading = 'LCFS credit option - Fuel supplier incentive transfer'
 
-    expect(screen.queryByText(heading)).not.toBeInTheDocument()
+    // The heading repeats the transfer option's name, so find it by role.
+    const findHeading = () => screen.queryByRole('heading', { name: heading })
+    expect(findHeading()).not.toBeInTheDocument()
     await user.click(screen.getByRole('radio', { name: TRANSFER }))
-    expect(screen.getByText(heading)).toBeInTheDocument()
+    expect(findHeading()).toBeInTheDocument()
     expect(
       screen.getByLabelText(/Fuel supplier contact email/)
     ).toBeInTheDocument()
 
     await user.click(screen.getByRole('radio', { name: CASH }))
-    expect(screen.queryByText(heading)).not.toBeInTheDocument()
+    expect(findHeading()).not.toBeInTheDocument()
   })
 
-  test('adds and removes purchase rows', async ({
+  test('shows one set of purchase fields with their units', async ({
     render,
     query,
     theme,
@@ -421,22 +420,43 @@ describe('LCJFIP application form', () => {
       server
     }
     const { user } = await openDraft(fixtures)
-    const deleteButtons = () =>
-      screen.getAllByRole('button', { name: /Delete purchase row/ })
 
-    expect(deleteButtons()).toHaveLength(2)
-    await user.click(screen.getByRole('button', { name: 'Add row' }))
-    expect(deleteButtons()).toHaveLength(3)
-    await user.click(
-      screen.getByRole('button', { name: 'Delete purchase row 1' })
+    expect(
+      screen.queryByRole('button', { name: /Add row/ })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getAllByText('indicates a required field').length
+    ).toBeGreaterThan(0)
+    // Required fields say so to screen readers; the asterisk is hidden.
+    expect(
+      screen.getByLabelText(/Assumed Jet-A price \(CAD\/L\)\s*\(required\)/)
+    ).toHaveValue('$0.9')
+    expect(screen.getByTestId('lcjfip-purchase-estimatedVolume')).toHaveValue(
+      '1,000,000 L'
     )
-    expect(deleteButtons()).toHaveLength(2)
+    // The date picker fills in its text after the first render.
+    const dateField = screen.getByLabelText(
+      /Anticipated delivery completion date/
+    )
+    await waitFor(() => expect(dateField).toHaveValue('2027-03-31'))
+
+    // The blend is shown as LCJF:Jet-A and follows what is typed.
+    const blend = screen.getByTestId('lcjfip-purchase-estimatedBlendPercentage')
+    expect(blend).toHaveValue('30:70')
+    await user.clear(blend)
+    await user.type(blend, '25')
+    expect(blend).toHaveValue('25:75')
+
+    // The total for support follows the purchase volume.
+    const volume = screen.getByTestId('lcjfip-purchase-estimatedVolume')
+    await user.clear(volume)
+    await user.type(volume, '400000')
     expect(screen.getByTestId('lcjfip-total-estimated-volume')).toHaveValue(
-      '400,000'
+      '400,000 L'
     )
   })
 
-  test('checks each row against the price premium rule', async ({
+  test('checks the price premium range as it is typed', async ({
     render,
     query,
     theme,
@@ -455,17 +475,23 @@ describe('LCJFIP application form', () => {
       server
     }
     const { user } = await openDraft(fixtures)
-    const status = within(screen.getByTestId('lcjfip-premium-status-0'))
-    expect(status.getByText('Within range')).toBeInTheDocument()
+    const status = screen.getByTestId('lcjfip-premium-status')
+    expect(status).toHaveTextContent('')
 
-    const to = screen.getByLabelText(
-      'Estimated price premium range - To (CAD/L), row 1'
-    )
+    const to = screen.getByTestId('lcjfip-purchase-pricePremiumTo')
     await user.clear(to)
     await user.type(to, '1.9')
     expect(
-      within(screen.getByTestId('lcjfip-premium-status-0')).getByText(
+      within(status).getByText(
         'The price premium range must not exceed $0.25 CAD/L.'
+      )
+    ).toBeInTheDocument()
+
+    await user.clear(to)
+    await user.type(to, '1.4')
+    expect(
+      within(status).getByText(
+        "The 'From' value must not be greater than 'To'."
       )
     ).toBeInTheDocument()
   })
@@ -497,7 +523,7 @@ describe('LCJFIP application form', () => {
     expect(body.incentiveOptionId).toBe(1)
     expect(
       body.purchaseDetails.map((row) => row.lcjfipPurchaseDetailId)
-    ).toEqual([11, 12])
+    ).toEqual([11])
     expect(body).not.toHaveProperty('declarations')
     expect(body).not.toHaveProperty('estimatedIncentiveAmount')
   })
@@ -595,7 +621,7 @@ describe('LCJFIP application form', () => {
       2
     )
     expect(
-      screen.getByLabelText('Estimated total volume for support (L), row 1')
+      screen.getByTestId('lcjfip-purchase-estimatedVolume')
     ).toHaveAttribute('aria-invalid', 'true')
     expect(calls.saves).toHaveLength(0)
     expect(calls.submits).toHaveLength(0)
@@ -780,14 +806,15 @@ describe('LCJFIP application form', () => {
 
     expect(screen.getByTestId('lcjfip-read-only')).toBeInTheDocument()
     expect(screen.getByRole('radio', { name: CASH })).toBeDisabled()
+    expect(screen.getByTestId('lcjfip-purchase-estimatedVolume')).toBeDisabled()
+    // No required markers on a form nobody can edit.
     expect(
-      screen.getByLabelText('Estimated total volume for support (L), row 1')
-    ).toBeDisabled()
+      screen.queryByText('indicates a required field')
+    ).not.toBeInTheDocument()
     for (const name of [
       'Save',
       'Submit application',
-      'Delete draft application',
-      'Add row'
+      'Delete draft application'
     ]) {
       expect(screen.queryByRole('button', { name })).not.toBeInTheDocument()
     }

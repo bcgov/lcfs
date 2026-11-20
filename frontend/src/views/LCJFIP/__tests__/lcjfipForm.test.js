@@ -128,8 +128,10 @@ describe('LCJFIP calculations', () => {
   it('formats cash in CAD and credits as credits', () => {
     const credits = (amount) => `${amount} credits`
     expect(formatIncentiveAmount(1125000, 'Cash', credits)).toBe(
-      '$1,125,000.00'
+      '$1,125,000 CAD'
     )
+    // Cents only when there are any.
+    expect(formatIncentiveAmount(1234.5, 'Cash', credits)).toBe('$1,234.50 CAD')
     expect(formatIncentiveAmount(7500, 'Credit', credits)).toBe(
       '7,500.00 credits'
     )
