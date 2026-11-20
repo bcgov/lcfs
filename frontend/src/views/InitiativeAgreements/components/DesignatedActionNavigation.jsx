@@ -1,32 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
-import ChevronRightIcon from '@mui/icons-material/ChevronRight'
-import BCBox from '@/components/BCBox'
-import BCButton from '@/components/BCButton'
-import BCTypography from '@/components/BCTypography'
+import AdjacentItemNavigation from '@/components/AdjacentItemNavigation'
 import { ROUTES, buildPath } from '@/routes/routes'
-
-const navButtonSx = {
-  backgroundColor: '#003366',
-  color: 'white !important',
-  borderRadius: '50%',
-  width: 25,
-  height: 25,
-  padding: 0,
-  '& .MuiSvgIcon-root': {
-    color: 'white',
-    fontSize: '18px !important'
-  },
-  '&:hover': {
-    backgroundColor: '#004080',
-    '& .MuiSvgIcon-root': { color: 'white' }
-  },
-  '&.Mui-disabled': {
-    backgroundColor: '#c0c0c0',
-    color: '#808080'
-  }
-}
 
 export const DesignatedActionNavigation = ({
   siblingActionIds = [],
@@ -35,7 +10,8 @@ export const DesignatedActionNavigation = ({
   actionNumber,
   actionLabel,
   previousTestId = 'previous-action-button',
-  nextTestId = 'next-action-button'
+  nextTestId = 'next-action-button',
+  currentTestId = 'designated-action-label'
 }) => {
   const { t } = useTranslation(['initiativeAgreement'])
   const navigate = useNavigate()
@@ -61,43 +37,20 @@ export const DesignatedActionNavigation = ({
   }
 
   return (
-    <BCBox
-      sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
-      data-test="designated-action-navigation"
-    >
-      <BCButton
-        variant="contained"
-        color="primary"
-        iconOnly
-        size="small"
-        data-test={previousTestId}
-        aria-label={t('initiativeAgreement:actionDetail.previousAction')}
-        disabled={!previousId}
-        onClick={() => goToSibling(previousId)}
-        sx={navButtonSx}
-      >
-        <ChevronLeftIcon />
-      </BCButton>
-      <BCTypography
-        variant="body4"
-        sx={{ color: 'primary.main', fontWeight: 700 }}
-      >
-        {label}
-      </BCTypography>
-      <BCButton
-        variant="contained"
-        color="primary"
-        iconOnly
-        size="small"
-        data-test={nextTestId}
-        aria-label={t('initiativeAgreement:actionDetail.nextAction')}
-        disabled={!nextId}
-        onClick={() => goToSibling(nextId)}
-        sx={navButtonSx}
-      >
-        <ChevronRightIcon />
-      </BCButton>
-    </BCBox>
+    <AdjacentItemNavigation
+      currentLabel={label}
+      currentLabelSx={{ color: 'primary.main', fontWeight: 700 }}
+      previousAriaLabel={t('initiativeAgreement:actionDetail.previousAction')}
+      nextAriaLabel={t('initiativeAgreement:actionDetail.nextAction')}
+      previousDisabled={!previousId}
+      nextDisabled={!nextId}
+      onPrevious={() => goToSibling(previousId)}
+      onNext={() => goToSibling(nextId)}
+      previousTestId={previousTestId}
+      nextTestId={nextTestId}
+      currentTestId={currentTestId}
+      testIdPrefix="designated-action-navigation"
+    />
   )
 }
 
