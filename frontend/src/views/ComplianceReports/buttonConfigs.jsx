@@ -88,7 +88,7 @@ class ButtonActionFactory {
         this.context.setModalData({
           primaryButtonAction: () =>
             this.context.updateComplianceReport({
-              ...formData,
+              supplementalNote: formData.supplementalNote,
               status: COMPLIANCE_REPORT_STATUSES.SUBMITTED
             }),
           primaryButtonText: this.context.t(
@@ -571,6 +571,12 @@ function shouldShowButton(buttonName, context) {
 
   switch (buttonName) {
     case 'deleteDraft':
+      if (
+        context.supplementalInitiator &&
+        context.supplementalInitiator !== 'Supplier Supplemental'
+      ) {
+        return false
+      }
       // For early issuance: only until first early issuance has been assessed
       if (context.isEarlyIssuance && context.hadBeenAssessed) {
         return false

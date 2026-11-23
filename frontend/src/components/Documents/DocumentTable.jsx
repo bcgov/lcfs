@@ -75,7 +75,9 @@ const TableCell = styled(Box)({
 
 // maxFiles limits how many documents a parent may hold; when the limit is
 // reached a new upload replaces the existing document after confirmation.
-function DocumentTable({ parentType, parentID, maxFiles }) {
+// deleteToBin sends deletes to the parent's document bin (see
+// useDeleteDocument); left unset, the hook picks by parent type.
+function DocumentTable({ parentType, parentID, maxFiles, deleteToBin }) {
   const { t } = useTranslation(['report', 'common'])
   const [, setIsDragActive] = useState(false)
   const fileInputRef = useRef(null)
@@ -96,7 +98,9 @@ function DocumentTable({ parentType, parentID, maxFiles }) {
   }, [loadedFiles])
 
   const { mutate: uploadFile } = useUploadDocument(parentType, parentID)
-  const { mutateAsync: deleteFile } = useDeleteDocument(parentType, parentID)
+  const { mutateAsync: deleteFile } = useDeleteDocument(parentType, parentID, {
+    deleteToBin
+  })
   const { mutateAsync: updateDocument } = useUpdateDocument(
     parentType,
     parentID

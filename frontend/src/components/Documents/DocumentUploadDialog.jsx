@@ -4,7 +4,14 @@ import { useTranslation } from 'react-i18next'
 import BCTypography from '@/components/BCTypography'
 import DocumentTable from '@/components/Documents/DocumentTable.jsx'
 
-function DocumentUploadDialog({ open, close, parentType, parentID, maxFiles }) {
+function DocumentUploadDialog({
+  open,
+  close,
+  parentType,
+  parentID,
+  maxFiles,
+  deleteToBin
+}) {
   const { t } = useTranslation([
     'report',
     'chargingSite',
@@ -78,6 +85,7 @@ function DocumentUploadDialog({ open, close, parentType, parentID, maxFiles }) {
         parentID={parentID}
         parentType={parentType}
         maxFiles={maxFiles}
+        deleteToBin={deleteToBin}
       />
     </Box>
   )

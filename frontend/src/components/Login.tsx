@@ -26,15 +26,15 @@ export const Login = () => {
 
   // Start with no image so the bundled default never flashes before the
   // selected background finishes loading. A neutral color fills the gap.
-  const [bgUrl, setBgUrl] = useState(null)
-  const [credits, setCredits] = useState(null)
+  const [bgUrl, setBgUrl] = useState<string | null>(null)
+  const [credits, setCredits] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
 
     // Resolve only once the image is fully decoded, so we swap it in without a flash.
-    const preload = (url) =>
-      new Promise((resolve, reject) => {
+    const preload = (url: string) =>
+      new Promise<void>((resolve, reject) => {
         const img = new Image()
         img.onload = () => resolve()
         img.onerror = reject

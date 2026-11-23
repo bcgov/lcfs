@@ -191,17 +191,21 @@ class OtherUsesServices:
         self, new_data: OtherUsesCreateSchema
     ) -> OtherUsesSchema:
         """Update an existing other use"""
-        existing_other_use = await self.repo.get_other_use(new_data.other_uses_id)
+        existing_other_use = await self.repo.get_other_use(
+            new_data.other_uses_id, new_data.compliance_report_id
+        )
 
         if not existing_other_use:
-            raise ValueError("Other use not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Other use not found"
+            )
 
         if existing_other_use.compliance_report_id == new_data.compliance_report_id:
-            # Update existing record if compliance report ID matches
+            # Update existing record if compliance report ID matches. The row's
+            # identity and version stay as stored, whatever the body says.
             for field, value in new_data.model_dump(
-                exclude={
-                    "id",
-                    "deleted",
+                exclude=OTHER_USE_EXCLUDE_FIELDS
+                | {
                     "fuel_type",
                     "fuel_category",
                     "expected_use",
@@ -292,8 +296,12 @@ class OtherUsesServices:
     ) -> DeleteOtherUsesResponseSchema:
         """Delete an other use"""
         existing_other_use = await self.repo.get_latest_other_uses_by_group_uuid(
-            other_use_data.group_uuid
+            other_use_data.group_uuid, other_use_data.compliance_report_id
         )
+        if not existing_other_use:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Other use not found"
+            )
 
         if (
             existing_other_use.compliance_report_id
@@ -308,7 +316,7 @@ class OtherUsesServices:
         else:
             deleted_entity = OtherUses(
                 compliance_report_id=other_use_data.compliance_report_id,
-                group_uuid=other_use_data.group_uuid,
+                group_uuid=existing_other_use.group_uuid,
                 version=existing_other_use.version + 1,
                 action_type=ActionTypeEnum.DELETE,
             )

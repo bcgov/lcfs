@@ -12,7 +12,12 @@ import '@/hooks/useRole'
 import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
 import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
 import { RoleSelectFloatingFilter } from './RoleSelectFloatingFilter'
-import { TRANSACTION_TYPES, TRANSFER_STATUSES } from '@/constants/statuses'
+import {
+  COMPLIANCE_REPORT_STATUSES,
+  TRANSACTION_STATUSES,
+  TRANSACTION_TYPES,
+  TRANSFER_STATUSES
+} from '@/constants/statuses'
 
 export const usersColumnDefs = (t) => [
   {
@@ -111,7 +116,8 @@ export const usersColumnDefs = (t) => [
 const prefixMap = {
   Transfer: 'CT',
   AdminAdjustment: 'AA',
-  InitiativeAgreement: 'IA'
+  InitiativeAgreement: 'IA',
+  ComplianceReport: 'CR'
 }
 
 export const userActivityColDefs = [
@@ -125,12 +131,24 @@ export const userActivityColDefs = [
       labelKey: 'action',
       optionsQuery: () => {
         const allStatuses = [
-          ...Object.values(TRANSFER_STATUSES).map((value) => ({
-            action: value
-          }))
-          // ...Object.values(COMPLIANCE_REPORT_STATUSES).map((value) => ({
-          //   action: value
-          // }))
+          ...Object.values(TRANSFER_STATUSES)
+            .filter((value) => value !== 'New' && value !== 'Draft')
+            .map((value) => ({ action: value })),
+          ...Object.values(TRANSACTION_STATUSES)
+            .filter((value) => value !== 'New' && value !== 'Draft')
+            .map((value) => ({ action: value })),
+          ...[
+            COMPLIANCE_REPORT_STATUSES.SUBMITTED,
+            COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT,
+            COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST,
+            COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER,
+            COMPLIANCE_REPORT_STATUSES.ASSESSED,
+            COMPLIANCE_REPORT_STATUSES.EXEMPTED,
+            COMPLIANCE_REPORT_STATUSES.REJECTED,
+            COMPLIANCE_REPORT_STATUSES.SUPPLEMENTAL_REQUESTED,
+            'Not recommended by analyst',
+            'Not recommended by manager'
+          ].map((value) => ({ action: value }))
         ]
 
         const deduplicatedStatuses = Array.from(

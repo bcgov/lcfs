@@ -1,4 +1,5 @@
 from sqlalchemy import Boolean, Column, Integer, String, ForeignKey, Enum, BigInteger, text
+from sqlalchemy import CheckConstraint, UniqueConstraint
 from sqlalchemy.orm import relationship
 from lcfs.db.base import BaseModel, Auditable, Versioning
 import enum
@@ -11,7 +12,17 @@ class ReceivedOrTransferredEnum(enum.Enum):
 
 class NotionalTransfer(BaseModel, Auditable, Versioning):
     __tablename__ = "notional_transfer"
-    __table_args__ = {"comment": "Records notional transfers for compliance reports."}
+    __table_args__ = (
+        UniqueConstraint(
+            "group_uuid", "version", name="uq_notional_transfer_group_uuid_version"
+        ),
+        CheckConstraint(
+            "quantity >= 0 AND q1_quantity >= 0 AND q2_quantity >= 0"
+            " AND q3_quantity >= 0 AND q4_quantity >= 0",
+            name="quantities_non_negative",
+        ),
+        {"comment": "Records notional transfers for compliance reports."},
+    )
 
     notional_transfer_id = Column(
         Integer,
