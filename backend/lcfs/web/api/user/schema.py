@@ -83,6 +83,7 @@ class UserActivitySchema(BaseSchema):
     transaction_type: str
     create_date: datetime
     user_id: Optional[int] = None  # Present when fetching activities for all users
+    compliance_period: Optional[str] = None
 
 
 class UserActivitiesResponseSchema(BaseSchema):

@@ -63,8 +63,8 @@ class OrganizationLinkKey(BaseModel):
         DateTime,
         nullable=True,
         comment=(
-            "Optional expiry date for the link key. When not null and in the past, "
-            "the link key is considered expired and should not grant access."
+            "Expiry date (UTC) for the link key. A link key with no expiry date, "
+            "or one in the past, is considered expired and does not grant access."
         ),
     )
 

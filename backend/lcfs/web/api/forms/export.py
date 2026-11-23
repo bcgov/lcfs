@@ -1,5 +1,6 @@
 """Base PDF and DOCX exporters """
 
+import asyncio
 import io
 import os
 from datetime import datetime, timezone
@@ -8,10 +9,12 @@ from typing import Optional
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Cm, Pt
+from fastapi import HTTPException
 from jinja2 import Environment, FileSystemLoader
 from pydantic import BaseModel
 from starlette.responses import StreamingResponse
 
+from lcfs.settings import settings
 from lcfs.web.api.forms.schema import DeclarationExportRequest
 
 _TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "templates")
@@ -23,6 +26,32 @@ _DOCX_MEDIA_TYPE = (
 
 
 # ── Base exporters ────────────────────────────────────────────────────────────
+
+
+def _pdf_url_fetcher():
+    """
+    URL fetcher for WeasyPrint that can reach nothing but inline ``data:`` URLs.
+
+    The default fetcher follows ``file:``, ``http:`` and ``ftp:`` URLs found in
+    the document, so any user text that reached the HTML as markup or CSS could
+    read local files or call internal services. Our templates reference no
+    external resources, so nothing needs to be fetched.
+    """
+    try:
+        from weasyprint import URLFetcher
+    except ImportError:  # WeasyPrint < 65 takes a plain callable
+
+        def deny_all(url, *args, **kwargs):
+            raise ValueError(f"External resources are not allowed: {url}")
+
+        return deny_all
+    return URLFetcher(allowed_protocols=["data"])
+
+
+def _render_pdf(html_str: str) -> bytes:
+    from weasyprint import HTML  # heavy import — defer until needed
+
+    return HTML(string=html_str, url_fetcher=_pdf_url_fetcher()).write_pdf()
 
 
 class BasePdfExporter:
@@ -39,11 +68,21 @@ class BasePdfExporter:
     async def export(
         self, payload: BaseModel, form_name: Optional[str] = None
     ) -> StreamingResponse:
-        from weasyprint import HTML  # heavy import — defer until needed
-
         ctx      = self.build_context(payload, form_name)
         html_str = _JINJA_ENV.get_template(self.template_file).render(**ctx)
-        pdf      = HTML(string=html_str, base_url=_TEMPLATE_DIR).write_pdf()
+
+        # WeasyPrint is CPU-bound and synchronous: run it off the event loop and
+        # bound how long a request waits for it. The worker thread cannot be
+        # cancelled, so a timed-out render finishes in the background.
+        try:
+            pdf = await asyncio.wait_for(
+                asyncio.to_thread(_render_pdf, html_str),
+                timeout=settings.pdf_render_timeout_seconds,
+            )
+        except asyncio.TimeoutError as exc:
+            raise HTTPException(
+                status_code=504, detail="PDF generation timed out."
+            ) from exc
         filename = self.safe_filename(payload, "pdf")
 
         return StreamingResponse(
@@ -111,9 +150,17 @@ def _declaration_context(
     }
 
 
+def _filename_part(value: str, max_length: int = 60) -> str:
+    """ASCII letters/digits only, so the value is safe in a Content-Disposition header."""
+    return "".join(c if c.isascii() and c.isalnum() else "_" for c in value)[
+        :max_length
+    ]
+
+
 def _declaration_filename(payload: DeclarationExportRequest, ext: str) -> str:
-    safe = "".join(c if c.isalnum() else "_" for c in payload.organization_name)
-    return f"LCFS-Declaration-{safe}-{payload.reporting_period}.{ext}"
+    org = _filename_part(payload.organization_name)
+    period = _filename_part(payload.reporting_period)
+    return f"LCFS-Declaration-{org}-{period}.{ext}"
 
 
 class FuelSupplierDeclarationPdfExporter(BasePdfExporter):
