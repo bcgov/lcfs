@@ -70,6 +70,31 @@ async def test_enforce_rate_limit_blocks_over_cap(app_with_redis):
 
     assert exc_info.value.status_code == 429
     assert "Retry-After" in exc_info.value.headers
+
+
+@pytest.mark.anyio
+async def test_enforce_rate_limit_not_bypassed_by_spoofed_forwarded_for(
+    app_with_redis,
+):
+    """LCFS-SEC-025 regression: alternating a spoofed left-most XFF hop
+    must not reset the limiter, as long as the router-appended (right-most)
+    hop -- the real client -- stays the same."""
+    from fastapi import HTTPException
+
+    app, _ = app_with_redis
+    limit = RateLimit(times=2, seconds=60, bucket="t-spoof")
+
+    def request_with_spoofed_prefix(fake_client_ip: str):
+        return _make_request(
+            app, headers={"x-forwarded-for": f"{fake_client_ip}, 203.0.113.9"}
+        )
+
+    await enforce_rate_limit(request_with_spoofed_prefix("1.1.1.1"), limit)
+    await enforce_rate_limit(request_with_spoofed_prefix("2.2.2.2"), limit)
+    with pytest.raises(HTTPException) as exc_info:
+        await enforce_rate_limit(request_with_spoofed_prefix("3.3.3.3"), limit)
+
+    assert exc_info.value.status_code == 429
     assert int(exc_info.value.headers["Retry-After"]) >= 1
 
 
@@ -99,15 +124,32 @@ async def test_enforce_rate_limit_no_redis_is_best_effort():
     await enforce_rate_limit(_make_request(app), RateLimit(times=1, seconds=60))
 
 
-def test_client_ip_uses_request_client_host():
-    # Uvicorn (configured with --proxy-headers --forwarded-allow-ips=*)
-    # has already rewritten request.client.host to the real client IP
-    # by the time we see it, so the limiter just trusts that value.
+def test_client_ip_uses_right_most_forwarded_for_hop():
+    # The right-most X-Forwarded-For entry is the one the OpenShift router
+    # itself appended based on the TCP peer it accepted -- the only hop we
+    # can trust. Earlier entries (here "9.9.9.9") are whatever the caller
+    # put in their own request and must be ignored, even though uvicorn's
+    # proxy-headers middleware (forwarded_allow_ips="*") would have rewritten
+    # request.client.host to that spoofed left-most value.
     app = FastAPI()
     req = _make_request(
         app, peer="9.9.9.9", headers={"x-forwarded-for": "9.9.9.9, 10.1.2.3"}
     )
-    assert client_ip(req) == "9.9.9.9"
+    assert client_ip(req) == "10.1.2.3"
+
+
+def test_client_ip_ignores_spoofed_left_most_hop():
+    # LCFS-SEC-025 regression: a caller who sets their own X-Forwarded-For
+    # must not be able to get a fresh rate-limit bucket by changing it,
+    # as long as the router-appended (right-most) hop stays the same.
+    app = FastAPI()
+    attacker_claim_a = _make_request(
+        app, headers={"x-forwarded-for": "1.1.1.1, 203.0.113.9"}
+    )
+    attacker_claim_b = _make_request(
+        app, headers={"x-forwarded-for": "2.2.2.2, 203.0.113.9"}
+    )
+    assert client_ip(attacker_claim_a) == client_ip(attacker_claim_b) == "203.0.113.9"
 
 
 def test_client_ip_handles_missing_client():
