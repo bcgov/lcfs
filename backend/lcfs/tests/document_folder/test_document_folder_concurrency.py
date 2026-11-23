@@ -52,10 +52,10 @@ async def test_folder_deletion_serializes_with_contents_through_commit(
     lock_parent = DocumentFolderRepository.lock_parent
     first_repo = None
 
-    async def observe_lock(repo, action_id):
+    async def observe_lock(repo, parent_type, action_id):
         if repo is not first_repo:
             second_lock_attempted.set()
-        await lock_parent(repo, action_id)
+        await lock_parent(repo, parent_type, action_id)
 
     monkeypatch.setattr(DocumentFolderRepository, "lock_parent", observe_lock)
 
@@ -158,18 +158,27 @@ async def test_folder_deletion_serializes_with_contents_through_commit(
 
 
 @pytest.mark.anyio
-async def test_parent_lock_uses_transaction_scoped_row_lock():
+@pytest.mark.parametrize(
+    "parent_type,table,key",
+    [
+        ("designatedAction", "designated_action", "designated_action_id"),
+        # Agreements are folder-enabled too (#5337), so they lock their own
+        # row rather than 404ing on a designated action lookup.
+        ("initiativeAgreement", "initiative_agreement", "initiative_agreement_id"),
+    ],
+)
+async def test_parent_lock_uses_transaction_scoped_row_lock(parent_type, table, key):
     db = AsyncMock()
     result = MagicMock()
     result.scalar_one_or_none.return_value = 9
     db.execute.return_value = result
 
-    await DocumentFolderRepository(db).lock_parent(9)
+    await DocumentFolderRepository(db).lock_parent(parent_type, 9)
 
     query = db.execute.call_args.args[0]
     sql = str(query.compile(dialect=postgresql.dialect()))
-    assert "FOR UPDATE OF designated_action" in sql
-    assert query.compile().params["designated_action_id_1"] == 9
+    assert f"FOR UPDATE OF {table}" in sql
+    assert query.compile().params[f"{key}_1"] == 9
     db.commit.assert_not_awaited()
     db.rollback.assert_not_awaited()
 
@@ -201,7 +210,7 @@ async def test_mutations_lock_parent_before_reading_or_changing_contents(method,
     with pytest.raises(DataNotFoundException):
         await getattr(service, method)("designatedAction", 9, *args)
 
-    repo.lock_parent.assert_awaited_once_with(9)
+    repo.lock_parent.assert_awaited_once_with("designatedAction", 9)
     assert len(repo.mock_calls) == 1
 
 
@@ -212,7 +221,9 @@ async def test_scoped_document_lock_refreshes_identity_map():
     result.scalars.return_value.first.return_value = None
     db.execute.return_value = result
 
-    await DocumentFolderRepository(db).get_document_for_parent(7, 9, for_update=True)
+    await DocumentFolderRepository(db).get_document_for_parent(
+        "designatedAction", 7, 9, for_update=True
+    )
 
     query = db.execute.call_args.args[0]
     sql = str(query.compile(dialect=postgresql.dialect()))
@@ -249,7 +260,9 @@ async def test_hard_delete_checks_current_ownership_after_lock(deleted_by):
             await service.hard_delete_document("designatedAction", 9, 7, user, storage)
         storage.delete_file.assert_not_awaited()
 
-    repo.get_document_for_parent.assert_awaited_once_with(7, 9, for_update=True)
+    repo.get_document_for_parent.assert_awaited_once_with(
+        "designatedAction", 7, 9, for_update=True
+    )
     repo.db.commit.assert_not_awaited()
     repo.db.rollback.assert_not_awaited()
 

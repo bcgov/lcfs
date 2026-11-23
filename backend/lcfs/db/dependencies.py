@@ -6,13 +6,14 @@ from alembic import op
 import os
 
 from fastapi import Request
-from sqlalchemy import text
+from sqlalchemy import event, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import Session
 from sqlalchemy.pool import NullPool
 
 from lcfs.db.base import current_user_var, get_current_user
-from lcfs.db.engine_config import build_connect_args
+from lcfs.db.engine_config import build_connect_args, register_statement_timeout
 from lcfs.db.pool_monitor import register_pool_monitor
 from lcfs.settings import settings
 from lcfs.utils.query_analyzer import register_query_analyzer
@@ -25,9 +26,10 @@ async_engine = create_async_engine(
     db_url,
     future=True,
     poolclass=NullPool,
-    connect_args=build_connect_args(settings.db_statement_timeout_ms),
+    connect_args=build_connect_args(),
 )
 logger = structlog.get_logger("sqlalchemy.engine")
+register_statement_timeout(async_engine.sync_engine, settings.db_statement_timeout_ms)
 register_query_analyzer(async_engine.sync_engine, name="app")
 register_pool_monitor(async_engine.sync_engine, name="app")
 
@@ -56,22 +58,39 @@ async def set_statement_timeout(session: AsyncSession, timeout_ms: int) -> None:
     )
 
 
+_SET_AUDIT_USERNAME = text("SELECT set_config('app.username', :username, true)")
+_AUDIT_USERNAME_KEY = "audit_username"
+
+
+def _reapply_user_context(session: Session, transaction, connection) -> None:
+    """``after_begin`` listener: set the audit username on a new transaction."""
+    username = session.info.get(_AUDIT_USERNAME_KEY)
+    if username is not None:
+        connection.execute(_SET_AUDIT_USERNAME, {"username": username})
+
+
 async def set_user_context(session: AsyncSession, username: str):
     """
-    Set user_id context for the session to be used in auditing.
-    This executes within the existing session context without managing its own transaction.
+    Set ``app.username``, which the audit trigger records, for this session.
+
+    ``set_config(..., true)`` is transaction-local (``SET LOCAL``). Behind
+    PgBouncer transaction pooling the server connection goes to another client
+    at commit, so a session-level ``SET`` would stay on it and attribute that
+    client's writes to this user. The value is set for the current transaction
+    and again at the start of each later transaction of this session, so writes
+    after a commit inside the request are still attributed.
     """
     try:
-        # Escape single quotes in username by doubling them up for SQL literal
-        escaped_username = username.replace("'", "''")
-        # Construct the SQL string with the quoted and escaped username.
-        sql_query = text(f"SET SESSION app.username = '{escaped_username}'")
-        await session.execute(sql_query)
+        await session.execute(_SET_AUDIT_USERNAME, {"username": username})
     except Exception as e:
         structlog.get_logger().error(
-            f"Failed to execute SET SESSION app.username = '{username}': {e}"  # Log original username for clarity
+            "Failed to set app.username for auditing", username=username, error=str(e)
         )
-        raise e
+        raise
+    sync_session = session.sync_session
+    sync_session.info[_AUDIT_USERNAME_KEY] = username
+    if not event.contains(sync_session, "after_begin", _reapply_user_context):
+        event.listen(sync_session, "after_begin", _reapply_user_context)
 
 
 async def get_async_db_session(
@@ -100,8 +119,7 @@ async def get_async_db_session(
                     if timeout_override is not None:
                         await set_statement_timeout(session, timeout_override)
 
-                    # Set user context for auditing within the transaction.
-                    # This ensures 'app.username' is set on the connection within the active transaction.
+                    # Set user context for auditing, per transaction (see set_user_context).
                     if request.user:
                         current_user_var.set(request.user)
                         current_user = get_current_user()

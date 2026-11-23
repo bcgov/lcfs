@@ -1,8 +1,10 @@
 from datetime import date, datetime
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
+from fastapi import HTTPException
 
 from lcfs.db.models import FuelCode
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatusEnum
@@ -121,6 +123,7 @@ def create_mock_fuel_code_model():
             self.fuel_status_id = 1
             self.fuel_code = "BCLCF001"
             self.company = "XYZ Corp"
+            self.organization_id = None
             self.carbon_intensity = 20.5
             self.fuel_suffix = "001.0"
             self.prefix_id = 1001
@@ -281,6 +284,7 @@ async def test_update_fuel_code_success():
     mock_fuel_code.history_records = [MagicMock(fuel_status_id=1)]  # Draft status
 
     repo_mock.get_fuel_code.return_value = mock_fuel_code
+    repo_mock.get_open_ci_application_id.return_value = None
     repo_mock.update_fuel_code.return_value = mock_fuel_code
     repo_mock.get_fuel_code_history.return_value = None
     repo_mock.create_fuel_code_history.return_value = None
@@ -292,6 +296,68 @@ async def test_update_fuel_code_success():
     assert result.fuel_code_id == 1
     repo_mock.get_fuel_code.assert_called_once_with(fuel_code_id)
     repo_mock.update_fuel_code.assert_called_once()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    ("old_org", "new_org", "company", "detached"),
+    [
+        (1, 2, "Example New Producer", True),
+        (1, None, "Example Historical Producer", True),
+        (None, 2, "Example New Producer", True),
+        (None, None, "Example Other Historical Producer", True),
+        (1, 1, "Example Renamed Producer", False),
+        (1, 1, "XYZ Corp", False),
+    ],
+)
+async def test_update_fuel_code_contacts_do_not_cross_ownership_boundaries(
+    old_org, new_org, company, detached
+):
+    repo = AsyncMock()
+    service = FuelCodeServices(repo=repo)
+    code = create_mock_fuel_code_model()
+    code.organization_id = old_org
+    # A draft the legacy pages started, not owned by a CI application (#5308)
+    code.history_records = [MagicMock(fuel_status_id=1)]
+    sibling = SimpleNamespace(
+        contact_name="Old Contact", contact_email="old@example.com"
+    )
+    facility = SimpleNamespace(
+        organization_id=old_org,
+        contact_name="Old Contact",
+        contact_email="old@example.com",
+        fuel_codes=[code, sibling],
+    )
+    code.fuel_production_facility = facility
+    code.fuel_production_facility_id = 12
+    repo.get_fuel_code.return_value = code
+    repo.get_open_ci_application_id.return_value = None
+    repo.get_organization_by_name.return_value = new_org
+    repo.update_fuel_code.return_value = code
+    repo.get_fuel_code_history.return_value = None
+    payload = FuelCodeCreateUpdateSchema(
+        **{
+            **vars(code),
+            "company": company,
+            "contact_name": "New Contact",
+            "contact_email": "new@example.com",
+        }
+    )
+
+    await service.update_fuel_code(payload)
+
+    assert code.organization_id == new_org
+    assert code.contact_name == "New Contact"
+    assert code.contact_email == "new@example.com"
+    if detached:
+        assert code.fuel_production_facility_id is None
+        assert code.fuel_production_facility is None
+        assert facility.contact_name == sibling.contact_name == "Old Contact"
+        assert facility.contact_email == sibling.contact_email == "old@example.com"
+    else:
+        assert code.fuel_production_facility is facility
+        assert facility.contact_name == sibling.contact_name == "New Contact"
+        assert facility.contact_email == sibling.contact_email == "new@example.com"
 
 
 @pytest.mark.anyio
@@ -325,8 +391,10 @@ async def test_update_fuel_code_notes_required():
     mock_fuel_code = MagicMock(spec=FuelCode)
     mock_fuel_code.fuel_code_id = 1
     mock_fuel_code.history_records = [MagicMock(fuel_status_id=2)]  # Not draft status
+    mock_fuel_code.fuel_code_status = MagicMock(status=FuelCodeStatusEnum.Draft)
 
     repo_mock.get_fuel_code.return_value = mock_fuel_code
+    repo_mock.get_open_ci_application_id.return_value = None
 
     # Act & Assert
     with pytest.raises(ValueError, match="Notes is required"):
@@ -342,6 +410,10 @@ async def test_delete_fuel_code_success():
     service = FuelCodeServices(repo=repo_mock)
 
     fuel_code_id = 1
+    mock_fuel_code = create_mock_fuel_code_model()
+    mock_fuel_code.history_records = [MagicMock(fuel_status_id=1)]
+    repo_mock.get_fuel_code.return_value = mock_fuel_code
+    repo_mock.get_open_ci_application_id.return_value = None
     repo_mock.delete_fuel_code.return_value = True
 
     # Act
@@ -397,6 +469,7 @@ async def test_update_fuel_code_status_success():
     mock_fuel_code = create_mock_fuel_code_model()
     mock_fuel_code.group_uuid = None
     mock_fuel_code.version = 0
+    mock_fuel_code.history_records = [MagicMock(fuel_status_id=1)]
 
     # Mock new status
     mock_new_status = MagicMock()
@@ -404,6 +477,7 @@ async def test_update_fuel_code_status_success():
     mock_new_status.status = FuelCodeStatusEnum.Approved
 
     repo_mock.get_fuel_code.return_value = mock_fuel_code
+    repo_mock.get_open_ci_application_id.return_value = None
     repo_mock.get_fuel_code_status.return_value = mock_new_status
     repo_mock.update_fuel_code.return_value = mock_fuel_code
     repo_mock.create_fuel_code_history.return_value = None
@@ -592,8 +666,7 @@ async def test_get_table_options_uses_shared_next_number_for_bclcf_prefixes():
     result = await service.get_table_options()
 
     next_codes = {
-        prefix.prefix: prefix.next_fuel_code
-        for prefix in result.fuel_code_prefixes
+        prefix.prefix: prefix.next_fuel_code for prefix in result.fuel_code_prefixes
     }
     assert next_codes == {"BCLCF": "1000.0", "C-BCLCF": "1000.0"}
     assert repo_mock.get_next_available_fuel_code_by_prefix.await_count == 2
@@ -627,8 +700,7 @@ async def test_get_table_options_keeps_other_prefixes_when_sequence_is_exhausted
     result = await service.get_table_options()
 
     next_codes = {
-        prefix.prefix: prefix.next_fuel_code
-        for prefix in result.fuel_code_prefixes
+        prefix.prefix: prefix.next_fuel_code for prefix in result.fuel_code_prefixes
     }
     assert next_codes == {"BCLCF": None, "C-BCLCF": None, "PROXY": "001.0"}
     assert all(
@@ -787,6 +859,7 @@ async def test_update_fuel_code_clears_notification_when_expiration_date_changes
     )
 
     repo_mock.get_fuel_code.return_value = mock_fuel_code
+    repo_mock.get_open_ci_application_id.return_value = None
     repo_mock.update_fuel_code.return_value = mock_fuel_code
     repo_mock.get_fuel_code_history.return_value = None
     repo_mock.create_fuel_code_history.return_value = None
@@ -842,6 +915,7 @@ async def test_update_fuel_code_keeps_notification_when_expiration_date_unchange
     )
 
     repo_mock.get_fuel_code.return_value = mock_fuel_code
+    repo_mock.get_open_ci_application_id.return_value = None
     repo_mock.update_fuel_code.return_value = mock_fuel_code
     repo_mock.get_fuel_code_history.return_value = None
     repo_mock.create_fuel_code_history.return_value = None
@@ -879,6 +953,81 @@ async def test_get_fuel_code_bulletins_wires_cutoff_and_pagination():
     assert call_kwargs["offset"] == 25
     assert call_kwargs["limit"] == 25
     assert "compliance_period_end" not in call_kwargs
+
+
+@pytest.mark.anyio
+async def test_update_fuel_code_rejects_a_code_that_isnt_a_draft():
+    """An approved fuel code is changed by reopening it (Edit), never in place,
+    e.g. from a page left open while someone else approved the draft."""
+    repo_mock = AsyncMock()
+    service = FuelCodeServices(repo=repo_mock)
+    mock_fuel_code = create_mock_fuel_code_model()
+    mock_fuel_code.fuel_code_status.status = FuelCodeStatusEnum.Approved
+    repo_mock.get_fuel_code.return_value = mock_fuel_code
+
+    with pytest.raises(HTTPException) as error:
+        await service.update_fuel_code(
+            FuelCodeCreateUpdateSchema(
+                fuel_code_id=1,
+                fuel_type_id=1,
+                prefix_id=1001,
+                fuel_suffix="101.0",
+                carbon_intensity=20.5,
+                company="XYZ Corp",
+                application_date=date(2023, 10, 1),
+                approval_date=date(2023, 10, 2),
+                effective_date=date(2023, 10, 3),
+                expiration_date=date(2024, 10, 1),
+                edrms="EDRMS-123",
+                feedstock="Corn oil",
+                feedstock_location="Canada",
+                fuel_production_facility_city="Victoria",
+                fuel_production_facility_province_state="BC",
+                fuel_production_facility_country="Canada",
+                notes="Updated",
+            )
+        )
+
+    assert error.value.status_code == 409
+    repo_mock.update_fuel_code.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_delete_fuel_code_rejects_an_approved_code():
+    repo_mock = AsyncMock()
+    service = FuelCodeServices(repo=repo_mock)
+    mock_fuel_code = create_mock_fuel_code_model()
+    mock_fuel_code.fuel_code_status.status = FuelCodeStatusEnum.Approved
+    repo_mock.get_fuel_code.return_value = mock_fuel_code
+
+    with pytest.raises(HTTPException) as error:
+        await service.delete_fuel_code(1)
+
+    assert error.value.status_code == 409
+    repo_mock.delete_fuel_code.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_status_change_rejects_a_draft_the_legacy_pages_never_started():
+    """A draft with no legacy history (e.g. imported) can't be progressed."""
+    repo_mock = AsyncMock()
+    service = FuelCodeServices(repo=repo_mock, notification_service=AsyncMock())
+    mock_fuel_code = create_mock_fuel_code_model()
+    mock_fuel_code.history_records = []
+    repo_mock.get_fuel_code.return_value = mock_fuel_code
+    repo_mock.get_open_ci_application_id.return_value = None
+
+    with pytest.raises(HTTPException) as error:
+        await service.update_fuel_code_status(
+            1, FuelCodeStatusEnum.Approved, MagicMock(user_profile_id=1)
+        )
+
+    assert error.value.status_code == 409
+    assert error.value.detail == (
+        "Only approved fuel codes can be edited and approved on this page."
+    )
+    repo_mock.update_fuel_code.assert_not_called()
+    repo_mock.create_fuel_code_history.assert_not_called()
 
 
 @pytest.mark.parametrize(

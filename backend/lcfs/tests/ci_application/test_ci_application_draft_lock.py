@@ -21,6 +21,7 @@ from sqlalchemy import func, select
 from lcfs.db.models import Organization
 from lcfs.db.models.ci_application import CIApplication, CIApplicationStatus
 from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
+from lcfs.db.models.fuel.FuelProductionFacility import FuelProductionFacility
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.services.s3.client import DocumentService
 
@@ -43,7 +44,9 @@ async def own_org(dbsession):
 
 @pytest.fixture
 def seed_application(dbsession, add_models, own_org):
-    async def _seed(status_name, document_upload_enabled=False):
+    async def _seed(
+        status_name, document_upload_enabled=False, fuel_production_facility_id=None
+    ):
         status_id = await _scalar(
             dbsession,
             select(CIApplicationStatus.ci_application_status_id).where(
@@ -52,6 +55,7 @@ def seed_application(dbsession, add_models, own_org):
         )
         application = CIApplication(
             organization_id=own_org,
+            fuel_production_facility_id=fuel_production_facility_id,
             status_id=status_id,
             facility_city="Original City",
             facility_province_state="BC",
@@ -122,6 +126,7 @@ def documents(fastapi_app: FastAPI):
 
 def _step1_body():
     return {
+        "facilityName": "Example production facility",
         "facilityCity": "Changed City",
         "facilityProvinceState": "BC",
         "facilityCountry": "Canada",
@@ -153,29 +158,31 @@ async def _application_exists(dbsession, ci_application_id):
     )
 
 
-async def _upload(client, fastapi_app, ci_application_id):
+async def _upload(client, fastapi_app, ci_application_id, parent_type="ci_application"):
     url = fastapi_app.url_path_for(
-        "upload_file", parent_type="ci_application", parent_id=ci_application_id
+        "upload_file", parent_type=parent_type, parent_id=ci_application_id
     )
     return await client.post(
         url, files={"file": ("file.pdf", b"%PDF", "application/pdf")}
     )
 
 
-async def _rename(client, fastapi_app, ci_application_id):
+async def _rename(client, fastapi_app, ci_application_id, parent_type="ci_application"):
     url = fastapi_app.url_path_for(
         "rename_file",
-        parent_type="ci_application",
+        parent_type=parent_type,
         parent_id=ci_application_id,
         document_id=1,
     )
     return await client.put(url, json={"displayName": "renamed.pdf"})
 
 
-async def _delete_document(client, fastapi_app, ci_application_id):
+async def _delete_document(
+    client, fastapi_app, ci_application_id, parent_type="ci_application"
+):
     url = fastapi_app.url_path_for(
         "delete_file",
-        parent_type="ci_application",
+        parent_type=parent_type,
         parent_id=ci_application_id,
         document_id=1,
     )
@@ -350,6 +357,65 @@ async def test_step3_during_documentation_request_saves_and_closes_it(
 # ---------------------------------------------------------------------------
 
 DOCUMENT_WRITES = [_upload, _rename, _delete_document]
+
+
+@pytest.fixture
+async def facility(add_models, own_org):
+    facility = FuelProductionFacility(
+        organization_id=own_org, name="Example production facility"
+    )
+    await add_models([facility])
+    return facility
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("write", DOCUMENT_WRITES)
+@pytest.mark.parametrize("status_name", AFTER_DRAFT)
+async def test_facility_diagram_stays_locked_when_reused_by_a_later_draft(
+    client,
+    fastapi_app,
+    seed_application,
+    as_applicant,
+    documents,
+    facility,
+    status_name,
+    write,
+):
+    facility_id = facility.fuel_production_facility_id
+    await seed_application(status_name, fuel_production_facility_id=facility_id)
+    await seed_application("Draft", fuel_production_facility_id=facility_id)
+    as_applicant()
+
+    response = await write(
+        client, fastapi_app, facility_id, parent_type="fuel_production_facility"
+    )
+
+    assert response.status_code == 403
+    assert documents.calls == []
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("route_name", ["get_all_documents", "stream_document"])
+async def test_government_cannot_list_or_download_draft_only_facility_diagrams(
+    client,
+    fastapi_app,
+    seed_application,
+    as_government,
+    documents,
+    facility,
+    route_name,
+):
+    facility_id = facility.fuel_production_facility_id
+    await seed_application("Draft", fuel_production_facility_id=facility_id)
+    as_government()
+    params = {"parent_type": "fuel_production_facility", "parent_id": facility_id}
+    if route_name == "stream_document":
+        params["document_id"] = 1
+
+    response = await client.get(fastapi_app.url_path_for(route_name, **params))
+
+    assert response.status_code == 404
+    assert documents.calls == []
 
 
 @pytest.mark.anyio

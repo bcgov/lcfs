@@ -5,6 +5,7 @@ from uuid import uuid4
 from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models import ProvisionOfTheAct, FuelType, FuelCategory, EndUseType
 from lcfs.db.models.compliance.FuelSupply import FuelSupply
+from lcfs.web.api.fuel_code.repo import CarbonIntensityResult
 from lcfs.web.api.fuel_supply.actions_service import FuelSupplyActionService
 from lcfs.web.api.fuel_supply.schema import (
     FuelSupplyCreateUpdateSchema,
@@ -32,7 +33,15 @@ FUEL_CATEGORY_MOCK = FuelCategory(category="Diesel")
 @pytest.fixture
 def mock_fuel_code_repo():
     fuel_code_repo = AsyncMock()
-    fuel_code_repo.get_standardized_fuel_data = AsyncMock()
+    fuel_code_repo.get_standardized_fuel_data = AsyncMock(
+        return_value=CarbonIntensityResult(
+            effective_carbon_intensity=50.0,
+            target_ci=80.0,
+            eer=1.0,
+            energy_density=35.0,
+            uci=None,
+        )
+    )
     return fuel_code_repo
 
 

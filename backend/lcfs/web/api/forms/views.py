@@ -37,6 +37,23 @@ def _org_name(request: Request) -> str | None:
     return None
 
 
+def _link_key_org_name(request: Request) -> str | None:
+    """
+    Organization name of the link key that authenticated this request.
+
+    Only link-key callers are bound to a key's organization; signed-in users
+    reaching a link-key route keep control of the body they send.
+    """
+    user = getattr(request.state, "user", None)
+    if not (user and getattr(user, "is_link_key_user", False)):
+        return None
+    organization = getattr(user, "organization", None)
+    name = getattr(organization, "name", None)
+    if not name:
+        raise HTTPException(status_code=403, detail="Invalid or expired access link")
+    return name
+
+
 async def _get_form_or_404(db: AsyncSession, form_slug: str) -> Form:
     result = await db.execute(select(Form).where(Form.slug == form_slug))
     form = result.scalar_one_or_none()
@@ -45,8 +62,20 @@ async def _get_form_or_404(db: AsyncSession, form_slug: str) -> Form:
     return form
 
 
-async def _export(form: Form, body: dict, fmt: str) -> StreamingResponse:
-    """Validate the request body against the form's registered schema and export."""
+async def _export(
+    form: Form,
+    body: dict,
+    fmt: str,
+    organization_name: str | None = None,
+) -> StreamingResponse:
+    """
+    Validate the request body against the form's registered schema and export.
+
+    ``organization_name``, when given, replaces whatever the body says so the
+    document always names the organization it is issued for.
+    """
+    if organization_name is not None:
+        body = {**body, "organization_name": organization_name}
     handler = FORM_REGISTRY.get(form.slug)
     if not handler:
         raise HTTPException(
@@ -151,4 +180,4 @@ async def export_form_by_link_key(
 ) -> StreamingResponse:
     form = await _get_form_or_404(db, form_slug)
     logger.info("form export via link key", form_slug=form_slug, format=format)
-    return await _export(form, body, format)
+    return await _export(form, body, format, _link_key_org_name(request))
