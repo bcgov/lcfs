@@ -25,7 +25,10 @@ from lcfs.web.api.compliance_report.summary_repo import (
 from lcfs.web.api.compliance_report.summary_service import (
     ComplianceReportSummaryService,
 )
-from lcfs.web.api.compliance_report.workflow import ensure_report_transition
+from lcfs.web.api.compliance_report.workflow import (
+    ensure_report_transition,
+    ensure_report_fields,
+)
 from lcfs.web.api.notification.schema import (
     COMPLIANCE_REPORT_STATUS_NOTIFICATION_MAPPER,
     NotificationMessageSchema,
@@ -131,6 +134,7 @@ class ComplianceReportUpdateService:
         # Refuse a status the workflow does not allow from the stored one,
         # before anything is changed.
         ensure_report_transition(user, report, report_data.status)
+        ensure_report_fields(user, report_data)
 
         existing_draft = await self.repo.get_draft_report_by_group_uuid(
             report.compliance_report_group_uuid
@@ -179,8 +183,9 @@ class ComplianceReportUpdateService:
 
         # Update report
         report.current_status = new_status
-        report.supplemental_note = report_data.supplemental_note
-        report.assessment_statement = report_data.assessment_statement
+        for field in ("supplemental_note", "assessment_statement"):
+            if field in report_data.model_fields_set:
+                setattr(report, field, getattr(report_data, field))
 
         # Handle non-assessment flag changes
         if report_data.is_non_assessment is not None:

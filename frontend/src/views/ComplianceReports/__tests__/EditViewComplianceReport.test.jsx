@@ -938,6 +938,26 @@ describe('EditViewComplianceReport', () => {
       expect(useCreateIdirSupplementalReport).toHaveBeenCalled()
     })
 
+    it('navigates directors to the list when a report returns to the supplier', () => {
+      useCurrentUser.mockReturnValue({
+        data: defaultUser,
+        isLoading: false,
+        hasRoles: vi.fn(() => true),
+        hasAnyRole: vi.fn(() => true)
+      })
+      render(<EditViewComplianceReport />)
+      const { onSuccess } = useUpdateComplianceReport.mock.calls.at(-1)[1]
+      act(() =>
+        onSuccess({
+          config: { data: JSON.stringify({ status: 'Return to supplier' }) }
+        })
+      )
+      expect(mockNavigate).toHaveBeenCalledWith(
+        '/compliance-reporting',
+        expect.objectContaining({ state: expect.any(Object) })
+      )
+    })
+
     it('shows the backend reason when a status update is refused', () => {
       render(<EditViewComplianceReport />)
       const { onError } = useUpdateComplianceReport.mock.calls.at(-1)[1]
