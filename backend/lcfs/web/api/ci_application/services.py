@@ -761,6 +761,7 @@ def _to_full_schema(
     ci: CIApplication,
     signature_user_display_name: Optional[str] = None,
     include_assignment_history: bool = False,
+    viewer: Optional[UserProfile] = None,
 ) -> CIApplicationSchema:
     all_pathways = list(getattr(ci, "pathways", None) or [])
     facility = getattr(ci, "fuel_production_facility", None)
@@ -840,7 +841,7 @@ def _to_full_schema(
             if row
         ],
         documents=[
-            FileResponseSchema.model_validate(d)
+            FileResponseSchema.model_validate(d).for_viewer(viewer)
             for d in (getattr(ci, "documents", None) or [])
         ],
         supporting_document_other=ci.supporting_document_other,
@@ -1128,6 +1129,7 @@ class CIApplicationServices:
             ci,
             signature_user_display_name=display_name,
             include_assignment_history=_is_idir_user(requesting_user),
+            viewer=requesting_user,
         )
 
     async def _get_assignment_user(

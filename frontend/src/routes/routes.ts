@@ -163,6 +163,12 @@ export const ROUTES = {
       '/initiative-agreements/:initiativeAgreementId/designated-actions/:designatedActionId'
   },
 
+  // Low carbon jet fuel incentive program. Nested under /jet-fuel so the
+  // breadcrumb reads Home > Jet fuel > LCJFIP, as in the wireframe (#5488).
+  LCJFIP: {
+    MAIN: '/jet-fuel/lcjfip'
+  },
+
   FORMS: {
     VIEW: '/forms/:formSlug/:linkKey',
     VIEW_AUTHENTICATED: '/forms/:formSlug'

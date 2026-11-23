@@ -319,7 +319,10 @@ export const EditViewComplianceReport = ({ isError, error }) => {
         const updatedStatus = JSON.parse(response.config.data)?.status
 
         // If Director is acting as another role, stay on the report page and show alert
-        if (hasRoles(roles.director)) {
+        if (
+          hasRoles(roles.director) &&
+          updatedStatus !== COMPLIANCE_REPORT_STATUSES.RETURN_TO_SUPPLIER
+        ) {
           // Invalidate queries to refresh the report data. Cache key is
           // kebab-case (`compliance-report`); the previous camelCase key
           // here was a silent no-op, leaving stale data on the page.
@@ -341,7 +344,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
             severity: 'success'
           })
         } else {
-          // For non-Directors, navigate to the list as before
+          // Return to the list when the updated report is no longer visible
           // Clear Filters before navigating to ensure they can see the report
           sessionStorage.setItem(FILTER_KEYS.COMPLIANCE_REPORT_GRID, '{}')
 
@@ -637,6 +640,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
 
       // Report metadata
       reportVersion: reportData?.report?.version,
+      supplementalInitiator: reportData?.report?.supplementalInitiator,
       compliancePeriod: reportCompliancePeriod,
       isSigningAuthorityDeclared,
 

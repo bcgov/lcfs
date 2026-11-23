@@ -112,7 +112,7 @@ async def test_get_latest_allocation_agreement_by_group_uuid(
 
     result = (
         await allocation_agreement_repo.get_latest_allocation_agreement_by_group_uuid(
-            group_uuid
+            group_uuid, 1
         )
     )
 

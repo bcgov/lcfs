@@ -1,5 +1,8 @@
 import asyncio
 import logging
+import os
+import socket
+import uuid
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from sqlalchemy import text
@@ -53,7 +56,10 @@ COMPLIANCE_REINDEX_TABLES = (
     "other_uses",
     "final_supply_equipment",
 )
-COMPLIANCE_REINDEX_LOCK_ID = 60271451
+COMPLIANCE_REINDEX_JOB_NAME = "reindex_compliance_report_tables"
+# Renewed after each table, so it only has to outlast one table's REINDEX. A
+# lease left by a pod that died mid-run frees itself after this long.
+COMPLIANCE_REINDEX_LEASE_SECONDS = 2 * 60 * 60
 CREDIT_MARKET_REPORT_LOCK_ID = 60271452
 FSE_REPORTING_MV_REFRESH_LOCK_ID = 60271453
 CREDIT_MARKET_REPORT_MAX_ATTEMPTS = 3
@@ -238,46 +244,148 @@ async def check_overdue_supplemental_reports(app: FastAPI):
     logger.info("Finished check for overdue supplemental reports.")
 
 
+def _job_lease_holder() -> str:
+    """Names one run of a job in its lease row: pod name, process id, run nonce."""
+    return f"{socket.gethostname()}:{os.getpid()}:{uuid.uuid4().hex[:8]}"
+
+
+async def _claim_job_lease(engine, job_name: str, holder: str, seconds: int) -> bool:
+    """
+    Claim the job's lease row unless an unexpired lease is held by another run.
+
+    The conditional upsert row-locks the lease, so when several pods race for it
+    exactly one gets the row back; the rest see the winner's unexpired lease.
+    """
+    async with engine.begin() as conn:
+        claimed_by = await conn.scalar(
+            text(
+                """
+                INSERT INTO scheduled_job_lease (job_name, holder, lease_until)
+                VALUES (
+                    :job_name,
+                    :holder,
+                    now() + make_interval(secs => :seconds)
+                )
+                ON CONFLICT (job_name) DO UPDATE
+                    SET holder = EXCLUDED.holder,
+                        lease_until = EXCLUDED.lease_until,
+                        update_date = now()
+                    WHERE scheduled_job_lease.lease_until <= now()
+                RETURNING holder;
+                """
+            ),
+            {"job_name": job_name, "holder": holder, "seconds": float(seconds)},
+        )
+    return claimed_by == holder
+
+
+async def _renew_job_lease(engine, job_name: str, holder: str, seconds: int) -> bool:
+    """Extend the lease if this run still holds it."""
+    async with engine.begin() as conn:
+        result = await conn.execute(
+            text(
+                """
+                UPDATE scheduled_job_lease
+                SET lease_until = now() + make_interval(secs => :seconds),
+                    update_date = now()
+                WHERE job_name = :job_name
+                  AND holder = :holder;
+                """
+            ),
+            {"job_name": job_name, "holder": holder, "seconds": float(seconds)},
+        )
+    return result.rowcount == 1
+
+
+async def _release_job_lease(engine, job_name: str, holder: str) -> None:
+    """Expire the lease now so the next scheduled run can claim it."""
+    async with engine.begin() as conn:
+        await conn.execute(
+            text(
+                """
+                UPDATE scheduled_job_lease
+                SET lease_until = now(),
+                    update_date = now()
+                WHERE job_name = :job_name
+                  AND holder = :holder;
+                """
+            ),
+            {"job_name": job_name, "holder": holder},
+        )
+
+
 async def reindex_compliance_report_tables(app: FastAPI):
     """
     Rebuild compliance-report related indexes during off-hours.
 
     Uses PostgreSQL's CONCURRENTLY mode so report traffic can continue while
     indexes are refreshed.
+
+    REINDEX CONCURRENTLY cannot run inside a transaction, so a transaction-scoped
+    advisory lock cannot guard it, and a session-level one strands behind
+    PgBouncer transaction pooling, where consecutive statements outside a
+    transaction can run on different server connections. Pods coordinate through
+    a lease row instead, claimed, renewed and released in short transactions. A
+    run that fails releases it, and one whose pod dies leaves a lease that
+    expires on its own.
+
+    Each REINDEX is sent as a simple query (no prepared statement), so it does
+    not rely on PgBouncer tracking prepared statements outside a transaction.
+    LCFS_DB_BACKGROUND_STATEMENT_TIMEOUT_MS does not apply to it: SET LOCAL needs
+    a transaction, and a REINDEX CONCURRENTLY cancelled part way leaves an
+    invalid index behind.
     """
     logger.info("Starting compliance-report table reindex job")
-    conn = await app.state.db_engine.connect()
+    engine = app.state.db_engine
+    holder = _job_lease_holder()
+    lease_claimed = False
 
     try:
-        conn = await conn.execution_options(isolation_level="AUTOCOMMIT")
-        lock_acquired = await conn.scalar(
-            text("SELECT pg_try_advisory_lock(:lock_id)"),
-            {"lock_id": COMPLIANCE_REINDEX_LOCK_ID},
+        lease_claimed = await _claim_job_lease(
+            engine,
+            COMPLIANCE_REINDEX_JOB_NAME,
+            holder,
+            COMPLIANCE_REINDEX_LEASE_SECONDS,
         )
-
-        if not lock_acquired:
+        if not lease_claimed:
             logger.info(
-                "Skipping compliance-report reindex job because another instance holds the lock"
+                "Skipping compliance-report reindex job because another instance holds the lease"
             )
-            return
+            return False
 
-        for table_name in COMPLIANCE_REINDEX_TABLES:
-            logger.info("Reindexing compliance table: %s", table_name)
-            await conn.execute(text(f"REINDEX TABLE CONCURRENTLY {table_name}"))
+        async with engine.connect() as conn:
+            raw_connection = await conn.get_raw_connection()
+            driver_connection = raw_connection.driver_connection
+            for table_name in COMPLIANCE_REINDEX_TABLES:
+                logger.info("Reindexing compliance table: %s", table_name)
+                await driver_connection.execute(
+                    f"REINDEX TABLE CONCURRENTLY {table_name}"
+                )
+                if not await _renew_job_lease(
+                    engine,
+                    COMPLIANCE_REINDEX_JOB_NAME,
+                    holder,
+                    COMPLIANCE_REINDEX_LEASE_SECONDS,
+                ):
+                    logger.warning(
+                        "Stopping compliance-report reindex job because its lease was taken over"
+                    )
+                    return False
     except Exception:
         logger.exception("Compliance-report table reindex job failed")
         raise
     finally:
-        try:
-            await conn.execute(
-                text("SELECT pg_advisory_unlock(:lock_id)"),
-                {"lock_id": COMPLIANCE_REINDEX_LOCK_ID},
-            )
-        except Exception:
-            logger.debug("Compliance-report reindex advisory unlock skipped")
-        await conn.close()
+        if lease_claimed:
+            try:
+                await _release_job_lease(engine, COMPLIANCE_REINDEX_JOB_NAME, holder)
+            except Exception:
+                logger.warning(
+                    "Compliance-report reindex lease release failed; the lease expires on its own",
+                    exc_info=True,
+                )
 
     logger.info("Finished compliance-report table reindex job")
+    return True
 
 
 async def refresh_fse_reporting_materialized_views(app: FastAPI):
@@ -288,75 +396,81 @@ async def refresh_fse_reporting_materialized_views(app: FastAPI):
     the materialized views when dirty_generation is ahead of refreshed_generation.
     The captured generation prevents losing changes made while a refresh is
     running; those changes remain dirty for the next scheduler pass.
+
+    Everything runs in one transaction under a transaction-scoped advisory lock,
+    which PostgreSQL releases at commit or rollback. Behind PgBouncer transaction
+    pooling the whole transaction stays on one server connection, so the lock
+    cannot be left behind on a pooled connection, and the background statement
+    timeout (SET LOCAL) applies. REFRESH MATERIALIZED VIEW CONCURRENTLY is allowed
+    inside a transaction.
     """
-    conn = await app.state.db_engine.connect()
-    lock_acquired = False
-
     try:
-        conn = await conn.execution_options(isolation_level="AUTOCOMMIT")
-        lock_acquired = await conn.scalar(
-            text("SELECT pg_try_advisory_lock(:lock_id)"),
-            {"lock_id": FSE_REPORTING_MV_REFRESH_LOCK_ID},
-        )
+        async with app.state.db_engine.begin() as conn:
+            lock_acquired = await conn.scalar(
+                text("SELECT pg_try_advisory_xact_lock(:lock_id)"),
+                {"lock_id": FSE_REPORTING_MV_REFRESH_LOCK_ID},
+            )
 
-        if not lock_acquired:
+            if not lock_acquired:
+                logger.info(
+                    "Skipping FSE reporting MV refresh because another instance holds the lock"
+                )
+                return False
+
+            refresh_objects_exist = await conn.scalar(
+                text(
+                    """
+                    SELECT
+                        to_regclass('fse_reporting_mv_refresh_state') IS NOT NULL
+                        AND to_regclass('v_fse_reporting_base') IS NOT NULL
+                        AND to_regclass('mv_fse_reporting_base_pref') IS NOT NULL;
+                    """
+                )
+            )
+
+            if not refresh_objects_exist:
+                logger.info(
+                    "Skipping FSE reporting MV refresh because refresh objects do not exist"
+                )
+                return False
+
+            dirty_generation = await conn.scalar(
+                text(
+                    """
+                    SELECT dirty_generation
+                    FROM fse_reporting_mv_refresh_state
+                    WHERE id = 1
+                      AND dirty_generation > refreshed_generation;
+                    """
+                )
+            )
+
+            if dirty_generation is None:
+                return False
+
             logger.info(
-                "Skipping FSE reporting MV refresh because another instance holds the lock"
+                "Refreshing FSE reporting preferred materialized view",
+                extra={"dirty_generation": dirty_generation},
             )
-            return False
-
-        refresh_objects_exist = await conn.scalar(
-            text(
-                """
-                SELECT
-                    to_regclass('fse_reporting_mv_refresh_state') IS NOT NULL
-                    AND to_regclass('v_fse_reporting_base') IS NOT NULL
-                    AND to_regclass('mv_fse_reporting_base_pref') IS NOT NULL;
-                """
+            await conn.execute(
+                text(
+                    "REFRESH MATERIALIZED VIEW CONCURRENTLY mv_fse_reporting_base_pref"
+                )
             )
-        )
-
-        if not refresh_objects_exist:
-            logger.info(
-                "Skipping FSE reporting MV refresh because refresh objects do not exist"
+            await conn.execute(
+                text(
+                    """
+                    UPDATE fse_reporting_mv_refresh_state
+                    SET refreshed_generation = GREATEST(
+                            refreshed_generation,
+                            :dirty_generation
+                        ),
+                        update_date = now()
+                    WHERE id = 1;
+                    """
+                ),
+                {"dirty_generation": dirty_generation},
             )
-            return False
-
-        dirty_generation = await conn.scalar(
-            text(
-                """
-                SELECT dirty_generation
-                FROM fse_reporting_mv_refresh_state
-                WHERE id = 1
-                  AND dirty_generation > refreshed_generation;
-                """
-            )
-        )
-
-        if dirty_generation is None:
-            return False
-
-        logger.info(
-            "Refreshing FSE reporting preferred materialized view",
-            extra={"dirty_generation": dirty_generation},
-        )
-        await conn.execute(
-            text("REFRESH MATERIALIZED VIEW CONCURRENTLY mv_fse_reporting_base_pref")
-        )
-        await conn.execute(
-            text(
-                """
-                UPDATE fse_reporting_mv_refresh_state
-                SET refreshed_generation = GREATEST(
-                        refreshed_generation,
-                        :dirty_generation
-                    ),
-                    update_date = now()
-                WHERE id = 1;
-                """
-            ),
-            {"dirty_generation": dirty_generation},
-        )
         logger.info(
             "Finished FSE reporting materialized view refresh",
             extra={"refreshed_generation": dirty_generation},
@@ -365,16 +479,6 @@ async def refresh_fse_reporting_materialized_views(app: FastAPI):
     except Exception:
         logger.exception("FSE reporting materialized view refresh job failed")
         raise
-    finally:
-        if lock_acquired:
-            try:
-                await conn.execute(
-                    text("SELECT pg_advisory_unlock(:lock_id)"),
-                    {"lock_id": FSE_REPORTING_MV_REFRESH_LOCK_ID},
-                )
-            except Exception:
-                logger.debug("FSE reporting MV refresh advisory unlock skipped")
-        await conn.close()
 
 
 async def send_monthly_credit_market_report(app: FastAPI):
