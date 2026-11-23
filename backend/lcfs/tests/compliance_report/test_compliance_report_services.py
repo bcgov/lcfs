@@ -705,10 +705,11 @@ async def test_delete_rechecks_status_after_lock_without_transaction(
         return report
 
     mock_repo.get_compliance_report_by_id.side_effect = refreshed_report
-    with pytest.raises(ServiceException):
+    with pytest.raises(HTTPException) as exc:
         await compliance_report_service.delete_compliance_report(
             996, MagicMock(organization_id=998)
         )
+    assert exc.value.status_code == 403
     mock_repo.delete_compliance_report.assert_not_awaited()
 
 
