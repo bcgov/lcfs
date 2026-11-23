@@ -18,13 +18,13 @@ export const DesignatedActionNavigation = ({
   const currentIndex = siblingActionIds.findIndex(
     (id) => Number(id) === Number(designatedActionId)
   )
-  const previousId = currentIndex > 0 ? siblingActionIds[currentIndex - 1] : null
+  const previousId =
+    currentIndex > 0 ? siblingActionIds[currentIndex - 1] : null
   const nextId =
     currentIndex >= 0 && currentIndex < siblingActionIds.length - 1
       ? siblingActionIds[currentIndex + 1]
       : null
-  const label =
-    actionLabel || `DA${actionNumber}-IA${initiativeAgreementId}`
+  const label = actionLabel || `DA${actionNumber}-IA${initiativeAgreementId}`
 
   const goToSibling = (siblingId) => {
     if (!siblingId) return
