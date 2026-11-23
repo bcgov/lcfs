@@ -100,7 +100,8 @@ async def validate_parent_access(
     production facility documents; the other surfaces grant both together.
     """
     if parent_type == "compliance_report":
-        await cr_validate.validate_organization_access(parent_id)
+        compliance_report = await cr_validate.validate_organization_access(parent_id)
+        await cr_validate.validate_compliance_report_access(compliance_report)
     elif parent_type == "initiativeAgreement":
         await ia_validate.validate_organization_access(parent_id)
     elif parent_type in ("adminAdjustment", "administrativeAdjustment"):
@@ -225,7 +226,8 @@ async def upload_file(
     ci_validate=Depends(ci_application_validator),
 ) -> FileResponseSchema:
     if parent_type == "compliance_report":
-        await cr_validate.validate_organization_access(parent_id)
+        compliance_report = await cr_validate.validate_organization_access(parent_id)
+        await cr_validate.validate_compliance_report_access(compliance_report)
 
     if parent_type == "initiativeAgreement":
         await ia_validate.validate_organization_access(parent_id)

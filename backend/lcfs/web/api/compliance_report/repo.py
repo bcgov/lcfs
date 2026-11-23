@@ -1466,7 +1466,10 @@ class ComplianceReportRepository:
         Returns (prev, next) compliance reports for an org by year, using latest visible per user role.
         """
         excluded_statuses: list[ComplianceReportStatusEnum] = []
-        if not user_has_roles(user, [RoleEnum.ANALYST]):
+        if not any(
+            user_has_roles(user, [role])
+            for role in (RoleEnum.ANALYST, RoleEnum.DIRECTOR)
+        ):
             excluded_statuses.append(ComplianceReportStatusEnum.Analyst_adjustment)
         if not user_has_roles(user, [RoleEnum.SUPPLIER]):
             excluded_statuses.append(ComplianceReportStatusEnum.Draft)
@@ -1477,24 +1480,20 @@ class ComplianceReportRepository:
             if status_row is not None:
                 status_ids.append(status_row.compliance_report_status_id)
 
-        # Hide in-progress government reassessments from the owning supplier
-        user_organization_id = (
-            user.organization.organization_id if user.organization else None
-        )
-        hide_gov_reassessments = (
-            user_organization_id is not None and user_organization_id == organization_id
-        )
-
-        assessed_status_id: Optional[int] = None
+        # Match can_access_report: suppliers see government reassessments only
+        # once they are assessed or exempted, regardless of organization metadata.
+        hide_gov_reassessments = user_has_roles(user, [RoleEnum.SUPPLIER])
+        finalized_status_ids: list[int] = []
         if hide_gov_reassessments:
-            assessed_status = await self.get_compliance_report_status_by_desc(
-                ComplianceReportStatusEnum.Assessed.value
-            )
-            assessed_status_id = (
-                assessed_status.compliance_report_status_id
-                if assessed_status is not None
-                else None
-            )
+            for status in (
+                ComplianceReportStatusEnum.Assessed,
+                ComplianceReportStatusEnum.Exempted,
+            ):
+                status_row = await self.get_compliance_report_status_by_desc(
+                    status.value
+                )
+                if status_row is not None:
+                    finalized_status_ids.append(status_row.compliance_report_status_id)
 
         # Pick latest version per group, excluding certain statuses and hidden reassessments.
         inner = aliased(ComplianceReport)
@@ -1506,10 +1505,10 @@ class ComplianceReportRepository:
             version_conditions.append(inner.current_status_id.notin_(status_ids))
 
         max_version_subq = select(func.max(inner.version)).where(*version_conditions)
-        if hide_gov_reassessments and assessed_status_id is not None:
+        if hide_gov_reassessments:
             max_version_subq = max_version_subq.where(
                 or_(
-                    inner.current_status_id == assessed_status_id,
+                    inner.current_status_id.in_(finalized_status_ids),
                     inner.supplemental_initiator
                     != SupplementalInitiatorType.GOVERNMENT_REASSESSMENT,
                     inner.supplemental_initiator.is_(None),
@@ -1905,10 +1904,34 @@ class ComplianceReportRepository:
                     .scalar_subquery()
                 )
             else:
-                logger.info(
-                    "Non-government user, no additional status filtering applied",
-                    user_id=user.user_profile_id,
-                    username=user.keycloak_username,
+                final_status = select(
+                    ComplianceReportStatus.compliance_report_status_id
+                ).where(
+                    ComplianceReportStatus.status.in_([
+                        ComplianceReportStatusEnum.Assessed,
+                        ComplianceReportStatusEnum.Exempted,
+                    ])
+                )
+                query_conditions.append(
+                    or_(
+                        ComplianceReport.supplemental_initiator.is_(None),
+                        ComplianceReport.supplemental_initiator
+                        != SupplementalInitiatorType.GOVERNMENT_REASSESSMENT,
+                        ComplianceReport.current_status_id.in_(final_status),
+                    )
+                )
+
+            if not (
+                user_has_roles(user, [RoleEnum.ANALYST])
+                or user_has_roles(user, [RoleEnum.DIRECTOR])
+            ):
+                query_conditions.append(
+                    ComplianceReport.current_status_id.in_(
+                        select(ComplianceReportStatus.compliance_report_status_id).where(
+                            ComplianceReportStatus.status
+                            != ComplianceReportStatusEnum.Analyst_adjustment
+                        )
+                    )
                 )
 
             # Get the specific schedule relationship for this data type
