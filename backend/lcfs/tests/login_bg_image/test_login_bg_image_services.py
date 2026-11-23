@@ -1,3 +1,5 @@
+import threading
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from io import BytesIO
@@ -94,6 +96,32 @@ async def test_upload_success(
     login_bg_image_service.s3_client.upload_fileobj.assert_called_once()
     mock_login_bg_image_repo.create.assert_called_once()
     assert result.display_name == sample_image.display_name
+
+
+@pytest.mark.anyio
+async def test_upload_runs_s3_upload_off_the_event_loop(
+    login_bg_image_service, mock_login_bg_image_repo, sample_image
+):
+    mock_file = MagicMock(spec=UploadFile)
+    mock_file.content_type = "image/jpeg"
+    mock_file.filename = "photo.jpg"
+    mock_file.file = MagicMock()
+    mock_file.file.fileno.return_value = 0
+    mock_file.file.read = MagicMock(return_value=b"\xff\xd8\xff\xe0fake-jpeg-bytes")
+    mock_login_bg_image_repo.create = AsyncMock(return_value=sample_image)
+
+    event_loop_thread = threading.get_ident()
+    upload_threads = []
+    login_bg_image_service.s3_client.upload_fileobj.side_effect = (
+        lambda **kwargs: upload_threads.append(threading.get_ident())
+    )
+
+    with patch("os.fstat") as mock_fstat:
+        mock_fstat.return_value.st_size = 1024
+        await login_bg_image_service.upload(mock_file, "Name", None)
+
+    assert upload_threads
+    assert event_loop_thread not in upload_threads
 
 
 
