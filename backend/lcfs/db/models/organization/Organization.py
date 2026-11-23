@@ -229,6 +229,11 @@ class Organization(BaseModel, Auditable, EffectiveDates):
     organization_internal_comments = relationship(
         "OrganizationInternalComment", back_populates="organization"
     )
+    lcjfip_applications = relationship(
+        "LCJFIPApplication",
+        foreign_keys="LCJFIPApplication.organization_id",
+        back_populates="organization",
+    )
 
 
 @event.listens_for(Organization, "before_insert")

@@ -12,12 +12,31 @@ from starlette.responses import StreamingResponse
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.services.s3.client import DocumentService
-from lcfs.services.s3.schema import DocumentRenameSchema, FileResponseSchema
+from lcfs.db.models.document.Document import DocumentScanStatusEnum
+from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
+    RECORD_KIND_LEGACY_AWARD,
+)
+from lcfs.services.s3.schema import (
+    DocumentRenameSchema,
+    DocumentScanReviewSchema,
+    FileResponseSchema,
+)
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
 from lcfs.web.api.document_folder.constants import FOLDER_ENABLED_PARENT_TYPES
 from lcfs.web.api.initiative_agreement.validation import InitiativeAgreementValidation
 from lcfs.web.api.charging_site.validation import ChargingSiteValidation
 from lcfs.web.core.decorators import view_handler
+
+
+BLOCKED_SCAN_STATUSES = {
+    DocumentScanStatusEnum.pending_approval: (
+        "This file contains macros and is waiting for an administrator to "
+        "approve it."
+    ),
+    DocumentScanStatusEnum.rejected: (
+        "This file contains macros and was rejected by an administrator."
+    ),
+}
 
 
 def _content_disposition(filename: str) -> str:
@@ -50,6 +69,15 @@ router = APIRouter()
 logger = structlog.get_logger(__name__)
 
 
+async def _is_legacy_credit_award(
+    parent_type: str, parent_id: int, ia_validate: InitiativeAgreementValidation
+) -> bool:
+    if parent_type != "initiativeAgreement":
+        return False
+    agreement = await ia_validate.repo.get_initiative_agreement_by_id(parent_id)
+    return agreement is not None and agreement.record_kind == RECORD_KIND_LEGACY_AWARD
+
+
 async def validate_parent_access(
     parent_type: str,
     parent_id: int,
@@ -72,7 +100,8 @@ async def validate_parent_access(
     production facility documents; the other surfaces grant both together.
     """
     if parent_type == "compliance_report":
-        await cr_validate.validate_organization_access(parent_id)
+        compliance_report = await cr_validate.validate_organization_access(parent_id)
+        await cr_validate.validate_compliance_report_access(compliance_report)
     elif parent_type == "initiativeAgreement":
         await ia_validate.validate_organization_access(parent_id)
     elif parent_type in ("adminAdjustment", "administrativeAdjustment"):
@@ -151,7 +180,9 @@ async def get_all_documents(
     usernames = {f.create_user for f in file_responses if f.create_user}
     codes = await document_service.get_uploading_organization_codes(usernames)
     return [
-        f.model_copy(update={"uploading_organization_code": codes.get(f.create_user)})
+        f.model_copy(
+            update={"uploading_organization_code": codes.get(f.create_user)}
+        ).for_viewer(request.user)
         for f in file_responses
     ]
 
@@ -195,7 +226,8 @@ async def upload_file(
     ci_validate=Depends(ci_application_validator),
 ) -> FileResponseSchema:
     if parent_type == "compliance_report":
-        await cr_validate.validate_organization_access(parent_id)
+        compliance_report = await cr_validate.validate_organization_access(parent_id)
+        await cr_validate.validate_compliance_report_access(compliance_report)
 
     if parent_type == "initiativeAgreement":
         await ia_validate.validate_organization_access(parent_id)
@@ -219,7 +251,7 @@ async def upload_file(
         document_category=document_category,
         replace_document_id=replace_document_id,
     )
-    return FileResponseSchema.model_validate(document)
+    return FileResponseSchema.model_validate(document).for_viewer(request.user)
 
 
 @router.get(
@@ -257,10 +289,22 @@ async def stream_document(
         document_id, parent_id, parent_type
     )
 
+    # Macro-enabled workbooks stay locked until an administrator approves them.
+    # 409, not 403: view_handler replaces every 403's message.
+    if document.scan_status in BLOCKED_SCAN_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=BLOCKED_SCAN_STATUSES[document.scan_status],
+        )
+
     download_name = document.display_name or document.file_name
     headers = {
         "Content-Disposition": _content_disposition(download_name),
         "content-length": str(file["ContentLength"]),
+        # Older uploads carry the type the browser claimed, so never let a
+        # browser sniff or run the content
+        "X-Content-Type-Options": "nosniff",
+        "Content-Security-Policy": "sandbox",
     }
 
     return StreamingResponse(
@@ -313,7 +357,55 @@ async def rename_file(
     document = await document_service.rename_file(
         document_id, parent_id, parent_type, data.display_name
     )
-    return FileResponseSchema.model_validate(document)
+    return FileResponseSchema.model_validate(document).for_viewer(request.user)
+
+
+@router.put(
+    "/{parent_type}/{parent_id}/{document_id}/scan-review",
+    response_model=FileResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.ADMINISTRATOR])
+async def review_document_scan(
+    request: Request,
+    parent_type: str,
+    parent_id: int,
+    document_id: int,
+    data: DocumentScanReviewSchema,
+    document_service: DocumentService = Depends(),
+    cr_validate: ComplianceReportValidation = Depends(),
+    ia_validate: InitiativeAgreementValidation = Depends(),
+    aa_validate: AdminAdjustmentValidation = Depends(),
+    cs_validate: ChargingSiteValidation = Depends(),
+    ci_validate=Depends(ci_application_validator),
+) -> FileResponseSchema:
+    """An IDIR Administrator approves or rejects a macro-enabled workbook."""
+    if parent_type == "fuel_production_facility":
+        # A review changes the file's scan status, not the facility's
+        # documents, so it needs read access rather than the supplier-only
+        # write rule validate_parent_access applies to every non-GET request.
+        await ci_validate.validate_facility_access(parent_id)
+    else:
+        await validate_parent_access(
+            parent_type,
+            parent_id,
+            request,
+            document_service,
+            cr_validate,
+            ia_validate,
+            aa_validate,
+            cs_validate,
+            ci_validate,
+        )
+
+    document = await document_service.review_scan(
+        document_id,
+        parent_id,
+        parent_type,
+        approve=data.decision == "approve",
+        user=request.user,
+    )
+    return FileResponseSchema.model_validate(document).for_viewer(request.user)
 
 
 @router.delete(
@@ -335,7 +427,11 @@ async def delete_file(
     # which soft-deletes first and lets only the file's owner destroy it.
     # This route destroys the S3 object outright on nothing more than
     # parent access, so it must not be reachable for those parents at all.
-    if parent_type in FOLDER_ENABLED_PARENT_TYPES:
+    # Legacy credit awards share the initiativeAgreement parent type but
+    # have no bin: their files are managed on the transaction pages.
+    if parent_type in FOLDER_ENABLED_PARENT_TYPES and not (
+        await _is_legacy_credit_award(parent_type, parent_id, ia_validate)
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=(

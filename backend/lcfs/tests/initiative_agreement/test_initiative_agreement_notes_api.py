@@ -266,6 +266,29 @@ async def test_long_and_short_notes_round_trip_untruncated(
 
 
 @pytest.mark.anyio
+async def test_disallowed_markup_is_sanitized_before_persistence(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+):
+    """The client sanitizes before display, but an API caller can send
+    whatever it likes, so the server must strip disallowed markup too."""
+    agreement = await _agreement(dbsession, "IA-26NOTE17")
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+
+    added = await _add(
+        client,
+        fastapi_app,
+        agreement,
+        "<p>Safe<script>alert('xss')</script></p><img src=x onerror=alert(1)>",
+    )
+
+    assert added.status_code == status.HTTP_201_CREATED
+    assert added.json()["noteText"] == "<p>Safe</p>"
+
+    listed = await client.get(_url(fastapi_app, "get_notes", agreement))
+    assert listed.json()[0]["noteText"] == "<p>Safe</p>"
+
+
+@pytest.mark.anyio
 async def test_directors_read_but_cannot_change_notes(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):

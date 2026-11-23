@@ -3,6 +3,7 @@ from fastapi.exceptions import RequestValidationError
 
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.fuel_export.schema import FuelExportCreateUpdateSchema
+from lcfs.web.utils.schema_validators import other_fuel_energy_density_valid
 
 
 class FuelExportValidation:
@@ -26,14 +27,5 @@ class FuelExportValidation:
                         }
                     ]
                 )
-            
-            if fuel_export.energy_density is None or fuel_export.energy_density <= 0:
-                raise RequestValidationError(
-                    [
-                        {
-                            "loc": ("energyDensity",),
-                            "msg": "Energy Density must be greater than zero when using Other fuel type",
-                            "type": "value_error",
-                        }
-                    ]
-                )
+
+            other_fuel_energy_density_valid(fuel_export.energy_density)

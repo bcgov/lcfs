@@ -5,6 +5,7 @@ from decimal import Decimal
 from html import unescape
 from typing import List, Optional
 
+import nh3
 import structlog
 from fastapi import Depends, HTTPException, Request
 
@@ -115,6 +116,49 @@ logger = structlog.get_logger(__name__)
 
 # Upper bound on grid page size; the frontend asks for 25.
 MAX_PAGE_SIZE = 200
+
+# Mirrors the allow-list the client enforces in sanitizeCommentHtml.ts. The
+# client sanitizes before save and display, but an API caller can bypass it,
+# so the server re-sanitizes before persistence.
+_NOTE_ALLOWED_TAGS = {
+    "a",
+    "b",
+    "blockquote",
+    "br",
+    "code",
+    "div",
+    "em",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "i",
+    "li",
+    "ol",
+    "p",
+    "pre",
+    "s",
+    "span",
+    "strong",
+    "u",
+    "ul",
+}
+_NOTE_ALLOWED_ATTRIBUTES = {"*": {"class", "href", "rel", "target", "title"}}
+
+
+def _sanitize_note_html(note_text: Optional[str]) -> str:
+    """The note HTML with any markup outside the rich-text allow-list
+    stripped."""
+    if not note_text:
+        return ""
+    return nh3.clean(
+        note_text,
+        tags=_NOTE_ALLOWED_TAGS,
+        attributes=_NOTE_ALLOWED_ATTRIBUTES,
+        link_rel=None,
+    )
 
 
 class InitiativeAgreementServices:
@@ -1598,12 +1642,14 @@ class InitiativeAgreementServices:
 
     @staticmethod
     def _require_note_text(note_text: Optional[str]) -> str:
-        """The note HTML, unless it holds no text (an empty Quill editor
-        submits ``<p><br></p>``). Like other rich-text fields it is stored as
-        the client sent it and sanitized by the client before save and display."""
-        if not unescape(sanitize_comment_text(note_text)).strip():
+        """The sanitized note HTML, unless it holds no text (an empty Quill
+        editor submits ``<p><br></p>``). The client also sanitizes before
+        display, but the server re-sanitizes before persistence so an API
+        caller can't bypass it and store disallowed markup."""
+        sanitized = _sanitize_note_html(note_text)
+        if not unescape(sanitize_comment_text(sanitized)).strip():
             raise HTTPException(status_code=400, detail="A note is required.")
-        return note_text
+        return sanitized
 
     @staticmethod
     def _note_schema(
