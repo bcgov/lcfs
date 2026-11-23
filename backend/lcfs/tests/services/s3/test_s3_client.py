@@ -1,3 +1,4 @@
+import threading
 from datetime import datetime
 from unittest.mock import AsyncMock, patch, MagicMock
 import os
@@ -413,6 +414,36 @@ async def test_upload_file_scan_failure_stops_upload(
 
     document_service.clamav_service.scan_file_async.assert_awaited_once()
     document_service.s3_client.upload_fileobj.assert_not_called()
+
+
+@pytest.mark.anyio
+@patch("os.fstat")
+async def test_upload_file_runs_s3_upload_off_the_event_loop(
+    mock_fstat,
+    document_service,
+    mock_file,
+    user_supplier,
+    compliance_report_mock,
+    db_mock,
+):
+    mock_fstat.return_value = MagicMock(st_size=1024)
+    document_service.compliance_report_repo.get_compliance_report_by_id.return_value = (
+        compliance_report_mock
+    )
+    db_mock.get.return_value = compliance_report_mock
+    db_mock.refresh = AsyncMock(side_effect=lambda x: x)
+
+    event_loop_thread = threading.get_ident()
+    upload_threads = []
+    document_service.s3_client.upload_fileobj.side_effect = (
+        lambda **kwargs: upload_threads.append(threading.get_ident())
+    )
+
+    await document_service.upload_file(mock_file, 1, "compliance_report", user_supplier)
+
+    assert upload_threads
+    assert event_loop_thread not in upload_threads
+
 
 @pytest.mark.anyio
 @patch("os.fstat")
