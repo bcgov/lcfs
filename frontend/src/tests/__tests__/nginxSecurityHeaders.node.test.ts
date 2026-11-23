@@ -39,7 +39,9 @@ describe('nginx security headers (LCFS-SEC-024)', () => {
   })
 
   it('sets X-Content-Type-Options to nosniff', () => {
-    expect(nginxConf).toMatch(/add_header\s+X-Content-Type-Options\s+nosniff\s+always;/)
+    expect(nginxConf).toMatch(
+      /add_header\s+X-Content-Type-Options\s+nosniff\s+always;/
+    )
   })
 
   it('sets a Referrer-Policy', () => {
@@ -57,6 +59,8 @@ describe('nginx security headers (LCFS-SEC-024)', () => {
   })
 
   it('still sends X-Frame-Options for defense in depth', () => {
-    expect(nginxConf).toMatch(/add_header\s+X-Frame-Options\s+SAMEORIGIN\s+always;/)
+    expect(nginxConf).toMatch(
+      /add_header\s+X-Frame-Options\s+SAMEORIGIN\s+always;/
+    )
   })
 })
