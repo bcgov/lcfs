@@ -1,13 +1,20 @@
 from sqlalchemy import Boolean, Column, Integer, String, ForeignKey, Numeric, BigInteger, text
+from sqlalchemy import CheckConstraint, UniqueConstraint
 from sqlalchemy.orm import relationship
 from lcfs.db.base import BaseModel, Auditable, Versioning
 
 
 class OtherUses(BaseModel, Auditable, Versioning):
     __tablename__ = "other_uses"
-    __table_args__ = {
-        "comment": "Records other uses of fuels that are subject to renewable requirements but do not earn credits."
-    }
+    __table_args__ = (
+        UniqueConstraint(
+            "group_uuid", "version", name="uq_other_uses_group_uuid_version"
+        ),
+        CheckConstraint("quantity_supplied >= 0", name="quantities_non_negative"),
+        {
+            "comment": "Records other uses of fuels that are subject to renewable requirements but do not earn credits."
+        },
+    )
 
     other_uses_id = Column(
         Integer,

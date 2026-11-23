@@ -1,10 +1,16 @@
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import type { ComponentType } from 'react'
 import { Navigate } from 'react-router-dom'
 
-export const withRole = (WrappedComponent, allowedRoles, redirect) => {
-  const WithRole = (props) => {
+export const withRole = <P extends object>(
+  WrappedComponent: ComponentType<P>,
+  allowedRoles: string[],
+  redirect?: string
+) => {
+  const WithRole = (props: P) => {
     const { data: currentUser } = useCurrentUser()
-    const userRoles = currentUser?.roles?.map((role) => role.name) || []
+    const userRoles =
+      currentUser?.roles?.map((role: { name: string }) => role.name) || []
 
     const isAuthorized = allowedRoles.some((role) => userRoles.includes(role))
 

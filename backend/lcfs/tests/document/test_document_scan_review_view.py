@@ -52,6 +52,9 @@ class FakeValidation:
     async def validate_organization_access(self, parent_id):
         return
 
+    async def validate_compliance_report_access(self, compliance_report):
+        return
+
 
 @pytest.fixture(autouse=True)
 def override_dependencies(fastapi_app):
