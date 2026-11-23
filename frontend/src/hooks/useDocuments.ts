@@ -177,7 +177,7 @@ export const useUploadDocument = (
 export const useDeleteDocument = (
   parentType: string,
   parentID: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, unknown> = {}
+  options: ExtMutationOptions<unknown, unknown> & { deleteToBin?: boolean } = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -186,6 +186,10 @@ export const useDeleteDocument = (
     onSuccess,
     onError,
     invalidateRelatedQueries = true,
+    // Parents with a document bin delete through it; the shared route
+    // refuses them. Initiative agreements opt in from their own page,
+    // because legacy credit awards share the parent type and have no bin.
+    deleteToBin = parentType === 'designatedAction',
     ...restOptions
   } = options
 
@@ -199,7 +203,7 @@ export const useDeleteDocument = (
       }
 
       const path = (
-        parentType === 'designatedAction'
+        deleteToBin
           ? apiRoutes.documentFolderDeleteDocument
           : apiRoutes.getDocument
       )
@@ -215,7 +219,7 @@ export const useDeleteDocument = (
       queryClient.invalidateQueries({
         queryKey: ['documents', parentType, parentID]
       })
-      if (parentType === 'designatedAction') {
+      if (deleteToBin) {
         queryClient.invalidateQueries({
           queryKey: ['document-tree', parentType, String(parentID)]
         })
@@ -239,6 +243,56 @@ export const useDeleteDocument = (
         }
       }
 
+      onSuccess?.(data, variables, context)
+    },
+    onError: (error, variables, context) => {
+      onError?.(error, variables, context)
+    },
+    ...restOptions
+  })
+}
+
+// An IDIR Administrator approves or rejects a macro-enabled workbook
+export const useReviewDocumentScan = (
+  parentType: string,
+  parentID: number | string | undefined | null,
+  options: ExtMutationOptions<
+    unknown,
+    { documentID: number | string; decision: 'approve' | 'reject' }
+  > = {}
+) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+
+  const { onSuccess, onError, ...restOptions } = options
+
+  return useMutation({
+    mutationFn: async ({
+      documentID,
+      decision
+    }: {
+      documentID: number | string
+      decision: 'approve' | 'reject'
+    }) => {
+      const path = apiRoutes.reviewDocumentScan
+        .replace(':parentID', String(parentID ?? ''))
+        .replace(':parentType', String(parentType ?? ''))
+        .replace(':documentID', String(documentID ?? ''))
+
+      return await client.put(path, { decision })
+    },
+    onSuccess: (data, variables, context) => {
+      queryClient.invalidateQueries({
+        queryKey: ['documents', parentType, parentID]
+      })
+      // The CI application summary lists documents from its detail query
+      if (parentType === 'ci_application') {
+        queryClient.invalidateQueries({
+          queryKey: ['ci-application', String(parentID)]
+        })
+      } else if (parentType === 'fuel_production_facility') {
+        invalidateFuelProductionFacilityQueries(queryClient)
+      }
       onSuccess?.(data, variables, context)
     },
     onError: (error, variables, context) => {

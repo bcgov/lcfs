@@ -4,9 +4,11 @@ import { vi, describe, expect, beforeEach } from 'vite-plus/test'
 import DocumentTable from '../DocumentTable'
 import { validateFile } from '@/utils/fileValidation'
 import {
+  CI_APPLICATION_FILE_TYPES,
   COMPLIANCE_REPORT_FILE_TYPES,
   MAX_FILE_SIZE_BYTES
 } from '@/constants/common'
+import { isFeatureEnabled } from '@/constants/config'
 
 // Import mocked hooks for use in tests
 import {
@@ -24,7 +26,13 @@ vi.mock('@/hooks/useDocuments', () => ({
   useUploadDocument: vi.fn(),
   useDeleteDocument: vi.fn(),
   useUpdateDocument: vi.fn(),
-  useDownloadDocument: vi.fn()
+  useDownloadDocument: vi.fn(),
+  useReviewDocumentScan: vi.fn(() => ({ mutateAsync: vi.fn() }))
+}))
+
+vi.mock('@/constants/config', async (importOriginal) => ({
+  ...(await importOriginal()),
+  isFeatureEnabled: vi.fn(() => false)
 }))
 
 vi.mock('@/components/Documents/DocumentPreviewButton', () => ({
@@ -421,6 +429,69 @@ describe('DocumentTable', () => {
     expect(mockDownloadDocument).toHaveBeenCalledWith(1, 'test.pdf')
   })
 
+  test('a file waiting for macro approval cannot be downloaded', async ({
+    render,
+    theme,
+    router
+  }) => {
+    useDocuments.mockReturnValue({
+      data: [
+        {
+          documentId: 3,
+          fileName: 'ghg-model.xlsm',
+          fileSize: 2048,
+          createDate: '2024-01-01T10:00:00Z',
+          createUser: 'applicant',
+          scanStatus: 'pending_approval'
+        }
+      ],
+      isLoading: false
+    })
+
+    render(<DocumentTable parentType="ci_application" parentID="5" />, [
+      theme,
+      router
+    ])
+
+    fireEvent.click(await screen.findByText('ghg-model.xlsm'))
+
+    expect(mockDownloadDocument).not.toHaveBeenCalled()
+    expect(screen.getByTestId('document-scan-status')).toBeInTheDocument()
+  })
+
+  test('CI applications accept .xlsm only with the feature flag on', async ({
+    render,
+    theme,
+    router
+  }) => {
+    isFeatureEnabled.mockReturnValue(true)
+    const file = createMockFile(
+      'ghg-model.xlsm',
+      'application/vnd.ms-excel.sheet.macroEnabled.12'
+    )
+
+    render(<DocumentTable parentType="ci_application" parentID="5" />, [
+      theme,
+      router
+    ])
+    fireEvent.change(screen.getByTestId('file-input'), {
+      target: { files: [file] }
+    })
+
+    await waitFor(() =>
+      expect(validateFile).toHaveBeenCalledWith(
+        file,
+        MAX_FILE_SIZE_BYTES,
+        CI_APPLICATION_FILE_TYPES
+      )
+    )
+    expect(screen.getByTestId('file-input')).toHaveAttribute(
+      'accept',
+      CI_APPLICATION_FILE_TYPES.ACCEPT_STRING
+    )
+    isFeatureEnabled.mockReturnValue(false)
+  })
+
   test('should download a renamed file using its display name', async ({
     render,
     theme,
@@ -790,7 +861,10 @@ describe('DocumentTable', () => {
 
     expect(useDocuments).toHaveBeenCalledWith('fuel-export', '456')
     expect(useUploadDocument).toHaveBeenCalledWith('fuel-export', '456')
-    expect(useDeleteDocument).toHaveBeenCalledWith('fuel-export', '456')
+    // No deleteToBin prop: the hook picks the route from the parent type.
+    expect(useDeleteDocument).toHaveBeenCalledWith('fuel-export', '456', {
+      deleteToBin: undefined
+    })
   })
 
   test('should clear error message when new file is uploaded', async ({
@@ -919,7 +993,7 @@ describe('DocumentTable', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText('error-file.pdf (Unsupported file type)')
+        screen.getByText('error-file.pdf (Upload failed)')
       ).toBeInTheDocument()
       expect(
         screen.getByText('oversize-file.pdf (File is over 50MB)')
@@ -927,6 +1001,39 @@ describe('DocumentTable', () => {
     })
 
     expect(screen.queryByTestId('delete-button')).not.toBeInTheDocument()
+  })
+
+  test('shows the server reason when an upload is refused', async ({
+    render,
+    theme,
+    router
+  }) => {
+    const file = createMockFile('model.xlsx', 'application/vnd.ms-excel', 1000)
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    mockUploadMutate.mockImplementation((file, { onError }) => {
+      onError({
+        response: {
+          status: 400,
+          data: {
+            detail: "This file contains macros, which can't be uploaded here."
+          }
+        }
+      })
+    })
+
+    render(<DocumentTable {...defaultProps} />, [theme, router])
+
+    fireEvent.change(screen.getByTestId('file-input'), {
+      target: { files: [file] }
+    })
+
+    expect(
+      await screen.findByText(
+        'Upload failed for "model.xlsx": This file contains macros, which can\'t be uploaded here.'
+      )
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
   })
 
   test('should handle non-422 upload errors correctly', async ({

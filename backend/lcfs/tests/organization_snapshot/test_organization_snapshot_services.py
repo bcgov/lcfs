@@ -1,9 +1,14 @@
 import pytest
+from fastapi import HTTPException
 from unittest.mock import AsyncMock, MagicMock
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db.models import ComplianceReportOrganizationSnapshot
+from lcfs.db.models.compliance.ComplianceReportStatus import (
+    ComplianceReportStatusEnum,
+)
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.organization_snapshot.repo import OrganizationSnapshotRepository
 from lcfs.web.api.organization_snapshot.services import OrganizationSnapshotService
 
@@ -76,11 +81,27 @@ async def test_create_organization_snapshot_no_organization(service, mock_repo):
         )
 
 
+SUPPLIER_ROLES = [RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING]
+ANALYST_ROLES = [RoleEnum.GOVERNMENT, RoleEnum.ANALYST]
+DIRECTOR_ROLES = [RoleEnum.GOVERNMENT, RoleEnum.DIRECTOR]
+
+
+def _as_user(service, roles):
+    service.request = MagicMock()
+    service.request.user = MagicMock(role_names=roles)
+
+
 @pytest.mark.anyio
 async def test_update_success(service, mock_repo):
     compliance_report_id = 1
-    request_data = MagicMock()
-    snapshot = ComplianceReportOrganizationSnapshot()
+    _as_user(service, SUPPLIER_ROLES)
+    request_data = MagicMock(compliance_report_id=compliance_report_id)
+    mock_repo.get_compliance_report_status.return_value = (
+        ComplianceReportStatusEnum.Draft
+    )
+    snapshot = ComplianceReportOrganizationSnapshot(
+        compliance_report_id=compliance_report_id
+    )
     mock_repo.get_by_compliance_report_id.return_value = snapshot
     updated_snapshot = ComplianceReportOrganizationSnapshot()
     mock_repo.save_snapshot.return_value = updated_snapshot
@@ -88,6 +109,7 @@ async def test_update_success(service, mock_repo):
     result = await service.update(request_data, compliance_report_id)
 
     assert result == updated_snapshot
+    assert snapshot.compliance_report_id == compliance_report_id
     mock_repo.get_by_compliance_report_id.assert_awaited_once_with(compliance_report_id)
     mock_repo.save_snapshot.assert_awaited_once()
 
@@ -95,11 +117,64 @@ async def test_update_success(service, mock_repo):
 @pytest.mark.anyio
 async def test_update_no_snapshot(service, mock_repo):
     compliance_report_id = 1
-    request_data = MagicMock()
+    _as_user(service, SUPPLIER_ROLES)
+    request_data = MagicMock(compliance_report_id=compliance_report_id)
+    mock_repo.get_compliance_report_status.return_value = (
+        ComplianceReportStatusEnum.Draft
+    )
     mock_repo.get_by_compliance_report_id.return_value = None
 
     with pytest.raises(NoResultFound):
         await service.update(request_data, compliance_report_id)
+
+
+@pytest.mark.anyio
+async def test_update_rejects_body_naming_another_report(service, mock_repo):
+    _as_user(service, SUPPLIER_ROLES)
+    request_data = MagicMock(compliance_report_id=2)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service.update(request_data, 1)
+
+    assert exc_info.value.status_code == 400
+    mock_repo.get_by_compliance_report_id.assert_not_awaited()
+    mock_repo.save_snapshot.assert_not_awaited()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "roles, report_status, allowed",
+    [
+        (SUPPLIER_ROLES, ComplianceReportStatusEnum.Draft, True),
+        (SUPPLIER_ROLES, ComplianceReportStatusEnum.Submitted, False),
+        (SUPPLIER_ROLES, ComplianceReportStatusEnum.Analyst_adjustment, False),
+        (SUPPLIER_ROLES, ComplianceReportStatusEnum.Assessed, False),
+        (ANALYST_ROLES, ComplianceReportStatusEnum.Draft, False),
+        (ANALYST_ROLES, ComplianceReportStatusEnum.Submitted, True),
+        (ANALYST_ROLES, ComplianceReportStatusEnum.Analyst_adjustment, True),
+        (ANALYST_ROLES, ComplianceReportStatusEnum.Recommended_by_analyst, False),
+        (ANALYST_ROLES, ComplianceReportStatusEnum.Assessed, False),
+        (DIRECTOR_ROLES, ComplianceReportStatusEnum.Submitted, False),
+    ],
+)
+async def test_update_editable_statuses_by_role(
+    service, mock_repo, roles, report_status, allowed
+):
+    _as_user(service, roles)
+    request_data = MagicMock(compliance_report_id=1)
+    mock_repo.get_compliance_report_status.return_value = report_status
+    mock_repo.get_by_compliance_report_id.return_value = (
+        ComplianceReportOrganizationSnapshot(compliance_report_id=1)
+    )
+
+    if allowed:
+        await service.update(request_data, 1)
+        mock_repo.save_snapshot.assert_awaited_once()
+    else:
+        with pytest.raises(HTTPException) as exc_info:
+            await service.update(request_data, 1)
+        assert exc_info.value.status_code == 403
+        mock_repo.save_snapshot.assert_not_awaited()
 
 
 @pytest.mark.anyio
