@@ -84,7 +84,7 @@
     "echarts-for-react": "^3.0.6",
     "esbuild": "^0.28.1",
     "html2canvas": "^1.4.1",
-    "i18next": "^24.2.3",
+    "i18next": "^27.2.6",
     "jspdf": "^4.2.1",
     "keycloak-js": "^26.1.4",
     "leaflet": "^1.9.4",
