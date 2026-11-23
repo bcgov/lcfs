@@ -13,6 +13,10 @@ from lcfs.services.s3.dependency import get_s3_client
 from lcfs.settings import settings
 from lcfs.db.models.user.Role import RoleEnum
 
+# Uploads are checked against their contents, so the PDFs need a PDF header
+PAYMENT_EVIDENCE = b"%PDF-1.7\nPayment evidence"
+REVISED_EVIDENCE = b"%PDF-1.7\nRevised evidence"
+
 
 @pytest.mark.anyio
 async def test_penalty_thread_persists_documents_and_is_searchable(
@@ -60,21 +64,21 @@ async def test_penalty_thread_persists_documents_and_is_searchable(
 
     uploaded = await client.post(
         f"/api/documents/internal_comment/{ids[0]}",
-        files={"file": ("confirmation.pdf", b"Payment evidence", "application/pdf")},
+        files={"file": ("confirmation.pdf", PAYMENT_EVIDENCE, "application/pdf")},
     )
     assert uploaded.status_code == 201, uploaded.text
     document_id = uploaded.json()["documentId"]
     storage.upload_fileobj.assert_called_once()
     storage.get_object.return_value = {
-        "Body": BytesIO(b"Payment evidence"),
-        "ContentLength": len(b"Payment evidence"),
+        "Body": BytesIO(PAYMENT_EVIDENCE),
+        "ContentLength": len(PAYMENT_EVIDENCE),
         "ContentType": "application/pdf",
     }
     downloaded = await client.get(
         f"/api/documents/internal_comment/{ids[0]}/{document_id}"
     )
     assert downloaded.status_code == 200, downloaded.text
-    assert downloaded.content == b"Payment evidence"
+    assert downloaded.content == PAYMENT_EVIDENCE
     assert "confirmation.pdf" in downloaded.headers["content-disposition"]
 
     invalid_upload = await client.post(
@@ -140,7 +144,7 @@ async def test_penalty_thread_persists_documents_and_is_searchable(
     attachment = record["documents"][0]
     assert attachment["documentId"] == document_id
     assert attachment["fileName"] == "confirmation.pdf"
-    assert attachment["fileSize"] == len(b"Payment evidence")
+    assert attachment["fileSize"] == len(PAYMENT_EVIDENCE)
     assert attachment["createUser"] == "PENALTY_AUTHOR"
     assert attachment["createDate"]
 
@@ -160,7 +164,7 @@ async def test_penalty_thread_persists_documents_and_is_searchable(
 
     replacement = await client.post(
         f"/api/documents/internal_comment/{ids[0]}",
-        files={"file": ("replacement.pdf", b"Revised evidence", "application/pdf")},
+        files={"file": ("replacement.pdf", REVISED_EVIDENCE, "application/pdf")},
     )
     assert replacement.status_code == 201, replacement.text
     removed = await client.delete(

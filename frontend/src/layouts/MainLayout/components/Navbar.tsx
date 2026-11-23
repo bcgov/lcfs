@@ -1,6 +1,11 @@
 import BCNavbar from '@/components/BCNavbar'
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
-import { nonGovRoles, roles } from '@/constants/roles'
+import {
+  lcjfipBceidRoles,
+  lcjfipIdirRoles,
+  nonGovRoles,
+  roles
+} from '@/constants/roles'
 import { ROUTES } from '@/routes/routes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useMemo } from 'react'
@@ -39,6 +44,9 @@ export const Navbar = () => {
     const canSeeInitiativeAgreementsBceid =
       initiativeAgreementsEnabled &&
       hasAnyRole(roles.ia_proponent, roles.ia_signer)
+    const lcjfipEnabled = isFeatureEnabled(FEATURE_FLAGS.LCJFIP)
+    const canSeeLcjfipIdir = lcjfipEnabled && hasAnyRole(...lcjfipIdirRoles)
+    const canSeeLcjfipBceid = lcjfipEnabled && hasAnyRole(...lcjfipBceidRoles)
     const idirRoutes: NavItem[] = [
       { name: t('Dashboard'), route: ROUTES.DASHBOARD },
       { name: t('Organizations'), route: ROUTES.ORGANIZATIONS.LIST },
@@ -59,6 +67,11 @@ export const Navbar = () => {
         name: t('InitiativeAgreements'),
         route: ROUTES.INITIATIVE_AGREEMENTS.LIST,
         hide: !canSeeInitiativeAgreementsIdir
+      },
+      {
+        name: t('LCJFIP'),
+        route: ROUTES.LCJFIP.MAIN,
+        hide: !canSeeLcjfipIdir
       },
       { name: t('Administration'), route: ROUTES.ADMIN.MAIN, hide: !isAdmin }
     ]
@@ -86,6 +99,11 @@ export const Navbar = () => {
         name: t('InitiativeAgreements'),
         route: ROUTES.INITIATIVE_AGREEMENTS.LIST,
         hide: !canSeeInitiativeAgreementsBceid
+      },
+      {
+        name: t('LCJFIP'),
+        route: ROUTES.LCJFIP.MAIN,
+        hide: !canSeeLcjfipBceid
       },
       { name: t('Organization'), route: ROUTES.ORGANIZATION.ORG }
     ]
