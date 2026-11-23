@@ -91,9 +91,15 @@ async def test_chain_filters_each_version_before_masking(
     assert response.status_code == 200
     chain = response.json()["chain"]
     assert {r["nickname"] for r in chain} == expected
-    assert {r["assessmentStatement"] for r in chain} == {
-        f"Statement for {name}" for name in expected
+    expected_statements = {
+        (
+            None
+            if actor == R.SUPPLIER and name == "draft"
+            else f"Statement for {name}"
+        )
+        for name in expected
     }
+    assert {r["assessmentStatement"] for r in chain} == expected_statements
 
 
 @pytest.mark.anyio
