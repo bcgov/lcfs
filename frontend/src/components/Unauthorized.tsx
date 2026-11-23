@@ -1,4 +1,5 @@
 import Link from '@mui/material/Link'
+import type { MouseEvent } from 'react'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import BCButton from '@/components/BCButton'
@@ -14,7 +15,7 @@ export const Unauthorized = () => {
   const { keycloak } = useKeycloak()
   const navigate = useNavigate()
 
-  const handleLoginClick = async (e) => {
+  const handleLoginClick = async (e: MouseEvent) => {
     e.preventDefault()
 
     if (keycloak.authenticated) {
