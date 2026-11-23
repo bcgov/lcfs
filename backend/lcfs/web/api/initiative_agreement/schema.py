@@ -369,6 +369,10 @@ class InitiativeAgreementListItemSchema(BaseSchema):
     # (#5186).
     organization: Optional[OrganizationSchema] = None
     last_comment: Optional[LastCommentSchema] = None
+    # Calculated from the designated actions by the grid endpoint only; the
+    # profile endpoint leaves them unset.
+    total_credits: Optional[int] = None
+    awarded_credits: Optional[int] = None
 
     class Config:
         from_attributes = True

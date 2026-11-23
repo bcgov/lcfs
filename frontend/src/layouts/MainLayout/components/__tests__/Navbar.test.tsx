@@ -6,6 +6,7 @@ import useMediaQuery from '@mui/material/useMediaQuery'
 import useTheme from '@mui/material/styles/useTheme'
 import { test } from '@/tests/utils/fixtures'
 import { roles } from '@/constants/roles'
+import { CONFIG } from '@/constants/config'
 
 vi.mock('@/hooks/useCurrentUser')
 vi.mock('react-i18next', () => ({
@@ -191,5 +192,119 @@ describe('Navbar', () => {
         ).not.toBeInTheDocument()
       }
     )
+  })
+
+  describe('LCJFIP tab visibility', () => {
+    const initialFlag = CONFIG.feature_flags.lcjfip
+
+    const mockNavUser = (roleNames: string[], isGovernmentUser: boolean) => {
+      const userRoles = roleNames.map((name) => ({ name }))
+      mockedUseCurrentUser.mockReturnValue({
+        data: { isGovernmentUser, roles: userRoles },
+        hasRoles: (role: string) => userRoles.some((r) => r.name === role),
+        hasAnyRole: (...roleNames: string[]) =>
+          roleNames.some((name) => userRoles.some((r) => r.name === name))
+      })
+    }
+
+    // Tab labels in menu order.
+    const navLabels = () =>
+      Array.from(document.querySelectorAll('.NavLink')).map(
+        (link) => link.textContent
+      )
+
+    test.beforeEach(() => {
+      CONFIG.feature_flags.lcjfip = true
+    })
+
+    test.afterEach(() => {
+      CONFIG.feature_flags.lcjfip = initialFlag
+    })
+
+    test.for<[string, string[], boolean]>([
+      ['Director', [roles.government, roles.director], true],
+      ['IA Analyst', [roles.government, roles.ia_analyst], true],
+      ['IA Manager', [roles.government, roles.ia_manager], true],
+      [
+        'LCJFIP Applicant (BCeID)',
+        [roles.supplier, roles.lcjfip_applicant],
+        false
+      ],
+      [
+        'LCJFIP Administrator (BCeID)',
+        [roles.supplier, roles.lcjfip_applicant, roles.lcjfip_administrator],
+        false
+      ]
+    ])(
+      'shows tab for %s',
+      ([, userRoles, isGovernmentUser], { render, query, theme, router }) => {
+        mockNavUser(userRoles, isGovernmentUser)
+        render(<Navbar />, [query, theme, router])
+        expect(screen.getByText('LCJFIP')).toBeInTheDocument()
+      }
+    )
+
+    test.for<[string, string[], boolean]>([
+      ['Analyst (IDIR)', [roles.government, roles.analyst], true],
+      [
+        'Compliance Manager (IDIR)',
+        [roles.government, roles.compliance_manager],
+        true
+      ],
+      ['Administrator (IDIR)', [roles.government, roles.administrator], true],
+      ['IA Proponent (BCeID)', [roles.supplier, roles.ia_proponent], false],
+      [
+        'Compliance Reporting (BCeID)',
+        [roles.supplier, roles.compliance_reporting],
+        false
+      ]
+    ])(
+      'hides tab for %s',
+      ([, userRoles, isGovernmentUser], { render, query, theme, router }) => {
+        mockNavUser(userRoles, isGovernmentUser)
+        render(<Navbar />, [query, theme, router])
+        expect(screen.queryByText('LCJFIP')).not.toBeInTheDocument()
+      }
+    )
+
+    test.for<[string, string[], boolean, string]>([
+      [
+        'IDIR',
+        [roles.government, roles.director, roles.administrator],
+        true,
+        'Administration'
+      ],
+      [
+        'BCeID',
+        [roles.supplier, roles.ia_proponent, roles.lcjfip_applicant],
+        false,
+        'Organization'
+      ]
+    ])(
+      'places the tab right of Initiative agreements on the %s side',
+      (
+        [, userRoles, isGovernmentUser, nextTab],
+        { render, query, theme, router }
+      ) => {
+        mockNavUser(userRoles, isGovernmentUser)
+        render(<Navbar />, [query, theme, router])
+        const labels = navLabels()
+        const index = labels.indexOf('LCJFIP')
+        expect(labels[index - 1]).toBe('InitiativeAgreements')
+        expect(labels[index + 1]).toBe(nextTab)
+      }
+    )
+
+    test('hides the tab when the LCJFIP flag is off', ({
+      render,
+      query,
+      theme,
+      router
+    }) => {
+      CONFIG.feature_flags.lcjfip = false
+      mockNavUser([roles.government, roles.director], true)
+      render(<Navbar />, [query, theme, router])
+      expect(screen.queryByText('LCJFIP')).not.toBeInTheDocument()
+    })
   })
 })

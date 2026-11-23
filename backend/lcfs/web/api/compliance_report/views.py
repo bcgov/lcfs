@@ -3,6 +3,7 @@ from fastapi import APIRouter, Body, status, Request, Depends, HTTPException
 from starlette.responses import StreamingResponse
 from typing import List, Literal
 
+from lcfs.db.dependencies import extended_statement_timeout
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.services.s3.client import DocumentService
 from lcfs.web.api.base import PaginationRequestSchema
@@ -145,7 +146,8 @@ async def get_compliance_report_schedule_overview(
     service: ComplianceReportServices = Depends(),
     validate: ComplianceReportValidation = Depends(),
 ) -> ComplianceReportScheduleOverviewSchema:
-    await validate.validate_organization_access(report_id)
+    compliance_report = await validate.validate_organization_access(report_id)
+    await validate.validate_compliance_report_access(compliance_report)
     return await service.get_schedule_overview(report_id)
 
 
@@ -164,7 +166,8 @@ async def get_compliance_report_year_navigation(
     validate: ComplianceReportValidation = Depends(),
 ) -> ComplianceReportYearNavigationSchema:
     """Get previous/next report refs for the same organization."""
-    await validate.validate_organization_access(report_id)
+    compliance_report = await validate.validate_organization_access(report_id)
+    await validate.validate_compliance_report_access(compliance_report)
     return await service.get_report_year_navigation(report_id, request.user)
 
 
@@ -186,7 +189,8 @@ async def get_compliance_report_summary(
     """
     Retrieve the comprehensive compliance report summary for a specific report by ID.
     """
-    await validate.validate_organization_access(report_id)
+    compliance_report = await validate.validate_organization_access(report_id)
+    await validate.validate_compliance_report_access(compliance_report)
     return await summary_service.calculate_compliance_report_summary(
         report_id, include_penalty_status=bool(request.user.is_government)
     )
@@ -290,7 +294,8 @@ async def update_compliance_report_penalty_status(
     """
     Update IDIR-only invoice/payment status for non-compliance penalty rows.
     """
-    await validate.validate_organization_access(report_id)
+    compliance_report = await validate.validate_organization_access(report_id)
+    await validate.validate_compliance_report_access(compliance_report)
     return await summary_service.update_penalty_status(
         report_id, status_data, user=request.user
     )
@@ -317,7 +322,8 @@ async def update_compliance_report(
     validate: ComplianceReportValidation = Depends(),
 ) -> ChainedComplianceReportSchema:
     """Update an existing compliance report."""
-    await validate.validate_organization_access(report_id)
+    compliance_report = await validate.validate_organization_access(report_id)
+    await validate.validate_compliance_report_access(compliance_report)
     await update_service.update_compliance_report(report_id, report_data, request.user)
 
     return await service.get_compliance_report_chain(report_id, request.user)
@@ -384,6 +390,7 @@ async def create_government_initiated_supplemental_report(
     "/{report_id}/export",
     response_class=StreamingResponse,
     status_code=status.HTTP_200_OK,
+    dependencies=[Depends(extended_statement_timeout)],
 )
 @view_handler(
     [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
@@ -397,7 +404,8 @@ async def export_compliance_report(
     """
     Retrieve the comprehensive compliance report summary for a specific report by ID.
     """
-    await validate.validate_organization_access(report_id)
+    compliance_report = await validate.validate_organization_access(report_id)
+    await validate.validate_compliance_report_access(compliance_report)
     return await export_service.export(report_id, request.user.is_government)
 
 

@@ -11,7 +11,7 @@ import os
 from fastapi import HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 
-from lcfs.services.clamav.client import VirusScanException
+from lcfs.services.clamav.client import FileScanException
 from lcfs.web.exception.exceptions import (
     ServiceException,
     DatabaseException,
@@ -202,11 +202,8 @@ def view_handler(required_roles: List[Union[RoleEnum, Literal["*"]]]):
                 raise
             except DataNotFoundException:
                 raise HTTPException(status_code=404, detail="Not Found")
-            except VirusScanException:
-                raise HTTPException(
-                    status_code=422,
-                    detail="Viruses detected in file, please upload another",
-                )
+            except FileScanException as e:
+                raise HTTPException(status_code=e.status_code, detail=e.detail)
             except RequestValidationError as e:
                 raise e
             except ValidationErrorException as e:
@@ -290,11 +287,8 @@ def public_view_handler(_func=None, *, rate_limit=None):
                 raise
             except DataNotFoundException:
                 raise HTTPException(status_code=404, detail="Not Found")
-            except VirusScanException:
-                raise HTTPException(
-                    status_code=422,
-                    detail="Viruses detected in file, please upload another",
-                )
+            except FileScanException as e:
+                raise HTTPException(status_code=e.status_code, detail=e.detail)
             except RequestValidationError as e:
                 raise e
             except ValidationErrorException as e:
@@ -330,6 +324,7 @@ def service_handler(func):
         # raise the error to the view layer
         except (
             DatabaseException,
+            FileScanException,
             HTTPException,
             DataNotFoundException,
             ServiceException,
@@ -361,7 +356,7 @@ def repo_handler(func):
         except (
             HTTPException,
             DataNotFoundException,
-            VirusScanException,
+            FileScanException,
             ValueError,
             ServiceException,
         ):

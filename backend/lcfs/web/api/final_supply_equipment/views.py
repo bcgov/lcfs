@@ -17,6 +17,7 @@ from fastapi import (
 from starlette.responses import StreamingResponse, JSONResponse
 
 from lcfs.db import dependencies
+from lcfs.db.dependencies import extended_statement_timeout
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
@@ -26,8 +27,12 @@ from lcfs.web.api.compliance_report.schema import (
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
 from lcfs.web.api.final_supply_equipment.export import FinalSupplyEquipmentExporter
 from lcfs.web.api.final_supply_equipment.importer import FinalSupplyEquipmentImporter
-from lcfs.web.api.final_supply_equipment.fse_reporting_export import FSEReportingExporter
-from lcfs.web.api.final_supply_equipment.fse_reporting_importer import FSEReportingImporter
+from lcfs.web.api.final_supply_equipment.fse_reporting_export import (
+    FSEReportingExporter,
+)
+from lcfs.web.api.final_supply_equipment.fse_reporting_importer import (
+    FSEReportingImporter,
+)
 from lcfs.web.api.final_supply_equipment.schema import (
     DeleteFinalSupplyEquipmentResponseSchema,
     FSEOptionsSchema,
@@ -198,6 +203,7 @@ async def search_table_options(
     "/export/{report_id}",
     response_class=StreamingResponse,
     status_code=status.HTTP_200_OK,
+    dependencies=[Depends(extended_statement_timeout)],
 )
 @view_handler(
     [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
@@ -221,6 +227,7 @@ async def export(
     compliance_report = await report_validate.validate_organization_access(
         compliance_report_id
     )
+    await report_validate.validate_compliance_report_access(compliance_report)
     if compliance_report is None:
         raise HTTPException(status_code=404, detail="Compliance report not found")
 
@@ -279,6 +286,7 @@ async def import_fse(
     compliance_report = await report_validate.validate_organization_access(
         compliance_report_id
     )
+    await report_validate.validate_compliance_report_access(compliance_report)
     await report_validate.validate_compliance_report_editable(compliance_report)
 
     if compliance_report is None:
@@ -335,6 +343,7 @@ async def get_template(
     compliance_report = await report_validate.validate_organization_access(
         compliance_report_id
     )
+    await report_validate.validate_compliance_report_access(compliance_report)
     if compliance_report is None:
         raise HTTPException(status_code=404, detail="Compliance report not found")
 
@@ -369,6 +378,7 @@ async def get_job_status(
     "/reporting/update-template/{report_id}",
     response_class=StreamingResponse,
     status_code=status.HTTP_200_OK,
+    dependencies=[Depends(extended_statement_timeout)],
 )
 @view_handler(
     [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
@@ -393,6 +403,7 @@ async def get_fse_reporting_update_template(
     compliance_report = await report_validate.validate_organization_access(
         compliance_report_id
     )
+    await report_validate.validate_compliance_report_access(compliance_report)
     if compliance_report is None:
         raise HTTPException(status_code=404, detail="Compliance report not found")
 
@@ -429,6 +440,7 @@ async def bulk_update_fse_reporting(
     compliance_report = await report_validate.validate_organization_access(
         compliance_report_id
     )
+    await report_validate.validate_compliance_report_access(compliance_report)
     if compliance_report is None:
         raise HTTPException(status_code=404, detail="Compliance report not found")
 
@@ -483,10 +495,16 @@ async def get_fse_reporting_list(
         description="Reporting source: 'base_pref' uses preferred rows; 'vw_fse_base' uses the base view",
     ),
     service: FinalSupplyEquipmentServices = Depends(),
+    report_validate: ComplianceReportValidation = Depends(),
 ) -> dict:
     """
     Get paginated charging equipment with related charging site and FSE compliance reporting data
     """
+    if compliance_report_id is not None:
+        compliance_report = await report_validate.validate_organization_access(
+            compliance_report_id
+        )
+        await report_validate.validate_compliance_report_access(compliance_report)
     org_id = (
         organization_id
         if request.user.is_government and organization_id
@@ -508,10 +526,14 @@ async def create_fse_reporting(
     request_data: FSEReportingBatchSchema = Body(...),
     service: FinalSupplyEquipmentServices = Depends(),
     report_validate: ComplianceReportValidation = Depends(),
+    fse_validate: FinalSupplyEquipmentValidation = Depends(),
 ) -> dict:
     """
     Create FSE compliance reporting data
     """
+    await fse_validate.validate_reporting_write(
+        report_ids=[request_data.compliance_report_id]
+    )
     compliance_report = await _validate_report_for_reporting_write(
         report_validate, request_data.compliance_report_id
     )
@@ -521,9 +543,16 @@ async def create_fse_reporting(
         request_data.organization_id,
         request_data.compliance_report_group_uuid,
     )
-    return await service.create_fse_reporting_batch(
-        request_data.fse_reports, compliance_report
-    )
+    rows = request_data.fse_reports
+    rows = rows if isinstance(rows, list) else [rows]
+    for row in rows:
+        service.ensure_body_matches_report(
+            compliance_report,
+            row.compliance_report_id,
+            row.organization_id,
+            row.compliance_report_group_uuid,
+        )
+    return await service.create_fse_reporting_batch(rows, compliance_report)
 
 
 @router.delete(
@@ -537,10 +566,15 @@ async def delete_fse_reporting_batch(
     request_data: FSEReportingBatchDeleteSchema = Body(...),
     service: FinalSupplyEquipmentServices = Depends(),
     report_validate: ComplianceReportValidation = Depends(),
+    fse_validate: FinalSupplyEquipmentValidation = Depends(),
 ) -> dict:
     """
     Delete multiple FSE compliance reporting records
     """
+    await fse_validate.validate_reporting_write(
+        report_ids=[request_data.compliance_report_id],
+        reporting_ids=request_data.reporting_ids,
+    )
     compliance_report = await _validate_report_for_reporting_write(
         report_validate, request_data.compliance_report_id
     )
@@ -558,10 +592,16 @@ async def update_fse_reporting_active_status(
     request_data: FSEReportingActiveStatusSchema = Body(...),
     service: FinalSupplyEquipmentServices = Depends(),
     report_validate: ComplianceReportValidation = Depends(),
+    fse_validate: FinalSupplyEquipmentValidation = Depends(),
 ) -> dict:
     """
     Activate or deactivate multiple FSE compliance reporting records without deleting data
     """
+    await fse_validate.validate_reporting_write(
+        report_ids=[request_data.compliance_report_id],
+        reporting_ids=request_data.reporting_ids,
+        source_editable=False,
+    )
     compliance_report = await _validate_report_for_reporting_write(
         report_validate, request_data.compliance_report_id
     )
@@ -582,12 +622,18 @@ async def update_fse_reporting(
     request_data: FSEReportingBaseSchema = Body(...),
     service: FinalSupplyEquipmentServices = Depends(),
     report_validate: ComplianceReportValidation = Depends(),
+    fse_validate: FinalSupplyEquipmentValidation = Depends(),
 ) -> dict:
     """
     Update FSE compliance reporting data
     """
     compliance_report = await _validate_report_for_reporting_write(
         report_validate, request_data.compliance_report_id
+    )
+    await fse_validate.validate_reporting_write(
+        report_ids=[request_data.compliance_report_id],
+        reporting_ids=[reporting_id],
+        source_editable=False,
     )
     return await service.update_fse_reporting(
         reporting_id, request_data, compliance_report
@@ -604,10 +650,12 @@ async def delete_fse_reporting(
     reporting_id: int,
     service: FinalSupplyEquipmentServices = Depends(),
     report_validate: ComplianceReportValidation = Depends(),
+    fse_validate: FinalSupplyEquipmentValidation = Depends(),
 ):
     """
     Delete FSE compliance reporting data
     """
+    await fse_validate.validate_reporting_write(reporting_ids=[reporting_id])
     reporting_record = await service.get_reporting_record_for_write(
         reporting_id, request.user
     )
@@ -624,10 +672,14 @@ async def set_default_dates_fse_reporting(
     request_data: FSEReportingDefaultDates = Body(...),
     service: FinalSupplyEquipmentServices = Depends(),
     report_validate: ComplianceReportValidation = Depends(),
+    fse_validate: FinalSupplyEquipmentValidation = Depends(),
 ):
     """
     Set default supply dates to the selected charging equipments
     """
+    await fse_validate.validate_reporting_write(
+        report_ids=[request_data.compliance_report_id]
+    )
     compliance_report = await _validate_report_for_reporting_write(
         report_validate, request_data.compliance_report_id
     )

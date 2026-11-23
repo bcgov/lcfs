@@ -19,6 +19,7 @@ from starlette import status
 
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.db.models.compliance.ComplianceReport import SupplementalInitiatorType
 from lcfs.web.api.compliance_report.schema import ReturnStatus
 
 Status = ComplianceReportStatusEnum
@@ -96,7 +97,7 @@ _GOVERNMENT_REVIEWERS = (
 SAVERS = {
     Status.Draft: (RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY),
     Status.Submitted: _GOVERNMENT_REVIEWERS,
-    Status.Analyst_adjustment: _GOVERNMENT_REVIEWERS,
+    Status.Analyst_adjustment: _ANALYST,
     Status.Recommended_by_analyst: _GOVERNMENT_REVIEWERS,
     Status.Recommended_by_manager: _GOVERNMENT_REVIEWERS,
 }
@@ -167,3 +168,39 @@ def can_override_penalty(user, report) -> bool:
     return current in PENALTY_OVERRIDE_STATUSES and _holds_any(
         user, PENALTY_OVERRIDE_EDITORS
     )
+
+
+def ensure_report_fields(user, report_data) -> None:
+    """Only government reviewers may supply assessment fields."""
+    protected = {
+        "assessment_statement",
+        "is_non_assessment",
+        "is_renewable_fuel_exempted",
+        "is_low_carbon_fuel_exempted",
+    }
+    if protected.intersection(report_data.model_fields_set) and not (
+        _holds_any(user, (RoleEnum.GOVERNMENT,))
+        and _holds_any(user, _GOVERNMENT_REVIEWERS)
+        and not _holds_any(user, (RoleEnum.SUPPLIER,))
+    ):
+        raise _forbidden("You do not have permission to set assessment fields.")
+
+
+def can_access_report(user, report) -> bool:
+    """Status visibility shared by report routes and embedded chain versions."""
+    current = report.current_status.status
+    current = getattr(current, "value", current)
+    initiator = report.supplemental_initiator
+    initiator = getattr(initiator, "value", initiator)
+    supplier = _holds_any(user, (RoleEnum.SUPPLIER,))
+    if current == Status.Draft.value and not supplier:
+        return False
+    if current == Status.Analyst_adjustment.value and not _holds_any(user, _ANALYST):
+        return False
+    if (
+        supplier
+        and initiator == SupplementalInitiatorType.GOVERNMENT_REASSESSMENT.value
+        and current not in (Status.Assessed.value, Status.Exempted.value)
+    ):
+        return False
+    return True

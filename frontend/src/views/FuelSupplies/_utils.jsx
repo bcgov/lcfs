@@ -1,5 +1,5 @@
 import { v4 as uuid } from 'uuid'
-import { isArrayEmpty } from '@/utils/array.js'
+import { isArrayEmpty } from '@/utils/array'
 import { DEFAULT_CI_FUEL } from '@/constants/common'
 import { handleScheduleSave } from '@/utils/schedules'
 import { cleanEmptyStringValues } from '@/utils/formatters'
