@@ -195,19 +195,22 @@ const RatesTable = ({ rates }: { rates: LCJFIPIncentiveRate[] }) => {
 }
 
 // A calculated value. The mock-up marks it with the required asterisk, but
-// nobody types in it, so screen readers are not told it is required.
+// nobody types in it, so screen readers are not told it is required. Once the
+// form is read-only it is disabled too, so it greys out like its neighbours.
 const ReadOnlyValue = ({
   id,
   label,
   value,
   help,
-  marked = false
+  marked = false,
+  disabled = false
 }: {
   id: string
   label: string
   value: string
   help?: string
   marked?: boolean
+  disabled?: boolean
 }) => (
   <FieldCell
     label={
@@ -221,6 +224,7 @@ const ReadOnlyValue = ({
       value={value}
       size="small"
       fullWidth
+      disabled={disabled}
       slotProps={{
         input: { readOnly: true },
         htmlInput: { 'data-test': id }
@@ -394,6 +398,7 @@ export const IncentiveSection = ({
           }
           help={t('lcjfip:incentive.totalEstimatedVolumeHelp')}
           marked={!readOnly}
+          disabled={readOnly}
         />
         <FieldCell
           label={
@@ -491,6 +496,7 @@ export const IncentiveSection = ({
             (value) => t('lcjfip:incentive.cad', { amount: value })
           )}
           marked={!readOnly}
+          disabled={readOnly}
           help={
             option &&
             (carbonIntensity === null || carbonIntensity === undefined)

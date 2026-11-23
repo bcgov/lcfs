@@ -354,6 +354,9 @@ describe('LCJFIP application form', () => {
     expect(screen.getByTestId('lcjfip-total-estimated-volume')).toHaveValue(
       '1,000,000 L'
     )
+    // Calculated, so read-only, but not greyed out on an editable draft.
+    expect(screen.getByTestId('lcjfip-total-estimated-volume')).toBeEnabled()
+    expect(amount()).toBeEnabled()
     // 1,000,000 L at the "10 or less" cash rate.
     expect(amount()).toHaveValue('$1,125,000 CAD')
 
@@ -827,6 +830,11 @@ describe('LCJFIP application form', () => {
     expect(screen.getByTestId('lcjfip-read-only')).toBeInTheDocument()
     expect(screen.getByRole('radio', { name: CASH })).toBeDisabled()
     expect(screen.getByTestId('lcjfip-purchase-estimatedVolume')).toBeDisabled()
+    // The calculated values grey out with the rest of the form.
+    expect(screen.getByTestId('lcjfip-total-estimated-volume')).toBeDisabled()
+    expect(
+      screen.getByTestId('lcjfip-estimated-incentive-amount')
+    ).toBeDisabled()
     // No required markers on a form nobody can edit.
     expect(
       screen.queryByText('indicates a required field')
