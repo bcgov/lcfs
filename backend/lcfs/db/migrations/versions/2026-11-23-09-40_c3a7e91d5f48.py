@@ -1,7 +1,7 @@
 """Add initiative_agreement_note.
 
 Revision ID: c3a7e91d5f48
-Revises: 9e0e5741b48f
+Revises: b7a04f59fdf3
 Create Date: 2026-11-16 09:40:00
 """
 
@@ -9,7 +9,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision = "c3a7e91d5f48"
-down_revision = "9e0e5741b48f"
+down_revision = "b7a04f59fdf3"
 branch_labels = None
 depends_on = None
 
