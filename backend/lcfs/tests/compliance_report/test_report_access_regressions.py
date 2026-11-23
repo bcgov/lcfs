@@ -71,10 +71,16 @@ async def test_supplier_cannot_supply_assessment_fields(field, value):
 )
 async def test_text_fields_preserved_unless_explicitly_set(text):
     stored = report(S.Submitted)
+    stored.compliance_report_group_uuid = None
+    stored.version = 0
+    stored.is_non_assessment = False
+    stored.is_renewable_fuel_exempted = False
+    stored.is_low_carbon_fuel_exempted = False
     repo = AsyncMock()
+    repo.get_compliance_report_by_id.return_value = stored
+    repo.get_draft_report_by_group_uuid.return_value = None
     repo.get_compliance_report_status_by_desc.return_value = stored.current_status
     service = ComplianceReportUpdateService(repo=repo)
-    service._check_report_exists = AsyncMock(return_value=stored)
     await service.update_compliance_report(
         1,
         ComplianceReportUpdateSchema(status=S.Submitted.value, **text),
