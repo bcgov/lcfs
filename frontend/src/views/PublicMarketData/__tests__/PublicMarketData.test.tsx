@@ -52,7 +52,7 @@ const mockReport = {
       weightedAvgPrice: 141.75 + index,
       minPrice: 120.3,
       maxPrice: 155,
-      transferValue: 4252500
+      transferValue: (141.75 + index) * 30000
     }
   }),
   quarterly: [
@@ -179,9 +179,8 @@ describe('PublicMarketData', () => {
         mockReport.kpis.volume = { ...originalVolume, current: volume }
         const { unmount } = render(<PublicMarketData />, [theme])
         const card = screen.getByTestId('average-price-all')
-        expect(
-          within(card).getByText(`Jun 2026; ${expected}`)
-        ).toBeInTheDocument()
+        expect(within(card).getByText('Jun 2026')).toBeInTheDocument()
+        expect(within(card).getByText(expected)).toBeInTheDocument()
         unmount()
       }
     } finally {
@@ -201,147 +200,78 @@ describe('PublicMarketData', () => {
     expect(within(card).getByText('$120.00')).toBeInTheDocument()
     expect(within(card).getByText('$160.00')).toBeInTheDocument()
     expect(
-      screen.queryByText('publicDashboard.marketData.snapshot.allDetails')
+      within(card).getByText(
+        'publicDashboard.marketData.tables.weightedAveragePrice'
+      )
+    ).toBeInTheDocument()
+    expect(screen.queryByTestId('average-price-change')).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId('average-price-year-change')
+    ).not.toBeInTheDocument()
+    const column = screen.getByTestId('all-transfers-column')
+    for (const category of ['a', 'b', 'c']) {
+      const definition = within(column).getByText(
+        `publicDashboard.marketData.classifications.${category}.title`
+      )
+      expect(
+        definition.compareDocumentPosition(card) &
+          Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy()
+    }
+    expect(
+      screen.queryByText('publicDashboard.marketData.classifications.a1.title')
     ).not.toBeInTheDocument()
   })
 
-  test('compares the all-transfer average to the immediately preceding month', ({
+  test('combines the two completed agreement months using credit-weighted prices', ({
     render,
     theme
   }) => {
-    const originalRows = mockReport.monthly
-    try {
-      for (const [price, expected] of [
-        [100, '▲ 43.3%'],
-        [200, '▾ 28.3%'],
-        [143.32, '0.0%'],
-        [0, 'publicDashboard.marketData.previousMonthUnavailable']
-      ] as const) {
-        mockReport.monthly = [
-          { ...originalRows[0], period: '2026-05', weightedAvgPrice: price },
-          ...originalRows
-        ]
-        const { unmount } = render(<PublicMarketData />, [theme])
-        expect(screen.getByTestId('average-price-change')).toHaveTextContent(
-          expected
-        )
-        unmount()
-      }
-
-      mockReport.monthly = [
-        { ...originalRows[0], period: '2026-04', weightedAvgPrice: 100 },
-        ...originalRows
-      ]
-      render(<PublicMarketData />, [theme])
-      expect(screen.getByTestId('average-price-change')).toHaveTextContent(
-        'publicDashboard.marketData.previousMonthUnavailable'
-      )
-    } finally {
-      mockReport.monthly = originalRows
-    }
-  })
-
-  test('compares January prices with the preceding December', ({
-    render,
-    theme
-  }) => {
-    const originalRows = mockReport.monthly
-    mockReport.monthly = [
-      { ...originalRows[0], period: '2025-12', weightedAvgPrice: 100 },
-      { ...originalRows[0], period: '2026-01', weightedAvgPrice: 120 }
-    ]
-    try {
-      render(<PublicMarketData />, [theme])
-      expect(screen.getByTestId('average-price-change')).toHaveTextContent(
-        '▲ 20.0%'
-      )
-    } finally {
-      mockReport.monthly = originalRows
-    }
-  })
-
-  test('shows the same month last year alongside the previous month', ({
-    render,
-    theme
-  }) => {
-    const originalRows = mockReport.monthly
-    const originalPrice = mockReport.kpis.weightedAvgPrice
-    mockReport.monthly = [
-      { ...originalRows[0], period: '2026-05', weightedAvgPrice: 100 },
-      ...originalRows
-    ]
-    try {
-      for (const [prior, deltaPct, expected] of [
-        [100, 43.32, '▲ 43.3%'],
-        [200, -28.34, '▾ 28.3%'],
-        [143.32, 0, '0.0%'],
-        [0, null, 'publicDashboard.marketData.previousYearUnavailable'],
-        [null, null, 'publicDashboard.marketData.previousYearUnavailable']
-      ] as const) {
-        mockReport.kpis.weightedAvgPrice = {
-          ...originalPrice,
-          prior,
-          deltaPct
-        }
-        const { unmount } = render(<PublicMarketData />, [theme])
-        const card = screen.getByTestId('average-price-all')
-        expect(
-          within(card).getByTestId('average-price-change')
-        ).toHaveTextContent('▲ 43.3%')
-        const yearly = within(card).getByTestId('average-price-year-change')
-        expect(yearly).toHaveTextContent(expected)
-        if (prior != null) {
-          expect(yearly).toHaveTextContent(
-            new Intl.NumberFormat('en-CA', {
-              style: 'currency',
-              currency: 'CAD'
-            }).format(prior)
-          )
-        }
-        unmount()
-      }
-    } finally {
-      mockReport.monthly = originalRows
-      mockReport.kpis.weightedAvgPrice = originalPrice
-    }
-  })
-
-  test('shows the volume for each price comparison period', ({
-    render,
-    theme
-  }) => {
-    const originalRows = mockReport.monthly
-    const originalVolume = mockReport.kpis.volume
-    mockReport.monthly = [
+    const originalRows = mockReport.agreementMonthly
+    const sample = originalRows[0]
+    mockReport.agreementMonthly = [
+      { ...sample, period: '2026-03', volume: 1000, transferValue: 1000 },
       {
-        ...originalRows[0],
-        period: '2026-05',
-        weightedAvgPrice: 100,
-        volume: 12345
+        ...sample,
+        period: '2026-04',
+        transfers: 2,
+        volume: 10,
+        transferValue: 500,
+        minPrice: 40,
+        maxPrice: 60
       },
-      ...originalRows
+      {
+        ...sample,
+        period: '2026-05',
+        transfers: 4,
+        volume: 110,
+        transferValue: 8800,
+        minPrice: 60,
+        maxPrice: 90
+      },
+      { ...sample, period: '2026-06', volume: 1000, transferValue: 1000 }
     ]
-    mockReport.kpis.volume = { ...originalVolume, prior: 67890 }
     try {
-      const { unmount } = render(<PublicMarketData />, [theme])
-      expect(screen.getByTestId('average-price-change')).toHaveTextContent(
-        '12,345'
-      )
-      expect(screen.getByTestId('average-price-year-change')).toHaveTextContent(
-        '67,890'
-      )
-      unmount()
-
-      mockReport.monthly = originalRows
-      mockReport.kpis.volume = { ...originalVolume, prior: 0 }
       render(<PublicMarketData />, [theme])
-      expect(screen.getByTestId('average-price-change')).toHaveTextContent('—')
-      expect(screen.getByTestId('average-price-year-change')).toHaveTextContent(
-        '0'
+      const price = screen.getByTestId('agreement-two-month-price')
+      const details = screen.getByTestId('agreement-two-month-details')
+      const allTransfers = screen.getByTestId('average-price-all')
+      expect(price).toHaveTextContent('$77.50')
+      expect(price).toHaveTextContent('Apr 2026 – May 2026')
+      expect(details).toHaveTextContent('Apr 2026 – May 2026')
+      expect(within(details).getByText('6')).toBeInTheDocument()
+      expect(within(details).getByText('120')).toBeInTheDocument()
+      expect(within(details).getByText('$40.00')).toBeInTheDocument()
+      expect(within(details).getByText('$90.00')).toBeInTheDocument()
+      expect(price.nextElementSibling).toBe(details)
+      expect(details.nextElementSibling).toBe(
+        screen.getByTestId('all-transfers-column')
+      )
+      expect(screen.getByTestId('all-transfers-column')).toContainElement(
+        allTransfers
       )
     } finally {
-      mockReport.monthly = originalRows
-      mockReport.kpis.volume = originalVolume
+      mockReport.agreementMonthly = originalRows
     }
   })
 
@@ -500,24 +430,12 @@ describe('PublicMarketData', () => {
     expect(a1Chart?.legend?.data).toContain(
       'publicDashboard.marketData.tables.maxPrice'
     )
-    expect(
-      screen.getByTestId('agreement-month-snapshot').textContent
-    ).toContain('May 2026')
-    expect(
-      screen.getByTestId('agreement-month-snapshot').textContent
-    ).not.toContain('Jun 2026')
-    expect(
-      screen.getByTestId('agreement-month-snapshot').textContent
-    ).not.toContain('Apr 2026')
-    expect(
-      screen.getByTestId('agreement-month-snapshot').textContent
-    ).toContain('30,000')
-    expect(
-      screen.getByTestId('agreement-month-snapshot-previous')
-    ).toHaveTextContent('Apr 2026')
-    expect(
-      screen.getByTestId('agreement-month-snapshot-previous')
-    ).not.toHaveTextContent('May 2026')
+    expect(screen.getByTestId('agreement-two-month-details')).toHaveTextContent(
+      'Apr 2026 – May 2026'
+    )
+    expect(screen.getByTestId('agreement-two-month-details')).toHaveTextContent(
+      '60,000'
+    )
     expect(screen.getByTestId('a1-price-chart-keyboard')).toHaveAttribute(
       'tabindex',
       '0'
@@ -549,9 +467,12 @@ describe('PublicMarketData', () => {
       expect(a1Chart?.series?.[3].data?.[3]).toBeNull()
       expect(a1Chart?.series?.[0].data?.[11]).toBeNull()
       expect(a1Chart?.series?.[0].data?.[4]).toBe(147.75)
-      const details = screen.getByTestId('agreement-month-snapshot')
-      expect(details).toHaveTextContent('May 2026')
-      expect(within(details).getAllByText('—')).toHaveLength(3)
+      const details = screen.getByTestId('agreement-two-month-details')
+      expect(details).toHaveTextContent('Apr 2026 – May 2026')
+      expect(details).toHaveTextContent('30,000')
+      expect(screen.getByTestId('agreement-two-month-price')).toHaveTextContent(
+        '$153.75'
+      )
 
       const chart = screen.getByTestId('a1-price-chart-keyboard')
       for (let index = 0; index < 4; index += 1) {
@@ -560,6 +481,26 @@ describe('PublicMarketData', () => {
       const announcement = chart.querySelector('[aria-live="polite"]')
       expect(announcement?.textContent).toContain('Sep 2025')
       expect(announcement?.textContent).toContain('—')
+    } finally {
+      mockReport.agreementMonthly = originalRows
+    }
+  })
+
+  test('shows unavailable values when neither completed agreement month has data', ({
+    render,
+    theme
+  }) => {
+    const originalRows = mockReport.agreementMonthly
+    mockReport.agreementMonthly = originalRows.filter(
+      (row) => !['2026-04', '2026-05'].includes(row.period)
+    )
+    try {
+      render(<PublicMarketData />, [theme])
+      const price = screen.getByTestId('agreement-two-month-price')
+      const details = screen.getByTestId('agreement-two-month-details')
+      expect(within(price).getByText('—')).toBeInTheDocument()
+      expect(within(details).getAllByText('—')).toHaveLength(4)
+      expect(details).toHaveTextContent('Apr 2026 – May 2026')
     } finally {
       mockReport.agreementMonthly = originalRows
     }
@@ -579,12 +520,12 @@ describe('PublicMarketData', () => {
     )
     expect(chart?.xAxis?.data?.[0]).toBe('Jan 2025')
     expect(chart?.xAxis?.data?.[11]).toBe('Dec 2025')
+    expect(screen.getByTestId('agreement-two-month-details')).toHaveTextContent(
+      'Nov 2025 – Dec 2025'
+    )
     expect(
-      screen.getByTestId('agreement-month-snapshot').textContent
-    ).not.toContain('Jan 2026')
-    expect(
-      screen.getByTestId('agreement-month-snapshot-previous')
-    ).toHaveTextContent('Nov 2025')
+      screen.getByTestId('agreement-two-month-details')
+    ).not.toHaveTextContent('Jan 2026')
   })
 
   test('shows every legend entry without canvas paging or series toggles', ({

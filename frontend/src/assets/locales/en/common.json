@@ -93,11 +93,6 @@
       "downloadPdf": "Download PDF",
       "generatingPdf": "Generating PDF…",
       "vsYearAgo": "vs {{period}}",
-      "vsPreviousMonth": "vs. previous month: {{price}}",
-      "previousMonthUnavailable": "Previous month comparison unavailable",
-      "vsSameMonthLastYear": "vs. same month last year: {{price}}",
-      "previousYearUnavailable": "Same month last year comparison unavailable",
-      "comparisonVolume": "Volume: {{volume}} credits",
       "sections": {
         "reportDescription": "Report description",
         "currentSnapshot": "Current Market Snapshot",
@@ -115,14 +110,13 @@
         "a1Details": "Monthly Category A1 Details",
         "a1Unavailable": "Published A1 price not available",
         "agreementMonthly": "Recorded transfers by agreement month",
+        "twoMonthAgreementPrice": "Average recorded credit price of agreements made within the last two completed months",
+        "twoMonthAgreementDetails": "Recorded agreement details for the last two completed months",
+        "agreementMonths": "Agreement months",
         "agreementNote": "Includes recorded transfers with a positive price and an agreement date; excludes Category D and the current agreement month. Earlier months may change as transfers are recorded."
       },
       "classifications": {
         "summary": "Transfer category definitions",
-        "a1": {
-          "title": "Category A1",
-          "body": "Transfers are categorized A1 when the agreement date is within 30 days of the recorded transfer date."
-        },
         "a": {
           "title": "Category A",
           "body": "The agreement to transfer credits was reached within six months of the credit transfer."

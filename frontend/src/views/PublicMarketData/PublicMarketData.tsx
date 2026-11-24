@@ -255,15 +255,11 @@ const MetricCard = ({
   title,
   value,
   caption,
-  delta,
-  items,
   dataTest
 }: {
   title: string
   value: string
   caption: string
-  delta?: ReactNode
-  items?: DetailItem[]
   dataTest?: string
 }) => (
   <CardShell dataTest={dataTest} sx={{ minHeight: 172 }}>
@@ -287,16 +283,6 @@ const MetricCard = ({
     >
       {caption}
     </BCTypography>
-    {delta && (
-      <BCBox sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-        {delta}
-      </BCBox>
-    )}
-    {items && (
-      <BCBox sx={{ mt: 2.5 }}>
-        <DetailItems items={items} />
-      </BCBox>
-    )}
   </CardShell>
 )
 
@@ -318,7 +304,7 @@ const DetailCard = ({
 )
 
 const DefinitionCard = ({ title, body }: { title: string; body: string }) => (
-  <CardShell sx={{ minHeight: 140 }}>
+  <CardShell>
     <BCTypography sx={{ fontSize: 15, color: DARK, fontWeight: 700, mb: 2.25 }}>
       {title}
     </BCTypography>
@@ -911,11 +897,6 @@ export const PublicMarketData = () => {
         )
 
   const classificationItems = [
-    {
-      key: 'a1',
-      title: t('publicDashboard.marketData.classifications.a1.title'),
-      body: t('publicDashboard.marketData.classifications.a1.body')
-    },
     {
       key: 'a',
       title: t('publicDashboard.marketData.classifications.a.title'),
@@ -1628,77 +1609,83 @@ export const PublicMarketData = () => {
   const latestMonthLabel = kpis?.labelPeriod ? fmtPeriod(kpis.labelPeriod) : '—'
   const monthlyRows = data?.monthly ?? []
   const latestMonthlyRow = monthlyRows[monthlyRows.length - 1]
-  const [latestYear, latestMonth] = (latestMonthlyRow?.period ?? '')
-    .split('-')
-    .map(Number)
-  const previousMonthDate = new Date(Date.UTC(latestYear, latestMonth - 2, 1))
-  const previousMonthPeriod = `${previousMonthDate.getUTCFullYear()}-${String(
-    previousMonthDate.getUTCMonth() + 1
-  ).padStart(2, '0')}`
-  const previousMonthRow = monthlyRows.find(
-    (row) => row.period === previousMonthPeriod
+  const agreementPeriods = agreementMonthlyChartRows.slice(-2)
+  const agreementPeriodLabels = agreementPeriods.map((month) =>
+    fmtPeriod(month.period)
   )
-  const previousMonthPrice = previousMonthRow?.weightedAvgPrice
-  const monthlyPriceChange =
-    latestMonthlyRow?.weightedAvgPrice != null &&
-    previousMonthPrice != null &&
-    previousMonthPrice !== 0
-      ? ((latestMonthlyRow.weightedAvgPrice - previousMonthPrice) /
-          previousMonthPrice) *
-        100
-      : null
-  const priceComparisons = [
+  const agreementPeriodLabel = agreementPeriodLabels.join(' – ')
+  const agreementRows = (data?.agreementMonthly ?? []).filter((row) =>
+    agreementPeriods.some((month) => month.period === row.period)
+  )
+  const agreementVolume = agreementRows.reduce(
+    (total, row) => total + row.volume,
+    0
+  )
+  const agreementTransfers = agreementRows.reduce(
+    (total, row) => total + row.transfers,
+    0
+  )
+  const agreementValue = agreementRows.reduce(
+    (total, row) => total + row.transferValue,
+    0
+  )
+  const agreementAverage =
+    agreementVolume > 0 ? agreementValue / agreementVolume : null
+  const minimumPrices = agreementRows.flatMap((row) =>
+    row.minPrice == null ? [] : [row.minPrice]
+  )
+  const maximumPrices = agreementRows.flatMap((row) =>
+    row.maxPrice == null ? [] : [row.maxPrice]
+  )
+  const agreementDetails: DetailItem[] = [
     {
-      dataTest: 'average-price-change',
-      change: monthlyPriceChange,
-      price: previousMonthPrice,
-      volume: previousMonthRow?.volume,
-      label: 'publicDashboard.marketData.vsPreviousMonth',
-      unavailable: 'publicDashboard.marketData.previousMonthUnavailable'
+      label: t('publicDashboard.marketData.snapshot.agreementMonths'),
+      value: agreementPeriodLabel
     },
     {
-      dataTest: 'average-price-year-change',
-      change: kpis?.weightedAvgPrice?.deltaPct,
-      price: kpis?.weightedAvgPrice?.prior,
-      volume: kpis?.volume?.prior,
-      label: 'publicDashboard.marketData.vsSameMonthLastYear',
-      unavailable: 'publicDashboard.marketData.previousYearUnavailable'
+      label: t('publicDashboard.marketData.kpi.transfers'),
+      value: agreementRows.length ? intFmt.format(agreementTransfers) : '—'
+    },
+    {
+      label: t('publicDashboard.marketData.tables.volumeCredits'),
+      value: agreementRows.length ? intFmt.format(agreementVolume) : '—'
+    },
+    {
+      label: t('publicDashboard.marketData.tables.minPrice'),
+      value: minimumPrices.length
+        ? price2Fmt.format(Math.min(...minimumPrices))
+        : '—'
+    },
+    {
+      label: t('publicDashboard.marketData.tables.maxPrice'),
+      value: maximumPrices.length
+        ? price2Fmt.format(Math.max(...maximumPrices))
+        : '—'
     }
   ]
-  const agreementMonthDetails = agreementMonthlyChartRows
-    .slice(-2)
-    .reverse()
-    .map((month) => ({
-      period: month.period,
-      items: [
-        {
-          label: t('publicDashboard.marketData.tables.agreementMonth'),
-          value: fmtPeriod(month.period) || '—'
-        },
-        {
-          label: t('publicDashboard.marketData.tables.weightedAveragePrice'),
-          value:
-            month.weightedAvgPrice != null
-              ? price2Fmt.format(month.weightedAvgPrice)
-              : '—'
-        },
-        {
-          label: t('publicDashboard.marketData.kpi.transfers'),
-          value: month.transfers != null ? intFmt.format(month.transfers) : '—'
-        },
-        {
-          label: t('publicDashboard.marketData.tables.volumeCredits'),
-          value: month.volume != null ? intFmt.format(month.volume) : '—'
-        }
-      ]
-    }))
   const allTransfersDetails: DetailItem[] = [
+    {
+      label: t('publicDashboard.marketData.tables.month'),
+      value: latestMonthLabel || '—'
+    },
+    {
+      label: t('publicDashboard.marketData.tables.weightedAveragePrice'),
+      value:
+        kpis?.weightedAvgPrice?.current != null
+          ? price2Fmt.format(kpis.weightedAvgPrice.current)
+          : '—'
+    },
     {
       label: t('publicDashboard.marketData.kpi.transfers'),
       value:
         latestMonthlyRow?.transfers != null
           ? intFmt.format(latestMonthlyRow.transfers)
           : '—'
+    },
+    {
+      label: t('publicDashboard.marketData.tables.volumeCredits'),
+      value:
+        kpis?.volume?.current != null ? intFmt.format(kpis.volume.current) : '—'
     },
     {
       label: t('publicDashboard.marketData.tables.minPrice'),
@@ -1878,88 +1865,46 @@ export const PublicMarketData = () => {
                 md: 'repeat(2, minmax(0, 1fr))',
                 lg: 'repeat(3, minmax(0, 1fr))'
               },
+              alignItems: 'start',
               gap: 1.5
             }}
           >
             <MetricCard
-              dataTest="average-price-all"
-              title={t('publicDashboard.marketData.snapshot.avgAll')}
+              dataTest="agreement-two-month-price"
+              title={t(
+                'publicDashboard.marketData.snapshot.twoMonthAgreementPrice'
+              )}
               value={
-                kpis?.weightedAvgPrice?.current != null
-                  ? price2Fmt.format(kpis.weightedAvgPrice.current)
-                  : '—'
+                agreementAverage == null
+                  ? '—'
+                  : price2Fmt.format(agreementAverage)
               }
-              caption={`${latestMonthLabel}; ${t(
-                'publicDashboard.marketData.comparisonVolume',
-                {
-                  volume:
-                    kpis?.volume?.current == null
-                      ? '—'
-                      : intFmt.format(kpis.volume.current)
-                }
-              )}`}
-              items={allTransfersDetails}
-              delta={
-                <BCBox sx={{ display: 'grid', gap: 0.5, textAlign: 'center' }}>
-                  {priceComparisons.map(
-                    ({
-                      dataTest,
-                      change,
-                      price,
-                      volume,
-                      label,
-                      unavailable
-                    }) => (
-                      <BCTypography
-                        key={dataTest}
-                        data-test={dataTest}
-                        sx={{
-                          fontSize: 14,
-                          color:
-                            change == null || change === 0
-                              ? MUTED
-                              : change < 0
-                                ? '#A12622'
-                                : '#2E7D32'
-                        }}
-                      >
-                        {change != null && price != null ? (
-                          <>
-                            {change < 0 ? '▾ ' : change > 0 ? '▲ ' : ''}
-                            {percentFmt.format(Math.abs(change))}%{' '}
-                            {t(label, { price: price2Fmt.format(price) })}
-                          </>
-                        ) : (
-                          <>
-                            {t(unavailable)}
-                            {price != null &&
-                              ` (${t(label, { price: price2Fmt.format(price) })})`}
-                          </>
-                        )}
-                        {'; '}
-                        {t('publicDashboard.marketData.comparisonVolume', {
-                          volume: volume == null ? '—' : intFmt.format(volume)
-                        })}
-                      </BCTypography>
-                    )
-                  )}
-                </BCBox>
-              }
+              caption={agreementPeriodLabel}
             />
-            {agreementMonthDetails.map(({ period, items }, index) => (
+            <DetailCard
+              dataTest="agreement-two-month-details"
+              title={t(
+                'publicDashboard.marketData.snapshot.twoMonthAgreementDetails'
+              )}
+              items={agreementDetails}
+            />
+            <BCBox
+              data-test="all-transfers-column"
+              sx={{ display: 'grid', gap: 1.5 }}
+            >
+              {classificationItems.map((item) => (
+                <DefinitionCard
+                  key={item.key}
+                  title={item.title}
+                  body={item.body}
+                />
+              ))}
               <DetailCard
-                key={period}
-                dataTest={
-                  index === 0
-                    ? 'agreement-month-snapshot'
-                    : 'agreement-month-snapshot-previous'
-                }
-                title={t(
-                  'publicDashboard.marketData.snapshot.agreementMonthly'
-                )}
-                items={items}
+                dataTest="average-price-all"
+                title={t('publicDashboard.marketData.snapshot.allDetails')}
+                items={allTransfersDetails}
               />
-            ))}
+            </BCBox>
           </BCBox>
         </ReportSection>
 
@@ -2024,32 +1969,6 @@ export const PublicMarketData = () => {
                 downloadCsv('agreementMonthly', data?.agreementMonthly ?? [])
               }
             />
-          </BCBox>
-        </ReportSection>
-
-        <ReportSection
-          title={t(
-            'publicDashboard.marketData.sections.transferClassifications'
-          )}
-        >
-          <BCBox
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: {
-                xs: '1fr',
-                sm: 'repeat(2, minmax(0, 1fr))',
-                lg: 'repeat(4, minmax(0, 1fr))'
-              },
-              gap: 1.5
-            }}
-          >
-            {classificationItems.map((item) => (
-              <DefinitionCard
-                key={item.key}
-                title={item.title}
-                body={item.body}
-              />
-            ))}
           </BCBox>
         </ReportSection>
 
