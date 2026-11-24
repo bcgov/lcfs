@@ -9,6 +9,10 @@ from .InitiativeAgreement import InitiativeAgreement
 from .InitiativeAgreementHistory import InitiativeAgreementHistory
 from .InitiativeAgreementLifecycleHistory import InitiativeAgreementLifecycleHistory
 from .InitiativeAgreementLifecycleStatus import InitiativeAgreementLifecycleStatus
+from .InitiativeAgreementNote import (
+    InitiativeAgreementNote,
+    InitiativeAgreementNoteDesignatedAction,
+)
 from .InitiativeAgreementStatus import InitiativeAgreementStatus
 
 __all__ = [
@@ -24,5 +28,7 @@ __all__ = [
     "InitiativeAgreementHistory",
     "InitiativeAgreementLifecycleHistory",
     "InitiativeAgreementLifecycleStatus",
+    "InitiativeAgreementNote",
+    "InitiativeAgreementNoteDesignatedAction",
     "InitiativeAgreementStatus",
 ]

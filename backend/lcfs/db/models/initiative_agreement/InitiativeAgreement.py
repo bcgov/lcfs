@@ -11,7 +11,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
-from lcfs.db.base import BaseModel, Auditable, EffectiveDates
+from lcfs.db.base import Auditable, BaseModel, EffectiveDates
 
 # Values accepted by initiative_agreement.agreement_type. Held as a plain
 # String column rather than a PG enum: the taxonomy will grow, and a postgres
@@ -154,9 +154,7 @@ class InitiativeAgreement(BaseModel, Auditable, EffectiveDates):
     project_location = Column(
         Text,
         nullable=True,
-        comment=(
-            "Project location"
-        ),
+        comment=("Project location"),
     )
     contact_name = Column(
         String(500), nullable=True, comment="Agreement contact person name"
@@ -199,6 +197,12 @@ class InitiativeAgreement(BaseModel, Auditable, EffectiveDates):
     )
     designated_actions = relationship(
         "DesignatedAction", back_populates="initiative_agreement"
+    )
+    notes = relationship(
+        "InitiativeAgreementNote",
+        back_populates="initiative_agreement",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
     transaction = relationship("Transaction")
     history = relationship(
