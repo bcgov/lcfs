@@ -238,7 +238,7 @@ describe('PublicMarketData', () => {
     expect(screen.queryByTestId('download-annual-xlsx')).not.toBeInTheDocument()
   })
 
-  test('keeps both charts in one PDF fit-to-page block before the report tables', ({
+  test('keeps the trends heading and both charts in one PDF fit-to-page block', ({
     render,
     theme
   }) => {
@@ -251,7 +251,13 @@ describe('PublicMarketData', () => {
       .closest('.pdf-fit-page')
     expect(chartBlock).not.toBeNull()
     expect(chartBlock).toBe(mainChartBlock)
-    expect(chartBlock).toHaveAttribute('data-pdf-anchor', 'price-volume-chart')
+    expect(chartBlock).toHaveClass('pdf-market-trends-section')
+    expect(
+      screen.getByRole('heading', {
+        level: 2,
+        name: 'publicDashboard.marketData.sections.marketTrendsHistoricalPerformance'
+      }).closest('.pdf-fit-page')
+    ).toBe(chartBlock)
     expect(
       chartBlock?.contains(container.querySelector('[data-pdf-table]'))
     ).toBe(false)

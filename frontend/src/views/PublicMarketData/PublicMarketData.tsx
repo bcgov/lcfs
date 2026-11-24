@@ -1285,7 +1285,7 @@ export const PublicMarketData = () => {
       // Tables sharing a page are wrapped in a single fit-to-page group.
       const reorderForPdf = (clonedRoot: HTMLElement) => {
         const anchor = clonedRoot.querySelector<HTMLElement>(
-          '[data-pdf-anchor="price-volume-chart"]'
+          '.pdf-market-trends-section'
         )
         if (!anchor) return
         let insertAfter: HTMLElement = anchor
@@ -2064,11 +2064,12 @@ export const PublicMarketData = () => {
         </ReportSection>
 
         <ReportSection
+          className="pdf-fit-page pdf-market-trends-section"
           title={t(
             'publicDashboard.marketData.sections.marketTrendsHistoricalPerformance'
           )}
         >
-          <BCBox className="pdf-fit-page" data-pdf-anchor="price-volume-chart">
+          <BCBox>
             <BCBox
               sx={{
                 display: 'grid',
