@@ -1606,6 +1606,22 @@ export const PublicMarketData = () => {
           previousMonthPrice) *
         100
       : null
+  const priceComparisons = [
+    {
+      dataTest: 'average-price-change',
+      change: monthlyPriceChange,
+      price: previousMonthPrice,
+      label: 'publicDashboard.marketData.vsPreviousMonth',
+      unavailable: 'publicDashboard.marketData.previousMonthUnavailable'
+    },
+    {
+      dataTest: 'average-price-year-change',
+      change: kpis?.weightedAvgPrice?.deltaPct,
+      price: kpis?.weightedAvgPrice?.prior,
+      label: 'publicDashboard.marketData.vsSameMonthLastYear',
+      unavailable: 'publicDashboard.marketData.previousYearUnavailable'
+    }
+  ]
   const latestAgreementMonth =
     agreementMonthlyChartRows[agreementMonthlyChartRows.length - 1]
   const agreementMonthDetails: DetailItem[] = [
@@ -1847,37 +1863,39 @@ export const PublicMarketData = () => {
               }
               caption={latestMonthLabel || '—'}
               delta={
-                monthlyPriceChange != null && previousMonthPrice != null ? (
-                  <BCTypography
-                    data-test="average-price-change"
-                    sx={{
-                      fontSize: 14,
-                      color:
-                        monthlyPriceChange === 0
-                          ? MUTED
-                          : monthlyPriceChange < 0
-                            ? '#A12622'
-                            : '#2E7D32'
-                    }}
-                  >
-                    {monthlyPriceChange < 0
-                      ? '▾ '
-                      : monthlyPriceChange > 0
-                        ? '▲ '
-                        : ''}
-                    {percentFmt.format(Math.abs(monthlyPriceChange))}%{' '}
-                    {t('publicDashboard.marketData.vsPreviousMonth', {
-                      price: price2Fmt.format(previousMonthPrice)
-                    })}
-                  </BCTypography>
-                ) : (
-                  <BCTypography
-                    data-test="average-price-change"
-                    sx={{ fontSize: 14, color: MUTED }}
-                  >
-                    {t('publicDashboard.marketData.previousMonthUnavailable')}
-                  </BCTypography>
-                )
+                <BCBox sx={{ display: 'grid', gap: 0.5, textAlign: 'center' }}>
+                  {priceComparisons.map(
+                    ({ dataTest, change, price, label, unavailable }) => (
+                      <BCTypography
+                        key={dataTest}
+                        data-test={dataTest}
+                        sx={{
+                          fontSize: 14,
+                          color:
+                            change == null || change === 0
+                              ? MUTED
+                              : change < 0
+                                ? '#A12622'
+                                : '#2E7D32'
+                        }}
+                      >
+                        {change != null && price != null ? (
+                          <>
+                            {change < 0 ? '▾ ' : change > 0 ? '▲ ' : ''}
+                            {percentFmt.format(Math.abs(change))}%{' '}
+                            {t(label, { price: price2Fmt.format(price) })}
+                          </>
+                        ) : (
+                          <>
+                            {t(unavailable)}
+                            {price != null &&
+                              ` (${t(label, { price: price2Fmt.format(price) })})`}
+                          </>
+                        )}
+                      </BCTypography>
+                    )
+                  )}
+                </BCBox>
               }
             />
             <DetailCard

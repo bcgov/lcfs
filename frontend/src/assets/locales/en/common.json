@@ -95,6 +95,8 @@
       "vsYearAgo": "vs {{period}}",
       "vsPreviousMonth": "vs. previous month: {{price}}",
       "previousMonthUnavailable": "Previous month comparison unavailable",
+      "vsSameMonthLastYear": "vs. same month last year: {{price}}",
+      "previousYearUnavailable": "Same month last year comparison unavailable",
       "sections": {
         "reportDescription": "Report description",
         "currentSnapshot": "Current Market Snapshot",

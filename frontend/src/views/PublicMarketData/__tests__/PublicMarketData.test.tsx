@@ -89,7 +89,11 @@ const mockReport = {
     labelPeriod: '2026-06',
     transfers: { current: 6, prior: null, deltaPct: null },
     volume: { current: 75491, prior: null, deltaPct: null },
-    weightedAvgPrice: { current: 143.32, prior: null, deltaPct: null }
+    weightedAvgPrice: {
+      current: 143.32,
+      prior: null as number | null,
+      deltaPct: null as number | null
+    }
   },
   ytdKpis: {
     labelPeriod: '2026-06',
@@ -209,6 +213,52 @@ describe('PublicMarketData', () => {
       )
     } finally {
       mockReport.monthly = originalRows
+    }
+  })
+
+  test('shows the same month last year alongside the previous month', ({
+    render,
+    theme
+  }) => {
+    const originalRows = mockReport.monthly
+    const originalPrice = mockReport.kpis.weightedAvgPrice
+    mockReport.monthly = [
+      { ...originalRows[0], period: '2026-05', weightedAvgPrice: 100 },
+      ...originalRows
+    ]
+    try {
+      for (const [prior, deltaPct, expected] of [
+        [100, 43.32, '▲ 43.3%'],
+        [200, -28.34, '▾ 28.3%'],
+        [143.32, 0, '0.0%'],
+        [0, null, 'publicDashboard.marketData.previousYearUnavailable'],
+        [null, null, 'publicDashboard.marketData.previousYearUnavailable']
+      ] as const) {
+        mockReport.kpis.weightedAvgPrice = {
+          ...originalPrice,
+          prior,
+          deltaPct
+        }
+        const { unmount } = render(<PublicMarketData />, [theme])
+        const card = screen.getByTestId('average-price-all')
+        expect(
+          within(card).getByTestId('average-price-change')
+        ).toHaveTextContent('▲ 43.3%')
+        const yearly = within(card).getByTestId('average-price-year-change')
+        expect(yearly).toHaveTextContent(expected)
+        if (prior != null) {
+          expect(yearly).toHaveTextContent(
+            new Intl.NumberFormat('en-CA', {
+              style: 'currency',
+              currency: 'CAD'
+            }).format(prior)
+          )
+        }
+        unmount()
+      }
+    } finally {
+      mockReport.monthly = originalRows
+      mockReport.kpis.weightedAvgPrice = originalPrice
     }
   })
 
