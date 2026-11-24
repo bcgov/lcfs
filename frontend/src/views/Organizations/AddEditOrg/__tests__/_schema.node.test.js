@@ -125,14 +125,14 @@ describe('Organization Form Schema Validation', () => {
 
   // Test dynamic schema for non-BCeID organization types
   describe('Dynamic Schema - Non-BCeID Organizations', () => {
-    const nonBceidSchema = createValidationSchema(mockOrgTypes, ['3']) // Fuel producer
+    const nonBceidSchema = createValidationSchema(mockOrgTypes, ['4']) // Exempted supplier
 
     it('validates non-BCeID org with minimal required fields', async () => {
       const validData = {
         orgLegalName: 'Test Producer Inc.',
         orgOperatingName: 'Test Producer',
         orgEmailAddress: 'producer@example.com',
-        orgTypeIds: ['3'],
+        orgTypeIds: ['4'],
         orgRegForTransfers: '1',
         hasEarlyIssuance: 'no'
       }
@@ -145,7 +145,7 @@ describe('Organization Form Schema Validation', () => {
         orgLegalName: 'Test Producer Inc.',
         orgOperatingName: 'Test Producer',
         orgEmailAddress: 'producer@example.com',
-        orgTypeIds: ['3'],
+        orgTypeIds: ['4'],
         orgRegForTransfers: '1',
         hasEarlyIssuance: 'no'
         // No phone number provided
@@ -159,7 +159,7 @@ describe('Organization Form Schema Validation', () => {
         orgLegalName: 'Test Producer Inc.',
         orgOperatingName: 'Test Producer',
         orgEmailAddress: 'producer@example.com',
-        orgTypeIds: ['3'],
+        orgTypeIds: ['4'],
         orgRegForTransfers: '1',
         hasEarlyIssuance: 'no'
         // No address fields provided
@@ -173,7 +173,7 @@ describe('Organization Form Schema Validation', () => {
         orgLegalName: 'Test Producer Inc.',
         orgOperatingName: 'Test Producer',
         // orgEmailAddress: 'producer@example.com', // Missing email
-        orgTypeIds: ['3'],
+        orgTypeIds: ['4'],
         orgRegForTransfers: '1',
         hasEarlyIssuance: 'no'
       }
@@ -189,13 +189,13 @@ describe('Organization Form Schema Validation', () => {
         orgOperatingName: 'Test Producer',
         orgEmailAddress: 'producer@example.com',
         orgPhoneNumber: 'invalid-phone-format!',
-        orgTypeIds: ['3'],
+        orgTypeIds: ['4'],
         orgRegForTransfers: '1',
         hasEarlyIssuance: 'no'
       }
 
       await expect(nonBceidSchema.validate(invalidData)).rejects.toThrow(
-        'Invalid format'
+        'Invalid phone number format.'
       )
     })
 
@@ -204,7 +204,7 @@ describe('Organization Form Schema Validation', () => {
         orgLegalName: 'Test Producer Inc.',
         orgOperatingName: 'Test Producer',
         orgEmailAddress: 'producer@example.com',
-        orgTypeIds: ['3'],
+        orgTypeIds: ['4'],
         orgRegForTransfers: '1',
         orgCity: 'Vancouver',
         orgPostalCodeZipCode: 'INVALID-FORMAT',
@@ -246,6 +246,7 @@ describe('Organization Form Schema Validation', () => {
         orgLegalName: 'Test LCJFIP Inc.',
         orgOperatingName: 'Test LCJFIP',
         orgEmailAddress: 'lcjfip@example.com',
+        orgPhoneNumber: '+33 1 23 45 67 89',
         orgTypeIds: ['7'],
         orgRegForTransfers: '1',
         orgHeadOfficeStreetAddress: '10 Rue Internationale',
@@ -285,7 +286,7 @@ describe('Organization Form Schema Validation', () => {
 
     it('validates switching from BCeID to non-BCeID type', async () => {
       const bceidSchema = createValidationSchema(mockOrgTypes, ['1'])
-      const nonBceidSchema = createValidationSchema(mockOrgTypes, ['3'])
+      const nonBceidSchema = createValidationSchema(mockOrgTypes, ['4'])
 
       // Start with BCeID data (all required fields filled)
       const bceidData = {
@@ -304,12 +305,12 @@ describe('Organization Form Schema Validation', () => {
       await expect(bceidSchema.validate(bceidData)).resolves.not.toThrow()
 
       // Switch to non-BCeID type - should still pass even with address/phone
-      const nonBceidData = { ...bceidData, orgTypeIds: ['3'] }
+      const nonBceidData = { ...bceidData, orgTypeIds: ['4'] }
       await expect(nonBceidSchema.validate(nonBceidData)).resolves.not.toThrow()
     })
 
     it('validates switching from non-BCeID to BCeID type', async () => {
-      const nonBceidSchema = createValidationSchema(mockOrgTypes, ['3'])
+      const nonBceidSchema = createValidationSchema(mockOrgTypes, ['4'])
       const bceidSchema = createValidationSchema(mockOrgTypes, ['1'])
 
       // Start with minimal non-BCeID data
@@ -317,7 +318,7 @@ describe('Organization Form Schema Validation', () => {
         orgLegalName: 'Test Producer Inc.',
         orgOperatingName: 'Test Producer',
         orgEmailAddress: 'producer@example.com',
-        orgTypeIds: ['3'],
+        orgTypeIds: ['4'],
         orgRegForTransfers: '1',
         hasEarlyIssuance: 'no'
       }

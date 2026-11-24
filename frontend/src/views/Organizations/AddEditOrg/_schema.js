@@ -4,12 +4,10 @@ const SPECIAL_ADDRESS_TYPE_KEYS = new Set(['fuel_producer', 'lcjfip'])
 
 const isSpecialAddressOrganization = (selectedOrgTypes) =>
   selectedOrgTypes.length > 0 &&
-  selectedOrgTypes.every((type) =>
-    SPECIAL_ADDRESS_TYPE_KEYS.has(type.orgType)
-  )
+  selectedOrgTypes.every((type) => SPECIAL_ADDRESS_TYPE_KEYS.has(type.orgType))
 
 const phoneFormat = /^[0-9()+.\-\s]+(?:\s*(?:x|ext\.?|#)\s*[0-9]+)?$/i
-const postalCodeFormat = /^[A-Za-z0-9][A-Za-z0-9\s\-]{1,11}$/
+const postalCodeFormat = /^[A-Za-z0-9][A-Za-z0-9\s-]{1,11}$/
 
 // Dynamic schema function based on the selected organization types
 export const createValidationSchema = (
@@ -26,8 +24,7 @@ export const createValidationSchema = (
   const requiresBCeID =
     selectedOrgTypes.length === 0 ||
     selectedOrgTypes.some((type) => type.isBceidUser) // Default to true for safety
-  const requiresSpecialAddress =
-    isSpecialAddressOrganization(selectedOrgTypes)
+  const requiresSpecialAddress = isSpecialAddressOrganization(selectedOrgTypes)
 
   return Yup.object({
     orgLegalName: Yup.string().required(
@@ -43,10 +40,7 @@ export const createValidationSchema = (
     orgPhoneNumber: requiresBCeID
       ? Yup.string()
           .required('Phone number is required.')
-          .matches(
-            phoneFormat,
-            'Invalid phone number format.'
-          )
+          .matches(phoneFormat, 'Invalid phone number format.')
           .max(50, 'Phone number is too long.')
       : Yup.string()
           .test(
@@ -63,26 +57,29 @@ export const createValidationSchema = (
     orgRegForTransfers: Yup.string().required(
       'Registered for transfers is required.'
     ),
-    orgStreetAddress: requiresBCeID && !requiresSpecialAddress
-      ? Yup.string().required('Street address / PO box is required.')
-      : Yup.string().nullable(),
-    orgCity: requiresBCeID && !requiresSpecialAddress
-      ? Yup.string().required('City is required.')
-      : Yup.string().nullable(),
-    orgPostalCodeZipCode: requiresBCeID && !requiresSpecialAddress
-      ? Yup.string()
-          .required('Postal / ZIP code is required.')
-          .matches(
-            postalCodeFormat,
-            'Please enter a valid postal / ZIP code.'
-          )
-      : Yup.string()
-          .test(
-            'postal-code-format',
-            'Please enter a valid postal / ZIP code.',
-            (value) => !value || postalCodeFormat.test(value)
-          )
-          .nullable(),
+    orgStreetAddress:
+      requiresBCeID && !requiresSpecialAddress
+        ? Yup.string().required('Street address / PO box is required.')
+        : Yup.string().nullable(),
+    orgCity:
+      requiresBCeID && !requiresSpecialAddress
+        ? Yup.string().required('City is required.')
+        : Yup.string().nullable(),
+    orgPostalCodeZipCode:
+      requiresBCeID && !requiresSpecialAddress
+        ? Yup.string()
+            .required('Postal / ZIP code is required.')
+            .matches(
+              postalCodeFormat,
+              'Please enter a valid postal / ZIP code.'
+            )
+        : Yup.string()
+            .test(
+              'postal-code-format',
+              'Please enter a valid postal / ZIP code.',
+              (value) => !value || postalCodeFormat.test(value)
+            )
+            .nullable(),
     orgHeadOfficeStreetAddress: requiresSpecialAddress
       ? Yup.string().required('Head office street address is required.')
       : Yup.string().nullable(),
@@ -94,10 +91,7 @@ export const createValidationSchema = (
     orgHeadOfficePostalCodeZipCode: requiresSpecialAddress
       ? Yup.string()
           .required('Head office postal / ZIP code is required.')
-          .matches(
-            postalCodeFormat,
-            'Please enter a valid postal / ZIP code.'
-          )
+          .matches(postalCodeFormat, 'Please enter a valid postal / ZIP code.')
           .max(30, 'Postal / ZIP code is too long.')
       : Yup.string()
           .test(

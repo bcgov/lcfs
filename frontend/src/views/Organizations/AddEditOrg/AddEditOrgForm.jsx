@@ -874,7 +874,8 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
                   {t('org:streetAddrLabel')}
                   {requiresBCeID && !requiresSpecialAddress
                     ? ''
-                    : ' (optional)'}:
+                    : ' (optional)'}
+                  :
                 </InputLabel>
                 <Controller
                   name="orgStreetAddress"
@@ -916,7 +917,8 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
                   {t('org:cityLabel')}
                   {requiresBCeID && !requiresSpecialAddress
                     ? ''
-                    : ' (optional)'}:
+                    : ' (optional)'}
+                  :
                 </InputLabel>
                 <TextField
                   required={requiresBCeID && !requiresSpecialAddress}
@@ -962,7 +964,8 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
                   {t('org:poLabel')}
                   {requiresBCeID && !requiresSpecialAddress
                     ? ''
-                    : ' (optional)'}:
+                    : ' (optional)'}
+                  :
                 </InputLabel>
                 <TextField
                   required={requiresBCeID && !requiresSpecialAddress}
