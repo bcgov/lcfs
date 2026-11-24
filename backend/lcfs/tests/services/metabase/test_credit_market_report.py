@@ -1,5 +1,7 @@
 import base64
 import io
+from datetime import datetime
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -7,6 +9,7 @@ from openpyxl import load_workbook
 
 from lcfs.services.jobs.jobs import send_monthly_credit_market_report
 from lcfs.services.metabase.client import (
+    ChartImageRenderer,
     CreditMarketReportBuilder,
     MetabaseClient,
     MetabaseDashboardReport,
@@ -373,13 +376,74 @@ def test_dashboard_metric_cards_compare_current_month_to_same_month_last_year():
             "direction": "down",
         },
         {
-            "name": "Category A1 Transfers (weighted average)",
-            "primary": "CA$120.30",
+            "name": "All transfers (weighted average)",
+            "primary": "CA$143.32",
             "subtitle": "Jun 2026",
-            "comparison": "49.24% vs. Jun 2025: CA$237.00",
+            "comparison": "47.63% vs. Jun 2025: CA$273.67",
             "direction": "down",
         },
     ]
+
+
+def test_agreement_months_replace_a1_in_email_and_workbook():
+    report = MetabaseDashboardReport(
+        dashboard_name="Credit Market",
+        dashboard_description=None,
+        dashboard_url="https://metabase.example/dashboard/1",
+        tables=[
+            MetabaseTable(
+                name="Monthly Market Report",
+                columns=[
+                    "Month",
+                    "Transfers (#)",
+                    "Volume (Credits)",
+                    "Weighted average price",
+                    "Category A1 - Average Price",
+                    "Category A - Transfers",
+                ],
+                rows=[["October 2026", 1, 300, 200, 200, 1]],
+            ),
+            MetabaseTable(
+                name="A1 Price Trend",
+                columns=["Month", "Price"],
+                rows=[["October 2026", 200]],
+            ),
+        ],
+    )
+    builder = CreditMarketReportBuilder()
+    updated = builder.with_agreement_months(
+        report,
+        [
+            SimpleNamespace(
+                period=datetime(2026, 10, 1),
+                transfers=2,
+                volume=400,
+                wavg=175,
+            )
+        ],
+    )
+
+    context = builder.build_email_context(updated)
+    workbook = load_workbook(io.BytesIO(builder.build_workbook(updated)))
+    agreement_table = next(
+        table
+        for table in updated.tables
+        if table.name == "Monthly market report by agreement date"
+    )
+    months = builder._agreement_months_context(agreement_table, datetime(2026, 11, 1))
+    assert months[0] == ["Nov 2026", "—", "—", "—"]
+    assert months[1] == ["Oct 2026", "2", "400", "CA$175.00"]
+    assert len(months) == 12
+    assert len(context["agreement_months"]) == 12
+    chart = ChartImageRenderer().render_agreement_months(months)
+    assert chart is not None and chart.startswith(b"\x89PNG")
+    assert all("A1" not in name for name in workbook.sheetnames)
+    monthly_headers = [cell.value for cell in workbook["Monthly Market Report"][1]]
+    assert "Category A1 - Average Price" not in monthly_headers
+    assert "Category A - Transfers" in monthly_headers
+    agreement = workbook["Monthly market report by agreem"]
+    assert [cell.value for cell in agreement[2]] == ["Oct 2026", 2, 400, 175]
+    assert agreement["D2"].number_format == "$#,##0.00"
 
 
 def test_metabase_client_prefers_api_key_authentication():
@@ -466,7 +530,9 @@ async def test_monthly_report_uses_notification_table_email_subscriptions(mock_a
         "lcfs.services.jobs.jobs.CHESEmailRepository"
     ) as mock_email_repo_class, patch(
         "lcfs.services.jobs.jobs.CHESEmailService"
-    ) as mock_email_service_class:
+    ) as mock_email_service_class, patch(
+        "lcfs.services.jobs.jobs.CreditMarketRepository"
+    ) as mock_market_repo_class:
         mock_client_class.return_value.fetch_credit_market_report.return_value = report
         mock_email_repo = MagicMock()
         mock_email_repo.get_subscribed_user_emails = AsyncMock(
@@ -478,6 +544,16 @@ async def test_monthly_report_uses_notification_table_email_subscriptions(mock_a
             return_value=True
         )
         mock_email_service_class.return_value = mock_email_service
+        mock_market_repo_class.return_value.get_report_agreement_months = AsyncMock(
+            return_value=[
+                SimpleNamespace(
+                    period=datetime(2026, 10, 1),
+                    transfers=2,
+                    volume=400,
+                    wavg=175,
+                )
+            ]
+        )
 
         result = await send_monthly_credit_market_report(mock_app)
 
@@ -494,6 +570,14 @@ async def test_monthly_report_uses_notification_table_email_subscriptions(mock_a
         "attachments"
     ]
     assert len(attachments) == 1
+    mock_market_repo_class.return_value.get_report_agreement_months.assert_awaited_once()
+    workbook = load_workbook(io.BytesIO(base64.b64decode(attachments[0]["content"])))
+    assert [cell.value for cell in workbook["Monthly market report by agreem"][2]] == [
+        "Oct 2026",
+        2,
+        400,
+        175,
+    ]
 
 
 @pytest.mark.anyio

@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, List, Optional
+from zoneinfo import ZoneInfo
 
 import requests
 import structlog
@@ -36,6 +37,7 @@ WORKBOOK_REPORT_KEYWORDS = (
     "month report",
     "month data",
 )
+AGREEMENT_MONTH_REPORT = "Monthly market report by agreement date"
 
 
 @dataclass
@@ -223,6 +225,52 @@ class MetabaseClient:
 class CreditMarketReportBuilder:
     """Builds the email payload pieces for the monthly credit market report."""
 
+    def with_agreement_months(
+        self, report: MetabaseDashboardReport, agreement_rows
+    ) -> MetabaseDashboardReport:
+        tables = []
+        for table in report.tables:
+            if self._is_category_a1_column(table.name):
+                continue
+            indexes = [
+                index
+                for index, column in enumerate(table.columns)
+                if not self._is_category_a1_column(column)
+            ]
+            tables.append(
+                MetabaseTable(
+                    name=table.name,
+                    columns=[table.columns[index] for index in indexes],
+                    rows=[
+                        [row[index] if index < len(row) else None for index in indexes]
+                        for row in table.rows
+                    ],
+                    visualization_settings=table.visualization_settings,
+                    display=table.display,
+                )
+            )
+        tables.append(
+            MetabaseTable(
+                name=AGREEMENT_MONTH_REPORT,
+                columns=[
+                    "Agreement month",
+                    "Transfers (#)",
+                    "Volume (Credits)",
+                    "Weighted average price",
+                ],
+                rows=[
+                    [row.period, row.transfers, row.volume, float(row.wavg)]
+                    for row in reversed(agreement_rows)
+                ],
+            )
+        )
+        return MetabaseDashboardReport(
+            dashboard_name=report.dashboard_name,
+            dashboard_description=report.dashboard_description,
+            dashboard_url=report.dashboard_url,
+            tables=tables,
+        )
+
     def build_workbook(self, report: MetabaseDashboardReport) -> bytes:
         workbook = Workbook()
         workbook.remove(workbook.active)
@@ -256,6 +304,14 @@ class CreditMarketReportBuilder:
     def build_email_context(self, report: MetabaseDashboardReport) -> Dict[str, Any]:
         now = datetime.now()
         sections = self._dashboard_sections(report)
+        agreement_table = next(
+            (table for table in report.tables if table.name == AGREEMENT_MONTH_REPORT),
+            None,
+        )
+        agreement_months = self._agreement_months_context(
+            agreement_table, datetime.now(ZoneInfo("America/Vancouver"))
+        )
+        chart = ChartImageRenderer().render_agreement_months(agreement_months)
         return {
             "environment": settings.environment.lower(),
             "subject": f"{report.dashboard_name} - Monthly Credit Market Report",
@@ -265,10 +321,38 @@ class CreditMarketReportBuilder:
             "metric_cards": sections["metric_cards"],
             "summary_cards": sections["summary_cards"],
             "chart_sections": sections["chart_sections"],
+            "agreement_months": agreement_months,
+            "agreement_chart": (
+                f"data:image/png;base64,{base64.b64encode(chart).decode('ascii')}"
+                if chart
+                else None
+            ),
             "attached_table_names": [
                 table.name for table in self._workbook_tables(report)
             ],
         }
+
+    def _agreement_months_context(
+        self, table: Optional[MetabaseTable], now: datetime
+    ) -> List[List[str]]:
+        if not table:
+            return []
+        rows_by_month = {(row[0].year, row[0].month): row for row in table.rows}
+        rows = []
+        for offset in range(12):
+            year, month = divmod(now.year * 12 + now.month - 1 - offset, 12)
+            month += 1
+            row = rows_by_month.get((year, month))
+            label = datetime(year, month, 1).strftime("%b %Y")
+            rows.append(
+                [
+                    label,
+                    self._format_value(row[1]) if row else "—",
+                    self._format_value(row[2]) if row else "—",
+                    self._format_metric_value(row[3], currency=True) if row else "—",
+                ]
+            )
+        return rows
 
     def _write_table_sheet(self, sheet, table: MetabaseTable) -> None:
         header_fill = PatternFill("solid", fgColor="003366")
@@ -509,8 +593,7 @@ class CreditMarketReportBuilder:
         }
 
     def _is_category_a1_column(self, column: str) -> bool:
-        normalized = column.lower().replace(" ", "")
-        return "categorya1" in normalized
+        return re.search(r"\ba\s*1\b", column, re.IGNORECASE) is not None
 
     def _dashboard_sections(
         self, report: MetabaseDashboardReport
@@ -520,6 +603,8 @@ class CreditMarketReportBuilder:
         chart_sections = []
 
         for table in report.tables:
+            if table.name == AGREEMENT_MONTH_REPORT:
+                continue
             table_context = self._table_context(table)
             lower_name = table.name.lower()
             if metric_cards and self._is_monthly_report_table(table):
@@ -549,7 +634,9 @@ class CreditMarketReportBuilder:
         remaining_tables = [
             self._table_context(table)
             for table in report.tables
-            if table.name not in shown_names and table.rows
+            if table.name not in shown_names
+            and table.name != AGREEMENT_MONTH_REPORT
+            and table.rows
         ]
         chart_sections.extend(remaining_tables[:2])
         if not summary_cards:
@@ -614,13 +701,8 @@ class CreditMarketReportBuilder:
                 "currency": False,
             },
             {
-                "name": "Category A1 Transfers (weighted average)",
-                "columns": [
-                    "category a1 - average price",
-                    "category a - average price",
-                    "weighted average price",
-                    "weighted average",
-                ],
+                "name": "All transfers (weighted average)",
+                "columns": ["weighted average price", "weighted average"],
                 "currency": True,
             },
         ]
@@ -711,6 +793,8 @@ class CreditMarketReportBuilder:
         return len(table.rows) <= 2 and len(table.columns) <= 4
 
     def _is_monthly_report_table(self, table: MetabaseTable) -> bool:
+        if table.name == AGREEMENT_MONTH_REPORT:
+            return False
         lower_name = table.name.lower()
         return "monthly" in lower_name and (
             "report" in lower_name or "market" in lower_name
@@ -895,6 +979,71 @@ class ChartImageRenderer:
     grid = (232, 235, 240)
     line_colors = [(166, 133, 203), (247, 159, 92), (247, 204, 67)]
     bar_color = (93, 154, 222)
+
+    def render_agreement_months(self, rows: List[List[str]]) -> Optional[bytes]:
+        if Image is None or not rows:
+            return None
+        rows = list(reversed(rows))
+        prices = [self._number(row[3]) for row in rows]
+        volumes = [self._number(row[2]) for row in rows]
+        valid_prices = [price for price in prices if price is not None]
+        valid_volumes = [volume for volume in volumes if volume is not None]
+        if not valid_prices or not valid_volumes:
+            return None
+        image = Image.new("RGB", (self.width, self.height), self.bg)
+        draw = ImageDraw.Draw(image)
+        font = self._font(10)
+        self._draw_grid(draw)
+        self._draw_legend(
+            draw, [{"name": "Volume (credits)"}], chart_type="bar", font=font
+        )
+        draw.line((260, 24, 276, 24), fill=self.line_colors[0], width=3)
+        draw.text((282, 16), "Weighted average price", fill=(76, 87, 115), font=font)
+        draw.text(
+            (self.margin_left, 34), "CA$/credit", fill=self.line_colors[0], font=font
+        )
+        draw.text((self.width - 130, 34), "Credits", fill=self.bar_color, font=font)
+        width = self.width - self.margin_left - self.margin_right
+        height = self.height - self.margin_top - self.margin_bottom
+        bottom = self.height - self.margin_bottom
+        max_price = max(valid_prices) or 1
+        max_volume = max(valid_volumes) or 1
+        for index, volume in enumerate(volumes):
+            x = self.margin_left + int(index * width / max(len(rows) - 1, 1))
+            if volume is not None:
+                bar_height = int(volume / max_volume * height)
+                draw.rectangle(
+                    (x - 8, bottom - bar_height, x + 8, bottom), fill=self.bar_color
+                )
+        previous = None
+        for index, price in enumerate(prices):
+            x = self.margin_left + int(index * width / max(len(rows) - 1, 1))
+            if price is None:
+                previous = None
+                continue
+            point = (x, bottom - int(price / max_price * height))
+            if previous is not None:
+                draw.line((previous, point), fill=self.line_colors[0], width=3)
+            draw.ellipse(
+                (point[0] - 4, point[1] - 4, point[0] + 4, point[1] + 4),
+                fill=self.line_colors[0],
+            )
+            previous = point
+        self._draw_x_labels(draw, [row[0] for row in rows], font)
+        draw.text(
+            (0, self.margin_top),
+            self._format_chart_number(max_price, True),
+            fill=self.line_colors[0],
+            font=font,
+        )
+        draw.text(
+            (self.width - self.margin_right, self.margin_top),
+            self._format_chart_number(max_volume, False),
+            fill=self.bar_color,
+            font=font,
+            anchor="ra",
+        )
+        return self._image_png(image)
 
     def render(self, table: MetabaseTable, chart_type: str) -> Optional[bytes]:
         if Image is None:

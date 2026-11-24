@@ -3,8 +3,26 @@
 {% block content %}
 <p style="font-size:12pt;font-family:BC Sans,Aptos,sans-serif;margin:0 0 12px 0;color:#4f5a78;">
   <strong>{{ dashboard_name }}</strong><br />
-  Generated on {{ generated_at }}. The attached workbook contains the monthly, quarterly, and annual report data.
+  Generated on {{ generated_at }}. The attached workbook contains agreement-month, monthly, quarterly, and annual report data.
 </p>
+
+<div style="border:1px solid #e6e8ee;border-radius:8px;background:#ffffff;padding:14px 18px;margin:8px 0;">
+  <strong>Recorded transfers by agreement month</strong>
+  <p>Prices are volume-weighted. Historical months may change as transfers are recorded. Transfers without an agreement date and Category D transfers are excluded.</p>
+  {% if agreement_chart %}
+  <img src="{{ agreement_chart }}" alt="Weighted average price and credit volume by agreement month" width="100%" style="display:block;width:100%;max-width:980px;height:auto;border:0;" />
+  {% endif %}
+  <table class="fuel-codes-table">
+    <thead><tr><th>Agreement month</th><th>Transfers</th><th>Volume (credits)</th><th>Weighted average price</th></tr></thead>
+    <tbody>
+      {% for row in agreement_months %}
+      <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+      {% else %}
+      <tr><td colspan="4">No agreement-month data available.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:8px;margin:0 0 8px 0;">
   <tr>

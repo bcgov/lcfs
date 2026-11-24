@@ -17,6 +17,7 @@ def mock_repo():
     repo.get_total_credits_issued = AsyncMock(return_value=0)
     repo.get_report_periods = AsyncMock(return_value=[])
     repo.get_report_a1_periods = AsyncMock(return_value=[])
+    repo.get_report_agreement_months = AsyncMock(return_value=[])
     repo.get_report_all_time = AsyncMock(
         return_value=SimpleNamespace(transfers=0, volume=0, transfer_value=0, wavg=None)
     )
@@ -232,12 +233,27 @@ async def test_empty_public_data(service):
     assert report.quarterly == []
     assert report.annual == []
     assert report.a1_monthly == []
+    assert report.agreement_monthly == []
     assert report.all_time.transfers == 0
     for kpis in (report.kpis, report.ytd_kpis, report.a1_kpis):
         assert kpis.label_period is None
         assert kpis.transfers.current is None
         assert kpis.transfers.prior is None
         assert kpis.transfers.delta_pct is None
+
+
+@pytest.mark.anyio
+async def test_public_report_includes_agreement_month_aggregates(service, mock_repo):
+    mock_repo.get_report_agreement_months.return_value = [
+        _report_row(datetime(2026, 10, 1), 2, 400, 70000, 175, 2, 2)
+    ]
+
+    report = await service.get_public_report()
+
+    assert report.agreement_monthly[0].period == "2026-10"
+    assert report.agreement_monthly[0].transfers == 2
+    assert report.agreement_monthly[0].volume == 400
+    assert report.agreement_monthly[0].weighted_avg_price == 175
 
 
 @pytest.mark.anyio
