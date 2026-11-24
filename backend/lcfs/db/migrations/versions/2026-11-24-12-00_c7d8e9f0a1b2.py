@@ -32,6 +32,19 @@ def upgrade():
 
 
 def downgrade():
+    connection = op.get_bind()
+    for table in ("organization_address", "organization_attorney_address"):
+        has_long_postal_code = connection.execute(
+            sa.text(
+                f'SELECT EXISTS (SELECT 1 FROM "{table}" '
+                'WHERE length("postalCode_zipCode") > 10)'
+            )
+        ).scalar()
+        if has_long_postal_code:
+            raise RuntimeError(
+                f"Cannot downgrade: {table} contains postal codes longer than 10 characters."
+            )
+
     op.alter_column(
         "organization_address",
         "postalCode_zipCode",

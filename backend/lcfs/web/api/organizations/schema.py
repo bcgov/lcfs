@@ -47,23 +47,6 @@ class OrganizationTypesAndRolesMixin(BaseSchema):
 
     organization_type_ids: List[int]
     available_roles: List[str] = []
-    phone: Optional[str] = None
-
-    @field_validator("phone")
-    @classmethod
-    def _validate_phone(cls, value):
-        if value is None:
-            return value
-        value = value.strip()
-        if not value:
-            return None
-        if len(value) > 50 or not re.match(
-            r"^[0-9()+.\-\s]+(?:\s*(?:x|ext\.?|#)\s*[0-9]+)?$",
-            value,
-            re.IGNORECASE,
-        ):
-            raise ValueError("Invalid phone number format.")
-        return value
 
     @field_validator("organization_type_ids")
     @classmethod
@@ -90,10 +73,29 @@ class OrganizationTypesAndRolesMixin(BaseSchema):
                 normalized.append(match)
         if invalid:
             raise ValueError(
-                "Roles not controllable per organization: "
-                + ", ".join(sorted(invalid))
+                "Roles not controllable per organization: " + ", ".join(sorted(invalid))
             )
         return normalized
+
+
+class OrganizationPhoneInputMixin(BaseSchema):
+    phone: Optional[str] = None
+
+    @field_validator("phone")
+    @classmethod
+    def _validate_phone(cls, value):
+        if value is None:
+            return value
+        value = value.strip()
+        if not value:
+            return None
+        if len(value) > 50 or not re.fullmatch(
+            r"[0-9()+.\-\s]+(?:\s*(?:x|ext\.?|#)\s*[0-9]+)?",
+            value,
+            re.IGNORECASE,
+        ):
+            raise ValueError("Invalid phone number format.")
+        return value
 
 
 # --------------------------------------
@@ -132,18 +134,6 @@ class AddressBase(BaseSchema):
     province_state: str
     country: str
     postalCode_zipCode: Optional[str] = None
-
-    @field_validator("postalCode_zipCode")
-    @classmethod
-    def _validate_postal_code(cls, value):
-        if value is None:
-            return value
-        value = value.strip()
-        if not value:
-            return None
-        if len(value) > 30 or not re.match(r"^[A-Za-z0-9][A-Za-z0-9\s\-]*$", value):
-            raise ValueError("Please enter a valid postal / ZIP code.")
-        return value
 
 
 # Optional address schema for non-BCeID organization types
@@ -188,7 +178,16 @@ class OrganizationAddressCreateSchema(OrganizationAddressBase):
 
 # Optional address schema for non-BCeID organization types
 class OptionalOrganizationAddressCreateSchema(OptionalAddressBase):
-    pass
+    @field_validator("postalCode_zipCode")
+    @classmethod
+    def _validate_service_postal_code(cls, value):
+        if value and not re.fullmatch(
+            r"(?:\d{5}-\d{4}|\d{5}|[A-Z]\d[A-Z]\s?\d[A-Z]\d)",
+            value,
+            re.IGNORECASE,
+        ):
+            raise ValueError("Please enter a valid postal / ZIP code.")
+        return value
 
 
 # --------------------------------------
@@ -239,22 +238,6 @@ class OrganizationBase(BaseSchema):
     credits_to_sell: Optional[int] = 0
     display_in_credit_market: Optional[bool] = False
 
-    @field_validator("phone")
-    @classmethod
-    def _validate_phone(cls, value):
-        if value is None:
-            return value
-        value = value.strip()
-        if not value:
-            return None
-        if len(value) > 50 or not re.match(
-            r"^[0-9()+.\-\s]+(?:\s*(?:x|ext\.?|#)\s*[0-9]+)?$",
-            value,
-            re.IGNORECASE,
-        ):
-            raise ValueError("Invalid phone number format.")
-        return value
-
 
 class OrganizationSchema(OrganizationBase):
     organization_address_id: Optional[int] = None
@@ -269,7 +252,9 @@ class OrganizationListSchema(BaseSchema):
     organizations: List[OrganizationSchema]
 
 
-class OrganizationCreateSchema(OrganizationTypesAndRolesMixin):
+class OrganizationCreateSchema(
+    OrganizationPhoneInputMixin, OrganizationTypesAndRolesMixin
+):
     name: str
     operating_name: str
     email: Optional[str] = None
@@ -291,7 +276,9 @@ class OrganizationCreateSchema(OrganizationTypesAndRolesMixin):
 
 
 # Schema for non-BCeID organization types
-class NonBCeIDOrganizationCreateSchema(OrganizationTypesAndRolesMixin):
+class NonBCeIDOrganizationCreateSchema(
+    OrganizationPhoneInputMixin, OrganizationTypesAndRolesMixin
+):
     name: str
     operating_name: str
     email: Optional[str] = None
@@ -316,7 +303,9 @@ class NonBCeIDOrganizationCreateSchema(OrganizationTypesAndRolesMixin):
     )
 
 
-class OrganizationUpdateSchema(OrganizationTypesAndRolesMixin):
+class OrganizationUpdateSchema(
+    OrganizationPhoneInputMixin, OrganizationTypesAndRolesMixin
+):
     available_roles: Optional[List[str]] = None
     name: Optional[str] = None
     operating_name: Optional[str] = None
@@ -339,7 +328,9 @@ class OrganizationUpdateSchema(OrganizationTypesAndRolesMixin):
 
 
 # Update schema for non-BCeID organization types with relaxed validation
-class NonBCeIDOrganizationUpdateSchema(OrganizationTypesAndRolesMixin):
+class NonBCeIDOrganizationUpdateSchema(
+    OrganizationPhoneInputMixin, OrganizationTypesAndRolesMixin
+):
     available_roles: Optional[List[str]] = None
     name: Optional[str] = None
     operating_name: Optional[str] = None

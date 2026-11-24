@@ -284,6 +284,32 @@ describe('Organization Form Schema Validation', () => {
       ).resolves.not.toThrow()
     })
 
+    it('accepts head office postal codes up to 30 characters but keeps service postal codes Canadian or US', async () => {
+      const schema = createValidationSchema(mockOrgTypes, ['3'])
+      const validData = {
+        orgLegalName: 'Test Org',
+        orgOperatingName: 'Test Org',
+        orgEmailAddress: 'test@example.com',
+        orgTypeIds: ['3'],
+        orgRegForTransfers: '1',
+        orgHeadOfficeStreetAddress: '1 Test Street',
+        orgHeadOfficeCity: 'Test City',
+        orgHeadOfficePostalCodeZipCode: 'A'.repeat(30),
+        hasEarlyIssuance: 'no'
+      }
+
+      await expect(schema.validate(validData)).resolves.not.toThrow()
+      await expect(
+        schema.validate({
+          ...validData,
+          orgHeadOfficePostalCodeZipCode: 'A'.repeat(31)
+        })
+      ).rejects.toThrow('Please enter a valid postal / ZIP code.')
+      await expect(
+        schema.validate({ ...validData, orgPostalCodeZipCode: 'SW1A 2AA' })
+      ).rejects.toThrow('Please enter a valid postal / ZIP code.')
+    })
+
     it('validates switching from BCeID to non-BCeID type', async () => {
       const bceidSchema = createValidationSchema(mockOrgTypes, ['1'])
       const nonBceidSchema = createValidationSchema(mockOrgTypes, ['4'])

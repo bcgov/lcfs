@@ -60,6 +60,8 @@ from .schema import (
 
 logger = structlog.get_logger(__name__)
 
+SPECIAL_ADDRESS_TYPE_KEYS = frozenset({"fuel_producer", "lcjfip"})
+
 
 class OrganizationsService:
     def __init__(
@@ -76,9 +78,7 @@ class OrganizationsService:
 
     async def _get_org_types(self, organization_type_ids: List[int]):
         """Resolve organization type ids, raising on unknown ids."""
-        org_types = await self.repo.get_organization_types_by_ids(
-            organization_type_ids
-        )
+        org_types = await self.repo.get_organization_types_by_ids(organization_type_ids)
         missing = set(organization_type_ids) - {
             t.organization_type_id for t in org_types
         }
@@ -100,8 +100,14 @@ class OrganizationsService:
         """
         if not org_types:
             return False
-        special_types = {"fuel_producer", "lcjfip"}
-        return all(getattr(t, "org_type", None) in special_types for t in org_types)
+        return all(t.org_type in SPECIAL_ADDRESS_TYPE_KEYS for t in org_types)
+
+    @staticmethod
+    def _has_required_address_fields(address) -> bool:
+        return bool(address) and all(
+            isinstance(value := getattr(address, field, None), str) and value.strip()
+            for field in ("street_address", "city", "postalCode_zipCode")
+        )
 
     @staticmethod
     def _primary_type_id(org_types) -> int:
@@ -259,15 +265,15 @@ class OrganizationsService:
         requires_bceid = self._requires_bceid(org_types)
         requires_special_address = self._requires_special_address(org_types)
 
+        if not organization_data.email or not organization_data.email.strip():
+            raise ValueError("Email is required for all organization types")
+
         org_address = None
         org_attorney_address = None
 
         if requires_special_address:
-            if (
-                not organization_data.attorney_address
-                or not organization_data.attorney_address.street_address
-                or not organization_data.attorney_address.city
-                or not organization_data.attorney_address.postalCode_zipCode
+            if not self._has_required_address_fields(
+                organization_data.attorney_address
             ):
                 raise ValueError(
                     "Head office address is required for Fuel producer and LCJFIP organizations"
@@ -275,15 +281,10 @@ class OrganizationsService:
             org_attorney_address = OrganizationAttorneyAddress(
                 **organization_data.attorney_address.dict()
             )
-            if (
-                organization_data.address
-                and organization_data.address.street_address
-            ):
-                org_address = OrganizationAddress(
-                    **organization_data.address.dict()
-                )
+            if organization_data.address and organization_data.address.street_address:
+                org_address = OrganizationAddress(**organization_data.address.dict())
         elif requires_bceid:
-            if not organization_data.address:
+            if not self._has_required_address_fields(organization_data.address):
                 raise ValueError("Address is required for BCeID organization types")
             org_address = OrganizationAddress(**organization_data.address.dict())
 
@@ -310,9 +311,6 @@ class OrganizationsService:
                 org_attorney_address = OrganizationAttorneyAddress(
                     **organization_data.attorney_address.dict()
                 )
-
-            if not organization_data.email:
-                raise ValueError("Email is required for all organization types")
 
         org_model = Organization(
             name=organization_data.name,
@@ -378,31 +376,23 @@ class OrganizationsService:
         requires_special_address = self._requires_special_address(org_types)
 
         if requires_special_address:
-            existing_attorney_address = getattr(
-                organization, "org_attorney_address", None
+            head_office = (
+                organization_data.attorney_address
+                if "attorney_address" in organization_data.model_fields_set
+                else organization.org_attorney_address
             )
-            submitted_attorney_address = organization_data.attorney_address
-            has_submitted_head_office = (
-                submitted_attorney_address
-                and submitted_attorney_address.street_address
-                and submitted_attorney_address.city
-                and submitted_attorney_address.postalCode_zipCode
-            )
-            has_existing_head_office = (
-                existing_attorney_address
-                and getattr(existing_attorney_address, "street_address", None)
-                and getattr(existing_attorney_address, "city", None)
-                and getattr(existing_attorney_address, "postalCode_zipCode", None)
-            )
-            if submitted_attorney_address is not None:
-                if not has_submitted_head_office:
-                    raise ValueError(
-                        "Head office address is required for Fuel producer and LCJFIP organizations"
-                    )
-            elif not has_existing_head_office:
+            if not self._has_required_address_fields(head_office):
                 raise ValueError(
                     "Head office address is required for Fuel producer and LCJFIP organizations"
                 )
+        elif requires_bceid:
+            service_address = (
+                organization_data.address
+                if "address" in organization_data.model_fields_set
+                else organization.org_address
+            )
+            if not self._has_required_address_fields(service_address):
+                raise ValueError("Address is required for BCeID organization types")
 
         if (
             hasattr(organization_data, "has_early_issuance")
@@ -436,7 +426,11 @@ class OrganizationsService:
             # Association-backed fields are persisted separately below;
             # available_roles would otherwise collide with the viewonly
             # relationship of the same name.
-            if key in ("has_early_issuance", "organization_type_ids", "available_roles"):
+            if key in (
+                "has_early_issuance",
+                "organization_type_ids",
+                "available_roles",
+            ):
                 continue
             if key in CREDIT_MARKET_FIELDS and key not in explicitly_set:
                 continue
@@ -457,12 +451,24 @@ class OrganizationsService:
         ):
             raise ValueError("Email is required for all organization types")
 
-        if organization_data.address:
-            if requires_bceid and not requires_special_address and not hasattr(
-                organization_data.address, "street_address"
-            ):
-                raise ValueError("Address is required for BCeID organization types")
-
+        if (
+            requires_special_address
+            and "address" in explicitly_set
+            and (
+                not organization_data.address
+                or not any(
+                    (getattr(organization_data.address, field, None) or "").strip()
+                    for field in (
+                        "street_address",
+                        "address_other",
+                        "city",
+                        "postalCode_zipCode",
+                    )
+                )
+            )
+        ):
+            organization.org_address = None
+        elif organization_data.address:
             has_address_data = (
                 hasattr(organization_data.address, "street_address")
                 and organization_data.address.street_address
@@ -477,7 +483,7 @@ class OrganizationsService:
                     org_address = OrganizationAddress(
                         organization=organization,
                     )
-                    organization.organization_address = org_address
+                    organization.org_address = org_address
                     self.repo.add(org_address)
 
                 for key, value in organization_data.address.dict().items():
@@ -485,8 +491,10 @@ class OrganizationsService:
                         setattr(org_address, key, value)
 
         if organization_data.attorney_address:
-            if requires_bceid and not requires_special_address and not hasattr(
-                organization_data.attorney_address, "street_address"
+            if (
+                requires_bceid
+                and not requires_special_address
+                and not hasattr(organization_data.attorney_address, "street_address")
             ):
                 raise ValueError(
                     "Attorney address is required for BCeID organization types"
@@ -508,7 +516,7 @@ class OrganizationsService:
                     org_attorney_address = OrganizationAttorneyAddress(
                         organization=organization,
                     )
-                    organization.organization_attorney_address = org_attorney_address
+                    organization.org_attorney_address = org_attorney_address
                     self.repo.add(org_attorney_address)
 
                 if not org_attorney_address:

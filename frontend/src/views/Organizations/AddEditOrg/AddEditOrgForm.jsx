@@ -21,7 +21,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { createValidationSchema } from './_schema'
+import { createValidationSchema, isSpecialAddressOrganization } from './_schema'
 
 // Internal Modules
 
@@ -136,26 +136,21 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
         selectedTypes.length === 0 ||
         selectedTypes.some((type) => type.isBceidUser)
       const newRequiresSpecialAddress =
-        selectedTypes.length > 0 &&
-        selectedTypes.every((type) =>
-          ['fuel_producer', 'lcjfip'].includes(type.orgType)
-        )
+        isSpecialAddressOrganization(selectedTypes)
       setRequiresBCeID(newRequiresBCeID)
       setRequiresSpecialAddress(newRequiresSpecialAddress)
 
       // Handle validation when switching organization types
+      if (!newRequiresBCeID) {
+        clearErrors('orgPhoneNumber')
+      }
       if (!newRequiresBCeID || newRequiresSpecialAddress) {
-        // For non-BCeID types, clear errors for fields that are now optional
-        clearErrors([
-          'orgPhoneNumber',
-          'orgStreetAddress',
-          'orgCity',
-          'orgPostalCodeZipCode'
-        ])
+        clearErrors(['orgStreetAddress', 'orgCity', 'orgPostalCodeZipCode'])
       }
       if (!newRequiresSpecialAddress) {
         clearErrors([
           'orgHeadOfficeStreetAddress',
+          'orgHeadOfficeCity',
           'orgHeadOfficePostalCodeZipCode'
         ])
       }
@@ -200,6 +195,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
     if (isFetched && data) {
       const shouldSyncNames = data.name === data.operatingName
       const shouldSyncAddress =
+        !!data.orgAddress?.streetAddress &&
         data.orgAddress?.streetAddress ===
           data.orgAttorneyAddress?.streetAddress &&
         data.orgAddress?.addressOther ===

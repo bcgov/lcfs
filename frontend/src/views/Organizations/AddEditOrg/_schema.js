@@ -2,12 +2,14 @@ import * as Yup from 'yup'
 
 const SPECIAL_ADDRESS_TYPE_KEYS = new Set(['fuel_producer', 'lcjfip'])
 
-const isSpecialAddressOrganization = (selectedOrgTypes) =>
+export const isSpecialAddressOrganization = (selectedOrgTypes) =>
   selectedOrgTypes.length > 0 &&
   selectedOrgTypes.every((type) => SPECIAL_ADDRESS_TYPE_KEYS.has(type.orgType))
 
 const phoneFormat = /^[0-9()+.\-\s]+(?:\s*(?:x|ext\.?|#)\s*[0-9]+)?$/i
-const postalCodeFormat = /^[A-Za-z0-9][A-Za-z0-9\s-]{1,11}$/
+const servicePostalCodeFormat =
+  /^(\d{5}-\d{4}|\d{5}|[A-Z]\d[A-Z]\s?\d[A-Z]\d)$/i
+const headOfficePostalCodeFormat = /^[A-Za-z0-9][A-Za-z0-9\s-]{0,29}$/
 
 // Dynamic schema function based on the selected organization types
 export const createValidationSchema = (
@@ -70,14 +72,14 @@ export const createValidationSchema = (
         ? Yup.string()
             .required('Postal / ZIP code is required.')
             .matches(
-              postalCodeFormat,
+              servicePostalCodeFormat,
               'Please enter a valid postal / ZIP code.'
             )
         : Yup.string()
             .test(
               'postal-code-format',
               'Please enter a valid postal / ZIP code.',
-              (value) => !value || postalCodeFormat.test(value)
+              (value) => !value || servicePostalCodeFormat.test(value)
             )
             .nullable(),
     orgHeadOfficeStreetAddress: requiresSpecialAddress
@@ -91,13 +93,16 @@ export const createValidationSchema = (
     orgHeadOfficePostalCodeZipCode: requiresSpecialAddress
       ? Yup.string()
           .required('Head office postal / ZIP code is required.')
-          .matches(postalCodeFormat, 'Please enter a valid postal / ZIP code.')
+          .matches(
+            headOfficePostalCodeFormat,
+            'Please enter a valid postal / ZIP code.'
+          )
           .max(30, 'Postal / ZIP code is too long.')
       : Yup.string()
           .test(
             'postal-code-format',
             'Please enter a valid postal / ZIP code.',
-            (value) => !value || postalCodeFormat.test(value)
+            (value) => !value || headOfficePostalCodeFormat.test(value)
           )
           .max(30, 'Postal / ZIP code is too long.')
           .nullable(),
