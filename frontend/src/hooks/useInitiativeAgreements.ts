@@ -517,3 +517,128 @@ export const useCreateAgreement = () => {
     }
   })
 }
+
+/** Notes recorded against an initiative agreement (#5486). */
+export interface InitiativeAgreementNote {
+  initiativeAgreementNoteId: number
+  initiativeAgreementId: number
+  noteNumber: number
+  noteText: string
+  lastEditedBy?: {
+    userProfileId: number
+    firstName?: string | null
+    lastName?: string | null
+  } | null
+  lastEditedDate: string | null
+}
+
+const notesKey = (initiativeAgreementId: number | string) => [
+  'initiative-agreement-notes',
+  String(initiativeAgreementId)
+]
+
+const notesPath = (template: string, initiativeAgreementId: number | string) =>
+  template.replace(':initiativeAgreementId', String(initiativeAgreementId))
+
+export const useInitiativeAgreementNotes = (
+  initiativeAgreementId: number | string,
+  options: QueryOptions<InitiativeAgreementNote[]> = {}
+) => {
+  const client = useApiService()
+  return useQuery<InitiativeAgreementNote[]>({
+    enabled: !!initiativeAgreementId,
+    queryKey: notesKey(initiativeAgreementId),
+    queryFn: async () =>
+      (
+        await client.get(
+          notesPath(apiRoutes.initiativeAgreementNotes, initiativeAgreementId)
+        )
+      ).data,
+    ...options
+  })
+}
+
+/** The number the add-note form starts from; refreshed with every save. */
+export const useNextNoteNumber = (
+  initiativeAgreementId: number | string,
+  options: QueryOptions<number> = {}
+) => {
+  const client = useApiService()
+  return useQuery<number>({
+    queryKey: [...notesKey(initiativeAgreementId), 'next-number'],
+    queryFn: async () =>
+      (
+        await client.get(
+          notesPath(
+            apiRoutes.initiativeAgreementNextNoteNumber,
+            initiativeAgreementId
+          )
+        )
+      ).data,
+    ...options
+  })
+}
+
+const useNoteMutation = <TVariables>(
+  initiativeAgreementId: number | string,
+  mutationFn: (
+    client: ApiServiceInstance
+  ) => (variables: TVariables) => Promise<unknown>
+) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: mutationFn(client),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: notesKey(initiativeAgreementId)
+      })
+  })
+}
+
+export const useCreateNote = (initiativeAgreementId: number | string) =>
+  useNoteMutation(
+    initiativeAgreementId,
+    (client) => async (payload: { noteNumber?: number; noteText: string }) =>
+      (
+        await client.post(
+          notesPath(apiRoutes.initiativeAgreementNotes, initiativeAgreementId),
+          payload
+        )
+      ).data
+  )
+
+export const useUpdateNote = (initiativeAgreementId: number | string) =>
+  useNoteMutation(
+    initiativeAgreementId,
+    (client) =>
+      async ({
+        noteId,
+        ...payload
+      }: {
+        noteId: number
+        noteNumber: number
+        noteText: string
+      }) =>
+        (
+          await client.put(
+            notesPath(
+              apiRoutes.initiativeAgreementNote,
+              initiativeAgreementId
+            ).replace(':noteId', String(noteId)),
+            payload
+          )
+        ).data
+  )
+
+export const useDeleteNote = (initiativeAgreementId: number | string) =>
+  useNoteMutation(
+    initiativeAgreementId,
+    (client) => async (noteId: number) =>
+      client.delete(
+        notesPath(
+          apiRoutes.initiativeAgreementNote,
+          initiativeAgreementId
+        ).replace(':noteId', String(noteId))
+      )
+  )
