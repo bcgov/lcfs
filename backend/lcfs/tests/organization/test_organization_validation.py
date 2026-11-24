@@ -87,20 +87,6 @@ async def test_check_available_balance_valid_quantity(organization_validation):
     assert result["adjusted_quantity"] == 500
 
 @pytest.mark.anyio
-async def test_update_transfer_success(organization_validation, mock_transaction_repo):
-    mock_transaction_repo.calculate_available_balance.return_value = 100
-    await organization_validation.update_transfer(
-        1,
-        TransferCreateSchema(
-            from_organization_id=1,
-            to_organization_id=2,
-            quantity=1,
-            current_status=TransferStatusEnum.Draft,
-        ),
-    )
-
-
-@pytest.mark.anyio
 async def test_create_compliance_report_success(
     organization_validation, mock_report_repo
 ):

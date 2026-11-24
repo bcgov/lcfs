@@ -56,8 +56,10 @@ class AdminAdjustmentServices:
         self, admin_adjustment_data: AdminAdjustmentUpdateSchema
     ) -> AdminAdjustmentSchema:
         """Update an existing admin adjustment."""
+        # Lock the row first so two concurrent approvals cannot both see the
+        # old status and each issue credits.
         admin_adjustment = await self.repo.get_admin_adjustment_by_id(
-            admin_adjustment_data.admin_adjustment_id
+            admin_adjustment_data.admin_adjustment_id, for_update=True
         )
         if not admin_adjustment:
             raise DataNotFoundException(

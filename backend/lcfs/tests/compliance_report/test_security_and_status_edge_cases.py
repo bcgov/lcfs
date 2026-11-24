@@ -256,6 +256,7 @@ class TestReportLifecycleAndTransactions:
         # 1. Setup the transaction for the original report (v0)
         v0_transaction = MagicMock(spec=Transaction)
         v0_transaction.transaction_id = 101
+        v0_transaction.organization_id = 1
         v0_transaction.transaction_action = TransactionActionEnum.Reserved
         v0_transaction.compliance_units = 1000
 
@@ -373,8 +374,11 @@ class TestReportLifecycleAndTransactions:
         mock_repo.get_compliance_report_chain.return_value = [v0_report, v1_report]
 
         # 5. Mock transaction repo methods to simulate state changes
-        async def mock_release(transaction_id):
-            if transaction_id == v0_transaction.transaction_id:
+        async def mock_release(transaction_id, *, organization_id):
+            if (
+                transaction_id == v0_transaction.transaction_id
+                and organization_id == v0_transaction.organization_id
+            ):
                 v0_transaction.transaction_action = TransactionActionEnum.Released
             return True
 
@@ -417,7 +421,7 @@ class TestReportLifecycleAndTransactions:
 
         # Assert: The supersede logic was called and the transaction is now 'Released'
         mock_trxn_repo.release_transaction.assert_called_once_with(
-            v0_transaction.transaction_id
+            v0_transaction.transaction_id, organization_id=v0_report.organization_id
         )
         assert v0_transaction.transaction_action == TransactionActionEnum.Released
 
@@ -469,7 +473,7 @@ class TestReportLifecycleAndTransactions:
 
         # Assert: The supersede logic was called and the transaction is now 'Released'
         mock_trxn_repo.release_transaction.assert_called_once_with(
-            v0_transaction.transaction_id
+            v0_transaction.transaction_id, organization_id=v0_report.organization_id
         )
 
         # --- Step 2: Delete the Government-Initiated Supplemental report ---

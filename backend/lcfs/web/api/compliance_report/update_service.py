@@ -593,6 +593,7 @@ class ComplianceReportUpdateService:
             # The remainder (penalty portion) is assumed paid by the supplier.
             final_units = credit_change
             if credit_change < 0:
+                await self.org_service.lock_balance(report.organization_id)
                 available_balance = (
                     await self.org_service.calculate_available_balance(
                         report.organization_id
@@ -720,6 +721,8 @@ class ComplianceReportUpdateService:
         await self.repo.update_compliance_report(report)
 
     async def _create_or_update_reserve_transaction(self, credit_change, report):
+        # Cap against a balance no concurrent request can spend meanwhile.
+        await self.org_service.lock_balance(report.organization_id)
         available_balance = await self.org_service.calculate_available_balance(
             report.organization_id
         )

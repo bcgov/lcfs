@@ -53,12 +53,29 @@ class EntityType(Enum):
 
 logger = structlog.get_logger(__name__)
 
+# First key of the two-key advisory lock that serializes one organization's
+# balance changes; the second key is the organization ID. Two-key advisory
+# locks never collide with the single-key ones the scheduled jobs take.
+BALANCE_LOCK_NAMESPACE = 1001
+
 
 class TransactionRepository:
     def __init__(
         self, db: AsyncSession = Depends(get_async_db_session, scope="function")
     ):
         self.db = db
+
+    @repo_handler
+    async def lock_organization_balance(self, organization_id: int) -> None:
+        """Hold the organization's balance lock until the transaction ends.
+
+        Every read-balance-then-write sequence for one organization takes
+        this first, so two requests cannot both spend the same available
+        units. The lock is released on commit or rollback.
+        """
+        await self.db.execute(
+            select(func.pg_advisory_xact_lock(BALANCE_LOCK_NAMESPACE, organization_id))
+        )
 
     @repo_handler
     async def get_transactions_paginated(
@@ -890,15 +907,19 @@ class TransactionRepository:
         return result.rowcount > 0
 
     @repo_handler
-    async def release_transaction(self, transaction_id: int) -> bool:
+    async def release_transaction(
+        self, transaction_id: int, *, organization_id: int
+    ) -> bool:
         """
         Attempt to release a transaction by updating its transaction_action to Released.
 
-        Only a Reserved transaction is released. A confirmed (Adjustment) one
-        has already moved units, and releasing it would hand them back.
+        Only a Reserved transaction of the given organization is released. A
+        confirmed (Adjustment) one has already moved units, and releasing it
+        would hand them back.
 
         Args:
             transaction_id (int): The ID of the transaction to release.
+            organization_id (int): The organization the reservation belongs to.
 
         Returns:
             bool: True if the action was successfully applied, False otherwise.
@@ -907,6 +928,7 @@ class TransactionRepository:
             update(Transaction)
             .where(
                 Transaction.transaction_id == transaction_id,
+                Transaction.organization_id == organization_id,
                 Transaction.transaction_action == TransactionActionEnum.Reserved,
             )
             .values(transaction_action=TransactionActionEnum.Released)
@@ -915,15 +937,19 @@ class TransactionRepository:
         return result.rowcount == 1
 
     @repo_handler
-    async def confirm_transaction(self, transaction_id: int) -> bool:
+    async def confirm_transaction(
+        self, transaction_id: int, *, organization_id: int
+    ) -> bool:
         """
         Attempt to confirm a transaction by updating its transaction_action to Adjustment.
 
-        Only a Reserved transaction is confirmed, so a transfer cannot be
-        recorded twice against the same reservation.
+        Only a Reserved transaction of the given organization is confirmed,
+        so a transfer cannot be recorded twice against the same reservation,
+        or against another organization's.
 
         Args:
-            transaction_id (int): The ID of the transaction to release.
+            transaction_id (int): The ID of the transaction to confirm.
+            organization_id (int): The organization the reservation belongs to.
 
         Returns:
             bool: True if the action was successfully applied, False otherwise.
@@ -933,6 +959,7 @@ class TransactionRepository:
             update(Transaction)
             .where(
                 Transaction.transaction_id == transaction_id,
+                Transaction.organization_id == organization_id,
                 Transaction.transaction_action == TransactionActionEnum.Reserved,
             )
             .values(

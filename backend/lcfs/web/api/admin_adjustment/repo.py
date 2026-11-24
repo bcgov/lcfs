@@ -24,8 +24,9 @@ class AdminAdjustmentRepository:
 
     @repo_handler
     async def get_admin_adjustment_by_id(
-        self, admin_adjustment_id: int
+        self, admin_adjustment_id: int, for_update: bool = False
     ) -> Optional[AdminAdjustment]:
+        """With ``for_update`` the row stays locked until the transaction ends."""
         query = (
             select(AdminAdjustment)
             .options(
@@ -40,6 +41,11 @@ class AdminAdjustmentRepository:
             )
             .where(AdminAdjustment.admin_adjustment_id == admin_adjustment_id)
         )
+        if for_update:
+            # Re-read after the wait, even if the row is in the identity map.
+            query = query.with_for_update(of=AdminAdjustment).execution_options(
+                populate_existing=True
+            )
         result = await self.db.execute(query)
         return result.scalars().first()
 

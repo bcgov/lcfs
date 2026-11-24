@@ -670,6 +670,14 @@ class OrganizationsService:
         return await self.transaction_repo.calculate_available_balance(organization_id)
 
     @service_handler
+    async def lock_balance(self, organization_id: int) -> None:
+        """
+        Serializes this organization's balance changes until the request's
+        transaction ends. Take it before reading a balance that decides a write.
+        """
+        await self.transaction_repo.lock_organization_balance(organization_id)
+
+    @service_handler
     async def adjust_balance(
         self,
         transaction_action: TransactionActionEnum,
@@ -681,10 +689,13 @@ class OrganizationsService:
 
         Validates the transaction against the organization's current balances before proceeding.
         It raises an error if the requested action violates balance constraints (e.g., attempting to reserve more than the available balance).
+        The organization's balance lock is held from the check through the
+        insert, so concurrent requests cannot overspend.
         """
         if compliance_units == 0:
             raise ValueError("Compliance units cannot be zero.")
 
+        await self.transaction_repo.lock_organization_balance(organization_id)
         available_balance = await self.calculate_available_balance(organization_id)
         reserved_balance = await self.calculate_reserved_balance(organization_id)
 

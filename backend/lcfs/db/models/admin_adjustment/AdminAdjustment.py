@@ -1,4 +1,14 @@
-from sqlalchemy import Column, Integer, BigInteger, ForeignKey, DateTime, String, Table
+from sqlalchemy import (
+    Column,
+    Integer,
+    BigInteger,
+    ForeignKey,
+    DateTime,
+    Index,
+    String,
+    Table,
+    text,
+)
 from sqlalchemy.orm import relationship
 
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
@@ -24,6 +34,13 @@ admin_adjustment_document_association = Table(
 class AdminAdjustment(BaseModel, Auditable, EffectiveDates):
     __tablename__ = "admin_adjustment"
     __table_args__ = (
+        # One adjustment may claim a given ledger transaction at most once.
+        Index(
+            "uq_admin_adjustment_transaction_id",
+            "transaction_id",
+            unique=True,
+            postgresql_where=text("transaction_id IS NOT NULL"),
+        ),
         {"comment": "Goverment to organization compliance units admin_adjustment"},
     )
 
