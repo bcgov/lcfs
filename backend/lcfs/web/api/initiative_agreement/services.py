@@ -82,7 +82,10 @@ from lcfs.web.api.initiative_agreement.schema import (
 )
 from lcfs.web.api.initiative_agreement.workflow import (
     ACTION_APPROVE,
+    LIFECYCLE_STATUS_UNDERWAY,
     LIFECYCLE_STATUSES_OPEN_TO_NEW_ACTIONS,
+    LIFECYCLE_STATUSES_SETTABLE_UNDERWAY,
+    SET_UNDERWAY_ROLES,
     STATUS_APPROVED,
     STATUS_NOT_STARTED,
     TRANSITIONS,
@@ -329,8 +332,8 @@ class InitiativeAgreementServices:
 
         The starting lifecycle status depends on who creates it (see
         INITIAL_LIFECYCLE_STATUS_RULES). An agreement government enters
-        starts Underway. Draft is kept for the applications BCeID
-        proponents will start.
+        starts as a Draft, hidden from the organization until a Director
+        sets it Underway (#5553).
         """
         if data.organization_id is not None:
             organization = await self.org_service.get_organization(data.organization_id)
@@ -404,6 +407,15 @@ class InitiativeAgreementServices:
         )
         # The status history starts with the status the agreement was
         # created in; the table's audit trigger records the insert itself.
+        await self._record_lifecycle_status(agreement, lifecycle_status, user)
+        return await self.get_initiative_agreement_profile(
+            agreement.initiative_agreement_id
+        )
+
+    async def _record_lifecycle_status(self, agreement, lifecycle_status, user):
+        """Append the status the agreement just entered, and who put it
+        there, to its lifecycle history."""
+        username = getattr(user, "keycloak_username", None)
         display_name = " ".join(
             p
             for p in (getattr(user, "first_name", ""), getattr(user, "last_name", ""))
@@ -421,9 +433,75 @@ class InitiativeAgreementServices:
                 update_user=username,
             )
         )
-        return await self.get_initiative_agreement_profile(
-            agreement.initiative_agreement_id
+
+    @service_handler
+    async def set_agreement_underway(
+        self, initiative_agreement_id: int, user
+    ) -> InitiativeAgreementProfileSchema:
+        """Release a completed draft package to its organization (#5553).
+
+        Only a Director may do it, and only from Draft. The package (the
+        agreement, its notes, designated actions and evidence requirements)
+        has one lifecycle, the agreement's, so this single update moves all
+        of it and can never leave part of it behind. The history row records
+        who did it and when, in the same transaction.
+
+        The agreement's row is locked first, so two Directors confirming at
+        once cannot both move it and record the change twice.
+        """
+        if not any(user_has_roles(user, [role]) for role in SET_UNDERWAY_ROLES):
+            raise HTTPException(
+                status_code=403,
+                detail="Only a Director can set an initiative agreement to Underway.",
+            )
+
+        agreement = await self.repo.get_initiative_agreement_by_id(
+            initiative_agreement_id, for_update=True
         )
+        if (
+            not agreement
+            or agreement.record_kind != RECORD_KIND_AGREEMENT
+            or is_hidden_from(agreement, user)
+        ):
+            raise DataNotFoundException(
+                f"Initiative Agreement with id {initiative_agreement_id} not found"
+            )
+
+        lifecycle = (
+            agreement.lifecycle_status.status if agreement.lifecycle_status else None
+        )
+        if lifecycle not in LIFECYCLE_STATUSES_SETTABLE_UNDERWAY:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Only a draft agreement can be set to Underway; this one "
+                    f"is '{lifecycle or 'not set'}'."
+                ),
+            )
+        # Underway opens the package to the organization, and the edit that
+        # would fill in a missing organization is closed after it.
+        if agreement.to_organization_id is None:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Set the agreement's organization before setting it to Underway."
+                ),
+            )
+
+        underway = await self.repo.get_lifecycle_status_by_name(
+            LIFECYCLE_STATUS_UNDERWAY
+        )
+        if underway is None:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Lifecycle status '{LIFECYCLE_STATUS_UNDERWAY}' is not configured.",
+            )
+
+        agreement.lifecycle_status = underway
+        agreement.update_user = getattr(user, "keycloak_username", None)
+        await self.repo.db.flush()
+        await self._record_lifecycle_status(agreement, underway, user)
+        return await self.get_initiative_agreement_profile(initiative_agreement_id)
 
     @service_handler
     async def update_agreement(
@@ -433,8 +511,8 @@ class InitiativeAgreementServices:
         user,
     ) -> InitiativeAgreementProfileSchema:
         """Edit an agreement's details, in any lifecycle status the caller
-        can see. A draft is hidden from government (#5186), so it reads as
-        missing here too."""
+        can see. A draft is hidden from anyone outside government (#5553),
+        so it reads as missing to them here too."""
         agreement = await self.repo.get_initiative_agreement_by_id(
             initiative_agreement_id
         )
@@ -532,9 +610,9 @@ class InitiativeAgreementServices:
     ) -> DesignatedActionSchema:
         """Add a designated action to an agreement that is still open.
 
-        Agreements government enters start Underway (#5186), and that is
-        when an analyst sets out the schedule. A completed or terminated
-        agreement takes no new actions.
+        An analyst sets out the schedule while government prepares the
+        agreement as a Draft (#5553). A completed or terminated agreement
+        takes no new actions.
         """
         agreement = await self.repo.get_initiative_agreement_by_id(
             initiative_agreement_id
@@ -823,8 +901,8 @@ class InitiativeAgreementServices:
     ) -> DesignatedAction:
         """The action, unless it is missing or its agreement is hidden from
         the caller. Every route to an action comes through here, so a
-        draft's actions read as missing everywhere, not only on the
-        profile (#5186)."""
+        draft's actions read as missing to the organization everywhere,
+        not only on the profile (#5553)."""
         if user is None and self.request:
             user = self.request.user
         action = await self.repo.get_designated_action_by_id(

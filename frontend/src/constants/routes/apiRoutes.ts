@@ -77,6 +77,8 @@ export const apiRoutes = {
   getInitiativeAgreementsList: '/initiative-agreements/list',
   createAgreement: '/initiative-agreements/agreements',
   updateAgreement: '/initiative-agreements/agreements/:initiativeAgreementId',
+  setAgreementUnderway:
+    '/initiative-agreements/agreements/:initiativeAgreementId/underway',
   getInitiativeAgreementStatuses: '/initiative-agreements/statuses',
   getInitiativeAgreement:
     '/initiative-agreements/:initiativeAgreementId/profile',

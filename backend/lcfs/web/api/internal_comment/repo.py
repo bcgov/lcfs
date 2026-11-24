@@ -1101,8 +1101,8 @@ class InternalCommentRepository:
         it also matches the author's name / email.
 
         Comments on an initiative agreement whose lifecycle status is in
-        ``hidden_lifecycle_statuses`` are left out: a proponent's draft is
-        hidden from government (#5186), and so is what is said about it.
+        ``hidden_lifecycle_statuses`` are left out: a draft is hidden from
+        the organization (#5553), and so is what is said about it.
         """
         entity_meta = self._entity_meta_subquery(organization_id)
 

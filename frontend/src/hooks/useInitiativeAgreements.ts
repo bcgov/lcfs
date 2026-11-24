@@ -493,8 +493,40 @@ export const useUpdateAgreement = (initiativeAgreementId: number | string) => {
   })
 }
 
-/** Start a new initiative agreement (analysts and managers). It starts
- * Underway, and the organization may be left unset (#5186). */
+/** Set a draft agreement Underway, releasing the whole package to its
+ * organization (#5553). Directors only. */
+export const useSetAgreementUnderway = (
+  initiativeAgreementId: number | string
+) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async () =>
+      (
+        await client.put(
+          apiRoutes.setAgreementUnderway.replace(
+            ':initiativeAgreementId',
+            String(initiativeAgreementId)
+          )
+        )
+      ).data,
+    onSuccess: (agreement) => {
+      // The response is the refreshed profile, so the page shows the new
+      // status at once; the grids and counts refetch.
+      queryClient.setQueryData(
+        QUERY_KEYS.detail(initiativeAgreementId),
+        agreement
+      )
+      queryClient.invalidateQueries({ queryKey: ['initiative-agreements'] })
+      queryClient.invalidateQueries({
+        queryKey: ['initiative-agreement-counts']
+      })
+    }
+  })
+}
+
+/** Start a new initiative agreement (analysts and managers). It starts as
+ * a Draft, and the organization may be left unset (#5553). */
 export const useCreateAgreement = () => {
   const client = useApiService()
   const queryClient = useQueryClient()
