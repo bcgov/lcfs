@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { HttpResponse } from 'msw'
 import { Route, Routes } from 'react-router-dom'
-import { describe, expect, vi } from 'vite-plus/test'
+import { afterEach, describe, expect, vi } from 'vite-plus/test'
 import axe from 'axe-core'
 
 import { roles } from '@/constants/roles'
@@ -11,6 +11,17 @@ import ROUTES from '@/routes/routes'
 import { test } from '@/tests/utils/fixtures'
 import { LCJFIPApplication } from '../LCJFIPApplication'
 import { OPERATOR_LIST_URL } from '../components/ApplicantSection'
+import { formValuesFromApplication } from '../lcjfipForm'
+
+// A new application's form starts empty; a test can start it filled in.
+const newForm = vi.hoisted(() => ({ values: null }))
+vi.mock('../lcjfipForm', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    defaultFormValues: () => newForm.values ?? actual.defaultFormValues()
+  }
+})
 
 vi.mock('@/hooks/useCurrentUser')
 vi.mock('@react-keycloak/web', () => ({
@@ -269,6 +280,10 @@ const checkAllDeclarations = async (user) => {
 }
 
 describe('LCJFIP application form', () => {
+  afterEach(() => {
+    newForm.values = null
+  })
+
   test('shows the applicant, the steps and the program links', async ({
     render,
     query,
@@ -805,6 +820,82 @@ describe('LCJFIP application form', () => {
     expect(thread).toHaveAttribute('data-entity-type', 'lcjfipApplication')
     expect(thread).toHaveAttribute('data-entity-id', '7')
     expect(thread).toHaveAttribute('data-mode', 'dual')
+  })
+
+  test('opens the new draft when its first submit fails, and a retry submits that draft', async ({
+    render,
+    query,
+    theme,
+    localization,
+    router,
+    i18n,
+    server
+  }) => {
+    const fixtures = {
+      render,
+      query,
+      theme,
+      localization,
+      router,
+      i18n,
+      server
+    }
+    mockApplicant()
+    newForm.values = formValuesFromApplication(draftApplication())
+    let submitAttempts = 0
+    const calls = mockApi(fixtures.server, {
+      submit: async ({ request }) => {
+        submitAttempts += 1
+        if (submitAttempts === 1) {
+          return HttpResponse.json(
+            {
+              errors: [
+                {
+                  fields: ['purchaseDetails.0.pricePremiumTo'],
+                  message: 'The server rejected this range.'
+                }
+              ]
+            },
+            { status: 422 }
+          )
+        }
+        calls.submits.push(await request.json())
+        return HttpResponse.json(submittedApplication())
+      }
+    })
+    renderAt(ROUTES.LCJFIP.NEW_APPLICATION, fixtures)
+    const user = userEvent.setup()
+    await screen.findByText('Jane Doe, Supplier - Jet fuel')
+
+    await checkAllDeclarations(user)
+    await user.click(screen.getByRole('button', { name: 'Submit application' }))
+
+    // The page is now the draft the save created, still showing the
+    // server's error and the selected declarations.
+    expect(
+      await screen.findByRole('button', { name: 'Delete draft application' })
+    ).toBeInTheDocument()
+    expect(screen.getByTestId('comment-thread')).toHaveAttribute(
+      'data-entity-id',
+      '7'
+    )
+    expect(
+      screen.getByText('The server rejected this range.')
+    ).toBeInTheDocument()
+    for (const checkbox of within(
+      screen.getByRole('group', { name: 'Declarations' })
+    ).getAllByRole('checkbox')) {
+      expect(checkbox).toBeChecked()
+    }
+    expect(calls.creates).toHaveLength(1)
+
+    await user.click(screen.getByRole('button', { name: 'Submit application' }))
+
+    await waitFor(() => expect(calls.submits).toHaveLength(1))
+    // The retry saved and submitted that draft rather than creating another.
+    expect(calls.creates).toHaveLength(1)
+    expect(calls.saves).toHaveLength(1)
+    expect(await screen.findByTestId('lcjfip-read-only')).toBeInTheDocument()
   })
 
   test('is read-only once submitted', async ({

@@ -3,7 +3,7 @@ import { FormProvider, useForm } from 'react-hook-form'
 import type { FieldPath } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import { useTranslation } from 'react-i18next'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import Accordion from '@mui/material/Accordion'
 import AccordionDetails from '@mui/material/AccordionDetails'
 import AccordionSummary from '@mui/material/AccordionSummary'
@@ -99,7 +99,6 @@ const formatDate = (value: string | null) =>
 export const LCJFIPApplicationBase = () => {
   const { t } = useTranslation(['lcjfip', 'common'])
   const navigate = useNavigate()
-  const location = useLocation()
   const { applicationId } = useParams<{ applicationId?: string }>()
   const alertRef = useRef<AlertHandle | null>(null)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -170,19 +169,6 @@ export const LCJFIPApplicationBase = () => {
     syncForm(application)
   }, [application, syncForm])
 
-  useEffect(() => {
-    const state = location.state as {
-      message?: string
-      severity?: string
-    } | null
-    if (state?.message) {
-      alertRef.current?.triggerAlert({
-        message: state.message,
-        severity: (state.severity as 'success') ?? 'success'
-      })
-    }
-  }, [location.state])
-
   const applyServerErrors = (error: unknown) => {
     const errors = (error as ServerError)?.response?.data?.errors
     if (!Array.isArray(errors)) return false
@@ -220,18 +206,22 @@ export const LCJFIPApplicationBase = () => {
       payload: toPayload(values)
     })
 
-  const openSaved = (saved: Application, message: string) => {
-    if (!application) {
-      navigate(
-        ROUTES.LCJFIP.APPLICATION.replace(
-          ':applicationId',
-          String(saved.lcjfipApplicationId)
-        ),
-        { replace: true, state: { message, severity: 'success' } }
-      )
-    } else {
-      alertRef.current?.triggerAlert({ severity: 'success', message })
-    }
+  const showSuccess = (message: string) =>
+    alertRef.current?.triggerAlert({ severity: 'success', message })
+
+  // A new application's first save creates its draft. Open that draft, so a
+  // later save or submit updates it rather than creating another. Both form
+  // routes render this one component (lcjfipRoutes), so the form stays
+  // mounted and keeps its values, errors and message.
+  const openDraft = (saved: Application) => {
+    loadedApplicationId.current = saved.lcjfipApplicationId
+    navigate(
+      ROUTES.LCJFIP.APPLICATION.replace(
+        ':applicationId',
+        String(saved.lcjfipApplicationId)
+      ),
+      { replace: true }
+    )
   }
 
   const handleSave = async () => {
@@ -240,7 +230,8 @@ export const LCJFIPApplicationBase = () => {
       try {
         const saved = await saveValues(values)
         syncForm(saved)
-        openSaved(saved, t('lcjfip:messages.saved'))
+        if (!application) openDraft(saved)
+        showSuccess(t('lcjfip:messages.saved'))
       } catch (error) {
         showError(error, 'lcjfip:messages.saveFailed')
       }
@@ -251,20 +242,25 @@ export const LCJFIPApplicationBase = () => {
     validationContext.current.submit = true
     await methods.handleSubmit(
       async (values) => {
+        let saved: Application | undefined
         try {
           // Submission checks what was saved, so save the form first.
-          const saved = await saveValues(values)
+          saved = await saveValues(values)
           syncForm(saved)
           const submitted = await submitMutation.mutateAsync({
             applicationId: saved.lcjfipApplicationId,
             declarations: toDeclarations(values.declarations)
           })
           syncForm(submitted)
-          openSaved(submitted, t('lcjfip:messages.submitted'))
+          showSuccess(t('lcjfip:messages.submitted'))
         } catch (error) {
           showError(error, 'lcjfip:messages.submitFailed')
         } finally {
           validationContext.current.submit = false
+          // Open a new application's draft only now, whether or not the
+          // submit went through: opening it loads it again, and a load
+          // racing the submit could show it as still a Draft.
+          if (!application && saved) openDraft(saved)
         }
       },
       () => {

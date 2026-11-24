@@ -10,6 +10,10 @@ const createGatedElement = (Component: ComponentType) =>
     withFeatureFlag(Component, FEATURE_FLAGS.LCJFIP, ROUTES.DASHBOARD)
   )
 
+// Both form routes render this one element, so when a new application's
+// first save opens its draft the form stays mounted, with whatever it shows.
+const applicationElement = createGatedElement(LCJFIPApplication)
+
 // The application form's crumb reads Home > Jet fuel > LCJFIP application:
 // Crumb.tsx hides the structural lcjfip/applications segments.
 const applicationHandle = {
@@ -29,12 +33,12 @@ export const lcjfipRoutes: AppRouteObject[] = [
   },
   {
     path: ROUTES.LCJFIP.NEW_APPLICATION,
-    element: createGatedElement(LCJFIPApplication),
+    element: applicationElement,
     handle: applicationHandle
   },
   {
     path: ROUTES.LCJFIP.APPLICATION,
-    element: createGatedElement(LCJFIPApplication),
+    element: applicationElement,
     handle: applicationHandle
   }
 ]

@@ -49,6 +49,11 @@ describe('lcjfipRoutes', () => {
     }
   })
 
+  test('renders both form routes with one component, so opening a new draft keeps the form', () => {
+    const [newApplication, application] = lcjfipRoutes.slice(1)
+    expect(newApplication.element.type).toBe(application.element.type)
+  })
+
   test('renders the page when the flag is on', async ({
     render,
     router,
