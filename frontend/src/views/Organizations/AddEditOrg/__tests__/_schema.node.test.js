@@ -33,6 +33,12 @@ describe('Organization Form Schema Validation', () => {
       orgType: 'initiative_agreement_holder',
       description: 'Initiative agreement holder',
       isBceidUser: false
+    },
+    {
+      organizationTypeId: 7,
+      orgType: 'lcjfip',
+      description: 'Low Carbon Jet fuel Incentive Program',
+      isBceidUser: true
     }
   ]
 
@@ -213,6 +219,70 @@ describe('Organization Form Schema Validation', () => {
 
   // Test cross-org-type validation scenarios
   describe('Validation Scenarios', () => {
+    it('requires head office and makes service address optional for fuel producers', async () => {
+      const schema = createValidationSchema(mockOrgTypes, ['3'])
+      const validData = {
+        orgLegalName: 'Test Producer Inc.',
+        orgOperatingName: 'Test Producer',
+        orgEmailAddress: 'producer@example.com',
+        orgTypeIds: ['3'],
+        orgRegForTransfers: '1',
+        orgHeadOfficeStreetAddress: '1 International Way',
+        orgHeadOfficeCity: 'Seattle',
+        orgHeadOfficePostalCodeZipCode: '98101',
+        orgHeadOfficeCountry: 'United States',
+        hasEarlyIssuance: 'no'
+      }
+
+      await expect(schema.validate(validData)).resolves.not.toThrow()
+      await expect(
+        schema.validate({ ...validData, orgHeadOfficeStreetAddress: '' })
+      ).rejects.toThrow('Head office street address is required.')
+    })
+
+    it('requires head office and makes service address optional for LCJFIP', async () => {
+      const schema = createValidationSchema(mockOrgTypes, ['7'])
+      const validData = {
+        orgLegalName: 'Test LCJFIP Inc.',
+        orgOperatingName: 'Test LCJFIP',
+        orgEmailAddress: 'lcjfip@example.com',
+        orgTypeIds: ['7'],
+        orgRegForTransfers: '1',
+        orgHeadOfficeStreetAddress: '10 Rue Internationale',
+        orgHeadOfficeCity: 'Paris',
+        orgHeadOfficePostalCodeZipCode: '75001',
+        orgHeadOfficeCountry: 'France',
+        hasEarlyIssuance: 'no'
+      }
+
+      await expect(schema.validate(validData)).resolves.not.toThrow()
+    })
+
+    it('accepts international phone and postal formats and retains Canadian formats', async () => {
+      const schema = createValidationSchema(mockOrgTypes, ['3'])
+      const internationalData = {
+        orgLegalName: 'Test Producer Inc.',
+        orgOperatingName: 'Test Producer',
+        orgEmailAddress: 'producer@example.com',
+        orgPhoneNumber: '+44 20 7946 0958',
+        orgTypeIds: ['3'],
+        orgRegForTransfers: '1',
+        orgHeadOfficeStreetAddress: '10 Downing Street',
+        orgHeadOfficeCity: 'London',
+        orgHeadOfficePostalCodeZipCode: 'SW1A 2AA',
+        hasEarlyIssuance: 'no'
+      }
+      await expect(schema.validate(internationalData)).resolves.not.toThrow()
+
+      await expect(
+        schema.validate({
+          ...internationalData,
+          orgPhoneNumber: '(604) 555-1234',
+          orgHeadOfficePostalCodeZipCode: 'V6B 3K9'
+        })
+      ).resolves.not.toThrow()
+    })
+
     it('validates switching from BCeID to non-BCeID type', async () => {
       const bceidSchema = createValidationSchema(mockOrgTypes, ['1'])
       const nonBceidSchema = createValidationSchema(mockOrgTypes, ['3'])

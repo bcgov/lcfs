@@ -1,5 +1,16 @@
 import * as Yup from 'yup'
 
+const SPECIAL_ADDRESS_TYPE_KEYS = new Set(['fuel_producer', 'lcjfip'])
+
+const isSpecialAddressOrganization = (selectedOrgTypes) =>
+  selectedOrgTypes.length > 0 &&
+  selectedOrgTypes.every((type) =>
+    SPECIAL_ADDRESS_TYPE_KEYS.has(type.orgType)
+  )
+
+const phoneFormat = /^[0-9()+.\-\s]+(?:\s*(?:x|ext\.?|#)\s*[0-9]+)?$/i
+const postalCodeFormat = /^[A-Za-z0-9][A-Za-z0-9\s\-]{1,11}$/
+
 // Dynamic schema function based on the selected organization types
 export const createValidationSchema = (
   orgTypes = [],
@@ -15,6 +26,8 @@ export const createValidationSchema = (
   const requiresBCeID =
     selectedOrgTypes.length === 0 ||
     selectedOrgTypes.some((type) => type.isBceidUser) // Default to true for safety
+  const requiresSpecialAddress =
+    isSpecialAddressOrganization(selectedOrgTypes)
 
   return Yup.object({
     orgLegalName: Yup.string().required(
@@ -31,17 +44,17 @@ export const createValidationSchema = (
       ? Yup.string()
           .required('Phone number is required.')
           .matches(
-            /^[0-9()+-\s]+$/,
-            'Invalid format. Only numbers, spaces, parentheses, plus signs, and hyphens are allowed.'
+            phoneFormat,
+            'Invalid phone number format.'
           )
-          .max(30, 'Phone number is too long.')
+          .max(50, 'Phone number is too long.')
       : Yup.string()
           .test(
             'phone-format',
-            'Invalid format. Only numbers, spaces, parentheses, plus signs, and hyphens are allowed.',
-            (value) => !value || /^[0-9()+-\s]*$/.test(value)
+            'Invalid phone number format.',
+            (value) => !value || phoneFormat.test(value)
           )
-          .max(30, 'Phone number is too long.')
+          .max(50, 'Phone number is too long.')
           .nullable(),
     orgTypeIds: Yup.array()
       .of(Yup.string())
@@ -50,36 +63,50 @@ export const createValidationSchema = (
     orgRegForTransfers: Yup.string().required(
       'Registered for transfers is required.'
     ),
-    orgStreetAddress: requiresBCeID
+    orgStreetAddress: requiresBCeID && !requiresSpecialAddress
       ? Yup.string().required('Street address / PO box is required.')
       : Yup.string().nullable(),
-    orgCity: requiresBCeID
+    orgCity: requiresBCeID && !requiresSpecialAddress
       ? Yup.string().required('City is required.')
       : Yup.string().nullable(),
-    orgPostalCodeZipCode: requiresBCeID
+    orgPostalCodeZipCode: requiresBCeID && !requiresSpecialAddress
       ? Yup.string()
           .required('Postal / ZIP code is required.')
           .matches(
-            /^((\d{5}-\d{4})|(\d{5})|([A-Z]\d[A-Z]\s?\d[A-Z]\d))$/i,
+            postalCodeFormat,
             'Please enter a valid postal / ZIP code.'
           )
       : Yup.string()
           .test(
             'postal-code-format',
             'Please enter a valid postal / ZIP code.',
-            (value) =>
-              !value ||
-              /^((\d{5}-\d{4})|(\d{5})|([A-Z]\d[A-Z]\s?\d[A-Z]\d))$/i.test(
-                value
-              )
+            (value) => !value || postalCodeFormat.test(value)
           )
           .nullable(),
-    // Head Office fields are optional for all org types
-    orgHeadOfficeStreetAddress: Yup.string().nullable(),
-    orgHeadOfficeCity: Yup.string().nullable(),
+    orgHeadOfficeStreetAddress: requiresSpecialAddress
+      ? Yup.string().required('Head office street address is required.')
+      : Yup.string().nullable(),
+    orgHeadOfficeCity: requiresSpecialAddress
+      ? Yup.string().required('Head office city is required.')
+      : Yup.string().nullable(),
     orgHeadOfficeProvince: Yup.string().nullable(),
     orgHeadOfficeCountry: Yup.string().nullable(),
-    orgHeadOfficePostalCodeZipCode: Yup.string().nullable(),
+    orgHeadOfficePostalCodeZipCode: requiresSpecialAddress
+      ? Yup.string()
+          .required('Head office postal / ZIP code is required.')
+          .matches(
+            postalCodeFormat,
+            'Please enter a valid postal / ZIP code.'
+          )
+          .max(30, 'Postal / ZIP code is too long.')
+      : Yup.string()
+          .test(
+            'postal-code-format',
+            'Please enter a valid postal / ZIP code.',
+            (value) => !value || postalCodeFormat.test(value)
+          )
+          .max(30, 'Postal / ZIP code is too long.')
+          .nullable(),
     hasEarlyIssuance: Yup.string().required(
       'Early issuance setting is required'
     )

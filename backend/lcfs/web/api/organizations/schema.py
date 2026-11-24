@@ -2,6 +2,7 @@ from enum import Enum
 from typing import List, Optional, Dict, Any, Union
 from datetime import datetime
 from decimal import Decimal
+import re
 
 from lcfs.db.models.user.role_domains import ORG_CONTROLLABLE_ROLES
 from lcfs.web.api.base import BaseSchema
@@ -46,6 +47,23 @@ class OrganizationTypesAndRolesMixin(BaseSchema):
 
     organization_type_ids: List[int]
     available_roles: List[str] = []
+    phone: Optional[str] = None
+
+    @field_validator("phone")
+    @classmethod
+    def _validate_phone(cls, value):
+        if value is None:
+            return value
+        value = value.strip()
+        if not value:
+            return None
+        if len(value) > 50 or not re.match(
+            r"^[0-9()+.\-\s]+(?:\s*(?:x|ext\.?|#)\s*[0-9]+)?$",
+            value,
+            re.IGNORECASE,
+        ):
+            raise ValueError("Invalid phone number format.")
+        return value
 
     @field_validator("organization_type_ids")
     @classmethod
@@ -115,6 +133,18 @@ class AddressBase(BaseSchema):
     country: str
     postalCode_zipCode: Optional[str] = None
 
+    @field_validator("postalCode_zipCode")
+    @classmethod
+    def _validate_postal_code(cls, value):
+        if value is None:
+            return value
+        value = value.strip()
+        if not value:
+            return None
+        if len(value) > 30 or not re.match(r"^[A-Za-z0-9][A-Za-z0-9\s\-]*$", value):
+            raise ValueError("Please enter a valid postal / ZIP code.")
+        return value
+
 
 # Optional address schema for non-BCeID organization types
 class OptionalAddressBase(BaseSchema):
@@ -125,6 +155,18 @@ class OptionalAddressBase(BaseSchema):
     province_state: Optional[str] = None
     country: Optional[str] = None
     postalCode_zipCode: Optional[str] = None
+
+    @field_validator("postalCode_zipCode")
+    @classmethod
+    def _validate_optional_postal_code(cls, value):
+        if value is None:
+            return value
+        value = value.strip()
+        if not value:
+            return None
+        if len(value) > 30 or not re.match(r"^[A-Za-z0-9][A-Za-z0-9\s\-]*$", value):
+            raise ValueError("Please enter a valid postal / ZIP code.")
+        return value
 
 
 # --------------------------------------
@@ -197,6 +239,22 @@ class OrganizationBase(BaseSchema):
     credits_to_sell: Optional[int] = 0
     display_in_credit_market: Optional[bool] = False
 
+    @field_validator("phone")
+    @classmethod
+    def _validate_phone(cls, value):
+        if value is None:
+            return value
+        value = value.strip()
+        if not value:
+            return None
+        if len(value) > 50 or not re.match(
+            r"^[0-9()+.\-\s]+(?:\s*(?:x|ext\.?|#)\s*[0-9]+)?$",
+            value,
+            re.IGNORECASE,
+        ):
+            raise ValueError("Invalid phone number format.")
+        return value
+
 
 class OrganizationSchema(OrganizationBase):
     organization_address_id: Optional[int] = None
@@ -228,8 +286,8 @@ class OrganizationCreateSchema(OrganizationTypesAndRolesMixin):
     credit_market_is_buyer: Optional[bool] = False
     credits_to_sell: Optional[int] = 0
     display_in_credit_market: Optional[bool] = False
-    address: OrganizationAddressCreateSchema
-    attorney_address: OrganizationAttorneyAddressCreateSchema
+    address: Optional[OptionalOrganizationAddressCreateSchema] = None
+    attorney_address: Optional[OptionalOrganizationAttorneyAddressCreateSchema] = None
 
 
 # Schema for non-BCeID organization types
@@ -276,8 +334,8 @@ class OrganizationUpdateSchema(OrganizationTypesAndRolesMixin):
     credit_market_is_buyer: Optional[bool] = False
     credits_to_sell: Optional[int] = 0
     display_in_credit_market: Optional[bool] = False
-    address: Optional[OrganizationAddressCreateSchema] = None
-    attorney_address: Optional[OrganizationAttorneyAddressCreateSchema] = None
+    address: Optional[OptionalOrganizationAddressCreateSchema] = None
+    attorney_address: Optional[OptionalOrganizationAttorneyAddressCreateSchema] = None
 
 
 # Update schema for non-BCeID organization types with relaxed validation
