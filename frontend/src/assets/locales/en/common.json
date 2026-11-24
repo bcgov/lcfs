@@ -94,6 +94,7 @@
       "generatingPdf": "Generating PDF…",
       "vsYearAgo": "vs {{period}}",
       "vsPreviousMonth": "vs. previous month: {{price}}",
+      "previousMonthUnavailable": "Previous month comparison unavailable",
       "sections": {
         "reportDescription": "Report description",
         "currentSnapshot": "Current Market Snapshot",
@@ -111,7 +112,7 @@
         "a1Details": "Monthly Category A1 Details",
         "a1Unavailable": "Published A1 price not available",
         "agreementMonthly": "Recorded transfers by agreement month",
-        "agreementNote": "Includes recorded transfers with a positive price and an agreement date; excludes Category D. Earlier months may change as transfers are recorded."
+        "agreementNote": "Includes recorded transfers with a positive price and an agreement date; excludes Category D and the current agreement month. Earlier months may change as transfers are recorded."
       },
       "classifications": {
         "summary": "Transfer category definitions",

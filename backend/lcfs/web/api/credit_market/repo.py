@@ -361,7 +361,7 @@ class CreditMarketRepository:
 
     @repo_handler
     async def get_report_agreement_months(self):
-        """Recorded, priced transfers grouped by the month they were agreed."""
+        """Recorded transfers by agreement month, excluding the current month."""
         period = func.date_trunc("month", Transfer.agreement_date).label("period")
         query = (
             select(
@@ -385,6 +385,10 @@ class CreditMarketRepository:
             .where(
                 TransferStatus.status == TransferStatusEnum.Recorded,
                 Transfer.agreement_date.isnot(None),
+                Transfer.agreement_date
+                < func.date_trunc(
+                    "month", func.timezone("America/Vancouver", func.now())
+                ),
                 Transfer.price_per_unit > 0,
                 Transfer.quantity > 0,
                 ~Transfer.transfer_category.has(

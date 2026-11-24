@@ -431,9 +431,13 @@ def test_agreement_months_replace_a1_in_email_and_workbook():
         if table.name == "Monthly market report by agreement date"
     )
     months = builder._agreement_months_context(agreement_table, datetime(2026, 11, 1))
-    assert months[0] == ["Nov 2026", "—", "—", "—"]
-    assert months[1] == ["Oct 2026", "2", "400", "CA$175.00"]
+    assert months[0] == ["Oct 2026", "2", "400", "CA$175.00"]
+    assert months[1] == ["Sep 2026", "—", "—", "—"]
     assert len(months) == 12
+    assert months[-1][0] == "Nov 2025"
+    january = builder._agreement_months_context(agreement_table, datetime(2026, 1, 1))
+    assert january[0][0] == "Dec 2025"
+    assert january[-1][0] == "Jan 2025"
     assert len(context["agreement_months"]) == 12
     chart = ChartImageRenderer().render_agreement_months(months)
     assert chart is not None and chart.startswith(b"\x89PNG")

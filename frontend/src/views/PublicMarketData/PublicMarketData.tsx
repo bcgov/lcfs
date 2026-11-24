@@ -605,7 +605,9 @@ export const PublicMarketData = () => {
     )
     const rowsByMonth = new Map(rows.map((row) => [row.period, row]))
     return Array.from({ length: AGREEMENT_MONTHS }, (_, index) => {
-      const date = new Date(Date.UTC(year, month - AGREEMENT_MONTHS + index, 1))
+      const date = new Date(
+        Date.UTC(year, month - AGREEMENT_MONTHS + index - 1, 1)
+      )
       const period = `${date.getUTCFullYear()}-${String(
         date.getUTCMonth() + 1
       ).padStart(2, '0')}`
@@ -1279,8 +1281,7 @@ export const PublicMarketData = () => {
         return clonedRoot
       }
 
-      // PDF-only ordering: the report tables follow the price & volume chart
-      // (quarterly + annual, then monthly) instead of the on-screen section.
+      // PDF-only ordering: report tables follow the grouped charts.
       // Tables sharing a page are wrapped in a single fit-to-page group.
       const reorderForPdf = (clonedRoot: HTMLElement) => {
         const anchor = clonedRoot.querySelector<HTMLElement>(
@@ -1587,6 +1588,55 @@ export const PublicMarketData = () => {
   const latestMonthLabel = kpis?.labelPeriod ? fmtPeriod(kpis.labelPeriod) : '—'
   const monthlyRows = data?.monthly ?? []
   const latestMonthlyRow = monthlyRows[monthlyRows.length - 1]
+  const [latestYear, latestMonth] = (latestMonthlyRow?.period ?? '')
+    .split('-')
+    .map(Number)
+  const previousMonthDate = new Date(Date.UTC(latestYear, latestMonth - 2, 1))
+  const previousMonthPeriod = `${previousMonthDate.getUTCFullYear()}-${String(
+    previousMonthDate.getUTCMonth() + 1
+  ).padStart(2, '0')}`
+  const previousMonthPrice = monthlyRows.find(
+    (row) => row.period === previousMonthPeriod
+  )?.weightedAvgPrice
+  const monthlyPriceChange =
+    latestMonthlyRow?.weightedAvgPrice != null &&
+    previousMonthPrice != null &&
+    previousMonthPrice !== 0
+      ? ((latestMonthlyRow.weightedAvgPrice - previousMonthPrice) /
+          previousMonthPrice) *
+        100
+      : null
+  const latestAgreementMonth =
+    agreementMonthlyChartRows[agreementMonthlyChartRows.length - 1]
+  const agreementMonthDetails: DetailItem[] = [
+    {
+      label: t('publicDashboard.marketData.tables.agreementMonth'),
+      value: latestAgreementMonth
+        ? fmtPeriod(latestAgreementMonth.period) || '—'
+        : '—'
+    },
+    {
+      label: t('publicDashboard.marketData.tables.weightedAveragePrice'),
+      value:
+        latestAgreementMonth?.weightedAvgPrice != null
+          ? price2Fmt.format(latestAgreementMonth.weightedAvgPrice)
+          : '—'
+    },
+    {
+      label: t('publicDashboard.marketData.kpi.transfers'),
+      value:
+        latestAgreementMonth?.transfers != null
+          ? intFmt.format(latestAgreementMonth.transfers)
+          : '—'
+    },
+    {
+      label: t('publicDashboard.marketData.tables.volumeCredits'),
+      value:
+        latestAgreementMonth?.volume != null
+          ? intFmt.format(latestAgreementMonth.volume)
+          : '—'
+    }
+  ]
   const allTransfersDetails: DetailItem[] = [
     {
       label: t('publicDashboard.marketData.tables.month'),
@@ -1782,7 +1832,7 @@ export const PublicMarketData = () => {
               gridTemplateColumns: {
                 xs: '1fr',
                 md: 'repeat(2, minmax(0, 1fr))',
-                lg: 'repeat(4, minmax(0, 1fr))'
+                lg: 'repeat(3, minmax(0, 1fr))'
               },
               gap: 1.5
             }}
@@ -1796,67 +1846,49 @@ export const PublicMarketData = () => {
                   : '—'
               }
               caption={latestMonthLabel || '—'}
+              delta={
+                monthlyPriceChange != null && previousMonthPrice != null ? (
+                  <BCTypography
+                    data-test="average-price-change"
+                    sx={{
+                      fontSize: 14,
+                      color:
+                        monthlyPriceChange === 0
+                          ? MUTED
+                          : monthlyPriceChange < 0
+                            ? '#A12622'
+                            : '#2E7D32'
+                    }}
+                  >
+                    {monthlyPriceChange < 0
+                      ? '▾ '
+                      : monthlyPriceChange > 0
+                        ? '▲ '
+                        : ''}
+                    {percentFmt.format(Math.abs(monthlyPriceChange))}%{' '}
+                    {t('publicDashboard.marketData.vsPreviousMonth', {
+                      price: price2Fmt.format(previousMonthPrice)
+                    })}
+                  </BCTypography>
+                ) : (
+                  <BCTypography
+                    data-test="average-price-change"
+                    sx={{ fontSize: 14, color: MUTED }}
+                  >
+                    {t('publicDashboard.marketData.previousMonthUnavailable')}
+                  </BCTypography>
+                )
+              }
             />
             <DetailCard
               title={t('publicDashboard.marketData.snapshot.allDetails')}
               items={allTransfersDetails}
             />
-            <CardShell
+            <DetailCard
               dataTest="agreement-month-snapshot"
-              sx={{ gridColumn: { xs: 'auto', md: 'span 2' } }}
-            >
-              <BCTypography sx={{ fontSize: 15, color: DARK, fontWeight: 700 }}>
-                {t('publicDashboard.marketData.snapshot.agreementMonthly')}
-              </BCTypography>
-              <BCTypography sx={{ fontSize: 13, color: MUTED, mb: 1 }}>
-                {t('publicDashboard.marketData.snapshot.agreementNote')}
-              </BCTypography>
-              <Box
-                component="table"
-                sx={{ width: '100%', fontSize: 14, textAlign: 'right' }}
-              >
-                <thead>
-                  <tr>
-                    <th scope="col" style={{ textAlign: 'left' }}>
-                      {t('publicDashboard.marketData.tables.agreementMonth')}
-                    </th>
-                    <th scope="col">
-                      {t(
-                        'publicDashboard.marketData.tables.weightedAveragePrice'
-                      )}
-                    </th>
-                    <th scope="col">
-                      {t('publicDashboard.marketData.tables.transfers')}
-                    </th>
-                    <th scope="col">
-                      {t('publicDashboard.marketData.tables.volumeCredits')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...agreementMonthlyChartRows].reverse().map((row) => (
-                    <tr key={row.period}>
-                      <th scope="row" style={{ textAlign: 'left' }}>
-                        {fmtPeriod(row.period)}
-                      </th>
-                      <td>
-                        {row.weightedAvgPrice == null
-                          ? '—'
-                          : price2Fmt.format(row.weightedAvgPrice)}
-                      </td>
-                      <td>
-                        {row.transfers == null
-                          ? '—'
-                          : intFmt.format(row.transfers)}
-                      </td>
-                      <td>
-                        {row.volume == null ? '—' : intFmt.format(row.volume)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Box>
-            </CardShell>
+              title={t('publicDashboard.marketData.snapshot.agreementMonthly')}
+              items={agreementMonthDetails}
+            />
           </BCBox>
         </ReportSection>
 
@@ -2036,176 +2068,175 @@ export const PublicMarketData = () => {
             'publicDashboard.marketData.sections.marketTrendsHistoricalPerformance'
           )}
         >
-          <BCBox
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: '1fr',
-              gap: 1.5,
-              mb: 3
-            }}
-          >
-            <CardShell dataTest="monthly-average-price-chart">
-              <BCBox
-                tabIndex={0}
-                role="group"
-                aria-label={t(
-                  'publicDashboard.marketData.trendCharts.monthlyAverageTitle'
-                )}
-                aria-describedby="a1-chart-keyboard-help"
-                aria-keyshortcuts="ArrowLeft ArrowRight Escape"
-                data-test="a1-price-chart-keyboard"
-                onKeyDown={(event) =>
-                  handleChartKeyboardNavigation(
-                    event,
-                    monthlyAvgChartRef,
-                    activeA1ChartIndex,
-                    setActiveA1ChartIndex,
-                    agreementMonthlyChartRows.length
-                  )
-                }
-              >
-                <ReactECharts
-                  ref={monthlyAvgChartRef}
-                  option={monthlyAverageChartOption}
-                  style={{ height: 290 }}
-                />
-                <span id="a1-chart-keyboard-help" className="visually-hidden">
-                  {keyboardHelp}
-                </span>
-                <span
-                  aria-live="polite"
-                  aria-atomic="true"
-                  className="visually-hidden"
-                >
-                  {a1ChartAnnouncement}
-                </span>
-              </BCBox>
-            </CardShell>
-          </BCBox>
-          <BCBox
-            className="pdf-avoid-break"
-            data-pdf-anchor="price-volume-chart"
-          >
+          <BCBox className="pdf-fit-page" data-pdf-anchor="price-volume-chart">
             <BCBox
               sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 2,
-                flexWrap: 'wrap',
-                mb: 2
+                display: 'grid',
+                gridTemplateColumns: '1fr',
+                gap: 1.5,
+                mb: 3
               }}
             >
-              <BCBox>
-                <BCTypography
-                  variant="h3"
-                  sx={{ fontSize: 20, fontWeight: 700, color: DARK }}
-                >
-                  {t('publicDashboard.marketData.chartTitle')}
-                </BCTypography>
-                <BCTypography sx={{ fontSize: 13.5, color: MUTED }}>
-                  {t('publicDashboard.marketData.chartSubtitle')}
-                </BCTypography>
-              </BCBox>
-              <ToggleButtonGroup
-                className="no-print"
-                size="small"
-                exclusive
-                value={gran}
-                onChange={(_, v) => v && setGran(v)}
-                data-test="granularity-toggle"
-              >
-                <ToggleButton value="month">
-                  {t('publicDashboard.marketData.granularity.month')}
-                </ToggleButton>
-                <ToggleButton value="quarter">
-                  {t('publicDashboard.marketData.granularity.quarter')}
-                </ToggleButton>
-                <ToggleButton value="year">
-                  {t('publicDashboard.marketData.granularity.year')}
-                </ToggleButton>
-              </ToggleButtonGroup>
-            </BCBox>
-            {series.length > 0 ? (
-              <BCBox
-                tabIndex={0}
-                role="group"
-                aria-label={t('publicDashboard.marketData.chartTitle')}
-                aria-describedby="price-volume-chart-keyboard-help"
-                aria-keyshortcuts="ArrowLeft ArrowRight Escape"
-                data-test="price-volume-chart-keyboard"
-                onKeyDown={(event) =>
-                  handleChartKeyboardNavigation(
-                    event,
-                    mainChartRef,
-                    activeMainChartIndex,
-                    setActiveMainChartIndex,
-                    series.length
-                  )
-                }
-              >
-                <ReactECharts
-                  ref={mainChartRef}
-                  option={chartOption}
-                  style={{ height: 380 }}
-                />
+              <CardShell dataTest="monthly-average-price-chart">
                 <BCBox
-                  component="ul"
-                  data-test="price-volume-chart-legend"
-                  sx={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    justifyContent: 'center',
-                    gap: 2,
-                    listStyle: 'none',
-                    m: 0,
-                    p: 0,
-                    fontSize: 12,
-                    color: DARK
-                  }}
+                  tabIndex={0}
+                  role="group"
+                  aria-label={t(
+                    'publicDashboard.marketData.trendCharts.monthlyAverageTitle'
+                  )}
+                  aria-describedby="a1-chart-keyboard-help"
+                  aria-keyshortcuts="ArrowLeft ArrowRight Escape"
+                  data-test="a1-price-chart-keyboard"
+                  onKeyDown={(event) =>
+                    handleChartKeyboardNavigation(
+                      event,
+                      monthlyAvgChartRef,
+                      activeA1ChartIndex,
+                      setActiveA1ChartIndex,
+                      agreementMonthlyChartRows.length
+                    )
+                  }
                 >
-                  {chartOption.series.map((entry) => (
-                    <li key={entry.name}>
-                      <Box
-                        component="span"
-                        aria-hidden="true"
-                        sx={{
-                          display: 'inline-block',
-                          width: 20,
-                          mr: 1,
-                          verticalAlign: 'middle',
-                          borderTop: `3px ${
-                            entry.lineStyle?.type === 'dashed'
-                              ? 'dashed'
-                              : entry.lineStyle?.type === 'dotted'
-                                ? 'dotted'
-                                : 'solid'
-                          } ${entry.lineStyle?.color ?? entry.itemStyle.color}`
-                        }}
-                      />
-                      {entry.name}
-                    </li>
-                  ))}
+                  <ReactECharts
+                    ref={monthlyAvgChartRef}
+                    option={monthlyAverageChartOption}
+                    style={{ height: 290 }}
+                  />
+                  <span id="a1-chart-keyboard-help" className="visually-hidden">
+                    {keyboardHelp}
+                  </span>
+                  <span
+                    aria-live="polite"
+                    aria-atomic="true"
+                    className="visually-hidden"
+                  >
+                    {a1ChartAnnouncement}
+                  </span>
                 </BCBox>
-                <span
-                  id="price-volume-chart-keyboard-help"
-                  className="visually-hidden"
+              </CardShell>
+            </BCBox>
+            <BCBox className="pdf-avoid-break">
+              <BCBox
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 2,
+                  flexWrap: 'wrap',
+                  mb: 2
+                }}
+              >
+                <BCBox>
+                  <BCTypography
+                    variant="h3"
+                    sx={{ fontSize: 20, fontWeight: 700, color: DARK }}
+                  >
+                    {t('publicDashboard.marketData.chartTitle')}
+                  </BCTypography>
+                  <BCTypography sx={{ fontSize: 13.5, color: MUTED }}>
+                    {t('publicDashboard.marketData.chartSubtitle')}
+                  </BCTypography>
+                </BCBox>
+                <ToggleButtonGroup
+                  className="no-print"
+                  size="small"
+                  exclusive
+                  value={gran}
+                  onChange={(_, v) => v && setGran(v)}
+                  data-test="granularity-toggle"
                 >
-                  {keyboardHelp}
-                </span>
-                <span
-                  aria-live="polite"
-                  aria-atomic="true"
-                  className="visually-hidden"
-                >
-                  {mainChartAnnouncement}
-                </span>
+                  <ToggleButton value="month">
+                    {t('publicDashboard.marketData.granularity.month')}
+                  </ToggleButton>
+                  <ToggleButton value="quarter">
+                    {t('publicDashboard.marketData.granularity.quarter')}
+                  </ToggleButton>
+                  <ToggleButton value="year">
+                    {t('publicDashboard.marketData.granularity.year')}
+                  </ToggleButton>
+                </ToggleButtonGroup>
               </BCBox>
-            ) : (
-              <BCTypography sx={{ fontSize: 14, color: MUTED, py: 4 }}>
-                {t('publicDashboard.marketData.tables.noData')}
-              </BCTypography>
-            )}
+              {series.length > 0 ? (
+                <BCBox
+                  tabIndex={0}
+                  role="group"
+                  aria-label={t('publicDashboard.marketData.chartTitle')}
+                  aria-describedby="price-volume-chart-keyboard-help"
+                  aria-keyshortcuts="ArrowLeft ArrowRight Escape"
+                  data-test="price-volume-chart-keyboard"
+                  onKeyDown={(event) =>
+                    handleChartKeyboardNavigation(
+                      event,
+                      mainChartRef,
+                      activeMainChartIndex,
+                      setActiveMainChartIndex,
+                      series.length
+                    )
+                  }
+                >
+                  <ReactECharts
+                    ref={mainChartRef}
+                    option={chartOption}
+                    style={{ height: 380 }}
+                  />
+                  <BCBox
+                    component="ul"
+                    data-test="price-volume-chart-legend"
+                    sx={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      justifyContent: 'center',
+                      gap: 2,
+                      listStyle: 'none',
+                      m: 0,
+                      p: 0,
+                      fontSize: 12,
+                      color: DARK
+                    }}
+                  >
+                    {chartOption.series.map((entry) => (
+                      <li key={entry.name}>
+                        <Box
+                          component="span"
+                          aria-hidden="true"
+                          sx={{
+                            display: 'inline-block',
+                            width: 20,
+                            mr: 1,
+                            verticalAlign: 'middle',
+                            borderTop: `3px ${
+                              entry.lineStyle?.type === 'dashed'
+                                ? 'dashed'
+                                : entry.lineStyle?.type === 'dotted'
+                                  ? 'dotted'
+                                  : 'solid'
+                            } ${entry.lineStyle?.color ?? entry.itemStyle.color}`
+                          }}
+                        />
+                        {entry.name}
+                      </li>
+                    ))}
+                  </BCBox>
+                  <span
+                    id="price-volume-chart-keyboard-help"
+                    className="visually-hidden"
+                  >
+                    {keyboardHelp}
+                  </span>
+                  <span
+                    aria-live="polite"
+                    aria-atomic="true"
+                    className="visually-hidden"
+                  >
+                    {mainChartAnnouncement}
+                  </span>
+                </BCBox>
+              ) : (
+                <BCTypography sx={{ fontSize: 14, color: MUTED, py: 4 }}>
+                  {t('publicDashboard.marketData.tables.noData')}
+                </BCTypography>
+              )}
+            </BCBox>
           </BCBox>
         </ReportSection>
 
@@ -2243,6 +2274,11 @@ export const PublicMarketData = () => {
                     {tbl.title}
                   </BCTypography>
                 </BCBox>
+                {tbl.key === 'agreementMonthly' && (
+                  <BCTypography sx={{ fontSize: 13, color: MUTED, mb: 1 }}>
+                    {t('publicDashboard.marketData.snapshot.agreementNote')}
+                  </BCTypography>
+                )}
                 <MarketReportTable
                   reportKey={tbl.key}
                   rows={rows}

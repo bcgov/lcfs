@@ -340,7 +340,7 @@ class CreditMarketReportBuilder:
         rows_by_month = {(row[0].year, row[0].month): row for row in table.rows}
         rows = []
         for offset in range(12):
-            year, month = divmod(now.year * 12 + now.month - 1 - offset, 12)
+            year, month = divmod(now.year * 12 + now.month - 2 - offset, 12)
             month += 1
             row = rows_by_month.get((year, month))
             label = datetime(year, month, 1).strftime("%b %Y")
