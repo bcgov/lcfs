@@ -113,7 +113,7 @@
         "twoMonthAgreementPrice": "Average recorded credit price of agreements made within the last two completed months",
         "twoMonthAgreementDetails": "Recorded agreement details for the last two completed months",
         "agreementMonths": "Agreement months",
-        "agreementNote": "Includes recorded transfers with a positive price and an agreement date; excludes Category D and the current agreement month. Earlier months may change as transfers are recorded."
+        "agreementNote": "The table represents the average price of credit transfers by the month the two parties agreed on the selling price. Data for earlier months may change as future transfers are recorded."
       },
       "classifications": {
         "summary": "Transfer category definitions",
