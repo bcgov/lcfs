@@ -1,19 +1,18 @@
 import { waitFor } from '@testing-library/react'
 import { describe, expect, vi, beforeEach, afterEach } from 'vite-plus/test'
-import { useApiService } from '@/services/useApiService'
 import { test } from '@/tests/utils/fixtures'
 import { useRoleList } from '../useRole'
 
-vi.mock('@/services/useApiService')
+const mocks = vi.hoisted(() => ({ get: vi.fn() }))
+vi.mock('@/services/useApiService', () => ({
+  useApiService: () => ({ get: mocks.get })
+}))
 
 describe('useRole', () => {
-  const mockGet = vi.fn()
+  const mockGet = mocks.get
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(useApiService).mockReturnValue({
-      get: mockGet
-    })
   })
 
   afterEach(() => {
