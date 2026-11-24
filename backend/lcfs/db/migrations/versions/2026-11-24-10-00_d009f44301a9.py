@@ -1,15 +1,15 @@
 """Add initiative agreement notes and designated action links.
 
-Revision ID: 5484ia_notes
-Revises: 8b3e6a1c5d90
-Create Date: 2026-11-16 09:40:00
+Revision ID: d009f44301a9
+Revises: b7a04f59fdf3
+Create Date: 2026-11-24 10:00:00.000000
 """
 
 import sqlalchemy as sa
 from alembic import op
 
-revision = "5484ia_notes"
-down_revision = "8b3e6a1c5d90"
+revision = "d009f44301a9"
+down_revision = "b7a04f59fdf3"
 branch_labels = None
 depends_on = None
 
