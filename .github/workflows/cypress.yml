@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "0 16 * * *" # Runs daily at 16:00 UTC (8 AM PST)
   workflow_dispatch: # Allows manual triggering of the workflow
+    inputs:
+      spec:
+        description: "Optional spec glob(s), comma-separated, relative to frontend/ (e.g. cypress/e2e/user_flow.cy.js). Empty runs every spec."
+        required: false
+        default: ""
 
 jobs:
   cypress:
@@ -64,6 +69,7 @@ jobs:
           record: false
           config-file: cypress.config.ts
           working-directory: frontend
+          spec: ${{ inputs.spec }}
         env:
           CYPRESS_IDIR_TEST_USER: ${{ secrets.ADMIN_IDIR_USERNAME }}
           CYPRESS_IDIR_TEST_PASS: ${{ secrets.ADMIN_IDIR_PASSWORD }}
@@ -107,7 +113,8 @@ jobs:
   teams-notification:
     needs: cypress
     runs-on: ubuntu-latest
-    if: always()
+    # Report develop runs only; manual runs on other branches stay out of the channel
+    if: always() && github.ref == 'refs/heads/develop'
     steps:
       - name: Determine Cypress Test Status
         id: test_status

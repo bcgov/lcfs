@@ -82,6 +82,7 @@ With 150+ models, the full ERD is overwhelming for day-to-day work. These Mermai
 - **[ERD: Compliance Domain](ERD-Compliance-Domain.md)** — `ComplianceReport` and its schedules (`FuelSupply`, `FuelExport`, `NotionalTransfer`, `OtherUses`, `AllocationAgreement`, `FinalSupplyEquipment`), charging infrastructure (`ChargingSite`, `ChargingEquipment`), and report status/history/summary tables. 29 model files — the most complex domain in the app.
 - **[ERD: Fuel Domain](ERD-Fuel-Domain.md)** — `FuelType`, `FuelCategory`, `FuelCode` and the carbon-intensity/energy-density/transport-mode reference tables consumed by compliance reporting. 22 model files.
 - **[ERD: Organization Domain](ERD-Organization-Domain.md)** — `Organization` and its sub-tables (address, type, status, roles, early issuance, link keys, penalty log), plus a map of which other domains reference it. 10 model files.
+- **[ERD: LCJFIP Domain](ERD-LCJFIP-Domain.md)** — the Low Carbon Jet Fuel Incentive Program application: application, purchase details, lookups, incentive rates, history, comment/document links, Metabase views, and the design decisions and open questions behind them.
 
 These pages are plain Markdown with embedded Mermaid `erDiagram` blocks, so they render directly on GitHub/the wiki and are easy to update alongside model changes — no drawio editor required.
 

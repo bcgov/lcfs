@@ -350,7 +350,7 @@ async def test_get_expected_use_types(fuel_code_repo, mock_db):
 
 
 @pytest.mark.anyio
-async def test_get_fuel_code_bulletin_rows_current_uses_effective_after_cutoff(
+async def test_get_fuel_code_bulletin_rows_current_includes_future_effective_codes(
     fuel_code_repo, mock_db
 ):
     # first execute() -> query rows, second scalar() -> count
@@ -374,9 +374,40 @@ async def test_get_fuel_code_bulletin_rows_current_uses_effective_after_cutoff(
     executed_stmt = mock_db.execute.await_args.args[0]
     stmt_sql = str(executed_stmt)
 
-    assert "effective_date <" in stmt_sql
+    assert "effective_date <" not in stmt_sql
     assert "effective_date >=" not in stmt_sql
-    assert "expiration_date >" in stmt_sql
+    assert "expiration_date >=" in stmt_sql
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    ("period_start", "expected_cutoff"),
+    [
+        (date(2026, 3, 31), "2026-01-01"),
+        (date(2027, 3, 31), "2027-01-01"),
+    ],
+)
+async def test_bulletin_current_expiry_cutoff_tracks_reporting_year(
+    fuel_code_repo, mock_db, period_start, expected_cutoff
+):
+    mock_result = MagicMock()
+    mock_result.all.return_value = []
+    mock_db.execute.return_value = mock_result
+    mock_db.scalar.return_value = 0
+
+    await fuel_code_repo.get_fuel_code_bulletin_rows(
+        compliance_period_start=period_start,
+        bulletin_type="current",
+        conditions=[],
+        sort_orders=[],
+    )
+
+    sql = str(
+        mock_db.execute.await_args.args[0].compile(
+            dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
+        )
+    )
+    assert f"vw_fuel_code_base.expiration_date >= '{expected_cutoff}'" in sql
 
 
 @pytest.mark.anyio
@@ -404,8 +435,8 @@ async def test_get_fuel_code_bulletin_rows_archived_is_inverse_of_current(
 
     # archived branch applies inverse (~current_conditions)
     assert "NOT (" in stmt_sql
-    assert "effective_date <" in stmt_sql
-    assert "expiration_date >" in stmt_sql
+    assert "effective_date <" not in stmt_sql
+    assert "expiration_date >=" in stmt_sql
 
 
 @pytest.mark.anyio
@@ -1444,3 +1475,38 @@ async def test_mark_fuel_codes_notified_empty_list(fuel_code_repo, mock_db):
     await fuel_code_repo.mark_fuel_codes_notified([])
 
     mock_db.execute.assert_not_called()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("bulletin_type", ["current", "archived"])
+async def test_public_bulletin_query_selects_only_public_projection(
+    fuel_code_repo, mock_db, bulletin_type
+):
+    result = MagicMock()
+    result.all.return_value = []
+    mock_db.execute.return_value = result
+    mock_db.scalar.return_value = 0
+    await fuel_code_repo.get_fuel_code_bulletin_rows(date(2025, 3, 31), bulletin_type)
+    statement = mock_db.execute.await_args.args[0]
+    assert set(statement.selected_columns.keys()) == {
+        "fuel_code",
+        "fuel",
+        "company",
+        "carbon_intensity",
+        "effective_date",
+        "expiry_date",
+    }
+
+
+@pytest.mark.parametrize(
+    "field", ["edrms", "contactEmail", "notes", "feedstock", "fuelCodeId"]
+)
+def test_public_bulletin_cannot_filter_on_internal_fields(fuel_code_repo, field):
+    from fastapi import HTTPException
+
+    pagination = PaginationRequestSchema(
+        filters=[{"field": field, "filter": "private"}]
+    )
+    with pytest.raises(HTTPException) as exc:
+        fuel_code_repo.get_fuel_code_bulletin_pagination_params(pagination)
+    assert exc.value.status_code == 400

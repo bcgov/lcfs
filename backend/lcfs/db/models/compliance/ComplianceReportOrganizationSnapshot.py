@@ -1,4 +1,12 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, Float
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    ForeignKey,
+    Boolean,
+    Float,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import relationship
 
 from lcfs.db.base import BaseModel, Auditable
@@ -6,9 +14,15 @@ from lcfs.db.base import BaseModel, Auditable
 
 class ComplianceReportOrganizationSnapshot(BaseModel, Auditable):
     __tablename__ = "compliance_report_organization_snapshot"
-    __table_args__ = {
-        "comment": "Contains organization snapshots that are attached to each compliance report for audit purposes."
-    }
+    __table_args__ = (
+        UniqueConstraint(
+            "compliance_report_id",
+            name="uq_compliance_report_organization_snapshot_report",
+        ),
+        {
+            "comment": "Contains organization snapshots that are attached to each compliance report for audit purposes."
+        },
+    )
 
     organization_snapshot_id = Column(
         Integer,

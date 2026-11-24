@@ -1117,6 +1117,15 @@ class ChargingEquipmentRepository:
         return updated_count
 
     @repo_handler
+    async def get_charging_site_organization_id(self, site_id: int) -> Optional[int]:
+        """The organization that owns a charging site (any version), or None."""
+        return await self.db.scalar(
+            select(ChargingSite.organization_id).where(
+                ChargingSite.charging_site_id == site_id
+            )
+        )
+
+    @repo_handler
     async def get_charging_site_by_id(self, site_id: int) -> Optional[ChargingSite]:
         """Get charging site by ID with related data."""
         query = (

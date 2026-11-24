@@ -119,7 +119,9 @@ async def test_get_notional_transfers_paginated(
             filters=[],
         ).model_dump()
 
-        mock_validate_organization_access.return_value = True
+        mock_validate_organization_access.return_value = MagicMock(
+            current_status=MagicMock(status="Submitted"), supplemental_initiator=None
+        )
         mock_notional_transfer_service.get_notional_transfers_paginated.return_value = {
             "pagination": {"total": 0, "page": 1, "size": 10, "totalPages": 1},
             "notionalTransfers": [],

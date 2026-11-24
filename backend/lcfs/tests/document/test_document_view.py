@@ -1,9 +1,22 @@
 import io
+from types import SimpleNamespace
+
 import pytest
 from fastapi import UploadFile
 from starlette import status
 
+from lcfs.db.models.document.Document import DocumentScanStatusEnum
+from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
+    RECORD_KIND_AGREEMENT,
+    RECORD_KIND_LEGACY_AWARD,
+)
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.services.clamav.client import (
+    FileTooLargeToScanException,
+    ScanUnavailableException,
+    VirusScanException,
+)
+from lcfs.services.file_inspection import FileRejectedException
 from lcfs.services.s3.client import DocumentService
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
 from lcfs.web.api.initiative_agreement.validation import InitiativeAgreementValidation
@@ -18,6 +31,7 @@ class DummyDocument:
         self.display_name = None
         self.create_date = "2024-01-01T00:00:00Z"
         self.create_user = "tester"
+        self.scan_status = DocumentScanStatusEnum.clean
 
 
 class FakeDocumentService:
@@ -39,6 +53,7 @@ class FakeDocumentService:
         parent_type: str,
         user,
         document_category=None,
+        replace_document_id=None,
     ):
         return {
             "document_id": 2,
@@ -111,11 +126,26 @@ class FakeForbiddenDocumentService(FakeDocumentService):
 
 
 class FakeComplianceReportValidation:
+    async def validate_compliance_report_access(self, report):
+        return
+
     async def validate_organization_access(self, parent_id: int):
         return
 
 
+class FakeInitiativeAgreementRepo:
+    # The shared delete route reads record_kind; legacy credit awards are
+    # the initiativeAgreement rows it still serves.
+    record_kind = RECORD_KIND_LEGACY_AWARD
+
+    async def get_initiative_agreement_by_id(self, initiative_agreement_id: int):
+        return SimpleNamespace(record_kind=FakeInitiativeAgreementRepo.record_kind)
+
+
 class FakeInitiativeAgreementValidation:
+    def __init__(self):
+        self.repo = FakeInitiativeAgreementRepo()
+
     async def validate_organization_access(self, parent_id: int):
         return
 
@@ -186,6 +216,38 @@ async def test_upload_file_success(fastapi_app, client):
     assert data["createUser"] == "tester"
 
 
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "exception, expected_status, expected_detail",
+    [
+        (
+            VirusScanException(),
+            422,
+            "Viruses detected in file, please upload another",
+        ),
+        (FileTooLargeToScanException(), 422, FileTooLargeToScanException.detail),
+        (ScanUnavailableException(), 503, ScanUnavailableException.detail),
+        (FileRejectedException("Contents don't match"), 400, "Contents don't match"),
+    ],
+)
+async def test_upload_file_scan_outcomes(
+    fastapi_app, client, monkeypatch, exception, expected_status, expected_detail
+):
+    async def refuse(self, *args, **kwargs):
+        raise exception
+
+    monkeypatch.setattr(FakeDocumentService, "upload_file", refuse)
+    url = fastapi_app.url_path_for(
+        "upload_file", parent_type="compliance_report", parent_id=1
+    )
+    files = {"file": ("test.txt", io.BytesIO(b"file content"), "text/plain")}
+
+    response = await client.post(url, files=files)
+
+    assert response.status_code == expected_status
+    assert response.json()["detail"] == expected_detail
+
 @pytest.mark.anyio
 async def test_upload_file_missing_file(fastapi_app, client):
     url = fastapi_app.url_path_for(
@@ -208,6 +270,8 @@ async def test_stream_document_compliance_report(fastapi_app, client):
     assert cd == "attachment; filename=\"document.pdf\"; filename*=UTF-8''document.pdf"
     cl = response.headers.get("content-length")
     assert cl == "789"
+    assert response.headers.get("X-Content-Type-Options") == "nosniff"
+    assert response.headers.get("Content-Security-Policy") == "sandbox"
 
     body = await response.aread()
     assert body == b"streamed content"
@@ -353,6 +417,46 @@ async def test_delete_file_refuses_folder_enabled_parent_type(
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert "document bin" in response.json()["detail"]
     assert FakeRecordingDocumentService.deleted == []
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "record_kind,expected_status,deleted",
+    [
+        # An agreement has a bin (#5337), so this route must refuse it.
+        (RECORD_KIND_AGREEMENT, status.HTTP_403_FORBIDDEN, []),
+        # A legacy credit award has no bin; the transaction pages delete
+        # its files here.
+        (
+            RECORD_KIND_LEGACY_AWARD,
+            status.HTTP_200_OK,
+            [("initiativeAgreement", 1, 100)],
+        ),
+    ],
+)
+async def test_delete_file_initiative_agreement_by_record_kind(
+    fastapi_app,
+    client,
+    set_mock_user,
+    monkeypatch,
+    record_kind,
+    expected_status,
+    deleted,
+):
+    set_mock_user(fastapi_app, [RoleEnum.IA_ANALYST])
+    monkeypatch.setattr(FakeInitiativeAgreementRepo, "record_kind", record_kind)
+    FakeRecordingDocumentService.deleted = []
+    fastapi_app.dependency_overrides[DocumentService] = (
+        lambda: FakeRecordingDocumentService()
+    )
+
+    url = fastapi_app.url_path_for(
+        "delete_file", parent_type="initiativeAgreement", parent_id=1, document_id=100
+    )
+    response = await client.delete(url)
+
+    assert response.status_code == expected_status
+    assert FakeRecordingDocumentService.deleted == deleted
 
 
 # --- internal_comment attachments (issue #4514) ------------------------------

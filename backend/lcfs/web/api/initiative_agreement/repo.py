@@ -1,12 +1,27 @@
+import operator
 from datetime import date as date_type
 from datetime import datetime, timezone
+from decimal import Decimal, InvalidOperation
 from typing import Dict, List, Optional, Sequence, Tuple
 
 from fastapi import Depends
+from sqlalchemy import BigInteger, Numeric
 from sqlalchemy import Date as SADate
-from sqlalchemy import String, and_, asc, cast, desc, func, or_, select, update
+from sqlalchemy import (
+    String,
+    and_,
+    asc,
+    case,
+    cast,
+    desc,
+    exists,
+    func,
+    or_,
+    select,
+    update,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import aliased, selectinload
 
 from lcfs.db.base import ActionTypeEnum
 from lcfs.db.dependencies import get_async_db_session
@@ -53,9 +68,70 @@ from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.initiative_agreement.schema import (
     CreateInitiativeAgreementHistorySchema,
 )
+from lcfs.web.api.initiative_agreement.workflow import STATUS_APPROVED
 from lcfs.web.api.internal_comment.schema import CommentVisibilityEnum
 from lcfs.web.core.decorators import repo_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
+
+
+def _agreement_credit_totals():
+    """
+    Per-agreement credit totals calculated from the designated actions, in
+    one aggregate rather than a subquery per row, so the grid can sort and
+    filter on them and pages stay cheap.
+
+    Only each action's current version counts (a change order appends a row
+    sharing group_uuid), and an action whose current version is a delete
+    drops out. The denormalized totals on initiative_agreement are caches
+    and are not read here.
+
+    Returns the aggregate and the two columns derived from it.
+
+    - total_credits: the compliance units to be issued, in any status.
+    - awarded_credits: the recommended credits of Approved actions that
+      resulted in a credit transaction.
+    """
+    # Built per call: aliasing a mapped class at import time forces mapper
+    # configuration before every model module has loaded.
+    action = aliased(DesignatedAction)
+    newer_version = aliased(DesignatedAction)
+    totals = (
+        select(
+            action.initiative_agreement_id.label("initiative_agreement_id"),
+            func.sum(action.credit_allocation).label("total_credits"),
+            func.sum(
+                case(
+                    (
+                        and_(
+                            DesignatedActionStatus.status == STATUS_APPROVED,
+                            action.transaction_id.isnot(None),
+                        ),
+                        action.recommended_credits,
+                    ),
+                    else_=0,
+                )
+            ).label("awarded_credits"),
+        )
+        .join(
+            DesignatedActionStatus,
+            action.current_status_id
+            == DesignatedActionStatus.designated_action_status_id,
+        )
+        .where(
+            action.action_type != ActionTypeEnum.DELETE,
+            ~exists().where(
+                newer_version.group_uuid == action.group_uuid,
+                newer_version.version > action.version,
+            ),
+        )
+        .group_by(action.initiative_agreement_id)
+        .subquery("agreement_credit_totals")
+    )
+    # An agreement with no designated actions has no row in the aggregate.
+    total_credits = cast(func.coalesce(totals.c.total_credits, 0), BigInteger)
+    awarded_credits = cast(func.coalesce(totals.c.awarded_credits, 0), BigInteger)
+    return totals, total_credits, awarded_credits
+
 
 # Grid field names (snake_cased by PaginationRequestSchema) -> filter/sort columns
 LIST_FIELD_COLUMNS = {
@@ -81,6 +157,14 @@ _DATE_FIELDS = {
     "agreement_end_date",
     "update_date",
     "create_date",
+}
+_NUMBER_OPERATORS = {
+    "equals": operator.eq,
+    "notEqual": operator.ne,
+    "lessThan": operator.lt,
+    "lessThanOrEqual": operator.le,
+    "greaterThan": operator.gt,
+    "greaterThanOrEqual": operator.ge,
 }
 
 
@@ -155,6 +239,18 @@ def _build_list_filter(filter_model, columns=None, date_fields=None):
         if filter_model.type == "greaterThan":
             return date_col > value
         return None
+
+    if filter_model.filter_type == "number":
+        operation = _NUMBER_OPERATORS.get(filter_model.type)
+        try:
+            value = Decimal(str(filter_model.filter))
+        except (InvalidOperation, ValueError):
+            return None
+        if operation is None or not value.is_finite():
+            return None
+        # Cast so a fractional value (e.g. 99.5) compares instead of being
+        # bound as an integer.
+        return operation(cast(column, Numeric), value)
 
     value = filter_model.filter
     if value is None:
@@ -321,21 +417,37 @@ class InitiativeAgreementRepository:
         pagination: PaginationRequestSchema,
         organization_id: Optional[int] = None,
         hidden_statuses: Sequence[str] = (),
-    ) -> Tuple[List[InitiativeAgreement], int]:
+    ) -> Tuple[List[Tuple[InitiativeAgreement, int, int]], int]:
         """
         Paginated, filterable agreements query for the agreement-management
         grid. When organization_id is provided the result is scoped to that
         organization (non-government callers). Agreements in any of
         hidden_statuses are left out.
+
+        Each row is (agreement, total_credits, awarded_credits); the credit
+        totals are calculated from the designated actions in the query so
+        they paginate, sort and filter like any other column.
         """
+        credit_totals, total_credits, awarded_credits = _agreement_credit_totals()
         query = (
-            select(InitiativeAgreement)
+            select(
+                InitiativeAgreement,
+                total_credits.label("total_credits"),
+                awarded_credits.label("awarded_credits"),
+            )
             # Outer join: agreement records carry a lifecycle status, not the
             # credit-award status, and it is nullable until one is set.
             .outerjoin(InitiativeAgreement.lifecycle_status)
             # Outer join: an agreement can be saved before its organization
             # is known (#5186).
             .outerjoin(InitiativeAgreement.to_organization)
+            # Outer join: an agreement with no designated actions has no
+            # totals row; it shows 0.
+            .outerjoin(
+                credit_totals,
+                credit_totals.c.initiative_agreement_id
+                == InitiativeAgreement.initiative_agreement_id,
+            )
             # Excludes the legacy one-row-per-credit-award records that share
             # this table until the transaction-flow cutover.
             .where(InitiativeAgreement.record_kind == RECORD_KIND_AGREEMENT)
@@ -350,14 +462,19 @@ class InitiativeAgreementRepository:
                     InitiativeAgreementLifecycleStatus.status, hidden_statuses
                 )
             )
+        list_columns = {
+            **LIST_FIELD_COLUMNS,
+            "total_credits": total_credits,
+            "awarded_credits": awarded_credits,
+        }
         for filter_model in pagination.filters:
-            condition = _build_list_filter(filter_model)
+            condition = _build_list_filter(filter_model, columns=list_columns)
             if condition is not None:
                 query = query.where(condition)
 
         order_by_clauses = []
         for order in pagination.sort_orders:
-            column = LIST_FIELD_COLUMNS.get(order.field)
+            column = list_columns.get(order.field)
             if column is None:
                 continue
             order_by_clauses.append(
@@ -365,6 +482,9 @@ class InitiativeAgreementRepository:
             )
         if not order_by_clauses:
             order_by_clauses = [desc(InitiativeAgreement.update_date)]
+        # Credit totals tie often; without a unique tiebreaker rows can
+        # repeat or vanish across pages.
+        order_by_clauses.append(asc(InitiativeAgreement.initiative_agreement_id))
 
         count_query = select(func.count()).select_from(
             query.with_only_columns(
@@ -383,7 +503,7 @@ class InitiativeAgreementRepository:
             .offset(offset)
             .limit(pagination.size)
         )
-        return result.scalars().all(), total_count
+        return [tuple(row) for row in result.all()], total_count
 
     @repo_handler
     async def get_initiative_agreement_profile(

@@ -113,6 +113,28 @@ describe('Crumb', () => {
     expect(screen.getByText('Admin Dashboard')).toBeInTheDocument()
   })
 
+  test('reads the LCJFIP page trail as Home > Jet fuel > LCJFIP', ({
+    render,
+    app
+  }) => {
+    setupRouterMocks({
+      pathname: '/jet-fuel/lcjfip',
+      matches: [{ handle: { title: 'LCJFIP' } }]
+    })
+
+    render(<Crumb />, app)
+
+    const items = Array.from(
+      document.querySelectorAll('.MuiBreadcrumbs-li')
+    ).map((item) => item.textContent)
+    expect(items).toEqual(['Home', 'Jet fuel', 'LCJFIP'])
+    // There is no /jet-fuel page, so the section crumb opens LCJFIP.
+    expect(screen.getByText('Jet fuel').closest('a')).toHaveAttribute(
+      'href',
+      '/jet-fuel/lcjfip'
+    )
+  })
+
   test('shows the agreement code for an initiative agreement detail path', ({
     render,
     app

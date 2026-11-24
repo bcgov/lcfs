@@ -31,7 +31,7 @@ type RoleOption = {
 }
 
 type CurrentUser = {
-  userProfileId?: number
+  userProfileId?: number | string | null
   title?: string | null
   firstName?: string | null
   lastName?: string | null
@@ -41,9 +41,9 @@ type CurrentUser = {
   phone?: string | null
   mobilePhone?: string | null
   isActive?: boolean | null
-  organizationId?: number | null
+  organizationId?: number | string | null
   organization?: {
-    organizationId?: number | null
+    organizationId?: number | string | null
     name?: string | null
   }
   roles?: Array<{ name?: string | null }>
