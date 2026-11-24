@@ -70,6 +70,10 @@ from lcfs.db.models.lcjfip.LCJFIPApplication import (
     LCJFIPApplication,
     lcjfip_application_document_association,
 )
+from lcfs.db.models.lcjfip.LCJFIPApplicationStatus import (
+    LCJFIPApplicationStatus,
+    LCJFIPApplicationStatusEnum,
+)
 from lcfs.db.models.comment.CIApplicationInternalComment import (
     CIApplicationInternalComment,
 )
@@ -673,6 +677,31 @@ class DocumentService:
         result = await self.db.execute(report_orgs.union(application_orgs, lcjfip_orgs))
         return {row[0] for row in result.all() if row[0] is not None}
 
+    async def _is_comment_on_draft_lcjfip_application(
+        self, internal_comment_id: int
+    ) -> bool:
+        """True when the comment belongs to an LCJFIP application still in Draft."""
+        stmt = (
+            select(LCJFIPApplicationInternalComment.internal_comment_id)
+            .join(
+                LCJFIPApplication,
+                LCJFIPApplication.lcjfip_application_id
+                == LCJFIPApplicationInternalComment.lcjfip_application_id,
+            )
+            .join(
+                LCJFIPApplicationStatus,
+                LCJFIPApplicationStatus.lcjfip_application_status_id
+                == LCJFIPApplication.status_id,
+            )
+            .where(
+                LCJFIPApplicationInternalComment.internal_comment_id
+                == internal_comment_id,
+                LCJFIPApplicationStatus.status
+                == LCJFIPApplicationStatusEnum.Draft.value,
+            )
+        )
+        return (await self.db.execute(stmt)).scalar_one_or_none() is not None
+
     async def verify_internal_comment_access(self, parent_id, user, write=False):
         """Authorise attachment access for an internal comment.
 
@@ -687,7 +716,8 @@ class DocumentService:
 
         A comment on a draft agreement, or on one of its designated actions,
         reads as missing to government (#5186), like its thread, and so do
-        its attachments.
+        its attachments. The same goes for a comment on a Draft LCJFIP
+        application, which is still the applicant's own (#5532).
         """
         comment = await self.db.get(InternalComment, parent_id)
         if not comment:
@@ -699,6 +729,10 @@ class DocumentService:
             raise HTTPException(status_code=404, detail="Internal comment not found")
 
         is_government = RoleEnum.GOVERNMENT in user.role_names
+        if is_government and await self._is_comment_on_draft_lcjfip_application(
+            parent_id
+        ):
+            raise HTTPException(status_code=404, detail="Internal comment not found")
 
         if write:
             is_penalty_log = (
