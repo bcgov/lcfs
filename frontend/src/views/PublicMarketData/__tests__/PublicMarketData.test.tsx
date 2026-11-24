@@ -1,5 +1,7 @@
-import { fireEvent, screen, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, vi } from 'vite-plus/test'
+import html2canvas from 'html2canvas'
+import { jsPDF as JsPdf } from 'jspdf'
 import * as XLSX from 'xlsx'
 import { test } from '@/tests/utils/fixtures'
 import { PublicMarketData } from '../PublicMarketData'
@@ -17,7 +19,16 @@ vi.mock('echarts-for-react', () => ({
   )
 }))
 vi.mock('html2canvas', () => ({ default: vi.fn() }))
-vi.mock('jspdf', () => ({ default: vi.fn() }))
+vi.mock('jspdf', () => ({
+  jsPDF: vi.fn(function () {
+    return {
+      internal: { pageSize: { getWidth: () => 210, getHeight: () => 297 } },
+      addPage: vi.fn(),
+      addImage: vi.fn(),
+      save: vi.fn()
+    }
+  })
+}))
 vi.mock('xlsx', () => ({
   utils: {
     json_to_sheet: vi.fn(() => ({
@@ -158,6 +169,7 @@ describe('PublicMarketData', () => {
 
   afterEach(() => {
     vi.useRealTimers()
+    vi.restoreAllMocks()
   })
 
   test('renders the title and KPI cards', ({ render, theme }) => {
@@ -313,6 +325,42 @@ describe('PublicMarketData', () => {
     ).not.toBeInTheDocument()
     expect(screen.getByTestId('download-annual-csv')).toBeInTheDocument()
     expect(screen.queryByTestId('download-annual-xlsx')).not.toBeInTheDocument()
+  })
+
+  test('exports compressed PDFs without replacing lossless page images', async ({
+    render,
+    theme
+  }) => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 100
+    canvas.height = 100
+    vi.mocked(JsPdf).mockClear()
+    vi.mocked(html2canvas).mockResolvedValue(canvas)
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null)
+    vi.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockReturnValue(
+      'data:image/png;base64,'
+    )
+    render(<PublicMarketData />, [theme])
+
+    fireEvent.click(screen.getByTestId('download-pdf'))
+
+    await waitFor(() => expect(JsPdf).toHaveBeenCalled())
+    const pdf = vi.mocked(JsPdf).mock.results[0]?.value
+    await waitFor(() => expect(pdf?.save).toHaveBeenCalled())
+    expect(JsPdf).toHaveBeenCalledWith({
+      orientation: 'p',
+      unit: 'mm',
+      format: 'a4',
+      compress: true
+    })
+    expect(pdf?.addImage).toHaveBeenCalledWith(
+      'data:image/png;base64,',
+      'PNG',
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number)
+    )
   })
 
   test('keeps the agreement chart and table together in their own section', ({

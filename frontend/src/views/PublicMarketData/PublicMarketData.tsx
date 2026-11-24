@@ -1429,7 +1429,12 @@ export const PublicMarketData = () => {
         }
       })
 
-      const pdf = new JsPdf({ orientation: 'p', unit: 'mm', format: 'a4' })
+      const pdf = new JsPdf({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4',
+        compress: true
+      })
       const marginMm = 8
       const portraitContentWidthMm =
         pdf.internal.pageSize.getWidth() - marginMm * 2
