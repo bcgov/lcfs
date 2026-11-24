@@ -72,6 +72,20 @@ type ServerError = {
 
 const cardSx = { p: { xs: 2, md: 3 }, mb: 3 }
 
+// A read-only application's fields are disabled, and MUI paints disabled
+// values and choices in faint grey. Keep the entered values and the chosen
+// options as easy to read as on a draft; the grey borders still show that
+// nothing can be changed.
+const readOnlyCardSx = {
+  ...cardSx,
+  '& .MuiInputBase-input.Mui-disabled, & .MuiSelect-select.Mui-disabled': {
+    WebkitTextFillColor: 'currentColor',
+    opacity: 1
+  },
+  '& .MuiRadio-root.Mui-disabled.Mui-checked, & .MuiCheckbox-root.Mui-disabled.Mui-checked':
+    { color: 'primary.main' }
+}
+
 const fullName = (first?: string | null, last?: string | null) =>
   [first, last].filter(Boolean).join(' ')
 
@@ -351,7 +365,7 @@ export const LCJFIPApplicationBase = () => {
       </BCTypography>
 
       <form noValidate onSubmit={(event) => event.preventDefault()}>
-        <Paper variant="outlined" sx={cardSx}>
+        <Paper variant="outlined" sx={readOnly ? readOnlyCardSx : cardSx}>
           <ApplicantSection
             applicant={applicant}
             carTypes={referenceData.carTypes}
@@ -387,7 +401,7 @@ export const LCJFIPApplicationBase = () => {
         </Paper>
 
         {!isGovernment && (
-          <Paper variant="outlined" sx={cardSx}>
+          <Paper variant="outlined" sx={readOnly ? readOnlyCardSx : cardSx}>
             <SigningSection
               readOnly={readOnly}
               canDelete={!!application && application.status === 'Draft'}
