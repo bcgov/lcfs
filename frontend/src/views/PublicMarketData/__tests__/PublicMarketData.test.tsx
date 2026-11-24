@@ -253,10 +253,12 @@ describe('PublicMarketData', () => {
     expect(chartBlock).toBe(mainChartBlock)
     expect(chartBlock).toHaveClass('pdf-market-trends-section')
     expect(
-      screen.getByRole('heading', {
-        level: 2,
-        name: 'publicDashboard.marketData.sections.marketTrendsHistoricalPerformance'
-      }).closest('.pdf-fit-page')
+      screen
+        .getByRole('heading', {
+          level: 2,
+          name: 'publicDashboard.marketData.sections.marketTrendsHistoricalPerformance'
+        })
+        .closest('.pdf-fit-page')
     ).toBe(chartBlock)
     expect(
       chartBlock?.contains(container.querySelector('[data-pdf-table]'))
