@@ -137,7 +137,8 @@ type ChartOption = {
   aria?: { enabled?: boolean }
   legend?: { show?: boolean; data?: string[] }
   xAxis?: { data?: string[]; axisLabel?: { interval?: number } }
-  series?: Array<{ name?: string; data?: unknown[] }>
+  yAxis?: Array<{ name?: string; axisLabel?: { show?: boolean } }>
+  series?: Array<{ name?: string; data?: unknown[]; yAxisIndex?: number }>
 }
 
 const getChartOptions = () =>
@@ -402,6 +403,32 @@ describe('PublicMarketData', () => {
     ])
     expect(mainChart?.series?.[2].data).toEqual([110])
     expect(mainChart?.series?.[3].data).toEqual([170])
+  })
+
+  test('shows the volume scale for each recorded-transfer time range', ({
+    render,
+    theme
+  }) => {
+    render(<PublicMarketData />, [theme])
+
+    for (const range of ['month', 'quarter', 'year']) {
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: `publicDashboard.marketData.granularity.${range}`
+        })
+      )
+      const chart = within(
+        screen.getByTestId('price-volume-chart-keyboard')
+      ).getByTestId('echarts-chart')
+      const option = JSON.parse(
+        chart.getAttribute('data-chart-option') ?? '{}'
+      ) as ChartOption
+      expect(option.yAxis?.[1]).toMatchObject({
+        name: 'publicDashboard.marketData.tables.volume',
+        axisLabel: { show: true }
+      })
+      expect(option.series?.[0].yAxisIndex).toBe(1)
+    }
   })
 
   test('separates agreement-month metrics from recorded-month classifications', ({

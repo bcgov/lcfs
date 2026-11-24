@@ -661,7 +661,7 @@ export const PublicMarketData = () => {
       },
       grid: {
         left: '2%',
-        right: '3%',
+        right: '8%',
         bottom: '12%',
         top: '8%',
         containLabel: true
@@ -680,8 +680,10 @@ export const PublicMarketData = () => {
         },
         {
           type: 'value',
+          name: volName,
+          nameTextStyle: { fontSize: 10 },
           splitLine: { show: false },
-          axisLabel: { show: false }
+          axisLabel: { show: true, color: '#767676', fontSize: 10 }
         }
       ],
       series: [
