@@ -61,18 +61,80 @@ async def test_get_audit_logs_paginated_success(
         mock_service.assert_called_once()
 
 
+# Every role except ADMINISTRATOR must be denied. IDIR users always carry the
+# base GOVERNMENT role, so each government case includes it explicitly.
+NON_ADMIN_ROLE_SETS = [
+    pytest.param([RoleEnum.SUPPLIER], id="supplier"),
+    pytest.param([RoleEnum.GOVERNMENT], id="government"),
+    pytest.param([RoleEnum.GOVERNMENT, RoleEnum.ANALYST], id="analyst"),
+    pytest.param(
+        [RoleEnum.GOVERNMENT, RoleEnum.COMPLIANCE_MANAGER], id="compliance_manager"
+    ),
+    pytest.param([RoleEnum.GOVERNMENT, RoleEnum.DIRECTOR], id="director"),
+    pytest.param([RoleEnum.GOVERNMENT, RoleEnum.IA_ANALYST], id="ia_analyst"),
+    pytest.param([RoleEnum.GOVERNMENT, RoleEnum.IA_MANAGER], id="ia_manager"),
+    pytest.param([RoleEnum.GOVERNMENT, RoleEnum.SYSTEM_ADMIN], id="system_admin_only"),
+]
+
+
 @pytest.mark.anyio
-async def test_get_audit_logs_paginated_forbidden(
+@pytest.mark.parametrize("roles", NON_ADMIN_ROLE_SETS)
+async def test_get_audit_logs_paginated_forbidden_for_non_administrators(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, roles
+):
+    with patch(
+        "lcfs.web.api.audit_log.views.AuditLogService.get_audit_logs_paginated"
+    ) as mock_service:
+        set_mock_user(fastapi_app, roles)
+
+        url = fastapi_app.url_path_for("get_audit_logs_paginated")
+        payload = {"page": 1, "size": 10, "filters": [], "sortOrders": []}
+
+        response = await client.post(url, json=payload)
+
+        assert response.status_code == 403
+        mock_service.assert_not_called()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("roles", NON_ADMIN_ROLE_SETS)
+async def test_get_audit_log_by_id_forbidden_for_non_administrators(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, roles
+):
+    with patch(
+        "lcfs.web.api.audit_log.views.AuditLogService.get_audit_log_by_id"
+    ) as mock_service:
+        set_mock_user(fastapi_app, roles)
+
+        url = fastapi_app.url_path_for("get_audit_log_by_id", audit_log_id=1)
+
+        response = await client.get(url)
+
+        assert response.status_code == 403
+        mock_service.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_get_audit_logs_paginated_allowed_for_government_administrator(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])  # Insufficient permissions
+    """An IDIR administrator (GOVERNMENT + ADMINISTRATOR) keeps access."""
+    with patch(
+        "lcfs.web.api.audit_log.views.AuditLogService.get_audit_logs_paginated"
+    ) as mock_service:
+        mock_service.return_value = AuditLogListSchema(
+            audit_logs=[],
+            pagination={"total": 0, "page": 1, "size": 10, "total_pages": 0},
+        )
+        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT, RoleEnum.ADMINISTRATOR])
 
-    url = fastapi_app.url_path_for("get_audit_logs_paginated")
-    payload = {"page": 1, "size": 10, "filters": [], "sortOrders": []}
+        url = fastapi_app.url_path_for("get_audit_logs_paginated")
+        payload = {"page": 1, "size": 10, "filters": [], "sortOrders": []}
 
-    response = await client.post(url, json=payload)
+        response = await client.post(url, json=payload)
 
-    assert response.status_code == 403  # Forbidden
+        assert response.status_code == 200
+        mock_service.assert_called_once()
 
 
 @pytest.mark.anyio
