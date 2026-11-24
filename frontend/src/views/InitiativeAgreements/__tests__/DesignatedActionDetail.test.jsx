@@ -41,6 +41,8 @@ const mockProfile = vi.fn()
 vi.mock('@/hooks/useInitiativeAgreements', () => ({
   useDesignatedActionProfile: () => mockProfile(),
   useSetRecommendedCredits: () => ({ mutate: vi.fn() }),
+  useRecordVersions: () => ({ data: [], isLoading: false }),
+  useRemoveDesignatedAction: () => ({ mutate: vi.fn(), isPending: false }),
   useEvidenceRequirements: () => ({
     data: [
       {
@@ -81,12 +83,14 @@ vi.mock('../components/EvidenceOfCompletion', () => ({
   // The section renders a request action beside each requested EOC.
   EvidenceOfCompletion: ({
     canEdit,
+    canEditDefinition,
     missingInformationReadOnly,
     renderRequestAction
   }) => (
     <div
       data-test="evidence-of-completion"
       data-can-edit={String(canEdit)}
+      data-can-edit-definition={String(canEditDefinition)}
       data-missing-information-read-only={String(missingInformationReadOnly)}
     >
       {renderRequestAction?.(
@@ -414,5 +418,70 @@ describe('DesignatedActionDetail', () => {
     })
     render(<DesignatedActionDetail />, app)
     expect(screen.getByTestId('alert-box')).toHaveTextContent('boom')
+  })
+})
+
+describe('DesignatedActionDetail in a change order (#5555)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockDocuments.mockReturnValue({ data: [], refetch: vi.fn() })
+  })
+
+  const show = (profile) =>
+    mockProfile.mockReturnValue({
+      data: profile,
+      isLoading: false,
+      isError: false,
+      error: null
+    })
+
+  test('warns that edits wait for the Director and offers removal', ({
+    render,
+    app
+  }) => {
+    mockRoles = [{ name: roles.ia_analyst }]
+    show({ ...action, changeOrderNumber: 2, changeOrderState: 'edited' })
+    render(<DesignatedActionDetail />, app)
+
+    expect(screen.getByTestId('action-change-order-banner')).toBeInTheDocument()
+    expect(screen.getByTestId('remove-designated-action')).toBeInTheDocument()
+    expect(screen.getByTestId('change-order-state')).toHaveAttribute(
+      'data-state',
+      'edited'
+    )
+  })
+
+  test('offers no removal outside a change order', ({ render, app }) => {
+    mockRoles = [{ name: roles.ia_analyst }]
+    show(action)
+    render(<DesignatedActionDetail />, app)
+
+    expect(screen.queryByTestId('action-change-order-banner')).toBeNull()
+    expect(screen.queryByTestId('remove-designated-action')).toBeNull()
+  })
+
+  test('lets the Director edit the evidence wording, not the review', ({
+    render,
+    app
+  }) => {
+    mockRoles = [{ name: roles.director }]
+    show({ ...action, changeOrderNumber: 2 })
+    render(<DesignatedActionDetail />, app)
+
+    const section = screen.getByTestId('evidence-of-completion')
+    expect(section).toHaveAttribute('data-can-edit', 'false')
+    expect(section).toHaveAttribute('data-can-edit-definition', 'true')
+    expect(screen.getByTestId('edit-designated-action')).toBeInTheDocument()
+  })
+
+  test('does not offer to remove an action already being removed', ({
+    render,
+    app
+  }) => {
+    mockRoles = [{ name: roles.ia_analyst }]
+    show({ ...action, changeOrderNumber: 2, changeOrderState: 'removed' })
+    render(<DesignatedActionDetail />, app)
+
+    expect(screen.queryByTestId('remove-designated-action')).toBeNull()
   })
 })

@@ -14,6 +14,7 @@ from lcfs.web.api.dashboard.schema import (
     CIApplicationCountsSchema,
     InitiativeAgreementCountsSchema,
 )
+from lcfs.web.api.initiative_agreement.workflow import LIFECYCLE_STATUSES_IN_EFFECT
 
 logger = structlog.get_logger(__name__)
 
@@ -93,7 +94,7 @@ class DashboardServices:
         counts = await self.repo.get_initiative_agreement_counts()
 
         return InitiativeAgreementCountsSchema(
-            underway=counts.get("Underway", 0),
+            underway=_in_effect(counts),
         )
 
     @service_handler
@@ -104,7 +105,7 @@ class DashboardServices:
         counts = await self.repo.get_initiative_agreement_counts(organization_id)
 
         return OrgInitiativeAgreementCountsSchema(
-            underway=counts.get("Underway", 0),
+            underway=_in_effect(counts),
             completed=counts.get("Completed", 0),
         )
 
@@ -113,3 +114,9 @@ class DashboardServices:
         counts = await self.repo.get_ci_application_counts()
 
         return CIApplicationCountsSchema(in_progress=counts.get("in_progress", 0))
+
+
+def _in_effect(counts) -> int:
+    """Agreements in effect: an agreement with a change order being drafted
+    is still underway (#5555)."""
+    return sum(counts.get(status, 0) for status in LIFECYCLE_STATUSES_IN_EFFECT)

@@ -285,7 +285,18 @@
       "evaluation": "Evaluation",
       "name": "Name",
       "credit_allocation": "Compliance units to be issued",
-      "specified_date": "Date for completion"
+      "specified_date": "Date for completion",
+      "requirement_number": "Number",
+      "evidence_type": "Evidence type"
+    },
+    "changeOrderAccepted": "Change order {{number}}, accepted date {{date}}",
+    "changeOrderAdded": "Added to the agreement",
+    "changeOrderRemoved": "Removed from the agreement",
+    "changeOrderRequirement": "Requirement {{number}}: {{title}} ({{action}})",
+    "changeOrderActions": {
+      "CREATE": "added",
+      "UPDATE": "changed",
+      "DELETE": "removed"
     }
   },
   "edit": {
@@ -339,5 +350,86 @@
     "initiativeAgreements": "Initiative agreements",
     "designatedActions": "Designated actions",
     "ariaLabel": "Initiative agreements navigation tabs"
+  },
+  "changeOrder": {
+    "start": "Start change order",
+    "startConfirmTitle": "Start a change order?",
+    "startConfirmBody": "The agreement moves to Change order draft. Changes to its details, notes, designated actions and evidence of completion are kept as new versions, and the organization keeps seeing the current agreement until the Director accepts them.",
+    "startFailed": "The change order could not be started.",
+    "banner": "Change order {{number}} is in draft. Changes made now are kept as new versions and are not visible to the organization until the Director accepts them.",
+    "startedBy": "Started by {{name}} on {{date}}.",
+    "accept": "Accept change order",
+    "acceptTitle": "Accept change order {{number}}",
+    "acceptBody": "The changed records become the current versions and are visible to the organization. Earlier versions are kept. The agreement returns to Underway.",
+    "acceptedDateLabel": "Accepted date",
+    "acceptedDateHint": "The date the change order takes effect. It can be earlier than today.",
+    "acceptedDateRequired": "Enter the accepted date.",
+    "acceptedDateFuture": "The accepted date cannot be in the future.",
+    "acceptFailed": "The change order could not be accepted.",
+    "accepted": "Change order {{number}} accepted.",
+    "discard": "Discard change order",
+    "discardTitle": "Discard change order {{number}}?",
+    "discardBody": "All changes made in this change order are dropped, and records added in it are removed. Attachment changes are not undone. The agreement returns to Underway.",
+    "discardFailed": "The change order could not be discarded.",
+    "discarded": "Change order {{number}} discarded.",
+    "started": "Change order {{number}} started.",
+    "historyTitle": "Change orders",
+    "historyEmpty": "No change orders yet.",
+    "columns": {
+      "number": "Change order",
+      "status": "Status",
+      "started": "Started",
+      "acceptedDate": "Accepted date",
+      "recorded": "Recorded",
+      "by": "By"
+    },
+    "state": {
+      "added": "Added",
+      "edited": "Edited",
+      "removed": "To be removed"
+    },
+    "stateHint": {
+      "added": "Added in this change order",
+      "edited": "Changed in this change order",
+      "removed": "Removed when the change order is accepted"
+    },
+    "versions": "Version history",
+    "versionsTitle": "Version history",
+    "versionsEmpty": "This record has not been changed by a change order.",
+    "versionLabel": "Version {{version}}",
+    "original": "Original",
+    "current": "Current",
+    "pending": "Pending",
+    "fromChangeOrder": "Change order {{number}}",
+    "acceptedOn": "Accepted date {{date}}",
+    "versionRemoved": "Removed",
+    "versionAdded": "Added",
+    "loadFailed": "The version history could not be loaded.",
+    "fields": {
+      "iaCode": "Initiative agreement code",
+      "agreementType": "Agreement type",
+      "title": "Title",
+      "projectDescription": "Project description",
+      "projectLocation": "Project location",
+      "contactName": "Contact name",
+      "contactEmail": "Contact email",
+      "contactPhone": "Contact phone",
+      "agreementStartDate": "Start date",
+      "agreementEndDate": "End date",
+      "noteNumber": "Note number",
+      "noteText": "Note",
+      "name": "Name",
+      "description": "Description",
+      "specifiedDate": "Date for completion",
+      "creditAllocation": "Compliance units to be issued",
+      "requirementNumber": "Number",
+      "evidenceType": "Evidence type"
+    },
+    "actionBanner": "Change order {{number}} is in draft. Changes to this designated action wait for the Director's acceptance.",
+    "removeAction": "Remove designated action",
+    "removeActionTitle": "Remove this designated action?",
+    "removeActionBody": "It is removed from the agreement when the Director accepts change order {{number}}. Until then the organization still sees it.",
+    "removeActionFailed": "The designated action could not be removed.",
+    "close": "Close"
   }
 }

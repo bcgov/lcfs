@@ -42,7 +42,12 @@ vi.mock('@/hooks/useInitiativeAgreements', () => ({
     ],
     isError: false
   }),
-  useUpdateAgreement: () => ({ mutate: vi.fn(), isPending: false })
+  useUpdateAgreement: () => ({ mutate: vi.fn(), isPending: false }),
+  useChangeOrders: () => ({ data: [] }),
+  useRecordVersions: () => ({ data: [], isLoading: false }),
+  useStartChangeOrder: () => ({ mutate: vi.fn(), isPending: false }),
+  useAcceptChangeOrder: () => ({ mutate: vi.fn(), isPending: false }),
+  useDiscardChangeOrder: () => ({ mutate: vi.fn(), isPending: false })
 }))
 
 const mockDocuments = vi.fn()
@@ -512,5 +517,88 @@ describe('InitiativeAgreementDetail', () => {
     })
     render(<InitiativeAgreementDetail />, app)
     expect(screen.getByText('Test Organization')).toBeInTheDocument()
+  })
+})
+
+describe('InitiativeAgreementDetail in a change order (#5555)', () => {
+  const inChangeOrder = {
+    ...agreement,
+    lifecycleStatus: { status: 'Change order draft' },
+    changeOrderState: 'edited',
+    changeOrder: {
+      initiativeAgreementChangeOrderId: 3,
+      changeOrderNumber: 2,
+      status: 'Draft',
+      startedByDisplayName: 'Ana Analyst',
+      createDate: '2026-11-24T18:00:00Z'
+    },
+    changeOrderActions: ['accept', 'discard']
+  }
+
+  beforeEach(() => {
+    mockRoles = [{ name: roles.director }]
+    mockDocuments.mockReturnValue({ data: [], refetch: vi.fn() })
+  })
+
+  test('shows the draft banner and marks the edited details', ({
+    render,
+    app
+  }) => {
+    mockAgreement.mockReturnValue({
+      data: inChangeOrder,
+      isLoading: false,
+      isError: false,
+      error: null
+    })
+    render(<InitiativeAgreementDetail />, app)
+
+    expect(screen.getByTestId('change-order-banner')).toBeInTheDocument()
+    expect(screen.getByTestId('accept-change-order')).toBeInTheDocument()
+    expect(screen.getByTestId('agreement-status-chip')).toHaveTextContent(
+      'Change order draft'
+    )
+    expect(screen.getByTestId('change-order-state')).toHaveAttribute(
+      'data-state',
+      'edited'
+    )
+  })
+
+  test('lets the Director edit the details only inside a change order', ({
+    render,
+    app
+  }) => {
+    mockAgreement.mockReturnValue({
+      data: inChangeOrder,
+      isLoading: false,
+      isError: false,
+      error: null
+    })
+    const { unmount } = render(<InitiativeAgreementDetail />, app)
+    expect(screen.getByTestId('edit-agreement')).toBeInTheDocument()
+    unmount()
+
+    mockAgreement.mockReturnValue({
+      data: agreement,
+      isLoading: false,
+      isError: false,
+      error: null
+    })
+    render(<InitiativeAgreementDetail />, app)
+    expect(screen.queryByTestId('edit-agreement')).toBeNull()
+  })
+
+  test('shows an organization no change order controls', ({ render, app }) => {
+    mockRoles = [{ name: roles.ia_proponent }]
+    mockAgreement.mockReturnValue({
+      // What the API sends an organization while IDIR drafts a change.
+      data: agreement,
+      isLoading: false,
+      isError: false,
+      error: null
+    })
+    render(<InitiativeAgreementDetail />, app)
+
+    expect(screen.queryByTestId('change-order-panel')).toBeNull()
+    expect(screen.queryByTestId('change-order-history')).toBeNull()
   })
 })

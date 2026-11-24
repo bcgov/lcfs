@@ -41,7 +41,8 @@ vi.mock('@/hooks/useInitiativeAgreements', () => ({
   useNextNoteNumber: () => ({ data: 3 }),
   useCreateNote: () => ({ mutateAsync: mockCreate }),
   useUpdateNote: () => ({ mutateAsync: mockUpdate }),
-  useDeleteNote: () => ({ mutateAsync: mockDelete })
+  useDeleteNote: () => ({ mutateAsync: mockDelete }),
+  useRecordVersions: () => ({ data: [], isLoading: false })
 }))
 
 const note = (number, noteText, extra = {}) => ({
@@ -361,5 +362,54 @@ describe('NotesAccordion', () => {
 
     expect(screen.getByTestId('note-1').querySelectorAll('p')).toHaveLength(8)
     expect(screen.getByTestId('note-2')).toHaveTextContent('One sentence.')
+  })
+})
+
+describe('NotesAccordion in a change order (#5555)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  test('lets the Director edit notes only inside a change order', ({
+    render,
+    app
+  }) => {
+    mockRoles = [roles.director]
+    mockNotes.mockReturnValue({
+      data: [note(1, '<p>First</p>')],
+      isLoading: false,
+      isError: false
+    })
+    const { unmount } = render(
+      <NotesAccordion initiativeAgreementId={5} inChangeOrder />,
+      app
+    )
+    expect(screen.getByTestId('edit-note-1')).toBeInTheDocument()
+    unmount()
+
+    render(<NotesAccordion initiativeAgreementId={5} />, app)
+    expect(screen.queryByTestId('edit-note-1')).toBeNull()
+  })
+
+  test('marks changed notes and keeps a removed one read-only', ({
+    render,
+    app
+  }) => {
+    mockRoles = [roles.ia_analyst]
+    mockNotes.mockReturnValue({
+      data: [
+        note(1, '<p>First</p>', { changeOrderState: 'edited' }),
+        note(2, '<p>Second</p>', { changeOrderState: 'removed' })
+      ],
+      isLoading: false,
+      isError: false
+    })
+    render(<NotesAccordion initiativeAgreementId={5} inChangeOrder />, app)
+
+    expect(
+      within(screen.getByTestId('note-1')).getByTestId('change-order-state')
+    ).toHaveAttribute('data-state', 'edited')
+    expect(screen.getByTestId('edit-note-1')).toBeInTheDocument()
+    expect(screen.queryByTestId('edit-note-2')).toBeNull()
   })
 })

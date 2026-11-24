@@ -9,13 +9,17 @@ import BCModal from '@/components/BCModal'
 import BCTypography from '@/components/BCTypography'
 import ModalField from './ModalField'
 import { Role } from '@/components/Role'
-import { roles } from '@/constants/roles'
+import { packageEditorRoles } from './packageEditors'
 import { useCreateDesignatedAction } from '@/hooks/useInitiativeAgreements'
 
 // Adding a designated action to an agreement that is still open: a draft
 // or underway (INITIATIVE_AGREEMENT_OPEN_TO_NEW_ACTIONS). The API enforces
 // that too — this only disables a control that would be refused.
-export const AddDesignatedAction = ({ initiativeAgreementId, canAdd }) => {
+export const AddDesignatedAction = ({
+  initiativeAgreementId,
+  canAdd,
+  inChangeOrder = false
+}) => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
@@ -64,7 +68,7 @@ export const AddDesignatedAction = ({ initiativeAgreementId, canAdd }) => {
   }
 
   return (
-    <Role roles={[roles.ia_analyst, roles.ia_manager]}>
+    <Role roles={packageEditorRoles(inChangeOrder)}>
       {/* Shown even when it cannot be used: a control that simply
           vanishes leaves someone hunting for a button that was never
           there. Disabled, it says why. */}

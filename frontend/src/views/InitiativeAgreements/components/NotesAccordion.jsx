@@ -16,8 +16,10 @@ import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCModal from '@/components/BCModal'
 import BCTypography from '@/components/BCTypography'
-import { roles } from '@/constants/roles'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { ChangeOrderStateChip } from './ChangeOrderStateChip'
+import { VersionHistoryButton } from './RecordVersions'
+import { packageEditorRoles } from './packageEditors'
 import {
   useCreateNote,
   useDeleteNote,
@@ -262,6 +264,12 @@ const NoteRow = ({ note, canEdit, onEdit }) => {
         {note.noteNumber}.
       </BCTypography>
       <BCBox sx={{ flex: 1, minWidth: 0 }}>
+        {note.changeOrderState && (
+          <ChangeOrderStateChip
+            state={note.changeOrderState}
+            sx={{ mb: 0.5 }}
+          />
+        )}
         <BCTypography
           variant="body4"
           component="div"
@@ -280,9 +288,15 @@ const NoteRow = ({ note, canEdit, onEdit }) => {
           {name
             ? t('initiativeAgreement:notes.lastEdited', { name, date })
             : t('initiativeAgreement:notes.lastEditedUnknown', { date })}
+          {' · '}
+          <VersionHistoryButton
+            recordType="note"
+            recordId={note.initiativeAgreementNoteId}
+          />
         </BCTypography>
       </BCBox>
-      {canEdit && (
+      {/* A note being removed in the change order can't be edited. */}
+      {canEdit && note.changeOrderState !== 'removed' && (
         <IconButton
           color="primary"
           size="small"
@@ -301,11 +315,14 @@ const NoteRow = ({ note, canEdit, onEdit }) => {
 
 // Notes on an initiative agreement (#5486): numbered, kept in number order,
 // one added or edited at a time.
-export const NotesAccordion = ({ initiativeAgreementId }) => {
+export const NotesAccordion = ({
+  initiativeAgreementId,
+  inChangeOrder = false
+}) => {
   const { t } = useTranslation(['initiativeAgreement'])
   const { hasRoles } = useCurrentUser()
-  const canEdit = Boolean(
-    hasRoles?.(roles.ia_analyst) || hasRoles?.(roles.ia_manager)
+  const canEdit = packageEditorRoles(inChangeOrder).some((role) =>
+    Boolean(hasRoles?.(role))
   )
   const [editing, setEditing] = useState(null)
 

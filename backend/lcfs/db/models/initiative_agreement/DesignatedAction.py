@@ -39,12 +39,15 @@ class DesignatedAction(BaseModel, Auditable, Versioning):
     """
     Designated action within an initiative agreement (Schedule B) (#4805).
 
-    Change orders: an amendment appends a new row sharing group_uuid with an
-    incremented version (action_type records CREATE/UPDATE/DELETE). Child
-    records (evidence requirements/submissions, internal comments) reference
-    a specific designated_action_id, so change-order-aware queries must
-    resolve children across every row id in the group_uuid group — mirror
-    the charging_site -> charging_equipment repository pattern.
+    Change orders (#5555) keep this row and its id: it always holds the
+    accepted terms, and its children (evidence requirements and
+    submissions, comments, documents, the credit transaction) stay attached
+    to it. A change order's edits wait in designated_action_version until
+    the Director accepts; then ``version`` is the accepted version and
+    ``action_type`` what the last accepted change did (DELETE retires the
+    action). An action a change order adds carries pending_change_order_id
+    until acceptance. group_uuid groups any version rows written before
+    that design; the current-version reads still resolve across it.
     """
 
     __tablename__ = "designated_action"
@@ -153,6 +156,20 @@ class DesignatedAction(BaseModel, Auditable, Versioning):
             "Ledger transaction created when credits were issued for this "
             "action; set by consolidation of legacy award records and by "
             "automatic issuance on director approval"
+        ),
+    )
+
+    pending_change_order_id = Column(
+        Integer,
+        ForeignKey(
+            "initiative_agreement_change_order.initiative_agreement_change_order_id"
+        ),
+        nullable=True,
+        index=True,
+        comment=(
+            "Change order that added this record, while it is not part of the "
+            "accepted package. NULL for every accepted record; acceptance "
+            "clears it (#5555)."
         ),
     )
 

@@ -8,7 +8,7 @@ import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
 import { Role } from '@/components/Role'
-import { roles } from '@/constants/roles'
+import { packageEditorRoles } from './packageEditors'
 import {
   useCreateEvidenceRequirement,
   useDeleteEvidenceRequirement,
@@ -23,6 +23,10 @@ import { AddEvidenceRequirementModal } from './AddEvidenceRequirementModal'
 export const EvidenceOfCompletion = ({
   designatedActionId,
   canEdit = true,
+  // The requirement's wording, which the Director may also edit inside a
+  // change order; canEdit covers the review (#5555).
+  canEditDefinition = canEdit,
+  inChangeOrder = false,
   renderRequestAction = null,
   missingInformationReadOnly = false
 }) => {
@@ -121,7 +125,7 @@ export const EvidenceOfCompletion = ({
             {t('report:collapseAll')}
           </Link>
         </BCTypography>
-        <Role roles={[roles.ia_analyst, roles.ia_manager]}>
+        <Role roles={packageEditorRoles(inChangeOrder)}>
           <BCButton
             type="button"
             variant="outlined"
@@ -153,6 +157,7 @@ export const EvidenceOfCompletion = ({
                 )
               }
               canEdit={canEdit}
+              canEditDefinition={canEditDefinition}
               missingInformationReadOnly={missingInformationReadOnly}
               actions={renderRequestAction?.(
                 requirement,

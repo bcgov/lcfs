@@ -22,6 +22,9 @@ from lcfs.web.api.role.schema import user_has_roles
 # Agreement lifecycle, distinct from the designated action statuses below.
 LIFECYCLE_STATUS_DRAFT = "Draft"
 LIFECYCLE_STATUS_UNDERWAY = "Underway"
+# An underway agreement whose changes are being prepared (#5555). The
+# organization keeps seeing the accepted package until the Director accepts.
+LIFECYCLE_STATUS_CHANGE_ORDER_DRAFT = "Change order draft"
 
 # Where a new agreement starts, by who starts it (#5186); the first rule the
 # creator matches wins. An agreement government enters is live from the
@@ -35,12 +38,98 @@ INITIAL_LIFECYCLE_STATUS_RULES = (
 # users do not see it: not in the grids, the counts or the status filter.
 LIFECYCLE_STATUSES_HIDDEN_FROM_GOVERNMENT = (LIFECYCLE_STATUS_DRAFT,)
 
-# Designated actions can be added while an agreement is being drafted or is
-# underway. A completed or terminated agreement takes no new ones.
+# Designated actions can be added while an agreement is being drafted, is
+# underway, or has a change order drafted (where the new action waits for
+# acceptance). A completed or terminated agreement takes no new ones.
 LIFECYCLE_STATUSES_OPEN_TO_NEW_ACTIONS = (
     LIFECYCLE_STATUS_DRAFT,
     LIFECYCLE_STATUS_UNDERWAY,
+    LIFECYCLE_STATUS_CHANGE_ORDER_DRAFT,
 )
+
+# --- Change orders (#5555) --------------------------------------------------
+# Staff who prepare an agreement can start a change order on an underway
+# one and edit it. Only the Director accepts it. A manager or the Director
+# can discard it.
+LIFECYCLE_STATUSES_OPEN_TO_CHANGE_ORDERS = (LIFECYCLE_STATUS_UNDERWAY,)
+CHANGE_ORDER_START_ROLES = (
+    RoleEnum.IA_ANALYST,
+    RoleEnum.IA_MANAGER,
+    RoleEnum.DIRECTOR,
+)
+CHANGE_ORDER_ACCEPT_ROLES = (RoleEnum.DIRECTOR,)
+CHANGE_ORDER_DISCARD_ROLES = (RoleEnum.IA_MANAGER, RoleEnum.DIRECTOR)
+
+CHANGE_ORDER_ACTION_START = "start"
+CHANGE_ORDER_ACTION_ACCEPT = "accept"
+CHANGE_ORDER_ACTION_DISCARD = "discard"
+
+# Who edits a package's content: analysts and managers, and inside a change
+# order the Director as well.
+PACKAGE_EDITOR_ROLES = (RoleEnum.IA_ANALYST, RoleEnum.IA_MANAGER)
+CHANGE_ORDER_EDITOR_ROLES = (
+    RoleEnum.IA_ANALYST,
+    RoleEnum.IA_MANAGER,
+    RoleEnum.DIRECTOR,
+)
+
+# What an organization sees in place of a status it is not shown. While a
+# change order is drafted, the organization still has the accepted package,
+# and sees it as Underway.
+LIFECYCLE_STATUSES_SHOWN_TO_ORGANIZATIONS_AS = {
+    LIFECYCLE_STATUS_CHANGE_ORDER_DRAFT: LIFECYCLE_STATUS_UNDERWAY,
+}
+
+# Statuses in which the package is in effect, for counts such as the
+# dashboards' "underway".
+LIFECYCLE_STATUSES_IN_EFFECT = (
+    LIFECYCLE_STATUS_UNDERWAY,
+    LIFECYCLE_STATUS_CHANGE_ORDER_DRAFT,
+)
+
+
+def has_any_role(user, roles) -> bool:
+    return user is not None and any(user_has_roles(user, [role]) for role in roles)
+
+
+def is_government(user) -> bool:
+    return user is not None and user_has_roles(user, [RoleEnum.GOVERNMENT])
+
+
+def lifecycle_status_aliases(user) -> dict:
+    """Statuses this user sees under another name: an organization sees a
+    change order draft as Underway. Government sees every status as is."""
+    if is_government(user):
+        return {}
+    return dict(LIFECYCLE_STATUSES_SHOWN_TO_ORGANIZATIONS_AS)
+
+
+def may_edit_package(user, in_change_order: bool) -> bool:
+    """Whether this user may change a package's content. The Director edits
+    only inside a change order."""
+    roles = CHANGE_ORDER_EDITOR_ROLES if in_change_order else PACKAGE_EDITOR_ROLES
+    return has_any_role(user, roles)
+
+
+def change_order_actions(lifecycle_status, user) -> list:
+    """The change-order actions this user can take on an agreement in this
+    lifecycle status."""
+    if not is_government(user):
+        return []
+    if lifecycle_status in LIFECYCLE_STATUSES_OPEN_TO_CHANGE_ORDERS:
+        return (
+            [CHANGE_ORDER_ACTION_START]
+            if has_any_role(user, CHANGE_ORDER_START_ROLES)
+            else []
+        )
+    if lifecycle_status == LIFECYCLE_STATUS_CHANGE_ORDER_DRAFT:
+        actions = []
+        if has_any_role(user, CHANGE_ORDER_ACCEPT_ROLES):
+            actions.append(CHANGE_ORDER_ACTION_ACCEPT)
+        if has_any_role(user, CHANGE_ORDER_DISCARD_ROLES):
+            actions.append(CHANGE_ORDER_ACTION_DISCARD)
+        return actions
+    return []
 
 
 def initial_lifecycle_status(user):

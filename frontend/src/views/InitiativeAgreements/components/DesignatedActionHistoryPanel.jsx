@@ -124,6 +124,46 @@ const detailLines = (entry, t) => {
       })
     )
   }
+  if (entry.event === 'CHANGE_ORDER' && snapshot.change_order_number) {
+    // What an accepted change order did to the action (#5555).
+    lines.push(
+      t('initiativeAgreement:history.changeOrderAccepted', {
+        number: snapshot.change_order_number,
+        date: snapshot.accepted_date
+      })
+    )
+    if (snapshot.action === 'CREATE') {
+      lines.push(t('initiativeAgreement:history.changeOrderAdded'))
+    }
+    if (snapshot.action === 'DELETE') {
+      lines.push(t('initiativeAgreement:history.changeOrderRemoved'))
+    }
+    for (const requirement of snapshot.requirements || []) {
+      lines.push(
+        t('initiativeAgreement:history.changeOrderRequirement', {
+          number: requirement.requirement_number,
+          title: evidencePlainText(requirement.title || ''),
+          action: t(
+            `initiativeAgreement:history.changeOrderActions.${requirement.action}`
+          )
+        })
+      )
+      for (const [field, change] of Object.entries(requirement.changed || {})) {
+        lines.push(
+          t('initiativeAgreement:history.changed', {
+            field: t(`initiativeAgreement:history.fields.${field}`, {
+              defaultValue: field
+            }),
+            from:
+              change.from == null
+                ? '—'
+                : evidencePlainText(String(change.from)),
+            to: change.to == null ? '—' : evidencePlainText(String(change.to))
+          })
+        )
+      }
+    }
+  }
   if (snapshot.recommended_credits !== undefined) {
     lines.push(
       t('initiativeAgreement:history.recommendedCredits', {

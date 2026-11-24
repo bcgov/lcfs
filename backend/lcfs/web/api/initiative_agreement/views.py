@@ -9,6 +9,8 @@ from lcfs.web.api.initiative_agreement.schema import (
     AgreementCreateSchema,
     AgreementUpdateSchema,
     AnalystAssignmentSchema,
+    ChangeOrderAcceptSchema,
+    ChangeOrderSchema,
     DesignatedActionCreateSchema,
     DesignatedActionDocumentTargetSchema,
     DesignatedActionHistorySchema,
@@ -31,6 +33,7 @@ from lcfs.web.api.initiative_agreement.schema import (
     InitiativeAgreementsListSchema,
     InitiativeAgreementUpdateSchema,
     RecommendedCreditsSchema,
+    RecordVersionSchema,
 )
 from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
 from lcfs.web.api.initiative_agreement.validation import InitiativeAgreementValidation
@@ -53,6 +56,11 @@ IA_IDIR_ROLES = [RoleEnum.IA_ANALYST, RoleEnum.IA_MANAGER, RoleEnum.DIRECTOR]
 # Recording an assessment is the analyst's job and a manager may cover for
 # them; directors see the review but do not author it (#4899).
 IA_REVIEW_ROLES = [RoleEnum.IA_ANALYST, RoleEnum.IA_MANAGER]
+
+# Who may reach the routes that change a package's content. Analysts and
+# managers edit at any time; the Director only inside a change order, which
+# the service enforces (#5555).
+IA_PACKAGE_EDIT_ROLES = [RoleEnum.IA_ANALYST, RoleEnum.IA_MANAGER, RoleEnum.DIRECTOR]
 
 router = APIRouter()
 
@@ -107,7 +115,7 @@ async def create_agreement(
     response_model=InitiativeAgreementProfileSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler(IA_REVIEW_ROLES)
+@view_handler(IA_PACKAGE_EDIT_ROLES)
 async def update_agreement(
     request: Request,
     initiative_agreement_id: int,
@@ -123,7 +131,7 @@ async def update_agreement(
     response_model=DesignatedActionSchema,
     status_code=status.HTTP_201_CREATED,
 )
-@view_handler(IA_REVIEW_ROLES)
+@view_handler(IA_PACKAGE_EDIT_ROLES)
 async def create_designated_action(
     request: Request,
     initiative_agreement_id: int,
@@ -246,7 +254,7 @@ async def get_evidence_requirements(
     response_model=EvidenceRequirementSchema,
     status_code=status.HTTP_201_CREATED,
 )
-@view_handler(IA_REVIEW_ROLES)
+@view_handler(IA_PACKAGE_EDIT_ROLES)
 async def create_evidence_requirement(
     request: Request,
     designated_action_id: int,
@@ -264,7 +272,7 @@ async def create_evidence_requirement(
     response_model=EvidenceRequirementSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler(IA_REVIEW_ROLES)
+@view_handler(IA_PACKAGE_EDIT_ROLES)
 async def update_evidence_requirement(
     request: Request,
     evidence_requirement_id: int,
@@ -281,7 +289,7 @@ async def update_evidence_requirement(
     "/evidence-requirements/{evidence_requirement_id}",
     status_code=status.HTTP_204_NO_CONTENT,
 )
-@view_handler(IA_REVIEW_ROLES)
+@view_handler(IA_PACKAGE_EDIT_ROLES)
 async def deactivate_evidence_requirement(
     request: Request,
     evidence_requirement_id: int,
@@ -311,7 +319,7 @@ async def get_designated_action_profile(
     response_model=DesignatedActionSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler(IA_REVIEW_ROLES)
+@view_handler(IA_PACKAGE_EDIT_ROLES)
 async def update_designated_action(
     request: Request,
     designated_action_id: int,
@@ -418,7 +426,7 @@ async def get_notes(
     response_model=float,
     status_code=status.HTTP_200_OK,
 )
-@view_handler(IA_REVIEW_ROLES)
+@view_handler(IA_PACKAGE_EDIT_ROLES)
 async def get_next_note_number(
     request: Request,
     initiative_agreement_id: int,
@@ -435,7 +443,7 @@ async def get_next_note_number(
     response_model=InitiativeAgreementNoteSchema,
     status_code=status.HTTP_201_CREATED,
 )
-@view_handler(IA_REVIEW_ROLES)
+@view_handler(IA_PACKAGE_EDIT_ROLES)
 async def create_note(
     request: Request,
     initiative_agreement_id: int,
@@ -451,7 +459,7 @@ async def create_note(
     response_model=InitiativeAgreementNoteSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler(IA_REVIEW_ROLES)
+@view_handler(IA_PACKAGE_EDIT_ROLES)
 async def update_note(
     request: Request,
     initiative_agreement_id: int,
@@ -469,7 +477,7 @@ async def update_note(
     "/{initiative_agreement_id}/notes/{note_id}",
     status_code=status.HTTP_204_NO_CONTENT,
 )
-@view_handler(IA_REVIEW_ROLES)
+@view_handler(IA_PACKAGE_EDIT_ROLES)
 async def delete_note(
     request: Request,
     initiative_agreement_id: int,
@@ -478,6 +486,101 @@ async def delete_note(
 ):
     """Permanently remove a note."""
     await service.delete_note(initiative_agreement_id, note_id, request.user)
+
+
+@router.delete(
+    "/designated-actions/{designated_action_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+@view_handler(IA_PACKAGE_EDIT_ROLES)
+async def remove_designated_action(
+    request: Request,
+    designated_action_id: int,
+    service: InitiativeAgreementServices = Depends(),
+):
+    """Remove a designated action in a change order (#5555)."""
+    await service.remove_designated_action(designated_action_id, request.user)
+
+
+@router.post(
+    "/agreements/{initiative_agreement_id}/change-order",
+    response_model=InitiativeAgreementProfileSchema,
+    status_code=status.HTTP_201_CREATED,
+)
+@view_handler(IA_IDIR_ROLES)
+async def start_change_order(
+    request: Request,
+    initiative_agreement_id: int,
+    service: InitiativeAgreementServices = Depends(),
+):
+    """Start a change order on an underway agreement (#5555)."""
+    return await service.start_change_order(initiative_agreement_id, request.user)
+
+
+@router.put(
+    "/agreements/{initiative_agreement_id}/change-order/accept",
+    response_model=InitiativeAgreementProfileSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.DIRECTOR])
+async def accept_change_order(
+    request: Request,
+    initiative_agreement_id: int,
+    data: ChangeOrderAcceptSchema = Body(...),
+    service: InitiativeAgreementServices = Depends(),
+):
+    """The Director accepts the open change order with its effective date."""
+    return await service.accept_change_order(
+        initiative_agreement_id, data.accepted_date, request.user
+    )
+
+
+@router.put(
+    "/agreements/{initiative_agreement_id}/change-order/discard",
+    response_model=InitiativeAgreementProfileSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.IA_MANAGER, RoleEnum.DIRECTOR])
+async def discard_change_order(
+    request: Request,
+    initiative_agreement_id: int,
+    service: InitiativeAgreementServices = Depends(),
+):
+    """Discard the open change order; the agreement returns to Underway."""
+    return await service.discard_change_order(initiative_agreement_id, request.user)
+
+
+@router.get(
+    "/agreements/{initiative_agreement_id}/change-orders",
+    response_model=List[ChangeOrderSchema],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(IA_IDIR_ROLES)
+async def get_change_orders(
+    request: Request,
+    initiative_agreement_id: int,
+    service: InitiativeAgreementServices = Depends(),
+):
+    """The agreement's change orders, newest first."""
+    return await service.get_change_orders(initiative_agreement_id, request.user)
+
+
+@router.get(
+    "/versions/{record_type}/{record_id}",
+    response_model=List[RecordVersionSchema],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(IA_IDIR_ROLES)
+async def get_record_versions(
+    request: Request,
+    record_type: str,
+    record_id: int,
+    service: InitiativeAgreementServices = Depends(),
+):
+    """Every version of an agreement's details, a note, a designated action
+    or an evidence requirement (record_type: agreement, note,
+    designated-action, evidence-requirement)."""
+    return await service.get_record_versions(record_type, record_id, request.user)
 
 
 @router.get("/{initiative_agreement_id}", response_model=InitiativeAgreementSchema)

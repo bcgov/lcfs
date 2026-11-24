@@ -504,3 +504,42 @@ describe('DesignatedActionHistoryPanel', () => {
     expect(toggle).toHaveAttribute('aria-expanded', 'false')
   })
 })
+
+describe('DesignatedActionHistoryPanel change orders (#5555)', () => {
+  test('describes what an accepted change order did', ({ render, app }) => {
+    mockHistory.mockReturnValue({
+      data: [
+        entry({
+          designatedActionHistoryId: 51,
+          event: 'CHANGE_ORDER',
+          status: null,
+          snapshot: {
+            change_order_number: 2,
+            accepted_date: '2025-12-01',
+            action: 'UPDATE',
+            changed: { credit_allocation: { from: 1000, to: 1500 } },
+            requirements: [
+              {
+                evidence_requirement_id: 4,
+                requirement_number: 1,
+                title: 'Permit',
+                action: 'DELETE'
+              }
+            ]
+          }
+        })
+      ],
+      isLoading: false
+    })
+    render(<DesignatedActionHistoryPanel designatedActionId="1" />, app)
+
+    expect(screen.getByTestId('history-entry-summary-51')).toHaveTextContent(
+      'history.changeOrderAccepted {"number":2,"date":"2025-12-01"}'
+    )
+    fireEvent.click(screen.getByTestId('history-entry-toggle-51'))
+    const detail = screen.getByTestId('history-entry-51')
+    expect(detail).toHaveTextContent('"from":1000,"to":1500')
+    expect(detail).toHaveTextContent('history.changeOrderRequirement')
+    expect(detail).toHaveTextContent('"title":"Permit"')
+  })
+})

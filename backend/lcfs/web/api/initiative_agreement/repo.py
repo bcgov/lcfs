@@ -33,6 +33,9 @@ from lcfs.db.models.comment.InitiativeAgreementInternalComment import (
 )
 from lcfs.db.models.comment.InternalComment import InternalComment
 from lcfs.db.models.document import Document
+from lcfs.db.models.initiative_agreement.ChangeOrderVersion import (
+    InitiativeAgreementNoteVersion,
+)
 from lcfs.db.models.initiative_agreement.DesignatedAction import (
     DesignatedAction,
     designated_action_document_association,
@@ -83,10 +86,10 @@ def _agreement_credit_totals():
     one aggregate rather than a subquery per row, so the grid can sort and
     filter on them and pages stay cheap.
 
-    Only each action's current version counts (a change order appends a row
-    sharing group_uuid), and an action whose current version is a delete
-    drops out. The denormalized totals on initiative_agreement are caches
-    and are not read here.
+    Only each action's current version counts, an action whose current
+    version is a delete drops out, and so does one a change order has added
+    but the Director has not yet accepted (#5555). The denormalized totals
+    on initiative_agreement are caches and are not read here.
 
     Returns the aggregate and the two columns derived from it.
 
@@ -122,6 +125,7 @@ def _agreement_credit_totals():
         )
         .where(
             action.action_type != ActionTypeEnum.DELETE,
+            _in_package(action.pending_change_order_id),
             ~exists().where(
                 newer_version.group_uuid == action.group_uuid,
                 newer_version.version > action.version,
@@ -199,6 +203,28 @@ def _not_in_statuses(status_column, hidden_statuses):
     """Rows whose lifecycle status is not hidden. A row with no status at
     all is kept: NOT IN would drop it as NULL."""
     return or_(status_column.is_(None), status_column.notin_(hidden_statuses))
+
+
+def _in_package(pending_column, change_order_id=None):
+    """Rows in the accepted package, plus, when change_order_id is given,
+    the rows that change order added (#5555). A record an unaccepted change
+    order added is never part of what an organization sees, nor of the
+    package's totals."""
+    if change_order_id is None:
+        return pending_column.is_(None)
+    return or_(pending_column.is_(None), pending_column == change_order_id)
+
+
+def _status_column(aliases):
+    """The lifecycle status as the caller sees it: an organization sees a
+    change order draft as Underway (#5555), and filters and sorts that way."""
+    column = InitiativeAgreementLifecycleStatus.status
+    if not aliases:
+        return column
+    return case(
+        *[(column == shown, alias) for shown, alias in aliases.items()],
+        else_=column,
+    )
 
 
 def _parse_date(value: str) -> "date_type | None":
@@ -420,12 +446,14 @@ class InitiativeAgreementRepository:
         pagination: PaginationRequestSchema,
         organization_id: Optional[int] = None,
         hidden_statuses: Sequence[str] = (),
+        status_aliases: Optional[Dict[str, str]] = None,
     ) -> Tuple[List[Tuple[InitiativeAgreement, int, int]], int]:
         """
         Paginated, filterable agreements query for the agreement-management
         grid. When organization_id is provided the result is scoped to that
         organization (non-government callers). Agreements in any of
-        hidden_statuses are left out.
+        hidden_statuses are left out. status_aliases maps a status to the one
+        the caller sees in its place, for filtering and sorting.
 
         Each row is (agreement, total_credits, awarded_credits); the credit
         totals are calculated from the designated actions in the query so
@@ -465,8 +493,11 @@ class InitiativeAgreementRepository:
                     InitiativeAgreementLifecycleStatus.status, hidden_statuses
                 )
             )
+        status_column = _status_column(status_aliases)
         list_columns = {
             **LIST_FIELD_COLUMNS,
+            "status": status_column,
+            "lifecycle_status.status": status_column,
             "total_credits": total_credits,
             "awarded_credits": awarded_credits,
         }
@@ -538,14 +569,17 @@ class InitiativeAgreementRepository:
 
     @repo_handler
     async def get_current_designated_actions(
-        self, initiative_agreement_id: int
+        self,
+        initiative_agreement_id: int,
+        include_change_order_id: Optional[int] = None,
     ) -> List[DesignatedAction]:
         """
-        The current version of each designated action.
+        The current version of each designated action in the accepted
+        package, plus those include_change_order_id's change order added.
 
-        Change orders append a row sharing group_uuid with a higher version,
-        so selecting every row would show one action once per amendment.
-        Mirrors the charging_site latest-version-per-group pattern.
+        Change orders keep each action's row and record its versions in
+        designated_action_version (#5555), so a group holds one row; the
+        latest-version-per-group join is kept for rows written before that.
         """
         latest = (
             select(
@@ -572,6 +606,10 @@ class InitiativeAgreementRepository:
             .where(
                 DesignatedAction.initiative_agreement_id == initiative_agreement_id,
                 DesignatedAction.action_type != ActionTypeEnum.DELETE,
+                _in_package(
+                    DesignatedAction.pending_change_order_id,
+                    include_change_order_id,
+                ),
             )
             .order_by(asc(DesignatedAction.action_number))
         )
@@ -700,6 +738,7 @@ class InitiativeAgreementRepository:
         initiative_agreement_id: Optional[int],
         pagination: PaginationRequestSchema,
         hidden_statuses: Sequence[str] = (),
+        include_change_order_id: Optional[int] = None,
     ) -> Tuple[List[DesignatedAction], int]:
         """
         Paginated current-version designated actions. Scoped to one
@@ -707,7 +746,9 @@ class InitiativeAgreementRepository:
         when *initiative_agreement_id* is None for the module's Designated
         actions tab (#5078). Change orders append rows sharing group_uuid,
         so the base set is the highest version per group. Actions of
-        agreements in any of hidden_statuses are left out.
+        agreements in any of hidden_statuses are left out, as are actions a
+        change order has added but not had accepted, unless it is
+        include_change_order_id's (#5555).
         """
         latest = select(
             DesignatedAction.group_uuid,
@@ -749,7 +790,13 @@ class InitiativeAgreementRepository:
                 InitiativeAgreement.lifecycle_status_id
                 == InitiativeAgreementLifecycleStatus.initiative_agreement_lifecycle_status_id,
             )
-            .where(DesignatedAction.action_type != ActionTypeEnum.DELETE)
+            .where(
+                DesignatedAction.action_type != ActionTypeEnum.DELETE,
+                _in_package(
+                    DesignatedAction.pending_change_order_id,
+                    include_change_order_id,
+                ),
+            )
         )
         if initiative_agreement_id is not None:
             query = query.where(
@@ -942,11 +989,19 @@ class InitiativeAgreementRepository:
 
     @repo_handler
     async def get_evidence_requirements(
-        self, designated_action_id: int, include_inactive: bool = False
+        self,
+        designated_action_id: int,
+        include_inactive: bool = False,
+        include_change_order_id: Optional[int] = None,
     ) -> List[EvidenceRequirement]:
-        """Requirements for one action, in their business numbering order."""
+        """Requirements for one action, in their business numbering order:
+        those in the accepted package, plus any include_change_order_id's
+        change order added (#5555)."""
         query = select(EvidenceRequirement).where(
-            EvidenceRequirement.designated_action_id == designated_action_id
+            EvidenceRequirement.designated_action_id == designated_action_id,
+            _in_package(
+                EvidenceRequirement.pending_change_order_id, include_change_order_id
+            ),
         )
         if not include_inactive:
             query = query.where(EvidenceRequirement.is_active.is_(True))
@@ -1018,6 +1073,7 @@ class InitiativeAgreementRepository:
         query = select(InitiativeAgreementNote.initiative_agreement_note_id).where(
             InitiativeAgreementNote.initiative_agreement_id == initiative_agreement_id,
             InitiativeAgreementNote.note_number == note_number,
+            InitiativeAgreementNote.is_active.is_(True),
         )
         if exclude_note_id is not None:
             query = query.where(
@@ -1031,23 +1087,28 @@ class InitiativeAgreementRepository:
 
     @repo_handler
     async def next_note_number(self, initiative_agreement_id: int) -> Decimal:
-        """The number after the agreement's highest note."""
+        """The number after the agreement's highest active note."""
         highest = await self.db.scalar(
             select(func.max(InitiativeAgreementNote.note_number)).where(
                 InitiativeAgreementNote.initiative_agreement_id
-                == initiative_agreement_id
+                == initiative_agreement_id,
+                InitiativeAgreementNote.is_active.is_(True),
             )
         )
         return (highest or Decimal(0)) + Decimal(1)
 
     @repo_handler
     async def get_notes_with_editors(
-        self, initiative_agreement_id: int, note_id: Optional[int] = None
+        self,
+        initiative_agreement_id: int,
+        note_id: Optional[int] = None,
+        include_change_order_id: Optional[int] = None,
     ) -> List[Tuple[InitiativeAgreementNote, Optional[UserProfile]]]:
-        """An agreement's notes in number order, each with the user who last
-        edited it. Notes record that user as the audit ``update_user``
-        (a Keycloak username), so the profile is joined on it; it is None
-        for a user no longer on file."""
+        """An agreement's active notes in number order, each with the user
+        who last edited it. Notes record that user as the audit
+        ``update_user`` (a Keycloak username), so the profile is joined on
+        it; it is None for a user no longer on file. Notes a change order
+        added are included only for include_change_order_id (#5555)."""
         query = (
             select(InitiativeAgreementNote, UserProfile)
             .outerjoin(
@@ -1056,7 +1117,12 @@ class InitiativeAgreementRepository:
             )
             .where(
                 InitiativeAgreementNote.initiative_agreement_id
-                == initiative_agreement_id
+                == initiative_agreement_id,
+                InitiativeAgreementNote.is_active.is_(True),
+                _in_package(
+                    InitiativeAgreementNote.pending_change_order_id,
+                    include_change_order_id,
+                ),
             )
             .order_by(asc(InitiativeAgreementNote.note_number))
             .execution_options(populate_existing=True)
@@ -1088,7 +1154,7 @@ class InitiativeAgreementRepository:
             )
             .execution_options(populate_existing=True)
         )
-        if note is None:
+        if note is None or not note.is_active:
             raise DataNotFoundException(f"Note with id {note_id} not found")
 
         if note.note_number == note_number and note.note_text == note_text:
@@ -1116,9 +1182,20 @@ class InitiativeAgreementRepository:
                 == initiative_agreement_id,
             )
         )
-        if note is None:
+        if note is None or not note.is_active:
             raise DataNotFoundException(f"Note with id {note_id} not found")
-        await self.db.delete(note)
+        has_versions = await self.db.scalar(
+            select(InitiativeAgreementNoteVersion.initiative_agreement_note_version_id)
+            .where(
+                InitiativeAgreementNoteVersion.initiative_agreement_note_id == note_id
+            )
+            .limit(1)
+        )
+        if has_versions is not None:
+            # A change order has versioned it, so its history is kept (#5555).
+            note.is_active = False
+        else:
+            await self.db.delete(note)
         await self.db.flush()
 
     @repo_handler
@@ -1128,18 +1205,32 @@ class InitiativeAgreementRepository:
         note_text: str,
         note_number: Optional[Decimal] = None,
         username: Optional[str] = None,
+        pending_change_order_id: Optional[int] = None,
+        taken_numbers: Optional[set] = None,
     ) -> InitiativeAgreementNote:
-        """Create a note, serializing number allocation per agreement."""
+        """Create a note, serializing number allocation per agreement.
+
+        A note a change order adds carries its pending_change_order_id, and
+        taken_numbers holds the numbers that change order's notes use, which
+        are not all in the live rows yet (#5555)."""
         await self._lock_agreement(initiative_agreement_id)
 
         if note_number is None:
             note_number = await self.next_note_number(initiative_agreement_id)
+            if taken_numbers:
+                note_number = max(note_number, max(taken_numbers) + Decimal(1))
         await self._ensure_note_number_free(initiative_agreement_id, note_number)
+        if taken_numbers and Decimal(note_number) in taken_numbers:
+            raise ValueError(
+                f"Note number {note_number} is already in use for this "
+                "initiative agreement."
+            )
 
         note = InitiativeAgreementNote(
             initiative_agreement_id=initiative_agreement_id,
             note_number=note_number,
             note_text=note_text,
+            pending_change_order_id=pending_change_order_id,
             create_user=username,
             update_user=username,
         )

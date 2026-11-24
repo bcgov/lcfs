@@ -291,7 +291,7 @@ async def test_lifecycle_statuses_endpoint(
     assert response.status_code == status.HTTP_200_OK
     statuses = [row["status"] for row in response.json()]
     # IDIR users do not see drafts, so the filter does not offer one (#5186).
-    assert statuses == ["Underway", "Completed", "Terminated"]
+    assert statuses == ["Underway", "Change order draft", "Completed", "Terminated"]
 
 
 @pytest.mark.anyio

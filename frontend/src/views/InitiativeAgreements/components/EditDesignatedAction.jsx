@@ -8,14 +8,18 @@ import BCModal from '@/components/BCModal'
 import BCTypography from '@/components/BCTypography'
 import ModalField from './ModalField'
 import { Role } from '@/components/Role'
-import { roles } from '@/constants/roles'
+import { packageEditorRoles } from './packageEditors'
 import { useUpdateDesignatedAction } from '@/hooks/useInitiativeAgreements'
 
 // Correcting a designated action. Available at any point in the
 // agreement's life: an analyst who spots a wrong figure or a mistyped
 // name should be able to fix it rather than work around it. Every change
 // is recorded in the activity trail with its before and after.
-export const EditDesignatedAction = ({ action, onChanged }) => {
+export const EditDesignatedAction = ({
+  action,
+  onChanged,
+  inChangeOrder = false
+}) => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
@@ -77,8 +81,11 @@ export const EditDesignatedAction = ({ action, onChanged }) => {
     )
   }
 
+  // An action being removed in the change order can't be edited (#5555).
+  if (action.changeOrderState === 'removed') return null
+
   return (
-    <Role roles={[roles.ia_analyst, roles.ia_manager]}>
+    <Role roles={packageEditorRoles(inChangeOrder)}>
       <FloatingAlert ref={alertRef} data-test="edit-action-alert" />
       <WidgetEditButton
         type="button"
