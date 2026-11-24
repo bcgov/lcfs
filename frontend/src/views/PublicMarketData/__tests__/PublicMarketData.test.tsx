@@ -3,6 +3,10 @@ import { afterEach, beforeEach, describe, expect, vi } from 'vite-plus/test'
 import * as XLSX from 'xlsx'
 import { test } from '@/tests/utils/fixtures'
 import { PublicMarketData } from '../PublicMarketData'
+import {
+  groupStatisticsAndTrendsForPdf,
+  pdfFitBlockEnd
+} from '../pdfPagination'
 
 vi.mock('echarts-for-react', () => ({
   default: ({ option }: { option: unknown }) => (
@@ -326,18 +330,54 @@ describe('PublicMarketData', () => {
     expect(
       within(report).getByTestId('download-agreementMonthly-csv')
     ).toBeInTheDocument()
-    const mainChartBlock = screen
-      .getByTestId('price-volume-chart-keyboard')
-      .closest('.pdf-fit-page')
-    expect(mainChartBlock).toHaveClass('pdf-market-trends-section')
+    const activitySummary = screen.getByRole('button', {
+      name: 'publicDashboard.marketData.sections.activityAndStatistics'
+    })
+    const trendsSummary = screen.getByRole('button', {
+      name: 'publicDashboard.marketData.sections.marketTrendsHistoricalPerformance'
+    })
+    expect(activitySummary.closest('section')).not.toBe(
+      trendsSummary.closest('section')
+    )
+    expect(activitySummary).toHaveAttribute('aria-expanded', 'true')
+    expect(trendsSummary).toHaveAttribute('aria-expanded', 'true')
+    fireEvent.click(activitySummary)
+    expect(activitySummary).toHaveAttribute('aria-expanded', 'false')
+    expect(trendsSummary).toHaveAttribute('aria-expanded', 'true')
+
+    const root = activitySummary.closest('section')?.parentElement
+    if (!root) throw new Error('Missing market report container')
+    const clone = root.cloneNode(true) as HTMLElement
+    groupStatisticsAndTrendsForPdf(clone)
+    const statistics = clone.querySelector('.pdf-market-statistics-section')
+    const trends = clone.querySelector('.pdf-market-trends-section')
+    expect(statistics?.parentElement).toHaveClass('pdf-fit-page')
+    expect(trends?.parentElement).toBe(statistics?.parentElement)
+    expect(statistics?.nextElementSibling).toBe(trends)
     expect(
-      screen
-        .getByRole('heading', {
-          level: 2,
-          name: 'publicDashboard.marketData.sections.marketTrendsHistoricalPerformance'
-        })
-        .closest('.pdf-fit-page')
-    ).toBe(mainChartBlock)
+      trends?.querySelector('[data-test="price-volume-chart-keyboard"]')
+    ).not.toBeNull()
+  })
+
+  test('packs a fit-to-page block with earlier content only when it fits', () => {
+    expect(pdfFitBlockEnd(0, 1000, { top: 400, bottom: 900 }, 200, true)).toBe(
+      900
+    )
+    expect(pdfFitBlockEnd(0, 1000, { top: 400, bottom: 1000 }, 200, true)).toBe(
+      1000
+    )
+    expect(pdfFitBlockEnd(0, 1000, { top: 400, bottom: 1001 }, 200, true)).toBe(
+      400
+    )
+    expect(pdfFitBlockEnd(0, 1000, { top: 100, bottom: 1001 }, 200, true)).toBe(
+      100
+    )
+    expect(pdfFitBlockEnd(0, 1000, { top: 100, bottom: 1000 }, 200, true)).toBe(
+      1000
+    )
+    expect(pdfFitBlockEnd(400, 1400, { top: 400, bottom: 1500 }, 200)).toBe(
+      1500
+    )
   })
 
   test('shows minimum and maximum prices in the price and volume chart', ({

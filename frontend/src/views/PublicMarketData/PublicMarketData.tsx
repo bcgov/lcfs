@@ -30,6 +30,7 @@ import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import { useCreditMarketPublicReport } from '@/hooks/useCreditMarket'
 import BCButton from '@/components/BCButton'
+import { groupStatisticsAndTrendsForPdf, pdfFitBlockEnd } from './pdfPagination'
 
 const NAVY = '#003366'
 const LINK = '#1A5A96'
@@ -1365,7 +1366,7 @@ export const PublicMarketData = () => {
       }
 
       let atomicRangesPx: PxRange[] = []
-      let fitPageRangesPx: PxRange[] = []
+      let fitPageRangesPx: (PxRange & { strictFit: boolean })[] = []
       let forcedPageBreaksPx: number[] = []
       let landscapeTopsPx: number[] = []
       let clonedRootWidthPx = 0
@@ -1378,6 +1379,7 @@ export const PublicMarketData = () => {
         onclone: (clonedDoc) => {
           const clonedRoot = prepareClone(clonedDoc, PDF_EXPORT_WIDTH_PX)
           if (!clonedRoot) return
+          groupStatisticsAndTrendsForPdf(clonedRoot)
           reorderForPdf(clonedRoot)
 
           const rootRect = clonedRoot.getBoundingClientRect()
@@ -1411,7 +1413,10 @@ export const PublicMarketData = () => {
             clonedRoot.querySelectorAll<HTMLElement>('.pdf-fit-page')
           )
             .filter(isRendered)
-            .map(rangeOf)
+            .map((el) => ({
+              ...rangeOf(el),
+              strictFit: el.classList.contains('pdf-strict-fit')
+            }))
             .filter((range) => range.bottom > range.top)
           forcedPageBreaksPx = Array.from(
             clonedRoot.querySelectorAll<HTMLElement>('.pdf-page-break-before')
@@ -1443,7 +1448,10 @@ export const PublicMarketData = () => {
       const byTop = (a: { top: number }, b: { top: number }) => a.top - b.top
       const atomicRangesCanvasPx = atomicRangesPx.map(toCanvasRange).sort(byTop)
       const fitPageRangesCanvasPx = fitPageRangesPx
-        .map(toCanvasRange)
+        .map((range) => ({
+          ...toCanvasRange(range),
+          strictFit: range.strictFit
+        }))
         .sort(byTop)
       const landscapeInserts = landscapeTopsPx
         .map((top, index) => ({
@@ -1556,20 +1564,24 @@ export const PublicMarketData = () => {
         )
         if (forcedBreak) candidateEnd = forcedBreak
 
-        // Fit-to-page blocks (tables) each get a dedicated page. A short
-        // lead-in (section heading) can share it; anything longer is flushed
-        // to its own page first.
+        // Keep fit-to-page blocks together.
         const fitBlock = fitPageRangesCanvasPx.find(
           (r) => r.top >= renderedPx - 1 && r.top < candidateEnd
         )
         if (fitBlock) {
-          if (fitBlock.top - renderedPx > maxFitLeadPx) {
-            candidateEnd = fitBlock.top
-          } else {
+          const end = pdfFitBlockEnd(
+            renderedPx,
+            candidateEnd,
+            fitBlock,
+            maxFitLeadPx,
+            fitBlock.strictFit
+          )
+          if (end === fitBlock.bottom) {
             addPortraitSlice(renderedPx, fitBlock.bottom)
             renderedPx = fitBlock.bottom
             continue
           }
+          candidateEnd = end
         }
 
         const breaking = atomicRangesCanvasPx.find(
@@ -1901,7 +1913,7 @@ export const PublicMarketData = () => {
 
         <ReportSection
           title={t('publicDashboard.marketData.tables.agreementMonthly')}
-          className="pdf-fit-page"
+          className="pdf-fit-page pdf-strict-fit"
           dataTest="agreement-month-report"
         >
           <BCTypography sx={{ fontSize: 13, color: MUTED, mb: 1 }}>
@@ -1967,6 +1979,7 @@ export const PublicMarketData = () => {
         </ReportSection>
 
         <ReportSection
+          className="pdf-market-statistics-section"
           title={t('publicDashboard.marketData.sections.activityAndStatistics')}
         >
           <BCBox
@@ -2112,7 +2125,7 @@ export const PublicMarketData = () => {
         </ReportSection>
 
         <ReportSection
-          className="pdf-fit-page pdf-market-trends-section"
+          className="pdf-market-trends-section"
           title={t(
             'publicDashboard.marketData.sections.marketTrendsHistoricalPerformance'
           )}
@@ -2242,7 +2255,6 @@ export const PublicMarketData = () => {
             </BCBox>
           </BCBox>
         </ReportSection>
-
         <ReportSection
           title={t(
             'publicDashboard.marketData.sections.transferClassifications'
