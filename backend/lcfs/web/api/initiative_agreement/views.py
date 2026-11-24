@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import APIRouter, Body, Depends, Request, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
 
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.services.s3.dependency import get_s3_client
@@ -498,19 +498,29 @@ async def download_eoc_submission_document(
 ):
     # Resolve storage lazily to avoid the S3/initiative agreement import cycle.
     from lcfs.services.s3.client import DocumentService
-    from lcfs.web.api.document.views import _content_disposition
+    from lcfs.web.api.document.views import (
+        BLOCKED_SCAN_STATUSES,
+        _content_disposition,
+    )
     from starlette.responses import StreamingResponse
 
     snapshot = await service.get_eoc_submission_document(
         designated_action_id, submission_id, document_id
     )
     storage = DocumentService(db=service.repo.db, s3_client=s3_client)
-    file, _ = await storage.get_object(document_id)
+    file, document = await storage.get_object(document_id)
+    if document.scan_status in BLOCKED_SCAN_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=BLOCKED_SCAN_STATUSES[document.scan_status],
+        )
     return StreamingResponse(
         content=file["Body"],
         media_type=snapshot.mime_type,
         headers={
             "Content-Disposition": _content_disposition(snapshot.file_name),
             "content-length": str(file["ContentLength"]),
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": "sandbox",
         },
     )

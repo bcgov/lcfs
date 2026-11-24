@@ -262,13 +262,23 @@ class InternalCommentService:
         }
         required_roles = roles_by_entity.get(entity_type, ())
         if has_ia_role and entity_type == EntityTypeEnum.COMPLIANCE_REPORT:
-            # The auth layer can include the base Supplier role with an IA
-            # role. Require a specific non-IA permission so IA access alone
-            # does not extend beyond DA threads, while retaining CI Applicant
-            # access for users who hold both roles.
-            required_roles = (
+            # IA roles must not grant access to non-DA threads. Preserve the
+            # legacy portal access for users who also hold another BCeID role,
+            # but ignore Supplier here because the auth layer may add it as a
+            # baseline role for IA users.
+            ia_roles = {RoleEnum.IA_PROPONENT, RoleEnum.IA_SIGNER}
+            legacy_portal_roles = {
+                RoleEnum.SUPPLIER,
+                RoleEnum.MANAGE_USERS,
+                RoleEnum.TRANSFER,
                 RoleEnum.COMPLIANCE_REPORTING,
+                RoleEnum.SIGNING_AUTHORITY,
+                RoleEnum.READ_ONLY,
                 RoleEnum.CI_APPLICANT,
+                RoleEnum.LCJFIP_APPLICANT,
+            }
+            required_roles = tuple(
+                role for role in legacy_portal_roles - ia_roles - {RoleEnum.SUPPLIER}
             )
         elif has_ia_role and entity_type == EntityTypeEnum.CI_APPLICATION:
             required_roles = (RoleEnum.CI_APPLICANT,)

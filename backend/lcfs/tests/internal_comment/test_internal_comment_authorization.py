@@ -454,6 +454,71 @@ async def test_ci_applicant_with_ia_role_keeps_compliance_report_comment_access(
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize("ia_role", [RoleEnum.IA_PROPONENT, RoleEnum.IA_SIGNER])
+@pytest.mark.parametrize(
+    "legacy_role",
+    [RoleEnum.SIGNING_AUTHORITY, RoleEnum.TRANSFER, RoleEnum.MANAGE_USERS],
+)
+async def test_ia_user_with_other_bceid_role_keeps_compliance_report_access(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    add_models,
+    ia_role,
+    legacy_role,
+):
+    """IA assignment preserves existing access granted by another BCeID role."""
+    set_mock_user(
+        fastapi_app,
+        [ia_role, legacy_role],
+        user_details={"keycloak_username": "MIXEDROLE", "organization_id": 1},
+    )
+    await _seed_author(add_models)
+    await _seed_report_comment(add_models, compliance_report_id=8825, organization_id=1)
+
+    read_url = fastapi_app.url_path_for(
+        "get_comments",
+        entity_type=EntityTypeEnum.COMPLIANCE_REPORT.value,
+        entity_id=8825,
+    )
+    assert (await client.get(read_url)).status_code == status.HTTP_200_OK
+
+    posted = await _post_comment(
+        client,
+        fastapi_app,
+        entity_type=EntityTypeEnum.COMPLIANCE_REPORT.value,
+        entity_id=8825,
+    )
+    assert posted.status_code == status.HTTP_201_CREATED
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("ia_role", [RoleEnum.IA_PROPONENT, RoleEnum.IA_SIGNER])
+async def test_ia_role_with_only_baseline_supplier_cannot_access_compliance_comments(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    add_models,
+    ia_role,
+):
+    """The baseline Supplier role does not turn IA access into a legacy grant."""
+    set_mock_user(
+        fastapi_app,
+        [ia_role, RoleEnum.SUPPLIER],
+        user_details={"keycloak_username": "IAUSER", "organization_id": 1},
+    )
+    await _seed_author(add_models)
+    await _seed_report_comment(add_models, compliance_report_id=8826, organization_id=1)
+
+    read_url = fastapi_app.url_path_for(
+        "get_comments",
+        entity_type=EntityTypeEnum.COMPLIANCE_REPORT.value,
+        entity_id=8826,
+    )
+    assert (await client.get(read_url)).status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.anyio
 async def test_bceid_can_comment_on_own_orgs_compliance_report(
     client: AsyncClient,
     fastapi_app: FastAPI,

@@ -224,7 +224,7 @@ test('failed saves preserve content and show an error', async ({
   fireEvent.click(screen.getByRole('button', { name: 'Save' }))
   await screen.findByText(/Unable to save evidence/)
   expect(screen.getAllByLabelText('Evidence response')[0]).toHaveValue(
-    'Existing evidence'
+    '<p>Existing evidence</p>'
   )
 })
 
@@ -246,7 +246,7 @@ test('manual save cancels the debounce and failed saves are not retried', async 
 
   expect(api.put).toHaveBeenCalledTimes(1)
   expect(screen.getAllByLabelText('Evidence response')[0]).toHaveValue(
-    'Unsaved evidence'
+    '<p>Unsaved evidence</p>'
   )
 })
 
@@ -331,7 +331,7 @@ test('draft saves refresh the EOC cache and later query data updates the editor'
   })
   await waitFor(() =>
     expect(screen.getAllByLabelText('Evidence response')[0]).toHaveValue(
-      'Newer saved evidence'
+      '<p>Newer saved evidence</p>'
     )
   )
   view.unmount()
@@ -456,7 +456,7 @@ test('IDIR read-only evidence updates when the latest submitted package refetche
   render(<ProponentEOC designatedActionId="3" readOnly />, app)
   await waitFor(() =>
     expect(screen.getAllByLabelText('Evidence response')[0]).toHaveValue(
-      'Initial submitted evidence'
+      '<p>Initial submitted evidence</p>'
     )
   )
   expect(
@@ -470,7 +470,7 @@ test('IDIR read-only evidence updates when the latest submitted package refetche
   })
   await waitFor(() =>
     expect(screen.getAllByLabelText('Evidence response')[0]).toHaveValue(
-      'Newly submitted evidence'
+      '<p>Newly submitted evidence</p>'
     )
   )
   expect(screen.getAllByLabelText('Evidence response')[0]).toBeDisabled()

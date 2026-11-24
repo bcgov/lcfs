@@ -3,7 +3,7 @@ import Box from '@mui/material/Box'
 import ReactQuill from 'react-quill'
 import { useTranslation } from 'react-i18next'
 import BCTypography from '@/components/BCTypography'
-import { evidencePlainText } from './evidenceRichText'
+import { evidenceEditorHtml, evidencePlainText } from './evidenceRichText'
 import { EOC_RESPONSE_FIELDS } from './EOCResponseFields'
 
 const applyEditorAccessibility = (editorRef, fieldLabel, readOnly) => {
@@ -84,7 +84,7 @@ export const EOCRequirementResponses = ({
               }}
               theme="snow"
               readOnly={readOnly || saving}
-              value={response[key] || ''}
+              value={evidenceEditorHtml(response[key])}
               onChange={(value) => {
                 if (!readOnly && !saving) onChange(key, value)
               }}

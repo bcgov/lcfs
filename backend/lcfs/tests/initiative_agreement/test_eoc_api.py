@@ -1,6 +1,7 @@
 """Live persistence and authorization for #5499-backed portal submissions."""
 
 from datetime import datetime, timezone, timedelta
+from io import BytesIO
 from unittest.mock import MagicMock
 import pytest
 from sqlalchemy import select
@@ -20,6 +21,7 @@ from lcfs.db.models.initiative_agreement.DesignatedActionStatus import (
     DesignatedActionStatus,
 )
 from lcfs.db.models.initiative_agreement.EvidenceRequirement import EvidenceRequirement
+from lcfs.db.models.document.Document import DocumentScanStatusEnum
 from lcfs.db.models.initiative_agreement.EvidenceRequirement import (
     REVIEW_OUTCOME_INFORMATION_REQUESTED,
 )
@@ -211,6 +213,83 @@ async def test_portal_draft_submission_revision_and_document_retention(
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize(
+    "scan_status,expected_status",
+    [
+        (DocumentScanStatusEnum.clean, 200),
+        (DocumentScanStatusEnum.pending_approval, 409),
+        (DocumentScanStatusEnum.rejected, 409),
+    ],
+)
+async def test_historical_eoc_download_applies_scan_and_browser_security(
+    client,
+    fastapi_app,
+    set_mock_user,
+    dbsession,
+    monkeypatch,
+    scan_status,
+    expected_status,
+):
+    from lcfs.services.s3.client import DocumentService
+
+    org, _ = await _two_org_ids(dbsession)
+    agreement = await _seed_agreement(dbsession, org, "IA-5454-SCAN")
+    action = await _seed_action(dbsession, agreement, 1, "Equipment")
+    document = await _seed_document(
+        dbsession, action, "snapshot.pdf", create_user="mockuser"
+    )
+    document.scan_status = scan_status
+    await _ensure_author_profile(dbsession)
+    signer = (
+        await dbsession.execute(
+            select(UserProfile).where(UserProfile.keycloak_username == "mockuser")
+        )
+    ).scalar_one()
+    fastapi_app.middleware_stack = None
+    set_mock_user(
+        fastapi_app,
+        [RoleEnum.IA_SIGNER],
+        {"organization_id": org, "user_profile_id": signer.user_profile_id},
+    )
+
+    async def fake_get_object(self, document_id):
+        assert document_id == document.document_id
+        return {"Body": BytesIO(b"safe"), "ContentLength": 4}, document
+
+    monkeypatch.setattr(DocumentService, "get_object", fake_get_object)
+
+    eoc_url = str(
+        fastapi_app.url_path_for(
+            "get_eoc", designated_action_id=action.designated_action_id
+        )
+    )
+    submitted = await client.post(
+        f"{eoc_url}/submit",
+        json={
+            "summaryOfWorkCompleted": "Completed",
+            "howEvidenceMeetsAgreementRequirements": "Attached",
+            "exceptionsLimitationsAndContext": "None",
+            "declarationAccepted": True,
+        },
+    )
+    assert submitted.status_code == 200, submitted.text
+    submission_id = submitted.json()["submissions"][0]["id"]
+    download_url = fastapi_app.url_path_for(
+        "download_eoc_submission_document",
+        designated_action_id=action.designated_action_id,
+        submission_id=submission_id,
+        document_id=document.document_id,
+    )
+
+    response = await client.get(download_url)
+    assert response.status_code == expected_status
+    if expected_status == 200:
+        assert response.content == b"safe"
+        assert response.headers["X-Content-Type-Options"] == "nosniff"
+        assert response.headers["Content-Security-Policy"] == "sandbox"
+
+
+@pytest.mark.anyio
 async def test_eoc_api_saves_requirement_responses_and_immutable_metadata(
     client, fastapi_app, set_mock_user, dbsession
 ):
@@ -269,9 +348,27 @@ async def test_eoc_api_saves_requirement_responses_and_immutable_metadata(
 
     evidence_responses = {
         str(requirements[0].evidence_requirement_id): {
-            "summaryOfWorkCompleted": "Permit granted",
-            "howEvidenceMeetsAgreementRequirements": "All permits are listed",
-            "exceptionsLimitationsAndContext": "None",
+            "summaryOfWorkCompleted": (
+                "<p>Permit <strong>granted</strong></p><script>alert(1)</script>"
+            ),
+            "howEvidenceMeetsAgreementRequirements": (
+                '<p onclick="alert(1)">All permits are listed</p>'
+            ),
+            "exceptionsLimitationsAndContext": (
+                '<a href="javascript:alert(1)">None</a>'
+            ),
+        },
+        str(requirements[1].evidence_requirement_id): {
+            "summaryOfWorkCompleted": "Studies completed",
+            "howEvidenceMeetsAgreementRequirements": "All required studies attached",
+            "exceptionsLimitationsAndContext": "Seasonal data limitation",
+        },
+    }
+    sanitized_responses = {
+        str(requirements[0].evidence_requirement_id): {
+            "summaryOfWorkCompleted": "<p>Permit <strong>granted</strong></p>",
+            "howEvidenceMeetsAgreementRequirements": "<p>All permits are listed</p>",
+            "exceptionsLimitationsAndContext": "<a>None</a>",
         },
         str(requirements[1].evidence_requirement_id): {
             "summaryOfWorkCompleted": "Studies completed",
@@ -281,7 +378,7 @@ async def test_eoc_api_saves_requirement_responses_and_immutable_metadata(
     }
     saved = await client.put(url, json={"evidenceResponses": evidence_responses})
     assert saved.status_code == 200, saved.text
-    assert saved.json()["evidenceResponses"] == evidence_responses
+    assert saved.json()["evidenceResponses"] == sanitized_responses
     submitted = await client.post(
         f"{url}/submit",
         json={"evidenceResponses": evidence_responses, "declarationAccepted": True},
@@ -289,7 +386,7 @@ async def test_eoc_api_saves_requirement_responses_and_immutable_metadata(
     assert submitted.status_code == 200, submitted.text
     first_snapshot = submitted.json()["submissions"][0]
     assert first_snapshot["requirements"][0]["title"] == "Permits and approvals"
-    assert first_snapshot["evidenceResponses"] == evidence_responses
+    assert first_snapshot["evidenceResponses"] == sanitized_responses
 
     requirements[0].title = "Updated current requirement"
     await dbsession.flush()
@@ -299,7 +396,7 @@ async def test_eoc_api_saves_requirement_responses_and_immutable_metadata(
     assert historical["submissions"][0]["requirements"][0]["title"] == (
         "Permits and approvals"
     )
-    assert historical["submissions"][0]["evidenceResponses"] == evidence_responses
+    assert historical["submissions"][0]["evidenceResponses"] == sanitized_responses
 
 
 @pytest.mark.anyio

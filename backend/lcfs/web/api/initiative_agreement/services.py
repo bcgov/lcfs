@@ -46,6 +46,7 @@ from lcfs.web.api.base import (
     validate_pagination,
 )
 from lcfs.web.api.initiative_agreement.repo import InitiativeAgreementRepository
+from lcfs.web.api.initiative_agreement.rich_text import sanitize_eoc_rich_text
 from lcfs.web.api.initiative_agreement.schema import (
     AllDesignatedActionsListSchema,
     DesignatedActionListItemSchema,
@@ -1674,7 +1675,10 @@ class InitiativeAgreementServices:
         ]
         if data.evidence_responses:
             response_map = {
-                str(requirement_id): response.model_dump()
+                str(requirement_id): {
+                    field: sanitize_eoc_rich_text(value)
+                    for field, value in response.model_dump().items()
+                }
                 for requirement_id, response in data.evidence_responses.items()
             }
             allowed_ids = set(active_ids or ["completion"])
@@ -1687,7 +1691,8 @@ class InitiativeAgreementServices:
                 response_map.setdefault(requirement_id, self._empty_eoc_response())
         else:
             legacy_response = {
-                field: getattr(data, field) or "" for field in self.EOC_FIELDS
+                field: sanitize_eoc_rich_text(getattr(data, field))
+                for field in self.EOC_FIELDS
             }
             response_map = {
                 requirement_id: self._empty_eoc_response()
