@@ -3156,7 +3156,7 @@ SELECT
         ORDER BY
           "allocation_agreement"."group_uuid" ASC
       ) AS "source"
-      LEFT JOIN "allocation_agreement" AS "Allocation Agreement - Group UUID" ON (
+      INNER JOIN "allocation_agreement" AS "Allocation Agreement - Group UUID" ON (
         "source"."group_uuid" = "Allocation Agreement - Group UUID"."group_uuid"
       )
       AND (

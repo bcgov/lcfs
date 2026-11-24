@@ -1,4 +1,5 @@
 import re
+import sqlite3
 from pathlib import Path
 
 from lcfs.db.dependencies import parse_sql_sections
@@ -166,6 +167,7 @@ def test_other_versioned_schedule_views_filter_delete_after_latest_version():
         re.IGNORECASE | re.DOTALL,
     )
     assert re.search(
+        r'INNER\s+JOIN\s+"allocation_agreement"\s+AS\s+"Allocation Agreement - Group UUID".*?'
         r'"source"\."max"\s*=\s*"Allocation Agreement - Group UUID"\."version".*?'
         r'"Allocation Agreement - Group UUID"\."action_type"\s*!=\s*\'DELETE\'',
         allocation_extended,
@@ -185,6 +187,42 @@ def test_other_versioned_schedule_views_filter_delete_after_latest_version():
         other_uses,
         re.IGNORECASE,
     )
+
+
+def test_extended_allocation_excludes_latest_deleted_agreement():
+    sql = _view_definitions()["vw_allocation_agreement_extended_base"]
+    join = re.search(
+        r'FROM\s+(\(\s*SELECT\s+"allocation_agreement"\."group_uuid".*?'
+        r'"Allocation Agreement - Group UUID"\."action_type"\s*!=\s*\'DELETE\')'
+        r'\s+LEFT\s+JOIN',
+        sql,
+        re.IGNORECASE | re.DOTALL,
+    )
+    assert join is not None
+
+    with sqlite3.connect(":memory:") as db:
+        db.execute(
+            "CREATE TABLE allocation_agreement "
+            "(group_uuid TEXT, version INTEGER, action_type TEXT)"
+        )
+        db.executemany(
+            "INSERT INTO allocation_agreement VALUES (?, ?, ?)",
+            [
+                ("deleted", 1, "CREATE"),
+                ("deleted", 2, "DELETE"),
+                ("active", 1, "CREATE"),
+                ("updated", 1, "CREATE"),
+                ("updated", 2, "UPDATE"),
+            ],
+        )
+        rows = db.execute(
+            'SELECT "source"."group_uuid", "source"."max", '
+            '"Allocation Agreement - Group UUID"."action_type" FROM '
+            + join.group(1)
+            + ' ORDER BY "source"."group_uuid"'
+        ).fetchall()
+
+    assert rows == [("active", 1, "CREATE"), ("updated", 2, "UPDATE")]
 
 
 def test_report_analytics_exclude_current_drafts_and_keep_prior_non_draft_version():
