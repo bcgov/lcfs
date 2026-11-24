@@ -49,14 +49,15 @@ const PDF_FIT_BLOCK_MAX_LEAD_RATIO = 0.2
 // every pixel is at least this light (borders/shadows allowed, text is not).
 const PDF_BLANK_CHECK_MAX_RATIO = 0.25
 const PDF_BLANK_LUMA_MIN = 200
-// Report tables in the PDF, grouped per page (differs from on-screen order):
-// quarterly and annual share a portrait page, monthly gets a landscape page.
-const PDF_TABLE_PAGES: ReportKey[][] = [['quarterly', 'annual'], ['monthly']]
-// Trailing months shown in the A1 price trend: the same month last year
-// through the current month (e.g. Oct -> Oct).
-const A1_TREND_MONTHS = 13
+// The wide recorded-month table gets a landscape page in the PDF.
+const PDF_TABLE_PAGES: ReportKey[][] = [
+  ['agreementMonthly'],
+  ['quarterly', 'annual'],
+  ['monthly']
+]
+const AGREEMENT_MONTHS = 12
 
-type ReportKey = 'monthly' | 'quarterly' | 'annual'
+type ReportKey = 'agreementMonthly' | 'monthly' | 'quarterly' | 'annual'
 type Granularity = 'month' | 'quarter' | 'year'
 type TooltipParam = {
   value: number | null
@@ -105,6 +106,7 @@ type MarketReportKpis = {
 type PublicMarketReportPayload = {
   monthly: MarketReportPeriod[]
   a1Monthly?: MarketReportPeriod[]
+  agreementMonthly: MarketReportPeriod[]
   quarterly: MarketReportPeriod[]
   annual: MarketReportPeriod[]
   allTime: {
@@ -198,7 +200,12 @@ const handleChartKeyboardNavigation = (
 
 const todayStamp = () => new Date().toISOString().slice(0, 10)
 const reportTypeName = (key: ReportKey) =>
-  ({ monthly: 'monthly', quarterly: 'quarterly', annual: 'yearly' })[key]
+  ({
+    agreementMonthly: 'agreement-monthly',
+    monthly: 'monthly',
+    quarterly: 'quarterly',
+    annual: 'yearly'
+  })[key]
 
 const CardShell = ({
   children,
@@ -384,7 +391,12 @@ const MarketReportTable = ({
       component="table"
       sx={{
         width: '100%',
-        minWidth: reportKey === 'monthly' ? 2300 : 920,
+        minWidth:
+          reportKey === 'monthly'
+            ? 2300
+            : reportKey === 'agreementMonthly'
+              ? 550
+              : 920,
         borderCollapse: 'separate',
         borderSpacing: 0,
         fontSize: 14
@@ -579,30 +591,32 @@ export const PublicMarketData = () => {
   const kpis = data?.kpis
   const ytdKpis = data?.ytdKpis ?? kpis
   const allTime = data?.allTime
-  const a1MonthlyChartRows = useMemo(() => {
-    const rows = data?.a1Monthly ?? []
-    const monthlyRows = data?.monthly ?? []
-    const reportingMonth =
-      kpis?.labelPeriod ??
-      monthlyRows[monthlyRows.length - 1]?.period ??
-      rows[rows.length - 1]?.period
-    if (!reportingMonth) return []
-
-    const [year, month] = reportingMonth.split('-').map(Number)
-    const pricesByMonth = new Map(
-      rows.map((row) => [row.period, row.weightedAvgPrice])
+  const agreementMonthlyChartRows = useMemo(() => {
+    const rows = data?.agreementMonthly ?? []
+    const now = new Date()
+    const monthParts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Vancouver',
+      year: 'numeric',
+      month: '2-digit'
+    }).formatToParts(now)
+    const year = Number(monthParts.find((part) => part.type === 'year')?.value)
+    const month = Number(
+      monthParts.find((part) => part.type === 'month')?.value
     )
-    return Array.from({ length: A1_TREND_MONTHS }, (_, index) => {
-      const date = new Date(Date.UTC(year, month - A1_TREND_MONTHS + index, 1))
+    const rowsByMonth = new Map(rows.map((row) => [row.period, row]))
+    return Array.from({ length: AGREEMENT_MONTHS }, (_, index) => {
+      const date = new Date(Date.UTC(year, month - AGREEMENT_MONTHS + index, 1))
       const period = `${date.getUTCFullYear()}-${String(
         date.getUTCMonth() + 1
       ).padStart(2, '0')}`
       return {
         period,
-        weightedAvgPrice: pricesByMonth.get(period) ?? null
+        weightedAvgPrice: rowsByMonth.get(period)?.weightedAvgPrice ?? null,
+        volume: rowsByMonth.get(period)?.volume ?? null,
+        transfers: rowsByMonth.get(period)?.transfers ?? null
       }
     })
-  }, [data?.a1Monthly, data?.monthly, kpis?.labelPeriod])
+  }, [data?.agreementMonthly])
 
   const chartOption = useMemo(() => {
     const priceName = t('publicDashboard.marketData.kpi.avgPrice')
@@ -716,6 +730,10 @@ export const PublicMarketData = () => {
     const title = t(
       'publicDashboard.marketData.trendCharts.monthlyAverageTitle'
     )
+    const volumeName = t('publicDashboard.marketData.tables.volume')
+    const priceName = t(
+      'publicDashboard.marketData.trendCharts.weightedAverage'
+    )
     return {
       aria: {
         enabled: true,
@@ -732,26 +750,34 @@ export const PublicMarketData = () => {
             .map(
               (p) =>
                 `${p.marker}${p.seriesName}: ${
-                  p.value == null ? '—' : price2Fmt.format(p.value)
+                  p.value == null
+                    ? '—'
+                    : p.seriesName === volumeName
+                      ? intFmt.format(p.value)
+                      : price2Fmt.format(p.value)
                 }`
             )
             .join('<br/>')}`
       },
       title: { text: title, textStyle: { fontSize: 13, color: DARK } },
-      grid: { left: '10%', right: '5%', top: '20%', bottom: '28%' },
+      legend: { data: [priceName, volumeName], bottom: 0 },
+      grid: { left: '10%', right: '10%', top: '20%', bottom: '28%' },
       xAxis: {
         type: 'category',
-        data: a1MonthlyChartRows.map((p) => fmtPeriod(p.period)),
+        data: agreementMonthlyChartRows.map((p) => fmtPeriod(p.period)),
         axisLabel: { interval: 0, rotate: 35, fontSize: 10 }
       },
-      yAxis: {
-        type: 'value',
-        name: 'CA$',
-        axisLabel: { formatter: (value: number) => `CA$${value}` }
-      },
+      yAxis: [
+        {
+          type: 'value',
+          name: 'CA$',
+          axisLabel: { formatter: (value: number) => `CA$${value}` }
+        },
+        { type: 'value', name: volumeName, splitLine: { show: false } }
+      ],
       series: [
         {
-          name: t('publicDashboard.marketData.trendCharts.weightedAverage'),
+          name: priceName,
           type: 'line',
           smooth: false,
           symbol: 'circle',
@@ -771,11 +797,18 @@ export const PublicMarketData = () => {
               p.value == null ? '' : price2Fmt.format(p.value)
           },
           labelLayout: { hideOverlap: true },
-          data: a1MonthlyChartRows.map((p) => p.weightedAvgPrice)
+          data: agreementMonthlyChartRows.map((p) => p.weightedAvgPrice)
+        },
+        {
+          name: volumeName,
+          type: 'bar',
+          yAxisIndex: 1,
+          itemStyle: { color: 'rgba(252,186,25,0.75)' },
+          data: agreementMonthlyChartRows.map((p) => p.volume)
         }
       ]
     }
-  }, [a1MonthlyChartRows, t])
+  }, [agreementMonthlyChartRows, t])
 
   const keyboardHelp = t(
     'publicDashboard.marketData.trendCharts.chartKeyboardInstructions'
@@ -805,17 +838,28 @@ export const PublicMarketData = () => {
           }
         )
   const a1ChartAnnouncement =
-    activeA1ChartIndex === null || !a1MonthlyChartRows[activeA1ChartIndex]
+    activeA1ChartIndex === null ||
+    !agreementMonthlyChartRows[activeA1ChartIndex]
       ? ''
       : t(
           'publicDashboard.marketData.trendCharts.a1ChartKeyboardAnnouncement',
           {
-            period: fmtPeriod(a1MonthlyChartRows[activeA1ChartIndex].period),
+            period: fmtPeriod(
+              agreementMonthlyChartRows[activeA1ChartIndex].period
+            ),
             price:
-              a1MonthlyChartRows[activeA1ChartIndex].weightedAvgPrice == null
+              agreementMonthlyChartRows[activeA1ChartIndex].weightedAvgPrice ==
+              null
                 ? '—'
                 : price2Fmt.format(
-                    a1MonthlyChartRows[activeA1ChartIndex].weightedAvgPrice
+                    agreementMonthlyChartRows[activeA1ChartIndex]
+                      .weightedAvgPrice
+                  ),
+            volume:
+              agreementMonthlyChartRows[activeA1ChartIndex].volume == null
+                ? '—'
+                : intFmt.format(
+                    agreementMonthlyChartRows[activeA1ChartIndex].volume
                   )
           }
         )
@@ -845,7 +889,8 @@ export const PublicMarketData = () => {
 
   const periodHeaderFor = (_key: ReportKey) =>
     ({
-      monthly: t('publicDashboard.marketData.tables.month'),
+      agreementMonthly: t('publicDashboard.marketData.tables.agreementMonth'),
+      monthly: t('publicDashboard.marketData.tables.recordedMonth'),
       quarterly: t('publicDashboard.marketData.tables.quarter'),
       annual: t('publicDashboard.marketData.tables.year')
     })[_key]
@@ -889,36 +934,6 @@ export const PublicMarketData = () => {
   ]
 
   const monthlyTableColumns: MarketReportTableColumn[] = [
-    {
-      key: 'categoryA1Transfers',
-      header: t('publicDashboard.marketData.tables.categoryA1Transfers'),
-      value: (r) => intFmt.format(r.categoryA1Transfers ?? 0),
-      exportValue: (r) => r.categoryA1Transfers ?? 0
-    },
-    {
-      key: 'categoryA1CreditVolume',
-      header: t('publicDashboard.marketData.tables.categoryA1CreditVolume'),
-      value: (r) => intFmt.format(r.categoryA1CreditVolume ?? 0),
-      exportValue: (r) => r.categoryA1CreditVolume ?? 0
-    },
-    {
-      key: 'categoryA1AveragePrice',
-      header: t('publicDashboard.marketData.tables.categoryA1AveragePrice'),
-      value: (r) => formatNullablePrice(r.categoryA1AveragePrice),
-      exportValue: (r) => nullableNumber(r.categoryA1AveragePrice)
-    },
-    {
-      key: 'minA1Price',
-      header: t('publicDashboard.marketData.tables.categoryA1MinUnitPriceCad'),
-      value: (r) => formatNullablePrice(r.minA1Price),
-      exportValue: (r) => nullableNumber(r.minA1Price)
-    },
-    {
-      key: 'maxA1Price',
-      header: t('publicDashboard.marketData.tables.categoryA1MaxUnitPriceCad'),
-      value: (r) => formatNullablePrice(r.maxA1Price),
-      exportValue: (r) => nullableNumber(r.maxA1Price)
-    },
     {
       key: 'categoryATransfers',
       header: t('publicDashboard.marketData.tables.categoryATransfers'),
@@ -1006,7 +1021,11 @@ export const PublicMarketData = () => {
   ]
 
   const columnsForReport = (key: ReportKey) =>
-    key === 'monthly' ? monthlyTableColumns : summaryTableColumns
+    key === 'monthly'
+      ? monthlyTableColumns
+      : key === 'agreementMonthly'
+        ? summaryTableColumns.slice(0, 3)
+        : summaryTableColumns
 
   const displayRows = (rows: MarketReportPeriod[]) => [...rows].reverse()
 
@@ -1133,6 +1152,10 @@ export const PublicMarketData = () => {
   const downloadCombinedExcel = () => {
     const workbook = XLSX.utils.book_new()
     const reports = [
+      {
+        key: 'agreementMonthly' as ReportKey,
+        rows: data?.agreementMonthly ?? []
+      },
       { key: 'monthly' as ReportKey, rows: data?.monthly ?? [] },
       { key: 'quarterly' as ReportKey, rows: data?.quarterly ?? [] },
       { key: 'annual' as ReportKey, rows: data?.annual ?? [] }
@@ -1544,6 +1567,10 @@ export const PublicMarketData = () => {
 
   const reportTables = [
     {
+      key: 'agreementMonthly' as ReportKey,
+      title: t('publicDashboard.marketData.tables.agreementMonthly')
+    },
+    {
       key: 'monthly' as ReportKey,
       title: t('publicDashboard.marketData.tables.monthly')
     },
@@ -1559,9 +1586,7 @@ export const PublicMarketData = () => {
 
   const latestMonthLabel = kpis?.labelPeriod ? fmtPeriod(kpis.labelPeriod) : '—'
   const monthlyRows = data?.monthly ?? []
-  const a1MonthlyRows = data?.a1Monthly ?? []
   const latestMonthlyRow = monthlyRows[monthlyRows.length - 1]
-  const latestA1MonthlyRow = a1MonthlyRows[a1MonthlyRows.length - 1]
   const allTransfersDetails: DetailItem[] = [
     {
       label: t('publicDashboard.marketData.tables.month'),
@@ -1596,61 +1621,6 @@ export const PublicMarketData = () => {
           : '—'
     }
   ]
-  const a1Details: DetailItem[] = [
-    {
-      label: t('publicDashboard.marketData.tables.month'),
-      value: latestA1MonthlyRow
-        ? fmtPeriod(latestA1MonthlyRow.period) || '—'
-        : '—'
-    },
-    {
-      label: t('publicDashboard.marketData.kpi.transfers'),
-      value:
-        latestA1MonthlyRow?.transfers != null
-          ? intFmt.format(latestA1MonthlyRow.transfers)
-          : '—'
-    },
-    {
-      label: t('publicDashboard.marketData.tables.volume'),
-      value:
-        latestA1MonthlyRow?.volume != null
-          ? intFmt.format(latestA1MonthlyRow.volume)
-          : '—'
-    },
-    {
-      label: t('publicDashboard.marketData.tables.minPrice'),
-      value:
-        latestA1MonthlyRow?.minPrice != null
-          ? price2Fmt.format(latestA1MonthlyRow.minPrice)
-          : '—'
-    },
-    {
-      label: t('publicDashboard.marketData.tables.maxPrice'),
-      value:
-        latestA1MonthlyRow?.maxPrice != null
-          ? price2Fmt.format(latestA1MonthlyRow.maxPrice)
-          : '—'
-    }
-  ]
-  const a1PriceDelta =
-    data?.a1Kpis?.weightedAvgPrice.deltaPct != null ? (
-      <BCTypography
-        sx={{
-          fontSize: 14,
-          color:
-            data.a1Kpis.weightedAvgPrice.deltaPct < 0 ? '#A12622' : '#2E7D32'
-        }}
-      >
-        {data.a1Kpis.weightedAvgPrice.deltaPct < 0 ? '▾' : '▲'}{' '}
-        {percentFmt.format(Math.abs(data.a1Kpis.weightedAvgPrice.deltaPct))}%{' '}
-        {t('publicDashboard.marketData.vsPreviousMonth', {
-          price:
-            data.a1Kpis.weightedAvgPrice.prior != null
-              ? price2Fmt.format(data.a1Kpis.weightedAvgPrice.prior)
-              : '—'
-        })}
-      </BCTypography>
-    ) : null
 
   if (isLoading) {
     return (
@@ -1827,29 +1797,66 @@ export const PublicMarketData = () => {
               }
               caption={latestMonthLabel || '—'}
             />
-            <MetricCard
-              dataTest="average-price-a1"
-              title={t('publicDashboard.marketData.snapshot.avgA1')}
-              value={
-                data?.a1Kpis?.weightedAvgPrice?.current != null
-                  ? price2Fmt.format(data.a1Kpis.weightedAvgPrice.current)
-                  : '—'
-              }
-              caption={
-                data?.a1Kpis?.labelPeriod
-                  ? fmtPeriod(data.a1Kpis.labelPeriod) || '—'
-                  : t('publicDashboard.marketData.snapshot.a1Unavailable')
-              }
-              delta={a1PriceDelta}
-            />
             <DetailCard
               title={t('publicDashboard.marketData.snapshot.allDetails')}
               items={allTransfersDetails}
             />
-            <DetailCard
-              title={t('publicDashboard.marketData.snapshot.a1Details')}
-              items={a1Details}
-            />
+            <CardShell
+              dataTest="agreement-month-snapshot"
+              sx={{ gridColumn: { xs: 'auto', md: 'span 2' } }}
+            >
+              <BCTypography sx={{ fontSize: 15, color: DARK, fontWeight: 700 }}>
+                {t('publicDashboard.marketData.snapshot.agreementMonthly')}
+              </BCTypography>
+              <BCTypography sx={{ fontSize: 13, color: MUTED, mb: 1 }}>
+                {t('publicDashboard.marketData.snapshot.agreementNote')}
+              </BCTypography>
+              <Box
+                component="table"
+                sx={{ width: '100%', fontSize: 14, textAlign: 'right' }}
+              >
+                <thead>
+                  <tr>
+                    <th scope="col" style={{ textAlign: 'left' }}>
+                      {t('publicDashboard.marketData.tables.agreementMonth')}
+                    </th>
+                    <th scope="col">
+                      {t(
+                        'publicDashboard.marketData.tables.weightedAveragePrice'
+                      )}
+                    </th>
+                    <th scope="col">
+                      {t('publicDashboard.marketData.tables.transfers')}
+                    </th>
+                    <th scope="col">
+                      {t('publicDashboard.marketData.tables.volumeCredits')}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...agreementMonthlyChartRows].reverse().map((row) => (
+                    <tr key={row.period}>
+                      <th scope="row" style={{ textAlign: 'left' }}>
+                        {fmtPeriod(row.period)}
+                      </th>
+                      <td>
+                        {row.weightedAvgPrice == null
+                          ? '—'
+                          : price2Fmt.format(row.weightedAvgPrice)}
+                      </td>
+                      <td>
+                        {row.transfers == null
+                          ? '—'
+                          : intFmt.format(row.transfers)}
+                      </td>
+                      <td>
+                        {row.volume == null ? '—' : intFmt.format(row.volume)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Box>
+            </CardShell>
           </BCBox>
         </ReportSection>
 
@@ -2053,7 +2060,7 @@ export const PublicMarketData = () => {
                     monthlyAvgChartRef,
                     activeA1ChartIndex,
                     setActiveA1ChartIndex,
-                    a1MonthlyChartRows.length
+                    agreementMonthlyChartRows.length
                   )
                 }
               >

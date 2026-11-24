@@ -1,5 +1,5 @@
-import { fireEvent, screen } from '@testing-library/react'
-import { describe, expect, vi } from 'vite-plus/test'
+import { fireEvent, screen, within } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, vi } from 'vite-plus/test'
 import * as XLSX from 'xlsx'
 import { test } from '@/tests/utils/fixtures'
 import { PublicMarketData } from '../PublicMarketData'
@@ -43,7 +43,7 @@ const mockReport = {
       transferValue: 10000000
     }
   ],
-  a1Monthly: Array.from({ length: 15 }, (_, index) => {
+  agreementMonthly: Array.from({ length: 15 }, (_, index) => {
     const date = new Date(Date.UTC(2025, 3 + index, 1))
     return {
       period: `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`,
@@ -139,6 +139,14 @@ const getChartOptions = () =>
     )
 
 describe('PublicMarketData', () => {
+  beforeEach(() => {
+    vi.setSystemTime(new Date('2026-06-15T12:00:00Z'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   test('renders the title and KPI cards', ({ render, theme }) => {
     render(<PublicMarketData />, [theme])
     expect(
@@ -199,19 +207,55 @@ describe('PublicMarketData', () => {
     expect(mainChart?.series?.[3].data).toEqual([170])
   })
 
-  test('shows the trailing 13 monthly A1 prices (same month last year to current) with a monthly date tick', ({
+  test('separates agreement-month metrics from recorded-month classifications', ({
+    render,
+    theme
+  }) => {
+    const { container } = render(<PublicMarketData />, [theme])
+    const agreementTable = container.querySelector(
+      '[data-pdf-table="agreementMonthly"]'
+    ) as HTMLElement
+    const recordedTable = container.querySelector(
+      '[data-pdf-table="monthly"]'
+    ) as HTMLElement
+
+    expect(
+      within(agreementTable).getByText(
+        'publicDashboard.marketData.tables.agreementMonth'
+      )
+    ).toBeInTheDocument()
+    expect(
+      within(recordedTable).getByText(
+        'publicDashboard.marketData.tables.recordedMonth'
+      )
+    ).toBeInTheDocument()
+    expect(
+      within(recordedTable).getByText(
+        'publicDashboard.marketData.tables.categoryATransfers'
+      )
+    ).toBeInTheDocument()
+    expect(
+      within(recordedTable).queryByText(
+        'publicDashboard.marketData.tables.categoryA1Transfers'
+      )
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByTestId('download-agreementMonthly-csv')
+    ).toBeInTheDocument()
+  })
+
+  test('shows the last 12 agreement months with prices and volumes', ({
     render,
     theme
   }) => {
     render(<PublicMarketData />, [theme])
 
     const a1Chart = getChartOptions().find(
-      (option) => option.series?.length === 1
+      (option) => option.series?.length === 2
     )
 
     expect(a1Chart?.aria?.enabled).toBe(true)
     expect(a1Chart?.xAxis?.data).toEqual([
-      'Jun 2025',
       'Jul 2025',
       'Aug 2025',
       'Sep 2025',
@@ -226,43 +270,48 @@ describe('PublicMarketData', () => {
       'Jun 2026'
     ])
     expect(a1Chart?.xAxis?.axisLabel?.interval).toBe(0)
-    expect(a1Chart?.series?.[0].data).toHaveLength(13)
+    expect(a1Chart?.series?.[0].data).toHaveLength(12)
+    expect(a1Chart?.series?.[1].data).toEqual(Array(12).fill(30000))
+    expect(
+      screen.getByTestId('agreement-month-snapshot').textContent
+    ).toContain('Jun 2026')
     expect(screen.getByTestId('a1-price-chart-keyboard')).toHaveAttribute(
       'tabindex',
       '0'
     )
   })
 
-  test('fills missing A1 months through the report month without extending the calendar window', ({
+  test('fills missing agreement months without inventing prices or volumes', ({
     render,
     theme
   }) => {
-    const originalRows = mockReport.a1Monthly
-    mockReport.a1Monthly = originalRows.filter(
+    const originalRows = mockReport.agreementMonthly
+    mockReport.agreementMonthly = originalRows.filter(
       (row) => !['2025-09', '2026-06'].includes(row.period)
     )
     try {
       render(<PublicMarketData />, [theme])
 
       const a1Chart = getChartOptions().find(
-        (option) => option.series?.length === 1
+        (option) => option.series?.length === 2
       )
-      expect(a1Chart?.xAxis?.data).toHaveLength(13)
-      expect(a1Chart?.xAxis?.data?.[0]).toBe('Jun 2025')
-      expect(a1Chart?.xAxis?.data?.[12]).toBe('Jun 2026')
-      expect(a1Chart?.series?.[0].data?.[3]).toBeNull()
-      expect(a1Chart?.series?.[0].data?.[12]).toBeNull()
-      expect(a1Chart?.series?.[0].data?.[4]).toBe(147.75)
+      expect(a1Chart?.xAxis?.data).toHaveLength(12)
+      expect(a1Chart?.xAxis?.data?.[0]).toBe('Jul 2025')
+      expect(a1Chart?.xAxis?.data?.[11]).toBe('Jun 2026')
+      expect(a1Chart?.series?.[0].data?.[2]).toBeNull()
+      expect(a1Chart?.series?.[1].data?.[2]).toBeNull()
+      expect(a1Chart?.series?.[0].data?.[11]).toBeNull()
+      expect(a1Chart?.series?.[0].data?.[3]).toBe(147.75)
 
       const chart = screen.getByTestId('a1-price-chart-keyboard')
-      for (let index = 0; index < 4; index += 1) {
+      for (let index = 0; index < 3; index += 1) {
         fireEvent.keyDown(chart, { key: 'ArrowRight' })
       }
       const announcement = chart.querySelector('[aria-live="polite"]')
       expect(announcement?.textContent).toContain('Sep 2025')
       expect(announcement?.textContent).toContain('—')
     } finally {
-      mockReport.a1Monthly = originalRows
+      mockReport.agreementMonthly = originalRows
     }
   })
 
@@ -284,7 +333,7 @@ describe('PublicMarketData', () => {
     expect(legend.querySelector('button, [tabindex]')).toBeNull()
   })
 
-  test('supports keyboard navigation through A1 monthly chart values', ({
+  test('supports keyboard navigation through agreement-month chart values', ({
     render,
     theme
   }) => {
@@ -293,7 +342,8 @@ describe('PublicMarketData', () => {
     const chart = screen.getByTestId('a1-price-chart-keyboard')
     fireEvent.keyDown(chart, { key: 'ArrowRight' })
     const announcement = chart.querySelector('[aria-live="polite"]')
-    expect(announcement?.textContent).toContain('Jun 2025')
+    expect(announcement?.textContent).toContain('Jul 2025')
+    expect(announcement?.textContent).toContain('30,000')
 
     fireEvent.keyDown(chart, { key: 'ArrowLeft' })
     expect(announcement?.textContent).toContain('Jun 2026')
@@ -326,8 +376,8 @@ describe('PublicMarketData', () => {
 
     fireEvent.click(screen.getByTestId('download-all-xlsx'))
 
-    expect(XLSX.utils.json_to_sheet).toHaveBeenCalledTimes(3)
-    expect(XLSX.utils.book_append_sheet).toHaveBeenCalledTimes(3)
+    expect(XLSX.utils.json_to_sheet).toHaveBeenCalledTimes(4)
+    expect(XLSX.utils.book_append_sheet).toHaveBeenCalledTimes(4)
     expect(XLSX.writeFile).toHaveBeenCalledWith(
       expect.anything(),
       expect.stringMatching(
