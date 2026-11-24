@@ -705,16 +705,22 @@ async def test_comment_thread_follows_the_application_visibility(
         },
     )
     assert posted.status_code == status.HTTP_201_CREATED, posted.text
+    attachments_url = (
+        f"/api/documents/internal_comment/{posted.json()['internalCommentId']}"
+    )
     own_thread = await client.get(thread_url)
     assert [c["comment"] for c in own_thread.json()] == ["A question for program staff"]
+    assert (await client.get(attachments_url)).status_code == status.HTTP_200_OK
 
     # Another organization cannot read it.
     _switch_user(fastapi_app, APPLICANT, {"organization_id": 2})
     assert (await client.get(thread_url)).status_code == status.HTTP_403_FORBIDDEN
 
-    # Government reads the thread only once the application is submitted.
+    # Government reads the thread, and the files on its comments, only once
+    # the application is submitted.
     _switch_user(fastapi_app, IDIR_IA_ANALYST, GOVERNMENT_USER)
     assert (await client.get(thread_url)).status_code == status.HTTP_404_NOT_FOUND
+    assert (await client.get(attachments_url)).status_code == status.HTTP_404_NOT_FOUND
 
     _switch_user(fastapi_app, APPLICANT)
     assert (
@@ -725,3 +731,4 @@ async def test_comment_thread_follows_the_application_visibility(
     government_thread = await client.get(thread_url)
     assert government_thread.status_code == status.HTTP_200_OK
     assert len(government_thread.json()) == 1
+    assert (await client.get(attachments_url)).status_code == status.HTTP_200_OK
