@@ -337,7 +337,9 @@ class DocumentService:
         # Upload file to S3
         file.file.seek(0)
         try:
-            self.s3_client.upload_fileobj(
+            # boto3 blocks, so keep it off the event loop
+            await run_in_threadpool(
+                self.s3_client.upload_fileobj,
                 Fileobj=file.file,
                 Bucket=BUCKET_NAME,
                 Key=file_key,
@@ -350,7 +352,8 @@ class DocumentService:
             # Some S3-compatible stores struggle with signed streaming uploads.
             file.file.seek(0)
             file_bytes = file.file.read()
-            self.s3_client.put_object(
+            await run_in_threadpool(
+                self.s3_client.put_object,
                 Body=file_bytes,
                 Bucket=BUCKET_NAME,
                 Key=file_key,
