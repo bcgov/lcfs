@@ -31,8 +31,8 @@ vi.mock('react-router-dom', async () => {
 // Mock i18n
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => {
-      const translations = {
+    t: (key: string) => {
+      const translations: Record<string, string> = {
         'unauthorized.title': 'Access Denied',
         'unauthorized.message':
           'You are not authorized to access this application.',

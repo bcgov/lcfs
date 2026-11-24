@@ -13,6 +13,9 @@ from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.services.s3.client import DocumentService
 from lcfs.db.models.document.Document import DocumentScanStatusEnum
+from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
+    RECORD_KIND_LEGACY_AWARD,
+)
 from lcfs.services.s3.schema import (
     DocumentRenameSchema,
     DocumentScanReviewSchema,
@@ -66,6 +69,15 @@ router = APIRouter()
 logger = structlog.get_logger(__name__)
 
 
+async def _is_legacy_credit_award(
+    parent_type: str, parent_id: int, ia_validate: InitiativeAgreementValidation
+) -> bool:
+    if parent_type != "initiativeAgreement":
+        return False
+    agreement = await ia_validate.repo.get_initiative_agreement_by_id(parent_id)
+    return agreement is not None and agreement.record_kind == RECORD_KIND_LEGACY_AWARD
+
+
 async def validate_parent_access(
     parent_type: str,
     parent_id: int,
@@ -88,7 +100,8 @@ async def validate_parent_access(
     production facility documents; the other surfaces grant both together.
     """
     if parent_type == "compliance_report":
-        await cr_validate.validate_organization_access(parent_id)
+        compliance_report = await cr_validate.validate_organization_access(parent_id)
+        await cr_validate.validate_compliance_report_access(compliance_report)
     elif parent_type == "initiativeAgreement":
         await ia_validate.validate_organization_access(parent_id)
     elif parent_type in ("adminAdjustment", "administrativeAdjustment"):
@@ -213,7 +226,8 @@ async def upload_file(
     ci_validate=Depends(ci_application_validator),
 ) -> FileResponseSchema:
     if parent_type == "compliance_report":
-        await cr_validate.validate_organization_access(parent_id)
+        compliance_report = await cr_validate.validate_organization_access(parent_id)
+        await cr_validate.validate_compliance_report_access(compliance_report)
 
     if parent_type == "initiativeAgreement":
         await ia_validate.validate_organization_access(parent_id)
@@ -413,7 +427,11 @@ async def delete_file(
     # which soft-deletes first and lets only the file's owner destroy it.
     # This route destroys the S3 object outright on nothing more than
     # parent access, so it must not be reachable for those parents at all.
-    if parent_type in FOLDER_ENABLED_PARENT_TYPES:
+    # Legacy credit awards share the initiativeAgreement parent type but
+    # have no bin: their files are managed on the transaction pages.
+    if parent_type in FOLDER_ENABLED_PARENT_TYPES and not (
+        await _is_legacy_credit_award(parent_type, parent_id, ia_validate)
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=(

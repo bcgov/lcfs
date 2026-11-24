@@ -32,6 +32,9 @@ from lcfs.db.models.ci_application.CIApplication import (
 from lcfs.db.models.comment.InternalComment import (
     internal_comment_document_association,
 )
+from lcfs.db.models.lcjfip.LCJFIPApplication import (
+    lcjfip_application_document_association,
+)
 
 
 class DocumentScanStatusEnum(enum.Enum):
@@ -165,4 +168,10 @@ class Document(BaseModel, Auditable):
         "InternalComment",
         secondary=internal_comment_document_association,
         back_populates="documents",
+    )
+    lcjfip_applications = relationship(
+        "LCJFIPApplication",
+        secondary=lcjfip_application_document_association,
+        back_populates="documents",
+        passive_deletes=True,
     )
