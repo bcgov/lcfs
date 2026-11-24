@@ -614,6 +614,9 @@ export const PublicMarketData = () => {
       }
     })
   }, [data?.agreementMonthly])
+  const agreementMonthlyRows = (data?.agreementMonthly ?? []).filter((row) =>
+    agreementMonthlyChartRows.some((month) => month.period === row.period)
+  )
 
   const chartOption = useMemo(() => {
     const priceName = t('publicDashboard.marketData.kpi.avgPrice')
@@ -1181,7 +1184,7 @@ export const PublicMarketData = () => {
     const reports = [
       {
         key: 'agreementMonthly' as ReportKey,
-        rows: data?.agreementMonthly ?? []
+        rows: agreementMonthlyRows
       },
       { key: 'monthly' as ReportKey, rows: data?.monthly ?? [] },
       { key: 'quarterly' as ReportKey, rows: data?.quarterly ?? [] },
@@ -1614,7 +1617,7 @@ export const PublicMarketData = () => {
     fmtPeriod(month.period)
   )
   const agreementPeriodLabel = agreementPeriodLabels.join(' – ')
-  const agreementRows = (data?.agreementMonthly ?? []).filter((row) =>
+  const agreementRows = agreementMonthlyRows.filter((row) =>
     agreementPeriods.some((month) => month.period === row.period)
   )
   const agreementVolume = agreementRows.reduce(
@@ -1942,9 +1945,12 @@ export const PublicMarketData = () => {
             </BCBox>
           </CardShell>
           <BCBox data-pdf-table="agreementMonthly">
+            <BCTypography sx={{ fontSize: 13, color: MUTED, mb: 1 }}>
+              {t('publicDashboard.marketData.tables.agreementWindowNote')}
+            </BCTypography>
             <MarketReportTable
               reportKey="agreementMonthly"
-              rows={data?.agreementMonthly ?? []}
+              rows={agreementMonthlyRows}
               periodHeader={periodHeaderFor('agreementMonthly')}
               columns={columnsForReport('agreementMonthly')}
               noDataLabel={t('publicDashboard.marketData.tables.noData')}
@@ -1954,7 +1960,7 @@ export const PublicMarketData = () => {
               title={t('publicDashboard.marketData.tables.agreementMonthly')}
               csvLabel={t('publicDashboard.marketData.downloadCsv')}
               onCsv={() =>
-                downloadCsv('agreementMonthly', data?.agreementMonthly ?? [])
+                downloadCsv('agreementMonthly', agreementMonthlyRows)
               }
             />
           </BCBox>

@@ -401,6 +401,33 @@ describe('PublicMarketData', () => {
     ).toBeInTheDocument()
   })
 
+  test('limits the agreement table to the last 12 completed calendar months', ({
+    render,
+    theme
+  }) => {
+    const originalRows = mockReport.agreementMonthly
+    mockReport.agreementMonthly = originalRows.filter(
+      (row) => row.period !== '2025-09'
+    )
+    try {
+      const { container } = render(<PublicMarketData />, [theme])
+      const table = container.querySelector(
+        '[data-pdf-table="agreementMonthly"]'
+      )
+      const periods = Array.from(
+        table?.querySelectorAll('tbody tr td:first-child') ?? []
+      ).map((cell) => cell.textContent)
+      expect(periods).toHaveLength(11)
+      expect(periods[0]).toBe('May 2026')
+      expect(periods[periods.length - 1]).toBe('Jun 2025')
+      expect(periods).not.toContain('Sep 2025')
+      expect(periods).not.toContain('May 2025')
+      expect(periods).not.toContain('Jun 2026')
+    } finally {
+      mockReport.agreementMonthly = originalRows
+    }
+  })
+
   test('shows the last 12 agreement months with prices and volumes', ({
     render,
     theme
@@ -529,6 +556,11 @@ describe('PublicMarketData', () => {
     )
     expect(chart?.xAxis?.data?.[0]).toBe('Jan 2025')
     expect(chart?.xAxis?.data?.[11]).toBe('Dec 2025')
+    const agreementTable = screen
+      .getByTestId('agreement-month-report')
+      .querySelector('[data-pdf-table="agreementMonthly"]')
+    expect(agreementTable?.textContent).toContain('Dec 2025')
+    expect(agreementTable?.textContent).not.toContain('Jan 2026')
     expect(screen.getByTestId('agreement-two-month-details')).toHaveTextContent(
       'Nov 2025 – Dec 2025'
     )
@@ -602,6 +634,15 @@ describe('PublicMarketData', () => {
     fireEvent.click(screen.getByTestId('download-all-xlsx'))
 
     expect(XLSX.utils.json_to_sheet).toHaveBeenCalledTimes(4)
+    const agreementRows = vi.mocked(XLSX.utils.json_to_sheet).mock
+      .calls[0][0] as Array<Record<string, unknown>>
+    expect(agreementRows).toHaveLength(12)
+    expect(
+      agreementRows[0]['publicDashboard.marketData.tables.agreementMonth']
+    ).toBe('May 2026')
+    expect(
+      agreementRows[11]['publicDashboard.marketData.tables.agreementMonth']
+    ).toBe('Jun 2025')
     expect(XLSX.utils.book_append_sheet).toHaveBeenCalledTimes(4)
     expect(XLSX.writeFile).toHaveBeenCalledWith(
       expect.anything(),
