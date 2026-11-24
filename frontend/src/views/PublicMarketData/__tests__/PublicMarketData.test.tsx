@@ -88,7 +88,11 @@ const mockReport = {
   kpis: {
     labelPeriod: '2026-06',
     transfers: { current: 6, prior: null, deltaPct: null },
-    volume: { current: 75491, prior: null as number | null, deltaPct: null },
+    volume: {
+      current: 75491 as number | null,
+      prior: null as number | null,
+      deltaPct: null
+    },
     weightedAvgPrice: {
       current: 143.32,
       prior: null as number | null,
@@ -127,7 +131,7 @@ vi.mock('react-i18next', () => ({
 
 type ChartOption = {
   aria?: { enabled?: boolean }
-  legend?: { show?: boolean }
+  legend?: { show?: boolean; data?: string[] }
   xAxis?: { data?: string[]; axisLabel?: { interval?: number } }
   series?: Array<{ name?: string; data?: unknown[] }>
 }
@@ -159,6 +163,46 @@ describe('PublicMarketData', () => {
     expect(screen.getByTestId('kpi-transfers')).toBeInTheDocument()
     expect(screen.getByTestId('kpi-volume')).toBeInTheDocument()
     expect(screen.queryByTestId('kpi-avgPrice')).not.toBeInTheDocument()
+  })
+
+  test('shows the latest reported month volume in the average price card', ({
+    render,
+    theme
+  }) => {
+    const originalVolume = mockReport.kpis.volume
+    try {
+      for (const [volume, expected] of [
+        [75491, '75,491'],
+        [0, '0'],
+        [null, '—']
+      ] as const) {
+        mockReport.kpis.volume = { ...originalVolume, current: volume }
+        const { unmount } = render(<PublicMarketData />, [theme])
+        const card = screen.getByTestId('average-price-all')
+        expect(
+          within(card).getByText(`Jun 2026; ${expected}`)
+        ).toBeInTheDocument()
+        unmount()
+      }
+    } finally {
+      mockReport.kpis.volume = originalVolume
+    }
+  })
+
+  test('combines the latest recorded month price and transfer details', ({
+    render,
+    theme
+  }) => {
+    render(<PublicMarketData />, [theme])
+    const card = screen.getByTestId('average-price-all')
+    expect(card).toHaveTextContent('$143.32')
+    expect(card).toHaveTextContent('75,491')
+    expect(within(card).getByText('6')).toBeInTheDocument()
+    expect(within(card).getByText('$120.00')).toBeInTheDocument()
+    expect(within(card).getByText('$160.00')).toBeInTheDocument()
+    expect(
+      screen.queryByText('publicDashboard.marketData.snapshot.allDetails')
+    ).not.toBeInTheDocument()
   })
 
   test('compares the all-transfer average to the immediately preceding month', ({
@@ -327,20 +371,26 @@ describe('PublicMarketData', () => {
     expect(screen.queryByTestId('download-annual-xlsx')).not.toBeInTheDocument()
   })
 
-  test('keeps the trends heading and both charts in one PDF fit-to-page block', ({
+  test('keeps the agreement chart and table together in their own section', ({
     render,
     theme
   }) => {
-    const { container } = render(<PublicMarketData />, [theme])
-    const chartBlock = screen
-      .getByTestId('monthly-average-price-chart')
-      .closest('.pdf-fit-page')
+    render(<PublicMarketData />, [theme])
+    const report = screen.getByTestId('agreement-month-report')
+    expect(report).toHaveClass('pdf-fit-page')
+    expect(
+      within(report).getByTestId('monthly-average-price-chart')
+    ).toBeInTheDocument()
+    expect(
+      report.querySelector('[data-pdf-table="agreementMonthly"]')
+    ).not.toBeNull()
+    expect(
+      within(report).getByTestId('download-agreementMonthly-csv')
+    ).toBeInTheDocument()
     const mainChartBlock = screen
       .getByTestId('price-volume-chart-keyboard')
       .closest('.pdf-fit-page')
-    expect(chartBlock).not.toBeNull()
-    expect(chartBlock).toBe(mainChartBlock)
-    expect(chartBlock).toHaveClass('pdf-market-trends-section')
+    expect(mainChartBlock).toHaveClass('pdf-market-trends-section')
     expect(
       screen
         .getByRole('heading', {
@@ -348,10 +398,7 @@ describe('PublicMarketData', () => {
           name: 'publicDashboard.marketData.sections.marketTrendsHistoricalPerformance'
         })
         .closest('.pdf-fit-page')
-    ).toBe(chartBlock)
-    expect(
-      chartBlock?.contains(container.querySelector('[data-pdf-table]'))
-    ).toBe(false)
+    ).toBe(mainChartBlock)
   })
 
   test('shows minimum and maximum prices in the price and volume chart', ({
@@ -422,7 +469,9 @@ describe('PublicMarketData', () => {
     render(<PublicMarketData />, [theme])
 
     const a1Chart = getChartOptions().find(
-      (option) => option.series?.length === 2
+      (option) =>
+        option.series?.[0].name ===
+        'publicDashboard.marketData.trendCharts.weightedAverage'
     )
 
     expect(a1Chart?.aria?.enabled).toBe(true)
@@ -443,6 +492,14 @@ describe('PublicMarketData', () => {
     expect(a1Chart?.xAxis?.axisLabel?.interval).toBe(0)
     expect(a1Chart?.series?.[0].data).toHaveLength(12)
     expect(a1Chart?.series?.[1].data).toEqual(Array(12).fill(30000))
+    expect(a1Chart?.series?.[2].data).toEqual(Array(12).fill(120.3))
+    expect(a1Chart?.series?.[3].data).toEqual(Array(12).fill(155))
+    expect(a1Chart?.legend?.data).toContain(
+      'publicDashboard.marketData.tables.minPrice'
+    )
+    expect(a1Chart?.legend?.data).toContain(
+      'publicDashboard.marketData.tables.maxPrice'
+    )
     expect(
       screen.getByTestId('agreement-month-snapshot').textContent
     ).toContain('May 2026')
@@ -455,6 +512,12 @@ describe('PublicMarketData', () => {
     expect(
       screen.getByTestId('agreement-month-snapshot').textContent
     ).toContain('30,000')
+    expect(
+      screen.getByTestId('agreement-month-snapshot-previous')
+    ).toHaveTextContent('Apr 2026')
+    expect(
+      screen.getByTestId('agreement-month-snapshot-previous')
+    ).not.toHaveTextContent('May 2026')
     expect(screen.getByTestId('a1-price-chart-keyboard')).toHaveAttribute(
       'tabindex',
       '0'
@@ -473,13 +536,17 @@ describe('PublicMarketData', () => {
       render(<PublicMarketData />, [theme])
 
       const a1Chart = getChartOptions().find(
-        (option) => option.series?.length === 2
+        (option) =>
+          option.series?.[0].name ===
+          'publicDashboard.marketData.trendCharts.weightedAverage'
       )
       expect(a1Chart?.xAxis?.data).toHaveLength(12)
       expect(a1Chart?.xAxis?.data?.[0]).toBe('Jun 2025')
       expect(a1Chart?.xAxis?.data?.[11]).toBe('May 2026')
       expect(a1Chart?.series?.[0].data?.[3]).toBeNull()
       expect(a1Chart?.series?.[1].data?.[3]).toBeNull()
+      expect(a1Chart?.series?.[2].data?.[3]).toBeNull()
+      expect(a1Chart?.series?.[3].data?.[3]).toBeNull()
       expect(a1Chart?.series?.[0].data?.[11]).toBeNull()
       expect(a1Chart?.series?.[0].data?.[4]).toBe(147.75)
       const details = screen.getByTestId('agreement-month-snapshot')
@@ -506,13 +573,18 @@ describe('PublicMarketData', () => {
     render(<PublicMarketData />, [theme])
 
     const chart = getChartOptions().find(
-      (option) => option.series?.length === 2
+      (option) =>
+        option.series?.[0].name ===
+        'publicDashboard.marketData.trendCharts.weightedAverage'
     )
     expect(chart?.xAxis?.data?.[0]).toBe('Jan 2025')
     expect(chart?.xAxis?.data?.[11]).toBe('Dec 2025')
     expect(
       screen.getByTestId('agreement-month-snapshot').textContent
     ).not.toContain('Jan 2026')
+    expect(
+      screen.getByTestId('agreement-month-snapshot-previous')
+    ).toHaveTextContent('Nov 2025')
   })
 
   test('shows every legend entry without canvas paging or series toggles', ({
@@ -522,7 +594,8 @@ describe('PublicMarketData', () => {
     render(<PublicMarketData />, [theme])
 
     const mainChart = getChartOptions().find(
-      (option) => option.series?.length === 4
+      (option) =>
+        option.series?.[0].name === 'publicDashboard.marketData.tables.volume'
     )
     expect(mainChart?.legend?.show).toBe(false)
     const legend = screen.getByTestId('price-volume-chart-legend')
@@ -544,6 +617,8 @@ describe('PublicMarketData', () => {
     const announcement = chart.querySelector('[aria-live="polite"]')
     expect(announcement?.textContent).toContain('Jun 2025')
     expect(announcement?.textContent).toContain('30,000')
+    expect(announcement?.textContent).toContain('$120.30')
+    expect(announcement?.textContent).toContain('$155.00')
 
     fireEvent.keyDown(chart, { key: 'ArrowLeft' })
     expect(announcement?.textContent).toContain('May 2026')

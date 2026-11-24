@@ -167,10 +167,10 @@
         "minimumPrice": "Min of Price Per Unit",
         "maximumPrice": "Max of Price Per Unit",
         "priceVolumeChartAriaDescription": "Interactive chart showing credit volume and weighted average, minimum, and maximum prices for the selected reporting periods.",
-        "a1ChartAriaDescription": "Interactive chart showing weighted average prices and credit volumes by agreement month for recorded transfers. Months without data have no price or volume.",
+        "a1ChartAriaDescription": "Interactive chart showing weighted average, minimum and maximum prices and credit volumes by agreement month for recorded transfers. Months without data have no price or volume.",
         "chartKeyboardInstructions": "Use the left and right arrow keys to explore data points. Press Escape to dismiss the tooltip.",
         "priceVolumeChartKeyboardAnnouncement": "{{period}}. Weighted average: {{weightedAverage}}. Minimum price: {{minimumPrice}}. Maximum price: {{maximumPrice}}. Volume: {{volume}} credits.",
-        "a1ChartKeyboardAnnouncement": "{{period}}. Weighted average price: {{price}}. Volume: {{volume}} credits."
+        "a1ChartKeyboardAnnouncement": "{{period}}. Weighted average price: {{price}}. Minimum price: {{minimumPrice}}. Maximum price: {{maximumPrice}}. Volume: {{volume}} credits."
       },
       "granularity": {
         "month": "Monthly",
