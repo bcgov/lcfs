@@ -17,15 +17,17 @@ from lcfs.web.core.decorators import public_view_handler
 
 
 def _make_request(app: FastAPI, peer: str = "1.2.3.4", headers=None) -> Request:
+    # `headers` may be a dict (one value per header name) or a list of
+    # (name, value) pairs, which lets tests simulate a header sent as
+    # multiple separate lines (e.g. repeated X-Forwarded-For).
+    header_items = headers.items() if isinstance(headers, dict) else (headers or [])
     scope = {
         "type": "http",
         "method": "GET",
         "path": "/api/test",
         "raw_path": b"/api/test",
         "query_string": b"",
-        "headers": [
-            (k.lower().encode(), v.encode()) for k, v in (headers or {}).items()
-        ],
+        "headers": [(k.lower().encode(), v.encode()) for k, v in header_items],
         "client": (peer, 12345),
         "app": app,
         "route": None,
@@ -150,6 +152,22 @@ def test_client_ip_ignores_spoofed_left_most_hop():
         app, headers={"x-forwarded-for": "2.2.2.2, 203.0.113.9"}
     )
     assert client_ip(attacker_claim_a) == client_ip(attacker_claim_b) == "203.0.113.9"
+
+
+def test_client_ip_uses_right_most_hop_across_repeated_headers():
+    # LCFS-SEC-025 follow-up: X-Forwarded-For can also arrive as several
+    # separate header lines rather than one comma-joined line. Headers.get()
+    # would only see the first ("fake-address") and miss the router-appended
+    # real one, so client_ip must look across every line via getlist().
+    app = FastAPI()
+    req = _make_request(
+        app,
+        headers=[
+            ("x-forwarded-for", "fake-address"),
+            ("x-forwarded-for", "real-client-address"),
+        ],
+    )
+    assert client_ip(req) == "real-client-address"
 
 
 def test_client_ip_handles_missing_client():

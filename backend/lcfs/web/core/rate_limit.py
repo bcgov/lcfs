@@ -67,12 +67,22 @@ def client_ip(request: Request) -> str:
     right-most one -- is the one real, un-spoofable signal we have, so we
     read the raw header ourselves and use that instead of the (possibly
     attacker-chosen) value uvicorn rewrote ``request.client.host`` to.
+
+    ``X-Forwarded-For`` can legally arrive as several header lines rather
+    than a single comma-joined one. ``Headers.get()`` only returns the
+    first such line, so a caller could smuggle a spoofed value in first
+    and hide the router-appended (trustworthy) one from us. We use
+    ``getlist()`` to collect every line before splitting on commas.
     """
-    forwarded_for = request.headers.get("x-forwarded-for")
-    if forwarded_for:
-        hops = [hop.strip() for hop in forwarded_for.split(",") if hop.strip()]
-        if hops:
-            return hops[-1]
+    forwarded_for_lines = request.headers.getlist("x-forwarded-for")
+    hops = [
+        hop.strip()
+        for line in forwarded_for_lines
+        for hop in line.split(",")
+        if hop.strip()
+    ]
+    if hops:
+        return hops[-1]
     return request.client.host if request.client else "unknown"
 
 
