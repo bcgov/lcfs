@@ -229,7 +229,6 @@
       "releaseNotesDesc": "Recent updates and change history."
     },
     "login": {
-      "prompt": "Are you a fuel supplier or government analyst? Log in to file and review compliance reports.",
       "bceid": "Log in with BCeID",
       "idir": "Log in with IDIR"
     },
