@@ -82,14 +82,15 @@ from lcfs.web.api.initiative_agreement.schema import (
 )
 from lcfs.web.api.initiative_agreement.workflow import (
     ACTION_APPROVE,
-    LIFECYCLE_STATUSES_OPEN_TO_NEW_ACTIONS,
     STATUS_APPROVED,
     STATUS_NOT_STARTED,
     TRANSITIONS,
     WORKFLOW_ACTIONS,
+    ensure_package_editable,
     hidden_lifecycle_statuses,
     initial_lifecycle_status,
     is_hidden_from,
+    is_package_editable,
 )
 from lcfs.web.api.internal_comment.schema import (
     AudienceScopeEnum,
@@ -312,6 +313,7 @@ class InitiativeAgreementServices:
             contact_phone=agreement.contact_phone,
             create_date=agreement.create_date,
             designated_actions=designated_actions,
+            package_editable=is_package_editable(agreement),
         )
 
     @service_handler
@@ -432,8 +434,8 @@ class InitiativeAgreementServices:
         data: AgreementUpdateSchema,
         user,
     ) -> InitiativeAgreementProfileSchema:
-        """Edit an agreement's details, in any lifecycle status the caller
-        can see. A draft is hidden from government (#5186), so it reads as
+        """Edit an agreement's details while its package is open to edits
+        (#5554). A draft is hidden from government (#5186), so it reads as
         missing here too."""
         agreement = await self.repo.get_initiative_agreement_by_id(
             initiative_agreement_id
@@ -446,6 +448,7 @@ class InitiativeAgreementServices:
             raise DataNotFoundException(
                 f"Initiative Agreement with id {initiative_agreement_id} not found"
             )
+        ensure_package_editable(agreement)
 
         provided = data.model_fields_set
 
@@ -530,12 +533,9 @@ class InitiativeAgreementServices:
         data: DesignatedActionCreateSchema,
         user,
     ) -> DesignatedActionSchema:
-        """Add a designated action to an agreement that is still open.
-
-        Agreements government enters start Underway (#5186), and that is
-        when an analyst sets out the schedule. A completed or terminated
-        agreement takes no new actions.
-        """
+        """Add a designated action while the agreement's package is open to
+        edits (#5554). Once it is Underway, a new action comes through a
+        change order."""
         agreement = await self.repo.get_initiative_agreement_by_id(
             initiative_agreement_id
         )
@@ -544,17 +544,7 @@ class InitiativeAgreementServices:
                 f"Initiative Agreement with id {initiative_agreement_id} not found"
             )
 
-        lifecycle = (
-            agreement.lifecycle_status.status if agreement.lifecycle_status else None
-        )
-        if lifecycle not in LIFECYCLE_STATUSES_OPEN_TO_NEW_ACTIONS:
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    "Designated actions can only be added while the agreement "
-                    f"is a draft or underway; this one is '{lifecycle or 'not set'}'."
-                ),
-            )
+        ensure_package_editable(agreement)
 
         name = (data.name or "").strip()
         if not name:
@@ -608,13 +598,13 @@ class InitiativeAgreementServices:
     ) -> DesignatedActionSchema:
         """Correct a designated action's details.
 
-        Editable at any point in the agreement's life: an analyst who
-        spots a wrong figure or a mistyped name should be able to fix it
-        rather than work around it. Every change is recorded with its
-        before and after, so the record shows what was altered and by
-        whom.
+        Editable while the agreement's package is open to edits (#5554);
+        once it is Underway, a correction comes through a change order.
+        Every change is recorded with its before and after, so the record
+        shows what was altered and by whom.
         """
         action = await self._get_action_or_404(designated_action_id, user)
+        ensure_package_editable(action.initiative_agreement)
 
         changes = {}
 
@@ -816,6 +806,12 @@ class InitiativeAgreementServices:
             available_actions=self._available_actions(
                 action, self.request.user if self.request else None
             ),
+            package_editable=is_package_editable(action.initiative_agreement),
+            agreement_lifecycle_status=(
+                action.initiative_agreement.lifecycle_status.status
+                if action.initiative_agreement.lifecycle_status
+                else None
+            ),
         )
 
     async def _get_action_or_404(
@@ -837,8 +833,8 @@ class InitiativeAgreementServices:
         return action
 
     async def _get_requirement_or_404(self, evidence_requirement_id: int, user):
-        """The evidence requirement, unless it is missing or its action is
-        hidden from the caller (see _get_action_or_404)."""
+        """The evidence requirement and its action, unless it is missing or
+        its action is hidden from the caller (see _get_action_or_404)."""
         requirement = await self.repo.get_evidence_requirement(evidence_requirement_id)
         action = (
             await self.repo.get_designated_action_by_id(
@@ -851,7 +847,7 @@ class InitiativeAgreementServices:
             raise DataNotFoundException(
                 f"Evidence requirement with id {evidence_requirement_id} not found"
             )
-        return requirement
+        return requirement, action
 
     def _user_may(self, transition, user) -> bool:
         return any(user_has_roles(user, [role]) for role in transition.roles)
@@ -1218,7 +1214,8 @@ class InitiativeAgreementServices:
         user,
     ) -> EvidenceRequirementSchema:
         """Add an evidence requirement to an action (the wireframe's Add EOC)."""
-        await self._get_action_or_404(designated_action_id, user)
+        action = await self._get_action_or_404(designated_action_id, user)
+        ensure_package_editable(action.initiative_agreement)
         title = (data.title or "").strip()
         if not title:
             raise HTTPException(
@@ -1258,8 +1255,17 @@ class InitiativeAgreementServices:
         Recording an assessment stamps who decided and when. The previous
         round's finding is not lost when information is requested: the round
         is captured with its full payload in designated_action_history.
+
+        The wording (title, description, type and number) is part of the
+        package and changes only while it is open to edits (#5554). The
+        assessment is the analyst review, which is what an Underway package
+        is for, so it stays open.
         """
-        requirement = await self._get_requirement_or_404(evidence_requirement_id, user)
+        requirement, action = await self._get_requirement_or_404(
+            evidence_requirement_id, user
+        )
+        if self._changes_requirement_wording(requirement, data):
+            ensure_package_editable(action.initiative_agreement)
 
         # The text an analyst saves deliberately — title, description and
         # evaluation — is recorded with its before and after, the way a
@@ -1361,13 +1367,38 @@ class InitiativeAgreementServices:
         refreshed = await self.repo.get_evidence_requirement(evidence_requirement_id)
         return EvidenceRequirementSchema.model_validate(refreshed)
 
+    @staticmethod
+    def _changes_requirement_wording(
+        requirement: EvidenceRequirement, data: EvidenceRequirementUpdateSchema
+    ) -> bool:
+        """Whether this update would change the requirement's wording. A
+        value sent unchanged is not a change, so a client that saves the
+        whole card does not trip the package lock with an assessment."""
+        sent = {
+            "title": (data.title or "").strip() if data.title is not None else None,
+            "description": (
+                (data.description or "").strip()
+                if data.description is not None
+                else None
+            ),
+            "evidence_type": data.evidence_type,
+            "requirement_number": data.requirement_number,
+        }
+        return any(
+            value is not None and value != getattr(requirement, field)
+            for field, value in sent.items()
+        )
+
     @service_handler
     async def deactivate_evidence_requirement(
         self, evidence_requirement_id: int, user
     ) -> None:
         """Remove a requirement from the list without erasing it — a
         requirement that was once reviewed is part of the record."""
-        requirement = await self._get_requirement_or_404(evidence_requirement_id, user)
+        requirement, action = await self._get_requirement_or_404(
+            evidence_requirement_id, user
+        )
+        ensure_package_editable(action.initiative_agreement)
         requirement.is_active = False
         requirement.update_user = getattr(user, "keycloak_username", None)
         await self.repo.db.flush()
@@ -1698,7 +1729,9 @@ class InitiativeAgreementServices:
         data: InitiativeAgreementNoteCreateSchema,
         user,
     ) -> InitiativeAgreementNoteSchema:
-        await self._agreement_or_404(initiative_agreement_id, user)
+        ensure_package_editable(
+            await self._agreement_or_404(initiative_agreement_id, user)
+        )
         try:
             note = await self.repo.add_initiative_agreement_note(
                 initiative_agreement_id=initiative_agreement_id,
@@ -1720,7 +1753,9 @@ class InitiativeAgreementServices:
         data: InitiativeAgreementNoteUpdateSchema,
         user,
     ) -> InitiativeAgreementNoteSchema:
-        await self._agreement_or_404(initiative_agreement_id, user)
+        ensure_package_editable(
+            await self._agreement_or_404(initiative_agreement_id, user)
+        )
         note_text = self._require_note_text(data.note_text)
         try:
             await self.repo.update_initiative_agreement_note(
@@ -1738,7 +1773,9 @@ class InitiativeAgreementServices:
     async def delete_note(
         self, initiative_agreement_id: int, note_id: int, user
     ) -> None:
-        await self._agreement_or_404(initiative_agreement_id, user)
+        ensure_package_editable(
+            await self._agreement_or_404(initiative_agreement_id, user)
+        )
         await self.repo.delete_initiative_agreement_note(
             initiative_agreement_id, note_id
         )

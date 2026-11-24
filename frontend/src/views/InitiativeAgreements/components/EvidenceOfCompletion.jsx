@@ -23,6 +23,10 @@ import { AddEvidenceRequirementModal } from './AddEvidenceRequirementModal'
 export const EvidenceOfCompletion = ({
   designatedActionId,
   canEdit = true,
+  // The requirements themselves (adding, rewording, removing) are part of
+  // the agreement's package and read-only once it is (#5554). The review
+  // that canEdit governs carries on.
+  canEditWording = true,
   renderRequestAction = null,
   missingInformationReadOnly = false
 }) => {
@@ -121,19 +125,21 @@ export const EvidenceOfCompletion = ({
             {t('report:collapseAll')}
           </Link>
         </BCTypography>
-        <Role roles={[roles.ia_analyst, roles.ia_manager]}>
-          <BCButton
-            type="button"
-            variant="outlined"
-            color="primary"
-            size="small"
-            startIcon={<AddIcon sx={{ width: '1rem', height: '1rem' }} />}
-            data-test="eoc-add-button"
-            onClick={() => setAdding(true)}
-          >
-            {t('initiativeAgreement:evidence.addEoc')}
-          </BCButton>
-        </Role>
+        {canEditWording && (
+          <Role roles={[roles.ia_analyst, roles.ia_manager]}>
+            <BCButton
+              type="button"
+              variant="outlined"
+              color="primary"
+              size="small"
+              startIcon={<AddIcon sx={{ width: '1rem', height: '1rem' }} />}
+              data-test="eoc-add-button"
+              onClick={() => setAdding(true)}
+            >
+              {t('initiativeAgreement:evidence.addEoc')}
+            </BCButton>
+          </Role>
+        )}
       </Box>
 
       {isLoading ? (
@@ -153,6 +159,7 @@ export const EvidenceOfCompletion = ({
                 )
               }
               canEdit={canEdit}
+              canEditWording={canEditWording}
               missingInformationReadOnly={missingInformationReadOnly}
               actions={renderRequestAction?.(
                 requirement,

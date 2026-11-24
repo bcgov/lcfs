@@ -10,6 +10,8 @@ Final director approval also issues the recommended credits through the
 existing initiative agreement credit transaction flow.
 """
 
+from fastapi import HTTPException
+
 from lcfs.db.models.initiative_agreement.DesignatedActionHistory import (
     EVENT_CREDITS_RECOMMENDED,
     EVENT_EVIDENCE_REVIEWED,
@@ -35,12 +37,29 @@ INITIAL_LIFECYCLE_STATUS_RULES = (
 # users do not see it: not in the grids, the counts or the status filter.
 LIFECYCLE_STATUSES_HIDDEN_FROM_GOVERNMENT = (LIFECYCLE_STATUS_DRAFT,)
 
-# Designated actions can be added while an agreement is being drafted or is
-# underway. A completed or terminated agreement takes no new ones.
-LIFECYCLE_STATUSES_OPEN_TO_NEW_ACTIONS = (
-    LIFECYCLE_STATUS_DRAFT,
-    LIFECYCLE_STATUS_UNDERWAY,
-)
+# The IA package (#5554) is the agreement's information, its notes, its
+# designated actions, their evidence of completion list, and the files on the
+# agreement and its actions. It can be edited directly only in these lifecycle
+# statuses. Underway is the package the organization has been given, so from
+# then on it is read-only and changes only through a change order (#5555 adds
+# its draft status here). The tuple lists what is open, so Underway,
+# Completed, Terminated and any status added later stay read-only unless
+# someone opens them here.
+LIFECYCLE_STATUSES_EDITABLE = (LIFECYCLE_STATUS_DRAFT,)
+
+# Not every write to an agreement edits its package. These stay open while it
+# is Underway, because Underway is when they happen:
+# - the analyst review: the TRANSITIONS below, the EOC assessment, the
+#   recommended amount and analyst assignment;
+# - internal comments on the agreement and its actions;
+# - the BCeID evidence of completion submission, which Underway opens. The
+#   files a proponent or signer puts on their designated action are that
+#   submission's evidence, not package attachments, so the submission's own
+#   rules govern them (is_eoc_evidence_write).
+EOC_SUBMISSION_ROLES = (RoleEnum.IA_PROPONENT, RoleEnum.IA_SIGNER)
+
+# Where the files on an agreement's package live, by document parent type.
+PACKAGE_DOCUMENT_PARENT_TYPES = ("initiativeAgreement", "designatedAction")
 
 
 def initial_lifecycle_status(user):
@@ -59,13 +78,68 @@ def hidden_lifecycle_statuses(user):
     return ()
 
 
+def _lifecycle(agreement):
+    return agreement.lifecycle_status.status if agreement.lifecycle_status else None
+
+
 def is_hidden_from(agreement, user) -> bool:
     """Whether this agreement's lifecycle status keeps it from this user.
     The agreement's lifecycle_status must already be loaded."""
-    lifecycle = (
-        agreement.lifecycle_status.status if agreement.lifecycle_status else None
-    )
-    return lifecycle in hidden_lifecycle_statuses(user)
+    return _lifecycle(agreement) in hidden_lifecycle_statuses(user)
+
+
+def is_package_editable(agreement) -> bool:
+    """Whether this agreement's package can be edited directly (#5554). The
+    agreement's lifecycle_status must already be loaded."""
+    return _lifecycle(agreement) in LIFECYCLE_STATUSES_EDITABLE
+
+
+def ensure_package_editable(agreement) -> None:
+    """Refuse a direct edit to a package that is not open to one.
+
+    Every write path that changes the package calls this, so the lock holds
+    for an API call as well as the page. 409, not 403: the request is
+    understood and allowed for this caller, but the agreement's state
+    refuses it, and view_handler would replace a 403's message.
+    """
+    if not is_package_editable(agreement):
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"This initiative agreement is {_lifecycle(agreement) or 'not set'}, "
+                "so its package can't be edited directly."
+            ),
+        )
+
+
+def is_eoc_evidence_write(
+    parent_type: str, user, *, new_file: bool = False, file_owner=None
+) -> bool:
+    """Whether a file write belongs to the BCeID evidence of completion
+    submission rather than the package (see EOC_SUBMISSION_ROLES): a
+    proponent or signer uploading to a designated action, or changing a
+    file they uploaded there. Folders, and the files government put on the
+    action, stay part of the package."""
+    if parent_type != "designatedAction":
+        return False
+    if user_has_roles(user, [RoleEnum.GOVERNMENT]) or not any(
+        user_has_roles(user, [role]) for role in EOC_SUBMISSION_ROLES
+    ):
+        return False
+    username = getattr(user, "keycloak_username", None)
+    return new_file or (file_owner is not None and file_owner == username)
+
+
+def ensure_package_document_writable(
+    agreement, parent_type: str, user, *, new_file: bool = False, file_owner=None
+) -> None:
+    """Refuse a file or folder write on a package that is not open to edits,
+    unless it is BCeID evidence (see is_eoc_evidence_write)."""
+    if is_eoc_evidence_write(
+        parent_type, user, new_file=new_file, file_owner=file_owner
+    ):
+        return
+    ensure_package_editable(agreement)
 
 
 # Status names as seeded in designated_action_status. "Approved" is the

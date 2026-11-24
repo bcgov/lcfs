@@ -11,10 +11,10 @@ import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
 import { useUpdateDesignatedAction } from '@/hooks/useInitiativeAgreements'
 
-// Correcting a designated action. Available at any point in the
-// agreement's life: an analyst who spots a wrong figure or a mistyped
-// name should be able to fix it rather than work around it. Every change
-// is recorded in the activity trail with its before and after.
+// Correcting a designated action while the agreement's package is open to
+// edits (#5554); the detail page leaves it out once the package is
+// read-only. Every change is recorded in the activity trail with its
+// before and after.
 export const EditDesignatedAction = ({ action, onChanged }) => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const [open, setOpen] = useState(false)

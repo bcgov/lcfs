@@ -535,8 +535,10 @@ async def test_action_documents_list_and_are_org_gated(
 
 
 # ---------------------------------------------------------------------------
-# Creating designated actions, which is possible while the agreement is a
-# draft or underway. Agreements government enters start Underway (#5186).
+# Creating designated actions, which is possible while the agreement's
+# package is open to edits (#5554). The tests that exercise creation itself
+# open the Underway agreements they seed (underway_packages_editable);
+# test_package_edit_lock.py covers the lock.
 # ---------------------------------------------------------------------------
 
 
@@ -548,13 +550,14 @@ def _create_action_url(fastapi_app, agreement):
 
 
 async def _open_agreement(dbsession, code):
-    """An agreement as an analyst creates it: Underway."""
+    """An agreement as an analyst creates it today: Underway (#5186)."""
     org_id, _ = await _two_org_ids(dbsession)
     return await _seed_agreement(dbsession, org_id, code)
 
 
 @pytest.mark.anyio
-async def test_an_analyst_adds_an_action_to_an_underway_agreement(
+@pytest.mark.usefixtures("underway_packages_editable")
+async def test_an_analyst_adds_an_action(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
     agreement = await _open_agreement(dbsession, "IA-26NEW1")
@@ -581,6 +584,7 @@ async def test_an_analyst_adds_an_action_to_an_underway_agreement(
 
 
 @pytest.mark.anyio
+@pytest.mark.usefixtures("underway_packages_editable")
 async def test_action_numbers_continue_from_what_is_there(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
@@ -613,8 +617,9 @@ async def test_actions_cannot_be_added_once_the_agreement_is_closed(
         _create_action_url(fastapi_app, agreement), json={"name": "Too late"}
     )
 
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert "draft or underway" in response.json()["detail"].lower()
+    # The package is read-only once the agreement is closed (#5554).
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert lifecycle in response.json()["detail"]
 
 
 @pytest.mark.anyio
@@ -640,6 +645,7 @@ async def test_an_analyst_cannot_reach_a_draft_to_add_an_action(
 
 
 @pytest.mark.anyio
+@pytest.mark.usefixtures("underway_packages_editable")
 async def test_a_nameless_action_is_refused(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
@@ -654,6 +660,7 @@ async def test_a_nameless_action_is_refused(
 
 
 @pytest.mark.anyio
+@pytest.mark.usefixtures("underway_packages_editable")
 async def test_negative_credits_are_refused(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
@@ -669,6 +676,7 @@ async def test_negative_credits_are_refused(
 
 
 @pytest.mark.anyio
+@pytest.mark.usefixtures("underway_packages_editable")
 async def test_an_action_without_an_amount_starts_at_nought(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
@@ -741,6 +749,7 @@ async def _action_history(dbsession, action):
 
 
 @pytest.mark.anyio
+@pytest.mark.usefixtures("underway_packages_editable")
 async def test_an_analyst_corrects_an_action_and_it_is_recorded(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
@@ -767,10 +776,11 @@ async def test_an_analyst_corrects_an_action_and_it_is_recorded(
 
 
 @pytest.mark.anyio
-async def test_an_action_can_be_corrected_after_the_agreement_is_underway(
+async def test_an_action_cannot_be_corrected_once_the_agreement_is_underway(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
-    """A wrong figure should be fixable rather than worked around."""
+    """Once Underway the agreement's package is read-only (#5554): a wrong
+    figure is corrected through a change order, not edited in place."""
     org_id, _ = await _two_org_ids(dbsession)
     agreement = await _seed_agreement(dbsession, org_id, "IA-26EDT2")
     action = await _seed_action(dbsession, agreement, 1, "Commission station")
@@ -782,11 +792,14 @@ async def test_an_action_can_be_corrected_after_the_agreement_is_underway(
         _edit_url(fastapi_app, action), json={"name": "Corrected while underway"}
     )
 
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json()["name"] == "Corrected while underway"
+    assert response.status_code == status.HTTP_409_CONFLICT
+    await dbsession.refresh(action)
+    assert action.name == "Commission station"
+    assert await _action_history(dbsession, action) == []
 
 
 @pytest.mark.anyio
+@pytest.mark.usefixtures("underway_packages_editable")
 async def test_editing_nothing_records_nothing(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
@@ -805,6 +818,7 @@ async def test_editing_nothing_records_nothing(
 
 
 @pytest.mark.anyio
+@pytest.mark.usefixtures("underway_packages_editable")
 async def test_the_completion_date_can_be_set_and_cleared(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
@@ -825,6 +839,7 @@ async def test_the_completion_date_can_be_set_and_cleared(
 
 
 @pytest.mark.anyio
+@pytest.mark.usefixtures("underway_packages_editable")
 async def test_an_edit_cannot_blank_the_name_or_go_negative(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
@@ -843,6 +858,7 @@ async def test_an_edit_cannot_blank_the_name_or_go_negative(
 
 
 @pytest.mark.anyio
+@pytest.mark.usefixtures("underway_packages_editable")
 async def test_a_manager_may_also_correct_an_action(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):

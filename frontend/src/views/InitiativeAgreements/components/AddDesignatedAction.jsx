@@ -12,9 +12,9 @@ import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
 import { useCreateDesignatedAction } from '@/hooks/useInitiativeAgreements'
 
-// Adding a designated action to an agreement that is still open: a draft
-// or underway (INITIATIVE_AGREEMENT_OPEN_TO_NEW_ACTIONS). The API enforces
-// that too — this only disables a control that would be refused.
+// Adding a designated action while the agreement's package is open to
+// edits (packageEditable, #5554). The API enforces that too — this only
+// disables a control that would be refused.
 export const AddDesignatedAction = ({ initiativeAgreementId, canAdd }) => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const [open, setOpen] = useState(false)

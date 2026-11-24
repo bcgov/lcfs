@@ -300,13 +300,14 @@ const NoteRow = ({ note, canEdit, onEdit }) => {
 }
 
 // Notes on an initiative agreement (#5486): numbered, kept in number order,
-// one added or edited at a time.
-export const NotesAccordion = ({ initiativeAgreementId }) => {
+// one added or edited at a time. Read-only once the agreement's package is
+// (#5554).
+export const NotesAccordion = ({ initiativeAgreementId, readOnly = false }) => {
   const { t } = useTranslation(['initiativeAgreement'])
   const { hasRoles } = useCurrentUser()
-  const canEdit = Boolean(
-    hasRoles?.(roles.ia_analyst) || hasRoles?.(roles.ia_manager)
-  )
+  const canEdit =
+    !readOnly &&
+    Boolean(hasRoles?.(roles.ia_analyst) || hasRoles?.(roles.ia_manager))
   const [editing, setEditing] = useState(null)
 
   const {

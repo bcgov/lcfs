@@ -290,6 +290,12 @@ class DesignatedActionProfileSchema(DesignatedActionSchema):
     # Current-version sibling ids in action_number order, for the detail
     # page's previous/next navigation.
     sibling_action_ids: List[int] = []
+    # Whether the agreement's package can be edited directly (#5554). The
+    # page reads this rather than repeating the lifecycle rule, so the two
+    # cannot disagree. Defaults closed.
+    package_editable: bool = False
+    # The agreement's lifecycle status, which the read-only notice names.
+    agreement_lifecycle_status: Optional[str] = None
 
 
 class DesignatedActionsListSchema(BaseSchema):
@@ -393,6 +399,8 @@ class InitiativeAgreementProfileSchema(InitiativeAgreementListItemSchema):
     contact_phone: Optional[str] = None
     create_date: datetime
     designated_actions: List[DesignatedActionSchema] = []
+    # See DesignatedActionProfileSchema.package_editable.
+    package_editable: bool = False
 
 
 class AgreementCreateSchema(BaseSchema):
