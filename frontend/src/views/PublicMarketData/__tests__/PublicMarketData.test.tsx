@@ -88,7 +88,7 @@ const mockReport = {
   kpis: {
     labelPeriod: '2026-06',
     transfers: { current: 6, prior: null, deltaPct: null },
-    volume: { current: 75491, prior: null, deltaPct: null },
+    volume: { current: 75491, prior: null as number | null, deltaPct: null },
     weightedAvgPrice: {
       current: 143.32,
       prior: null as number | null,
@@ -259,6 +259,45 @@ describe('PublicMarketData', () => {
     } finally {
       mockReport.monthly = originalRows
       mockReport.kpis.weightedAvgPrice = originalPrice
+    }
+  })
+
+  test('shows the volume for each price comparison period', ({
+    render,
+    theme
+  }) => {
+    const originalRows = mockReport.monthly
+    const originalVolume = mockReport.kpis.volume
+    mockReport.monthly = [
+      {
+        ...originalRows[0],
+        period: '2026-05',
+        weightedAvgPrice: 100,
+        volume: 12345
+      },
+      ...originalRows
+    ]
+    mockReport.kpis.volume = { ...originalVolume, prior: 67890 }
+    try {
+      const { unmount } = render(<PublicMarketData />, [theme])
+      expect(screen.getByTestId('average-price-change')).toHaveTextContent(
+        '12,345'
+      )
+      expect(screen.getByTestId('average-price-year-change')).toHaveTextContent(
+        '67,890'
+      )
+      unmount()
+
+      mockReport.monthly = originalRows
+      mockReport.kpis.volume = { ...originalVolume, prior: 0 }
+      render(<PublicMarketData />, [theme])
+      expect(screen.getByTestId('average-price-change')).toHaveTextContent('—')
+      expect(screen.getByTestId('average-price-year-change')).toHaveTextContent(
+        '0'
+      )
+    } finally {
+      mockReport.monthly = originalRows
+      mockReport.kpis.volume = originalVolume
     }
   })
 

@@ -1595,9 +1595,10 @@ export const PublicMarketData = () => {
   const previousMonthPeriod = `${previousMonthDate.getUTCFullYear()}-${String(
     previousMonthDate.getUTCMonth() + 1
   ).padStart(2, '0')}`
-  const previousMonthPrice = monthlyRows.find(
+  const previousMonthRow = monthlyRows.find(
     (row) => row.period === previousMonthPeriod
-  )?.weightedAvgPrice
+  )
+  const previousMonthPrice = previousMonthRow?.weightedAvgPrice
   const monthlyPriceChange =
     latestMonthlyRow?.weightedAvgPrice != null &&
     previousMonthPrice != null &&
@@ -1611,6 +1612,7 @@ export const PublicMarketData = () => {
       dataTest: 'average-price-change',
       change: monthlyPriceChange,
       price: previousMonthPrice,
+      volume: previousMonthRow?.volume,
       label: 'publicDashboard.marketData.vsPreviousMonth',
       unavailable: 'publicDashboard.marketData.previousMonthUnavailable'
     },
@@ -1618,6 +1620,7 @@ export const PublicMarketData = () => {
       dataTest: 'average-price-year-change',
       change: kpis?.weightedAvgPrice?.deltaPct,
       price: kpis?.weightedAvgPrice?.prior,
+      volume: kpis?.volume?.prior,
       label: 'publicDashboard.marketData.vsSameMonthLastYear',
       unavailable: 'publicDashboard.marketData.previousYearUnavailable'
     }
@@ -1865,7 +1868,14 @@ export const PublicMarketData = () => {
               delta={
                 <BCBox sx={{ display: 'grid', gap: 0.5, textAlign: 'center' }}>
                   {priceComparisons.map(
-                    ({ dataTest, change, price, label, unavailable }) => (
+                    ({
+                      dataTest,
+                      change,
+                      price,
+                      volume,
+                      label,
+                      unavailable
+                    }) => (
                       <BCTypography
                         key={dataTest}
                         data-test={dataTest}
@@ -1892,6 +1902,10 @@ export const PublicMarketData = () => {
                               ` (${t(label, { price: price2Fmt.format(price) })})`}
                           </>
                         )}
+                        {'; '}
+                        {t('publicDashboard.marketData.comparisonVolume', {
+                          volume: volume == null ? '—' : intFmt.format(volume)
+                        })}
                       </BCTypography>
                     )
                   )}
