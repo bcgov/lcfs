@@ -75,10 +75,10 @@ const cardSx = { p: { xs: 2, md: 3 }, mb: 3 }
 // A read-only application's fields are disabled, and MUI paints disabled
 // values and choices in faint grey. Keep the entered values and the chosen
 // options as easy to read as on a draft; the grey borders still show that
-// nothing can be changed.
+// nothing can be changed. `&&` outranks the theme's dimmed disabled select.
 const readOnlyCardSx = {
   ...cardSx,
-  '& .MuiInputBase-input.Mui-disabled, & .MuiSelect-select.Mui-disabled': {
+  '&& .MuiInputBase-input.Mui-disabled, && .MuiSelect-select.Mui-disabled': {
     WebkitTextFillColor: 'currentColor',
     opacity: 1
   },
