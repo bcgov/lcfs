@@ -30,6 +30,7 @@ import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import { useCreditMarketPublicReport } from '@/hooks/useCreditMarket'
 import BCButton from '@/components/BCButton'
+import { groupStatisticsAndTrendsForPdf, pdfFitBlockEnd } from './pdfPagination'
 
 const NAVY = '#003366'
 const LINK = '#1A5A96'
@@ -49,14 +50,11 @@ const PDF_FIT_BLOCK_MAX_LEAD_RATIO = 0.2
 // every pixel is at least this light (borders/shadows allowed, text is not).
 const PDF_BLANK_CHECK_MAX_RATIO = 0.25
 const PDF_BLANK_LUMA_MIN = 200
-// Report tables in the PDF, grouped per page (differs from on-screen order):
-// quarterly and annual share a portrait page, monthly gets a landscape page.
+// The wide recorded-month table gets a landscape page in the PDF.
 const PDF_TABLE_PAGES: ReportKey[][] = [['quarterly', 'annual'], ['monthly']]
-// Trailing months shown in the A1 price trend: the same month last year
-// through the current month (e.g. Oct -> Oct).
-const A1_TREND_MONTHS = 13
+const AGREEMENT_MONTHS = 12
 
-type ReportKey = 'monthly' | 'quarterly' | 'annual'
+type ReportKey = 'agreementMonthly' | 'monthly' | 'quarterly' | 'annual'
 type Granularity = 'month' | 'quarter' | 'year'
 type TooltipParam = {
   value: number | null
@@ -105,6 +103,7 @@ type MarketReportKpis = {
 type PublicMarketReportPayload = {
   monthly: MarketReportPeriod[]
   a1Monthly?: MarketReportPeriod[]
+  agreementMonthly: MarketReportPeriod[]
   quarterly: MarketReportPeriod[]
   annual: MarketReportPeriod[]
   allTime: {
@@ -198,7 +197,12 @@ const handleChartKeyboardNavigation = (
 
 const todayStamp = () => new Date().toISOString().slice(0, 10)
 const reportTypeName = (key: ReportKey) =>
-  ({ monthly: 'monthly', quarterly: 'quarterly', annual: 'yearly' })[key]
+  ({
+    agreementMonthly: 'agreement-monthly',
+    monthly: 'monthly',
+    quarterly: 'quarterly',
+    annual: 'yearly'
+  })[key]
 
 const CardShell = ({
   children,
@@ -225,17 +229,38 @@ const CardShell = ({
   </BCBox>
 )
 
+const DetailItems = ({ items }: { items: DetailItem[] }) => (
+  <BCBox sx={{ display: 'grid', gap: 1.15 }}>
+    {items.map((item) => (
+      <BCBox
+        key={item.label}
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1fr) auto',
+          gap: 2,
+          alignItems: 'baseline'
+        }}
+      >
+        <BCTypography sx={{ fontSize: 14.5, color: DARK }}>
+          {item.label}
+        </BCTypography>
+        <BCTypography sx={{ fontSize: 14.5, color: '#000', fontWeight: 700 }}>
+          {item.value}
+        </BCTypography>
+      </BCBox>
+    ))}
+  </BCBox>
+)
+
 const MetricCard = ({
   title,
   value,
   caption,
-  delta,
   dataTest
 }: {
   title: string
   value: string
   caption: string
-  delta?: ReactNode
   dataTest?: string
 }) => (
   <CardShell dataTest={dataTest} sx={{ minHeight: 172 }}>
@@ -259,11 +284,6 @@ const MetricCard = ({
     >
       {caption}
     </BCTypography>
-    {delta && (
-      <BCBox sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-        {delta}
-      </BCBox>
-    )}
   </CardShell>
 )
 
@@ -280,31 +300,12 @@ const DetailCard = ({
     <BCTypography sx={{ fontSize: 15, color: DARK, fontWeight: 700, mb: 2.5 }}>
       {title}
     </BCTypography>
-    <BCBox sx={{ display: 'grid', gap: 1.15 }}>
-      {items.map((item) => (
-        <BCBox
-          key={item.label}
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1fr) auto',
-            gap: 2,
-            alignItems: 'baseline'
-          }}
-        >
-          <BCTypography sx={{ fontSize: 14.5, color: DARK }}>
-            {item.label}
-          </BCTypography>
-          <BCTypography sx={{ fontSize: 14.5, color: '#000', fontWeight: 700 }}>
-            {item.value}
-          </BCTypography>
-        </BCBox>
-      ))}
-    </BCBox>
+    <DetailItems items={items} />
   </CardShell>
 )
 
 const DefinitionCard = ({ title, body }: { title: string; body: string }) => (
-  <CardShell sx={{ minHeight: 140 }}>
+  <CardShell>
     <BCTypography sx={{ fontSize: 15, color: DARK, fontWeight: 700, mb: 2.25 }}>
       {title}
     </BCTypography>
@@ -384,7 +385,12 @@ const MarketReportTable = ({
       component="table"
       sx={{
         width: '100%',
-        minWidth: reportKey === 'monthly' ? 2300 : 920,
+        minWidth:
+          reportKey === 'monthly'
+            ? 2300
+            : reportKey === 'agreementMonthly'
+              ? 550
+              : 920,
         borderCollapse: 'separate',
         borderSpacing: 0,
         fontSize: 14
@@ -579,30 +585,39 @@ export const PublicMarketData = () => {
   const kpis = data?.kpis
   const ytdKpis = data?.ytdKpis ?? kpis
   const allTime = data?.allTime
-  const a1MonthlyChartRows = useMemo(() => {
-    const rows = data?.a1Monthly ?? []
-    const monthlyRows = data?.monthly ?? []
-    const reportingMonth =
-      kpis?.labelPeriod ??
-      monthlyRows[monthlyRows.length - 1]?.period ??
-      rows[rows.length - 1]?.period
-    if (!reportingMonth) return []
-
-    const [year, month] = reportingMonth.split('-').map(Number)
-    const pricesByMonth = new Map(
-      rows.map((row) => [row.period, row.weightedAvgPrice])
+  const agreementMonthlyChartRows = useMemo(() => {
+    const rows = data?.agreementMonthly ?? []
+    const now = new Date()
+    const monthParts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Vancouver',
+      year: 'numeric',
+      month: '2-digit'
+    }).formatToParts(now)
+    const year = Number(monthParts.find((part) => part.type === 'year')?.value)
+    const month = Number(
+      monthParts.find((part) => part.type === 'month')?.value
     )
-    return Array.from({ length: A1_TREND_MONTHS }, (_, index) => {
-      const date = new Date(Date.UTC(year, month - A1_TREND_MONTHS + index, 1))
+    const rowsByMonth = new Map(rows.map((row) => [row.period, row]))
+    return Array.from({ length: AGREEMENT_MONTHS }, (_, index) => {
+      const date = new Date(
+        Date.UTC(year, month - AGREEMENT_MONTHS + index - 1, 1)
+      )
       const period = `${date.getUTCFullYear()}-${String(
         date.getUTCMonth() + 1
       ).padStart(2, '0')}`
       return {
         period,
-        weightedAvgPrice: pricesByMonth.get(period) ?? null
+        weightedAvgPrice: rowsByMonth.get(period)?.weightedAvgPrice ?? null,
+        volume: rowsByMonth.get(period)?.volume ?? null,
+        transfers: rowsByMonth.get(period)?.transfers ?? null,
+        minPrice: rowsByMonth.get(period)?.minPrice ?? null,
+        maxPrice: rowsByMonth.get(period)?.maxPrice ?? null
       }
     })
-  }, [data?.a1Monthly, data?.monthly, kpis?.labelPeriod])
+  }, [data?.agreementMonthly])
+  const agreementMonthlyRows = (data?.agreementMonthly ?? []).filter((row) =>
+    agreementMonthlyChartRows.some((month) => month.period === row.period)
+  )
 
   const chartOption = useMemo(() => {
     const priceName = t('publicDashboard.marketData.kpi.avgPrice')
@@ -646,7 +661,7 @@ export const PublicMarketData = () => {
       },
       grid: {
         left: '2%',
-        right: '3%',
+        right: '8%',
         bottom: '12%',
         top: '8%',
         containLabel: true
@@ -665,8 +680,10 @@ export const PublicMarketData = () => {
         },
         {
           type: 'value',
+          name: volName,
+          nameTextStyle: { fontSize: 10 },
           splitLine: { show: false },
-          axisLabel: { show: false }
+          axisLabel: { show: true, color: '#767676', fontSize: 10 }
         }
       ],
       series: [
@@ -716,6 +733,12 @@ export const PublicMarketData = () => {
     const title = t(
       'publicDashboard.marketData.trendCharts.monthlyAverageTitle'
     )
+    const volumeName = t('publicDashboard.marketData.tables.volume')
+    const priceName = t(
+      'publicDashboard.marketData.trendCharts.weightedAverage'
+    )
+    const minPriceName = t('publicDashboard.marketData.tables.minPrice')
+    const maxPriceName = t('publicDashboard.marketData.tables.maxPrice')
     return {
       aria: {
         enabled: true,
@@ -732,26 +755,37 @@ export const PublicMarketData = () => {
             .map(
               (p) =>
                 `${p.marker}${p.seriesName}: ${
-                  p.value == null ? '—' : price2Fmt.format(p.value)
+                  p.value == null
+                    ? '—'
+                    : p.seriesName === volumeName
+                      ? intFmt.format(p.value)
+                      : price2Fmt.format(p.value)
                 }`
             )
             .join('<br/>')}`
       },
       title: { text: title, textStyle: { fontSize: 13, color: DARK } },
-      grid: { left: '10%', right: '5%', top: '20%', bottom: '28%' },
+      legend: {
+        data: [priceName, volumeName, minPriceName, maxPriceName],
+        bottom: 0
+      },
+      grid: { left: '10%', right: '10%', top: '20%', bottom: '28%' },
       xAxis: {
         type: 'category',
-        data: a1MonthlyChartRows.map((p) => fmtPeriod(p.period)),
+        data: agreementMonthlyChartRows.map((p) => fmtPeriod(p.period)),
         axisLabel: { interval: 0, rotate: 35, fontSize: 10 }
       },
-      yAxis: {
-        type: 'value',
-        name: 'CA$',
-        axisLabel: { formatter: (value: number) => `CA$${value}` }
-      },
+      yAxis: [
+        {
+          type: 'value',
+          name: 'CA$',
+          axisLabel: { formatter: (value: number) => `CA$${value}` }
+        },
+        { type: 'value', name: volumeName, splitLine: { show: false } }
+      ],
       series: [
         {
-          name: t('publicDashboard.marketData.trendCharts.weightedAverage'),
+          name: priceName,
           type: 'line',
           smooth: false,
           symbol: 'circle',
@@ -771,11 +805,36 @@ export const PublicMarketData = () => {
               p.value == null ? '' : price2Fmt.format(p.value)
           },
           labelLayout: { hideOverlap: true },
-          data: a1MonthlyChartRows.map((p) => p.weightedAvgPrice)
+          data: agreementMonthlyChartRows.map((p) => p.weightedAvgPrice)
+        },
+        {
+          name: volumeName,
+          type: 'bar',
+          yAxisIndex: 1,
+          itemStyle: { color: 'rgba(252,186,25,0.75)' },
+          data: agreementMonthlyChartRows.map((p) => p.volume)
+        },
+        {
+          name: minPriceName,
+          type: 'line',
+          symbol: 'triangle',
+          symbolSize: 6,
+          itemStyle: { color: '#007A5E' },
+          lineStyle: { color: '#007A5E', width: 2, type: 'dashed' },
+          data: agreementMonthlyChartRows.map((p) => p.minPrice)
+        },
+        {
+          name: maxPriceName,
+          type: 'line',
+          symbol: 'diamond',
+          symbolSize: 6,
+          itemStyle: { color: '#A52834' },
+          lineStyle: { color: '#A52834', width: 2, type: 'dotted' },
+          data: agreementMonthlyChartRows.map((p) => p.maxPrice)
         }
       ]
     }
-  }, [a1MonthlyChartRows, t])
+  }, [agreementMonthlyChartRows, t])
 
   const keyboardHelp = t(
     'publicDashboard.marketData.trendCharts.chartKeyboardInstructions'
@@ -805,27 +864,45 @@ export const PublicMarketData = () => {
           }
         )
   const a1ChartAnnouncement =
-    activeA1ChartIndex === null || !a1MonthlyChartRows[activeA1ChartIndex]
+    activeA1ChartIndex === null ||
+    !agreementMonthlyChartRows[activeA1ChartIndex]
       ? ''
       : t(
           'publicDashboard.marketData.trendCharts.a1ChartKeyboardAnnouncement',
           {
-            period: fmtPeriod(a1MonthlyChartRows[activeA1ChartIndex].period),
+            period: fmtPeriod(
+              agreementMonthlyChartRows[activeA1ChartIndex].period
+            ),
             price:
-              a1MonthlyChartRows[activeA1ChartIndex].weightedAvgPrice == null
+              agreementMonthlyChartRows[activeA1ChartIndex].weightedAvgPrice ==
+              null
                 ? '—'
                 : price2Fmt.format(
-                    a1MonthlyChartRows[activeA1ChartIndex].weightedAvgPrice
+                    agreementMonthlyChartRows[activeA1ChartIndex]
+                      .weightedAvgPrice
+                  ),
+            minimumPrice:
+              agreementMonthlyChartRows[activeA1ChartIndex].minPrice == null
+                ? '—'
+                : price2Fmt.format(
+                    agreementMonthlyChartRows[activeA1ChartIndex].minPrice
+                  ),
+            maximumPrice:
+              agreementMonthlyChartRows[activeA1ChartIndex].maxPrice == null
+                ? '—'
+                : price2Fmt.format(
+                    agreementMonthlyChartRows[activeA1ChartIndex].maxPrice
+                  ),
+            volume:
+              agreementMonthlyChartRows[activeA1ChartIndex].volume == null
+                ? '—'
+                : intFmt.format(
+                    agreementMonthlyChartRows[activeA1ChartIndex].volume
                   )
           }
         )
 
   const classificationItems = [
-    {
-      key: 'a1',
-      title: t('publicDashboard.marketData.classifications.a1.title'),
-      body: t('publicDashboard.marketData.classifications.a1.body')
-    },
     {
       key: 'a',
       title: t('publicDashboard.marketData.classifications.a.title'),
@@ -845,7 +922,8 @@ export const PublicMarketData = () => {
 
   const periodHeaderFor = (_key: ReportKey) =>
     ({
-      monthly: t('publicDashboard.marketData.tables.month'),
+      agreementMonthly: t('publicDashboard.marketData.tables.agreementMonth'),
+      monthly: t('publicDashboard.marketData.tables.recordedMonth'),
       quarterly: t('publicDashboard.marketData.tables.quarter'),
       annual: t('publicDashboard.marketData.tables.year')
     })[_key]
@@ -889,36 +967,6 @@ export const PublicMarketData = () => {
   ]
 
   const monthlyTableColumns: MarketReportTableColumn[] = [
-    {
-      key: 'categoryA1Transfers',
-      header: t('publicDashboard.marketData.tables.categoryA1Transfers'),
-      value: (r) => intFmt.format(r.categoryA1Transfers ?? 0),
-      exportValue: (r) => r.categoryA1Transfers ?? 0
-    },
-    {
-      key: 'categoryA1CreditVolume',
-      header: t('publicDashboard.marketData.tables.categoryA1CreditVolume'),
-      value: (r) => intFmt.format(r.categoryA1CreditVolume ?? 0),
-      exportValue: (r) => r.categoryA1CreditVolume ?? 0
-    },
-    {
-      key: 'categoryA1AveragePrice',
-      header: t('publicDashboard.marketData.tables.categoryA1AveragePrice'),
-      value: (r) => formatNullablePrice(r.categoryA1AveragePrice),
-      exportValue: (r) => nullableNumber(r.categoryA1AveragePrice)
-    },
-    {
-      key: 'minA1Price',
-      header: t('publicDashboard.marketData.tables.categoryA1MinUnitPriceCad'),
-      value: (r) => formatNullablePrice(r.minA1Price),
-      exportValue: (r) => nullableNumber(r.minA1Price)
-    },
-    {
-      key: 'maxA1Price',
-      header: t('publicDashboard.marketData.tables.categoryA1MaxUnitPriceCad'),
-      value: (r) => formatNullablePrice(r.maxA1Price),
-      exportValue: (r) => nullableNumber(r.maxA1Price)
-    },
     {
       key: 'categoryATransfers',
       header: t('publicDashboard.marketData.tables.categoryATransfers'),
@@ -1006,7 +1054,11 @@ export const PublicMarketData = () => {
   ]
 
   const columnsForReport = (key: ReportKey) =>
-    key === 'monthly' ? monthlyTableColumns : summaryTableColumns
+    key === 'monthly'
+      ? monthlyTableColumns
+      : key === 'agreementMonthly'
+        ? summaryTableColumns.slice(0, 3)
+        : summaryTableColumns
 
   const displayRows = (rows: MarketReportPeriod[]) => [...rows].reverse()
 
@@ -1133,6 +1185,10 @@ export const PublicMarketData = () => {
   const downloadCombinedExcel = () => {
     const workbook = XLSX.utils.book_new()
     const reports = [
+      {
+        key: 'agreementMonthly' as ReportKey,
+        rows: agreementMonthlyRows
+      },
       { key: 'monthly' as ReportKey, rows: data?.monthly ?? [] },
       { key: 'quarterly' as ReportKey, rows: data?.quarterly ?? [] },
       { key: 'annual' as ReportKey, rows: data?.annual ?? [] }
@@ -1256,12 +1312,11 @@ export const PublicMarketData = () => {
         return clonedRoot
       }
 
-      // PDF-only ordering: the report tables follow the price & volume chart
-      // (quarterly + annual, then monthly) instead of the on-screen section.
+      // PDF-only ordering: report tables follow the classification section.
       // Tables sharing a page are wrapped in a single fit-to-page group.
       const reorderForPdf = (clonedRoot: HTMLElement) => {
         const anchor = clonedRoot.querySelector<HTMLElement>(
-          '[data-pdf-anchor="price-volume-chart"]'
+          '.pdf-classifications-section'
         )
         if (!anchor) return
         let insertAfter: HTMLElement = anchor
@@ -1313,7 +1368,7 @@ export const PublicMarketData = () => {
       }
 
       let atomicRangesPx: PxRange[] = []
-      let fitPageRangesPx: PxRange[] = []
+      let fitPageRangesPx: (PxRange & { strictFit: boolean })[] = []
       let forcedPageBreaksPx: number[] = []
       let landscapeTopsPx: number[] = []
       let clonedRootWidthPx = 0
@@ -1326,6 +1381,7 @@ export const PublicMarketData = () => {
         onclone: (clonedDoc) => {
           const clonedRoot = prepareClone(clonedDoc, PDF_EXPORT_WIDTH_PX)
           if (!clonedRoot) return
+          groupStatisticsAndTrendsForPdf(clonedRoot)
           reorderForPdf(clonedRoot)
 
           const rootRect = clonedRoot.getBoundingClientRect()
@@ -1359,7 +1415,10 @@ export const PublicMarketData = () => {
             clonedRoot.querySelectorAll<HTMLElement>('.pdf-fit-page')
           )
             .filter(isRendered)
-            .map(rangeOf)
+            .map((el) => ({
+              ...rangeOf(el),
+              strictFit: el.classList.contains('pdf-strict-fit')
+            }))
             .filter((range) => range.bottom > range.top)
           forcedPageBreaksPx = Array.from(
             clonedRoot.querySelectorAll<HTMLElement>('.pdf-page-break-before')
@@ -1370,7 +1429,12 @@ export const PublicMarketData = () => {
         }
       })
 
-      const pdf = new JsPdf({ orientation: 'p', unit: 'mm', format: 'a4' })
+      const pdf = new JsPdf({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4',
+        compress: true
+      })
       const marginMm = 8
       const portraitContentWidthMm =
         pdf.internal.pageSize.getWidth() - marginMm * 2
@@ -1391,7 +1455,10 @@ export const PublicMarketData = () => {
       const byTop = (a: { top: number }, b: { top: number }) => a.top - b.top
       const atomicRangesCanvasPx = atomicRangesPx.map(toCanvasRange).sort(byTop)
       const fitPageRangesCanvasPx = fitPageRangesPx
-        .map(toCanvasRange)
+        .map((range) => ({
+          ...toCanvasRange(range),
+          strictFit: range.strictFit
+        }))
         .sort(byTop)
       const landscapeInserts = landscapeTopsPx
         .map((top, index) => ({
@@ -1504,20 +1571,24 @@ export const PublicMarketData = () => {
         )
         if (forcedBreak) candidateEnd = forcedBreak
 
-        // Fit-to-page blocks (tables) each get a dedicated page. A short
-        // lead-in (section heading) can share it; anything longer is flushed
-        // to its own page first.
+        // Keep fit-to-page blocks together.
         const fitBlock = fitPageRangesCanvasPx.find(
           (r) => r.top >= renderedPx - 1 && r.top < candidateEnd
         )
         if (fitBlock) {
-          if (fitBlock.top - renderedPx > maxFitLeadPx) {
-            candidateEnd = fitBlock.top
-          } else {
+          const end = pdfFitBlockEnd(
+            renderedPx,
+            candidateEnd,
+            fitBlock,
+            maxFitLeadPx,
+            fitBlock.strictFit
+          )
+          if (end === fitBlock.bottom) {
             addPortraitSlice(renderedPx, fitBlock.bottom)
             renderedPx = fitBlock.bottom
             continue
           }
+          candidateEnd = end
         }
 
         const breaking = atomicRangesCanvasPx.find(
@@ -1559,13 +1630,72 @@ export const PublicMarketData = () => {
 
   const latestMonthLabel = kpis?.labelPeriod ? fmtPeriod(kpis.labelPeriod) : '—'
   const monthlyRows = data?.monthly ?? []
-  const a1MonthlyRows = data?.a1Monthly ?? []
   const latestMonthlyRow = monthlyRows[monthlyRows.length - 1]
-  const latestA1MonthlyRow = a1MonthlyRows[a1MonthlyRows.length - 1]
+  const agreementPeriods = agreementMonthlyChartRows.slice(-2)
+  const agreementPeriodLabels = agreementPeriods.map((month) =>
+    fmtPeriod(month.period)
+  )
+  const agreementPeriodLabel = agreementPeriodLabels.join(' – ')
+  const agreementRows = agreementMonthlyRows.filter((row) =>
+    agreementPeriods.some((month) => month.period === row.period)
+  )
+  const agreementVolume = agreementRows.reduce(
+    (total, row) => total + row.volume,
+    0
+  )
+  const agreementTransfers = agreementRows.reduce(
+    (total, row) => total + row.transfers,
+    0
+  )
+  const agreementValue = agreementRows.reduce(
+    (total, row) => total + row.transferValue,
+    0
+  )
+  const agreementAverage =
+    agreementVolume > 0 ? agreementValue / agreementVolume : null
+  const minimumPrices = agreementRows.flatMap((row) =>
+    row.minPrice == null ? [] : [row.minPrice]
+  )
+  const maximumPrices = agreementRows.flatMap((row) =>
+    row.maxPrice == null ? [] : [row.maxPrice]
+  )
+  const agreementDetails: DetailItem[] = [
+    {
+      label: t('publicDashboard.marketData.snapshot.agreementMonths'),
+      value: agreementPeriodLabel
+    },
+    {
+      label: t('publicDashboard.marketData.kpi.transfers'),
+      value: agreementRows.length ? intFmt.format(agreementTransfers) : '—'
+    },
+    {
+      label: t('publicDashboard.marketData.tables.volumeCredits'),
+      value: agreementRows.length ? intFmt.format(agreementVolume) : '—'
+    },
+    {
+      label: t('publicDashboard.marketData.tables.minPrice'),
+      value: minimumPrices.length
+        ? price2Fmt.format(Math.min(...minimumPrices))
+        : '—'
+    },
+    {
+      label: t('publicDashboard.marketData.tables.maxPrice'),
+      value: maximumPrices.length
+        ? price2Fmt.format(Math.max(...maximumPrices))
+        : '—'
+    }
+  ]
   const allTransfersDetails: DetailItem[] = [
     {
       label: t('publicDashboard.marketData.tables.month'),
-      value: latestMonthlyRow ? fmtPeriod(latestMonthlyRow.period) || '—' : '—'
+      value: latestMonthLabel || '—'
+    },
+    {
+      label: t('publicDashboard.marketData.tables.weightedAveragePrice'),
+      value:
+        kpis?.weightedAvgPrice?.current != null
+          ? price2Fmt.format(kpis.weightedAvgPrice.current)
+          : '—'
     },
     {
       label: t('publicDashboard.marketData.kpi.transfers'),
@@ -1575,11 +1705,9 @@ export const PublicMarketData = () => {
           : '—'
     },
     {
-      label: t('publicDashboard.marketData.tables.volume'),
+      label: t('publicDashboard.marketData.tables.volumeCredits'),
       value:
-        latestMonthlyRow?.volume != null
-          ? intFmt.format(latestMonthlyRow.volume)
-          : '—'
+        kpis?.volume?.current != null ? intFmt.format(kpis.volume.current) : '—'
     },
     {
       label: t('publicDashboard.marketData.tables.minPrice'),
@@ -1596,61 +1724,6 @@ export const PublicMarketData = () => {
           : '—'
     }
   ]
-  const a1Details: DetailItem[] = [
-    {
-      label: t('publicDashboard.marketData.tables.month'),
-      value: latestA1MonthlyRow
-        ? fmtPeriod(latestA1MonthlyRow.period) || '—'
-        : '—'
-    },
-    {
-      label: t('publicDashboard.marketData.kpi.transfers'),
-      value:
-        latestA1MonthlyRow?.transfers != null
-          ? intFmt.format(latestA1MonthlyRow.transfers)
-          : '—'
-    },
-    {
-      label: t('publicDashboard.marketData.tables.volume'),
-      value:
-        latestA1MonthlyRow?.volume != null
-          ? intFmt.format(latestA1MonthlyRow.volume)
-          : '—'
-    },
-    {
-      label: t('publicDashboard.marketData.tables.minPrice'),
-      value:
-        latestA1MonthlyRow?.minPrice != null
-          ? price2Fmt.format(latestA1MonthlyRow.minPrice)
-          : '—'
-    },
-    {
-      label: t('publicDashboard.marketData.tables.maxPrice'),
-      value:
-        latestA1MonthlyRow?.maxPrice != null
-          ? price2Fmt.format(latestA1MonthlyRow.maxPrice)
-          : '—'
-    }
-  ]
-  const a1PriceDelta =
-    data?.a1Kpis?.weightedAvgPrice.deltaPct != null ? (
-      <BCTypography
-        sx={{
-          fontSize: 14,
-          color:
-            data.a1Kpis.weightedAvgPrice.deltaPct < 0 ? '#A12622' : '#2E7D32'
-        }}
-      >
-        {data.a1Kpis.weightedAvgPrice.deltaPct < 0 ? '▾' : '▲'}{' '}
-        {percentFmt.format(Math.abs(data.a1Kpis.weightedAvgPrice.deltaPct))}%{' '}
-        {t('publicDashboard.marketData.vsPreviousMonth', {
-          price:
-            data.a1Kpis.weightedAvgPrice.prior != null
-              ? price2Fmt.format(data.a1Kpis.weightedAvgPrice.prior)
-              : '—'
-        })}
-      </BCTypography>
-    ) : null
 
   if (isLoading) {
     return (
@@ -1812,74 +1885,108 @@ export const PublicMarketData = () => {
               gridTemplateColumns: {
                 xs: '1fr',
                 md: 'repeat(2, minmax(0, 1fr))',
-                lg: 'repeat(4, minmax(0, 1fr))'
+                lg: 'repeat(3, minmax(0, 1fr))'
               },
+              alignItems: 'start',
               gap: 1.5
             }}
           >
             <MetricCard
-              dataTest="average-price-all"
-              title={t('publicDashboard.marketData.snapshot.avgAll')}
+              dataTest="agreement-two-month-price"
+              title={t(
+                'publicDashboard.marketData.snapshot.twoMonthAgreementPrice'
+              )}
               value={
-                kpis?.weightedAvgPrice?.current != null
-                  ? price2Fmt.format(kpis.weightedAvgPrice.current)
-                  : '—'
+                agreementAverage == null
+                  ? '—'
+                  : price2Fmt.format(agreementAverage)
               }
-              caption={latestMonthLabel || '—'}
-            />
-            <MetricCard
-              dataTest="average-price-a1"
-              title={t('publicDashboard.marketData.snapshot.avgA1')}
-              value={
-                data?.a1Kpis?.weightedAvgPrice?.current != null
-                  ? price2Fmt.format(data.a1Kpis.weightedAvgPrice.current)
-                  : '—'
-              }
-              caption={
-                data?.a1Kpis?.labelPeriod
-                  ? fmtPeriod(data.a1Kpis.labelPeriod) || '—'
-                  : t('publicDashboard.marketData.snapshot.a1Unavailable')
-              }
-              delta={a1PriceDelta}
+              caption={agreementPeriodLabel}
             />
             <DetailCard
+              dataTest="agreement-two-month-details"
+              title={t(
+                'publicDashboard.marketData.snapshot.twoMonthAgreementDetails'
+              )}
+              items={agreementDetails}
+            />
+            <DetailCard
+              dataTest="average-price-all"
               title={t('publicDashboard.marketData.snapshot.allDetails')}
               items={allTransfersDetails}
             />
-            <DetailCard
-              title={t('publicDashboard.marketData.snapshot.a1Details')}
-              items={a1Details}
+          </BCBox>
+        </ReportSection>
+
+        <ReportSection
+          title={t('publicDashboard.marketData.tables.agreementMonthly')}
+          className="pdf-fit-page pdf-strict-fit"
+          dataTest="agreement-month-report"
+        >
+          <BCTypography sx={{ fontSize: 13, color: MUTED, mb: 1 }}>
+            {t('publicDashboard.marketData.snapshot.agreementNote')}
+          </BCTypography>
+          <CardShell dataTest="monthly-average-price-chart" sx={{ mb: 3 }}>
+            <BCBox
+              tabIndex={0}
+              role="group"
+              aria-label={t(
+                'publicDashboard.marketData.trendCharts.monthlyAverageTitle'
+              )}
+              aria-describedby="a1-chart-keyboard-help"
+              aria-keyshortcuts="ArrowLeft ArrowRight Escape"
+              data-test="a1-price-chart-keyboard"
+              onKeyDown={(event) =>
+                handleChartKeyboardNavigation(
+                  event,
+                  monthlyAvgChartRef,
+                  activeA1ChartIndex,
+                  setActiveA1ChartIndex,
+                  agreementMonthlyChartRows.length
+                )
+              }
+            >
+              <ReactECharts
+                ref={monthlyAvgChartRef}
+                option={monthlyAverageChartOption}
+                style={{ height: 290 }}
+              />
+              <span id="a1-chart-keyboard-help" className="visually-hidden">
+                {keyboardHelp}
+              </span>
+              <span
+                aria-live="polite"
+                aria-atomic="true"
+                className="visually-hidden"
+              >
+                {a1ChartAnnouncement}
+              </span>
+            </BCBox>
+          </CardShell>
+          <BCBox data-pdf-table="agreementMonthly">
+            <BCTypography sx={{ fontSize: 13, color: MUTED, mb: 1 }}>
+              {t('publicDashboard.marketData.tables.agreementWindowNote')}
+            </BCTypography>
+            <MarketReportTable
+              reportKey="agreementMonthly"
+              rows={agreementMonthlyRows}
+              periodHeader={periodHeaderFor('agreementMonthly')}
+              columns={columnsForReport('agreementMonthly')}
+              noDataLabel={t('publicDashboard.marketData.tables.noData')}
+            />
+            <DownloadControls
+              reportKey="agreementMonthly"
+              title={t('publicDashboard.marketData.tables.agreementMonthly')}
+              csvLabel={t('publicDashboard.marketData.downloadCsv')}
+              onCsv={() =>
+                downloadCsv('agreementMonthly', agreementMonthlyRows)
+              }
             />
           </BCBox>
         </ReportSection>
 
         <ReportSection
-          title={t(
-            'publicDashboard.marketData.sections.transferClassifications'
-          )}
-        >
-          <BCBox
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: {
-                xs: '1fr',
-                sm: 'repeat(2, minmax(0, 1fr))',
-                lg: 'repeat(4, minmax(0, 1fr))'
-              },
-              gap: 1.5
-            }}
-          >
-            {classificationItems.map((item) => (
-              <DefinitionCard
-                key={item.key}
-                title={item.title}
-                body={item.body}
-              />
-            ))}
-          </BCBox>
-        </ReportSection>
-
-        <ReportSection
+          className="pdf-market-statistics-section"
           title={t('publicDashboard.marketData.sections.activityAndStatistics')}
         >
           <BCBox
@@ -2025,180 +2132,160 @@ export const PublicMarketData = () => {
         </ReportSection>
 
         <ReportSection
+          className="pdf-market-trends-section"
           title={t(
             'publicDashboard.marketData.sections.marketTrendsHistoricalPerformance'
           )}
         >
+          <BCBox>
+            <BCBox className="pdf-avoid-break">
+              <BCBox
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 2,
+                  flexWrap: 'wrap',
+                  mb: 2
+                }}
+              >
+                <BCBox>
+                  <BCTypography
+                    variant="h3"
+                    sx={{ fontSize: 20, fontWeight: 700, color: DARK }}
+                  >
+                    {t('publicDashboard.marketData.chartTitle')}
+                  </BCTypography>
+                  <BCTypography sx={{ fontSize: 13.5, color: MUTED }}>
+                    {t('publicDashboard.marketData.chartSubtitle')}
+                  </BCTypography>
+                </BCBox>
+                <ToggleButtonGroup
+                  className="no-print"
+                  size="small"
+                  exclusive
+                  value={gran}
+                  onChange={(_, v) => v && setGran(v)}
+                  data-test="granularity-toggle"
+                >
+                  <ToggleButton value="month">
+                    {t('publicDashboard.marketData.granularity.month')}
+                  </ToggleButton>
+                  <ToggleButton value="quarter">
+                    {t('publicDashboard.marketData.granularity.quarter')}
+                  </ToggleButton>
+                  <ToggleButton value="year">
+                    {t('publicDashboard.marketData.granularity.year')}
+                  </ToggleButton>
+                </ToggleButtonGroup>
+              </BCBox>
+              {series.length > 0 ? (
+                <BCBox
+                  tabIndex={0}
+                  role="group"
+                  aria-label={t('publicDashboard.marketData.chartTitle')}
+                  aria-describedby="price-volume-chart-keyboard-help"
+                  aria-keyshortcuts="ArrowLeft ArrowRight Escape"
+                  data-test="price-volume-chart-keyboard"
+                  onKeyDown={(event) =>
+                    handleChartKeyboardNavigation(
+                      event,
+                      mainChartRef,
+                      activeMainChartIndex,
+                      setActiveMainChartIndex,
+                      series.length
+                    )
+                  }
+                >
+                  <ReactECharts
+                    ref={mainChartRef}
+                    option={chartOption}
+                    style={{ height: 380 }}
+                  />
+                  <BCBox
+                    component="ul"
+                    data-test="price-volume-chart-legend"
+                    sx={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      justifyContent: 'center',
+                      gap: 2,
+                      listStyle: 'none',
+                      m: 0,
+                      p: 0,
+                      fontSize: 12,
+                      color: DARK
+                    }}
+                  >
+                    {chartOption.series.map((entry) => (
+                      <li key={entry.name}>
+                        <Box
+                          component="span"
+                          aria-hidden="true"
+                          sx={{
+                            display: 'inline-block',
+                            width: 20,
+                            mr: 1,
+                            verticalAlign: 'middle',
+                            borderTop: `3px ${
+                              entry.lineStyle?.type === 'dashed'
+                                ? 'dashed'
+                                : entry.lineStyle?.type === 'dotted'
+                                  ? 'dotted'
+                                  : 'solid'
+                            } ${entry.lineStyle?.color ?? entry.itemStyle.color}`
+                          }}
+                        />
+                        {entry.name}
+                      </li>
+                    ))}
+                  </BCBox>
+                  <span
+                    id="price-volume-chart-keyboard-help"
+                    className="visually-hidden"
+                  >
+                    {keyboardHelp}
+                  </span>
+                  <span
+                    aria-live="polite"
+                    aria-atomic="true"
+                    className="visually-hidden"
+                  >
+                    {mainChartAnnouncement}
+                  </span>
+                </BCBox>
+              ) : (
+                <BCTypography sx={{ fontSize: 14, color: MUTED, py: 4 }}>
+                  {t('publicDashboard.marketData.tables.noData')}
+                </BCTypography>
+              )}
+            </BCBox>
+          </BCBox>
+        </ReportSection>
+        <ReportSection
+          title={t(
+            'publicDashboard.marketData.sections.transferClassifications'
+          )}
+          className="pdf-classifications-section"
+          dataTest="transfer-classifications"
+        >
           <BCBox
             sx={{
               display: 'grid',
-              gridTemplateColumns: '1fr',
-              gap: 1.5,
-              mb: 3
+              gridTemplateColumns: {
+                xs: '1fr',
+                md: 'repeat(3, minmax(0, 1fr))'
+              },
+              gap: 1.5
             }}
           >
-            <CardShell dataTest="monthly-average-price-chart">
-              <BCBox
-                tabIndex={0}
-                role="group"
-                aria-label={t(
-                  'publicDashboard.marketData.trendCharts.monthlyAverageTitle'
-                )}
-                aria-describedby="a1-chart-keyboard-help"
-                aria-keyshortcuts="ArrowLeft ArrowRight Escape"
-                data-test="a1-price-chart-keyboard"
-                onKeyDown={(event) =>
-                  handleChartKeyboardNavigation(
-                    event,
-                    monthlyAvgChartRef,
-                    activeA1ChartIndex,
-                    setActiveA1ChartIndex,
-                    a1MonthlyChartRows.length
-                  )
-                }
-              >
-                <ReactECharts
-                  ref={monthlyAvgChartRef}
-                  option={monthlyAverageChartOption}
-                  style={{ height: 290 }}
-                />
-                <span id="a1-chart-keyboard-help" className="visually-hidden">
-                  {keyboardHelp}
-                </span>
-                <span
-                  aria-live="polite"
-                  aria-atomic="true"
-                  className="visually-hidden"
-                >
-                  {a1ChartAnnouncement}
-                </span>
-              </BCBox>
-            </CardShell>
-          </BCBox>
-          <BCBox
-            className="pdf-avoid-break"
-            data-pdf-anchor="price-volume-chart"
-          >
-            <BCBox
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 2,
-                flexWrap: 'wrap',
-                mb: 2
-              }}
-            >
-              <BCBox>
-                <BCTypography
-                  variant="h3"
-                  sx={{ fontSize: 20, fontWeight: 700, color: DARK }}
-                >
-                  {t('publicDashboard.marketData.chartTitle')}
-                </BCTypography>
-                <BCTypography sx={{ fontSize: 13.5, color: MUTED }}>
-                  {t('publicDashboard.marketData.chartSubtitle')}
-                </BCTypography>
-              </BCBox>
-              <ToggleButtonGroup
-                className="no-print"
-                size="small"
-                exclusive
-                value={gran}
-                onChange={(_, v) => v && setGran(v)}
-                data-test="granularity-toggle"
-              >
-                <ToggleButton value="month">
-                  {t('publicDashboard.marketData.granularity.month')}
-                </ToggleButton>
-                <ToggleButton value="quarter">
-                  {t('publicDashboard.marketData.granularity.quarter')}
-                </ToggleButton>
-                <ToggleButton value="year">
-                  {t('publicDashboard.marketData.granularity.year')}
-                </ToggleButton>
-              </ToggleButtonGroup>
-            </BCBox>
-            {series.length > 0 ? (
-              <BCBox
-                tabIndex={0}
-                role="group"
-                aria-label={t('publicDashboard.marketData.chartTitle')}
-                aria-describedby="price-volume-chart-keyboard-help"
-                aria-keyshortcuts="ArrowLeft ArrowRight Escape"
-                data-test="price-volume-chart-keyboard"
-                onKeyDown={(event) =>
-                  handleChartKeyboardNavigation(
-                    event,
-                    mainChartRef,
-                    activeMainChartIndex,
-                    setActiveMainChartIndex,
-                    series.length
-                  )
-                }
-              >
-                <ReactECharts
-                  ref={mainChartRef}
-                  option={chartOption}
-                  style={{ height: 380 }}
-                />
-                <BCBox
-                  component="ul"
-                  data-test="price-volume-chart-legend"
-                  sx={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    justifyContent: 'center',
-                    gap: 2,
-                    listStyle: 'none',
-                    m: 0,
-                    p: 0,
-                    fontSize: 12,
-                    color: DARK
-                  }}
-                >
-                  {chartOption.series.map((entry) => (
-                    <li key={entry.name}>
-                      <Box
-                        component="span"
-                        aria-hidden="true"
-                        sx={{
-                          display: 'inline-block',
-                          width: 20,
-                          mr: 1,
-                          verticalAlign: 'middle',
-                          borderTop: `3px ${
-                            entry.lineStyle?.type === 'dashed'
-                              ? 'dashed'
-                              : entry.lineStyle?.type === 'dotted'
-                                ? 'dotted'
-                                : 'solid'
-                          } ${entry.lineStyle?.color ?? entry.itemStyle.color}`
-                        }}
-                      />
-                      {entry.name}
-                    </li>
-                  ))}
-                </BCBox>
-                <span
-                  id="price-volume-chart-keyboard-help"
-                  className="visually-hidden"
-                >
-                  {keyboardHelp}
-                </span>
-                <span
-                  aria-live="polite"
-                  aria-atomic="true"
-                  className="visually-hidden"
-                >
-                  {mainChartAnnouncement}
-                </span>
-              </BCBox>
-            ) : (
-              <BCTypography sx={{ fontSize: 14, color: MUTED, py: 4 }}>
-                {t('publicDashboard.marketData.tables.noData')}
-              </BCTypography>
-            )}
+            {classificationItems.map((item) => (
+              <DefinitionCard
+                key={item.key}
+                title={item.title}
+                body={item.body}
+              />
+            ))}
           </BCBox>
         </ReportSection>
 

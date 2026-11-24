@@ -360,6 +360,48 @@ class CreditMarketRepository:
         return result.all()
 
     @repo_handler
+    async def get_report_agreement_months(self):
+        """Recorded transfers by agreement month, excluding the current month."""
+        period = func.date_trunc("month", Transfer.agreement_date).label("period")
+        query = (
+            select(
+                period,
+                func.count(Transfer.transfer_id).label("transfers"),
+                func.sum(Transfer.quantity).label("volume"),
+                func.sum(Transfer.quantity * Transfer.price_per_unit).label(
+                    "transfer_value"
+                ),
+                (
+                    func.sum(Transfer.quantity * Transfer.price_per_unit)
+                    / func.nullif(func.sum(Transfer.quantity), 0)
+                ).label("wavg"),
+                func.min(Transfer.price_per_unit).label("min_price"),
+                func.max(Transfer.price_per_unit).label("max_price"),
+            )
+            .join(
+                TransferStatus,
+                Transfer.current_status_id == TransferStatus.transfer_status_id,
+            )
+            .where(
+                TransferStatus.status == TransferStatusEnum.Recorded,
+                Transfer.agreement_date.isnot(None),
+                Transfer.agreement_date
+                < func.date_trunc(
+                    "month", func.timezone("America/Vancouver", func.now())
+                ),
+                Transfer.price_per_unit > 0,
+                Transfer.quantity > 0,
+                ~Transfer.transfer_category.has(
+                    TransferCategory.category == TransferCategoryEnum.D
+                ),
+            )
+            .group_by(period)
+            .order_by(period)
+        )
+        result = await self.db.execute(query)
+        return result.all()
+
+    @repo_handler
     async def get_report_all_time(self):
         """Program-wide totals across all recorded, priced transfers."""
         query = (

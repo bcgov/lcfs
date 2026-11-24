@@ -93,7 +93,6 @@
       "downloadPdf": "Download PDF",
       "generatingPdf": "Generating PDF…",
       "vsYearAgo": "vs {{period}}",
-      "vsPreviousMonth": "vs. previous month: {{price}}",
       "sections": {
         "reportDescription": "Report description",
         "currentSnapshot": "Current Market Snapshot",
@@ -109,14 +108,15 @@
         "avgA1": "Average Credit Price for A1 Transfers",
         "allDetails": "Monthly All Transfers Details",
         "a1Details": "Monthly Category A1 Details",
-        "a1Unavailable": "Published A1 price not available"
+        "a1Unavailable": "Published A1 price not available",
+        "agreementMonthly": "Recorded transfers by agreement month",
+        "twoMonthAgreementPrice": "Average recorded credit price of agreements made within the last two completed months",
+        "twoMonthAgreementDetails": "Recorded agreement details for the last two completed months",
+        "agreementMonths": "Agreement months",
+        "agreementNote": "The table represents the average price of credit transfers by the month the two parties agreed on the selling price. Data for earlier months may change as future transfers are recorded."
       },
       "classifications": {
         "summary": "Transfer category definitions",
-        "a1": {
-          "title": "Category A1",
-          "body": "Transfers are categorized A1 when the agreement date is within 30 days of the recorded transfer date."
-        },
         "a": {
           "title": "Category A",
           "body": "The agreement to transfer credits was reached within six months of the credit transfer."
@@ -156,15 +156,15 @@
       "chartTitle": "Price and volume over time",
       "chartSubtitle": "Weighted average, minimum and maximum price per credit, and credits traded",
       "trendCharts": {
-        "monthlyAverageTitle": "A1 Price Trend",
+        "monthlyAverageTitle": "Price and volume by agreement month",
         "weightedAverage": "Weighted average",
         "minimumPrice": "Min of Price Per Unit",
         "maximumPrice": "Max of Price Per Unit",
         "priceVolumeChartAriaDescription": "Interactive chart showing credit volume and weighted average, minimum, and maximum prices for the selected reporting periods.",
-        "a1ChartAriaDescription": "Interactive line chart showing monthly A1 weighted average prices from the same month last year through the reporting month. Months without A1 transfers have no price. Available price values are labeled on the chart.",
+        "a1ChartAriaDescription": "Interactive chart showing weighted average, minimum and maximum prices and credit volumes by agreement month for recorded transfers. Months without data have no price or volume.",
         "chartKeyboardInstructions": "Use the left and right arrow keys to explore data points. Press Escape to dismiss the tooltip.",
         "priceVolumeChartKeyboardAnnouncement": "{{period}}. Weighted average: {{weightedAverage}}. Minimum price: {{minimumPrice}}. Maximum price: {{maximumPrice}}. Volume: {{volume}} credits.",
-        "a1ChartKeyboardAnnouncement": "{{period}}. Weighted average price: {{price}}."
+        "a1ChartKeyboardAnnouncement": "{{period}}. Weighted average price: {{price}}. Minimum price: {{minimumPrice}}. Maximum price: {{maximumPrice}}. Volume: {{volume}} credits."
       },
       "granularity": {
         "month": "Monthly",
@@ -172,7 +172,11 @@
         "year": "Annual"
       },
       "tables": {
-        "monthly": "Monthly market report",
+        "monthly": "Monthly market report by recorded date",
+        "agreementMonthly": "Monthly market report by agreement date",
+        "agreementWindowNote": "Showing the last 12 completed agreement months.",
+        "agreementMonth": "Agreement month",
+        "recordedMonth": "Recorded month",
         "quarterly": "Quarterly market report",
         "annual": "Yearly market report",
         "month": "Month",

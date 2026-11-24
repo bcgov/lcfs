@@ -1,8 +1,14 @@
-import { fireEvent, screen } from '@testing-library/react'
-import { describe, expect, vi } from 'vite-plus/test'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, vi } from 'vite-plus/test'
+import html2canvas from 'html2canvas'
+import { jsPDF as JsPdf } from 'jspdf'
 import * as XLSX from 'xlsx'
 import { test } from '@/tests/utils/fixtures'
 import { PublicMarketData } from '../PublicMarketData'
+import {
+  groupStatisticsAndTrendsForPdf,
+  pdfFitBlockEnd
+} from '../pdfPagination'
 
 vi.mock('echarts-for-react', () => ({
   default: ({ option }: { option: unknown }) => (
@@ -13,7 +19,16 @@ vi.mock('echarts-for-react', () => ({
   )
 }))
 vi.mock('html2canvas', () => ({ default: vi.fn() }))
-vi.mock('jspdf', () => ({ default: vi.fn() }))
+vi.mock('jspdf', () => ({
+  jsPDF: vi.fn(function () {
+    return {
+      internal: { pageSize: { getWidth: () => 210, getHeight: () => 297 } },
+      addPage: vi.fn(),
+      addImage: vi.fn(),
+      save: vi.fn()
+    }
+  })
+}))
 vi.mock('xlsx', () => ({
   utils: {
     json_to_sheet: vi.fn(() => ({
@@ -43,7 +58,7 @@ const mockReport = {
       transferValue: 10000000
     }
   ],
-  a1Monthly: Array.from({ length: 15 }, (_, index) => {
+  agreementMonthly: Array.from({ length: 15 }, (_, index) => {
     const date = new Date(Date.UTC(2025, 3 + index, 1))
     return {
       period: `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`,
@@ -52,7 +67,7 @@ const mockReport = {
       weightedAvgPrice: 141.75 + index,
       minPrice: 120.3,
       maxPrice: 155,
-      transferValue: 4252500
+      transferValue: (141.75 + index) * 30000
     }
   }),
   quarterly: [
@@ -88,8 +103,16 @@ const mockReport = {
   kpis: {
     labelPeriod: '2026-06',
     transfers: { current: 6, prior: null, deltaPct: null },
-    volume: { current: 75491, prior: null, deltaPct: null },
-    weightedAvgPrice: { current: 143.32, prior: null, deltaPct: null }
+    volume: {
+      current: 75491 as number | null,
+      prior: null as number | null,
+      deltaPct: null
+    },
+    weightedAvgPrice: {
+      current: 143.32,
+      prior: null as number | null,
+      deltaPct: null as number | null
+    }
   },
   ytdKpis: {
     labelPeriod: '2026-06',
@@ -123,9 +146,10 @@ vi.mock('react-i18next', () => ({
 
 type ChartOption = {
   aria?: { enabled?: boolean }
-  legend?: { show?: boolean }
+  legend?: { show?: boolean; data?: string[] }
   xAxis?: { data?: string[]; axisLabel?: { interval?: number } }
-  series?: Array<{ name?: string; data?: unknown[] }>
+  yAxis?: Array<{ name?: string; axisLabel?: { show?: boolean } }>
+  series?: Array<{ name?: string; data?: unknown[]; yAxisIndex?: number }>
 }
 
 const getChartOptions = () =>
@@ -139,6 +163,15 @@ const getChartOptions = () =>
     )
 
 describe('PublicMarketData', () => {
+  beforeEach(() => {
+    vi.setSystemTime(new Date('2026-06-15T12:00:00Z'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
+
   test('renders the title and KPI cards', ({ render, theme }) => {
     render(<PublicMarketData />, [theme])
     expect(
@@ -147,6 +180,125 @@ describe('PublicMarketData', () => {
     expect(screen.getByTestId('kpi-transfers')).toBeInTheDocument()
     expect(screen.getByTestId('kpi-volume')).toBeInTheDocument()
     expect(screen.queryByTestId('kpi-avgPrice')).not.toBeInTheDocument()
+  })
+
+  test('shows the latest reported month volume in the average price card', ({
+    render,
+    theme
+  }) => {
+    const originalVolume = mockReport.kpis.volume
+    try {
+      for (const [volume, expected] of [
+        [75491, '75,491'],
+        [0, '0'],
+        [null, '—']
+      ] as const) {
+        mockReport.kpis.volume = { ...originalVolume, current: volume }
+        const { unmount } = render(<PublicMarketData />, [theme])
+        const card = screen.getByTestId('average-price-all')
+        expect(within(card).getByText('Jun 2026')).toBeInTheDocument()
+        expect(within(card).getByText(expected)).toBeInTheDocument()
+        unmount()
+      }
+    } finally {
+      mockReport.kpis.volume = originalVolume
+    }
+  })
+
+  test('combines the latest recorded month price and transfer details', ({
+    render,
+    theme
+  }) => {
+    render(<PublicMarketData />, [theme])
+    const card = screen.getByTestId('average-price-all')
+    expect(card).toHaveTextContent('$143.32')
+    expect(card).toHaveTextContent('75,491')
+    expect(within(card).getByText('6')).toBeInTheDocument()
+    expect(within(card).getByText('$120.00')).toBeInTheDocument()
+    expect(within(card).getByText('$160.00')).toBeInTheDocument()
+    expect(
+      within(card).getByText(
+        'publicDashboard.marketData.tables.weightedAveragePrice'
+      )
+    ).toBeInTheDocument()
+    expect(screen.queryByTestId('average-price-change')).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId('average-price-year-change')
+    ).not.toBeInTheDocument()
+  })
+
+  test('combines the two completed agreement months using credit-weighted prices', ({
+    render,
+    theme
+  }) => {
+    const originalRows = mockReport.agreementMonthly
+    const sample = originalRows[0]
+    mockReport.agreementMonthly = [
+      { ...sample, period: '2026-03', volume: 1000, transferValue: 1000 },
+      {
+        ...sample,
+        period: '2026-04',
+        transfers: 2,
+        volume: 10,
+        transferValue: 500,
+        minPrice: 40,
+        maxPrice: 60
+      },
+      {
+        ...sample,
+        period: '2026-05',
+        transfers: 4,
+        volume: 110,
+        transferValue: 8800,
+        minPrice: 60,
+        maxPrice: 90
+      },
+      { ...sample, period: '2026-06', volume: 1000, transferValue: 1000 }
+    ]
+    try {
+      render(<PublicMarketData />, [theme])
+      const price = screen.getByTestId('agreement-two-month-price')
+      const details = screen.getByTestId('agreement-two-month-details')
+      const allTransfers = screen.getByTestId('average-price-all')
+      expect(price).toHaveTextContent('$77.50')
+      expect(price).toHaveTextContent('Apr 2026 – May 2026')
+      expect(details).toHaveTextContent('Apr 2026 – May 2026')
+      expect(within(details).getByText('6')).toBeInTheDocument()
+      expect(within(details).getByText('120')).toBeInTheDocument()
+      expect(within(details).getByText('$40.00')).toBeInTheDocument()
+      expect(within(details).getByText('$90.00')).toBeInTheDocument()
+      expect(price.nextElementSibling).toBe(details)
+      expect(details.nextElementSibling).toBe(allTransfers)
+    } finally {
+      mockReport.agreementMonthly = originalRows
+    }
+  })
+
+  test('places A, B and C definitions in an accordion before detailed reports', ({
+    render,
+    theme
+  }) => {
+    render(<PublicMarketData />, [theme])
+    const section = screen.getByTestId('transfer-classifications')
+    expect(section).toHaveClass('pdf-classifications-section')
+    for (const category of ['a', 'b', 'c']) {
+      expect(
+        within(section).getByText(
+          `publicDashboard.marketData.classifications.${category}.title`
+        )
+      ).toBeInTheDocument()
+      expect(
+        within(section).getByText(
+          `publicDashboard.marketData.classifications.${category}.body`
+        )
+      ).toBeInTheDocument()
+    }
+    expect(
+      screen.queryByText('publicDashboard.marketData.classifications.a1.title')
+    ).not.toBeInTheDocument()
+    expect(section.nextElementSibling).toHaveClass(
+      'pdf-detailed-reports-section'
+    )
   })
 
   test('renders the CO2 impact band and report downloads', ({
@@ -175,6 +327,108 @@ describe('PublicMarketData', () => {
     expect(screen.queryByTestId('download-annual-xlsx')).not.toBeInTheDocument()
   })
 
+  test('exports compressed PDFs without replacing lossless page images', async ({
+    render,
+    theme
+  }) => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 100
+    canvas.height = 100
+    vi.mocked(JsPdf).mockClear()
+    vi.mocked(html2canvas).mockResolvedValue(canvas)
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null)
+    vi.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockReturnValue(
+      'data:image/png;base64,'
+    )
+    render(<PublicMarketData />, [theme])
+
+    fireEvent.click(screen.getByTestId('download-pdf'))
+
+    await waitFor(() => expect(JsPdf).toHaveBeenCalled())
+    const pdf = vi.mocked(JsPdf).mock.results[0]?.value
+    await waitFor(() => expect(pdf?.save).toHaveBeenCalled())
+    expect(JsPdf).toHaveBeenCalledWith({
+      orientation: 'p',
+      unit: 'mm',
+      format: 'a4',
+      compress: true
+    })
+    expect(pdf?.addImage).toHaveBeenCalledWith(
+      'data:image/png;base64,',
+      'PNG',
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number)
+    )
+  })
+
+  test('keeps the agreement chart and table together in their own section', ({
+    render,
+    theme
+  }) => {
+    render(<PublicMarketData />, [theme])
+    const report = screen.getByTestId('agreement-month-report')
+    expect(report).toHaveClass('pdf-fit-page')
+    expect(
+      within(report).getByTestId('monthly-average-price-chart')
+    ).toBeInTheDocument()
+    expect(
+      report.querySelector('[data-pdf-table="agreementMonthly"]')
+    ).not.toBeNull()
+    expect(
+      within(report).getByTestId('download-agreementMonthly-csv')
+    ).toBeInTheDocument()
+    const activitySummary = screen.getByRole('button', {
+      name: 'publicDashboard.marketData.sections.activityAndStatistics'
+    })
+    const trendsSummary = screen.getByRole('button', {
+      name: 'publicDashboard.marketData.sections.marketTrendsHistoricalPerformance'
+    })
+    expect(activitySummary.closest('section')).not.toBe(
+      trendsSummary.closest('section')
+    )
+    expect(activitySummary).toHaveAttribute('aria-expanded', 'true')
+    expect(trendsSummary).toHaveAttribute('aria-expanded', 'true')
+    fireEvent.click(activitySummary)
+    expect(activitySummary).toHaveAttribute('aria-expanded', 'false')
+    expect(trendsSummary).toHaveAttribute('aria-expanded', 'true')
+
+    const root = activitySummary.closest('section')?.parentElement
+    if (!root) throw new Error('Missing market report container')
+    const clone = root.cloneNode(true) as HTMLElement
+    groupStatisticsAndTrendsForPdf(clone)
+    const statistics = clone.querySelector('.pdf-market-statistics-section')
+    const trends = clone.querySelector('.pdf-market-trends-section')
+    expect(statistics?.parentElement).toHaveClass('pdf-fit-page')
+    expect(trends?.parentElement).toBe(statistics?.parentElement)
+    expect(statistics?.nextElementSibling).toBe(trends)
+    expect(
+      trends?.querySelector('[data-test="price-volume-chart-keyboard"]')
+    ).not.toBeNull()
+  })
+
+  test('packs a fit-to-page block with earlier content only when it fits', () => {
+    expect(pdfFitBlockEnd(0, 1000, { top: 400, bottom: 900 }, 200, true)).toBe(
+      900
+    )
+    expect(pdfFitBlockEnd(0, 1000, { top: 400, bottom: 1000 }, 200, true)).toBe(
+      1000
+    )
+    expect(pdfFitBlockEnd(0, 1000, { top: 400, bottom: 1001 }, 200, true)).toBe(
+      400
+    )
+    expect(pdfFitBlockEnd(0, 1000, { top: 100, bottom: 1001 }, 200, true)).toBe(
+      100
+    )
+    expect(pdfFitBlockEnd(0, 1000, { top: 100, bottom: 1000 }, 200, true)).toBe(
+      1000
+    )
+    expect(pdfFitBlockEnd(400, 1400, { top: 400, bottom: 1500 }, 200)).toBe(
+      1500
+    )
+  })
+
   test('shows minimum and maximum prices in the price and volume chart', ({
     render,
     theme
@@ -199,14 +453,106 @@ describe('PublicMarketData', () => {
     expect(mainChart?.series?.[3].data).toEqual([170])
   })
 
-  test('shows the trailing 13 monthly A1 prices (same month last year to current) with a monthly date tick', ({
+  test('shows the volume scale for each recorded-transfer time range', ({
+    render,
+    theme
+  }) => {
+    render(<PublicMarketData />, [theme])
+
+    for (const range of ['month', 'quarter', 'year']) {
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: `publicDashboard.marketData.granularity.${range}`
+        })
+      )
+      const chart = within(
+        screen.getByTestId('price-volume-chart-keyboard')
+      ).getByTestId('echarts-chart')
+      const option = JSON.parse(
+        chart.getAttribute('data-chart-option') ?? '{}'
+      ) as ChartOption
+      expect(option.yAxis?.[1]).toMatchObject({
+        name: 'publicDashboard.marketData.tables.volume',
+        axisLabel: { show: true }
+      })
+      expect(option.series?.[0].yAxisIndex).toBe(1)
+    }
+  })
+
+  test('separates agreement-month metrics from recorded-month classifications', ({
+    render,
+    theme
+  }) => {
+    const { container } = render(<PublicMarketData />, [theme])
+    const agreementTable = container.querySelector(
+      '[data-pdf-table="agreementMonthly"]'
+    ) as HTMLElement
+    const recordedTable = container.querySelector(
+      '[data-pdf-table="monthly"]'
+    ) as HTMLElement
+
+    expect(
+      within(agreementTable).getByText(
+        'publicDashboard.marketData.tables.agreementMonth'
+      )
+    ).toBeInTheDocument()
+    expect(
+      within(recordedTable).getByText(
+        'publicDashboard.marketData.tables.recordedMonth'
+      )
+    ).toBeInTheDocument()
+    expect(
+      within(recordedTable).getByText(
+        'publicDashboard.marketData.tables.categoryATransfers'
+      )
+    ).toBeInTheDocument()
+    expect(
+      within(recordedTable).queryByText(
+        'publicDashboard.marketData.tables.categoryA1Transfers'
+      )
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByTestId('download-agreementMonthly-csv')
+    ).toBeInTheDocument()
+  })
+
+  test('limits the agreement table to the last 12 completed calendar months', ({
+    render,
+    theme
+  }) => {
+    const originalRows = mockReport.agreementMonthly
+    mockReport.agreementMonthly = originalRows.filter(
+      (row) => row.period !== '2025-09'
+    )
+    try {
+      const { container } = render(<PublicMarketData />, [theme])
+      const table = container.querySelector(
+        '[data-pdf-table="agreementMonthly"]'
+      )
+      const periods = Array.from(
+        table?.querySelectorAll('tbody tr td:first-child') ?? []
+      ).map((cell) => cell.textContent)
+      expect(periods).toHaveLength(11)
+      expect(periods[0]).toBe('May 2026')
+      expect(periods[periods.length - 1]).toBe('Jun 2025')
+      expect(periods).not.toContain('Sep 2025')
+      expect(periods).not.toContain('May 2025')
+      expect(periods).not.toContain('Jun 2026')
+    } finally {
+      mockReport.agreementMonthly = originalRows
+    }
+  })
+
+  test('shows the last 12 agreement months with prices and volumes', ({
     render,
     theme
   }) => {
     render(<PublicMarketData />, [theme])
 
     const a1Chart = getChartOptions().find(
-      (option) => option.series?.length === 1
+      (option) =>
+        option.series?.[0].name ===
+        'publicDashboard.marketData.trendCharts.weightedAverage'
     )
 
     expect(a1Chart?.aria?.enabled).toBe(true)
@@ -222,37 +568,62 @@ describe('PublicMarketData', () => {
       'Feb 2026',
       'Mar 2026',
       'Apr 2026',
-      'May 2026',
-      'Jun 2026'
+      'May 2026'
     ])
     expect(a1Chart?.xAxis?.axisLabel?.interval).toBe(0)
-    expect(a1Chart?.series?.[0].data).toHaveLength(13)
+    expect(a1Chart?.series?.[0].data).toHaveLength(12)
+    expect(a1Chart?.series?.[1].data).toEqual(Array(12).fill(30000))
+    expect(a1Chart?.series?.[2].data).toEqual(Array(12).fill(120.3))
+    expect(a1Chart?.series?.[3].data).toEqual(Array(12).fill(155))
+    expect(a1Chart?.legend?.data).toContain(
+      'publicDashboard.marketData.tables.minPrice'
+    )
+    expect(a1Chart?.legend?.data).toContain(
+      'publicDashboard.marketData.tables.maxPrice'
+    )
+    expect(screen.getByTestId('agreement-two-month-details')).toHaveTextContent(
+      'Apr 2026 – May 2026'
+    )
+    expect(screen.getByTestId('agreement-two-month-details')).toHaveTextContent(
+      '60,000'
+    )
     expect(screen.getByTestId('a1-price-chart-keyboard')).toHaveAttribute(
       'tabindex',
       '0'
     )
   })
 
-  test('fills missing A1 months through the report month without extending the calendar window', ({
+  test('fills missing agreement months without inventing prices or volumes', ({
     render,
     theme
   }) => {
-    const originalRows = mockReport.a1Monthly
-    mockReport.a1Monthly = originalRows.filter(
-      (row) => !['2025-09', '2026-06'].includes(row.period)
+    const originalRows = mockReport.agreementMonthly
+    mockReport.agreementMonthly = originalRows.filter(
+      (row) => !['2025-09', '2026-05'].includes(row.period)
     )
     try {
       render(<PublicMarketData />, [theme])
 
       const a1Chart = getChartOptions().find(
-        (option) => option.series?.length === 1
+        (option) =>
+          option.series?.[0].name ===
+          'publicDashboard.marketData.trendCharts.weightedAverage'
       )
-      expect(a1Chart?.xAxis?.data).toHaveLength(13)
+      expect(a1Chart?.xAxis?.data).toHaveLength(12)
       expect(a1Chart?.xAxis?.data?.[0]).toBe('Jun 2025')
-      expect(a1Chart?.xAxis?.data?.[12]).toBe('Jun 2026')
+      expect(a1Chart?.xAxis?.data?.[11]).toBe('May 2026')
       expect(a1Chart?.series?.[0].data?.[3]).toBeNull()
-      expect(a1Chart?.series?.[0].data?.[12]).toBeNull()
+      expect(a1Chart?.series?.[1].data?.[3]).toBeNull()
+      expect(a1Chart?.series?.[2].data?.[3]).toBeNull()
+      expect(a1Chart?.series?.[3].data?.[3]).toBeNull()
+      expect(a1Chart?.series?.[0].data?.[11]).toBeNull()
       expect(a1Chart?.series?.[0].data?.[4]).toBe(147.75)
+      const details = screen.getByTestId('agreement-two-month-details')
+      expect(details).toHaveTextContent('Apr 2026 – May 2026')
+      expect(details).toHaveTextContent('30,000')
+      expect(screen.getByTestId('agreement-two-month-price')).toHaveTextContent(
+        '$153.75'
+      )
 
       const chart = screen.getByTestId('a1-price-chart-keyboard')
       for (let index = 0; index < 4; index += 1) {
@@ -262,8 +633,55 @@ describe('PublicMarketData', () => {
       expect(announcement?.textContent).toContain('Sep 2025')
       expect(announcement?.textContent).toContain('—')
     } finally {
-      mockReport.a1Monthly = originalRows
+      mockReport.agreementMonthly = originalRows
     }
+  })
+
+  test('shows unavailable values when neither completed agreement month has data', ({
+    render,
+    theme
+  }) => {
+    const originalRows = mockReport.agreementMonthly
+    mockReport.agreementMonthly = originalRows.filter(
+      (row) => !['2026-04', '2026-05'].includes(row.period)
+    )
+    try {
+      render(<PublicMarketData />, [theme])
+      const price = screen.getByTestId('agreement-two-month-price')
+      const details = screen.getByTestId('agreement-two-month-details')
+      expect(within(price).getByText('—')).toBeInTheDocument()
+      expect(within(details).getAllByText('—')).toHaveLength(4)
+      expect(details).toHaveTextContent('Apr 2026 – May 2026')
+    } finally {
+      mockReport.agreementMonthly = originalRows
+    }
+  })
+
+  test('ends the agreement-month display in December when it is January', ({
+    render,
+    theme
+  }) => {
+    vi.setSystemTime(new Date('2026-01-15T12:00:00Z'))
+    render(<PublicMarketData />, [theme])
+
+    const chart = getChartOptions().find(
+      (option) =>
+        option.series?.[0].name ===
+        'publicDashboard.marketData.trendCharts.weightedAverage'
+    )
+    expect(chart?.xAxis?.data?.[0]).toBe('Jan 2025')
+    expect(chart?.xAxis?.data?.[11]).toBe('Dec 2025')
+    const agreementTable = screen
+      .getByTestId('agreement-month-report')
+      .querySelector('[data-pdf-table="agreementMonthly"]')
+    expect(agreementTable?.textContent).toContain('Dec 2025')
+    expect(agreementTable?.textContent).not.toContain('Jan 2026')
+    expect(screen.getByTestId('agreement-two-month-details')).toHaveTextContent(
+      'Nov 2025 – Dec 2025'
+    )
+    expect(
+      screen.getByTestId('agreement-two-month-details')
+    ).not.toHaveTextContent('Jan 2026')
   })
 
   test('shows every legend entry without canvas paging or series toggles', ({
@@ -273,7 +691,8 @@ describe('PublicMarketData', () => {
     render(<PublicMarketData />, [theme])
 
     const mainChart = getChartOptions().find(
-      (option) => option.series?.length === 4
+      (option) =>
+        option.series?.[0].name === 'publicDashboard.marketData.tables.volume'
     )
     expect(mainChart?.legend?.show).toBe(false)
     const legend = screen.getByTestId('price-volume-chart-legend')
@@ -284,7 +703,7 @@ describe('PublicMarketData', () => {
     expect(legend.querySelector('button, [tabindex]')).toBeNull()
   })
 
-  test('supports keyboard navigation through A1 monthly chart values', ({
+  test('supports keyboard navigation through agreement-month chart values', ({
     render,
     theme
   }) => {
@@ -294,9 +713,12 @@ describe('PublicMarketData', () => {
     fireEvent.keyDown(chart, { key: 'ArrowRight' })
     const announcement = chart.querySelector('[aria-live="polite"]')
     expect(announcement?.textContent).toContain('Jun 2025')
+    expect(announcement?.textContent).toContain('30,000')
+    expect(announcement?.textContent).toContain('$120.30')
+    expect(announcement?.textContent).toContain('$155.00')
 
     fireEvent.keyDown(chart, { key: 'ArrowLeft' })
-    expect(announcement?.textContent).toContain('Jun 2026')
+    expect(announcement?.textContent).toContain('May 2026')
 
     fireEvent.keyDown(chart, { key: 'Escape' })
     expect(announcement?.textContent).toBe('')
@@ -326,8 +748,17 @@ describe('PublicMarketData', () => {
 
     fireEvent.click(screen.getByTestId('download-all-xlsx'))
 
-    expect(XLSX.utils.json_to_sheet).toHaveBeenCalledTimes(3)
-    expect(XLSX.utils.book_append_sheet).toHaveBeenCalledTimes(3)
+    expect(XLSX.utils.json_to_sheet).toHaveBeenCalledTimes(4)
+    const agreementRows = vi.mocked(XLSX.utils.json_to_sheet).mock
+      .calls[0][0] as Array<Record<string, unknown>>
+    expect(agreementRows).toHaveLength(12)
+    expect(
+      agreementRows[0]['publicDashboard.marketData.tables.agreementMonth']
+    ).toBe('May 2026')
+    expect(
+      agreementRows[11]['publicDashboard.marketData.tables.agreementMonth']
+    ).toBe('Jun 2025')
+    expect(XLSX.utils.book_append_sheet).toHaveBeenCalledTimes(4)
     expect(XLSX.writeFile).toHaveBeenCalledWith(
       expect.anything(),
       expect.stringMatching(

@@ -132,6 +132,7 @@ class CreditMarketServices:
         quarterly_rows = await self.repo.get_report_periods("quarter")
         annual_rows = await self.repo.get_report_periods("year")
         a1_monthly_rows = await self.repo.get_report_a1_periods("month")
+        agreement_monthly_rows = await self.repo.get_report_agreement_months()
         all_time_row = await self.repo.get_report_all_time()
 
         def to_periods(rows, interval):
@@ -213,6 +214,7 @@ class CreditMarketServices:
         return PublicMarketReportSchema(
             monthly=to_periods(monthly_rows, "month"),
             a1_monthly=to_periods(a1_monthly_rows, "month"),
+            agreement_monthly=to_periods(agreement_monthly_rows, "month"),
             quarterly=to_periods(quarterly_rows, "quarter"),
             annual=to_periods(annual_rows, "year"),
             all_time=all_time,
