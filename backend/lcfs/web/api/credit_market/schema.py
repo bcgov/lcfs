@@ -133,7 +133,6 @@ class PublicMarketReportSchema(BaseSchema):
 
     monthly: List[MarketReportPeriodSchema]
     a1_monthly: List[MarketReportPeriodSchema]
-    agreement_monthly: List[MarketReportPeriodSchema]
     quarterly: List[MarketReportPeriodSchema]
     annual: List[MarketReportPeriodSchema]
     all_time: MarketReportAllTimeSchema

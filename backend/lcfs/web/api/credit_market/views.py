@@ -48,10 +48,10 @@ async def get_credit_market_public_report(
     service: CreditMarketServices = Depends(),
 ):
     """
-    Public, aggregate-only market report: recorded-period and agreement-month
-    counts, volume and weighted-average price, plus all-time totals and KPIs.
-    Low-count periods are included; no transaction records or organization
-    identities are returned.
+    Public, aggregate-only market report: monthly/quarterly/annual transfer
+    counts, volume, weighted-average price and transfer value, plus all-time
+    totals and year-over-year KPIs. Low-count periods are included; no
+    transaction records or organization identities are returned.
     """
     return await service.get_public_report()
 

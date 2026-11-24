@@ -109,9 +109,7 @@
         "avgA1": "Average Credit Price for A1 Transfers",
         "allDetails": "Monthly All Transfers Details",
         "a1Details": "Monthly Category A1 Details",
-        "a1Unavailable": "Published A1 price not available",
-        "agreementMonthly": "Recorded transfers by agreement month",
-        "agreementNote": "Includes recorded transfers with a positive price and an agreement date; excludes Category D. Earlier months may change as transfers are recorded."
+        "a1Unavailable": "Published A1 price not available"
       },
       "classifications": {
         "summary": "Transfer category definitions",
@@ -158,15 +156,15 @@
       "chartTitle": "Price and volume over time",
       "chartSubtitle": "Weighted average, minimum and maximum price per credit, and credits traded",
       "trendCharts": {
-        "monthlyAverageTitle": "Price and volume by agreement month",
+        "monthlyAverageTitle": "A1 Price Trend",
         "weightedAverage": "Weighted average",
         "minimumPrice": "Min of Price Per Unit",
         "maximumPrice": "Max of Price Per Unit",
         "priceVolumeChartAriaDescription": "Interactive chart showing credit volume and weighted average, minimum, and maximum prices for the selected reporting periods.",
-        "a1ChartAriaDescription": "Interactive chart showing weighted average prices and credit volumes by agreement month for recorded transfers. Months without data have no price or volume.",
+        "a1ChartAriaDescription": "Interactive line chart showing monthly A1 weighted average prices from the same month last year through the reporting month. Months without A1 transfers have no price. Available price values are labeled on the chart.",
         "chartKeyboardInstructions": "Use the left and right arrow keys to explore data points. Press Escape to dismiss the tooltip.",
         "priceVolumeChartKeyboardAnnouncement": "{{period}}. Weighted average: {{weightedAverage}}. Minimum price: {{minimumPrice}}. Maximum price: {{maximumPrice}}. Volume: {{volume}} credits.",
-        "a1ChartKeyboardAnnouncement": "{{period}}. Weighted average price: {{price}}. Volume: {{volume}} credits."
+        "a1ChartKeyboardAnnouncement": "{{period}}. Weighted average price: {{price}}."
       },
       "granularity": {
         "month": "Monthly",
@@ -174,10 +172,7 @@
         "year": "Annual"
       },
       "tables": {
-        "monthly": "Monthly market report by recorded date",
-        "agreementMonthly": "Monthly market report by agreement date",
-        "agreementMonth": "Agreement month",
-        "recordedMonth": "Recorded month",
+        "monthly": "Monthly market report",
         "quarterly": "Quarterly market report",
         "annual": "Yearly market report",
         "month": "Month",

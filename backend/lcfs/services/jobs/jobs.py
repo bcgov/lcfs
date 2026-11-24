@@ -24,7 +24,6 @@ from lcfs.web.api.internal_comment.services import InternalCommentService
 from lcfs.web.api.notification.services import NotificationService
 from lcfs.web.api.email.services import CHESEmailService
 from lcfs.web.api.email.repo import CHESEmailRepository
-from lcfs.web.api.credit_market.repo import CreditMarketRepository
 from lcfs.services.metabase.client import (
     CreditMarketReportBuilder,
     MetabaseClient,
@@ -522,10 +521,6 @@ async def send_monthly_credit_market_report(app: FastAPI):
                 )
                 return False
 
-            agreement_rows = await CreditMarketRepository(
-                session
-            ).get_report_agreement_months()
-            report = builder.with_agreement_months(report, agreement_rows)
             email_service = CHESEmailService(email_repo)
             result = await _retry_credit_market_step(
                 "send_ches_email",
