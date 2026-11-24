@@ -208,19 +208,6 @@ describe('PublicMarketData', () => {
     expect(
       screen.queryByTestId('average-price-year-change')
     ).not.toBeInTheDocument()
-    const column = screen.getByTestId('all-transfers-column')
-    for (const category of ['a', 'b', 'c']) {
-      const definition = within(column).getByText(
-        `publicDashboard.marketData.classifications.${category}.title`
-      )
-      expect(
-        definition.compareDocumentPosition(card) &
-          Node.DOCUMENT_POSITION_FOLLOWING
-      ).toBeTruthy()
-    }
-    expect(
-      screen.queryByText('publicDashboard.marketData.classifications.a1.title')
-    ).not.toBeInTheDocument()
   })
 
   test('combines the two completed agreement months using credit-weighted prices', ({
@@ -264,15 +251,37 @@ describe('PublicMarketData', () => {
       expect(within(details).getByText('$40.00')).toBeInTheDocument()
       expect(within(details).getByText('$90.00')).toBeInTheDocument()
       expect(price.nextElementSibling).toBe(details)
-      expect(details.nextElementSibling).toBe(
-        screen.getByTestId('all-transfers-column')
-      )
-      expect(screen.getByTestId('all-transfers-column')).toContainElement(
-        allTransfers
-      )
+      expect(details.nextElementSibling).toBe(allTransfers)
     } finally {
       mockReport.agreementMonthly = originalRows
     }
+  })
+
+  test('places A, B and C definitions in an accordion before detailed reports', ({
+    render,
+    theme
+  }) => {
+    render(<PublicMarketData />, [theme])
+    const section = screen.getByTestId('transfer-classifications')
+    expect(section).toHaveClass('pdf-classifications-section')
+    for (const category of ['a', 'b', 'c']) {
+      expect(
+        within(section).getByText(
+          `publicDashboard.marketData.classifications.${category}.title`
+        )
+      ).toBeInTheDocument()
+      expect(
+        within(section).getByText(
+          `publicDashboard.marketData.classifications.${category}.body`
+        )
+      ).toBeInTheDocument()
+    }
+    expect(
+      screen.queryByText('publicDashboard.marketData.classifications.a1.title')
+    ).not.toBeInTheDocument()
+    expect(section.nextElementSibling).toHaveClass(
+      'pdf-detailed-reports-section'
+    )
   })
 
   test('renders the CO2 impact band and report downloads', ({

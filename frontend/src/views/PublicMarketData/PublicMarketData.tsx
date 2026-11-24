@@ -1306,11 +1306,11 @@ export const PublicMarketData = () => {
         return clonedRoot
       }
 
-      // PDF-only ordering: the remaining report tables follow the trends section.
+      // PDF-only ordering: report tables follow the classification section.
       // Tables sharing a page are wrapped in a single fit-to-page group.
       const reorderForPdf = (clonedRoot: HTMLElement) => {
         const anchor = clonedRoot.querySelector<HTMLElement>(
-          '.pdf-market-trends-section'
+          '.pdf-classifications-section'
         )
         if (!anchor) return
         let insertAfter: HTMLElement = anchor
@@ -1888,23 +1888,11 @@ export const PublicMarketData = () => {
               )}
               items={agreementDetails}
             />
-            <BCBox
-              data-test="all-transfers-column"
-              sx={{ display: 'grid', gap: 1.5 }}
-            >
-              {classificationItems.map((item) => (
-                <DefinitionCard
-                  key={item.key}
-                  title={item.title}
-                  body={item.body}
-                />
-              ))}
-              <DetailCard
-                dataTest="average-price-all"
-                title={t('publicDashboard.marketData.snapshot.allDetails')}
-                items={allTransfersDetails}
-              />
-            </BCBox>
+            <DetailCard
+              dataTest="average-price-all"
+              title={t('publicDashboard.marketData.snapshot.allDetails')}
+              items={allTransfersDetails}
+            />
           </BCBox>
         </ReportSection>
 
@@ -2246,6 +2234,33 @@ export const PublicMarketData = () => {
                 </BCTypography>
               )}
             </BCBox>
+          </BCBox>
+        </ReportSection>
+
+        <ReportSection
+          title={t(
+            'publicDashboard.marketData.sections.transferClassifications'
+          )}
+          className="pdf-classifications-section"
+          dataTest="transfer-classifications"
+        >
+          <BCBox
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: {
+                xs: '1fr',
+                md: 'repeat(3, minmax(0, 1fr))'
+              },
+              gap: 1.5
+            }}
+          >
+            {classificationItems.map((item) => (
+              <DefinitionCard
+                key={item.key}
+                title={item.title}
+                body={item.body}
+              />
+            ))}
           </BCBox>
         </ReportSection>
 
