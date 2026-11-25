@@ -9,7 +9,7 @@ import {
   useSaveOtherUses
 } from '@/hooks/useOtherUses'
 import { cleanEmptyStringValues } from '@/utils/formatters'
-import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
+import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules'
 import Grid2 from '@mui/material/Grid2'
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'

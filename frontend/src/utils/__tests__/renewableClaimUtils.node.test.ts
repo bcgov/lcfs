@@ -1,0 +1,323 @@
+import { describe, expect, it, beforeEach, vi } from 'vite-plus/test'
+import {
+  isEligibleRenewableFuel,
+  isFuelCodeCanadian,
+  calculateRenewableClaimColumnVisibility,
+  applyRenewableClaimColumnVisibility,
+  canEditCanadianProduced
+} from '../renewableClaimUtils'
+import { DEFAULT_CI_FUEL_CODE } from '@/constants/common'
+
+const APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
+
+const mockOptionsData = {
+  fuelTypes: [
+    {
+      fuelType: 'Biodiesel',
+      renewable: true,
+      fuelCodes: [
+        {
+          fuelCode: '123',
+          fuelProductionFacilityCountry: 'Canada'
+        },
+        {
+          fuelCode: '999',
+          fuelProductionFacilityCountry: 'United States'
+        }
+      ]
+    },
+    {
+      fuelType: 'Ethanol',
+      renewable: true,
+      fuelCodes: []
+    },
+    {
+      fuelType: 'Renewable gasoline',
+      renewable: true,
+      fuelCodes: []
+    },
+    {
+      fuelType: 'Renewable naphtha',
+      renewable: true,
+      fuelCodes: []
+    },
+    {
+      fuelType: 'Fossil gasoline',
+      renewable: false,
+      fuelCodes: []
+    }
+  ]
+}
+
+describe('renewableClaimEligibility utilities', () => {
+  describe('isEligibleRenewableFuel', () => {
+    it('returns true for renewable diesel types', () => {
+      expect(
+        isEligibleRenewableFuel('Biodiesel', 'Diesel', mockOptionsData)
+      ).toBe(true)
+    })
+
+    it('returns false for non-eligible categories', () => {
+      expect(
+        isEligibleRenewableFuel('Biodiesel', 'Jet fuel', mockOptionsData)
+      ).toBe(false)
+    })
+  })
+
+  describe('isFuelCodeCanadian', () => {
+    it('returns true when fuel code matches Canadian production', () => {
+      expect(isFuelCodeCanadian('Biodiesel', 'C-123', mockOptionsData)).toBe(
+        true
+      )
+    })
+
+    it('returns false when production country is not Canadian', () => {
+      expect(isFuelCodeCanadian('Biodiesel', 'C-999', mockOptionsData)).toBe(
+        false
+      )
+    })
+  })
+
+  describe('calculateRenewableClaimColumnVisibility', () => {
+    it('returns false visibility before 2025', () => {
+      const result = calculateRenewableClaimColumnVisibility(
+        [
+          {
+            fuelType: 'Biodiesel',
+            fuelCategory: 'Diesel',
+            provisionOfTheAct: 'Default carbon intensity - section 19 (b) (ii)',
+            fuelCode: 'C-123'
+          }
+        ],
+        mockOptionsData,
+        '2024'
+      )
+
+      expect(result).toEqual({
+        shouldShowIsCanadaProduced: false,
+        shouldShowIsQ1Supplied: false
+      })
+    })
+
+    it('always shows both columns in 2025 irrespective of row data', () => {
+      const result = calculateRenewableClaimColumnVisibility(
+        [
+          {
+            fuelType: 'Biodiesel',
+            fuelCategory: 'Diesel',
+            provisionOfTheAct: 'Default carbon intensity - section 19 (b) (ii)',
+            fuelCode: 'C-123'
+          }
+        ],
+        mockOptionsData,
+        '2025'
+      )
+
+      expect(result.shouldShowIsCanadaProduced).toBe(true)
+      expect(result.shouldShowIsQ1Supplied).toBe(true)
+    })
+
+    it('keeps Canada column visible and hides Q1 outside 2025', () => {
+      const result = calculateRenewableClaimColumnVisibility(
+        [
+          {
+            fuelType: 'Biodiesel',
+            fuelCategory: 'Diesel',
+            provisionOfTheAct: APPROVED_FUEL_CODE,
+            fuelCode: 'C-999'
+          }
+        ],
+        mockOptionsData,
+        '2026'
+      )
+
+      expect(result.shouldShowIsCanadaProduced).toBe(true)
+      expect(result.shouldShowIsQ1Supplied).toBe(false)
+    })
+  })
+
+  describe('applyRenewableClaimColumnVisibility', () => {
+    const columnVisibilityState: Record<string, boolean> = {
+      isCanadaProduced: false,
+      isQ1Supplied: false
+    }
+
+    let setColumnsVisible: (columns: string[], visible: boolean) => void
+    let getColumn: (column: string) => { isVisible: () => boolean }
+    let gridRef: {
+      current: {
+        api: {
+          setColumnsVisible: typeof setColumnsVisible
+          getColumn: typeof getColumn
+        }
+      }
+    }
+
+    beforeEach(() => {
+      columnVisibilityState.isCanadaProduced = false
+      columnVisibilityState.isQ1Supplied = false
+
+      setColumnsVisible = vi.fn((columns: string[], visible: boolean) => {
+        columns.forEach((column) => {
+          columnVisibilityState[column] = visible
+        })
+      })
+
+      getColumn = vi.fn((column: string) => ({
+        isVisible: () => columnVisibilityState[column]
+      }))
+
+      gridRef = {
+        current: {
+          api: {
+            setColumnsVisible,
+            getColumn
+          }
+        }
+      }
+    })
+
+    it('updates visibility when values change', () => {
+      applyRenewableClaimColumnVisibility(gridRef, {
+        shouldShowIsCanadaProduced: true,
+        shouldShowIsQ1Supplied: false
+      })
+
+      expect(setColumnsVisible).toHaveBeenCalledWith(['isCanadaProduced'], true)
+      expect(columnVisibilityState.isCanadaProduced).toBe(true)
+
+      applyRenewableClaimColumnVisibility(gridRef, {
+        shouldShowIsCanadaProduced: true,
+        shouldShowIsQ1Supplied: true
+      })
+
+      expect(setColumnsVisible).toHaveBeenCalledWith(['isQ1Supplied'], true)
+      expect(columnVisibilityState.isQ1Supplied).toBe(true)
+    })
+
+    it('does not call grid API when visibility is unchanged', () => {
+      columnVisibilityState.isCanadaProduced = true
+      columnVisibilityState.isQ1Supplied = true
+
+      applyRenewableClaimColumnVisibility(gridRef, {
+        shouldShowIsCanadaProduced: true,
+        shouldShowIsQ1Supplied: true
+      })
+
+      expect(setColumnsVisible).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('canEditCanadianProduced', () => {
+    const defaultCiRenewableDieselRow = {
+      fuelType: 'Biodiesel',
+      fuelCategory: 'Diesel',
+      provisionOfTheAct: DEFAULT_CI_FUEL_CODE
+    }
+
+    it('does not allow editing before 2025', () => {
+      expect(
+        canEditCanadianProduced(
+          defaultCiRenewableDieselRow,
+          '2024',
+          mockOptionsData
+        )
+      ).toBe(false)
+    })
+
+    it('allows editing for eligible renewable diesel with Default CI in 2025', () => {
+      expect(
+        canEditCanadianProduced(
+          defaultCiRenewableDieselRow,
+          '2025',
+          mockOptionsData
+        )
+      ).toBe(true)
+    })
+
+    it('allows editing for eligible renewable diesel with Default CI after 2025', () => {
+      expect(
+        canEditCanadianProduced(
+          defaultCiRenewableDieselRow,
+          '2026',
+          mockOptionsData
+        )
+      ).toBe(true)
+    })
+
+    it('does not allow editing when Default CI is not selected', () => {
+      expect(
+        canEditCanadianProduced(
+          {
+            ...defaultCiRenewableDieselRow,
+            provisionOfTheAct: APPROVED_FUEL_CODE
+          },
+          '2026',
+          mockOptionsData
+        )
+      ).toBe(false)
+    })
+
+    it.each(['Ethanol', 'Renewable gasoline', 'Renewable naphtha'])(
+      'allows editing for eligible renewable gasoline fuel %s with Default CI in 2026',
+      (fuelType) => {
+        expect(
+          canEditCanadianProduced(
+            {
+              fuelType,
+              fuelCategory: 'Gasoline',
+              provisionOfTheAct: DEFAULT_CI_FUEL_CODE
+            },
+            '2026',
+            mockOptionsData
+          )
+        ).toBe(true)
+      }
+    )
+
+    it.each(['Ethanol', 'Renewable gasoline', 'Renewable naphtha'])(
+      'does not allow editing for eligible renewable gasoline fuel %s before 2026',
+      (fuelType) => {
+        expect(
+          canEditCanadianProduced(
+            {
+              fuelType,
+              fuelCategory: 'Gasoline',
+              provisionOfTheAct: DEFAULT_CI_FUEL_CODE
+            },
+            '2025',
+            mockOptionsData
+          )
+        ).toBe(false)
+      }
+    )
+
+    it('does not allow editing for renewable gasoline when Default CI is not selected', () => {
+      expect(
+        canEditCanadianProduced(
+          {
+            fuelType: 'Renewable gasoline',
+            fuelCategory: 'Gasoline',
+            provisionOfTheAct: APPROVED_FUEL_CODE
+          },
+          '2026',
+          mockOptionsData
+        )
+      ).toBe(false)
+    })
+
+    it('does not allow editing for non-renewable gasoline in 2026', () => {
+      expect(
+        canEditCanadianProduced(
+          {
+            fuelType: 'Fossil gasoline',
+            fuelCategory: 'Gasoline',
+            provisionOfTheAct: DEFAULT_CI_FUEL_CODE
+          },
+          '2026',
+          mockOptionsData
+        )
+      ).toBe(false)
+    })
+  })
+})

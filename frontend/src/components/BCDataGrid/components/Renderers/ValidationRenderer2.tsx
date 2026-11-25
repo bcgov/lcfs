@@ -11,7 +11,13 @@ const legacyIconSizeProps = { size: 'medium' } as unknown as ComponentProps<
 
 export interface ValidationRenderer2Props {
   data: {
-    validationStatus?: 'warning' | 'error' | 'success' | 'pending' | string
+    validationStatus?:
+      | 'warning'
+      | 'error'
+      | 'success'
+      | 'pending'
+      | string
+      | null
     validationMsg?: string
     [key: string]: unknown
   }
