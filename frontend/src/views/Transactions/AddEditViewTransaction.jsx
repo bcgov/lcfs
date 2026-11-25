@@ -51,7 +51,7 @@ import {
   ADMIN_ADJUSTMENT,
   INITIATIVE_AGREEMENT
 } from '@/views/Transactions/constants'
-import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog.jsx'
+import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
 import '@/views/SupportingDocuments/SupportingDocumentSummary.jsx'
 import { useTransactionDocuments } from '@/hooks/useTransactions.js'
 import TransactionDocuments from '@/views/Transactions/components/Documents.jsx'

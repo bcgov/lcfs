@@ -5,7 +5,7 @@ import IconButton from '@mui/material/IconButton'
 import { useTranslation } from 'react-i18next'
 import BCTypography from '@/components/BCTypography'
 import { LabelBox } from '@/views/Transactions/components/LabelBox.jsx'
-import DocumentTable from '@/components/Documents/DocumentTable.jsx'
+import DocumentTable from '@/components/Documents/DocumentTable'
 import ExpandLess from '@mui/icons-material/ExpandLess'
 import ExpandMore from '@mui/icons-material/ExpandMore'
 

@@ -1,18 +1,23 @@
 import { screen, fireEvent, waitFor } from '@testing-library/react'
+import type { ComponentProps } from 'react'
 import { vi, describe, expect, beforeEach } from 'vite-plus/test'
 import ImportDialog from '../ImportDialog'
 import { test } from '@/tests/utils/fixtures'
-import { validateFile } from '@/utils/fileValidation'
+const mocks = vi.hoisted(() => ({
+  validateFile: vi.fn(),
+  importHook: vi.fn(),
+  getJobStatusHook: vi.fn()
+}))
 
 // Mock dependencies
 vi.mock('@/utils/fileValidation', () => ({
-  validateFile: vi.fn()
+  validateFile: mocks.validateFile
 }))
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key, options) => {
-      const translations = {
+    t: (key: string, options: Record<string, string | undefined> = {}) => {
+      const translations: Record<string, string> = {
         'common:importExport.import.dialog.title': `Import ${options?.mode || 'append'}`,
         'common:importExport.import.dialog.header': 'Select file to import',
         'common:importExport.import.dialog.selectorText':
@@ -41,7 +46,7 @@ vi.mock('react-i18next', () => ({
 
 describe('LinearProgressWithLabel', () => {
   test('should render progress bar with correct percentage', ({ render }) => {
-    const LinearProgressWithLabel = ({ value }) => {
+    const LinearProgressWithLabel = ({ value }: { value: number }) => {
       return (
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <div style={{ width: '100%', marginRight: 1 }}>
@@ -59,11 +64,22 @@ describe('LinearProgressWithLabel', () => {
 })
 
 describe('ImportDialog', () => {
-  let mockImportHook, mockGetJobStatusHook
+  const mockImportHook = mocks.importHook as ComponentProps<
+    typeof ImportDialog
+  >['importHook'] &
+    ReturnType<typeof vi.fn>
+  const mockGetJobStatusHook = mocks.getJobStatusHook as ComponentProps<
+    typeof ImportDialog
+  >['getJobStatusHook'] &
+    ReturnType<typeof vi.fn>
 
   beforeEach(() => {
-    mockImportHook = vi.fn(() => ({ mutate: vi.fn() }))
-    mockGetJobStatusHook = vi.fn(() => ({ data: null, refetch: vi.fn() }))
+    vi.clearAllMocks()
+    mockImportHook.mockImplementation(() => ({ mutate: vi.fn() }))
+    mockGetJobStatusHook.mockImplementation(() => ({
+      data: null,
+      refetch: vi.fn()
+    }))
   })
 
   test('should render with initial state and props', ({
@@ -106,7 +122,7 @@ describe('ImportDialog', () => {
       refetch: mockRefetch
     })
 
-    validateFile.mockReturnValue({ isValid: true })
+    mocks.validateFile.mockReturnValue({ isValid: true })
 
     render(
       <ImportDialog
@@ -138,7 +154,7 @@ describe('ImportDialog', () => {
     localization,
     router
   }) => {
-    validateFile.mockReturnValue({ isValid: true })
+    mocks.validateFile.mockReturnValue({ isValid: true })
 
     const mockMutate = vi.fn()
     mockImportHook.mockReturnValue({ mutate: mockMutate })
@@ -160,7 +176,7 @@ describe('ImportDialog', () => {
     })
     const dropZone = screen
       .getByRole('button', { name: /upload/i })
-      .closest('.MuiCard-root')
+      .closest('.MuiCard-root')!
 
     const dropEvent = new Event('drop', { bubbles: true })
     Object.defineProperty(dropEvent, 'dataTransfer', {
@@ -198,7 +214,7 @@ describe('ImportDialog', () => {
       .getByRole('button', { name: /upload/i })
       .closest('.MuiCard-root')
 
-    fireEvent.click(uploadCard)
+    fireEvent.click(uploadCard!)
     expect(clickSpy).toHaveBeenCalled()
   })
 
@@ -210,15 +226,17 @@ describe('ImportDialog', () => {
     router
   }) => {
     const mockMutate = vi.fn()
-    let savedOnError
+    let savedOnError: (error: {
+      response?: { status?: number }
+    }) => void = () => {}
 
     // Capture the onError callback when importHook is called
-    mockImportHook.mockImplementation((complianceReportId, { onError }) => {
+    mockImportHook.mockImplementation((_complianceReportId, { onError }) => {
       savedOnError = onError
       return { mutate: mockMutate }
     })
 
-    validateFile.mockReturnValue({ isValid: true })
+    mocks.validateFile.mockReturnValue({ isValid: true })
 
     render(
       <ImportDialog
@@ -256,15 +274,17 @@ describe('ImportDialog', () => {
     router
   }) => {
     const mockMutate = vi.fn()
-    let savedOnError
+    let savedOnError: (error: {
+      response?: { status?: number }
+    }) => void = () => {}
 
     // Capture the onError callback when importHook is called
-    mockImportHook.mockImplementation((complianceReportId, { onError }) => {
+    mockImportHook.mockImplementation((_complianceReportId, { onError }) => {
       savedOnError = onError
       return { mutate: mockMutate }
     })
 
-    validateFile.mockReturnValue({ isValid: true })
+    mocks.validateFile.mockReturnValue({ isValid: true })
 
     render(
       <ImportDialog
@@ -303,10 +323,10 @@ describe('ImportDialog', () => {
   }) => {
     const mockRefetch = vi.fn()
     const mockMutate = vi.fn()
-    let savedOnSuccess
+    let savedOnSuccess: (data: unknown) => void = () => {}
 
     // Capture the onSuccess callback when importHook is called
-    mockImportHook.mockImplementation((complianceReportId, { onSuccess }) => {
+    mockImportHook.mockImplementation((_complianceReportId, { onSuccess }) => {
       savedOnSuccess = onSuccess
       return { mutate: mockMutate }
     })
@@ -316,7 +336,7 @@ describe('ImportDialog', () => {
       refetch: mockRefetch
     })
 
-    validateFile.mockReturnValue({ isValid: true })
+    mocks.validateFile.mockReturnValue({ isValid: true })
 
     render(
       <ImportDialog
@@ -386,7 +406,7 @@ describe('ImportDialog', () => {
     localization,
     router
   }) => {
-    validateFile.mockReturnValue({
+    mocks.validateFile.mockReturnValue({
       isValid: false,
       errorMessage: 'File too large'
     })
@@ -428,9 +448,9 @@ describe('ImportDialog', () => {
     router
   }) => {
     const mockMutate = vi.fn()
-    let savedOnSuccess
+    let savedOnSuccess: (data: unknown) => void = () => {}
 
-    mockImportHook.mockImplementation((complianceReportId, { onSuccess }) => {
+    mockImportHook.mockImplementation((_complianceReportId, { onSuccess }) => {
       savedOnSuccess = onSuccess
       return { mutate: mockMutate }
     })
@@ -446,7 +466,7 @@ describe('ImportDialog', () => {
       refetch: vi.fn()
     })
 
-    validateFile.mockReturnValue({ isValid: true })
+    mocks.validateFile.mockReturnValue({ isValid: true })
 
     render(
       <ImportDialog
@@ -489,9 +509,9 @@ describe('ImportDialog', () => {
     router
   }) => {
     const mockMutate = vi.fn()
-    let savedOnSuccess
+    let savedOnSuccess: (data: unknown) => void = () => {}
 
-    mockImportHook.mockImplementation((complianceReportId, { onSuccess }) => {
+    mockImportHook.mockImplementation((_complianceReportId, { onSuccess }) => {
       savedOnSuccess = onSuccess
       return { mutate: mockMutate }
     })
@@ -507,7 +527,7 @@ describe('ImportDialog', () => {
       refetch: vi.fn()
     })
 
-    validateFile.mockReturnValue({ isValid: true })
+    mocks.validateFile.mockReturnValue({ isValid: true })
 
     render(
       <ImportDialog
@@ -609,9 +629,9 @@ describe('ImportDialog', () => {
     router
   }) => {
     const mockMutate = vi.fn()
-    let savedOnSuccess
+    let savedOnSuccess: (data: unknown) => void = () => {}
 
-    mockImportHook.mockImplementation((complianceReportId, { onSuccess }) => {
+    mockImportHook.mockImplementation((_complianceReportId, { onSuccess }) => {
       savedOnSuccess = onSuccess
       return { mutate: mockMutate }
     })
@@ -627,7 +647,7 @@ describe('ImportDialog', () => {
       refetch: vi.fn()
     })
 
-    validateFile.mockReturnValue({ isValid: true })
+    mocks.validateFile.mockReturnValue({ isValid: true })
 
     render(
       <ImportDialog
@@ -721,7 +741,7 @@ describe('ImportDialog', () => {
     localization,
     router
   }) => {
-    let savedOnSuccess
+    let savedOnSuccess: (data: unknown) => void = () => {}
     mockImportHook.mockImplementation((_, { onSuccess }) => {
       savedOnSuccess = onSuccess
       return { mutate: vi.fn() }
@@ -737,7 +757,7 @@ describe('ImportDialog', () => {
       refetch: vi.fn()
     })
 
-    validateFile.mockReturnValue({ isValid: true })
+    mocks.validateFile.mockReturnValue({ isValid: true })
 
     render(
       <ImportDialog
@@ -771,7 +791,7 @@ describe('ImportDialog', () => {
     localization,
     router
   }) => {
-    let savedOnSuccess
+    let savedOnSuccess: (data: unknown) => void = () => {}
     mockImportHook.mockImplementation((_, { onSuccess }) => {
       savedOnSuccess = onSuccess
       return { mutate: vi.fn() }
@@ -787,7 +807,7 @@ describe('ImportDialog', () => {
       refetch: vi.fn()
     })
 
-    validateFile.mockReturnValue({ isValid: true })
+    mocks.validateFile.mockReturnValue({ isValid: true })
 
     render(
       <ImportDialog
@@ -826,7 +846,7 @@ describe('ImportDialog', () => {
     localization,
     router
   }) => {
-    let savedOnSuccess
+    let savedOnSuccess: (data: unknown) => void = () => {}
     mockImportHook.mockImplementation((_, { onSuccess }) => {
       savedOnSuccess = onSuccess
       return { mutate: vi.fn() }
@@ -843,7 +863,7 @@ describe('ImportDialog', () => {
       refetch: vi.fn()
     })
 
-    validateFile.mockReturnValue({ isValid: true })
+    mocks.validateFile.mockReturnValue({ isValid: true })
 
     render(
       <ImportDialog
@@ -877,7 +897,7 @@ describe('ImportDialog', () => {
     localization,
     router
   }) => {
-    let savedOnSuccess
+    let savedOnSuccess: (data: unknown) => void = () => {}
     mockImportHook.mockImplementation((_, { onSuccess }) => {
       savedOnSuccess = onSuccess
       return { mutate: vi.fn() }
@@ -894,7 +914,7 @@ describe('ImportDialog', () => {
       refetch: vi.fn()
     })
 
-    validateFile.mockReturnValue({ isValid: true })
+    mocks.validateFile.mockReturnValue({ isValid: true })
 
     render(
       <ImportDialog
@@ -929,7 +949,7 @@ describe('ImportDialog', () => {
     localization,
     router
   }) => {
-    let savedOnSuccess
+    let savedOnSuccess: (data: unknown) => void = () => {}
     mockImportHook.mockImplementation((_, { onSuccess }) => {
       savedOnSuccess = onSuccess
       return { mutate: vi.fn() }
@@ -946,7 +966,7 @@ describe('ImportDialog', () => {
       refetch: vi.fn()
     })
 
-    validateFile.mockReturnValue({ isValid: true })
+    mocks.validateFile.mockReturnValue({ isValid: true })
 
     render(
       <ImportDialog

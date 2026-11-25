@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import PropTypes from 'prop-types'
+import type { ReactNode, KeyboardEvent } from 'react'
 import Box from '@mui/material/Box'
 import IconButton from '@mui/material/IconButton'
 import TextField from '@mui/material/TextField'
@@ -9,12 +9,39 @@ import Close from '@mui/icons-material/Close'
 import Edit from '@mui/icons-material/Edit'
 import { useTranslation } from 'react-i18next'
 
-const splitExtension = (name) => {
+interface RenameableFileNameProps {
+  displayName: string
+  canRename?: boolean
+  disabled?: boolean
+  onRename: (name: string) => Promise<unknown>
+  renderName: (name: string) => ReactNode
+}
+
+const splitExtension = (name: string): { base: string; ext: string } => {
   const dotIndex = name.lastIndexOf('.')
   if (dotIndex <= 0) {
     return { base: name, ext: '' }
   }
   return { base: name.slice(0, dotIndex), ext: name.slice(dotIndex) }
+}
+
+const getRenameErrorMessage = (error: unknown): string | undefined => {
+  if (!error || typeof error !== 'object') return undefined
+  const message = 'message' in error ? error.message : undefined
+  const response = 'response' in error ? error.response : undefined
+  const data =
+    response && typeof response === 'object' && 'data' in response
+      ? response.data
+      : undefined
+  const detail =
+    data && typeof data === 'object' && 'detail' in data
+      ? data.detail
+      : undefined
+  return typeof detail === 'string'
+    ? detail
+    : typeof message === 'string'
+      ? message
+      : undefined
 }
 
 const RenameableFileName = ({
@@ -23,14 +50,14 @@ const RenameableFileName = ({
   disabled = false,
   onRename,
   renderName
-}) => {
+}: RenameableFileNameProps) => {
   const { t } = useTranslation('common')
   const [isEditing, setIsEditing] = useState(false)
   const { base: initialBase, ext } = splitExtension(displayName)
   const [value, setValue] = useState(initialBase)
-  const [error, setError] = useState(null)
+  const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-  const inputRef = useRef(null)
+  const inputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     if (!isEditing) {
@@ -73,16 +100,14 @@ const RenameableFileName = ({
     try {
       await onRename(newName)
       setIsEditing(false)
-    } catch (err) {
-      setError(
-        err?.response?.data?.detail || err?.message || t('common:renameFailed')
-      )
+    } catch (err: unknown) {
+      setError(getRenameErrorMessage(err) || t('common:renameFailed'))
     } finally {
       setSaving(false)
     }
   }
 
-  const handleKeyDown = (e) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault()
       save()
@@ -183,14 +208,6 @@ const RenameableFileName = ({
       </Tooltip>
     </Box>
   )
-}
-
-RenameableFileName.propTypes = {
-  displayName: PropTypes.string.isRequired,
-  canRename: PropTypes.bool,
-  disabled: PropTypes.bool,
-  onRename: PropTypes.func.isRequired,
-  renderName: PropTypes.func.isRequired
 }
 
 export default RenameableFileName

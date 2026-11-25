@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import PropTypes from 'prop-types'
+import type { ButtonProps } from '@mui/material/Button'
 import { useTranslation } from 'react-i18next'
 import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
@@ -7,13 +7,21 @@ import Visibility from '@mui/icons-material/Visibility'
 
 import DocumentPreviewDialog from '@/components/Documents/DocumentPreviewDialog'
 import { getDocumentDisplayName, isDocumentLocked } from '@/utils/documents'
+import type { DocumentPreviewMetadata } from '@/types/documents'
+
+interface DocumentPreviewButtonProps {
+  parentType: string
+  parentID: number | string
+  document: DocumentPreviewMetadata
+  size?: ButtonProps['size']
+}
 
 const DocumentPreviewButton = ({
   parentType,
   parentID,
   document,
   size = 'small'
-}) => {
+}: DocumentPreviewButtonProps) => {
   const { t } = useTranslation(['report'])
   const [open, setOpen] = useState(false)
   const fileName = getDocumentDisplayName(document || {})
@@ -67,14 +75,6 @@ const DocumentPreviewButton = ({
       )}
     </>
   )
-}
-
-DocumentPreviewButton.propTypes = {
-  parentType: PropTypes.string.isRequired,
-  parentID: PropTypes.oneOfType([PropTypes.string, PropTypes.number])
-    .isRequired,
-  document: PropTypes.object.isRequired,
-  size: PropTypes.oneOf(['small', 'medium', 'large'])
 }
 
 export default DocumentPreviewButton

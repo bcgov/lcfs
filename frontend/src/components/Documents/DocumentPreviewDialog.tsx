@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import PropTypes from 'prop-types'
+import type { MouseEvent } from 'react'
 import DOMPurify from 'dompurify'
 import mammoth from 'mammoth/mammoth.browser'
 import * as XLSX from 'xlsx'
@@ -20,6 +20,22 @@ import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import { useDownloadDocument, useFetchDocument } from '@/hooks/useDocuments'
 import { getDocumentDisplayName } from '@/utils/documents'
+import type { DocumentPreviewMetadata } from '@/types/documents'
+
+interface DocumentPreviewDialogProps {
+  open: boolean
+  onClose: () => void
+  parentType: string
+  parentID: number | string
+  document: DocumentPreviewMetadata
+}
+
+interface SpreadsheetPreviewProps {
+  html: string
+  sheetNames: string[]
+  selectedSheet: string
+  onSheetChange: (sheetName: string) => void
+}
 
 const OFFICE_MIME_TYPES = {
   doc: 'application/msword',
@@ -30,22 +46,43 @@ const OFFICE_MIME_TYPES = {
 }
 
 // Blob requests deliver error bodies as a Blob, so read the JSON out of it
-const getErrorDetail = async (err) => {
-  const data = err?.response?.data
+const getErrorDetail = async (err: unknown): Promise<string | undefined> => {
+  if (!err || typeof err !== 'object') return undefined
+  const response = (err as { response?: { data?: unknown } }).response
+  const data = response?.data as
+    | { text?: () => Promise<string>; detail?: unknown }
+    | undefined
   if (data && typeof data.text === 'function') {
     try {
-      return JSON.parse(await data.text())?.detail
+      const detail = JSON.parse(await data.text())?.detail
+      return typeof detail === 'string' ? detail : undefined
     } catch {
       return undefined
     }
   }
-  return data?.detail
+  return typeof data?.detail === 'string' ? data.detail : undefined
 }
 
-const getExtension = (fileName = '') =>
+const getErrorMessage = (error: unknown): string | undefined =>
+  error &&
+  typeof error === 'object' &&
+  'message' in error &&
+  typeof error.message === 'string'
+    ? error.message
+    : undefined
+
+const getExtension = (fileName = ''): string =>
   fileName.split('.').pop()?.toLowerCase() || ''
 
-const getPreviewKind = (fileName, contentType = '') => {
+type PreviewKind =
+  | 'pdf'
+  | 'image'
+  | 'text'
+  | 'spreadsheet'
+  | 'word'
+  | 'unsupported'
+
+const getPreviewKind = (fileName: string, contentType = ''): PreviewKind => {
   const type = contentType.toLowerCase()
   const extension = getExtension(fileName)
 
@@ -91,7 +128,7 @@ const documentPageSx = {
   boxSizing: 'border-box'
 }
 
-const getSheetHtml = (workbook, sheetName) => {
+const getSheetHtml = (workbook: XLSX.WorkBook | null, sheetName: string) => {
   const sheet = workbook?.Sheets?.[sheetName]
   return sheet ? DOMPurify.sanitize(XLSX.utils.sheet_to_html(sheet)) : ''
 }
@@ -101,7 +138,7 @@ const SpreadsheetPreview = ({
   sheetNames,
   selectedSheet,
   onSheetChange
-}) => (
+}: SpreadsheetPreviewProps) => (
   <Box
     sx={{
       ...documentPageSx,
@@ -164,25 +201,21 @@ const SpreadsheetPreview = ({
   </Box>
 )
 
-SpreadsheetPreview.propTypes = {
-  html: PropTypes.string.isRequired,
-  sheetNames: PropTypes.arrayOf(PropTypes.string).isRequired,
-  selectedSheet: PropTypes.string.isRequired,
-  onSheetChange: PropTypes.func.isRequired
-}
-
 const DocumentPreviewDialog = ({
   open,
   onClose,
   parentType,
   parentID,
   document
-}) => {
+}: DocumentPreviewDialogProps) => {
   const [objectUrl, setObjectUrl] = useState('')
   const [textContent, setTextContent] = useState('')
   const [spreadsheetHtml, setSpreadsheetHtml] = useState('')
-  const [spreadsheetWorkbook, setSpreadsheetWorkbook] = useState(null)
-  const [spreadsheetSheetNames, setSpreadsheetSheetNames] = useState([])
+  const [spreadsheetWorkbook, setSpreadsheetWorkbook] =
+    useState<XLSX.WorkBook | null>(null)
+  const [spreadsheetSheetNames, setSpreadsheetSheetNames] = useState<string[]>(
+    []
+  )
   const [selectedSpreadsheetSheet, setSelectedSpreadsheetSheet] = useState('')
   const [wordHtml, setWordHtml] = useState('')
   const [contentType, setContentType] = useState('')
@@ -192,7 +225,7 @@ const DocumentPreviewDialog = ({
   const fetchDocument = useFetchDocument(parentType, parentID)
   const downloadDocument = useDownloadDocument(parentType, parentID)
   const fileName = useMemo(
-    () => getDocumentDisplayName(document || {}),
+    () => getDocumentDisplayName(document) || '',
     [document]
   )
   const documentId = document?.documentId
@@ -250,11 +283,11 @@ const DocumentPreviewDialog = ({
             setWordHtml(DOMPurify.sanitize(result.value || ''))
           }
         }
-      } catch (err) {
+      } catch (err: unknown) {
         if (!cancelled) {
           setError(
             (await getErrorDetail(err)) ||
-              err?.message ||
+              getErrorMessage(err) ||
               'Unable to load document preview.'
           )
         }
@@ -288,12 +321,12 @@ const DocumentPreviewDialog = ({
     if (documentId) downloadDocument(documentId, fileName)
   }
 
-  const handleSpreadsheetSheetChange = (sheetName) => {
+  const handleSpreadsheetSheetChange = (sheetName: string) => {
     setSelectedSpreadsheetSheet(sheetName)
     setSpreadsheetHtml(getSheetHtml(spreadsheetWorkbook, sheetName))
   }
 
-  const handleCanvasClick = (event) => {
+  const handleCanvasClick = (event: MouseEvent<HTMLDivElement>) => {
     if (event.target === event.currentTarget) {
       handleClose()
     }
@@ -525,15 +558,6 @@ const DocumentPreviewDialog = ({
       </DialogContent>
     </Dialog>
   )
-}
-
-DocumentPreviewDialog.propTypes = {
-  open: PropTypes.bool.isRequired,
-  onClose: PropTypes.func.isRequired,
-  parentType: PropTypes.string.isRequired,
-  parentID: PropTypes.oneOfType([PropTypes.string, PropTypes.number])
-    .isRequired,
-  document: PropTypes.object
 }
 
 export default DocumentPreviewDialog

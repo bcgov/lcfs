@@ -210,9 +210,10 @@ export function calculateRowHeight(
 export const timezoneFormatter = ({
   value
 }: {
-  value: string | number | Date
+  value: string | number | Date | null
 }): string => {
-  const date = new Date(value)
+  // The native Date constructor treats null as the Unix epoch.
+  const date = new Date(value === null ? 0 : value)
   const options: Intl.DateTimeFormatOptions = {
     year: 'numeric',
     month: '2-digit',

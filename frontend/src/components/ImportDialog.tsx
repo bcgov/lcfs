@@ -9,6 +9,7 @@ import BCTypography from '@/components/BCTypography'
 import { styled } from '@mui/system'
 import CloudUpload from '@mui/icons-material/CloudUpload'
 import { useEffect, useRef, useState } from 'react'
+import type { ChangeEvent, DragEvent, ComponentProps } from 'react'
 import {
   MAX_FILE_SIZE_BYTES,
   SCHEDULE_IMPORT_FILE_TYPES
@@ -19,7 +20,54 @@ import BCBox from '@/components/BCBox'
 import { useQueryClient } from '@tanstack/react-query'
 import { invalidateComplianceReportRelatedQueries } from '@/hooks/reportQueryInvalidation'
 
-function LinearProgressWithLabel(props) {
+interface ImportJobStatus {
+  progress: number
+  status: string
+  created: number
+  skipped?: number
+  rejected: number
+  errors: string[]
+}
+
+interface ImportJobResult extends ImportJobStatus {
+  jobId: string | number
+}
+
+interface ImportVariables {
+  file: File
+  isOverwrite: boolean
+}
+
+interface ImportHookOptions {
+  onSuccess: (data: unknown) => void
+  onError: (error: Error) => void
+}
+
+interface ImportDialogProps {
+  open: boolean
+  close: () => void
+  complianceReportId?: number | string | null
+  isOverwrite: boolean
+  importHook: (
+    id: number | string | null | undefined,
+    options: ImportHookOptions
+  ) => {
+    mutate: (variables: ImportVariables) => void
+  }
+  getJobStatusHook: (jobId: string | number | null) => {
+    data?: ImportJobStatus
+    refetch: () => Promise<unknown>
+  }
+  onComplete?: (result: ImportJobResult) => void
+  invalidateComplianceReportOnComplete?: boolean
+  title?: string
+  importedLabel?: string
+  skippedLabel?: string
+}
+
+function LinearProgressWithLabel(
+  props: ComponentProps<typeof LinearProgress> & { value: number }
+) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center' }}>
       <Box sx={{ width: '100%', mr: 1 }}>
@@ -83,11 +131,15 @@ function ImportDialog({
   title: titleProp,
   importedLabel: importedLabelProp,
   skippedLabel: skippedLabelProp
-}) {
+}: ImportDialogProps) {
   const { t } = useTranslation(['common'])
   const queryClient = useQueryClient()
-  const fileInputRef = useRef(null)
-  const [uploadedFile, setUploadedFile] = useState(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [uploadedFile, setUploadedFile] = useState<{
+    documentId: number
+    fileName: string
+    fileSize: number
+  } | null>(null)
   const [dialogState, setDialogState] = useState(DIALOG_STATES.SELECT_FILE)
 
   // Upload progress and status
@@ -95,12 +147,14 @@ function ImportDialog({
   const [uploadStatus, setUploadStatus] = useState(
     t(`common:importExport.import.dialog.uploadStatusStarting`)
   )
-  const [errorMsg, setErrorMsg] = useState(null)
-  const [errorMsgs, setErrorMsgs] = useState([])
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [errorMsgs, setErrorMsgs] = useState<string[]>([])
 
   // Job tracking
-  const [jobID, setJobID] = useState(null)
-  const [intervalID, setIntervalID] = useState(null)
+  const [jobID, setJobID] = useState<string | number | null>(null)
+  const [intervalID, setIntervalID] = useState<ReturnType<
+    typeof setInterval
+  > | null>(null)
 
   // Imported/Skipped/Rejected counts
   const [createdCount, setCreatedCount] = useState(0)
@@ -109,7 +163,11 @@ function ImportDialog({
 
   const { mutate: importFile } = importHook(complianceReportId, {
     onSuccess: (data) => {
-      const jobId = data?.data?.jobId ?? data?.jobId
+      const result = data as {
+        data?: { jobId?: string | number }
+        jobId?: string | number
+      } | null
+      const jobId = result?.data?.jobId ?? result?.jobId
 
       if (jobId) {
         setJobID(jobId)
@@ -122,14 +180,31 @@ function ImportDialog({
     },
     onError: (error) => {
       setDialogState(DIALOG_STATES.COMPLETED)
-      if (error.response?.status === 422) {
+      const response =
+        'response' in error &&
+        error.response &&
+        typeof error.response === 'object'
+          ? error.response
+          : undefined
+      if (response && 'status' in response && response.status === 422) {
         setUploadedFile(null)
         setErrorMsg(
           t(`common:importExport.import.dialog.fileError.virusDetected`)
         )
-      } else if (error.response?.status === 400) {
+      } else if (response && 'status' in response && response.status === 400) {
         // Backend validation errors (MIME type, file size, etc.)
-        const backendMessage = error.response?.data?.detail
+        const response =
+          'response' in error &&
+          error.response &&
+          typeof error.response === 'object'
+            ? error.response
+            : undefined
+        const data = response && 'data' in response ? response.data : undefined
+        const detail =
+          data && typeof data === 'object' && 'detail' in data
+            ? data.detail
+            : undefined
+        const backendMessage = typeof detail === 'string' ? detail : undefined
         setErrorMsg(
           backendMessage ||
             t(`common:importExport.import.dialog.fileError.uploadFailed`)
@@ -145,7 +220,7 @@ function ImportDialog({
   const { data, refetch } = getJobStatusHook(jobID)
 
   useEffect(() => {
-    let intervalId
+    let intervalId: ReturnType<typeof setInterval> | undefined
     if (jobID && open) {
       intervalId = setInterval(async () => {
         try {
@@ -202,7 +277,7 @@ function ImportDialog({
     invalidateComplianceReportOnComplete
   ])
 
-  const preventBrowserDefaults = (e) => {
+  const preventBrowserDefaults = (e: DragEvent<HTMLElement>) => {
     e.preventDefault()
     e.stopPropagation()
   }
@@ -227,7 +302,7 @@ function ImportDialog({
     close()
   }
 
-  const handleDrop = (e) => {
+  const handleDrop = (e: DragEvent<HTMLElement>) => {
     preventBrowserDefaults(e)
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       handleFileUpload(e.dataTransfer.files[0])
@@ -241,20 +316,20 @@ function ImportDialog({
     }
   }
 
-  const handleFileChange = (e) => {
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const fileList = e.target.files
     if (fileList && fileList.length > 0) {
       handleFileUpload(fileList[0])
     }
   }
 
-  const startImport = (file) => {
+  const startImport = (file: File) => {
     setDialogState(DIALOG_STATES.UPLOADING)
     setUploadProgress(0)
     importFile({ file, isOverwrite })
   }
 
-  const handleFileUpload = (file) => {
+  const handleFileUpload = (file: File | undefined) => {
     setErrorMsg(null)
     if (!file) return
 
@@ -353,7 +428,7 @@ function ImportDialog({
             <CardContent>
               {uploadedFile ? (
                 <>
-                  <BCTypography variant="body">
+                  <BCTypography variant="body1">
                     {t(`common:importExport.import.dialog.completed.success`, {
                       fileName: uploadedFile.fileName
                     })}
@@ -462,7 +537,7 @@ function ImportDialog({
             {/* Errors from the job (e.g. row-level rejects) */}
             {!!errorMsgs.length && (
               <BCBox sx={{ width: '100%', ml: 2 }}>
-                <BCTypography color="error" variant="body">
+                <BCTypography color="error" variant="body1">
                   {t(`common:importExport.import.dialog.uploadStatus.rejected`)}
                 </BCTypography>
                 {errorMsgs.map((msg, idx) => (
