@@ -114,9 +114,6 @@ class UserAuthentication(AuthenticationBackend):
             except jwt.DecodeError as exc:
                 raise HTTPException(status_code=401, detail=str(exc))
 
-            if unverified_header.get("typ") != "Bearer":
-                raise HTTPException(status_code=401, detail="Token type must be Bearer")
-
             kid = unverified_header.get("kid")
             if not kid:
                 raise HTTPException(status_code=401, detail="Token header missing kid")
@@ -158,6 +155,13 @@ class UserAuthentication(AuthenticationBackend):
                     options={"verify_exp": True},
                     leeway=5,  # Allows for 5 seconds of clock skew
                 )
+                # Keycloak sets the token type in the payload `typ` claim
+                # ("Bearer" for access tokens, "ID" for ID tokens). The JOSE
+                # header `typ` is "JWT" for all of them, so it can't be used.
+                if user_token.get("typ") != "Bearer":
+                    raise HTTPException(
+                        status_code=401, detail="Token type must be Bearer"
+                    )
                 if user_token.get("azp") != self.settings.keycloak_audience:
                     raise HTTPException(
                         status_code=401, detail="Token client is not authorized"

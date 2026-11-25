@@ -113,12 +113,13 @@ async def bulletin_app(fake_redis_client, bulletin_signing_key):
                     "preferred_username": "bulletin-test-user",
                     "aud": settings.keycloak_audience,
                     "azp": settings.keycloak_audience,
+                    "typ": "Bearer",
                     "iss": issuer,
                     "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
                 },
                 bulletin_signing_key,
                 algorithm="RS256",
-                headers={"kid": public_key["kid"], "typ": "Bearer"},
+                headers={"kid": public_key["kid"], "typ": "JWT"},
             )
             headers = {"Authorization": f"Bearer {token}"}
 
