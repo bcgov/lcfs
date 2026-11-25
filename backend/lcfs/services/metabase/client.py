@@ -257,9 +257,18 @@ class CreditMarketReportBuilder:
                     "Transfers (#)",
                     "Volume (Credits)",
                     "Weighted average price",
+                    "Min of Price Per Unit (CA$)",
+                    "Max of Price Per Unit (CA$)",
                 ],
                 rows=[
-                    [row.period, row.transfers, row.volume, float(row.wavg)]
+                    [
+                        row.period,
+                        row.transfers,
+                        row.volume,
+                        float(row.wavg),
+                        float(row.min_price),
+                        float(row.max_price),
+                    ]
                     for row in reversed(agreement_rows)
                 ],
             )
@@ -350,6 +359,8 @@ class CreditMarketReportBuilder:
                     self._format_value(row[1]) if row else "—",
                     self._format_value(row[2]) if row else "—",
                     self._format_metric_value(row[3], currency=True) if row else "—",
+                    self._format_metric_value(row[4], currency=True) if row else "—",
+                    self._format_metric_value(row[5], currency=True) if row else "—",
                 ]
             )
         return rows

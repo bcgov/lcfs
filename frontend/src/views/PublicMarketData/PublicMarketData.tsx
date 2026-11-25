@@ -1054,11 +1054,7 @@ export const PublicMarketData = () => {
   ]
 
   const columnsForReport = (key: ReportKey) =>
-    key === 'monthly'
-      ? monthlyTableColumns
-      : key === 'agreementMonthly'
-        ? summaryTableColumns.slice(0, 3)
-        : summaryTableColumns
+    key === 'monthly' ? monthlyTableColumns : summaryTableColumns
 
   const displayRows = (rows: MarketReportPeriod[]) => [...rows].reverse()
 

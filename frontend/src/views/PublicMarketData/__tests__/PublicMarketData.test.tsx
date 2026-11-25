@@ -497,6 +497,21 @@ describe('PublicMarketData', () => {
       )
     ).toBeInTheDocument()
     expect(
+      within(agreementTable).getByText(
+        'publicDashboard.marketData.tables.minUnitPriceCad'
+      )
+    ).toBeInTheDocument()
+    expect(
+      within(agreementTable).getByText(
+        'publicDashboard.marketData.tables.maxUnitPriceCad'
+      )
+    ).toBeInTheDocument()
+    const agreementRow = within(agreementTable)
+      .getByText('May 2026')
+      .closest('tr')
+    expect(agreementRow).toHaveTextContent('120.30')
+    expect(agreementRow).toHaveTextContent('155.00')
+    expect(
       within(recordedTable).getByText(
         'publicDashboard.marketData.tables.recordedMonth'
       )
@@ -758,6 +773,12 @@ describe('PublicMarketData', () => {
     expect(
       agreementRows[11]['publicDashboard.marketData.tables.agreementMonth']
     ).toBe('Jun 2025')
+    expect(
+      agreementRows[0]['publicDashboard.marketData.tables.minUnitPriceCad']
+    ).toBe(120.3)
+    expect(
+      agreementRows[0]['publicDashboard.marketData.tables.maxUnitPriceCad']
+    ).toBe(155)
     expect(XLSX.utils.book_append_sheet).toHaveBeenCalledTimes(4)
     expect(XLSX.writeFile).toHaveBeenCalledWith(
       expect.anything(),

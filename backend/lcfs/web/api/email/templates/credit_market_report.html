@@ -13,12 +13,12 @@
   <img src="{{ agreement_chart }}" alt="Weighted average price and credit volume by agreement month" width="100%" style="display:block;width:100%;max-width:980px;height:auto;border:0;" />
   {% endif %}
   <table class="fuel-codes-table">
-    <thead><tr><th>Agreement month</th><th>Transfers</th><th>Volume (credits)</th><th>Weighted average price</th></tr></thead>
+    <thead><tr><th>Agreement month</th><th>Transfers</th><th>Volume (credits)</th><th>Weighted average price</th><th>Minimum price</th><th>Maximum price</th></tr></thead>
     <tbody>
       {% for row in agreement_months %}
       <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
       {% else %}
-      <tr><td colspan="4">No agreement-month data available.</td></tr>
+      <tr><td colspan="6">No agreement-month data available.</td></tr>
       {% endfor %}
     </tbody>
   </table>

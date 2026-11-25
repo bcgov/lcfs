@@ -419,6 +419,8 @@ def test_agreement_months_replace_a1_in_email_and_workbook():
                 transfers=2,
                 volume=400,
                 wavg=175,
+                min_price=100,
+                max_price=200,
             )
         ],
     )
@@ -431,8 +433,8 @@ def test_agreement_months_replace_a1_in_email_and_workbook():
         if table.name == "Monthly market report by agreement date"
     )
     months = builder._agreement_months_context(agreement_table, datetime(2026, 11, 1))
-    assert months[0] == ["Oct 2026", "2", "400", "CA$175.00"]
-    assert months[1] == ["Sep 2026", "—", "—", "—"]
+    assert months[0] == ["Oct 2026", "2", "400", "CA$175.00", "CA$100.00", "CA$200.00"]
+    assert months[1] == ["Sep 2026", "—", "—", "—", "—", "—"]
     assert len(months) == 12
     assert months[-1][0] == "Nov 2025"
     january = builder._agreement_months_context(agreement_table, datetime(2026, 1, 1))
@@ -446,8 +448,10 @@ def test_agreement_months_replace_a1_in_email_and_workbook():
     assert "Category A1 - Average Price" not in monthly_headers
     assert "Category A - Transfers" in monthly_headers
     agreement = workbook["Monthly market report by agreem"]
-    assert [cell.value for cell in agreement[2]] == ["Oct 2026", 2, 400, 175]
+    assert [cell.value for cell in agreement[2]] == ["Oct 2026", 2, 400, 175, 100, 200]
     assert agreement["D2"].number_format == "$#,##0.00"
+    assert agreement["E2"].number_format == "$#,##0.00"
+    assert agreement["F2"].number_format == "$#,##0.00"
 
 
 def test_metabase_client_prefers_api_key_authentication():
@@ -555,6 +559,8 @@ async def test_monthly_report_uses_notification_table_email_subscriptions(mock_a
                     transfers=2,
                     volume=400,
                     wavg=175,
+                    min_price=100,
+                    max_price=200,
                 )
             ]
         )
@@ -581,6 +587,8 @@ async def test_monthly_report_uses_notification_table_email_subscriptions(mock_a
         2,
         400,
         175,
+        100,
+        200,
     ]
 
 
