@@ -9,7 +9,7 @@ export const ApiDocs = () => {
     <SwaggerUI
       url="http://localhost:8000/api/openapi.json"
       requestInterceptor={(req) => {
-        req.headers.Authorization = `Bearer ${keycloak.idToken}`
+        req.headers.Authorization = `Bearer ${keycloak.token}`
         return req
       }}
     />

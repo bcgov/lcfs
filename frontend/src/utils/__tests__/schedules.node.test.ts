@@ -1,0 +1,178 @@
+import { describe, it, expect, vi, beforeEach } from 'vite-plus/test'
+import type { GridErrors, GridWarnings } from '@/types/schema'
+import {
+  handleScheduleSave,
+  handleScheduleDelete,
+  type ScheduleGridApi,
+  type ScheduleGridNode,
+  type ScheduleGridParams,
+  type ScheduleRow,
+  type ScheduleSaveParams
+} from '../schedules'
+
+// Mock uuid to predictable value
+vi.mock('uuid', () => ({
+  v4: () => 'mock-uuid'
+}))
+
+describe('handleScheduleSave', () => {
+  const t = (key: string) => key // simple translator
+  let alertRef: {
+    current: {
+      triggerAlert: (alert: {
+        message: string
+        severity: 'success' | 'warning' | 'error'
+      }) => void
+    }
+  }
+  let setErrors: (errors: GridErrors) => void
+  let setWarnings: (warnings: GridWarnings) => void
+
+  beforeEach(() => {
+    alertRef = { current: { triggerAlert: vi.fn() } }
+    setErrors = vi.fn()
+    setWarnings = vi.fn()
+  })
+
+  it('returns success data when saveRow resolves', async () => {
+    const saveRow = vi.fn().mockResolvedValue({ data: { foo: 'bar' } })
+    const updated = { id: 1, foo: 'initial' }
+
+    const result = await handleScheduleSave({
+      labelPrefix: 'labels',
+      idField: 'id',
+      updatedData: updated,
+      params: {},
+      alertRef,
+      setErrors,
+      setWarnings,
+      saveRow,
+      t
+    })
+
+    expect(saveRow).toHaveBeenCalledWith(updated)
+    expect(result.validationStatus).toBe('success')
+    expect(result.modified).toBe(false)
+    expect(alertRef.current.triggerAlert).toHaveBeenCalledWith({
+      message: 'Row updated successfully.',
+      severity: 'success'
+    })
+  })
+
+  it('handles warnings and errors when saveRow rejects with ERR_BAD_REQUEST', async () => {
+    const apiMock: ScheduleGridApi<ScheduleRow> = {
+      forEachNode: (cb: (node: ScheduleGridNode<ScheduleRow>) => void) => {
+        // Provide fake row node
+        cb({ data: { fuelSupplyId: 99 }, updateData: vi.fn() })
+      }
+    }
+    const params: ScheduleSaveParams<ScheduleRow> = {
+      node: { data: { id: 'temp' } },
+      api: apiMock
+    }
+    const errorResponse = {
+      code: 'ERR_BAD_REQUEST',
+      response: {
+        data: {
+          warnings: [{ id: 99, fields: ['baz'] }],
+          errors: [{ fields: ['baz'], message: 'is invalid' }]
+        }
+      }
+    }
+    const saveRow = vi.fn().mockRejectedValue(errorResponse)
+
+    const updated = { foo: 'bad' }
+
+    const result = await handleScheduleSave({
+      labelPrefix: 'labels',
+      idField: 'id',
+      updatedData: updated,
+      params,
+      alertRef,
+      setErrors,
+      setWarnings,
+      saveRow,
+      t
+    })
+
+    expect(result.validationStatus).toBe('warning')
+    expect(setWarnings).toHaveBeenCalled()
+    expect(alertRef.current.triggerAlert).toHaveBeenCalled()
+  })
+})
+
+describe('handleScheduleDelete', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('applies transaction and calls alert on successful delete', async () => {
+    const alertRef = { current: { triggerAlert: vi.fn() } }
+    const applyTransaction = vi.fn()
+    const params: ScheduleGridParams<ScheduleRow> = {
+      node: { data: { id: 5, some: 'data' }, updateData: vi.fn() },
+      api: { applyTransaction, isRowDataEmpty: () => true }
+    }
+
+    const saveRow = vi.fn().mockResolvedValue({})
+    const setRowData = vi.fn()
+    const defaultRowData: ScheduleRow = { default: true }
+
+    await handleScheduleDelete(
+      params,
+      'id',
+      saveRow,
+      alertRef,
+      setRowData,
+      defaultRowData
+    )
+
+    expect(applyTransaction).toHaveBeenCalled()
+    expect(saveRow).toHaveBeenCalled()
+    expect(alertRef.current.triggerAlert).toHaveBeenCalledWith({
+      message: 'Row deleted successfully.',
+      severity: 'success'
+    })
+
+    // Fast-forward the setTimeout
+    vi.advanceTimersByTime(100)
+
+    expect(setRowData).toHaveBeenCalledWith([
+      {
+        ...defaultRowData,
+        id: 'mock-uuid'
+      }
+    ])
+  })
+
+  it('does not call setRowData when grid is not empty', async () => {
+    const alertRef = { current: { triggerAlert: vi.fn() } }
+    const applyTransaction = vi.fn()
+    const params: ScheduleGridParams<ScheduleRow> = {
+      node: { data: { id: 5, some: 'data' }, updateData: vi.fn() },
+      api: { applyTransaction, isRowDataEmpty: () => false }
+    }
+
+    const saveRow = vi.fn().mockResolvedValue({})
+    const setRowData = vi.fn()
+    const defaultRowData: ScheduleRow = { default: true }
+
+    await handleScheduleDelete(
+      params,
+      'id',
+      saveRow,
+      alertRef,
+      setRowData,
+      defaultRowData
+    )
+
+    // Fast-forward timers to ensure setTimeout doesn't run
+    vi.advanceTimersByTime(100)
+
+    expect(setRowData).not.toHaveBeenCalled()
+  })
+})

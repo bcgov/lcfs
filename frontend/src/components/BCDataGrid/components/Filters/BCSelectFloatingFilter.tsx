@@ -10,10 +10,10 @@ export interface BCSelectFloatingFilterProps {
   model?: { type?: string; filter?: string } | null
   onModelChange: (model: { type: string; filter: string } | null) => void
   optionsQuery: (params?: Record<string, unknown>) => {
-    data?: Array<Record<string, unknown>>
+    data?: Array<Record<string, unknown>> | null
     isLoading?: boolean
     isError?: boolean
-    error?: Error
+    error?: { message?: string } | null
   }
   valueKey?: string
   labelKey?: string

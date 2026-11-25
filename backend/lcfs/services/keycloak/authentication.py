@@ -155,6 +155,17 @@ class UserAuthentication(AuthenticationBackend):
                     options={"verify_exp": True},
                     leeway=5,  # Allows for 5 seconds of clock skew
                 )
+                # Keycloak sets the token type in the payload `typ` claim
+                # ("Bearer" for access tokens, "ID" for ID tokens). The JOSE
+                # header `typ` is "JWT" for all of them, so it can't be used.
+                if user_token.get("typ") != "Bearer":
+                    raise HTTPException(
+                        status_code=401, detail="Token type must be Bearer"
+                    )
+                if user_token.get("azp") != self.settings.keycloak_audience:
+                    raise HTTPException(
+                        status_code=401, detail="Token client is not authorized"
+                    )
             except jwt.ExpiredSignatureError:
                 raise HTTPException(status_code=401, detail="Token has expired")
             except (jwt.InvalidTokenError, jwt.DecodeError) as exc:
