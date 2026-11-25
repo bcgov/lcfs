@@ -1,4 +1,5 @@
 .env
+.private/
 .mcp.json
 AGENTS.md
 backend/.env
