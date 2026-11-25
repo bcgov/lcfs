@@ -50,8 +50,19 @@ const SECOND_LINE_COLUMNS = {
 
 const selectSx = {
   '& .MuiSelect-select.MuiOutlinedInput-input': {
-    padding: '8.5px 14px !important',
+    // Keep the right padding MUI leaves for the arrow, so a long value ends
+    // in an ellipsis rather than running under it.
+    padding: '8.5px 32px 8.5px 14px !important',
     minHeight: '1.4375em'
+  }
+}
+
+// The theme caps menus at 160px and hides overflow, which cut the source
+// names off. Let this menu grow to fit them, up to the viewport, and wrap
+// past that.
+const feedstockMenuProps = {
+  slotProps: {
+    paper: { sx: { maxWidth: 'min(400px, calc(100vw - 32px))' } }
   }
 }
 
@@ -247,14 +258,27 @@ export const PurchaseDetails = ({
                       : t('lcjfip:applicant.select')
                   }
                   data-test="lcjfip-feedstock"
+                  MenuProps={feedstockMenuProps}
                 >
                   {feedstockSources.map((source) => (
-                    <MenuItem key={source.id} value={source.id}>
+                    <MenuItem
+                      key={source.id}
+                      value={source.id}
+                      sx={{ gap: 1, whiteSpace: 'normal' }}
+                    >
                       <Checkbox
                         size="small"
                         checked={(field.value ?? []).includes(source.id)}
+                        sx={{ mt: 0, flexShrink: 0 }}
                       />
-                      <ListItemText primary={source.name} />
+                      {/* The menu item's text size, not ListItemText's body1. */}
+                      <ListItemText
+                        primary={source.name}
+                        sx={{ my: 0 }}
+                        slotProps={{
+                          primary: { fontSize: 'inherit', lineHeight: 1.4 }
+                        }}
+                      />
                     </MenuItem>
                   ))}
                 </Select>
