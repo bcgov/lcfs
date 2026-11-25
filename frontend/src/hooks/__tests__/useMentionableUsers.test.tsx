@@ -1,6 +1,7 @@
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { vi, describe, it, expect, beforeEach } from 'vite-plus/test'
+import type { ReactNode } from 'react'
 import { useMentionableUsers } from '../useMentionableUsers'
 
 const mockApiService = {
@@ -18,7 +19,7 @@ const createWrapper = () => {
       mutations: { retry: false }
     }
   })
-  return function QueryClientWrapper({ children }) {
+  return function QueryClientWrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     )

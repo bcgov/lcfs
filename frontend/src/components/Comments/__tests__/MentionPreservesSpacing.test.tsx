@@ -6,7 +6,7 @@ import { useState } from 'react'
 import CommentForm from '../CommentForm'
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key) => key })
+  useTranslation: () => ({ t: (key: string) => key })
 }))
 
 // jsdom doesn't implement range layout geometry; Quill's setSelection calls
@@ -24,14 +24,26 @@ beforeAll(() => {
     toJSON: () => ({})
   }
   Range.prototype.getBoundingClientRect = () => rect
-  Range.prototype.getClientRects = () => ({
-    length: 0,
-    item: () => null,
-    [Symbol.iterator]: function* () {}
-  })
+  Range.prototype.getClientRects = () => {
+    const rects: DOMRect[] = []
+    return {
+      length: rects.length,
+      item: (index: number) => rects[index] ?? null,
+      [Symbol.iterator]: () => rects[Symbol.iterator]()
+    }
+  }
 })
 
 const { Quill } = ReactQuill
+
+const getQuill = (container: Element | null) => {
+  if (!container) throw new Error('Expected a mounted Quill container')
+  const quill = Quill.find(container)
+  if (!quill || !('getSelection' in quill)) {
+    throw new Error('Expected the mounted Quill editor instance')
+  }
+  return quill
+}
 
 const mentionableUsers = [
   { userProfileId: 1, displayName: 'Jane Doe', email: 'jane.doe@gov.bc.ca' }
@@ -83,7 +95,7 @@ describe('Typing a mention after an existing mention', () => {
     theme
   }) => {
     render(<ChainedMentionsForm />, [theme])
-    const quill = Quill.find(document.querySelector('.ql-container'))
+    const quill = getQuill(document.querySelector('.ql-container'))
     quill.focus()
 
     // Typed one chunk at a time, like a real user.
@@ -99,9 +111,11 @@ describe('Typing a mention after an existing mention', () => {
       expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
     })
 
-    const visibleText = document
-      .querySelector('.ql-editor')
-      .textContent.replace(/\uFEFF/g, '')
+    const editor = document.querySelector<HTMLElement>('.ql-editor')
+    if (!editor) throw new Error('Expected the comment editor')
+    const editorText = editor.textContent
+    if (editorText === null) throw new Error('Expected visible editor text')
+    const visibleText = editorText.replace(/\uFEFF/g, '')
     expect(visibleText).toBe('test @Jane Doe and @Al Ring ')
   })
 })
@@ -113,16 +127,19 @@ describe('Mention button preserves surrounding text', () => {
   }) => {
     render(<ControlledCommentForm />, [theme])
 
-    const editor = document.querySelector('.ql-editor')
+    const editor = document.querySelector<HTMLElement>('.ql-editor')
+    if (!editor) throw new Error('Expected the comment editor')
 
     // Simulate the user having already clicked into the editor and placed
     // the caret at the end of "Hello" (jsdom has no real layout/click-to-
     // caret behaviour, so the native Selection API is driven directly).
-    const textNode = editor.querySelector('p').firstChild
+    const textNode = editor.querySelector('p')?.firstChild
+    if (!(textNode instanceof Text)) throw new Error('Expected editor text')
     const range = document.createRange()
     range.setStart(textNode, textNode.length)
     range.collapse(true)
     const domSelection = document.getSelection()
+    if (!domSelection) throw new Error('Expected a document selection')
     domSelection.removeAllRanges()
     domSelection.addRange(range)
     document.dispatchEvent(new Event('selectionchange'))

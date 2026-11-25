@@ -1,5 +1,5 @@
-import PropTypes from 'prop-types'
 import { useMemo } from 'react'
+import type { MentionableUser } from '@/hooks/useMentionableUsers'
 import Popper from '@mui/material/Popper'
 import Fade from '@mui/material/Fade'
 import Paper from '@mui/material/Paper'
@@ -27,7 +27,7 @@ const {
 } = MENTION_COLORS
 const MENTION_RADIUS = '4px'
 
-const getMentionInitials = (name) =>
+const getMentionInitials = (name: string | null | undefined) =>
   (name || '')
     .split(' ')
     .filter(Boolean)
@@ -37,6 +37,27 @@ const getMentionInitials = (name) =>
 
 // Popper anchored to the caret (a virtual element), since Quill's
 // contenteditable has no DOM node for the caret position.
+interface MentionDropdownProps {
+  getAnchorRect: () =>
+    | DOMRect
+    | {
+        x: number
+        y: number
+        left: number
+        top: number
+        right: number
+        bottom: number
+        width: number
+        height: number
+      }
+  results: MentionableUser[]
+  isLoading?: boolean
+  activeIndex: number
+  onHoverIndex: (index: number) => void
+  onSelect: (user: MentionableUser) => void
+  t: (key: string) => string
+}
+
 const MentionDropdown = ({
   getAnchorRect,
   results,
@@ -45,9 +66,9 @@ const MentionDropdown = ({
   onHoverIndex,
   onSelect,
   t
-}) => {
+}: MentionDropdownProps) => {
   const virtualAnchor = useMemo(
-    () => ({ getBoundingClientRect: getAnchorRect }),
+    () => ({ getBoundingClientRect: getAnchorRect as () => DOMRect }),
     [getAnchorRect]
   )
 
@@ -202,16 +223,6 @@ const MentionDropdown = ({
       )}
     </Popper>
   )
-}
-
-MentionDropdown.propTypes = {
-  getAnchorRect: PropTypes.func.isRequired,
-  results: PropTypes.array.isRequired,
-  isLoading: PropTypes.bool,
-  activeIndex: PropTypes.number.isRequired,
-  onHoverIndex: PropTypes.func.isRequired,
-  onSelect: PropTypes.func.isRequired,
-  t: PropTypes.func.isRequired
 }
 
 export default MentionDropdown

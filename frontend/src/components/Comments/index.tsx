@@ -1,4 +1,3 @@
-import PropTypes from 'prop-types'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useComments } from '@/hooks/useComments'
@@ -7,6 +6,18 @@ import CommentList from './CommentList'
 import Loading from '@/components/Loading'
 import BCAlert from '@/components/BCAlert'
 import { getCommentErrorMessage } from './commentErrors'
+
+interface CommentsProps {
+  entityType: string
+  entityId?: number | string | null
+  commentMode?: 'internal-only' | 'dual'
+  enableAttachments?: boolean
+  showUploadDropzone?: boolean
+  enableDeletion?: boolean
+  enableSorting?: boolean
+  showTitle?: boolean
+  placeholder?: string
+}
 
 const Comments = ({
   entityType,
@@ -18,7 +29,7 @@ const Comments = ({
   enableSorting = true,
   showTitle = true,
   placeholder
-}) => {
+}: CommentsProps) => {
   const { t } = useTranslation(['internalComment'])
   const {
     comments,
@@ -47,7 +58,7 @@ const Comments = ({
 
   // One lookup is shared by the add form and any comment being edited.
   // `null` means no lookup is in progress.
-  const [mentionQuery, setMentionQuery] = useState(null)
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null)
   const mentionResults = useMentionableUsers(
     mentionQuery ?? '',
     mentionQuery !== null
@@ -71,10 +82,13 @@ const Comments = ({
   }
 
   const handleEditComment = async (
-    commentId,
-    commentText,
-    visibility,
-    fileChanges = {}
+    commentId: number | string,
+    commentText: string,
+    visibility: string,
+    fileChanges: {
+      newFiles?: File[]
+      removedDocumentIds?: Array<number | string>
+    } = {}
   ) => {
     await editComment({ commentId, commentText, visibility, ...fileChanges })
   }
@@ -92,7 +106,13 @@ const Comments = ({
         onAddComment={handleAddComment}
         onEditComment={handleEditComment}
         onCancelEdit={cancelEditComment}
-        onDeleteComment={enableDeletion ? deleteComment : undefined}
+        onDeleteComment={
+          enableDeletion
+            ? async (id) => {
+                await deleteComment(id)
+              }
+            : undefined
+        }
         isDeletingComment={isDeletingComment}
         showTitle={showTitle}
         placeholder={placeholder}
@@ -114,27 +134,14 @@ const Comments = ({
         sortOrder={sortOrder}
         enableSorting={enableSorting}
         onSortOrderChange={handleSortOrderChange}
-        mentionResults={mentionResults}
+        mentionResults={{
+          data: mentionResults.data ?? [],
+          isFetching: mentionResults.isFetching
+        }}
         onMentionQueryChange={setMentionQuery}
       />
     </>
   )
-}
-
-Comments.propTypes = {
-  entityType: PropTypes.string.isRequired,
-  entityId: PropTypes.oneOfType([
-    PropTypes.number,
-    PropTypes.string,
-    PropTypes.oneOf([null])
-  ]),
-  commentMode: PropTypes.oneOf(['internal-only', 'dual']),
-  enableAttachments: PropTypes.bool,
-  showUploadDropzone: PropTypes.bool,
-  enableDeletion: PropTypes.bool,
-  enableSorting: PropTypes.bool,
-  showTitle: PropTypes.bool,
-  placeholder: PropTypes.string
 }
 
 export default Comments

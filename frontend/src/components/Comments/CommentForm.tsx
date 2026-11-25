@@ -1,5 +1,5 @@
-import PropTypes from 'prop-types'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import type { ChangeEvent } from 'react'
 import ReactQuill from 'react-quill'
 import { GlobalStyles } from '@mui/system'
 import Chip from '@mui/material/Chip'
@@ -31,13 +31,46 @@ import CommentUploadDropzone from './CommentUploadDropzone'
 import { useMentionEditor } from './useMentionEditor'
 import './quillExtensions'
 import { quillAttachIcon } from '@/utils/quillAttachIcon'
+import type { MentionableUser } from '@/hooks/useMentionableUsers'
+
+type Visibility = 'Internal' | 'Public'
+interface CommentDocument {
+  documentId: number
+  fileName: string
+}
+interface CommentFormProps {
+  title: string
+  placeholder?: string
+  commentText?: string
+  onSubmit: (comment: string, visibility?: string) => void
+  onCancel?: () => void
+  isEditing?: boolean
+  showAddCommentBtn?: boolean
+  onCommentChange?: (value: string) => void
+  isSubmitting?: boolean
+  showVisibilityToggle?: boolean
+  visibility?: string
+  onVisibilityChange?: (visibility: string) => void
+  visibilityAlign?: 'left' | 'right'
+  showTitle?: boolean
+  enableAttachments?: boolean
+  showUploadDropzone?: boolean
+  attachments?: File[]
+  onAttachmentsChange?: (files: File[]) => void
+  existingAttachments?: CommentDocument[]
+  onRemoveExistingAttachment?: (documentId: number) => void
+  onDownloadAttachment?: (documentId: number, fileName: string) => void
+  enableMentions?: boolean
+  mentionResults?: { data?: MentionableUser[]; isFetching?: boolean }
+  onMentionQueryChange?: (query: string | null) => void
+}
 
 // Register a paperclip icon for the custom Quill "attach" toolbar button.
 // `react-quill` exposes Quill as a static property of its default export
 // (not a separate named export), so access it that way to stay safe across
 // bundler CJS/ESM interop. Quill's icon registry is global — register once.
 const Quill = ReactQuill.Quill
-const quillIcons = Quill.import('ui/icons')
+const quillIcons = Quill.import('ui/icons') as Record<string, string>
 quillIcons.attach = quillAttachIcon
 
 const VisibilityToggle = ({
@@ -45,6 +78,11 @@ const VisibilityToggle = ({
   onVisibilityChange,
   align = 'right',
   marginTop = 0.5
+}: {
+  visibility: string
+  onVisibilityChange?: (value: string) => void
+  align?: 'left' | 'right'
+  marginTop?: number
 }) => {
   const { t } = useTranslation(['internalComment'])
   const isLeft = align === 'left'
@@ -61,7 +99,9 @@ const VisibilityToggle = ({
         exclusive
         size="small"
         value={visibility}
-        onChange={(_, value) => value && onVisibilityChange?.(value)}
+        onChange={(_, value) =>
+          value && onVisibilityChange?.(value as Visibility)
+        }
         aria-label={t('internalComment:commentVisibility')}
         sx={{
           '& .MuiToggleButton-root': {
@@ -119,13 +159,6 @@ const VisibilityToggle = ({
   )
 }
 
-VisibilityToggle.propTypes = {
-  visibility: PropTypes.oneOf(['Internal', 'Public']).isRequired,
-  onVisibilityChange: PropTypes.func,
-  align: PropTypes.oneOf(['left', 'right']),
-  marginTop: PropTypes.number
-}
-
 const CommentForm = ({
   title,
   placeholder: customPlaceholder,
@@ -151,14 +184,16 @@ const CommentForm = ({
   enableMentions = false,
   mentionResults = { data: [], isFetching: false },
   onMentionQueryChange = () => {}
-}) => {
+}: CommentFormProps) => {
   const { t } = useTranslation(['internalComment'])
-  const fileInputRef = useRef(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const mentionConflictId = `comment-mention-conflict-${useId()}`
-  const quillRef = useRef(null)
-  const [attachmentError, setAttachmentError] = useState(null)
+  const quillRef = useRef<ReactQuill | null>(null)
+  const [attachmentError, setAttachmentError] = useState<string | null>(null)
   // Pre-removal HTML after "Remove mentions", so that choice can be undone.
-  const [removedMentionsSnapshot, setRemovedMentionsSnapshot] = useState(null)
+  const [removedMentionsSnapshot, setRemovedMentionsSnapshot] = useState<
+    string | null
+  >(null)
   const mentionEditor = useMentionEditor({
     quillRef,
     enabled: enableMentions,
@@ -193,13 +228,13 @@ const CommentForm = ({
     fileInputRef.current?.click()
   }, [])
 
-  const appendAttachments = (selected) => {
+  const appendAttachments = (selected: File[]) => {
     if (!canAttachFiles || selected.length === 0) {
       return
     }
 
-    const valid = []
-    const errors = []
+    const valid: File[] = []
+    const errors: string[] = []
     selected.forEach((file) => {
       const result = validateFile(
         file,
@@ -215,23 +250,23 @@ const CommentForm = ({
 
     setAttachmentError(errors.length ? errors.join(' ') : null)
     if (valid.length) {
-      onAttachmentsChange([...attachments, ...valid])
+      onAttachmentsChange?.([...attachments, ...valid])
     }
   }
 
-  const handleFilesSelected = (event) => {
+  const handleFilesSelected = (event: ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(event.target.files || [])
     // Reset the input so selecting the same file again still fires onChange.
     event.target.value = ''
     appendAttachments(selected)
   }
 
-  const handleRemoveStaged = (index) => {
-    onAttachmentsChange(attachments.filter((_, i) => i !== index))
+  const handleRemoveStaged = (index: number) => {
+    onAttachmentsChange?.(attachments.filter((_, i) => i !== index))
   }
 
   const handleVisibilityChange = useCallback(
-    (newVisibility) => {
+    (newVisibility: string) => {
       if (newVisibility === 'Internal') setRemovedMentionsSnapshot(null)
       onVisibilityChange?.(newVisibility)
     },
@@ -240,7 +275,7 @@ const CommentForm = ({
 
   const handleRemoveMentions = useCallback(() => {
     setRemovedMentionsSnapshot(commentText)
-    onCommentChange(removeMentionMarkup(commentText))
+    onCommentChange?.(removeMentionMarkup(commentText))
   }, [commentText, onCommentChange])
 
   const handleKeepInternal = useCallback(() => {
@@ -249,12 +284,19 @@ const CommentForm = ({
 
   const handleUndoRemoveMentions = useCallback(() => {
     if (removedMentionsSnapshot === null) return
-    onCommentChange(removedMentionsSnapshot)
+    onCommentChange?.(removedMentionsSnapshot)
     setRemovedMentionsSnapshot(null)
     onVisibilityChange?.('Internal')
   }, [removedMentionsSnapshot, onCommentChange, onVisibilityChange])
 
-  const handleEditorChange = (content, _delta, source, editor) => {
+  const handleEditorChange = (
+    content: string,
+    _delta: unknown,
+    source: string,
+    editor: Parameters<typeof mentionEditor.handleEditorChange>[0] & {
+      getHTML: () => string
+    }
+  ) => {
     // A manual edit makes the "Undo" snapshot stale.
     if (source === 'user' && removedMentionsSnapshot !== null) {
       setRemovedMentionsSnapshot(null)
@@ -309,7 +351,10 @@ const CommentForm = ({
   // and visibility have to be set imperatively once the toolbar DOM exists.
   useEffect(() => {
     const quill = quillRef.current?.getEditor?.()
-    const toolbar = quill?.getModule?.('toolbar')?.container
+    const toolbarModule = quill?.getModule?.('toolbar') as
+      | { container?: HTMLElement }
+      | undefined
+    const toolbar = toolbarModule?.container
     if (!toolbar) return
 
     toolbar.setAttribute('role', 'toolbar')
@@ -320,7 +365,7 @@ const CommentForm = ({
       })
     )
 
-    const controls = [
+    const controls: Array<[string, string]> = [
       ['.ql-bold', t('internalComment:formatBold', { defaultValue: 'Bold' })],
       [
         '.ql-italic',
@@ -340,34 +385,39 @@ const CommentForm = ({
       ]
     ]
     controls.forEach(([selector, label]) => {
-      toolbar.querySelectorAll(selector).forEach((button) => {
+      toolbar
+        .querySelectorAll<HTMLButtonElement>(selector)
+        .forEach((button) => {
+          button.setAttribute('aria-label', label)
+          button.setAttribute('title', label)
+        })
+    })
+    toolbar
+      .querySelectorAll<HTMLButtonElement>('.ql-attach')
+      .forEach((button) => {
+        const label = t('internalComment:attachFile', {
+          defaultValue: 'Attach file'
+        })
         button.setAttribute('aria-label', label)
         button.setAttribute('title', label)
+        button.removeAttribute('aria-pressed')
+        button.disabled = !canAttachFiles
+        button.hidden = !attachmentsEnabled
+        // Quill's author stylesheet can override the browser's default [hidden]
+        // styling, so set inline display as well to keep it out of view and the
+        // accessibility tree while attachments are unavailable.
+        button.style.display = attachmentsEnabled ? '' : 'none'
+        const group = button.closest<HTMLElement>('.ql-formats')
+        if (group) {
+          group.hidden = !attachmentsEnabled
+          group.style.display = attachmentsEnabled ? '' : 'none'
+        }
       })
-    })
-    toolbar.querySelectorAll('.ql-attach').forEach((button) => {
-      const label = t('internalComment:attachFile', {
-        defaultValue: 'Attach file'
-      })
-      button.setAttribute('aria-label', label)
-      button.setAttribute('title', label)
-      button.removeAttribute('aria-pressed')
-      button.disabled = !canAttachFiles
-      button.hidden = !attachmentsEnabled
-      // Quill's author stylesheet can override the browser's default [hidden]
-      // styling, so set inline display as well to keep it out of view and the
-      // accessibility tree while attachments are unavailable.
-      button.style.display = attachmentsEnabled ? '' : 'none'
-      const group = button.closest('.ql-formats')
-      if (group) {
-        group.hidden = !attachmentsEnabled
-        group.style.display = attachmentsEnabled ? '' : 'none'
-      }
-    })
 
     // Only the presentation of the mention button changes: hidden when
     // mentions aren't allowed, disabled while the comment is Public.
-    const mentionButton = toolbar.querySelector('.ql-mention')
+    const mentionButton =
+      toolbar.querySelector<HTMLButtonElement>('.ql-mention')
     if (mentionButton) {
       mentionButton.style.display =
         enableMentions || mentionsPausedByVisibility ? '' : 'none'
@@ -670,7 +720,6 @@ const CommentForm = ({
               severity="error"
               dismissible
               sx={{ mb: 1 }}
-              onClose={() => setAttachmentError(null)}
               data-test="comment-attachment-error"
             >
               {attachmentError}
@@ -772,36 +821,6 @@ const CommentForm = ({
       </BCBox>
     </>
   )
-}
-
-CommentForm.propTypes = {
-  title: PropTypes.string.isRequired,
-  placeholder: PropTypes.string,
-  commentText: PropTypes.string,
-  onSubmit: PropTypes.func.isRequired,
-  onCancel: PropTypes.func,
-  isEditing: PropTypes.bool,
-  showAddCommentBtn: PropTypes.bool,
-  onCommentChange: PropTypes.func,
-  isSubmitting: PropTypes.bool,
-  showVisibilityToggle: PropTypes.bool,
-  visibility: PropTypes.oneOf(['Internal', 'Public']),
-  onVisibilityChange: PropTypes.func,
-  visibilityAlign: PropTypes.oneOf(['left', 'right']),
-  showTitle: PropTypes.bool,
-  enableAttachments: PropTypes.bool,
-  showUploadDropzone: PropTypes.bool,
-  attachments: PropTypes.array,
-  onAttachmentsChange: PropTypes.func,
-  existingAttachments: PropTypes.array,
-  onRemoveExistingAttachment: PropTypes.func,
-  onDownloadAttachment: PropTypes.func,
-  enableMentions: PropTypes.bool,
-  mentionResults: PropTypes.shape({
-    data: PropTypes.array,
-    isFetching: PropTypes.bool
-  }),
-  onMentionQueryChange: PropTypes.func
 }
 
 export default CommentForm

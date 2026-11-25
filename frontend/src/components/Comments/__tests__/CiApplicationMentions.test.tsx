@@ -8,7 +8,7 @@ import Comments from '@/components/Comments'
 // the feature is wired up for whichever entityType is passed in, including
 // CI applications.
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key) => key })
+  useTranslation: () => ({ t: (key: string) => key })
 }))
 
 const mockApiService = {
