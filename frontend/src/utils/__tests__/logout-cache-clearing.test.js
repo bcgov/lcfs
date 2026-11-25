@@ -10,6 +10,7 @@ vi.mock('keycloak-js', () => {
         authenticated: true,
         token: 'mock-token',
         idToken: 'mock-id-token',
+        logout: vi.fn().mockResolvedValue(undefined),
         tokenParsed: {
           exp: Math.floor(Date.now() / 1000) + 300,
           idToken: 'mock-id-token'
