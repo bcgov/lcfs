@@ -560,7 +560,11 @@ const SummaryTable = ({
                             row.bold
                               ? 'bold'
                               : 'normal',
-                          whiteSpace: 'nowrap',
+                          whiteSpace:
+                            tableType === 'renewable' &&
+                            column.id === 'description'
+                              ? 'normal'
+                              : 'nowrap',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           display: 'block'
@@ -606,6 +610,17 @@ const SummaryTable = ({
                               useParenthesis,
                               maxDecimals
                             )
+                          }
+
+                          if (
+                            tableType === 'renewable' &&
+                            column.id === 'description' &&
+                            [6, 8].includes(Number(row.line)) &&
+                            row.maxGasoline != null &&
+                            row.maxDiesel != null &&
+                            row.maxJetFuel != null
+                          ) {
+                            return `${rawValue} Maximum: gasoline=${Number(row.maxGasoline).toLocaleString('en-CA')}; diesel=${Number(row.maxDiesel).toLocaleString('en-CA')}; jet fuel=${Number(row.maxJetFuel).toLocaleString('en-CA')}.`
                           }
 
                           return rawValue

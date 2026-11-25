@@ -287,6 +287,30 @@ describe('SummaryTable', () => {
   })
 
   describe('Basic Rendering', () => {
+    it('shows backend-calculated maxima in the renewable line description', () => {
+      customRender(
+        <SummaryTable
+          tableType="renewable"
+          columns={basicColumns}
+          data={[
+            {
+              line: 6,
+              description: 'Renewable fuel retained',
+              maxGasoline: 351_988,
+              maxDiesel: 675_827,
+              maxJetFuel: 0
+            }
+          ]}
+        />
+      )
+
+      const description = screen.getByText(
+        'Renewable fuel retained Maximum: gasoline=351,988; diesel=675,827; jet fuel=0.'
+      )
+      expect(description).toBeInTheDocument()
+      expect(description).toHaveStyle({ whiteSpace: 'normal' })
+    })
+
     it('renders table with title and basic structure', () => {
       customRender(<SummaryTable {...defaultProps} />)
 
