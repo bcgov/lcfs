@@ -4,7 +4,13 @@ import { BCMetricCard } from '../BCMetricCard'
 import { test } from '@/tests/utils/fixtures'
 
 vi.mock('../BCResponsiveEchart', () => ({
-  BCResponsiveEChart: ({ option, ariaLabel }) => (
+  BCResponsiveEChart: ({
+    option,
+    ariaLabel
+  }: {
+    option?: unknown
+    ariaLabel?: string
+  }) => (
     <div
       data-test="bc-responsive-echart"
       role="img"

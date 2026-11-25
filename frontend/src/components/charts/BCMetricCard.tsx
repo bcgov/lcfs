@@ -4,6 +4,16 @@ import Grid from '@mui/material/Grid'
 import Stack from '@mui/material/Stack'
 import { BCResponsiveEChart } from './BCResponsiveEchart'
 import BCTypography from '../BCTypography'
+import type { EChartsOption } from 'echarts'
+import type { ReactNode } from 'react'
+
+type BCMetricCardProps = {
+  title: string
+  value: ReactNode
+  subtitle?: ReactNode
+  option?: EChartsOption
+  ariaLabel?: string
+}
 
 export const BCMetricCard = ({
   title,
@@ -11,7 +21,7 @@ export const BCMetricCard = ({
   subtitle = undefined,
   option = undefined,
   ariaLabel = undefined
-}) => {
+}: BCMetricCardProps) => {
   return (
     <Card
       tabIndex={0}

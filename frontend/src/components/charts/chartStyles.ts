@@ -1,3 +1,14 @@
+import type {
+  EChartsOption,
+  LineSeriesOption,
+  BarSeriesOption,
+  TooltipComponentOption
+} from 'echarts'
+
+type StandardChartOptions = Omit<EChartsOption, 'tooltip'> & {
+  tooltip?: TooltipComponentOption
+}
+
 export const BC_CHART_COLORS = {
   green: '#026833',
   teal: '#006085',
@@ -59,7 +70,12 @@ export const bcChartTextStyle = {
 export const getChartColor = (index = 0) =>
   BC_CHART_PALETTE[index % BC_CHART_PALETTE.length]
 
-export const getStandardLineSeriesStyle = (index = 0) => {
+export const getStandardLineSeriesStyle = (
+  index = 0
+): Pick<
+  LineSeriesOption,
+  'symbol' | 'symbolSize' | 'itemStyle' | 'lineStyle'
+> => {
   const color = getChartColor(index)
   return {
     symbol: 'circle',
@@ -76,32 +92,40 @@ export const getStandardLineSeriesStyle = (index = 0) => {
   }
 }
 
-export const getStandardBarSeriesStyle = (index = 0) => ({
+export const getStandardBarSeriesStyle = (
+  index = 0
+): Pick<BarSeriesOption, 'itemStyle'> => ({
   itemStyle: {
     color: getChartColor(index)
   }
 })
 
-const BC_CHART_TOOLTIP_OPTIONS = {
+const BC_CHART_TOOLTIP_OPTIONS: TooltipComponentOption = {
   appendTo: 'body',
   appendToBody: true,
   confine: false,
   extraCssText: 'z-index: 1500;'
 }
 
-export const getStandardChartOptions = (overrides = {}) => {
+export const getStandardChartOptions = (
+  overrides: StandardChartOptions = {}
+): EChartsOption => {
   const { tooltip, ...rest } = overrides
+  const mergedTooltip: TooltipComponentOption | undefined =
+    tooltip === undefined
+      ? undefined
+      : {
+          ...BC_CHART_TOOLTIP_OPTIONS,
+          ...tooltip
+        }
 
   return {
     color: BC_CHART_PALETTE,
     ...rest,
-    ...(tooltip === undefined
+    ...(mergedTooltip === undefined
       ? {}
       : {
-          tooltip: {
-            ...BC_CHART_TOOLTIP_OPTIONS,
-            ...tooltip
-          }
+          tooltip: mergedTooltip
         })
   }
 }

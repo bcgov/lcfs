@@ -89,3 +89,20 @@ declare module 'mammoth/mammoth.browser' {
 
   export default mammoth
 }
+
+declare module 'swagger-ui-react' {
+  import type { ComponentType } from 'react'
+
+  export interface SwaggerUIRequest {
+    headers: Record<string, string>
+    [key: string]: unknown
+  }
+
+  export interface SwaggerUIProps {
+    url: string
+    requestInterceptor: (request: SwaggerUIRequest) => SwaggerUIRequest
+  }
+
+  const SwaggerUI: ComponentType<SwaggerUIProps>
+  export default SwaggerUI
+}

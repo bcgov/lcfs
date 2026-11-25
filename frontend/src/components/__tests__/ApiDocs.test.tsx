@@ -3,13 +3,14 @@ import { screen } from '@testing-library/react'
 import { useTranslation } from 'react-i18next'
 import { expect } from 'vite-plus/test'
 import { test } from '@/tests/utils/fixtures'
+import type { SwaggerUIProps } from 'swagger-ui-react'
 
 const keycloak = vi.hoisted(() => ({
   useKeycloak: vi.fn()
 }))
 vi.mock('@react-keycloak/web', () => keycloak)
 vi.mock('swagger-ui-react', () => ({
-  default: ({ url, requestInterceptor }) => (
+  default: ({ url, requestInterceptor }: SwaggerUIProps) => (
     <div data-test="swaggerui">
       <p>{url}</p>
       <p>{requestInterceptor({ headers: {} }).headers.Authorization}</p>
@@ -17,7 +18,7 @@ vi.mock('swagger-ui-react', () => ({
   )
 }))
 
-describe('ApiDocs.jsx', () => {
+describe('ApiDocs.tsx', () => {
   afterEach(() => {
     vi.clearAllMocks()
   })

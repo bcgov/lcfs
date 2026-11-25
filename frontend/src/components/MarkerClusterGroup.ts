@@ -6,8 +6,14 @@ import markerClusterGroupModule from 'react-leaflet-cluster'
 // `module.exports` object rather than the component, and rendering it fails
 // with React error #130. Unwrap it here; test mocks (and bundlers that honour
 // `__esModule`) already hand back the component itself.
-const MarkerClusterGroup = markerClusterGroupModule?.__esModule
-  ? markerClusterGroupModule.default
-  : markerClusterGroupModule
+type MarkerClusterGroupModule =
+  | typeof markerClusterGroupModule
+  | { __esModule: true; default: typeof markerClusterGroupModule }
+
+const importedModule = markerClusterGroupModule as MarkerClusterGroupModule
+const MarkerClusterGroup =
+  '__esModule' in importedModule && importedModule.__esModule
+    ? importedModule.default
+    : importedModule
 
 export default MarkerClusterGroup

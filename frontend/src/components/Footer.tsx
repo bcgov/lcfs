@@ -3,7 +3,7 @@ import BCFooter from '@/components/BCFooter'
 
 /* global __APP_VERSION__ */
 
-const Footer = () => {
+const Footer = (): JSX.Element => {
   const links = useMemo(
     () => [
       {

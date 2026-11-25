@@ -2,15 +2,17 @@ import Box from '@mui/material/Box'
 import * as echarts from 'echarts/core'
 import { AriaComponent } from 'echarts/components'
 import { useEffect, useRef } from 'react'
+import type { EChartsOption, ECharts } from 'echarts'
+import type { SystemStyleObject } from '@mui/system'
+import type { Theme } from '@mui/material/styles'
 
 echarts.use([AriaComponent])
 
-/**
- * @param {import('echarts').EChartsOption} option
- * @param {string | undefined} ariaLabel
- * @param {string | undefined} ariaDescription
- */
-const getAccessibleOption = (option, ariaLabel, ariaDescription) => {
+const getAccessibleOption = (
+  option: EChartsOption,
+  ariaLabel?: string,
+  ariaDescription?: string
+): EChartsOption => {
   if (!option || typeof option !== 'object') return option
 
   const existingAria = option.aria || {}
@@ -37,7 +39,10 @@ const getAccessibleOption = (option, ariaLabel, ariaDescription) => {
     ...option,
     aria: {
       ...existingAria,
-      enabled: existingAria.enabled ?? existingAria.show ?? true,
+      enabled:
+        existingAria.enabled ??
+        (existingAria as typeof existingAria & { show?: boolean }).show ??
+        true,
       ...(description != null || Object.keys(general).length
         ? {
             label: {
@@ -51,17 +56,16 @@ const getAccessibleOption = (option, ariaLabel, ariaDescription) => {
   }
 }
 
-/**
- * @param {{
- *   option: import('echarts').EChartsOption,
- *   height?: number | string,
- *   ariaLabel?: string,
- *   ariaDescription?: string,
- *   ariaDescribedBy?: string,
- *   tabIndex?: number,
- *   sx?: import('@mui/system').SystemStyleObject<import('@mui/material/styles').Theme>
- * }} props
- */
+type BCResponsiveEChartProps = {
+  option?: EChartsOption | null
+  height?: number | string
+  ariaLabel?: string
+  ariaDescription?: string
+  ariaDescribedBy?: string
+  tabIndex?: number
+  sx?: SystemStyleObject<Theme>
+}
+
 export const BCResponsiveEChart = ({
   option,
   height = 300,
@@ -70,9 +74,9 @@ export const BCResponsiveEChart = ({
   ariaDescribedBy = undefined,
   tabIndex = 0,
   sx = undefined
-}) => {
-  const chartRef = useRef(null)
-  const chartInstance = useRef(null)
+}: BCResponsiveEChartProps) => {
+  const chartRef = useRef<HTMLDivElement | null>(null)
+  const chartInstance = useRef<ECharts | null>(null)
 
   useEffect(() => {
     if (!chartRef.current) return
@@ -83,7 +87,7 @@ export const BCResponsiveEChart = ({
       chartInstance.current?.resize()
     }
 
-    let resizeObserver
+    let resizeObserver: ResizeObserver | undefined
     if (typeof ResizeObserver !== 'undefined') {
       resizeObserver = new ResizeObserver(handleResize)
       resizeObserver.observe(chartRef.current)

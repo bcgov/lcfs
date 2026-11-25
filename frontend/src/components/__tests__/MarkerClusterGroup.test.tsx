@@ -1,8 +1,13 @@
 import { describe, it, expect, vi, afterEach } from 'vite-plus/test'
+import type { ReactNode } from 'react'
 
-const ClusterComponent = ({ children }) => children
+const ClusterComponent = ({ children }: { children?: ReactNode }) => children
 
-const loadWithModule = async (moduleDefault) => {
+const loadWithModule = async (
+  moduleDefault:
+    | typeof ClusterComponent
+    | { __esModule: true; default: typeof ClusterComponent }
+) => {
   vi.resetModules()
   vi.doMock('react-leaflet-cluster', () => ({ default: moduleDefault }))
   return (await import('@/components/MarkerClusterGroup')).default
