@@ -5,6 +5,48 @@ import {
   parseMentionTrigger
 } from './mentionUtils'
 import { mentionBlotRegistered } from './quillExtensions'
+import type ReactQuill from 'react-quill'
+import type { RefObject } from 'react'
+import type { MentionableUser } from '@/hooks/useMentionableUsers'
+
+interface QuillEditor {
+  getSelection: () => { index: number; length: number } | null
+  getContents: (
+    index: number,
+    length: number
+  ) => { ops: Array<{ insert: string | object }> }
+  getBounds: (
+    index: number,
+    length: number
+  ) => { left: number; top: number; height: number }
+  root: HTMLElement
+  container: HTMLElement
+  getModule: (name: string) => { container?: HTMLElement } | undefined
+  deleteText: (index: number, length: number, source: string) => void
+  insertEmbed: (
+    index: number,
+    type: string,
+    value: unknown,
+    source: string
+  ) => void
+  insertText: (index: number, text: string, source: string) => void
+  setSelection: (index: number, length: number, source: string) => void
+  hasFocus: () => boolean
+  getLength: () => number
+  getText: (index: number, length: number) => string
+  focus: () => void
+}
+interface MentionEditorOptions {
+  quillRef: RefObject<ReactQuill | null>
+  enabled: boolean
+  results: { data?: MentionableUser[]; isFetching?: boolean }
+  onQueryChange: (query: string | null) => void
+}
+interface MentionState {
+  anchorIndex: number
+  query: string
+  activeIndex: number
+}
 
 // How far back from the caret to look for an "@query".
 const TRIGGER_LOOKBACK = 60
@@ -21,7 +63,7 @@ const EMPTY_RECT = {
 const NAVIGATION_KEYS = ['ArrowDown', 'ArrowUp', 'Enter', 'Tab', 'Escape']
 
 // Scrolls only the options list. `scrollIntoView` would also scroll the page.
-const scrollOptionIntoView = (index) => {
+const scrollOptionIntoView = (index: number) => {
   const option = document.getElementById(getMentionOptionId(index))
   const list = document.getElementById(MENTION_LISTBOX_ID)
   if (!option || !list) return
@@ -46,9 +88,9 @@ export const useMentionEditor = ({
   enabled,
   results,
   onQueryChange
-}) => {
+}: MentionEditorOptions) => {
   // Non-null while a lookup is open: { anchorIndex, query, activeIndex }
-  const [mention, setMention] = useState(null)
+  const [mention, setMention] = useState<MentionState | null>(null)
   const users = useMemo(() => results.data || [], [results.data])
 
   // Read by the toolbar handler, which must keep a stable identity.
@@ -58,17 +100,17 @@ export const useMentionEditor = ({
   }, [enabled])
 
   const getQuill = useCallback(
-    () => quillRef.current?.getEditor?.(),
+    () => quillRef.current?.getEditor?.() as QuillEditor | undefined,
     [quillRef]
   )
   const closeMention = useCallback(() => setMention(null), [])
   const setActiveIndex = useCallback(
-    (activeIndex) =>
+    (activeIndex: number) =>
       setMention((prev) => (prev ? { ...prev, activeIndex } : prev)),
     []
   )
 
-  const openMention = useCallback((anchorIndex, query) => {
+  const openMention = useCallback((anchorIndex: number, query: string) => {
     setMention((prev) => ({
       anchorIndex,
       query,
@@ -102,7 +144,10 @@ export const useMentionEditor = ({
 
   // Call from the editor's onChange to open, update or close the dropdown.
   const handleEditorChange = useCallback(
-    (editor) => {
+    (editor: {
+      getSelection: () => { index: number; length: number } | null
+      getContents: QuillEditor['getContents']
+    }) => {
       if (!enabled) return
       const selection = editor.getSelection()
       if (!selection || selection.length > 0) {
@@ -128,7 +173,11 @@ export const useMentionEditor = ({
 
   // Caret moved or the editor lost focus: re-evaluate, or close the dropdown.
   const handleSelectionChange = useCallback(
-    (range, _source, editor) => {
+    (
+      range: unknown,
+      _source: string,
+      editor: Parameters<typeof handleEditorChange>[0]
+    ) => {
       if (range) handleEditorChange(editor)
       else closeMention()
     },
@@ -136,7 +185,7 @@ export const useMentionEditor = ({
   )
 
   const selectMention = useCallback(
-    (user) => {
+    (user: MentionableUser) => {
       const quill = getQuill()
       if (!quill || !mention) return
       const { anchorIndex, query } = mention
@@ -200,13 +249,16 @@ export const useMentionEditor = ({
 
     // The editor and its toolbar count, as does "nothing focused": clicking
     // the toolbar "@" can leave focus on the button or on <body>.
-    const toolbar = getQuill()?.getModule('toolbar')?.container
-    const isInScope = (target) =>
-      container.contains(target) ||
-      !!toolbar?.contains(target) ||
+    const toolbarModule = getQuill()?.getModule('toolbar') as
+      | { container?: HTMLElement }
+      | undefined
+    const toolbar = toolbarModule?.container
+    const isInScope = (target: EventTarget | null) =>
+      (target instanceof Node && container.contains(target)) ||
+      (target instanceof Node && !!toolbar?.contains(target)) ||
       target === document.body
 
-    const onKeyDown = (event) => {
+    const onKeyDown = (event: KeyboardEvent) => {
       if (!isInScope(event.target) || !NAVIGATION_KEYS.includes(event.key)) {
         return
       }

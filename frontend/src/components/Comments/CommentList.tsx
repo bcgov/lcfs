@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import PropTypes from 'prop-types'
 import { GlobalStyles } from '@mui/system'
 import Avatar from '@mui/material/Avatar'
 import Tooltip from '@mui/material/Tooltip'
@@ -21,6 +20,69 @@ import CommentActionButton from './CommentActionButton'
 import CommentAttachments from './CommentAttachments'
 import { sanitizeCommentHtml } from '@/utils/sanitizeCommentHtml'
 import { MENTION_CHIP_STYLE } from './mentionUtils'
+import type { MentionableUser } from '@/hooks/useMentionableUsers'
+
+type Visibility = string
+type AddCommentArgs = [commentText: string, visibility?: string]
+interface CommentRecord {
+  internalCommentId: number | string
+  comment: string
+  fullName?: string | null
+  createDate?: string | null
+  createUser?: string | null
+  updateDate?: string | null
+  updateUser?: string | null
+  updateFullName?: string | null
+  visibility?: Visibility | null
+  documents?: Array<{
+    documentId: number
+    fileName: string
+    displayName?: string | null
+    createUser?: string | null
+    createDate?: string | null
+  }>
+  isOptimistic?: boolean
+  [key: string]: unknown
+}
+interface CommentListProps {
+  comments: CommentRecord[]
+  onAddComment: (...args: AddCommentArgs) => Promise<void> | void
+  onEditComment: (
+    id: number | string,
+    text: string,
+    visibility: Visibility,
+    changes: { newFiles: File[]; removedDocumentIds: Array<number | string> }
+  ) => Promise<void> | void
+  onCancelEdit?: (id: number | string) => void
+  onDeleteComment?: (id: number | string) => Promise<unknown> | void
+  isDeletingComment?: boolean
+  showTitle?: boolean
+  placeholder?: string
+  canCreateComment?: boolean
+  showAddCommentBtn?: boolean
+  isAddingComment?: boolean
+  isEditingComment?: boolean
+  commentInput?: string
+  onCommentInputChange?: (value: string) => void
+  commentMode?: 'internal-only' | 'dual'
+  visibility?: string
+  onVisibilityChange?: (value: string) => void
+  allowInternalVisibility?: boolean
+  enableAttachments?: boolean
+  showUploadDropzone?: boolean
+  attachments?: File[]
+  onAttachmentsChange?: (files: File[]) => void
+  onDownloadAttachment?: (
+    commentId: number | string,
+    documentId: number,
+    fileName: string
+  ) => Promise<void> | void
+  sortOrder?: 'asc' | 'desc'
+  enableSorting?: boolean
+  onSortOrderChange?: (order: 'asc' | 'desc') => void
+  mentionResults?: { data?: MentionableUser[]; isFetching?: boolean }
+  onMentionQueryChange?: (query: string | null) => void
+}
 
 const CommentList = ({
   comments,
@@ -51,19 +113,25 @@ const CommentList = ({
   onSortOrderChange,
   mentionResults = { data: [], isFetching: false },
   onMentionQueryChange = () => {}
-}) => {
+}: CommentListProps) => {
   const { t } = useTranslation(['internalComment'])
   const { data: currentUser, hasAnyRole } = useCurrentUser()
-  const [editCommentId, setEditCommentId] = useState(null)
+  const [editCommentId, setEditCommentId] = useState<number | string | null>(
+    null
+  )
   const [editCommentText, setEditCommentText] = useState('')
-  const [editVisibility, setEditVisibility] = useState('Internal')
+  const [editVisibility, setEditVisibility] = useState<Visibility>('Internal')
   const [editOriginalVisibility, setEditOriginalVisibility] =
-    useState('Internal')
+    useState<Visibility>('Internal')
   const [commentFilter, setCommentFilter] = useState('all')
   // Attachment changes staged while editing a comment.
-  const [editNewFiles, setEditNewFiles] = useState([])
-  const [editRemovedDocIds, setEditRemovedDocIds] = useState([])
-  const [deleteCommentId, setDeleteCommentId] = useState(null)
+  const [editNewFiles, setEditNewFiles] = useState<File[]>([])
+  const [editRemovedDocIds, setEditRemovedDocIds] = useState<
+    Array<number | string>
+  >([])
+  const [deleteCommentId, setDeleteCommentId] = useState<
+    number | string | null
+  >(null)
 
   const isGov = hasAnyRole(
     roles.analyst,
@@ -75,7 +143,11 @@ const CommentList = ({
   const isAdmin = hasAnyRole(roles.administrator)
   const isDualMode = commentMode === 'dual'
 
-  const startEditing = (id, text, visibilityValue = 'Internal') => {
+  const startEditing = (
+    id: number | string,
+    text: string,
+    visibilityValue: Visibility = 'Internal'
+  ) => {
     if (editCommentId !== null) onCancelEdit?.(editCommentId)
     setEditCommentId(id)
     setEditCommentText(text)
@@ -96,6 +168,7 @@ const CommentList = ({
   }
 
   const submitEdit = async () => {
+    if (editCommentId === null) return
     const performEdit = async () => {
       try {
         await onEditComment(editCommentId, editCommentText, editVisibility, {
@@ -119,12 +192,12 @@ const CommentList = ({
     }
     await performEdit()
   }
-  const handleEditCommentChange = (value) => {
+  const handleEditCommentChange = (value: string) => {
     setEditCommentText(value)
   }
   // Matches the organization Comment Log format, e.g. "September 24, 2026 at 2:15 PM".
-  const formatDate = (dateString) => {
-    const options = {
+  const formatDate = (dateString: string | null | undefined) => {
+    const options: Intl.DateTimeFormatOptions = {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -132,7 +205,8 @@ const CommentList = ({
       minute: '2-digit',
       hour12: true
     }
-    return new Date(dateString).toLocaleDateString(undefined, options)
+    const date = dateString === null ? new Date(0) : new Date(dateString ?? '')
+    return date.toLocaleDateString(undefined, options)
   }
 
   const CommentTimestamp = ({
@@ -141,6 +215,12 @@ const CommentList = ({
     updateFullName,
     updateUser,
     createUser
+  }: {
+    createDate?: string | null
+    updateDate?: string | null
+    updateFullName?: string | null
+    updateUser?: string | null
+    createUser?: string | null
   }) => {
     const isEdited = updateDate && createDate !== updateDate
     const editorName = updateFullName || updateUser
@@ -180,7 +260,7 @@ const CommentList = ({
     )
   }
 
-  const getInitials = (name) => {
+  const getInitials = (name?: string | null) => {
     if (!name) {
       return ''
     }
@@ -233,7 +313,7 @@ const CommentList = ({
     })
   }, [comments, commentFilter, showCommentTabs])
 
-  const performAddComment = async (...args) => {
+  const performAddComment = async (...args: AddCommentArgs) => {
     await onAddComment(...args)
     if (showCommentTabs && commentFilter !== 'all') {
       setCommentFilter('all')
@@ -243,9 +323,11 @@ const CommentList = ({
     }
   }
 
-  const [pendingPublicAction, setPendingPublicAction] = useState(null)
+  const [pendingPublicAction, setPendingPublicAction] = useState<
+    (() => Promise<void>) | null
+  >(null)
 
-  const handleAddComment = async (...args) => {
+  const handleAddComment = async (...args: AddCommentArgs) => {
     if (isDualMode && isGov && visibility === 'Public') {
       setPendingPublicAction(() => () => performAddComment(...args))
       return
@@ -649,7 +731,7 @@ const CommentList = ({
                   {(comment.documents || []).length > 0 && (
                     <CommentAttachments
                       commentId={comment.internalCommentId}
-                      documents={comment.documents}
+                      documents={comment.documents || []}
                       onDownload={
                         onDownloadAttachment
                           ? (documentId, fileName) =>
@@ -707,7 +789,7 @@ const CommentList = ({
             primaryButtonAction: async () => {
               if (isDeletingComment) return
               try {
-                await onDeleteComment(deleteCommentId)
+                await onDeleteComment?.(deleteCommentId)
               } catch {
                 // The parent displays the mutation error after the dialog closes.
               } finally {
@@ -740,56 +822,6 @@ const CommentList = ({
       )}
     </>
   )
-}
-
-CommentList.propTypes = {
-  comments: PropTypes.arrayOf(
-    PropTypes.shape({
-      internalCommentId: PropTypes.oneOfType([
-        PropTypes.number,
-        PropTypes.string
-      ]).isRequired,
-      comment: PropTypes.string.isRequired,
-      fullName: PropTypes.string.isRequired,
-      createDate: PropTypes.string.isRequired,
-      updateDate: PropTypes.string,
-      updateUser: PropTypes.string,
-      updateFullName: PropTypes.string,
-      createUser: PropTypes.string,
-      visibility: PropTypes.string,
-      documents: PropTypes.array
-    })
-  ).isRequired,
-  onAddComment: PropTypes.func.isRequired,
-  onEditComment: PropTypes.func.isRequired,
-  onCancelEdit: PropTypes.func,
-  onDeleteComment: PropTypes.func,
-  isDeletingComment: PropTypes.bool,
-  showTitle: PropTypes.bool,
-  placeholder: PropTypes.string,
-  canCreateComment: PropTypes.bool,
-  showAddCommentBtn: PropTypes.bool,
-  isAddingComment: PropTypes.bool,
-  isEditingComment: PropTypes.bool,
-  commentInput: PropTypes.string,
-  onCommentInputChange: PropTypes.func,
-  commentMode: PropTypes.oneOf(['internal-only', 'dual']),
-  visibility: PropTypes.oneOf(['Internal', 'Public']),
-  onVisibilityChange: PropTypes.func,
-  allowInternalVisibility: PropTypes.bool,
-  enableAttachments: PropTypes.bool,
-  showUploadDropzone: PropTypes.bool,
-  attachments: PropTypes.array,
-  onAttachmentsChange: PropTypes.func,
-  onDownloadAttachment: PropTypes.func,
-  sortOrder: PropTypes.oneOf(['asc', 'desc']),
-  enableSorting: PropTypes.bool,
-  onSortOrderChange: PropTypes.func,
-  mentionResults: PropTypes.shape({
-    data: PropTypes.array,
-    isFetching: PropTypes.bool
-  }),
-  onMentionQueryChange: PropTypes.func
 }
 
 export default CommentList

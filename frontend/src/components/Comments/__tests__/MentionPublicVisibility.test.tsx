@@ -5,7 +5,7 @@ import { useState } from 'react'
 import CommentForm from '../CommentForm'
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key) => key })
+  useTranslation: () => ({ t: (key: string) => key })
 }))
 
 beforeAll(() => {
@@ -21,20 +21,27 @@ beforeAll(() => {
     toJSON: () => ({})
   }
   Range.prototype.getBoundingClientRect = () => rect
-  Range.prototype.getClientRects = () => ({
-    length: 0,
-    item: () => null,
-    [Symbol.iterator]: function* () {}
-  })
+  Range.prototype.getClientRects = () => {
+    const rects: DOMRect[] = []
+    return {
+      length: rects.length,
+      item: (index: number) => rects[index] ?? null,
+      [Symbol.iterator]: () => rects[Symbol.iterator]()
+    }
+  }
 })
 
 const MENTION_HTML =
   '<p>Hi <span class="mention" data-mention-id="5" ' +
   'data-mention-name="Jane Doe">@Jane Doe</span> there</p>'
 
-const Harness = ({ onSubmit = () => {} }) => {
+const Harness = ({
+  onSubmit = () => {}
+}: {
+  onSubmit?: (text: string, visibility?: string) => void
+}) => {
   const [commentText, setCommentText] = useState(MENTION_HTML)
-  const [visibility, setVisibility] = useState('Internal')
+  const [visibility, setVisibility] = useState<string>('Internal')
   return (
     <CommentForm
       title="Edit comment:"
@@ -111,7 +118,9 @@ describe('Mentions when switching a comment to Public', () => {
     fireEvent.click(screen.getByText('internalComment:removeMentions'))
 
     expect(document.querySelector('.ql-editor .mention')).toBeNull()
-    const text = document.querySelector('.ql-editor').textContent
+    const editor = document.querySelector<HTMLElement>('.ql-editor')
+    if (!editor) throw new Error('Expected the comment editor')
+    const text = editor.textContent
     expect(text).not.toContain('Jane Doe')
     expect(text).toContain('Hi')
     expect(text).toContain('there')
@@ -143,7 +152,13 @@ describe('Mentions when switching a comment to Public', () => {
     theme
   }) => {
     render(<Harness />, [theme])
-    const button = () => document.querySelector('.ql-toolbar .ql-mention')
+    const button = () => {
+      const element = document.querySelector<HTMLButtonElement>(
+        '.ql-toolbar .ql-mention'
+      )
+      if (!element) throw new Error('Expected the mention toolbar button')
+      return element
+    }
 
     expect(button().getAttribute('aria-disabled')).toBeNull()
     switchToPublic()
@@ -161,10 +176,11 @@ describe('Mentions when switching a comment to Public', () => {
     render(<Harness />, [theme])
     switchToPublic()
 
-    const editor = document.querySelector('.ql-container')
+    const editor = document.querySelector<HTMLElement>('.ql-container')
     const warning = document.querySelector(
       '[data-test="comment-mention-conflict"]'
     )
+    if (!editor || !warning) throw new Error('Expected editor and warning')
     expect(
       editor.compareDocumentPosition(warning) & Node.DOCUMENT_POSITION_PRECEDING
     ).toBeTruthy()

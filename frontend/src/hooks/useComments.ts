@@ -40,8 +40,8 @@ const DEFAULT_STALE_TIME = 5 * 60 * 1000
 const DEFAULT_CACHE_TIME = 15 * 60 * 1000
 
 export const useComments = (
-  entityType: string,
-  entityId: number | string,
+  entityType: string | null | undefined,
+  entityId: number | string | null | undefined,
   options: CommentOptions = {}
 ) => {
   const apiService = useApiService()
@@ -156,7 +156,7 @@ export const useComments = (
   const isDualMode = commentMode === 'dual'
 
   // Visibility state for dual mode (gov users can toggle, BCeID forced to Public)
-  const [visibility, setVisibility] = useState(
+  const [visibility, setVisibility] = useState<string>(
     isDualMode && !isGov ? 'Public' : 'Internal'
   )
 

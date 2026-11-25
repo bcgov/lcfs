@@ -1,6 +1,7 @@
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { vi, describe, it, expect, beforeEach } from 'vite-plus/test'
+import type { ReactNode } from 'react'
 import { useComments } from '../useComments'
 
 // Mock the API service
@@ -40,7 +41,7 @@ const createWrapper = () => {
       mutations: { retry: false }
     }
   })
-  return function QueryWrapper({ children }) {
+  return function QueryWrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     )
@@ -1039,7 +1040,7 @@ describe('penalty attachment recovery', () => {
       data: { internalCommentId: 42, comment: 'Evidence' }
     })
     const { result } = renderHook(() => useComments('penaltyLog', 7), {
-      wrapper: ({ children }) => (
+      wrapper: ({ children }: { children: ReactNode }) => (
         <QueryClientProvider client={queryClient}>
           {children}
         </QueryClientProvider>
@@ -1049,8 +1050,8 @@ describe('penalty attachment recovery', () => {
     await act(async () => {
       await result.current.addComment()
     })
-    expect(queryClient.getQueryState(affectedKey).isInvalidated).toBe(true)
-    expect(queryClient.getQueryState(unrelatedKey).isInvalidated).toBe(false)
+    expect(queryClient.getQueryState(affectedKey)?.isInvalidated).toBe(true)
+    expect(queryClient.getQueryState(unrelatedKey)?.isInvalidated).toBe(false)
   })
 })
 

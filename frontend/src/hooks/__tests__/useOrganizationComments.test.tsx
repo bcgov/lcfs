@@ -4,21 +4,21 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import React from 'react'
 
-import { useApiService } from '@/services/useApiService'
 import {
   parseFiltersFromParams,
   useOrganizationComments
 } from '../useOrganizationComments'
 
-vi.mock('@/services/useApiService')
+const mockGet = vi.hoisted(() => vi.fn())
+vi.mock('@/services/useApiService', () => ({
+  useApiService: () => ({ get: mockGet })
+}))
 
-const mockGet = vi.fn()
-
-const makeWrapper = (initialEntries) => {
+const makeWrapper = (initialEntries?: string[]) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: 0 } }
   })
-  return function QueryWrapper({ children }) {
+  return function QueryWrapper({ children }: { children: React.ReactNode }) {
     return React.createElement(
       QueryClientProvider,
       { client },
@@ -32,7 +32,7 @@ const makeWrapper = (initialEntries) => {
 }
 
 // Helper hook that surfaces the URL so we can assert on it.
-const useHookWithLocation = (orgID) => {
+const useHookWithLocation = (orgID: number | string | undefined | null) => {
   const hook = useOrganizationComments(orgID)
   const location = useLocation()
   return { hook, search: location.search }
@@ -87,7 +87,6 @@ describe('parseFiltersFromParams', () => {
 
 describe('useOrganizationComments', () => {
   beforeEach(() => {
-    vi.mocked(useApiService).mockReturnValue({ get: mockGet })
     mockGet.mockReset()
     mockGet.mockResolvedValue({
       data: {

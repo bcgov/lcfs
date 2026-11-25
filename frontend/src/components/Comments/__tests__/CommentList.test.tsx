@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, vi } from 'vite-plus/test'
 import { roles } from '@/constants/roles'
 import CommentList from '../CommentList'
 import axe from 'axe-core'
+import type { ComponentProps } from 'react'
 
 vi.unmock('@/components/BCBox')
 
@@ -14,23 +15,33 @@ const mockUserState = vi.hoisted(() => ({
 }))
 
 vi.mock('react-quill', () => {
-  const ReactQuill = ({ value, onChange, placeholder }) => (
-    <textarea
-      aria-label="Comment editor"
-      value={value}
-      placeholder={placeholder}
-      onChange={(event) => onChange?.(event.target.value)}
-    />
+  const ReactQuill = Object.assign(
+    ({
+      value,
+      onChange,
+      placeholder
+    }: {
+      value: string
+      onChange?: (value: string) => void
+      placeholder?: string
+    }) => (
+      <textarea
+        aria-label="Comment editor"
+        value={value}
+        placeholder={placeholder}
+        onChange={(event) => onChange?.(event.target.value)}
+      />
+    ),
+    { Quill: { import: () => ({}) } }
   )
   // Mirror the real module: Quill is a static property of the default export.
-  ReactQuill.Quill = { import: () => ({}) }
   return { default: ReactQuill }
 })
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key, options) => {
-      const translations = {
+    t: (key: string, options?: { name?: string; defaultValue?: string }) => {
+      const translations: Record<string, string> = {
         'internalComment:addComment': 'Add comment',
         'internalComment:allComments': 'All comments',
         'internalComment:commentFilterTabs': 'Comment filters',
@@ -78,7 +89,7 @@ vi.mock('react-i18next', () => ({
 vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: () => ({
     data: { keycloakUsername: mockUserState.username },
-    hasAnyRole: (...names) =>
+    hasAnyRole: (...names: string[]) =>
       names.some((name) => mockUserState.roles.includes(name))
   })
 }))
@@ -90,7 +101,7 @@ const baseProps = {
       comment: 'Internal comment body',
       fullName: 'Internal User',
       createDate: '2026-06-01T12:00:00Z',
-      visibility: 'Internal',
+      visibility: 'Internal' as const,
       createUser: 'other-user'
     },
     {
@@ -98,7 +109,7 @@ const baseProps = {
       comment: 'Public comment body',
       fullName: 'Public User',
       createDate: '2026-06-02T12:00:00Z',
-      visibility: 'Public',
+      visibility: 'Public' as const,
       createUser: 'other-user'
     }
   ],
@@ -108,11 +119,11 @@ const baseProps = {
   isEditingComment: false,
   commentInput: '',
   onCommentInputChange: vi.fn(),
-  commentMode: 'dual',
-  visibility: 'Internal',
+  commentMode: 'dual' as const,
+  visibility: 'Internal' as const,
   onVisibilityChange: vi.fn(),
   allowInternalVisibility: true
-}
+} satisfies ComponentProps<typeof CommentList>
 
 describe('CommentList comment filters', () => {
   beforeEach(() => {
@@ -140,7 +151,9 @@ describe('CommentList comment filters', () => {
     theme
   }) => {
     const { container } = render(<CommentList {...baseProps} />, [theme])
-    const cards = container.querySelectorAll('[data-test="comment-card"]')
+    const cards = container.querySelectorAll<HTMLElement>(
+      '[data-test="comment-card"]'
+    )
 
     expect(cards[0]).toHaveAttribute('data-visibility', 'Internal')
     expect(within(cards[0]).getByText('Internal')).toBeInTheDocument()
@@ -357,7 +370,7 @@ describe('CommentList comment filters', () => {
             comment: 'Internal editable comment',
             fullName: 'IDIR User',
             createDate: '2026-06-01T12:00:00Z',
-            visibility: 'Internal',
+            visibility: 'Internal' as const,
             createUser: 'idir-user'
           }
         ]}
@@ -414,7 +427,7 @@ describe('CommentList attachments', () => {
         comment: 'Comment with files',
         fullName: 'Author',
         createDate: '2026-06-01T12:00:00Z',
-        visibility: 'Internal',
+        visibility: 'Internal' as const,
         createUser: 'other-user',
         documents: [
           { documentId: 11, fileName: 'spec.pdf' },
@@ -467,9 +480,10 @@ describe('CommentList attachments', () => {
       />,
       [theme]
     )
-    const input = container.querySelector(
+    const input = container.querySelector<HTMLInputElement>(
       '[data-test="comment-attachment-input"]'
     )
+    if (!input) throw new Error('Expected the comment attachment input')
     const file = new File(['x'], 'note.pdf', { type: 'application/pdf' })
     fireEvent.change(input, { target: { files: [file] } })
     expect(onAttachmentsChange).toHaveBeenCalledWith([file])
@@ -510,7 +524,7 @@ describe('CommentList admin edit mode', () => {
           comment: 'Mine',
           fullName: 'Analyst User',
           createDate: '2026-06-01T12:00:00Z',
-          visibility: 'Internal',
+          visibility: 'Internal' as const,
           createUser: 'analyst-user'
         },
         {
@@ -518,7 +532,7 @@ describe('CommentList admin edit mode', () => {
           comment: 'Theirs',
           fullName: 'Other User',
           createDate: '2026-06-02T12:00:00Z',
-          visibility: 'Internal',
+          visibility: 'Internal' as const,
           createUser: 'someone-else'
         }
       ]
@@ -546,7 +560,7 @@ describe('CommentList admin edit mode', () => {
           comment: 'One',
           fullName: 'Alice',
           createDate: '2026-06-01T12:00:00Z',
-          visibility: 'Internal',
+          visibility: 'Internal' as const,
           createUser: 'alice'
         },
         {
@@ -554,7 +568,7 @@ describe('CommentList admin edit mode', () => {
           comment: 'Two',
           fullName: 'Bob',
           createDate: '2026-06-02T12:00:00Z',
-          visibility: 'Public',
+          visibility: 'Public' as const,
           createUser: 'bob'
         }
       ]
@@ -582,7 +596,7 @@ describe('CommentList admin edit mode', () => {
           comment: 'One',
           fullName: 'Alice',
           createDate: '2026-06-01T12:00:00Z',
-          visibility: 'Internal',
+          visibility: 'Internal' as const,
           createUser: 'alice'
         },
         {
@@ -590,7 +604,7 @@ describe('CommentList admin edit mode', () => {
           comment: 'Two',
           fullName: 'Bob',
           createDate: '2026-06-02T12:00:00Z',
-          visibility: 'Public',
+          visibility: 'Public' as const,
           createUser: 'bob'
         }
       ]
@@ -619,7 +633,7 @@ describe('CommentList admin edit mode', () => {
           updateDate: '2026-06-15T08:30:00Z',
           updateUser: 'admin-user',
           updateFullName: 'Admin User',
-          visibility: 'Internal',
+          visibility: 'Internal' as const,
           createUser: 'alice'
         }
       ]
@@ -649,7 +663,7 @@ describe('CommentList admin edit mode', () => {
           updateDate: '2026-06-15T08:30:00Z',
           updateUser: 'alice',
           updateFullName: 'Alice',
-          visibility: 'Internal',
+          visibility: 'Internal' as const,
           createUser: 'alice'
         }
       ]
@@ -669,7 +683,7 @@ describe('CommentList timestamps', () => {
     mockUserState.username = 'reader'
   })
 
-  const expectedDate = (iso) =>
+  const expectedDate = (iso: string) =>
     new Date(iso).toLocaleDateString(undefined, {
       year: 'numeric',
       month: 'long',
@@ -682,14 +696,14 @@ describe('CommentList timestamps', () => {
   }) => {
     const props = {
       ...baseProps,
-      commentMode: 'internal-only',
+      commentMode: 'internal-only' as const,
       comments: [
         {
           internalCommentId: 60,
           comment: 'Older comment',
           fullName: 'Alice',
           createDate: '2025-06-01T12:00:00Z',
-          visibility: 'Internal',
+          visibility: 'Internal' as const,
           createUser: 'alice'
         },
         {
@@ -697,7 +711,7 @@ describe('CommentList timestamps', () => {
           comment: 'Newer comment',
           fullName: 'Alice',
           createDate: '2026-06-01T12:00:00Z',
-          visibility: 'Internal',
+          visibility: 'Internal' as const,
           createUser: 'alice'
         }
       ]
@@ -719,7 +733,7 @@ describe('CommentList timestamps', () => {
   }) => {
     const props = {
       ...baseProps,
-      commentMode: 'internal-only',
+      commentMode: 'internal-only' as const,
       comments: [
         {
           internalCommentId: 62,
@@ -728,7 +742,7 @@ describe('CommentList timestamps', () => {
           createDate: '2025-06-01T12:00:00Z',
           updateDate: '2026-06-15T12:00:00Z',
           updateUser: 'alice',
-          visibility: 'Internal',
+          visibility: 'Internal' as const,
           createUser: 'alice'
         }
       ]
@@ -755,7 +769,7 @@ describe('penalty log comment management', () => {
     fullName: 'Author Name',
     createDate: '2026-10-22T12:00:00Z',
     createUser: 'idir-user',
-    visibility: 'Internal',
+    visibility: 'Internal' as const,
     documents: [
       {
         documentId: 81,
@@ -776,7 +790,7 @@ describe('penalty log comment management', () => {
     render,
     theme
   }) => {
-    const onDeleteComment = vi.fn().mockResolvedValue()
+    const onDeleteComment = vi.fn().mockResolvedValue(undefined)
     render(
       <CommentList
         {...baseProps}

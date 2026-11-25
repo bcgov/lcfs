@@ -18,17 +18,20 @@ beforeAll(() => {
     toJSON: () => ({})
   }
   Range.prototype.getBoundingClientRect = () => rect
-  Range.prototype.getClientRects = () => ({
-    length: 0,
-    item: () => null,
-    [Symbol.iterator]: function* () {}
-  })
+  Range.prototype.getClientRects = () => {
+    const rects: DOMRect[] = []
+    return {
+      length: rects.length,
+      item: (index: number) => rects[index] ?? null,
+      [Symbol.iterator]: () => rects[Symbol.iterator]()
+    }
+  }
 })
 
 // Real react-quill so the toolbar button + keyboard handling under test are
 // the actual production code path, not a stub.
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key) => key })
+  useTranslation: () => ({ t: (key: string) => key })
 }))
 
 const mockApiService = {
@@ -42,7 +45,7 @@ vi.mock('@/services/useApiService', () => ({
 vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: () => ({
     data: { keycloakUsername: 'idir-user' },
-    hasAnyRole: (...roles) => roles.includes('Government')
+    hasAnyRole: (...roles: string[]) => roles.includes('Government')
   })
 }))
 
@@ -87,7 +90,8 @@ describe('Mention dropdown keyboard navigation', () => {
     expect(options).toHaveLength(3)
     expect(options[0]).toHaveAttribute('aria-selected', 'true')
 
-    const editor = document.querySelector('.ql-editor')
+    const editor = document.querySelector<HTMLElement>('.ql-editor')
+    if (!editor) throw new Error('Expected the comment editor')
     fireEvent.keyDown(editor, { key: 'ArrowDown' })
 
     await waitFor(() => {
@@ -147,7 +151,8 @@ describe('Mention dropdown keyboard navigation', () => {
     )
     await screen.findByRole('listbox')
 
-    const editor = document.querySelector('.ql-editor')
+    const editor = document.querySelector<HTMLElement>('.ql-editor')
+    if (!editor) throw new Error('Expected the comment editor')
     // fireEvent returns false when the default action was prevented.
     expect(fireEvent.keyDown(editor, { key: 'ArrowDown' })).toBe(false)
     expect(fireEvent.keyDown(editor, { key: 'ArrowUp' })).toBe(false)
@@ -170,7 +175,9 @@ describe('Mention dropdown keyboard navigation', () => {
     await screen.findAllByRole('option')
 
     // Re-query: the toolbar may have been re-rendered since the click.
-    const currentButton = document.querySelector('.ql-mention')
+    const currentButton =
+      document.querySelector<HTMLButtonElement>('.ql-mention')
+    if (!currentButton) throw new Error('Expected the mention toolbar button')
     expect(fireEvent.keyDown(currentButton, { key: 'ArrowDown' })).toBe(false)
     await waitFor(() => {
       expect(screen.getAllByRole('option')[1]).toHaveAttribute(

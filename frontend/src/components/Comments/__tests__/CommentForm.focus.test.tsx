@@ -6,25 +6,29 @@ import { useState } from 'react'
 import CommentForm from '../CommentForm'
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key) => key })
+  useTranslation: () => ({ t: (key: string) => key })
 }))
 
 beforeAll(() => {
-  const rect = {
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: 0,
-    height: 0
-  }
+  const rect = new DOMRect(0, 0, 0, 0)
   Range.prototype.getBoundingClientRect = () => rect
-  Range.prototype.getClientRects = () => []
+  Range.prototype.getClientRects = () => {
+    const rects: DOMRect[] = []
+    return {
+      length: rects.length,
+      item: (index: number) => rects[index] ?? null,
+      [Symbol.iterator]: () => rects[Symbol.iterator]()
+    }
+  }
 })
 
-const Harness = ({ initialVisibility = 'Internal' }) => {
+const Harness = ({
+  initialVisibility = 'Internal'
+}: {
+  initialVisibility?: 'Internal' | 'Public'
+}) => {
   const [text, setText] = useState('')
-  const [visibility, setVisibility] = useState(initialVisibility)
+  const [visibility, setVisibility] = useState<string>(initialVisibility)
   return (
     <CommentForm
       title="Comment"
@@ -39,16 +43,27 @@ const Harness = ({ initialVisibility = 'Internal' }) => {
   )
 }
 
-test.for([
+const focusCases: Array<['Internal' | 'Public', string]> = [
   ['Internal', 'a'],
   ['Internal', '@'],
   ['Public', 'a']
-])(
+]
+
+const getQuill = (container: Element | null) => {
+  if (!container) throw new Error('Expected a mounted Quill container')
+  const quill = ReactQuill.Quill.find(container)
+  if (!quill || !('getSelection' in quill)) {
+    throw new Error('Expected the mounted Quill editor instance')
+  }
+  return quill
+}
+
+test.for(focusCases)(
   'preserves focus when starting an empty %s comment with %s',
   async ([visibility, character], { render, theme }) => {
     render(<Harness initialVisibility={visibility} />, [theme])
     const originalEditor = document.querySelector('.ql-editor')
-    const quill = ReactQuill.Quill.find(document.querySelector('.ql-container'))
+    const quill = getQuill(document.querySelector('.ql-container'))
     quill.focus()
 
     await act(async () => {
@@ -68,7 +83,7 @@ test('updates the placeholder without replacing the editor or its content', asyn
 }) => {
   render(<Harness />, [theme])
   const editor = document.querySelector('.ql-editor')
-  const quill = ReactQuill.Quill.find(document.querySelector('.ql-container'))
+  const quill = getQuill(document.querySelector('.ql-container'))
 
   fireEvent.click(
     screen.getByRole('button', { name: 'internalComment:public' })

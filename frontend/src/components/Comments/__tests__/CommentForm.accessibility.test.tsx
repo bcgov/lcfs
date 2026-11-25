@@ -12,23 +12,49 @@ const defaultProps = {
   showAddCommentBtn: false
 }
 
-const getToolbar = (container) => container.querySelector('.ql-toolbar')
-const getQuill = (container) =>
-  container.querySelector('.ql-container')?.__quill
+const getToolbar = (container: HTMLElement) =>
+  container.querySelector('.ql-toolbar')
+interface TestQuill {
+  root: HTMLElement
+  setText: (text: string, source: string) => void
+  setSelection: (index: number, length: number, source: string) => void
+  getFormat: (
+    index: number,
+    length: number
+  ) => { bold?: boolean; list?: string }
+  insertText: (index: number, text: string, source: string) => void
+  getContents: () => unknown
+  getSelection: () => { index: number; length: number } | null
+  getText: () => string
+  getModule(name: 'history'): {
+    clear: () => void
+    cutoff: () => void
+    undo: () => void
+  }
+  getModule(name: 'toolbar'): { handlers: { attach: (this: unknown) => void } }
+}
+
+const getQuill = (container: HTMLElement): TestQuill => {
+  const quill = container.querySelector<HTMLElement & { __quill?: TestQuill }>(
+    '.ql-container'
+  )?.__quill
+  if (!quill) throw new Error('Expected the mounted Quill editor')
+  return quill
+}
 
 describe('CommentForm Quill toolbar accessibility', () => {
   beforeEach(() => {
     // Quill focuses the editor before applying toolbar actions. jsdom does not
     // implement these layout APIs, so return an empty rectangle for that path.
-    Range.prototype.getBoundingClientRect ??= () => ({
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      width: 0,
-      height: 0
-    })
-    Range.prototype.getClientRects ??= () => []
+    Range.prototype.getBoundingClientRect ??= () => new DOMRect(0, 0, 0, 0)
+    Range.prototype.getClientRects ??= () => {
+      const rects: DOMRect[] = []
+      return {
+        length: rects.length,
+        item: (index: number) => rects[index] ?? null,
+        [Symbol.iterator]: () => rects[Symbol.iterator]()
+      }
+    }
   })
 
   afterEach(() => {
@@ -161,7 +187,11 @@ describe('CommentForm Quill toolbar accessibility', () => {
   }) => {
     const user = userEvent.setup()
     const onAttachmentsChange = vi.fn()
-    const StatefulCommentForm = ({ enableAttachments }) => {
+    const StatefulCommentForm = ({
+      enableAttachments
+    }: {
+      enableAttachments: boolean
+    }) => {
       const [commentText, setCommentText] = useState('')
       return (
         <CommentForm
