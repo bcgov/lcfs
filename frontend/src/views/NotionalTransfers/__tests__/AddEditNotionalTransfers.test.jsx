@@ -8,7 +8,7 @@ import { test } from '@/tests/utils/fixtures'
 import { screen, waitFor, act, fireEvent } from '@testing-library/react'
 import { beforeEach, describe, expect, vi } from 'vite-plus/test'
 import { AddEditNotionalTransfers } from '../AddEditNotionalTransfers'
-import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
+import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules'
 
 let render
 const fixtureOptions = undefined
@@ -42,7 +42,7 @@ vi.mock('@/hooks/useComplianceReports')
 vi.mock('@/hooks/useNotionalTransfer')
 
 // Mock utility functions
-vi.mock('@/utils/schedules.js', () => ({
+vi.mock('@/utils/schedules', () => ({
   handleScheduleDelete: vi.fn(),
   handleScheduleSave: vi.fn().mockResolvedValue({ saved: true })
 }))
