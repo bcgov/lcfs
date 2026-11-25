@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vite-plus/test'
 import { MemoryRouter } from 'react-router-dom'
 import Footer from '@/components/Footer'
+import type { BCFooterProps } from '@/components/BCFooter'
 
 // __APP_VERSION__ is injected by Vite at build time; stub it for tests.
 vi.stubGlobal('__APP_VERSION__', '1.0.0-test')
@@ -10,7 +11,7 @@ vi.stubGlobal('__APP_VERSION__', '1.0.0-test')
 // link configuration from the underlying rendering logic.
 vi.mock('@/components/BCFooter', () => ({
   __esModule: true,
-  default: ({ links, repoDetails }) => (
+  default: ({ links = [], repoDetails }: BCFooterProps) => (
     <footer data-test="bc-footer">
       {links.map((link) => (
         <a

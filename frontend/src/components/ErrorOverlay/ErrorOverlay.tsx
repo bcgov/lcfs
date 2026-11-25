@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import type { MouseEvent } from 'react'
 import Box from '@mui/material/Box'
 import IconButton from '@mui/material/IconButton'
 import CloseIcon from '@mui/icons-material/Close'
@@ -8,7 +9,10 @@ import { router } from '@/routes'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 
-const ERROR_CONTENT = {
+const ERROR_CONTENT: Record<
+  number,
+  { code: string; titleKey: string; messageKey: string }
+> = {
   500: {
     code: '500',
     titleKey: 'internalServerError.title',
@@ -16,7 +20,7 @@ const ERROR_CONTENT = {
   }
 }
 
-export const ErrorOverlay = () => {
+export const ErrorOverlay = (): JSX.Element | null => {
   const { t } = useTranslation('common')
   const {
     errorStatus,
@@ -58,7 +62,7 @@ export const ErrorOverlay = () => {
       }}
     >
       <Box
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}
         sx={{
           position: 'relative',
           bgcolor: 'background.paper',

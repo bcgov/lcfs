@@ -1,9 +1,12 @@
-import PropTypes from 'prop-types'
 import Box from '@mui/material/Box'
 import BCTypography from '@/components/BCTypography'
 import colors from '@/themes/base/colors'
 
-const DisclaimerBanner = ({ messages }) => {
+export interface DisclaimerBannerProps {
+  messages: Array<string | undefined>
+}
+
+const DisclaimerBanner = ({ messages }: DisclaimerBannerProps) => {
   return (
     <Box
       sx={{
@@ -23,10 +26,6 @@ const DisclaimerBanner = ({ messages }) => {
       ))}
     </Box>
   )
-}
-
-DisclaimerBanner.propTypes = {
-  messages: PropTypes.arrayOf(PropTypes.string).isRequired
 }
 
 export default DisclaimerBanner

@@ -1,4 +1,4 @@
-export const NotFound = () => (
+export const NotFound = (): JSX.Element => (
   <div
     className="alert alert-danger error-alert"
     role="alert"

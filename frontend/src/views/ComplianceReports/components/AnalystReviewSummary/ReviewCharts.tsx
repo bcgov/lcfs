@@ -20,6 +20,7 @@ import type {
   ComplianceUnitPoint,
   ReviewChartData
 } from './types'
+import type { TooltipComponentFormatterCallbackParams } from 'echarts'
 
 interface HistoricalChartGroup {
   title: string
@@ -46,16 +47,6 @@ interface SunburstNode {
 interface FuelCodeSunburstFilters {
   complianceYear: string
   fuelType: string
-}
-
-type HeatmapTooltipParams = {
-  value?: [number, number, number, number]
-}
-
-type SunburstTooltipParams = {
-  data?: Pick<SunburstNode, 'units'>
-  treePathInfo?: Array<{ name: string }>
-  value?: number
 }
 
 type HistoricalChartMode = 'trend' | 'horizontal-bars' | 'grouped-bars'
@@ -684,8 +675,13 @@ const buildFuelPresenceHeatmapOptions = (group: HistoricalChartGroup) => {
   return getStandardChartOptions({
     tooltip: {
       position: 'top',
-      formatter: (params: HeatmapTooltipParams) => {
-        const [xIndex, yIndex, quantity] = params.value ?? [0, 0, 0, 0]
+      formatter: (formatterParams: TooltipComponentFormatterCallbackParams) => {
+        const params = Array.isArray(formatterParams)
+          ? formatterParams[0]
+          : formatterParams
+        const [xIndex, yIndex, quantity] = (params.value as
+          | number[]
+          | undefined) ?? [0, 0, 0, 0]
         const period = group.periodLabels[xIndex]
         const fuel = group.labels[yIndex]
         return `${fuel}<br/>${period}<br/>${
@@ -883,8 +879,13 @@ const buildFuelCodeSunburstOptions = (
   return getStandardChartOptions({
     tooltip: {
       trigger: 'item',
-      formatter: (params: SunburstTooltipParams) => {
-        const treePath = params.treePathInfo
+      formatter: (formatterParams: TooltipComponentFormatterCallbackParams) => {
+        const params = Array.isArray(formatterParams)
+          ? formatterParams[0]
+          : formatterParams
+        const treePath = (
+          params as typeof params & { treePathInfo?: Array<{ name: string }> }
+        ).treePathInfo
           ?.slice(1)
           .map((item: { name: string }) => item.name)
           .join(' / ')
@@ -892,10 +893,11 @@ const buildFuelCodeSunburstOptions = (
           typeof params.value === 'number'
             ? Number(params.value).toLocaleString()
             : ''
-        const units = params.data?.units ? ` ${params.data.units}` : ''
+        const data = params.data as Pick<SunburstNode, 'units'> | undefined
+        const units = data?.units ? ` ${data.units}` : ''
         return value
           ? `${treePath}<br/>Quantity supplied: ${value}${units}`
-          : treePath
+          : treePath!
       }
     },
     series: [

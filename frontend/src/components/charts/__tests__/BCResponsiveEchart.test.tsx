@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vite-plus/test'
 import { BCResponsiveEChart } from '../BCResponsiveEchart'
+import type { EChartsOption } from 'echarts'
 
 const mockSetOption = vi.fn()
 const mockResize = vi.fn()
@@ -9,15 +10,15 @@ const { mockUse, mockAriaComponent } = vi.hoisted(() => ({
   mockUse: vi.fn(),
   mockAriaComponent: { id: 'aria' }
 }))
-const mockInit = vi.fn(() => ({
+const mockInit = vi.fn((_element?: HTMLElement) => ({
   setOption: mockSetOption,
   resize: mockResize,
   dispose: mockDispose
 }))
 
 vi.mock('echarts/core', () => ({
-  init: (...args) => mockInit(...args),
-  use: (...args) => mockUse(...args)
+  init: (element: HTMLElement) => mockInit(element),
+  use: (components: unknown[]) => mockUse(components)
 }))
 
 vi.mock('echarts/components', () => ({
@@ -58,7 +59,7 @@ describe('BCResponsiveEChart', () => {
         xAxis: { type: 'category', data: ['A', 'B'] },
         yAxis: { type: 'value' },
         series: [{ data: [10, 20], type: 'bar' }]
-      }
+      } satisfies EChartsOption
 
       render(<BCResponsiveEChart option={option} height={240} />)
 
@@ -73,8 +74,10 @@ describe('BCResponsiveEChart', () => {
     })
 
     it('updates chart options when the option prop changes', () => {
-      const initialOption = { series: [{ data: [1] }] }
-      const updatedOption = { series: [{ data: [1, 2, 3] }] }
+      const initialOption = { series: [{ data: [1] }] } satisfies EChartsOption
+      const updatedOption = {
+        series: [{ data: [1, 2, 3] }]
+      } satisfies EChartsOption
 
       const { rerender } = render(<BCResponsiveEChart option={initialOption} />)
 
@@ -89,7 +92,7 @@ describe('BCResponsiveEChart', () => {
     it('uses the chart label as the generated ARIA preamble without mutating the option', () => {
       const option = {
         series: [{ name: 'Supply', type: 'line', data: [10, 20] }]
-      }
+      } satisfies EChartsOption
 
       render(<BCResponsiveEChart option={option} ariaLabel="Supply history" />)
 
@@ -109,7 +112,7 @@ describe('BCResponsiveEChart', () => {
     it('uses a supplied data description instead of generated series narration', () => {
       const option = {
         series: [{ name: 'Fuel supply', type: 'bar', data: [20] }]
-      }
+      } satisfies EChartsOption
 
       render(
         <BCResponsiveEChart
@@ -135,7 +138,9 @@ describe('BCResponsiveEChart', () => {
     })
 
     it('updates the supplied data description when it changes', () => {
-      const option = { series: [{ name: 'Supply', type: 'bar', data: [20] }] }
+      const option = {
+        series: [{ name: 'Supply', type: 'bar', data: [20] }]
+      } satisfies EChartsOption
       const { rerender } = render(
         <BCResponsiveEChart
           option={option}
@@ -166,7 +171,7 @@ describe('BCResponsiveEChart', () => {
       const option = {
         title: { text: 'Compliance trends' },
         series: [{ name: 'Supply', type: 'line', data: [10, 20] }]
-      }
+      } satisfies EChartsOption
 
       render(
         <BCResponsiveEChart option={option} ariaLabel="Fuel supply chart" />
@@ -195,7 +200,7 @@ describe('BCResponsiveEChart', () => {
           label: { description: 'Option description' }
         },
         series: [{ name: 'Supply', type: 'line', data: [10, 20] }]
-      }
+      } satisfies EChartsOption
 
       render(
         <BCResponsiveEChart option={option} ariaLabel="Prop description" />
@@ -293,7 +298,7 @@ describe('BCResponsiveEChart', () => {
 
   describe('option updates', () => {
     it('calls setOption with replace flag true', () => {
-      const option = { series: [{ data: [1, 2, 3] }] }
+      const option = { series: [{ data: [1, 2, 3] }] } satisfies EChartsOption
       render(<BCResponsiveEChart option={option} />)
 
       expect(mockSetOption).toHaveBeenCalledWith(
@@ -302,16 +307,19 @@ describe('BCResponsiveEChart', () => {
       )
     })
 
-    it('does not call setOption if option is null', () => {
-      render(<BCResponsiveEChart option={null} />)
+    it('applies an empty option', () => {
+      render(<BCResponsiveEChart option={{}} />)
 
-      expect(mockSetOption).not.toHaveBeenCalled()
+      expect(mockSetOption).toHaveBeenCalledWith(
+        { aria: { enabled: true } },
+        true
+      )
     })
 
     it('handles multiple option updates', () => {
-      const option1 = { series: [{ data: [1] }] }
-      const option2 = { series: [{ data: [1, 2] }] }
-      const option3 = { series: [{ data: [1, 2, 3] }] }
+      const option1 = { series: [{ data: [1] }] } satisfies EChartsOption
+      const option2 = { series: [{ data: [1, 2] }] } satisfies EChartsOption
+      const option3 = { series: [{ data: [1, 2, 3] }] } satisfies EChartsOption
 
       const { rerender } = render(<BCResponsiveEChart option={option1} />)
 

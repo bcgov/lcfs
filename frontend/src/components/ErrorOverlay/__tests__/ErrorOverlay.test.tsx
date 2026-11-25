@@ -4,21 +4,75 @@ import { ErrorOverlay } from '../ErrorOverlay'
 import { useTranslation } from 'react-i18next'
 import { useAuthorization } from '@/contexts/AuthorizationContext'
 import { router } from '@/routes'
+import type { AuthorizationContextValue } from '@/contexts/authorizationState'
+import type {
+  ButtonHTMLAttributes,
+  ElementType,
+  HTMLAttributes,
+  MouseEventHandler,
+  ReactNode
+} from 'react'
+
+type MockButtonProps = Omit<
+  ButtonHTMLAttributes<HTMLButtonElement>,
+  'onClick'
+> & {
+  children?: ReactNode
+  onClick?: MouseEventHandler<HTMLButtonElement>
+  'data-test'?: string
+  sx?: unknown
+  variant?: string
+  color?: string
+}
+
+type MockBoxProps = Omit<HTMLAttributes<HTMLDivElement>, 'onClick'> & {
+  children?: ReactNode
+  component?: ElementType
+  onClick?: MouseEventHandler<HTMLDivElement>
+  sx?: unknown
+}
+
+type MockIconButtonProps = Omit<
+  ButtonHTMLAttributes<HTMLButtonElement>,
+  'onClick' | 'size'
+> & {
+  children?: ReactNode
+  onClick?: MouseEventHandler<HTMLButtonElement>
+  'aria-label'?: string
+  size?: string
+  sx?: unknown
+}
 
 // Mock BCButton to avoid theme/function errors in tests
 vi.mock('@/components/BCButton', () => ({
   __esModule: true,
-  default: ({ children, onClick, 'data-test': dataTest, ...props }) => (
-    <button onClick={onClick} data-test={dataTest} {...props}>
-      {children}
-    </button>
-  )
+  default: ({
+    children,
+    onClick,
+    'data-test': dataTest,
+    ...props
+  }: MockButtonProps) => {
+    delete props.sx
+    delete props.variant
+    delete props.color
+    return (
+      <button onClick={onClick} data-test={dataTest} {...props}>
+        {children}
+      </button>
+    )
+  }
 }))
 
 // Mock BCTypography
 vi.mock('@/components/BCTypography', () => ({
   __esModule: true,
-  default: ({ children, variant, ...props }) => {
+  default: ({
+    children,
+    variant,
+    ...props
+  }: MockBoxProps & {
+    variant?: string
+  }) => {
     delete props.sx
     return (
       <div data-variant={variant} {...props}>
@@ -30,9 +84,8 @@ vi.mock('@/components/BCTypography', () => ({
 
 // Mock MUI components
 vi.mock('@mui/material/Box', () => ({
-  default: ({ children, onClick, component, ...props }) => {
+  default: ({ children, onClick, component, ...props }: MockBoxProps) => {
     delete props.sx
-
     const Component = component || 'div'
     return (
       <Component onClick={onClick} {...props}>
@@ -43,7 +96,12 @@ vi.mock('@mui/material/Box', () => ({
 }))
 
 vi.mock('@mui/material/IconButton', () => ({
-  default: ({ children, onClick, 'aria-label': ariaLabel, ...props }) => {
+  default: ({
+    children,
+    onClick,
+    'aria-label': ariaLabel,
+    ...props
+  }: MockIconButtonProps) => {
     delete props.size
     delete props.sx
     return (
@@ -68,8 +126,8 @@ vi.mock('@/routes', () => ({
 }))
 
 describe('ErrorOverlay', () => {
-  const mockT = vi.fn((key) => {
-    const translations = {
+  const mockT = vi.fn((key: string) => {
+    const translations: Record<string, string> = {
       'internalServerError.title': 'Internal server error',
       'internalServerError.message': 'Sorry, something went wrong on our end.',
       'errorPage.genericMessage': 'An unexpected error occurred.',
@@ -84,22 +142,31 @@ describe('ErrorOverlay', () => {
     return translations[key] || key
   })
 
-  const mockSetErrorStatus = vi.fn()
-  const mockClearErrorRefs = vi.fn()
-  const mockResetServerError = vi.fn()
+  const mockSetErrorStatus =
+    vi.fn<AuthorizationContextValue['setErrorStatus']>()
+  const mockClearErrorRefs =
+    vi.fn<AuthorizationContextValue['clearErrorRefs']>()
+  const mockResetServerError =
+    vi.fn<AuthorizationContextValue['resetServerError']>()
 
-  const defaultAuthContext = {
+  const defaultAuthContext: AuthorizationContextValue = {
+    forbidden: false,
+    setForbidden: vi.fn<AuthorizationContextValue['setForbidden']>(),
     errorStatus: null,
     errorRefs: [],
+    addErrorRef: vi.fn<AuthorizationContextValue['addErrorRef']>(),
     setErrorStatus: mockSetErrorStatus,
     clearErrorRefs: mockClearErrorRefs,
-    resetServerError: mockResetServerError
+    resetServerError: mockResetServerError,
+    serverErrorBlockedRef: { current: false }
   }
 
   beforeEach(() => {
     vi.clearAllMocks()
-    useTranslation.mockReturnValue({ t: mockT })
-    useAuthorization.mockReturnValue(defaultAuthContext)
+    vi.mocked(useTranslation).mockReturnValue({
+      t: mockT
+    } as unknown as ReturnType<typeof useTranslation>)
+    vi.mocked(useAuthorization).mockReturnValue(defaultAuthContext)
   })
 
   afterEach(() => {
@@ -108,7 +175,7 @@ describe('ErrorOverlay', () => {
 
   describe('Rendering', () => {
     it('should not render when errorStatus is null', () => {
-      useAuthorization.mockReturnValue({
+      vi.mocked(useAuthorization).mockReturnValue({
         ...defaultAuthContext,
         errorStatus: null
       })
@@ -118,7 +185,7 @@ describe('ErrorOverlay', () => {
     })
 
     it('should render overlay when errorStatus is 500', () => {
-      useAuthorization.mockReturnValue({
+      vi.mocked(useAuthorization).mockReturnValue({
         ...defaultAuthContext,
         errorStatus: 500,
         errorRefs: ['ref-123']
@@ -130,7 +197,7 @@ describe('ErrorOverlay', () => {
     })
 
     it('should render generic error message for unknown error codes', () => {
-      useAuthorization.mockReturnValue({
+      vi.mocked(useAuthorization).mockReturnValue({
         ...defaultAuthContext,
         errorStatus: 503,
         errorRefs: []
@@ -144,7 +211,7 @@ describe('ErrorOverlay', () => {
     })
 
     it('should display error code in overline text', () => {
-      useAuthorization.mockReturnValue({
+      vi.mocked(useAuthorization).mockReturnValue({
         ...defaultAuthContext,
         errorStatus: 500
       })
@@ -154,7 +221,7 @@ describe('ErrorOverlay', () => {
     })
 
     it('should display title when titleKey is available', () => {
-      useAuthorization.mockReturnValue({
+      vi.mocked(useAuthorization).mockReturnValue({
         ...defaultAuthContext,
         errorStatus: 500
       })
@@ -164,7 +231,7 @@ describe('ErrorOverlay', () => {
     })
 
     it('should not display title when titleKey is null', () => {
-      useAuthorization.mockReturnValue({
+      vi.mocked(useAuthorization).mockReturnValue({
         ...defaultAuthContext,
         errorStatus: 503
       })
@@ -178,7 +245,7 @@ describe('ErrorOverlay', () => {
 
   describe('Reference Numbers', () => {
     it('should not display reference number section when errorRefs is empty', () => {
-      useAuthorization.mockReturnValue({
+      vi.mocked(useAuthorization).mockReturnValue({
         ...defaultAuthContext,
         errorStatus: 500,
         errorRefs: []
@@ -189,7 +256,7 @@ describe('ErrorOverlay', () => {
     })
 
     it('should display single reference number', () => {
-      useAuthorization.mockReturnValue({
+      vi.mocked(useAuthorization).mockReturnValue({
         ...defaultAuthContext,
         errorStatus: 500,
         errorRefs: ['abc-123-def-456']
@@ -204,7 +271,7 @@ describe('ErrorOverlay', () => {
     })
 
     it('should display multiple reference numbers with numbering', () => {
-      useAuthorization.mockReturnValue({
+      vi.mocked(useAuthorization).mockReturnValue({
         ...defaultAuthContext,
         errorStatus: 500,
         errorRefs: ['ref-001', 'ref-002', 'ref-003']
@@ -218,7 +285,7 @@ describe('ErrorOverlay', () => {
     })
 
     it('should use singular label for single reference', () => {
-      useAuthorization.mockReturnValue({
+      vi.mocked(useAuthorization).mockReturnValue({
         ...defaultAuthContext,
         errorStatus: 500,
         errorRefs: ['single-ref']
@@ -230,7 +297,7 @@ describe('ErrorOverlay', () => {
     })
 
     it('should use plural label for multiple references', () => {
-      useAuthorization.mockReturnValue({
+      vi.mocked(useAuthorization).mockReturnValue({
         ...defaultAuthContext,
         errorStatus: 500,
         errorRefs: ['ref-1', 'ref-2']
@@ -244,7 +311,7 @@ describe('ErrorOverlay', () => {
 
   describe('Contact Support', () => {
     it('should display contact support message with email link', () => {
-      useAuthorization.mockReturnValue({
+      vi.mocked(useAuthorization).mockReturnValue({
         ...defaultAuthContext,
         errorStatus: 500
       })
@@ -262,7 +329,7 @@ describe('ErrorOverlay', () => {
 
   describe('Close Button', () => {
     it('should render close button with correct text', () => {
-      useAuthorization.mockReturnValue({
+      vi.mocked(useAuthorization).mockReturnValue({
         ...defaultAuthContext,
         errorStatus: 500
       })
@@ -274,7 +341,7 @@ describe('ErrorOverlay', () => {
     })
 
     it('should call setErrorStatus and clearErrorRefs when close button is clicked', () => {
-      useAuthorization.mockReturnValue({
+      vi.mocked(useAuthorization).mockReturnValue({
         ...defaultAuthContext,
         errorStatus: 500,
         errorRefs: ['ref-123']
@@ -290,7 +357,7 @@ describe('ErrorOverlay', () => {
     })
 
     it('should render IconButton close in top right corner', () => {
-      useAuthorization.mockReturnValue({
+      vi.mocked(useAuthorization).mockReturnValue({
         ...defaultAuthContext,
         errorStatus: 500
       })
@@ -301,7 +368,7 @@ describe('ErrorOverlay', () => {
     })
 
     it('should call setErrorStatus and clearErrorRefs when icon close is clicked', () => {
-      useAuthorization.mockReturnValue({
+      vi.mocked(useAuthorization).mockReturnValue({
         ...defaultAuthContext,
         errorStatus: 500,
         errorRefs: ['ref-456']
@@ -319,13 +386,14 @@ describe('ErrorOverlay', () => {
 
   describe('Backdrop Click', () => {
     it('should close overlay when backdrop is clicked', () => {
-      useAuthorization.mockReturnValue({
+      vi.mocked(useAuthorization).mockReturnValue({
         ...defaultAuthContext,
         errorStatus: 500
       })
 
       const { container } = render(<ErrorOverlay />)
       const backdrop = container.firstChild
+      if (!backdrop) throw new Error('Expected the error backdrop to render')
 
       fireEvent.click(backdrop)
 
@@ -334,7 +402,7 @@ describe('ErrorOverlay', () => {
     })
 
     it('should not close overlay when modal content is clicked', () => {
-      useAuthorization.mockReturnValue({
+      vi.mocked(useAuthorization).mockReturnValue({
         ...defaultAuthContext,
         errorStatus: 500
       })
@@ -343,6 +411,7 @@ describe('ErrorOverlay', () => {
       const modalContent = screen
         .getByText('Internal server error')
         .closest('div')
+      if (!modalContent) throw new Error('Expected the modal content to render')
 
       fireEvent.click(modalContent)
 
@@ -353,7 +422,7 @@ describe('ErrorOverlay', () => {
 
   describe('Router Subscription', () => {
     it('should subscribe to router on mount', () => {
-      useAuthorization.mockReturnValue({
+      vi.mocked(useAuthorization).mockReturnValue({
         ...defaultAuthContext,
         errorStatus: 500
       })
@@ -365,7 +434,7 @@ describe('ErrorOverlay', () => {
 
     it('should pass resetServerError to router subscription', () => {
       const customResetFn = vi.fn()
-      useAuthorization.mockReturnValue({
+      vi.mocked(useAuthorization).mockReturnValue({
         ...defaultAuthContext,
         errorStatus: 500,
         resetServerError: customResetFn
@@ -379,7 +448,7 @@ describe('ErrorOverlay', () => {
 
   describe('Error Content Configuration', () => {
     it('should use ERROR_CONTENT mapping for 500 errors', () => {
-      useAuthorization.mockReturnValue({
+      vi.mocked(useAuthorization).mockReturnValue({
         ...defaultAuthContext,
         errorStatus: 500
       })
@@ -392,7 +461,7 @@ describe('ErrorOverlay', () => {
     })
 
     it('should fallback to generic message for unmapped error codes', () => {
-      useAuthorization.mockReturnValue({
+      vi.mocked(useAuthorization).mockReturnValue({
         ...defaultAuthContext,
         errorStatus: 502
       })
@@ -406,20 +475,23 @@ describe('ErrorOverlay', () => {
 
   describe('Styling and Layout', () => {
     it('should render overlay with proper structure', () => {
-      useAuthorization.mockReturnValue({
+      vi.mocked(useAuthorization).mockReturnValue({
         ...defaultAuthContext,
         errorStatus: 500
       })
 
       const { container } = render(<ErrorOverlay />)
       const overlay = container.firstChild
+      if (!(overlay instanceof HTMLElement)) {
+        throw new Error('Expected the error overlay to render')
+      }
 
       expect(overlay).toBeInTheDocument()
       expect(overlay.tagName).toBe('DIV')
     })
 
     it('should render modal content within overlay', () => {
-      useAuthorization.mockReturnValue({
+      vi.mocked(useAuthorization).mockReturnValue({
         ...defaultAuthContext,
         errorStatus: 500
       })
@@ -434,7 +506,7 @@ describe('ErrorOverlay', () => {
 
   describe('Accessibility', () => {
     it('should have accessible close button with aria-label', () => {
-      useAuthorization.mockReturnValue({
+      vi.mocked(useAuthorization).mockReturnValue({
         ...defaultAuthContext,
         errorStatus: 500
       })
@@ -445,7 +517,7 @@ describe('ErrorOverlay', () => {
     })
 
     it('should render reference numbers in code elements for screen readers', () => {
-      useAuthorization.mockReturnValue({
+      vi.mocked(useAuthorization).mockReturnValue({
         ...defaultAuthContext,
         errorStatus: 500,
         errorRefs: ['ref-abc-123']
@@ -459,7 +531,7 @@ describe('ErrorOverlay', () => {
 
   describe('Edge Cases', () => {
     it('should handle errorStatus of 0', () => {
-      useAuthorization.mockReturnValue({
+      vi.mocked(useAuthorization).mockReturnValue({
         ...defaultAuthContext,
         errorStatus: 0
       })
@@ -471,7 +543,7 @@ describe('ErrorOverlay', () => {
 
     it('should handle very long reference numbers', () => {
       const longRef = 'a'.repeat(100)
-      useAuthorization.mockReturnValue({
+      vi.mocked(useAuthorization).mockReturnValue({
         ...defaultAuthContext,
         errorStatus: 500,
         errorRefs: [longRef]
@@ -483,7 +555,7 @@ describe('ErrorOverlay', () => {
 
     it('should handle many reference numbers', () => {
       const manyRefs = Array.from({ length: 10 }, (_, i) => `ref-${i}`)
-      useAuthorization.mockReturnValue({
+      vi.mocked(useAuthorization).mockReturnValue({
         ...defaultAuthContext,
         errorStatus: 500,
         errorRefs: manyRefs
@@ -498,7 +570,7 @@ describe('ErrorOverlay', () => {
     })
 
     it('should handle special characters in reference numbers', () => {
-      useAuthorization.mockReturnValue({
+      vi.mocked(useAuthorization).mockReturnValue({
         ...defaultAuthContext,
         errorStatus: 500,
         errorRefs: ['ref-123!@#$%^&*()']
@@ -511,7 +583,7 @@ describe('ErrorOverlay', () => {
 
   describe('Integration', () => {
     it('should handle complete error flow with reference number', () => {
-      useAuthorization.mockReturnValue({
+      vi.mocked(useAuthorization).mockReturnValue({
         ...defaultAuthContext,
         errorStatus: 500,
         errorRefs: ['correlation-id-xyz-789']
@@ -536,7 +608,7 @@ describe('ErrorOverlay', () => {
     })
 
     it('should handle error without reference number', () => {
-      useAuthorization.mockReturnValue({
+      vi.mocked(useAuthorization).mockReturnValue({
         ...defaultAuthContext,
         errorStatus: 500,
         errorRefs: []
