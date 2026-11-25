@@ -110,10 +110,10 @@
         "a1Details": "Monthly Category A1 Details",
         "a1Unavailable": "Published A1 price not available",
         "agreementMonthly": "Recorded transfers by agreement month",
-        "twoMonthAgreementPrice": "Average recorded Category A credit price of agreements made within the last two completed months",
-        "twoMonthAgreementDetails": "Recorded Category A agreement details for the last two completed months",
+        "twoMonthAgreementPrice": "Average recorded credit price of agreements made in the last two completed months",
+        "twoMonthAgreementDetails": "Details for recorded transfers of agreements made in the last two completed months:",
         "agreementMonths": "Agreement months",
-        "agreementNote": "The table represents the average price of Category A credit transfers (including A1) by the month the two parties agreed on the selling price. Data for earlier months may change as future transfers are recorded or recategorized."
+        "agreementNote": "The table represents the average price of credit transfers by the month the two parties agreed on the selling price. Data for earlier months may change as future transfers are recorded or recategorized."
       },
       "classifications": {
         "summary": "Transfer category definitions",
