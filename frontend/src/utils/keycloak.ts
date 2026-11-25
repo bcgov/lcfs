@@ -34,26 +34,13 @@ export const logout = (): void => {
       })
     return
   }
-  const tokenParsed = keycloak.tokenParsed as { idToken?: string } | undefined
-  const idToken = keycloak.idToken || tokenParsed?.idToken
-
-  if (!idToken) {
-    console.error('idToken is not available')
-    return
-  }
-  const keycloakLogoutUrl =
-    (
-      keycloak as unknown as { endpoints: { logout: () => string } }
-    ).endpoints.logout() +
-    '?post_logout_redirect_uri=' +
-    CONFIG.KEYCLOAK.POST_LOGOUT_URL +
-    '&client_id=' +
-    keycloak.clientId +
-    '&id_token_hint=' +
-    idToken
-
-  const url =
-    CONFIG.KEYCLOAK.SM_LOGOUT_URL + encodeURIComponent(keycloakLogoutUrl)
-
-  window.location.href = url
+  keycloak
+    .logout({
+      redirectUri:
+        CONFIG.KEYCLOAK.SM_LOGOUT_URL +
+        encodeURIComponent(CONFIG.KEYCLOAK.POST_LOGOUT_URL)
+    })
+    .catch((error) => {
+      console.error('Failed to log out from Keycloak:', error)
+    })
 }
