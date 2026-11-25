@@ -126,3 +126,49 @@ async def test_authenticate_no_auth_header(auth_backend):
 
     assert exc_info.value.status_code == 401
     assert exc_info.value.detail == "Authorization header is required"
+
+
+@pytest.mark.anyio
+async def test_authenticate_rejects_id_token_type(auth_backend):
+    request = MagicMock(spec=Request)
+    request.headers = {"Authorization": "Bearer signed-token"}
+    auth_backend.jwks = {"keys": [{"kid": "key-id"}]}
+    auth_backend.refresh_jwk = AsyncMock()
+
+    with patch(
+        "lcfs.services.keycloak.authentication.jwt.get_unverified_header",
+        return_value={"kid": "key-id", "typ": "JWT"},
+    ):
+        with pytest.raises(HTTPException) as exc_info:
+            await auth_backend.authenticate(request)
+
+    assert exc_info.value.status_code == 401
+    assert exc_info.value.detail == "Token type must be Bearer"
+
+
+@pytest.mark.anyio
+async def test_authenticate_rejects_token_from_another_authorized_party(auth_backend):
+    request = MagicMock(spec=Request)
+    request.headers = {"Authorization": "Bearer signed-token"}
+    auth_backend.jwks = {"keys": [{"kid": "key-id"}]}
+    auth_backend.refresh_jwk = AsyncMock()
+
+    with (
+        patch(
+            "lcfs.services.keycloak.authentication.jwt.get_unverified_header",
+            return_value={"kid": "key-id", "typ": "Bearer"},
+        ),
+        patch(
+            "lcfs.services.keycloak.authentication.jwt.algorithms.RSAAlgorithm.from_jwk",
+            return_value=object(),
+        ),
+        patch(
+            "lcfs.services.keycloak.authentication.jwt.decode",
+            return_value={"azp": "another-client"},
+        ),
+    ):
+        with pytest.raises(HTTPException) as exc_info:
+            await auth_backend.authenticate(request)
+
+    assert exc_info.value.status_code == 401
+    assert exc_info.value.detail == "Token client is not authorized"
