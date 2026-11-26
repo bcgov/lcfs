@@ -110,18 +110,27 @@ class InitiativeAgreementValidation:
         whether a BCeID write is the caller's own evidence, which the lock
         leaves to the evidence submission (see is_eoc_evidence_write).
 
+        The agreement's row is held until the write is saved and its status
+        read under that lock, so a concurrent Set to Underway cannot slip in
+        between (see the repository's lock_agreement_for_package_edit).
+
         Call it after the parent's access check, which reports a missing or
         hidden parent. Legacy credit awards share the initiativeAgreement
         parent type but are no package: their files are managed on the
         transaction pages, so they pass.
         """
         if parent_type == "initiativeAgreement":
-            agreement = await self.repo.get_initiative_agreement_by_id(parent_id)
+            agreement_id = parent_id
         elif parent_type == "designatedAction":
             action = await self.repo.get_designated_action_by_id(parent_id)
-            agreement = action.initiative_agreement if action else None
+            agreement_id = action.initiative_agreement_id if action else None
         else:
             return
+        agreement = (
+            await self.repo.lock_agreement_for_package_edit(agreement_id)
+            if agreement_id is not None
+            else None
+        )
         if agreement is None or agreement.record_kind != RECORD_KIND_AGREEMENT:
             return
         file_owner = None

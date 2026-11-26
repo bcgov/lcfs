@@ -31,6 +31,7 @@ from typing import Dict, List, Optional
 
 from fastapi import HTTPException
 from sqlalchemy import delete, func, select, update
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -408,6 +409,40 @@ class ChangeOrderService:
             )
         return agreement, change_order
 
+    async def _lock_actions_or_409(self, change_order_id: int) -> None:
+        """Take the rows of the designated actions this change order will
+        change, without waiting.
+
+        Acceptance and discard hold the agreement's row (FOR UPDATE) before
+        they change actions, while a Director's approval holds an action's
+        row before it adds the issued credits to the agreement's. Waiting on
+        an action here could deadlock with that approval, so a busy action
+        refuses the request instead, and it can be retried.
+        """
+        versioned = select(DesignatedActionVersion.designated_action_id).where(
+            DesignatedActionVersion.change_order_id == change_order_id
+        )
+        try:
+            await self.db.execute(
+                select(DesignatedAction.designated_action_id)
+                .where(
+                    (DesignatedAction.designated_action_id.in_(versioned))
+                    | (DesignatedAction.pending_change_order_id == change_order_id)
+                )
+                .order_by(DesignatedAction.designated_action_id)
+                .with_for_update(nowait=True)
+            )
+        except DBAPIError as error:
+            if _is_lock_not_available(error):
+                raise HTTPException(
+                    status_code=409,
+                    detail=(
+                        "A designated action in this change order is being "
+                        "updated right now. Try again in a moment."
+                    ),
+                ) from error
+            raise
+
     async def start(
         self, initiative_agreement_id: int, user
     ) -> InitiativeAgreementChangeOrder:
@@ -632,6 +667,7 @@ class ChangeOrderService:
             initiative_agreement_id
         )
         change_order_id = change_order.initiative_agreement_change_order_id
+        await self._lock_actions_or_409(change_order_id)
         username = getattr(user, "keycloak_username", None)
 
         # Per designated action, what the change order did, for its history.
@@ -868,6 +904,7 @@ class ChangeOrderService:
             initiative_agreement_id
         )
         change_order_id = change_order.initiative_agreement_change_order_id
+        await self._lock_actions_or_409(change_order_id)
         username = getattr(user, "keycloak_username", None)
 
         for record_type in RECORD_TYPES.values():
@@ -930,3 +967,18 @@ def check_issued_credits(
                 "set below that."
             ),
         )
+
+
+def _is_lock_not_available(error: DBAPIError) -> bool:
+    """Whether PostgreSQL refused a NOWAIT lock (SQLSTATE 55P03)."""
+    original = getattr(error, "orig", None)
+    for candidate in (original, getattr(original, "__cause__", None)):
+        if candidate is None:
+            continue
+        if getattr(candidate, "sqlstate", None) == "55P03":
+            return True
+        if getattr(candidate, "pgcode", None) == "55P03":
+            return True
+        if type(candidate).__name__ == "LockNotAvailableError":
+            return True
+    return False

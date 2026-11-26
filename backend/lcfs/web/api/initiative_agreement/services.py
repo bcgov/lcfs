@@ -234,12 +234,6 @@ class InitiativeAgreementServices:
             cache[alias] = await self.repo.get_lifecycle_status_by_name(alias)
         return cache[alias] or lifecycle_status
 
-    async def _change_order_of_action(self, action):
-        """The open change order of the action's agreement, if any."""
-        return await self.change_orders.open_change_order_for(
-            action.initiative_agreement
-        )
-
     @staticmethod
     def _require_not_pending(action) -> None:
         """An action a change order added is not part of the agreement until
@@ -637,8 +631,10 @@ class InitiativeAgreementServices:
             raise DataNotFoundException(
                 f"Initiative Agreement with id {initiative_agreement_id} not found"
             )
+        agreement = await self._lock_editable_package(
+            agreement.initiative_agreement_id, user
+        )
         change_order = await self.change_orders.open_change_order_for(agreement)
-        ensure_package_editable(agreement, user)
 
         provided = data.model_fields_set
 
@@ -751,7 +747,8 @@ class InitiativeAgreementServices:
             raise DataNotFoundException(
                 f"Initiative Agreement with id {initiative_agreement_id} not found"
             )
-        ensure_package_editable(agreement, user)
+
+        agreement = await self._lock_editable_package(initiative_agreement_id, user)
         change_order = await self.change_orders.open_change_order_for(agreement)
 
         name = (data.name or "").strip()
@@ -818,8 +815,10 @@ class InitiativeAgreementServices:
         accepts (#5555).
         """
         action = await self._get_action_or_404(designated_action_id, user)
-        change_order = await self._change_order_of_action(action)
-        ensure_package_editable(action.initiative_agreement, user)
+        agreement = await self._lock_editable_package(
+            action.initiative_agreement_id, user
+        )
+        change_order = await self.change_orders.open_change_order_for(agreement)
         current = (
             await self.change_orders.working_values(
                 change_order, DESIGNATED_ACTION, action
@@ -914,8 +913,10 @@ class InitiativeAgreementServices:
         action the change order itself added goes at once. Credits already
         issued for an action keep it in the package."""
         action = await self._get_action_or_404(designated_action_id, user)
-        ensure_package_editable(action.initiative_agreement, user)
-        change_order = await self._change_order_of_action(action)
+        agreement = await self._lock_editable_package(
+            action.initiative_agreement_id, user
+        )
+        change_order = await self.change_orders.open_change_order_for(agreement)
         if change_order is None:
             raise HTTPException(
                 status_code=400,
@@ -1548,8 +1549,10 @@ class InitiativeAgreementServices:
         One added in a change order waits for the Director's acceptance
         (#5555)."""
         action = await self._get_action_or_404(designated_action_id, user)
-        change_order = await self._change_order_of_action(action)
-        ensure_package_editable(action.initiative_agreement, user)
+        agreement = await self._lock_editable_package(
+            action.initiative_agreement_id, user
+        )
+        change_order = await self.change_orders.open_change_order_for(agreement)
         title = (data.title or "").strip()
         if not title:
             raise HTTPException(
@@ -1604,8 +1607,6 @@ class InitiativeAgreementServices:
         requirement, action = await self._get_requirement_or_404(
             evidence_requirement_id, user
         )
-        agreement = action.initiative_agreement
-        change_order = await self._change_order_of_action(action)
         definition_fields = {
             "title",
             "description",
@@ -1632,16 +1633,23 @@ class InitiativeAgreementServices:
                 status_code=403,
                 detail="Only an IA analyst or manager can record an assessment.",
             )
-        if change_order is not None and provided & definition_fields:
-            # Staged against the change order's working values; unchanged
-            # wording sent with an assessment stages nothing.
-            ensure_package_editable(agreement, user)
-            await self._stage_requirement_definition(
-                change_order, requirement, data, user
-            )
-            data = data.model_copy(update={name: None for name in definition_fields})
-        elif self._changes_requirement_wording(requirement, data):
-            ensure_package_editable(agreement, user)
+        if provided & definition_fields:
+            # The wording is package content: read the lifecycle under the
+            # agreement's row lock (#5554) before deciding. Wording sent
+            # unchanged with an assessment is no edit, so an Underway
+            # package still takes the review.
+            agreement = await self._lock_package(action.initiative_agreement_id)
+            change_order = await self.change_orders.open_change_order_for(agreement)
+            if change_order is not None:
+                ensure_package_editable(agreement, user)
+                await self._stage_requirement_definition(
+                    change_order, requirement, data, user
+                )
+                data = data.model_copy(
+                    update={name: None for name in definition_fields}
+                )
+            elif self._changes_requirement_wording(requirement, data):
+                ensure_package_editable(agreement, user)
 
         # The text an analyst saves deliberately — title, description and
         # evaluation — is recorded with its before and after, the way a
@@ -1818,8 +1826,10 @@ class InitiativeAgreementServices:
         requirement, action = await self._get_requirement_or_404(
             evidence_requirement_id, user
         )
-        ensure_package_editable(action.initiative_agreement, user)
-        change_order = await self._change_order_of_action(action)
+        agreement = await self._lock_editable_package(
+            action.initiative_agreement_id, user
+        )
+        change_order = await self.change_orders.open_change_order_for(agreement)
         if change_order is not None:
             await self.change_orders.stage_removal(
                 change_order, EVIDENCE_REQUIREMENT, requirement, user
@@ -2086,6 +2096,35 @@ class InitiativeAgreementServices:
                 )
             )
 
+    async def _lock_editable_package(self, initiative_agreement_id: int, user=None):
+        """Refuse an edit unless the agreement's package is open to one
+        (#5554) and, with a user, open to that user (the Director only inside
+        a change order, #5555), holding the agreement's row until the edit is
+        saved.
+
+        The status is read under the lock, so a concurrent Set to Underway,
+        or a change order being started, accepted or discarded, cannot slip
+        between this check and the edit's save: it either waits for the
+        edit, or the edit waits for it and is then checked against the new
+        status. Every package write calls this before it changes anything,
+        and reads the open change order from the agreement it returns.
+        """
+        agreement = await self._lock_package(initiative_agreement_id)
+        ensure_package_editable(agreement, user)
+        return agreement
+
+    async def _lock_package(self, initiative_agreement_id: int):
+        """The agreement, its row held FOR KEY SHARE until the transaction
+        ends and its lifecycle re-read (see lock_agreement_for_package_edit)."""
+        agreement = await self.repo.lock_agreement_for_package_edit(
+            initiative_agreement_id
+        )
+        if agreement is None:
+            raise DataNotFoundException(
+                f"Initiative Agreement with id {initiative_agreement_id} not found"
+            )
+        return agreement
+
     async def _agreement_or_404(self, initiative_agreement_id: int, user):
         """The agreement, unless it is missing or hidden from the caller."""
         agreement = await self.repo.get_initiative_agreement_by_id(
@@ -2178,9 +2217,9 @@ class InitiativeAgreementServices:
         data: InitiativeAgreementNoteCreateSchema,
         user,
     ) -> InitiativeAgreementNoteSchema:
-        agreement = await self._agreement_or_404(initiative_agreement_id, user)
+        await self._agreement_or_404(initiative_agreement_id, user)
+        agreement = await self._lock_editable_package(initiative_agreement_id, user)
         change_order = await self.change_orders.open_change_order_for(agreement)
-        ensure_package_editable(agreement, user)
         taken = (
             await self.change_orders.note_numbers_in_use(
                 initiative_agreement_id, change_order, include_live=True
@@ -2215,9 +2254,9 @@ class InitiativeAgreementServices:
         data: InitiativeAgreementNoteUpdateSchema,
         user,
     ) -> InitiativeAgreementNoteSchema:
-        agreement = await self._agreement_or_404(initiative_agreement_id, user)
+        await self._agreement_or_404(initiative_agreement_id, user)
+        agreement = await self._lock_editable_package(initiative_agreement_id, user)
         change_order = await self.change_orders.open_change_order_for(agreement)
-        ensure_package_editable(agreement, user)
         note_text = self._require_note_text(data.note_text)
         if change_order is not None:
             await self._stage_note_update(
@@ -2281,9 +2320,9 @@ class InitiativeAgreementServices:
     async def delete_note(
         self, initiative_agreement_id: int, note_id: int, user
     ) -> None:
-        agreement = await self._agreement_or_404(initiative_agreement_id, user)
+        await self._agreement_or_404(initiative_agreement_id, user)
+        agreement = await self._lock_editable_package(initiative_agreement_id, user)
         change_order = await self.change_orders.open_change_order_for(agreement)
-        ensure_package_editable(agreement, user)
         if change_order is not None:
             note = await self._change_order_note(agreement, change_order, note_id)
             await self.change_orders.stage_removal(change_order, NOTE, note, user)

@@ -13,18 +13,23 @@ changes. A Draft is government's own preparation (#5553), so IDIR sees and
 edits it while the organization does not see it at all.
 """
 
+import asyncio
 from datetime import datetime, timezone
 from types import SimpleNamespace
 
 import pytest
 from fastapi import FastAPI, HTTPException, status
 from httpx import AsyncClient
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
+from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.document import Document, DocumentFolder, DocumentFolderItem
 from lcfs.db.models.initiative_agreement import DesignatedAction
 from lcfs.db.models.initiative_agreement.DesignatedAction import (
     designated_action_document_association,
+)
+from lcfs.db.models.initiative_agreement.DesignatedActionHistory import (
+    DesignatedActionHistory,
 )
 from lcfs.db.models.initiative_agreement.EvidenceRequirement import (
     EvidenceRequirement,
@@ -579,6 +584,163 @@ async def test_a_closed_package_stays_read_only(
 
     assert response.status_code == status.HTTP_409_CONFLICT, response.text
     assert await _state(dbsession, pkg) == before
+
+
+# ---------------------------------------------------------------------------
+# An edit racing Set to Underway. Each request has its own transaction here,
+# as in production, so PostgreSQL's row locks are what is under test.
+# ---------------------------------------------------------------------------
+
+RACING_EDITS = [
+    ("update_agreement", "PUT", _agreement, {"title": "Changed"}),
+    ("create_note", "POST", _agreement, {"noteText": "<p>Added</p>"}),
+    ("update_designated_action", "PUT", _action, {"name": "Renamed"}),
+    (
+        "create_evidence_requirement",
+        "POST",
+        _action,
+        {"title": "Inspection", "description": "Inspection report"},
+    ),
+    (
+        "create_document_folder",
+        "POST",
+        lambda pkg: _parent(pkg, "initiativeAgreement"),
+        {"name": "Inspections"},
+    ),
+]
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "route, method, params, body", RACING_EDITS, ids=[r[0] for r in RACING_EDITS]
+)
+async def test_an_edit_racing_set_to_underway_is_refused(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    dbsession_factory,
+    route,
+    method,
+    params,
+    body,
+):
+    """An edit that starts while a Draft is being set Underway must not
+    land after it. The edit reads the status under the agreement's row lock,
+    so it waits for the transition and is then refused."""
+    async with dbsession_factory() as setup:
+        async with setup.begin():
+            org_id, _ = await _two_org_ids(setup)
+            draft = await _lifecycle_status_id(setup, DRAFT)
+            underway = await _lifecycle_status_id(setup, UNDERWAY)
+            agreement = await _seed_agreement(
+                setup,
+                org_id,
+                f"IA-26RACE-{RACING_EDITS.index((route, method, params, body))}",
+                lifecycle_status_id=draft,
+            )
+            action = await _seed_action(setup, agreement, 1, "Commission station")
+            pkg = SimpleNamespace(agreement=agreement, action=action)
+            agreement_id = agreement.initiative_agreement_id
+            action_id = action.designated_action_id
+
+    async def request_session():
+        async with dbsession_factory() as session:
+            async with session.begin():
+                yield session
+
+    previous = fastapi_app.dependency_overrides[get_async_db_session]
+    fastapi_app.dependency_overrides[get_async_db_session] = request_session
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+    try:
+        async with dbsession_factory() as transition:
+            async with transition.begin():
+                # Set to Underway's own lock and update, not yet committed.
+                await transition.execute(
+                    select(InitiativeAgreement.initiative_agreement_id)
+                    .where(InitiativeAgreement.initiative_agreement_id == agreement_id)
+                    .with_for_update()
+                )
+                row = await transition.get(InitiativeAgreement, agreement_id)
+                row.lifecycle_status_id = underway
+                await transition.flush()
+
+                edit = asyncio.create_task(
+                    client.request(
+                        method,
+                        fastapi_app.url_path_for(route, **params(pkg)),
+                        json=body,
+                    )
+                )
+                await asyncio.sleep(1)
+                # Without the lock the edit reads Draft and is already saved.
+                assert not edit.done(), (await edit).text
+
+        response = await asyncio.wait_for(edit, timeout=10)
+
+        assert response.status_code == status.HTTP_409_CONFLICT, response.text
+        async with dbsession_factory() as check:
+            saved = await check.get(InitiativeAgreement, agreement_id)
+            assert saved.title == "Test agreement"
+            assert (
+                await check.scalars(
+                    select(InitiativeAgreementNote.initiative_agreement_note_id).where(
+                        InitiativeAgreementNote.initiative_agreement_id == agreement_id
+                    )
+                )
+            ).all() == []
+            assert (
+                await check.get(DesignatedAction, action_id)
+            ).name == "Commission station"
+            assert (
+                await check.scalars(
+                    select(EvidenceRequirement.evidence_requirement_id).where(
+                        EvidenceRequirement.designated_action_id == action_id
+                    )
+                )
+            ).all() == []
+            assert (
+                await check.scalars(
+                    select(DocumentFolder.folder_id).where(
+                        DocumentFolder.parent_type == "initiativeAgreement",
+                        DocumentFolder.parent_id == agreement_id,
+                    )
+                )
+            ).all() == []
+    finally:
+        fastapi_app.dependency_overrides[get_async_db_session] = previous
+        async with dbsession_factory() as cleanup:
+            async with cleanup.begin():
+                await cleanup.execute(
+                    delete(EvidenceRequirement).where(
+                        EvidenceRequirement.designated_action_id == action_id
+                    )
+                )
+                await cleanup.execute(
+                    delete(DesignatedActionHistory).where(
+                        DesignatedActionHistory.designated_action_id == action_id
+                    )
+                )
+                await cleanup.execute(
+                    delete(DesignatedAction).where(
+                        DesignatedAction.initiative_agreement_id == agreement_id
+                    )
+                )
+                await cleanup.execute(
+                    delete(InitiativeAgreementNote).where(
+                        InitiativeAgreementNote.initiative_agreement_id == agreement_id
+                    )
+                )
+                await cleanup.execute(
+                    delete(DocumentFolder).where(
+                        DocumentFolder.parent_type == "initiativeAgreement",
+                        DocumentFolder.parent_id == agreement_id,
+                    )
+                )
+                await cleanup.execute(
+                    delete(InitiativeAgreement).where(
+                        InitiativeAgreement.initiative_agreement_id == agreement_id
+                    )
+                )
 
 
 # ---------------------------------------------------------------------------

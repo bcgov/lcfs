@@ -7,6 +7,7 @@ keeps reading the accepted package, and the Director accepts. Each API test
 checks one user's view of a package the services put in place.
 """
 
+import asyncio
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from types import SimpleNamespace
@@ -14,9 +15,10 @@ from types import SimpleNamespace
 import pytest
 from fastapi import FastAPI, HTTPException, status
 from httpx import AsyncClient
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 
 from lcfs.db.base import ActionTypeEnum
+from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.initiative_agreement.ChangeOrderVersion import (
     DesignatedActionVersion,
     EvidenceRequirementVersion,
@@ -1122,3 +1124,254 @@ def test_the_lock_lets_the_director_edit_only_in_a_change_order():
     with pytest.raises(HTTPException) as error:
         ensure_package_editable(_agreement_in("Draft"), DIRECTOR)
     assert error.value.status_code == 403
+
+
+# --- Racing the lifecycle (#5554's row lock) ----------------------------------
+# Each request runs in its own transaction here, as in production, so
+# PostgreSQL's row locks are what is under test. Starting, accepting and
+# discarding a change order hold the agreement's row FOR UPDATE; a package
+# edit takes it FOR KEY SHARE and reads the lifecycle under it.
+
+
+async def _committed_package(factory, code, *, staged_edit=False):
+    """An underway agreement with one action, committed. With staged_edit,
+    a change order is open and holds an edit to the action."""
+    async with factory() as setup:
+        async with setup.begin():
+            org_id, _ = await _two_org_ids(setup)
+            agreement = await _seed_agreement(
+                setup, org_id, code, title="Original title"
+            )
+            action = await _seed_action(setup, agreement, 1, "Build the plant", 1000)
+            ids = SimpleNamespace(
+                agreement_id=agreement.initiative_agreement_id,
+                action_id=action.designated_action_id,
+            )
+    if staged_edit:
+        async with factory() as staging:
+            async with staging.begin():
+                service = _service(staging, ANALYST)
+                await service.change_orders.start(ids.agreement_id, ANALYST)
+                await service.update_designated_action(
+                    ids.action_id,
+                    DesignatedActionUpdateSchema(credit_allocation=1500),
+                    ANALYST,
+                )
+    return ids
+
+
+async def _purge(factory, ids):
+    async with factory() as cleanup:
+        async with cleanup.begin():
+            action_ids = select(DesignatedAction.designated_action_id).where(
+                DesignatedAction.initiative_agreement_id == ids.agreement_id
+            )
+            for statement in (
+                delete(DesignatedActionHistory).where(
+                    DesignatedActionHistory.designated_action_id.in_(action_ids)
+                ),
+                delete(DesignatedActionVersion).where(
+                    DesignatedActionVersion.designated_action_id.in_(action_ids)
+                ),
+                delete(InitiativeAgreementVersion).where(
+                    InitiativeAgreementVersion.initiative_agreement_id
+                    == ids.agreement_id
+                ),
+                delete(DesignatedAction).where(
+                    DesignatedAction.initiative_agreement_id == ids.agreement_id
+                ),
+                delete(InitiativeAgreementLifecycleHistory).where(
+                    InitiativeAgreementLifecycleHistory.initiative_agreement_id
+                    == ids.agreement_id
+                ),
+                delete(InitiativeAgreementChangeOrder).where(
+                    InitiativeAgreementChangeOrder.initiative_agreement_id
+                    == ids.agreement_id
+                ),
+                delete(InitiativeAgreement).where(
+                    InitiativeAgreement.initiative_agreement_id == ids.agreement_id
+                ),
+            ):
+                await cleanup.execute(statement)
+
+
+def _own_transactions(fastapi_app, factory):
+    """Give each API request its own committed transaction; returns the
+    override it replaced."""
+
+    async def request_session():
+        async with factory() as session:
+            async with session.begin():
+                yield session
+
+    previous = fastapi_app.dependency_overrides[get_async_db_session]
+    fastapi_app.dependency_overrides[get_async_db_session] = request_session
+    return previous
+
+
+async def _edit_while(transition_step, client, fastapi_app, factory, ids):
+    """Run transition_step in an uncommitted transaction, send an edit to the
+    action meanwhile, check the edit waits for it, then commit and return
+    the edit's response."""
+    async with factory() as transition:
+        async with transition.begin():
+            await transition_step(transition)
+            edit = asyncio.create_task(
+                client.put(
+                    fastapi_app.url_path_for(
+                        "update_designated_action",
+                        designated_action_id=ids.action_id,
+                    ),
+                    json={"name": "Late edit"},
+                )
+            )
+            await asyncio.sleep(1)
+            # Without the lock the edit reads the old status and is saved.
+            assert not edit.done(), (await edit).text
+    return await asyncio.wait_for(edit, timeout=10)
+
+
+async def _action_versions(factory, ids):
+    async with factory() as check:
+        return (
+            await check.execute(
+                select(
+                    DesignatedActionVersion.version,
+                    DesignatedActionVersion.name,
+                    DesignatedActionVersion.credit_allocation,
+                )
+                .where(DesignatedActionVersion.designated_action_id == ids.action_id)
+                .order_by(DesignatedActionVersion.version)
+            )
+        ).all()
+
+
+@pytest.mark.anyio
+async def test_an_edit_racing_a_change_order_start_lands_in_the_change_order(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession_factory
+):
+    ids = await _committed_package(dbsession_factory, "IA-26RACE-CO1")
+    previous = _own_transactions(fastapi_app, dbsession_factory)
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+    try:
+
+        async def start(session):
+            await _service(session, ANALYST).change_orders.start(
+                ids.agreement_id, ANALYST
+            )
+
+        response = await _edit_while(start, client, fastapi_app, dbsession_factory, ids)
+
+        # The edit waited, saw the change order draft, and was staged in it
+        # instead of changing the live row.
+        assert response.status_code == status.HTTP_200_OK, response.text
+        assert response.json()["changeOrderState"] == "edited"
+        async with dbsession_factory() as check:
+            live = await check.get(DesignatedAction, ids.action_id)
+            assert live.name == "Build the plant"
+        assert [v.name for v in await _action_versions(dbsession_factory, ids)] == [
+            "Late edit"
+        ]
+    finally:
+        fastapi_app.dependency_overrides[get_async_db_session] = previous
+        await _purge(dbsession_factory, ids)
+
+
+@pytest.mark.anyio
+async def test_an_edit_racing_acceptance_is_refused_once_it_is_accepted(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession_factory
+):
+    ids = await _committed_package(dbsession_factory, "IA-26RACE-CO2", staged_edit=True)
+    previous = _own_transactions(fastapi_app, dbsession_factory)
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+    try:
+
+        async def accept(session):
+            await _service(session, DIRECTOR).accept_change_order(
+                ids.agreement_id, date(2025, 12, 1), DIRECTOR
+            )
+
+        response = await _edit_while(
+            accept, client, fastapi_app, dbsession_factory, ids
+        )
+
+        assert response.status_code == status.HTTP_409_CONFLICT, response.text
+        async with dbsession_factory() as check:
+            live = await check.get(DesignatedAction, ids.action_id)
+            assert (live.name, live.credit_allocation) == ("Build the plant", 1500)
+        # The accepted versions only: the late edit left no pending row.
+        assert [
+            (v.version, v.credit_allocation)
+            for v in await _action_versions(dbsession_factory, ids)
+        ] == [(0, 1000), (1, 1500)]
+    finally:
+        fastapi_app.dependency_overrides[get_async_db_session] = previous
+        await _purge(dbsession_factory, ids)
+
+
+@pytest.mark.anyio
+async def test_an_edit_racing_a_discard_is_refused_once_it_is_discarded(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession_factory
+):
+    ids = await _committed_package(dbsession_factory, "IA-26RACE-CO3", staged_edit=True)
+    previous = _own_transactions(fastapi_app, dbsession_factory)
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+    try:
+
+        async def discard(session):
+            await _service(session, MANAGER).discard_change_order(
+                ids.agreement_id, MANAGER
+            )
+
+        response = await _edit_while(
+            discard, client, fastapi_app, dbsession_factory, ids
+        )
+
+        # Without the lock the edit would be staged on a change order that
+        # was being discarded, leaving a pending version nothing owns.
+        assert response.status_code == status.HTTP_409_CONFLICT, response.text
+        assert await _action_versions(dbsession_factory, ids) == []
+        async with dbsession_factory() as check:
+            live = await check.get(DesignatedAction, ids.action_id)
+            assert (live.name, live.credit_allocation) == ("Build the plant", 1000)
+    finally:
+        fastapi_app.dependency_overrides[get_async_db_session] = previous
+        await _purge(dbsession_factory, ids)
+
+
+@pytest.mark.anyio
+async def test_acceptance_refuses_rather_than_waits_on_a_busy_action(
+    dbsession_factory,
+):
+    """A Director's approval holds an action's row and then updates the
+    agreement's; acceptance holds the agreement's and then changes actions.
+    Acceptance must not wait on the action, or the two could deadlock."""
+    ids = await _committed_package(dbsession_factory, "IA-26RACE-CO4", staged_edit=True)
+    try:
+        async with dbsession_factory() as approval:
+            async with approval.begin():
+                await approval.execute(
+                    select(DesignatedAction.designated_action_id)
+                    .where(DesignatedAction.designated_action_id == ids.action_id)
+                    .with_for_update()
+                )
+                with pytest.raises(HTTPException) as error:
+                    async with dbsession_factory() as accepting:
+                        async with accepting.begin():
+                            await asyncio.wait_for(
+                                _service(accepting, DIRECTOR).accept_change_order(
+                                    ids.agreement_id, date(2025, 12, 1), DIRECTOR
+                                ),
+                                timeout=5,
+                            )
+                assert error.value.status_code == 409
+
+        # Nothing was accepted; once the action is free it can be.
+        async with dbsession_factory() as accepting:
+            async with accepting.begin():
+                profile = await _service(accepting, DIRECTOR).accept_change_order(
+                    ids.agreement_id, date(2025, 12, 1), DIRECTOR
+                )
+        assert profile.lifecycle_status.status == "Underway"
+    finally:
+        await _purge(dbsession_factory, ids)

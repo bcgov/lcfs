@@ -336,6 +336,31 @@ class InitiativeAgreementRepository:
         return result.scalars().first()
 
     @repo_handler
+    async def lock_agreement_for_package_edit(
+        self, initiative_agreement_id: int
+    ) -> Optional[InitiativeAgreement]:
+        """The agreement, its row held until the transaction ends and its
+        lifecycle re-read, for a package edit to check against (#5554).
+
+        FOR KEY SHARE conflicts with the FOR UPDATE a lifecycle change takes
+        (Set to Underway), so the two cannot interleave: the edit either
+        finishes first or waits and then sees the new status. It does not
+        conflict with the plain updates the review workflow makes to the
+        agreement's credit totals, so an approval and a package edit never
+        deadlock over the row.
+        """
+        result = await self.db.execute(
+            select(InitiativeAgreement)
+            .options(selectinload(InitiativeAgreement.lifecycle_status))
+            .where(
+                InitiativeAgreement.initiative_agreement_id == initiative_agreement_id
+            )
+            .with_for_update(key_share=True, of=InitiativeAgreement)
+            .execution_options(populate_existing=True)
+        )
+        return result.scalars().first()
+
+    @repo_handler
     async def create_initiative_agreement(
         self, initiative_agreement: InitiativeAgreement
     ) -> InitiativeAgreement:
