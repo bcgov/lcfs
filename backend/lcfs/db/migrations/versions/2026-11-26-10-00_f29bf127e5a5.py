@@ -6,8 +6,8 @@ recreated from metabase.sql with the new prefix. Their columns do not change,
 so CREATE OR REPLACE keeps the views' grants and anything built on them.
 
 Revision ID: f29bf127e5a5
-Revises: b7a04f59fdf3
-Create Date: 2026-11-20 10:00:00.000000
+Revises: c3a7e91d5f48
+Create Date: 2026-11-26 10:00:00.000000
 """
 
 import sqlalchemy as sa
@@ -21,7 +21,7 @@ from lcfs.db.dependencies import (
 )
 
 revision = "f29bf127e5a5"
-down_revision = "b7a04f59fdf3"
+down_revision = "c3a7e91d5f48"
 branch_labels = None
 depends_on = None
 
