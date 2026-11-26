@@ -1847,17 +1847,19 @@ async def test_calculate_renewable_fuel_target_summary_copy_lines_6_and_8(
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize("with_previous_report", [False, True])
 async def test_calculate_summary_filters_ineligible_renewable_fuel_post_2025(
     compliance_report_summary_service,
     mock_repo,
     mock_summary_repo,
     mock_trxn_repo,
+    with_previous_report,
 ):
     compliance_report = MagicMock(spec=ComplianceReport)
     compliance_report.compliance_report_id = 1
     compliance_report.organization_id = 1
     compliance_report.compliance_report_group_uuid = "test-group"
-    compliance_report.version = 0
+    compliance_report.version = 1 if with_previous_report else 0
     compliance_report.nickname = "Test Report"
     compliance_report.reporting_frequency = None
 
@@ -1871,13 +1873,21 @@ async def test_calculate_summary_filters_ineligible_renewable_fuel_post_2025(
     summary_model = ComplianceReportSummary(
         summary_id=1,
         compliance_report_id=1,
+        line_6_renewable_fuel_retained_diesel=0,
+        line_8_obligation_deferred_gasoline=0,
     )
     compliance_report.summary = summary_model
 
     compliance_report_summary_service.cr_repo.get_compliance_report_by_id = AsyncMock(
         return_value=compliance_report
     )
-    mock_repo.get_assessed_compliance_report_by_period.return_value = None
+    previous_summary = ComplianceReportSummary(
+        line_6_renewable_fuel_retained_diesel=100,
+        line_8_obligation_deferred_gasoline=50,
+    )
+    mock_repo.get_assessed_compliance_report_by_period.return_value = (
+        MagicMock(summary=previous_summary) if with_previous_report else None
+    )
 
     def _make_record(category, fuel_type_name, *, canada=False, q1=False, country=None):
         fuel_type = MagicMock()
@@ -1972,6 +1982,13 @@ async def test_calculate_summary_filters_ineligible_renewable_fuel_post_2025(
     compliance_report_summary_service.repo.save_compliance_report_summary = AsyncMock()
 
     await compliance_report_summary_service.calculate_compliance_report_summary(1)
+
+    assert summary_model.line_6_renewable_fuel_retained_diesel == (
+        100 if with_previous_report else 0
+    )
+    assert summary_model.line_8_obligation_deferred_gasoline == (
+        50 if with_previous_report else 0
+    )
 
     # Ensure renewable aggregation excluded ineligible supply but kept eligible ones.
     assert captured_records, "Expected renewable aggregation records to be captured"
