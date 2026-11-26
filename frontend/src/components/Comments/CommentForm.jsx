@@ -256,10 +256,12 @@ const CommentForm = ({
 
   const handleEditorChange = (content, _delta, source, editor) => {
     // A manual edit makes the "Undo" snapshot stale.
-    if (source === 'user' && removedMentionsSnapshot !== null) {
-      setRemovedMentionsSnapshot(null)
+    if (source === 'user') {
+      if (removedMentionsSnapshot !== null) {
+        setRemovedMentionsSnapshot(null)
+      }
+      onCommentChange?.(content)
     }
-    onCommentChange?.(content)
     mentionEditor.handleEditorChange(editor)
   }
 
