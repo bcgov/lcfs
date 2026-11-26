@@ -1,5 +1,5 @@
 import { Controller } from 'react-hook-form'
-import type { Control, FieldValues } from 'react-hook-form'
+import type { Control, FieldPath, FieldValues } from 'react-hook-form'
 import TextField from '@mui/material/TextField'
 import InputLabel from '@mui/material/InputLabel'
 import FormControlLabel from '@mui/material/FormControlLabel'
@@ -9,9 +9,11 @@ import BCTypography from '@/components/BCTypography'
 import PropTypes from 'prop-types'
 import type { ChangeEventHandler, ReactNode } from 'react'
 
-export interface BCFormTextProps {
-  name: string
-  control: Control<FieldValues>
+export interface BCFormTextProps<
+  TFieldValues extends FieldValues = FieldValues
+> {
+  name: FieldPath<TFieldValues>
+  control: Control<TFieldValues>
   label?: ReactNode
   optional?: boolean
   checkbox?: boolean
@@ -23,7 +25,7 @@ export interface BCFormTextProps {
   rows?: number
 }
 
-export const BCFormText = ({
+export const BCFormText = <TFieldValues extends FieldValues>({
   name,
   control,
   label,
@@ -35,7 +37,7 @@ export const BCFormText = ({
   disabled,
   multiline,
   rows
-}: BCFormTextProps) => {
+}: BCFormTextProps<TFieldValues>) => {
   return (
     <Controller
       name={name}

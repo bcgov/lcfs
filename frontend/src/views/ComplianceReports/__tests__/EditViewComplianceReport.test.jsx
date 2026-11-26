@@ -156,7 +156,7 @@ vi.mock('../components/AssessmentCard', () => ({
 }))
 
 vi.mock(
-  '@/views/ComplianceReports/components/AssessmentRecommendation.jsx',
+  '@/views/ComplianceReports/components/AssessmentRecommendation.tsx',
   () => ({
     AssessmentRecommendation: () => (
       <div data-test="assessment-recommendation" />
@@ -164,20 +164,20 @@ vi.mock(
   })
 )
 
-vi.mock('@/views/ComplianceReports/components/AssessmentStatement.jsx', () => ({
+vi.mock('@/views/ComplianceReports/components/AssessmentStatement.tsx', () => ({
   AssessmentStatement: () => <div data-test="assessment-statement" />
 }))
 
-vi.mock('@/views/ComplianceReports/components/Introduction.jsx', () => ({
+vi.mock('@/views/ComplianceReports/components/Introduction.tsx', () => ({
   Introduction: () => <div data-test="introduction" />
 }))
 
-vi.mock('@/views/ComplianceReports/components/ReportYearNavigator.jsx', () => ({
+vi.mock('@/views/ComplianceReports/components/ReportYearNavigator.tsx', () => ({
   ReportYearNavigator: () => <div data-test="report-year-navigator" />
 }))
 
 vi.mock(
-  '@/views/ComplianceReports/components/ComplianceReportEarlyIssuanceSummary.jsx',
+  '@/views/ComplianceReports/components/ComplianceReportEarlyIssuanceSummary.tsx',
   () => ({
     __esModule: true,
     default: () => <div data-test="early-issuance-summary" />

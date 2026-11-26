@@ -1,0 +1,395 @@
+import { useMemo } from 'react'
+import BCTypography from '@/components/BCTypography/index.jsx'
+import { StyledListItem } from '@/components/StyledListItem'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
+import { useCurrentUser } from '@/hooks/useCurrentUser.js'
+import { timezoneFormatter, currencyFormatter } from '@/utils/formatters'
+import ExpandMore from '@mui/icons-material/ExpandMore'
+import List from '@mui/material/List'
+import ListItemText from '@mui/material/ListItemText'
+import { styled } from '@mui/material/styles'
+import MuiAccordion from '@mui/material/Accordion'
+import MuiAccordionDetails from '@mui/material/AccordionDetails'
+import MuiAccordionSummary, {
+  accordionSummaryClasses
+} from '@mui/material/AccordionSummary'
+import { useTranslation } from 'react-i18next'
+import { roles } from '@/constants/roles'
+import type { ComplianceReportHistoryEntry } from '@/stores/useComplianceReportStore'
+import type { AccordionProps } from '@mui/material/Accordion'
+import type { AccordionSummaryProps } from '@mui/material/AccordionSummary'
+
+interface HistoryCardReport {
+  complianceReportId?: number | string
+  currentStatus?: { status: string }
+  version?: number
+  nickname?: string
+  assessmentStatement?: string | null
+  compliancePeriod?: { description?: string }
+  history?: ComplianceReportHistoryEntry[] | null
+  summary?: {
+    line11NonCompliancePenaltyPayable?: number | string | null
+    line11FossilDerivedBaseFuelTotal?: number | string | null
+    line21NonCompliancePenaltyPayable?: number | string | null
+    hasRenewableFuelRequirement?: boolean
+    totalRenewableFuelSupplied?: number
+    totalLowCarbonFuelSupplied?: number
+  }
+  isLowCarbonFuelExempted?: boolean
+  isRenewableFuelExempted?: boolean
+  isNonAssessment?: boolean
+  organization?: { name?: string }
+}
+
+interface HistoryCardProps {
+  report: HistoryCardReport
+  defaultExpanded?: boolean
+  assessedMessage?: string | false | null
+  reportVersion?: number
+  currentStatus?: string
+}
+
+const Accordion = styled((props: AccordionProps) => (
+  <MuiAccordion disableGutters elevation={0} square {...props} />
+))(() => ({
+  border: 'none',
+  '&::before': {
+    display: 'none'
+  }
+}))
+
+const AccordionSummary = styled((props: AccordionSummaryProps) => (
+  <MuiAccordionSummary
+    expandIcon={<ExpandMore sx={{ fontSize: '0.9rem' }} />}
+    {...props}
+  />
+))(() => ({
+  minHeight: 'unset',
+  padding: 0,
+  flexDirection: 'row-reverse',
+  [`& .${accordionSummaryClasses.content}`]: {
+    margin: 0
+  },
+  [`& .${accordionSummaryClasses.expanded}`]: {
+    margin: 0
+  }
+}))
+
+const AccordionDetails = styled(MuiAccordionDetails)(() => ({
+  paddingLeft: '1rem',
+  paddingTop: 0,
+  paddingBottom: 0
+}))
+
+export const HistoryCard = ({
+  report,
+  defaultExpanded = false,
+  assessedMessage = undefined
+}: HistoryCardProps) => {
+  const { data: currentUser, hasRoles } = useCurrentUser()
+  const isGovernmentUser = currentUser?.isGovernmentUser
+  const { t } = useTranslation(['report'])
+
+  // Basic status checks
+  const isCurrentAssessed =
+    report.currentStatus?.status === COMPLIANCE_REPORT_STATUSES.ASSESSED ||
+    report.currentStatus?.status === COMPLIANCE_REPORT_STATUSES.EXEMPTED
+
+  // User permission checks
+  const canEditAssessmentStatement = useMemo(() => {
+    if (!isGovernmentUser) return false
+
+    const currentStatus = report.currentStatus?.status
+    const roleStatusMap: Record<string, string[]> = {
+      [roles.analyst]: [
+        COMPLIANCE_REPORT_STATUSES.SUBMITTED,
+        COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT
+      ],
+      [roles.compliance_manager]: [
+        COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST
+      ],
+      [roles.director]: [COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER]
+    }
+
+    return Object.entries(roleStatusMap).some(
+      ([role, statuses]) =>
+        hasRoles(role) && statuses.includes(currentStatus ?? '')
+    )
+  }, [isGovernmentUser, hasRoles, report.currentStatus?.status])
+
+  // Display conditions - what to show/hide
+  const shouldShowTopLevelAssessmentLines =
+    isGovernmentUser &&
+    !isCurrentAssessed &&
+    defaultExpanded &&
+    report?.currentStatus?.status !== COMPLIANCE_REPORT_STATUSES.DRAFT
+
+  const shouldShowDirectorStatement =
+    assessedMessage &&
+    ((!isGovernmentUser && isCurrentAssessed) || isGovernmentUser)
+
+  const shouldShowEditableIndicator =
+    isGovernmentUser && canEditAssessmentStatement
+
+  const renewablePenaltyAmountRaw =
+    report?.summary?.line11NonCompliancePenaltyPayable ??
+    report?.summary?.line11FossilDerivedBaseFuelTotal ??
+    0
+  const lowCarbonPenaltyAmountRaw =
+    report?.summary?.line21NonCompliancePenaltyPayable || 0
+
+  const renewablePenaltyAmount = Math.trunc(
+    Number(renewablePenaltyAmountRaw) || 0
+  )
+  const lowCarbonPenaltyAmount = Math.trunc(
+    Number(lowCarbonPenaltyAmountRaw) || 0
+  )
+
+  const renewableTargetNotMet = Number(renewablePenaltyAmountRaw) > 0
+  const lowCarbonTargetNotMet = Number(lowCarbonPenaltyAmountRaw) > 0
+
+  const formattedRenewablePenalty = currencyFormatter(renewablePenaltyAmount)
+  const formattedLowCarbonPenalty = currencyFormatter(lowCarbonPenaltyAmount)
+
+  /**
+   * Helper: build the two assessment list items.
+   * We use it twice – once top‑level for gov users (pre‑assessment)
+   * and once nested under the Assessed history entry for all users.
+   */
+  const AssessmentLines = () => {
+    // Check if the report is marked as non-assessment
+    if (report.isNonAssessment) {
+      return (
+        <StyledListItem disablePadding>
+          <ListItemText slotProps={{ primary: { variant: 'body4' } }}>
+            <strong>{t('report:notSubjectToAssessment')}:&nbsp;</strong>
+            {t('report:notSubjectToAssessmentHistoryMessage')}
+          </ListItemText>
+        </StyledListItem>
+      )
+    }
+
+    // Check if the report has exemptions
+    if (report.isRenewableFuelExempted || report.isLowCarbonFuelExempted) {
+      return (
+        <>
+          {report.isRenewableFuelExempted && (
+            <StyledListItem disablePadding>
+              <ListItemText slotProps={{ primary: { variant: 'body4' } }}>
+                <strong>
+                  {t('report:complianceReportHistory.renewableTarget')}:&nbsp;
+                </strong>
+                {t('report:assessmentExemptRenewable', {
+                  name: report.organization?.name
+                })}
+              </ListItemText>
+            </StyledListItem>
+          )}
+          {report.isLowCarbonFuelExempted && (
+            <StyledListItem disablePadding>
+              <ListItemText slotProps={{ primary: { variant: 'body4' } }}>
+                <strong>
+                  {t('report:complianceReportHistory.lowCarbonTarget')}:&nbsp;
+                </strong>
+                {t('report:assessmentExemptLowCarbon', {
+                  name: report.organization?.name
+                })}
+              </ListItemText>
+            </StyledListItem>
+          )}
+        </>
+      )
+    }
+
+    // Default assessment lines for normal reports
+    // Only show renewable fuel target assessment if there is a renewable fuel requirement
+    // (any non-zero value in Lines 3 or 9 for any fuel category)
+    return (
+      <>
+        {report?.summary?.hasRenewableFuelRequirement && (
+          <StyledListItem disablePadding>
+            <ListItemText slotProps={{ primary: { variant: 'body4' } }}>
+              <strong>
+                {t('report:complianceReportHistory.renewableTarget')}:&nbsp;
+              </strong>
+              {t('report:assessmentLn1', {
+                name: report.organization?.name,
+                hasMet:
+                  Number(renewablePenaltyAmountRaw) <= 0
+                    ? 'has met'
+                    : 'has not met'
+              })}
+            </ListItemText>
+            {renewableTargetNotMet && (
+              <List sx={{ p: 0, m: 0, width: '100%' }}>
+                <StyledListItem
+                  disablePadding
+                  sx={{ listStyleType: 'circle', marginLeft: '2.4rem' }}
+                >
+                  <ListItemText slotProps={{ primary: { variant: 'body4' } }}>
+                    {t('report:assessmentPenaltyLn1', {
+                      penaltyAmount: formattedRenewablePenalty
+                    })}
+                  </ListItemText>
+                </StyledListItem>
+              </List>
+            )}
+          </StyledListItem>
+        )}
+        <StyledListItem disablePadding>
+          <ListItemText slotProps={{ primary: { variant: 'body4' } }}>
+            <strong>
+              {t('report:complianceReportHistory.lowCarbonTarget')}:&nbsp;
+            </strong>
+            {t('report:assessmentLn2', {
+              name: report.organization?.name,
+              hasMet:
+                Number(lowCarbonPenaltyAmountRaw) <= 0
+                  ? 'has met'
+                  : 'has not met'
+            })}
+          </ListItemText>
+          {lowCarbonTargetNotMet && (
+            <List sx={{ p: 0, m: 0, width: '100%' }}>
+              <StyledListItem
+                disablePadding
+                sx={{ listStyleType: 'circle', marginLeft: '2.4rem' }}
+              >
+                <ListItemText slotProps={{ primary: { variant: 'body4' } }}>
+                  {t('report:assessmentPenaltyLn2', {
+                    penaltyAmount: formattedLowCarbonPenalty
+                  })}
+                </ListItemText>
+              </StyledListItem>
+            </List>
+          )}
+        </StyledListItem>
+      </>
+    )
+  }
+
+  const sortedHistory = useMemo(() => {
+    if (!Array.isArray(report.history) || report.history.length === 0) return []
+
+    return [...report.history]
+      .sort(
+        (a, b) =>
+          new Date(b.createDate).getTime() - new Date(a.createDate).getTime()
+      )
+      .map((item) => {
+        if (!isGovernmentUser) {
+          if (item.status.status === COMPLIANCE_REPORT_STATUSES.ASSESSED) {
+            item.status.status = 'AssessedBy'
+          } else if (
+            item.status.status === COMPLIANCE_REPORT_STATUSES.EXEMPTED
+          ) {
+            item.status.status = 'ExemptedBy'
+          }
+        }
+        return item
+      })
+  }, [isGovernmentUser, report.history])
+
+  return (
+    <Accordion defaultExpanded={defaultExpanded}>
+      <AccordionSummary
+        expandIcon={<ExpandMore sx={{ width: '2rem', height: '2rem' }} />}
+        aria-controls="panel1-content"
+      >
+        <BCTypography color="link" variant="body2">
+          {report.version === 0
+            ? `${report.compliancePeriod?.description} Compliance Report`
+            : report.nickname}
+          : {report.currentStatus?.status}
+        </BCTypography>
+      </AccordionSummary>
+
+      {sortedHistory.length > 0 && (
+        <AccordionDetails>
+          <List>
+            {/* GOV users – show assessment lines immediately (top‑level) until Assessed */}
+            {shouldShowTopLevelAssessmentLines && <AssessmentLines />}
+
+            {/* Director statement – show to government users and non-government users if assessed */}
+            {shouldShowDirectorStatement && (
+              <StyledListItem disablePadding>
+                <ListItemText
+                  data-test="list-item"
+                  slotProps={{ primary: { variant: 'body4' } }}
+                >
+                  <strong>
+                    {t('report:complianceReportHistory.directorStatement')}
+                  </strong>
+                  {shouldShowEditableIndicator && (
+                    <span style={{ color: '#d8292f' }}>
+                      {' '}
+                      {t('report:complianceReportHistory.canBeEdited')}
+                    </span>
+                  )}
+                  :{' '}
+                  <span style={{ whiteSpace: 'pre-line' }}>
+                    {assessedMessage.replace(/\n{2,}/g, '\n')}
+                  </span>
+                </ListItemText>
+              </StyledListItem>
+            )}
+
+            {/* History timeline */}
+            {sortedHistory.map((item, index) => {
+              const showNestedAssessment = [
+                COMPLIANCE_REPORT_STATUSES.ASSESSED,
+                COMPLIANCE_REPORT_STATUSES.EXEMPTED,
+                'AssessedBy',
+                'ExemptedBy'
+              ].includes(item.status.status)
+
+              const hideHistoryLine =
+                report?.complianceReportId === item?.complianceReportId &&
+                report?.currentStatus?.status ===
+                  COMPLIANCE_REPORT_STATUSES.DRAFT &&
+                item?.status?.status !== COMPLIANCE_REPORT_STATUSES.DRAFT
+
+              return (
+                !hideHistoryLine && (
+                  <StyledListItem key={index} disablePadding>
+                    <ListItemText
+                      data-test="list-item"
+                      slotProps={{ primary: { variant: 'body4' } }}
+                    >
+                      <span
+                        dangerouslySetInnerHTML={{
+                          __html: t(
+                            `report:complianceReportHistory.${item.status.status}`,
+                            {
+                              createDate: timezoneFormatter({
+                                value: item.createDate
+                              }),
+                              displayName:
+                                item.displayName ||
+                                `${item.userProfile.firstName} ${item.userProfile.lastName}`,
+                              // Rendered as HTML for the template's own <i>
+                              // markup, so escape the user-supplied values
+                              // (escaping is off globally in i18n.ts)
+                              interpolation: { escapeValue: true }
+                            }
+                          )
+                        }}
+                      />
+                    </ListItemText>
+
+                    {/* Nested assessment – appears once the status is Assessed */}
+                    {showNestedAssessment && (
+                      <List sx={{ p: 0, m: 0 }}>
+                        <AssessmentLines />
+                      </List>
+                    )}
+                  </StyledListItem>
+                )
+              )
+            })}
+          </List>
+        </AccordionDetails>
+      )}
+    </Accordion>
+  )
+}
