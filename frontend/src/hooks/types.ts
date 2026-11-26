@@ -21,7 +21,7 @@ export interface PaginationParams {
   filters?: Filter[]
   sort_orders?: SortOrder[]
   sortOrders?: SortOrder[]
-  organizationId?: number | string
+  organizationId?: number | string | null
   [key: string]: unknown
 }
 

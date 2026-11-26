@@ -31,17 +31,85 @@ import '@mui/material/MenuItem'
 import '@/components/BCButton'
 import '@fortawesome/react-fontawesome'
 import '@fortawesome/free-solid-svg-icons'
+import type {
+  BCGridRow,
+  BCGridEditContext,
+  BCGridRef
+} from '@/components/BCDataGrid/types'
+import type { FloatingAlertHandle } from '@/components/BCAlert/FloatingAlert'
+import type {
+  GridReadyEvent,
+  CellValueChangedEvent,
+  FirstDataRenderedEvent,
+  GridApi,
+  ColDef,
+  GridOptions
+} from 'ag-grid-community'
+import type { GridErrors, GridWarnings, OptionsData } from '@/types/schema'
+import type {
+  ScheduleGridParams,
+  ScheduleRow,
+  ScheduleSaveParams
+} from '@/utils/schedules'
+
+interface AllocationAgreementRow extends ScheduleRow {
+  allocationAgreementId?: number | string
+  complianceReportId?: string | number
+  compliancePeriod?: string
+  fuelType?: unknown
+  fuelCode?: unknown
+  fuelCategory?: unknown
+  provisionOfTheAct?: unknown
+  provisionOfTheActId?: unknown
+  quantity?: unknown
+  ciOfFuel?: unknown
+  transactionPartner?: unknown
+  allocationTransactionType?: unknown
+  isNewSupplementalEntry?: boolean
+  modified?: boolean
+}
+
+interface AllocationAgreementList {
+  allocationAgreements?: AllocationAgreementRow[]
+}
+
+interface AllocationAgreementImportJobStatus {
+  progress: number
+  status: string
+  created: number
+  skipped?: number
+  rejected: number
+  errors: string[]
+}
+
+type AllocationAgreementImportOptions = {
+  onSuccess: (data: unknown) => void
+  onError: (error: Error) => void
+}
+
+const useAllocationAgreementImport = (
+  complianceReportId: number | string | null | undefined,
+  options: AllocationAgreementImportOptions
+) => {
+  const { mutate } = useImportAllocationAgreement(complianceReportId, options)
+  return { mutate }
+}
+
+const useAllocationAgreementImportJobStatus = (jobId: string | number | null) =>
+  useGetAllocationAgreementImportJobStatus<AllocationAgreementImportJobStatus>(
+    jobId
+  )
 
 export const AddEditAllocationAgreements = () => {
-  const [rowData, setRowData] = useState([])
-  const gridRef = useRef(null)
+  const [rowData, setRowData] = useState<AllocationAgreementRow[]>([])
+  const gridRef = useRef<BCGridRef['current']>(null)
   const isPastingRef = useRef(false)
-  const [errors, setErrors] = useState({})
-  const [warnings, setWarnings] = useState({})
+  const [errors, setErrors] = useState<GridErrors>({})
+  const [warnings, setWarnings] = useState<GridWarnings>({})
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
   const [isOverwrite] = useState(false)
-  const [columnDefs, setColumnDefs] = useState([])
-  const alertRef = useRef()
+  const [columnDefs, setColumnDefs] = useState<ColDef[]>([])
+  const alertRef = useRef<FloatingAlertHandle | null>(null)
   const location = useLocation()
   const { t } = useTranslation(['common', 'allocationAgreement', 'reports'])
   const guides = useMemo(
@@ -50,12 +118,13 @@ export const AddEditAllocationAgreements = () => {
         returnObjects: true
       }),
     [t]
-  )
+  ) as string[]
   const params = useParams()
   const { complianceReportId, compliancePeriod } = params
   const navigate = useNavigate()
-  const { data: currentReport, isLoading } =
-    useComplianceReportWithCache(complianceReportId)
+  const { data: currentReport, isLoading } = useComplianceReportWithCache(
+    complianceReportId!
+  )
 
   const version = currentReport?.report?.version ?? 0
 
@@ -67,21 +136,21 @@ export const AddEditAllocationAgreements = () => {
     data: optionsData,
     isLoading: optionsLoading,
     isFetched
-  } = useAllocationAgreementOptions({ compliancePeriod })
+  } = useAllocationAgreementOptions<OptionsData>({ compliancePeriod })
   const { mutateAsync: saveRow } = useSaveAllocationAgreement({
-    complianceReportId
+    complianceReportId: complianceReportId!
   })
 
   const {
     data,
     isLoading: allocationAgreementsLoading,
     refetch
-  } = useGetAllocationAgreementsList({
+  } = useGetAllocationAgreementsList<AllocationAgreementList>({
     complianceReportId,
     changelog: isSupplemental
   })
 
-  const gridOptions = useMemo(
+  const gridOptions = useMemo<GridOptions<BCGridRow>>(
     () => ({
       overlayNoRowsTemplate: t(
         'allocationAgreement:noAllocationAgreementsFound'
@@ -106,20 +175,20 @@ export const AddEditAllocationAgreements = () => {
   }, [location.state?.message, location.state?.severity])
 
   const validate = (
-    params,
-    validationFn,
-    errorMessage,
-    alertRef,
-    field = null
+    params: BCGridEditContext<BCGridRow>,
+    validationFn: (value: unknown) => boolean,
+    errorMessage: string,
+    targetAlertRef: typeof alertRef,
+    field?: string
   ) => {
-    const value = field ? params.node?.data[field] : params
+    const value = field ? params.node?.data![field] : params
 
     if (field && params.colDef?.field !== field) {
       return true
     }
 
     if (!validationFn(value)) {
-      alertRef.current?.triggerAlert({
+      targetAlertRef.current?.triggerAlert({
         message: errorMessage,
         severity: 'error'
       })
@@ -129,17 +198,18 @@ export const AddEditAllocationAgreements = () => {
   }
 
   const onGridReady = useCallback(
-    async (params) => {
+    async (params: GridReadyEvent<BCGridRow>) => {
       if (
-        Array.isArray(data.allocationAgreements) &&
-        data.allocationAgreements.length > 0
+        Array.isArray(data!.allocationAgreements) &&
+        data!.allocationAgreements.length > 0
       ) {
-        const updatedRowData = data.allocationAgreements.map((item) => ({
+        const updatedRowData = data!.allocationAgreements.map((item) => ({
           ...flattenNestedFields(item),
           complianceReportId,
           compliancePeriod,
           isNewSupplementalEntry:
-            isSupplemental && item.complianceReportId === +complianceReportId,
+            isSupplemental &&
+            item.complianceReportId === Number(complianceReportId),
           id: item.id || uuid() // Ensure every item has a unique ID
         }))
         setRowData([...updatedRowData, { id: uuid() }])
@@ -160,14 +230,19 @@ export const AddEditAllocationAgreements = () => {
   )
 
   useEffect(() => {
-    const orgName = currentReport?.report?.organization?.name
+    const orgName = (
+      currentReport?.report?.organization as
+        | { name?: string }
+        | null
+        | undefined
+    )?.name
     const updatedColumnDefs = allocationAgreementColDefs(
       optionsData,
       orgName,
       errors,
       warnings,
       isSupplemental,
-      compliancePeriod,
+      compliancePeriod!,
       isEarlyIssuance
     )
     setColumnDefs(updatedColumnDefs)
@@ -188,10 +263,11 @@ export const AddEditAllocationAgreements = () => {
 
     if (
       !allocationAgreementsLoading &&
-      data?.allocationAgreements?.length > 0
+      data?.allocationAgreements &&
+      data.allocationAgreements.length > 0
     ) {
       setRowData((previousRows) => {
-        const updatedRowData = data.allocationAgreements.map((item) => {
+        const updatedRowData = data!.allocationAgreements!.map((item) => {
           let matchingRow = previousRows.find(
             (row) => row.allocationAgreementId === item.allocationAgreementId
           )
@@ -207,7 +283,8 @@ export const AddEditAllocationAgreements = () => {
             complianceReportId,
             compliancePeriod,
             isNewSupplementalEntry:
-              isSupplemental && item.complianceReportId === +complianceReportId,
+              isSupplemental &&
+              item.complianceReportId === Number(complianceReportId),
             id: matchingRow ? matchingRow.id : uuid()
           }
         })
@@ -227,27 +304,27 @@ export const AddEditAllocationAgreements = () => {
     compliancePeriod
   ])
 
-  const onFirstDataRendered = useCallback((params) => {
+  const onFirstDataRendered = useCallback((params: FirstDataRenderedEvent) => {
     params.api?.autoSizeAllColumns?.({ scaleUpToFitGridWidth: true })
   }, [])
 
   const onCellValueChanged = useCallback(
-    async (params) => {
+    async (params: CellValueChangedEvent<BCGridRow>) => {
       setWarnings({}) // Reset warnings
 
       if (params.colDef.field === 'provisionOfTheAct') {
         params.node.setDataValue('fuelCode', '') // Reset fuelCode if provisionOfTheAct changes
       }
 
+      const field = params.colDef.field
       if (
-        ['fuelType', 'fuelCode', 'provisionOfTheAct'].includes(
-          params.colDef.field
-        )
+        field &&
+        ['fuelType', 'fuelCode', 'provisionOfTheAct'].includes(field)
       ) {
         let ciOfFuel = 0
 
         const selectedFuelType = optionsData?.fuelTypes?.find(
-          (obj) => params.data.fuelType === obj.fuelType
+          (obj) => params.data!.fuelType === obj.fuelType
         )
 
         if (params.colDef.field === 'fuelType') {
@@ -285,10 +362,10 @@ export const AddEditAllocationAgreements = () => {
           }
         }
 
-        if (params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE) {
+        if (params.data!.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE) {
           // Logic for approved fuel code provision
           const fuelCode = selectedFuelType?.fuelCodes?.find(
-            (item) => item.fuelCode === params.data.fuelCode
+            (item) => item.fuelCode === params.data!.fuelCode
           )
           ciOfFuel = fuelCode?.fuelCodeCarbonIntensity || 0
         } else {
@@ -302,12 +379,12 @@ export const AddEditAllocationAgreements = () => {
 
       if (params.colDef.field === 'fuelCategory') {
         const selectedFuelType = optionsData?.fuelTypes?.find(
-          (obj) => params.node.data.fuelType === obj.fuelType
+          (obj) => params.node.data!.fuelType === obj.fuelType
         )
 
         if (selectedFuelType) {
           const validFuelCategory = selectedFuelType.fuelCategories.find(
-            (item) => item.fuelCategory === params.data.fuelCategory
+            (item) => item.fuelCategory === params.data!.fuelCategory
           )
 
           // Reset fuelCategory if the selected one is invalid
@@ -321,18 +398,23 @@ export const AddEditAllocationAgreements = () => {
   )
 
   const onCellEditingStopped = useCallback(
-    async (params) => {
+    async (params: BCGridEditContext<BCGridRow>) => {
       if (params.oldValue === params.newValue) return
 
       const fieldName = params.colDef?.field
 
       // User cannot select their own organization as the transaction partner
       if (fieldName === 'transactionPartner') {
-        const orgName = currentReport?.report?.organization?.name
+        const orgName = (
+          currentReport?.report?.organization as
+            | { name?: string }
+            | null
+            | undefined
+        )?.name
         if (
           params.newValue === orgName ||
           (typeof params.newValue === 'object' &&
-            params.newValue.name === orgName)
+            (params.newValue as { name?: string }).name === orgName)
         ) {
           alertRef.current?.triggerAlert({
             message:
@@ -346,14 +428,16 @@ export const AddEditAllocationAgreements = () => {
           'transactionPartner',
           typeof params.newValue === 'string'
             ? params.newValue
-            : params.newValue?.name
+            : (params.newValue as { name?: string } | null | undefined)?.name
         )
       }
 
       const isValid = validate(
         params,
         (value) => {
-          return value !== null && !isNaN(value) && value > 0
+          return (
+            value !== null && !isNaN(value as number) && (value as number) > 0
+          )
         },
         'Quantity supplied must be greater than 0.',
         alertRef,
@@ -365,7 +449,7 @@ export const AddEditAllocationAgreements = () => {
       }
 
       params.node.updateData({
-        ...params.node.data,
+        ...params.node.data!,
         validationStatus: 'pending'
       })
 
@@ -374,22 +458,37 @@ export const AddEditAllocationAgreements = () => {
         severity: 'pending'
       })
 
-      let updatedData = Object.entries(params.node.data)
+      let updatedData = Object.entries(params.node.data!)
         .filter(([, value]) => value !== null && value !== '')
-        .reduce((acc, [key, value]) => {
+        .reduce<BCGridRow>((acc, [key, value]) => {
           acc[key] = value
           return acc
         }, {})
 
       if (updatedData.fuelType === 'Other') {
-        updatedData.ciOfFuel = DEFAULT_CI_FUEL[updatedData.fuelCategory]
+        updatedData.ciOfFuel =
+          DEFAULT_CI_FUEL[updatedData.fuelCategory as string]
       }
 
       updatedData = await handleScheduleSave({
         alertRef,
         idField: 'allocationAgreementId',
         labelPrefix: 'allocationAgreement:allocationAgreementColLabels',
-        params,
+        params: {
+          node: {
+            data: params.node.data!,
+            updateData: (row) => params.node.updateData(row)
+          },
+          api: {
+            forEachNode: (callback) =>
+              params.api.forEachNode((node) =>
+                callback({
+                  data: node.data ?? {},
+                  updateData: (row) => node.updateData(row)
+                })
+              )
+          }
+        } satisfies ScheduleSaveParams<ScheduleRow>,
         setErrors,
         setWarnings,
         saveRow,
@@ -397,7 +496,7 @@ export const AddEditAllocationAgreements = () => {
         updatedData
       })
 
-      updatedData.ciOfFuel = params.node.data.ciOfFuel
+      updatedData.ciOfFuel = params.node.data!.ciOfFuel
 
       // The backend may return nested objects for fields the grid expects as strings
       updatedData = flattenNestedFields(updatedData)
@@ -405,34 +504,43 @@ export const AddEditAllocationAgreements = () => {
       params.node.updateData(updatedData)
       params.api?.autoSizeAllColumns?.({ scaleUpToFitGridWidth: true })
     },
-    [currentReport?.report?.organization?.name, saveRow, t]
+    [currentReport?.report?.organization, saveRow, t]
   )
 
   const handlePaste = useCallback(
-    async (event, { api: gridApi }) => {
+    async (event: ClipboardEvent, context?: unknown) => {
+      const { api: gridApi } = context as { api?: GridApi<BCGridRow> }
       if (!gridApi) return
 
-      const clipboardData = event.clipboardData || window.clipboardData
+      const clipboardData =
+        event.clipboardData ||
+        (window as Window & { clipboardData?: DataTransfer }).clipboardData!
       const pastedData = clipboardData.getData('text/plain')
       if (!pastedData?.trim()) return
 
       const displayedColumns = gridApi.getAllDisplayedColumns()
       const editableColumns = displayedColumns.filter(
-        (col) => col.colDef.field && col.colDef.field !== 'action'
+        (col) => col.getColDef().field && col.getColDef().field !== 'action'
       )
       const headerRow = editableColumns
-        .map((column) => column.colDef.field)
+        .map((column) => column.getColDef().field)
         .join('\t')
-      const parsedData = Papa.parse(headerRow + '\n' + pastedData, {
-        delimiter: '\t',
-        header: true,
-        transform: (value) => {
-          if (value === '' || value == null) return value
-          const num = Number(value)
-          return isNaN(num) ? value : num
-        },
-        skipEmptyLines: true
-      })
+      const parsedData = Papa.parse<Record<string, string | number>>(
+        headerRow + '\n' + pastedData,
+        {
+          delimiter: '\t',
+          header: true,
+          transform: (value: string) => {
+            if (value === '' || value == null) return value
+            const num = Number(value)
+            return isNaN(num) ? value : num
+          },
+          skipEmptyLines: true
+        }
+      ) as Exclude<
+        ReturnType<typeof Papa.parse<Record<string, string | number>>>,
+        void
+      >
 
       if (
         parsedData.data.length <= 0 ||
@@ -455,27 +563,29 @@ export const AddEditAllocationAgreements = () => {
           ? { quantity: Math.round(Number(row.quantity)) }
           : {})
       }))
-      const transactions = gridApi.applyTransaction({ add: newData })
+      const transactions = gridApi.applyTransaction({ add: newData })!
+      const addedNodes = transactions.add!
 
       const firstEditableCol = editableColumns[0]
-      const colDef = firstEditableCol?.colDef || {
+      const colDef = firstEditableCol?.getColDef() || {
         field: 'allocationTransactionType'
       }
+      const field = colDef.field ?? 'allocationTransactionType'
 
       alertRef.current?.triggerAlert({
-        message: `Saving ${transactions.add.length} rows...`,
+        message: `Saving ${addedNodes.length} rows...`,
         severity: 'pending'
       })
 
       let savedCount = 0
       let errorCount = 0
-      for (const node of transactions.add) {
+      for (const node of addedNodes) {
         try {
           await onCellEditingStopped({
             node,
-            data: node.data,
+            data: node.data!,
             oldValue: '',
-            newValue: node.data[colDef.field],
+            newValue: node.data![field],
             colDef,
             column: firstEditableCol,
             api: gridApi
@@ -506,10 +616,10 @@ export const AddEditAllocationAgreements = () => {
     [onCellEditingStopped, complianceReportId, compliancePeriod, refetch]
   )
 
-  const onAction = async (action, params) => {
+  const onAction = async (action: string, params?: unknown) => {
     if (action === 'delete' || action === 'undo') {
       await handleScheduleDelete(
-        params,
+        params as ScheduleGridParams<AllocationAgreementRow>,
         'allocationAgreementId',
         saveRow,
         alertRef,
@@ -525,7 +635,10 @@ export const AddEditAllocationAgreements = () => {
 
   const handleNavigateBack = useCallback(() => {
     navigate(
-      buildPath(ROUTES.REPORTS.VIEW, { compliancePeriod, complianceReportId }),
+      buildPath(ROUTES.REPORTS.VIEW, {
+        compliancePeriod: compliancePeriod!,
+        complianceReportId: complianceReportId!
+      }),
       {
         state: {
           expandedSchedule: 'allocationAgreements',
@@ -698,8 +811,8 @@ export const AddEditAllocationAgreements = () => {
           }}
           complianceReportId={complianceReportId}
           isOverwrite={isOverwrite}
-          importHook={useImportAllocationAgreement}
-          getJobStatusHook={useGetAllocationAgreementImportJobStatus}
+          importHook={useAllocationAgreementImport}
+          getJobStatusHook={useAllocationAgreementImportJobStatus}
           invalidateComplianceReportOnComplete
         />
       </Grid2>

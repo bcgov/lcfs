@@ -5,16 +5,54 @@ import { test } from '@/tests/utils/fixtures'
 import { useState } from 'react'
 
 // Import the actual hooks to mock them
-import {
-  useComplianceReportWithCache,
-  useGetChangeLog
-} from '@/hooks/useComplianceReports'
 import { useParams } from 'react-router-dom'
+import type { HTMLAttributes, PropsWithChildren } from 'react'
+import type {
+  BCPaginationOptions,
+  BCGridRow
+} from '@/components/BCDataGrid/types'
+
+interface ChangelogRow extends BCGridRow {
+  allocationAgreementId?: number | string
+  actionType?: string
+}
+
+interface ChangelogViewerProps {
+  gridKey?: string
+  columnDefs?: unknown[]
+  queryData?: {
+    data?: { items?: ChangelogRow[]; [key: string]: unknown } | null
+  }
+  getRowId?: (params: { data?: BCGridRow }) => string
+  suppressPagination?: boolean
+  gridOptions?: { getRowStyle?: (params: { data?: ChangelogRow }) => unknown }
+  paginationOptions?: BCPaginationOptions
+  onPaginationChange?: (pagination: BCPaginationOptions) => void
+}
+
+type TypographyMockProps = PropsWithChildren<
+  HTMLAttributes<HTMLDivElement> & {
+    variant?: string
+    color?: string
+    component?: string
+    mb?: number
+  }
+>
+
+interface TestQueryResult {
+  data?: unknown
+  isLoading?: boolean
+}
+
+const hookMocks = vi.hoisted(() => ({
+  useComplianceReportWithCache: vi.fn<() => TestQueryResult>(),
+  useGetChangeLog: vi.fn<() => TestQueryResult>()
+}))
 
 // Mock hooks
 vi.mock('@/hooks/useComplianceReports', () => ({
-  useComplianceReportWithCache: vi.fn(),
-  useGetChangeLog: vi.fn()
+  useComplianceReportWithCache: hookMocks.useComplianceReportWithCache,
+  useGetChangeLog: hookMocks.useGetChangeLog
 }))
 
 // Mock react-router-dom
@@ -29,7 +67,7 @@ vi.mock('react-router-dom', async () => {
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => key
+    t: (key: string) => key
   })
 }))
 
@@ -44,10 +82,10 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
     gridOptions,
     paginationOptions,
     onPaginationChange
-  }) => {
+  }: ChangelogViewerProps) => {
     // Actually call functions to increase coverage
-    let rowIds = []
-    let rowStyles = []
+    let rowIds: string[] = []
+    let rowStyles: unknown[] = []
 
     if (queryData?.data?.items && getRowId) {
       rowIds = queryData.data.items.map((item) => {
@@ -57,9 +95,10 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
     }
 
     if (queryData?.data?.items && gridOptions?.getRowStyle) {
+      const getRowStyle = gridOptions.getRowStyle
       rowStyles = queryData.data.items.map((item) => {
         const params = { data: item }
-        return gridOptions.getRowStyle(params)
+        return getRowStyle(params)
       })
     }
 
@@ -117,7 +156,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 
 // Mock BCTypography
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, variant, color, ...props }) => {
+  default: ({ children, variant, color, ...props }: TypographyMockProps) => {
     delete props.component
     return (
       <div
@@ -172,7 +211,9 @@ vi.mock('@/constants/schedules', () => ({
 
 // Mock colors
 vi.mock('@/themes/base/colors', async () => {
-  const actual = await vi.importActual('@/themes/base/colors')
+  const actual = await vi.importActual<typeof import('@/themes/base/colors')>(
+    '@/themes/base/colors'
+  )
   return {
     ...actual,
     default: {
@@ -204,7 +245,7 @@ describe('AllocationAgreementChangelog', () => {
       compliancePeriod: '2024'
     })
 
-    vi.mocked(useComplianceReportWithCache).mockReturnValue({
+    hookMocks.useComplianceReportWithCache.mockReturnValue({
       data: {
         report: {
           complianceReportGroupUuid: 'test-group-uuid'
@@ -213,7 +254,7 @@ describe('AllocationAgreementChangelog', () => {
       isLoading: false
     })
 
-    vi.mocked(useGetChangeLog).mockReturnValue({
+    hookMocks.useGetChangeLog.mockReturnValue({
       data: [],
       isLoading: false
     })
@@ -230,7 +271,7 @@ describe('AllocationAgreementChangelog', () => {
     localization,
     router
   }) => {
-    vi.mocked(useGetChangeLog).mockReturnValue({
+    hookMocks.useGetChangeLog.mockReturnValue({
       data: null,
       isLoading: true
     })
@@ -251,7 +292,7 @@ describe('AllocationAgreementChangelog', () => {
     localization,
     router
   }) => {
-    vi.mocked(useComplianceReportWithCache).mockReturnValue({
+    hookMocks.useComplianceReportWithCache.mockReturnValue({
       data: null,
       isLoading: true
     })
@@ -272,7 +313,7 @@ describe('AllocationAgreementChangelog', () => {
     localization,
     router
   }) => {
-    vi.mocked(useGetChangeLog).mockReturnValue({
+    hookMocks.useGetChangeLog.mockReturnValue({
       data: [],
       isLoading: false
     })
@@ -314,7 +355,7 @@ describe('AllocationAgreementChangelog', () => {
       }
     ]
 
-    vi.mocked(useGetChangeLog).mockReturnValue({
+    hookMocks.useGetChangeLog.mockReturnValue({
       data: mockChangelogData,
       isLoading: false
     })
@@ -363,7 +404,7 @@ describe('AllocationAgreementChangelog', () => {
       }
     ]
 
-    vi.mocked(useGetChangeLog).mockReturnValue({
+    hookMocks.useGetChangeLog.mockReturnValue({
       data: mockChangelogData,
       isLoading: false
     })
@@ -402,7 +443,7 @@ describe('AllocationAgreementChangelog', () => {
       }
     ]
 
-    vi.mocked(useGetChangeLog).mockReturnValue({
+    hookMocks.useGetChangeLog.mockReturnValue({
       data: mockChangelogData,
       isLoading: false
     })
@@ -444,7 +485,7 @@ describe('AllocationAgreementChangelog', () => {
       }
     ]
 
-    vi.mocked(useGetChangeLog).mockReturnValue({
+    hookMocks.useGetChangeLog.mockReturnValue({
       data: mockChangelogData,
       isLoading: false
     })
@@ -486,7 +527,7 @@ describe('AllocationAgreementChangelog', () => {
       }
     ]
 
-    vi.mocked(useGetChangeLog).mockReturnValue({
+    hookMocks.useGetChangeLog.mockReturnValue({
       data: mockChangelogData,
       isLoading: false
     })
@@ -532,7 +573,7 @@ describe('AllocationAgreementChangelog', () => {
       }
     ]
 
-    vi.mocked(useGetChangeLog).mockReturnValue({
+    hookMocks.useGetChangeLog.mockReturnValue({
       data: mockChangelogData,
       isLoading: false
     })
@@ -594,7 +635,7 @@ describe('AllocationAgreementChangelog', () => {
       }
     ]
 
-    vi.mocked(useGetChangeLog).mockReturnValue({
+    hookMocks.useGetChangeLog.mockReturnValue({
       data: mockChangelogData,
       isLoading: false
     })
@@ -655,7 +696,7 @@ describe('AllocationAgreementChangelog', () => {
       }
     ]
 
-    vi.mocked(useGetChangeLog).mockReturnValue({
+    hookMocks.useGetChangeLog.mockReturnValue({
       data: mockChangelogData,
       isLoading: false
     })
@@ -688,7 +729,7 @@ describe('AllocationAgreementChangelog', () => {
       }
     ]
 
-    vi.mocked(useGetChangeLog).mockReturnValue({
+    hookMocks.useGetChangeLog.mockReturnValue({
       data: mockChangelogData,
       isLoading: false
     })
@@ -714,7 +755,7 @@ describe('AllocationAgreementChangelog', () => {
     localization,
     router
   }) => {
-    vi.mocked(useGetChangeLog).mockReturnValue({
+    hookMocks.useGetChangeLog.mockReturnValue({
       data: undefined,
       isLoading: false
     })
@@ -737,7 +778,7 @@ describe('AllocationAgreementChangelog', () => {
     localization,
     router
   }) => {
-    vi.mocked(useGetChangeLog).mockReturnValue({
+    hookMocks.useGetChangeLog.mockReturnValue({
       data: null,
       isLoading: false
     })
@@ -786,7 +827,7 @@ describe('AllocationAgreementChangelog', () => {
       }
     ]
 
-    vi.mocked(useGetChangeLog).mockReturnValue({
+    hookMocks.useGetChangeLog.mockReturnValue({
       data: mockChangelogData,
       isLoading: false
     })
@@ -847,7 +888,7 @@ describe('AllocationAgreementChangelog', () => {
       }
     ]
 
-    vi.mocked(useGetChangeLog).mockReturnValue({
+    hookMocks.useGetChangeLog.mockReturnValue({
       data: mockChangelogData,
       isLoading: false
     })
@@ -891,7 +932,7 @@ describe('AllocationAgreementChangelog', () => {
       }
     ]
 
-    vi.mocked(useGetChangeLog).mockReturnValue({
+    hookMocks.useGetChangeLog.mockReturnValue({
       data: mockChangelogData,
       isLoading: false
     })
@@ -939,7 +980,7 @@ describe('AllocationAgreementChangelog', () => {
       }
     ]
 
-    vi.mocked(useGetChangeLog).mockReturnValue({
+    hookMocks.useGetChangeLog.mockReturnValue({
       data: mockChangelogData,
       isLoading: false
     })
@@ -977,7 +1018,7 @@ describe('AllocationAgreementChangelog', () => {
       }
     }
 
-    vi.mocked(useComplianceReportWithCache).mockReturnValue({
+    hookMocks.useComplianceReportWithCache.mockReturnValue({
       data: mockCurrentReport,
       isLoading: false
     })
@@ -989,7 +1030,7 @@ describe('AllocationAgreementChangelog', () => {
       router
     ])
 
-    expect(useGetChangeLog).toHaveBeenCalledWith({
+    expect(hookMocks.useGetChangeLog).toHaveBeenCalledWith({
       complianceReportGroupUuid: 'different-group-uuid',
       dataType: 'allocation-agreements'
     })
@@ -1002,12 +1043,12 @@ describe('AllocationAgreementChangelog', () => {
     localization,
     router
   }) => {
-    vi.mocked(useComplianceReportWithCache).mockReturnValue({
+    hookMocks.useComplianceReportWithCache.mockReturnValue({
       data: null,
       isLoading: false
     })
 
-    vi.mocked(useGetChangeLog).mockReturnValue({
+    hookMocks.useGetChangeLog.mockReturnValue({
       data: [],
       isLoading: false
     })
@@ -1019,7 +1060,7 @@ describe('AllocationAgreementChangelog', () => {
       router
     ])
 
-    expect(useGetChangeLog).toHaveBeenCalledWith({
+    expect(hookMocks.useGetChangeLog).toHaveBeenCalledWith({
       complianceReportGroupUuid: undefined,
       dataType: 'allocation-agreements'
     })
@@ -1055,7 +1096,7 @@ describe('AllocationAgreementChangelog', () => {
       }
     ]
 
-    vi.mocked(useGetChangeLog).mockReturnValue({
+    hookMocks.useGetChangeLog.mockReturnValue({
       data: mockChangelogData,
       isLoading: false
     })
@@ -1094,7 +1135,7 @@ describe('AllocationAgreementChangelog', () => {
       }
     ]
 
-    vi.mocked(useGetChangeLog).mockReturnValue({
+    hookMocks.useGetChangeLog.mockReturnValue({
       data: mockChangelogData,
       isLoading: false
     })
@@ -1152,7 +1193,7 @@ describe('AllocationAgreementChangelog', () => {
       }
     ]
 
-    vi.mocked(useGetChangeLog).mockReturnValue({
+    hookMocks.useGetChangeLog.mockReturnValue({
       data: mockChangelogData,
       isLoading: false
     })
@@ -1198,7 +1239,7 @@ describe('AllocationAgreementChangelog', () => {
       }
     ]
 
-    vi.mocked(useGetChangeLog).mockReturnValue({
+    hookMocks.useGetChangeLog.mockReturnValue({
       data: mockChangelogData,
       isLoading: false
     })
@@ -1259,7 +1300,7 @@ describe('AllocationAgreementChangelog', () => {
 
     vi.mocked(useState).mockReturnValue([{ 0: mockPaginationState }, vi.fn()])
 
-    vi.mocked(useGetChangeLog).mockReturnValue({
+    hookMocks.useGetChangeLog.mockReturnValue({
       data: mockChangelogData,
       isLoading: false
     })
@@ -1298,7 +1339,7 @@ describe('AllocationAgreementChangelog', () => {
     const mockSetPaginationStates = vi.fn()
     vi.mocked(useState).mockReturnValue([{}, mockSetPaginationStates])
 
-    vi.mocked(useGetChangeLog).mockReturnValue({
+    hookMocks.useGetChangeLog.mockReturnValue({
       data: mockChangelogData,
       isLoading: false
     })

@@ -3,13 +3,79 @@ import { screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, beforeEach, vi } from 'vite-plus/test'
 import { AddEditAllocationAgreements } from '../AddEditAllocationAgreements'
 import { flattenNestedFields } from '../allocationAgreementUtils'
-import * as useAllocationAgreementHook from '@/hooks/useAllocationAgreement'
-import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { test } from '@/tests/utils/fixtures'
 import * as configModule from '@/constants/config'
 import * as schedulesUtils from '@/utils/schedules'
 import '@/services/useApiService'
+import type {
+  ButtonHTMLAttributes,
+  PropsWithChildren,
+  ReactNode,
+  MouseEventHandler
+} from 'react'
+
+type TestRow = Record<string, unknown>
+
+interface MockGridEvent {
+  colDef?: { field?: string }
+  data?: TestRow
+  oldValue?: unknown
+  newValue?: unknown
+  node?: {
+    data?: TestRow
+    setDataValue?: (field: string, value: unknown) => void
+    updateData?: (data: TestRow) => void
+  }
+  [key: string]: unknown
+}
+
+interface MockGridEditorProps {
+  onGridReady?: (params: { api: typeof mockGridApi }) => void
+  rowData?: TestRow[]
+  onCellValueChanged?: (params: MockGridEvent) => void
+  onCellEditingStopped?: (params: MockGridEvent) => void
+  onAction?: (action: string, params?: MockGridEvent) => void
+}
+
+type ChildrenProps = { children?: ReactNode }
+
+interface MenuMockProps extends ChildrenProps {
+  open?: boolean
+  onClose?: MouseEventHandler<HTMLDivElement>
+}
+
+interface MenuItemMockProps extends ChildrenProps {
+  onClick?: MouseEventHandler<HTMLDivElement>
+}
+
+type ButtonMockProps = PropsWithChildren<
+  ButtonHTMLAttributes<HTMLButtonElement> & {
+    isLoading?: boolean
+    endIcon?: ReactNode
+  }
+>
+
+interface TestQueryResult {
+  data?: unknown
+  isLoading?: boolean
+  isFetched?: boolean
+  refetch?: () => Promise<unknown>
+}
+
+interface TestMutationResult {
+  mutate?: (variables: { file: File; isOverwrite: boolean }) => void
+  mutateAsync: (variables: Record<string, unknown>) => Promise<unknown>
+}
+
+const hookMocks = vi.hoisted(() => ({
+  useCurrentUser: vi.fn<() => TestQueryResult>(),
+  useComplianceReportWithCache: vi.fn<() => TestQueryResult>(),
+  useAllocationAgreementOptions: vi.fn<() => TestQueryResult>(),
+  useGetAllocationAgreementsList: vi.fn<() => TestQueryResult>(),
+  useSaveAllocationAgreement: vi.fn<() => TestMutationResult>(),
+  useImportAllocationAgreement: vi.fn<() => TestMutationResult>(),
+  useGetAllocationAgreementImportJobStatus: vi.fn<() => TestQueryResult>()
+}))
 
 // Mock react-router-dom hooks
 const mockUseLocation = vi.fn()
@@ -17,11 +83,15 @@ const mockUseNavigate = vi.fn()
 const mockUseParams = vi.fn()
 const mockNavigate = vi.fn()
 
-vi.mock('@/hooks/useCurrentUser')
-vi.mock('@/hooks/useComplianceReports')
+vi.mock('@/hooks/useCurrentUser', () => ({
+  useCurrentUser: hookMocks.useCurrentUser
+}))
+vi.mock('@/hooks/useComplianceReports', () => ({
+  useComplianceReportWithCache: hookMocks.useComplianceReportWithCache
+}))
 
 vi.mock('@react-keycloak/web', () => ({
-  ReactKeycloakProvider: ({ children }) => children,
+  ReactKeycloakProvider: ({ children }: { children: ReactNode }) => children,
   useKeycloak: () => ({
     keycloak: {
       authenticated: true,
@@ -44,7 +114,7 @@ vi.mock('react-router-dom', () => ({
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: vi.fn((key, options = {}) => {
+    t: vi.fn((key: string, options: { returnObjects?: boolean } = {}) => {
       // Handle specific keys with returnObjects
       if (
         key === 'allocationAgreement:allocationAgreementGuides' &&
@@ -58,7 +128,14 @@ vi.mock('react-i18next', () => ({
 }))
 
 // Mock hooks related to allocation agreements
-vi.mock('@/hooks/useAllocationAgreement')
+vi.mock('@/hooks/useAllocationAgreement', () => ({
+  useAllocationAgreementOptions: hookMocks.useAllocationAgreementOptions,
+  useGetAllocationAgreementsList: hookMocks.useGetAllocationAgreementsList,
+  useSaveAllocationAgreement: hookMocks.useSaveAllocationAgreement,
+  useImportAllocationAgreement: hookMocks.useImportAllocationAgreement,
+  useGetAllocationAgreementImportJobStatus:
+    hookMocks.useGetAllocationAgreementImportJobStatus
+}))
 
 vi.mock('@/constants/config', () => ({
   FEATURE_FLAGS: {
@@ -69,7 +146,7 @@ vi.mock('@/constants/config', () => ({
 
 vi.mock('@/services/useApiService', () => ({
   useApiService: () => ({
-    download: vi.fn().mockResolvedValue()
+    download: vi.fn().mockResolvedValue(undefined)
   })
 }))
 
@@ -80,18 +157,28 @@ vi.mock('uuid', () => ({
 
 // Mock utility functions
 vi.mock('@/utils/schedules', () => ({
-  handleScheduleDelete: vi.fn().mockResolvedValue(),
-  handleScheduleSave: vi.fn().mockImplementation(({ updatedData, params }) => {
-    const data = params?.node?.data || updatedData
-    return Promise.resolve({
-      ...data,
-      id: 'saved-id',
-      ciOfFuel: data?.ciOfFuel || 85.5,
-      quantity: data?.quantity || 100,
-      complianceReportId: data?.complianceReportId || 'testReportId',
-      compliancePeriod: data?.compliancePeriod || '2024'
-    })
-  })
+  handleScheduleDelete: vi.fn().mockResolvedValue(undefined),
+  handleScheduleSave: vi
+    .fn()
+    .mockImplementation(
+      ({
+        updatedData,
+        params
+      }: {
+        updatedData: TestRow
+        params?: { node?: { data?: TestRow } }
+      }) => {
+        const data = params?.node?.data || updatedData
+        return Promise.resolve({
+          ...data,
+          id: 'saved-id',
+          ciOfFuel: data?.ciOfFuel || 85.5,
+          quantity: data?.quantity || 100,
+          complianceReportId: data?.complianceReportId || 'testReportId',
+          compliancePeriod: data?.compliancePeriod || '2024'
+        })
+      }
+    )
 }))
 
 vi.mock('@/utils/grid/changelogCellStyle', () => ({
@@ -105,8 +192,10 @@ vi.mock('@/routes/routes', () => ({
     }
   },
   buildPath: vi.fn(
-    (route, params) =>
-      `/reports/view/${params.compliancePeriod}/${params.complianceReportId}`
+    (
+      _route: string,
+      params: { compliancePeriod: string; complianceReportId: string }
+    ) => `/reports/view/${params.compliancePeriod}/${params.complianceReportId}`
   )
 }))
 
@@ -146,11 +235,11 @@ const mockGridApi = {
 vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
   BCGridEditor: ({
     onGridReady,
-    rowData,
+    rowData = [],
     onCellValueChanged,
     onCellEditingStopped,
     onAction
-  }) => {
+  }: MockGridEditorProps) => {
     // Simulate onGridReady being called
     React.useEffect(() => {
       if (onGridReady) {
@@ -163,7 +252,7 @@ vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
         <div data-test="row-data">
           {rowData.map((row, index) => (
             <div key={index} data-test="grid-row">
-              {row.id}
+              {String(row.id ?? '')}
             </div>
           ))}
         </div>
@@ -322,7 +411,7 @@ vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
 }))
 
 vi.mock('@/components/ImportDialog', () => ({
-  default: ({ open, close }) => (
+  default: ({ open, close }: { open?: boolean; close?: () => void }) => (
     <div data-test="import-dialog" aria-hidden={!open}>
       <button onClick={close} data-test="close-dialog">
         Close
@@ -333,7 +422,7 @@ vi.mock('@/components/ImportDialog', () => ({
 
 // Mock Material-UI components
 vi.mock('@mui/material/Menu', () => ({
-  default: ({ children, open, onClose }) =>
+  default: ({ children, open, onClose }: MenuMockProps) =>
     open ? (
       <div data-test="menu" onClick={onClose}>
         {children}
@@ -342,7 +431,7 @@ vi.mock('@mui/material/Menu', () => ({
 }))
 
 vi.mock('@mui/material/MenuItem', () => ({
-  default: ({ children, onClick }) => (
+  default: ({ children, onClick }: MenuItemMockProps) => (
     <div data-test="menu-item" onClick={onClick}>
       {children}
     </div>
@@ -351,15 +440,22 @@ vi.mock('@mui/material/MenuItem', () => ({
 
 // Mock other BC components
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children }) => <div>{children}</div>
+  default: ({ children }: ChildrenProps) => <div>{children}</div>
 }))
 
 vi.mock('@/components/BCBox', () => ({
-  default: ({ children }) => <div>{children}</div>
+  default: ({ children }: ChildrenProps) => <div>{children}</div>
 }))
 
 vi.mock('@/components/BCButton', () => ({
-  default: ({ children, onClick, isLoading, disabled, endIcon, ...props }) => (
+  default: ({
+    children,
+    onClick,
+    isLoading,
+    disabled,
+    endIcon,
+    ...props
+  }: ButtonMockProps) => (
     <button onClick={onClick} disabled={disabled || isLoading} {...props}>
       {children}
       {endIcon}
@@ -368,7 +464,7 @@ vi.mock('@/components/BCButton', () => ({
 }))
 
 vi.mock('@mui/material/Grid2', () => ({
-  default: ({ children }) => <div>{children}</div>
+  default: ({ children }: ChildrenProps) => <div>{children}</div>
 }))
 
 vi.mock('@fortawesome/react-fontawesome', () => ({
@@ -456,18 +552,14 @@ describe('AddEditAllocationAgreements', () => {
     })
 
     // Mock useGetAllocationAgreementsList hook
-    vi.mocked(
-      useAllocationAgreementHook.useGetAllocationAgreementsList
-    ).mockReturnValue({
+    vi.mocked(hookMocks.useGetAllocationAgreementsList).mockReturnValue({
       data: { allocationAgreements: [] },
       isLoading: false,
       refetch: vi.fn()
     })
 
     // Mock useAllocationAgreementOptions hook
-    vi.mocked(
-      useAllocationAgreementHook.useAllocationAgreementOptions
-    ).mockReturnValue({
+    vi.mocked(hookMocks.useAllocationAgreementOptions).mockReturnValue({
       data: {
         fuelTypes: [
           {
@@ -486,32 +578,28 @@ describe('AddEditAllocationAgreements', () => {
     })
 
     // Mock useSaveAllocationAgreement hook
-    vi.mocked(
-      useAllocationAgreementHook.useSaveAllocationAgreement
-    ).mockReturnValue({
+    vi.mocked(hookMocks.useSaveAllocationAgreement).mockReturnValue({
       mutateAsync: vi.fn().mockResolvedValue({ id: 'saved-id' })
     })
 
-    vi.mocked(
-      useAllocationAgreementHook.useImportAllocationAgreement
-    ).mockReturnValue({
+    vi.mocked(hookMocks.useImportAllocationAgreement).mockReturnValue({
       mutateAsync: vi.fn()
     })
 
     vi.mocked(
-      useAllocationAgreementHook.useGetAllocationAgreementImportJobStatus
+      hookMocks.useGetAllocationAgreementImportJobStatus
     ).mockReturnValue({
       data: null,
       isLoading: false
     })
 
-    useCurrentUser.mockReturnValue({
+    hookMocks.useCurrentUser.mockReturnValue({
       data: {
         organization: { organizationId: 1, name: 'Test Org' }
       }
     })
 
-    useComplianceReportWithCache.mockReturnValue({
+    hookMocks.useComplianceReportWithCache.mockReturnValue({
       data: {
         report: {
           version: 0,
@@ -571,9 +659,7 @@ describe('AddEditAllocationAgreements', () => {
       localization,
       router
     }) => {
-      vi.mocked(
-        useAllocationAgreementHook.useGetAllocationAgreementsList
-      ).mockReturnValue({
+      vi.mocked(hookMocks.useGetAllocationAgreementsList).mockReturnValue({
         data: { allocationAgreements: [] },
         isLoading: true,
         refetch: vi.fn()
@@ -626,9 +712,7 @@ describe('AddEditAllocationAgreements', () => {
         ]
       }
 
-      vi.mocked(
-        useAllocationAgreementHook.useGetAllocationAgreementsList
-      ).mockReturnValue({
+      vi.mocked(hookMocks.useGetAllocationAgreementsList).mockReturnValue({
         data: mockData,
         isLoading: false,
         refetch: vi.fn()
@@ -680,7 +764,7 @@ describe('AddEditAllocationAgreements', () => {
     })
 
     // TODO: Re-enable when import/export feature is re-enabled in the component
-    it.skip('shows import/export buttons when feature flag is enabled', ({
+    test.skip('shows import/export buttons when feature flag is enabled', ({
       render,
       query,
       theme,
@@ -712,7 +796,7 @@ describe('AddEditAllocationAgreements', () => {
       router
     }) => {
       vi.mocked(configModule.isFeatureEnabled).mockReturnValue(true)
-      useComplianceReportWithCache.mockReturnValue({
+      hookMocks.useComplianceReportWithCache.mockReturnValue({
         data: {
           report: {
             version: 0,
@@ -752,7 +836,7 @@ describe('AddEditAllocationAgreements', () => {
       localization,
       router
     }) => {
-      useComplianceReportWithCache.mockReturnValue({
+      hookMocks.useComplianceReportWithCache.mockReturnValue({
         data: {
           report: {
             version: 1,
@@ -768,9 +852,7 @@ describe('AddEditAllocationAgreements', () => {
         allocationAgreements: [{ allocationAgreementId: 'testId1' }]
       }
 
-      vi.mocked(
-        useAllocationAgreementHook.useGetAllocationAgreementsList
-      ).mockReturnValue({
+      vi.mocked(hookMocks.useGetAllocationAgreementsList).mockReturnValue({
         data: mockExistingData,
         isLoading: false,
         refetch: vi.fn()
@@ -803,7 +885,7 @@ describe('AddEditAllocationAgreements', () => {
       localization,
       router
     }) => {
-      useComplianceReportWithCache.mockReturnValue({
+      hookMocks.useComplianceReportWithCache.mockReturnValue({
         data: {
           report: {
             version: 0,
@@ -1204,9 +1286,7 @@ describe('AddEditAllocationAgreements', () => {
       localization,
       router
     }) => {
-      vi.mocked(
-        useAllocationAgreementHook.useGetAllocationAgreementsList
-      ).mockReturnValue({
+      vi.mocked(hookMocks.useGetAllocationAgreementsList).mockReturnValue({
         data: { allocationAgreements: [] },
         isLoading: false,
         refetch: vi.fn()
@@ -1229,7 +1309,7 @@ describe('AddEditAllocationAgreements', () => {
       router
     }) => {
       // Test supplemental report logic
-      useComplianceReportWithCache.mockReturnValue({
+      hookMocks.useComplianceReportWithCache.mockReturnValue({
         data: {
           report: {
             version: 2,
@@ -1250,7 +1330,7 @@ describe('AddEditAllocationAgreements', () => {
     })
 
     // TODO: Re-enable when import/export feature is re-enabled in the component
-    it.skip('handles close menu functions with actual state changes', ({
+    test.skip('handles close menu functions with actual state changes', ({
       render,
       query,
       theme,
@@ -1286,9 +1366,7 @@ describe('AddEditAllocationAgreements', () => {
       localization,
       router
     }) => {
-      vi.mocked(
-        useAllocationAgreementHook.useAllocationAgreementOptions
-      ).mockReturnValue({
+      vi.mocked(hookMocks.useAllocationAgreementOptions).mockReturnValue({
         data: null,
         isLoading: false,
         isFetched: true
@@ -1310,9 +1388,7 @@ describe('AddEditAllocationAgreements', () => {
       localization,
       router
     }) => {
-      vi.mocked(
-        useAllocationAgreementHook.useAllocationAgreementOptions
-      ).mockReturnValue({
+      vi.mocked(hookMocks.useAllocationAgreementOptions).mockReturnValue({
         data: {
           fuelTypes: [
             {
@@ -1353,9 +1429,7 @@ describe('AddEditAllocationAgreements', () => {
       router
     }) => {
       // Mock data for approved fuel code scenario
-      vi.mocked(
-        useAllocationAgreementHook.useAllocationAgreementOptions
-      ).mockReturnValue({
+      vi.mocked(hookMocks.useAllocationAgreementOptions).mockReturnValue({
         data: {
           fuelTypes: [
             {
@@ -1387,7 +1461,7 @@ describe('AddEditAllocationAgreements', () => {
     })
 
     // TODO: Re-enable when import/export feature is re-enabled in the component
-    it.skip('handles import dialog overwrite option correctly', ({
+    test.skip('handles import dialog overwrite option correctly', ({
       render,
       query,
       theme,
@@ -1516,9 +1590,7 @@ describe('AddEditAllocationAgreements', () => {
       localization,
       router
     }) => {
-      vi.mocked(
-        useAllocationAgreementHook.useAllocationAgreementOptions
-      ).mockReturnValue({
+      vi.mocked(hookMocks.useAllocationAgreementOptions).mockReturnValue({
         data: { fuelTypes: [] },
         isLoading: true,
         isFetched: false
@@ -1545,9 +1617,7 @@ describe('AddEditAllocationAgreements', () => {
       router
     }) => {
       // Mock data with approved fuel code provision
-      vi.mocked(
-        useAllocationAgreementHook.useAllocationAgreementOptions
-      ).mockReturnValue({
+      vi.mocked(hookMocks.useAllocationAgreementOptions).mockReturnValue({
         data: {
           fuelTypes: [
             {

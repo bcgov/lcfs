@@ -14,9 +14,9 @@ const DEFAULT_CACHE_TIME = 10 * 60 * 1000 // 10 minutes
 const OPTIONS_STALE_TIME = 30 * 60 * 1000 // 30 minutes (options change less frequently)
 const JOB_STATUS_STALE_TIME = 0 // Real-time for job status
 
-export const useAllocationAgreementOptions = (
+export const useAllocationAgreementOptions = <TData = unknown>(
   params: Record<string, unknown>,
-  options: QueryOptions<unknown> = {}
+  options: QueryOptions<TData> = {}
 ) => {
   const client = useApiService()
 
@@ -35,7 +35,7 @@ export const useAllocationAgreementOptions = (
       }
 
       const path = `${apiRoutes.allocationAgreementOptions}compliancePeriod=${params.compliancePeriod}`
-      const response = await client.get(path)
+      const response = await client.get<TData>(path)
       return response.data
     },
     enabled: enabled && !!params?.compliancePeriod,
@@ -124,10 +124,10 @@ export const useGetAllAllocationAgreements = (
   })
 }
 
-export const useGetAllocationAgreementsList = (
+export const useGetAllocationAgreementsList = <TData = unknown>(
   { complianceReportId, changelog = false }: Record<string, unknown>,
-  pagination: PaginationParams,
-  options: QueryOptions<unknown> = {}
+  pagination?: PaginationParams,
+  options: QueryOptions<TData> = {}
 ) => {
   const client = useApiService()
 
@@ -151,11 +151,14 @@ export const useGetAllocationAgreementsList = (
         throw new Error('Compliance report ID is required')
       }
 
-      const response = await client.post(apiRoutes.getAllAllocationAgreements, {
-        complianceReportId,
-        changelog,
-        ...pagination
-      })
+      const response = await client.post<TData>(
+        apiRoutes.getAllAllocationAgreements,
+        {
+          complianceReportId,
+          changelog,
+          ...(pagination ?? {})
+        }
+      )
       return response.data
     },
     enabled: enabled && !!complianceReportId,
@@ -226,7 +229,7 @@ export const useGetAllocationAgreementsIndex = (
 
 export const useSaveAllocationAgreement = (
   params: { complianceReportId: number | string },
-  options: ExtMutationOptions<unknown, Record<string, unknown>> = {}
+  options: ExtMutationOptions<unknown, Record<string, unknown> | null> = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -240,7 +243,7 @@ export const useSaveAllocationAgreement = (
   } = options
 
   return useMutation({
-    mutationFn: async (data: Record<string, unknown>) => {
+    mutationFn: async (data: Record<string, unknown> | null) => {
       if (!params?.complianceReportId) {
         throw new Error('Compliance report ID is required')
       }
@@ -530,9 +533,9 @@ export const useImportAllocationAgreement = (
   })
 }
 
-export const useGetAllocationAgreementImportJobStatus = (
-  jobID: string | undefined | null,
-  options: QueryOptions<unknown> = {}
+export const useGetAllocationAgreementImportJobStatus = <TData = unknown>(
+  jobID: string | number | undefined | null,
+  options: QueryOptions<TData> = {}
 ) => {
   const client = useApiService()
 
@@ -551,10 +554,10 @@ export const useGetAllocationAgreementImportJobStatus = (
         throw new Error('Job ID is required')
       }
 
-      const response = await client.get(
+      const response = await client.get<TData>(
         apiRoutes.getImportAllocationAgreementsJobStatus.replace(
           ':jobID',
-          jobID
+          String(jobID)
         )
       )
       return response.data

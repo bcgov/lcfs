@@ -33,8 +33,8 @@ import { isQuarterEditable } from '@/utils/grid/cellEditables'
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
 export const allocationAgreementColDefs = (
-  optionsData: OptionsData,
-  orgName: string,
+  optionsData: OptionsData | undefined,
+  orgName: string | undefined,
   errors: GridErrors,
   warnings: GridWarnings,
   isSupplemental: boolean,

@@ -14,6 +14,14 @@ import {
 } from '@/hooks/useAllocationAgreement'
 import { useApiService } from '@/services/useApiService'
 import { test } from '@/tests/utils/fixtures'
+import axios from 'axios'
+import type { Filter, SortOrder } from '../types'
+
+const createMockApiService = <TMethods extends object>(methods: TMethods) =>
+  Object.assign(axios.create(), {
+    download: async () => undefined,
+    ...methods
+  })
 
 vi.mock('@/services/useApiService')
 
@@ -22,7 +30,9 @@ describe('useAllocationAgreementOptions', () => {
 
   beforeEach(() => {
     vi.resetAllMocks()
-    vi.mocked(useApiService).mockReturnValue({ get: mockGet })
+    vi.mocked(useApiService).mockReturnValue(
+      createMockApiService({ get: mockGet })
+    )
   })
 
   test('should fetch allocation agreement options successfully', async ({
@@ -114,7 +124,9 @@ describe('useGetAllocationAgreements', () => {
 
   beforeEach(() => {
     vi.resetAllMocks()
-    vi.mocked(useApiService).mockReturnValue({ post: mockPost })
+    vi.mocked(useApiService).mockReturnValue(
+      createMockApiService({ post: mockPost })
+    )
   })
 
   test('should fetch allocation agreements successfully', async ({
@@ -201,7 +213,9 @@ describe('useGetAllAllocationAgreements', () => {
 
   beforeEach(() => {
     vi.resetAllMocks()
-    vi.mocked(useApiService).mockReturnValue({ post: mockPost })
+    vi.mocked(useApiService).mockReturnValue(
+      createMockApiService({ post: mockPost })
+    )
   })
 
   test('should fetch all allocation agreements successfully', async ({
@@ -265,7 +279,9 @@ describe('useGetAllocationAgreementsList', () => {
 
   beforeEach(() => {
     vi.resetAllMocks()
-    vi.mocked(useApiService).mockReturnValue({ post: mockPost })
+    vi.mocked(useApiService).mockReturnValue(
+      createMockApiService({ post: mockPost })
+    )
   })
 
   test('should fetch allocation agreements list successfully', async ({
@@ -331,7 +347,9 @@ describe('useSaveAllocationAgreement', () => {
 
   beforeEach(() => {
     vi.resetAllMocks()
-    vi.mocked(useApiService).mockReturnValue({ post: mockPost })
+    vi.mocked(useApiService).mockReturnValue(
+      createMockApiService({ post: mockPost })
+    )
   })
 
   test('should save allocation agreement successfully', async ({
@@ -364,13 +382,16 @@ describe('useSaveAllocationAgreement', () => {
     renderHook,
     query
   }) => {
-    const { result } = renderHook(() => useSaveAllocationAgreement({}), [query])
+    const { result } = renderHook(
+      () => useSaveAllocationAgreement({ complianceReportId: '' }),
+      [query]
+    )
 
     const testData = { name: 'Test Agreement' }
     result.current.mutate(testData)
 
     await waitFor(() => expect(result.current.isError).toBe(true))
-    expect(result.current.error.message).toBe(
+    expect(result.current.error?.message).toBe(
       'Compliance report ID is required'
     )
   })
@@ -384,7 +405,7 @@ describe('useSaveAllocationAgreement', () => {
     result.current.mutate(null)
 
     await waitFor(() => expect(result.current.isError).toBe(true))
-    expect(result.current.error.message).toBe(
+    expect(result.current.error?.message).toBe(
       'Allocation agreement data is required'
     )
   })
@@ -395,7 +416,9 @@ describe('useUpdateAllocationAgreement', () => {
 
   beforeEach(() => {
     vi.resetAllMocks()
-    vi.mocked(useApiService).mockReturnValue({ put: mockPut })
+    vi.mocked(useApiService).mockReturnValue(
+      createMockApiService({ put: mockPut })
+    )
   })
 
   test('should provide mutation function for update operations', ({
@@ -437,7 +460,9 @@ describe('useDeleteAllocationAgreement', () => {
 
   beforeEach(() => {
     vi.resetAllMocks()
-    vi.mocked(useApiService).mockReturnValue({ delete: mockDelete })
+    vi.mocked(useApiService).mockReturnValue(
+      createMockApiService({ delete: mockDelete })
+    )
   })
 
   test('should provide mutation function for delete operations', ({
@@ -478,7 +503,9 @@ describe('useImportAllocationAgreement', () => {
 
   beforeEach(() => {
     vi.resetAllMocks()
-    vi.mocked(useApiService).mockReturnValue({ post: mockPost })
+    vi.mocked(useApiService).mockReturnValue(
+      createMockApiService({ post: mockPost })
+    )
   })
 
   test('should provide mutation function for import operations', ({
@@ -520,7 +547,9 @@ describe('useGetAllocationAgreementImportJobStatus', () => {
 
   beforeEach(() => {
     vi.resetAllMocks()
-    vi.mocked(useApiService).mockReturnValue({ get: mockGet })
+    vi.mocked(useApiService).mockReturnValue(
+      createMockApiService({ get: mockGet })
+    )
   })
 
   test('should fetch job status successfully', async ({
@@ -576,7 +605,9 @@ describe('useGetAllocationAgreementsIndex', () => {
 
   beforeEach(() => {
     vi.resetAllMocks()
-    vi.mocked(useApiService).mockReturnValue({ post: mockPost })
+    vi.mocked(useApiService).mockReturnValue(
+      createMockApiService({ post: mockPost })
+    )
   })
 
   test('posts paging, sorting, filters and the organization to the index endpoint', async ({
@@ -588,8 +619,10 @@ describe('useGetAllocationAgreementsIndex', () => {
       pagination: { total: 0, page: 2, size: 25, totalPages: 0 }
     }
     mockPost.mockResolvedValueOnce({ data: response })
-    const sortOrders = [{ field: 'compliancePeriod', direction: 'desc' }]
-    const filters = [
+    const sortOrders: SortOrder[] = [
+      { field: 'compliancePeriod', direction: 'desc' }
+    ]
+    const filters: Filter[] = [
       {
         field: 'status',
         filterType: 'text',
