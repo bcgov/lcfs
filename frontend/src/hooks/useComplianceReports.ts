@@ -9,11 +9,67 @@ import type {
   ReportId
 } from '@/stores/useComplianceReportStore'
 import type { QueryOptions, ExtMutationOptions } from './types'
+import type { AxiosResponse } from 'axios'
+import type { RenewableFuelSummaryRow } from '@/types/schema'
+
+export interface CompliancePeriod {
+  compliancePeriodId: number
+  description?: string | null
+  effectiveDate?: string | null
+}
+
+export interface AvailableAnalyst {
+  userProfileId: number
+  firstName: string
+  lastName: string
+  initials: string
+  fullName?: string
+}
+
+interface ComplianceReportCreationResult {
+  complianceReportId: number | string
+  compliancePeriod: { description: string }
+}
 
 interface PenaltySummaryRow {
   line?: number | string | null
   invoiceSent?: boolean | null
   paymentReceived?: boolean | null
+  totalValue?: number | string | null
+}
+
+export interface ComplianceReportSummaryRow extends PenaltySummaryRow {
+  value?: number
+  gasoline?: number
+  diesel?: number
+  jetFuel?: number
+  format?: 'number' | 'currency'
+  bold?: boolean
+  [key: string]: string | number | boolean | null | undefined
+}
+
+export interface ComplianceReportSummaryData {
+  canSign?: boolean
+  penaltyOverrideEnabled?: boolean
+  renewableFuelTargetSummary?: RenewableFuelSummaryRow[]
+  lowCarbonFuelTargetSummary?: ComplianceReportSummaryRow[]
+  earlyIssuanceSummary?: ComplianceReportSummaryRow[]
+  nonCompliancePenaltySummary?: ComplianceReportSummaryRow[]
+  renewablePenaltyOverride?: number | string | null
+  lowCarbonPenaltyOverride?: number | string | null
+  lines6And8Locked?: boolean
+  lines7And9Locked?: boolean
+  [key: string]: unknown
+}
+
+export interface ComplianceReportScheduleOverview {
+  supportingDocs?: { count?: number; hasChargingEquipment?: boolean }
+  fuelSupplies?: { count?: number; hasChargingEquipment?: boolean }
+  finalSupplyEquipments?: { count?: number; hasChargingEquipment?: boolean }
+  allocationAgreements?: { count?: number; hasChargingEquipment?: boolean }
+  notionalTransfers?: { count?: number; hasChargingEquipment?: boolean }
+  otherUses?: { count?: number; hasChargingEquipment?: boolean }
+  fuelExports?: { count?: number; hasChargingEquipment?: boolean }
 }
 
 interface CachedComplianceReportSummary {
@@ -26,7 +82,9 @@ const DEFAULT_CACHE_TIME = 10 * 60 * 1000 // 10 minutes
 const STATIC_DATA_STALE_TIME = 60 * 60 * 1000 // 1 hour (for periods, statuses)
 const DOCUMENT_STALE_TIME = 10 * 60 * 1000 // 10 minutes (documents change less frequently)
 
-export const useCompliancePeriod = (options: QueryOptions<unknown> = {}) => {
+export const useCompliancePeriod = (
+  options: QueryOptions<CompliancePeriod[] | { data: CompliancePeriod[] }> = {}
+) => {
   const client = useApiService()
 
   const {
@@ -36,7 +94,7 @@ export const useCompliancePeriod = (options: QueryOptions<unknown> = {}) => {
     ...restOptions
   } = options
 
-  return useQuery({
+  return useQuery<CompliancePeriod[] | { data: CompliancePeriod[] }>({
     queryKey: ['compliance-periods'],
     queryFn: async () => {
       const response = await client.get(apiRoutes.getCompliancePeriods)
@@ -206,7 +264,7 @@ export const useComplianceReportWithCache = (
 
 export const useGetComplianceReportSummary = (
   reportID: number | string | undefined | null,
-  options: QueryOptions<unknown> = {}
+  options: QueryOptions<ComplianceReportSummaryData> = {}
 ) => {
   const client = useApiService()
 
@@ -217,7 +275,7 @@ export const useGetComplianceReportSummary = (
     ...restOptions
   } = options
 
-  return useQuery({
+  return useQuery<ComplianceReportSummaryData>({
     queryKey: ['compliance-report-summary', reportID],
     queryFn: async () => {
       if (!reportID) {
@@ -276,7 +334,7 @@ export const useGetComplianceReportReviewSummary = (
 
 export const useComplianceReportScheduleOverview = (
   reportID: number | string | undefined | null,
-  options: QueryOptions<unknown> = {}
+  options: QueryOptions<ComplianceReportScheduleOverview> = {}
 ) => {
   const client = useApiService()
 
@@ -287,7 +345,7 @@ export const useComplianceReportScheduleOverview = (
     ...restOptions
   } = options
 
-  return useQuery({
+  return useQuery<ComplianceReportScheduleOverview>({
     queryKey: ['compliance-report-schedule-overview', reportID],
     queryFn: async () => {
       if (!reportID) {
@@ -312,7 +370,10 @@ export const useComplianceReportScheduleOverview = (
 
 export const useUpdateComplianceReportSummary = (
   reportID: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, unknown> = {}
+  options: ExtMutationOptions<
+    AxiosResponse<ComplianceReportSummaryData>,
+    ComplianceReportSummaryData
+  > = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -326,7 +387,7 @@ export const useUpdateComplianceReportSummary = (
   void ignoredClearCache
 
   return useMutation({
-    mutationFn: async (data: Record<string, unknown>) => {
+    mutationFn: async (data: ComplianceReportSummaryData) => {
       if (!reportID) {
         throw new Error('Report ID is required')
       }
@@ -339,7 +400,7 @@ export const useUpdateComplianceReportSummary = (
     onSuccess: (data, variables, context) => {
       queryClient.setQueryData(
         ['compliance-report-summary', reportID],
-        (data as { data?: unknown } | undefined)?.data
+        data.data
       )
       queryClient.invalidateQueries({
         queryKey: ['compliance-report-summary', reportID],
@@ -359,7 +420,10 @@ export const useUpdateComplianceReportSummary = (
 
 export const useUpdateComplianceReportPenaltyStatus = (
   reportID: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, unknown> = {}
+  options: ExtMutationOptions<
+    AxiosResponse<PenaltySummaryRow>,
+    Pick<PenaltySummaryRow, 'line' | 'invoiceSent' | 'paymentReceived'>
+  > = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -367,7 +431,9 @@ export const useUpdateComplianceReportPenaltyStatus = (
   const { onSuccess, onError, ...restOptions } = options
 
   return useMutation({
-    mutationFn: async (data: Record<string, unknown>) => {
+    mutationFn: async (
+      data: Pick<PenaltySummaryRow, 'line' | 'invoiceSent' | 'paymentReceived'>
+    ) => {
       if (!reportID) {
         throw new Error('Report ID is required')
       }
@@ -540,7 +606,7 @@ export const useDeleteComplianceReport = (
 
 export const useComplianceReportDocuments = (
   parentID: number | string | undefined | null,
-  options: QueryOptions<unknown> = {}
+  options: QueryOptions<unknown[]> = {}
 ) => {
   const client = useApiService()
 
@@ -551,7 +617,7 @@ export const useComplianceReportDocuments = (
     ...restOptions
   } = options
 
-  return useQuery({
+  return useQuery<unknown[]>({
     queryKey: ['documents', 'compliance_report', parentID],
     queryFn: async () => {
       if (!parentID) {
@@ -576,7 +642,10 @@ export const useComplianceReportDocuments = (
 
 export const useCreateSupplementalReport = (
   reportID: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, unknown> = {}
+  options: ExtMutationOptions<
+    AxiosResponse<ComplianceReportCreationResult>,
+    void
+  > = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -615,7 +684,10 @@ export const useCreateSupplementalReport = (
 
 export const useCreateAnalystAdjustment = (
   reportID: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, unknown> = {}
+  options: ExtMutationOptions<
+    AxiosResponse<ComplianceReportCreationResult>,
+    unknown
+  > = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -628,7 +700,7 @@ export const useCreateAnalystAdjustment = (
   } = options
 
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async (_variables: unknown) => {
       if (!reportID) {
         throw new Error('Report ID is required')
       }
@@ -861,7 +933,7 @@ export const useGetChangeLog = <TData = unknown>(
 }
 
 export const useGetAvailableAnalysts = (
-  options: QueryOptions<unknown> = {}
+  options: QueryOptions<AvailableAnalyst[]> = {}
 ) => {
   const client = useApiService()
 

@@ -427,7 +427,12 @@ export const useGetFinalSupplyEquipmentImportJobStatus = (
 
 export const useGetFSEReportingList = (
   complianceReportId: number | string | undefined | null,
-  pagination = { page: 1, size: 10, filters: [], sort_orders: [] },
+  pagination: PaginationParams = {
+    page: 1,
+    size: 10,
+    filters: [],
+    sort_orders: []
+  },
   options: QueryOptions<unknown> = {},
   organizationId: number | string | undefined | null = null,
   mode = undefined,

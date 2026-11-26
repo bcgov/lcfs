@@ -336,7 +336,7 @@ export const useCurrentOrgBalance = (options: QueryOptions<unknown> = {}) => {
 
 export const useGetOrgComplianceReportReportedYears = (
   orgID: number | string | undefined | null,
-  options: QueryOptions<unknown> = {}
+  options: QueryOptions<ReportedCompliancePeriod[]> = {}
 ) => {
   const client = useApiService()
   const { data: currentUser } = useCurrentUser()
@@ -349,7 +349,7 @@ export const useGetOrgComplianceReportReportedYears = (
     ...restOptions
   } = options
 
-  return useQuery({
+  return useQuery<ReportedCompliancePeriod[]>({
     queryKey: ['org-compliance-reports', id],
     queryFn: async () => {
       if (!id) {
@@ -369,6 +369,10 @@ export const useGetOrgComplianceReportReportedYears = (
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     ...restOptions
   })
+}
+
+export interface ReportedCompliancePeriod {
+  compliancePeriodId: number
 }
 
 /**

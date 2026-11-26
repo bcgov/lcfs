@@ -12,6 +12,7 @@ interface DocumentUploadDialogProps {
   parentID: number | string
   maxFiles?: number
   deleteToBin?: boolean
+  onUploadSuccess?: () => void
 }
 
 function DocumentUploadDialog({

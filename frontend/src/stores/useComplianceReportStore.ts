@@ -2,12 +2,53 @@ import { create } from 'zustand'
 
 export type ReportId = number | string
 
-export type ComplianceReport = {
+export interface ComplianceReportHistoryEntry {
+  complianceReportId?: ReportId
+  createDate: string | Date
+  displayName?: string
+  userProfile: { firstName: string; lastName: string }
+  status: { status: string }
+}
+
+export interface ComplianceReport {
   report: {
     id?: ReportId
+    complianceReportId?: ReportId
+    version?: number
+    nickname?: string
+    supplementalInitiator?: string | null
+    reportingFrequency?: string
+    compliancePeriod?: { description?: string }
+    organizationId?: number | string
+    currentStatus?: { status?: string }
+    isNonAssessment?: boolean
+    hasSupplemental?: boolean
     [key: string]: unknown
   }
   metadata?: Record<string, unknown>
+  chain?: Array<{
+    version: number
+    history?: ComplianceReportHistoryEntry[] | null
+    assessmentStatement?: string | null
+    currentStatus?: { status: string }
+    compliancePeriod?: { description?: string }
+    nickname?: string
+    organization?: { name?: string }
+    summary?: {
+      line11NonCompliancePenaltyPayable?: number | string | null
+      line11FossilDerivedBaseFuelTotal?: number | string | null
+      line21NonCompliancePenaltyPayable?: number | string | null
+      hasRenewableFuelRequirement?: boolean
+    }
+    isLowCarbonFuelExempted?: boolean
+    isRenewableFuelExempted?: boolean
+    isNonAssessment?: boolean
+    [key: string]: unknown
+  }>
+  hasGovernmentReassessmentInProgress?: boolean
+  isNonAssessment?: boolean
+  isRenewableFuelExempted?: boolean
+  isLowCarbonFuelExempted?: boolean
   [key: string]: unknown
 }
 

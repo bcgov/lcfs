@@ -1,0 +1,620 @@
+import { useCallback, useEffect, useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
+import Accordion from '@mui/material/Accordion'
+import AccordionDetails from '@mui/material/AccordionDetails'
+import AccordionSummary from '@mui/material/AccordionSummary'
+import Stack from '@mui/material/Stack'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Checkbox from '@mui/material/Checkbox'
+import Box from '@mui/material/Box'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import SigningAuthorityDeclaration from './SigningAuthorityDeclaration'
+import SummaryTable from './SummaryTable'
+import {
+  lowCarbonColumns,
+  nonComplianceColumns,
+  renewableFuelColumns
+} from './_schema'
+import {
+  useGetComplianceReportSummary,
+  useUpdateComplianceReportPenaltyStatus,
+  useUpdateComplianceReportSummary
+} from '@/hooks/useComplianceReports'
+import BCTypography from '@/components/BCTypography'
+import BCButton from '@/components/BCButton'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
+import Loading from '@/components/Loading'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { roles } from '@/constants/roles'
+import { useOrganizationSnapshot } from '@/hooks/useOrganizationSnapshot.js'
+import { CompareReports } from '@/views/CompareReports/CompareReports.jsx'
+import { TogglePanel } from '@/components/TogglePanel'
+import ExpandMore from '@mui/icons-material/ExpandMore'
+import { SUMMARY } from '@/constants/common'
+import type {
+  ComplianceReportSummaryData,
+  ComplianceReportSummaryRow
+} from '@/hooks/useComplianceReports'
+import type { ConfiguredButton } from '../buttonConfigs'
+
+interface SummaryFormData extends Record<string, unknown> {
+  isNonAssessment?: boolean
+  isRenewableFuelExempted?: boolean
+  isLowCarbonFuelExempted?: boolean
+}
+
+interface SummaryMethods {
+  handleSubmit: (
+    handler: (data: SummaryFormData) => unknown
+  ) => (event?: React.FormEvent) => void
+}
+
+interface AlertRef {
+  current?: {
+    triggerAlert: (alert: { message: string; severity: string }) => void
+  } | null
+}
+
+interface ComplianceReportSummaryProps {
+  reportID: number | string | undefined
+  currentStatus: string
+  canEdit: boolean
+  compliancePeriodYear: string | number
+  isSigningAuthorityDeclared: boolean
+  setIsSigningAuthorityDeclared: (declared: boolean) => void
+  buttonClusterConfig: Record<string, ConfiguredButton[]>
+  methods: SummaryMethods
+  enableCompareMode: boolean
+  alertRef: AlertRef
+  setHasEligibleRenewableFuel: (eligible: boolean) => void
+  isRenewableFuelExempted?: boolean
+  isLowCarbonFuelExempted?: boolean
+}
+
+/**
+ * Checks if the renewable fuel target summary should be hidden.
+ * Returns true if all values in Lines 3 and 9 are zero or null
+ * for every fuel category (gasoline, diesel, jetFuel).
+ */
+const shouldHideRenewableSummary = (
+  renewableFuelTargetSummary?: ComplianceReportSummaryData['renewableFuelTargetSummary']
+) => {
+  if (!renewableFuelTargetSummary) return false
+
+  const line3 = renewableFuelTargetSummary[SUMMARY.LINE_3]
+  const line9 = renewableFuelTargetSummary[SUMMARY.LINE_9]
+
+  if (!line3 || !line9) return false
+
+  const isZeroOrNull = (value: number | undefined) =>
+    value === null || value === undefined || value === 0
+
+  const line3AllZero =
+    isZeroOrNull(line3.gasoline) &&
+    isZeroOrNull(line3.diesel) &&
+    isZeroOrNull(line3.jetFuel)
+
+  const line9AllZero =
+    isZeroOrNull(line9.gasoline) &&
+    isZeroOrNull(line9.diesel) &&
+    isZeroOrNull(line9.jetFuel)
+
+  return line3AllZero && line9AllZero
+}
+
+// Required organization fields for compliance report submission
+const REQUIRED_ORG_FIELDS = [
+  'name',
+  'operatingName',
+  'email',
+  'phone',
+  'serviceAddress',
+  'recordsAddress',
+  'headOfficeAddress'
+]
+
+const ComplianceReportSummary = ({
+  reportID,
+  currentStatus,
+  canEdit,
+  compliancePeriodYear,
+  isSigningAuthorityDeclared,
+  setIsSigningAuthorityDeclared,
+  buttonClusterConfig,
+  methods,
+  enableCompareMode,
+  alertRef,
+  setHasEligibleRenewableFuel,
+  isRenewableFuelExempted = false,
+  isLowCarbonFuelExempted = false
+}: ComplianceReportSummaryProps) => {
+  const [summaryData, setSummaryData] =
+    useState<ComplianceReportSummaryData | null>(null)
+  const [hasRecords, setHasRecords] = useState(false)
+  const [hasValidAddress, setHasValidAddress] = useState(false)
+  const [penaltyOverrideEnabled, setPenaltyOverrideEnabled] = useState(false)
+  const [savingCellKey, setSavingCellKey] = useState<string | null>(null)
+  const { t } = useTranslation(['report'])
+
+  const { data: snapshotData } = useOrganizationSnapshot(reportID)
+
+  const { hasRoles, data: currentUser } = useCurrentUser()
+  const isGovernmentUser = currentUser?.isGovernmentUser
+
+  const { data, isLoading, isError, error } =
+    useGetComplianceReportSummary(reportID)
+  const { mutate: updateComplianceReportSummary } =
+    useUpdateComplianceReportSummary(reportID, {
+      onSuccess: (response) => {
+        setSummaryData(response.data)
+        setSavingCellKey(null)
+      },
+      onError: (error) => {
+        setSavingCellKey(null)
+        alertRef.current?.triggerAlert({
+          message: error.message,
+          severity: 'error'
+        })
+      }
+    })
+  const { mutate: updateComplianceReportPenaltyStatus } =
+    useUpdateComplianceReportPenaltyStatus(reportID, {
+      onSuccess: (response) => {
+        setSummaryData((currentSummary) => {
+          if (!currentSummary) return currentSummary
+
+          return {
+            ...currentSummary,
+            nonCompliancePenaltySummary:
+              currentSummary.nonCompliancePenaltySummary?.map((row) =>
+                Number(row.line) === Number(response.data?.line)
+                  ? {
+                      ...row,
+                      invoiceSent: response.data.invoiceSent,
+                      paymentReceived: response.data.paymentReceived
+                    }
+                  : row
+              )
+          }
+        })
+        setSavingCellKey(null)
+        alertRef.current?.triggerAlert({
+          message: 'Penalty status updated.',
+          severity: 'success'
+        })
+      },
+      onError: (error) => {
+        setSavingCellKey(null)
+        alertRef.current?.triggerAlert({
+          message: error.message,
+          severity: 'error'
+        })
+      }
+    })
+  useEffect(() => {
+    if (data) {
+      setSummaryData(data)
+      setHasRecords(Boolean(data.canSign))
+      setPenaltyOverrideEnabled(data.penaltyOverrideEnabled || false)
+      // Set hasEligibleRenewableFuel based on Lines 3 and 9
+      // If both lines are all zero/null, there's no renewable fuel requirement
+      setHasEligibleRenewableFuel(
+        !shouldHideRenewableSummary(data.renewableFuelTargetSummary)
+      )
+    }
+    if (isError && error) {
+      const errorResponse = 'response' in error ? error.response : undefined
+      const errorData =
+        errorResponse &&
+        typeof errorResponse === 'object' &&
+        'data' in errorResponse
+          ? errorResponse.data
+          : undefined
+      const errorDetail =
+        errorData && typeof errorData === 'object' && 'detail' in errorData
+          ? errorData.detail
+          : undefined
+      alertRef.current?.triggerAlert({
+        message: typeof errorDetail === 'string' ? errorDetail : error.message,
+        severity: 'error'
+      })
+    }
+  }, [alertRef, data, error, isError, setHasEligibleRenewableFuel])
+
+  useEffect(() => {
+    if (snapshotData) {
+      // Check that all required fields have non-empty values
+      const isComplete = REQUIRED_ORG_FIELDS.every((field) => {
+        const value = snapshotData[field]
+        return value && typeof value === 'string' && value.trim() !== ''
+      })
+      setHasValidAddress(isComplete)
+    }
+  }, [snapshotData])
+
+  const handleCellEdit = useCallback(
+    (
+      data: NonNullable<
+        ComplianceReportSummaryData['renewableFuelTargetSummary']
+      >,
+      cellInfo?: { rowIndex: number; columnId: string } | null
+    ) => {
+      // perform auto save of summary after each cell change
+      const updatedData = { ...summaryData, renewableFuelTargetSummary: data }
+      setSummaryData(updatedData)
+      if (cellInfo) {
+        setSavingCellKey(`renewable_${cellInfo.rowIndex}_${cellInfo.columnId}`)
+      }
+      updateComplianceReportSummary(updatedData)
+    },
+    [summaryData, updateComplianceReportSummary]
+  )
+
+  const handlePenaltyOverrideCellEdit = useCallback(
+    (
+      data: ComplianceReportSummaryRow[],
+      cellInfo?: { rowIndex: number; columnId: string } | null
+    ) => {
+      // Extract penalty override values from edited non-compliance penalty summary data
+      // Row 0 (index 0) = Line 11 renewable fuel penalty -> renewablePenaltyOverride
+      // Row 1 (index 1) = Line 21 low carbon fuel penalty -> lowCarbonPenaltyOverride
+      const renewablePenaltyValue = data[0]?.totalValue || null
+      const lowCarbonPenaltyValue = data[1]?.totalValue || null
+
+      const updatedData: ComplianceReportSummaryData = {
+        ...(summaryData ?? {}),
+        nonCompliancePenaltySummary: data,
+        ...(penaltyOverrideEnabled
+          ? {
+              renewablePenaltyOverride: renewablePenaltyValue,
+              lowCarbonPenaltyOverride: lowCarbonPenaltyValue,
+              penaltyOverrideDate: new Date().toISOString(),
+              penaltyOverrideUser: currentUser?.userProfileId
+            }
+          : {})
+      }
+
+      if (cellInfo) {
+        setSavingCellKey(`penalty_${cellInfo.rowIndex}_${cellInfo.columnId}`)
+      }
+      setSummaryData(updatedData)
+      updateComplianceReportSummary(updatedData)
+    },
+    [
+      summaryData,
+      updateComplianceReportSummary,
+      currentUser,
+      penaltyOverrideEnabled
+    ]
+  )
+
+  const handlePenaltyStatusCellEdit = useCallback(
+    (
+      data: ComplianceReportSummaryRow[],
+      cellInfo?: { rowIndex: number; columnId: string } | null
+    ) => {
+      const updatedData = {
+        ...summaryData,
+        nonCompliancePenaltySummary: data
+      }
+      const row = cellInfo ? data[cellInfo.rowIndex] : undefined
+
+      setSummaryData(updatedData)
+
+      if (!row?.line) return
+
+      if (cellInfo) {
+        setSavingCellKey(`penalty_${cellInfo.rowIndex}_${cellInfo.columnId}`)
+      }
+
+      alertRef.current?.triggerAlert({
+        message: 'Updating penalty status...',
+        severity: 'pending'
+      })
+
+      updateComplianceReportPenaltyStatus({
+        line: Number(row.line),
+        ...(cellInfo?.columnId === 'invoiceSent'
+          ? { invoiceSent: !!row.invoiceSent }
+          : {}),
+        ...(cellInfo?.columnId === 'paymentReceived'
+          ? { paymentReceived: !!row.paymentReceived }
+          : {})
+      })
+    },
+    [alertRef, summaryData, updateComplianceReportPenaltyStatus]
+  )
+
+  // Computed data for non-compliance penalty summary based on override state
+  const nonCompliancePenaltyDisplayData = useMemo(() => {
+    if (!summaryData?.nonCompliancePenaltySummary) return null
+
+    const originalData = summaryData.nonCompliancePenaltySummary
+
+    if (!penaltyOverrideEnabled) {
+      // When override is disabled, show original calculated values
+      return originalData
+    }
+
+    // When override is enabled, show override values
+    return originalData.map((row, index) => {
+      if (index === 0) {
+        // Line 11: Renewable fuel penalty - show override value
+        return {
+          ...row,
+          totalValue: summaryData.renewablePenaltyOverride || 0
+        }
+      } else if (index === 1) {
+        // Line 21: Low carbon fuel penalty - show override value
+        return {
+          ...row,
+          totalValue: summaryData.lowCarbonPenaltyOverride || 0
+        }
+      } else if (index === 2) {
+        // Total row: Sum of override values (calculated from backend)
+        const renewableOverride = summaryData.renewablePenaltyOverride || 0
+        const lowCarbonOverride = summaryData.lowCarbonPenaltyOverride || 0
+        return {
+          ...row,
+          totalValue:
+            typeof renewableOverride === 'string' ||
+            typeof lowCarbonOverride === 'string'
+              ? `${renewableOverride}${lowCarbonOverride}`
+              : renewableOverride + lowCarbonOverride
+        }
+      }
+      return row
+    })
+  }, [summaryData, penaltyOverrideEnabled])
+
+  const penaltyStatusEditableCells = useMemo(
+    () =>
+      (nonCompliancePenaltyDisplayData ?? []).reduce<number[]>(
+        (indexes, row, index) => {
+          if (row?.line && Number(row.totalValue) > 0) indexes.push(index)
+          return indexes
+        },
+        []
+      ),
+    [nonCompliancePenaltyDisplayData]
+  )
+  const showPenaltyStatusColumns =
+    isGovernmentUser &&
+    currentStatus !== COMPLIANCE_REPORT_STATUSES.DRAFT &&
+    penaltyStatusEditableCells.length > 0
+
+  // When low carbon fuel is exempted, override line 22 to show line 17's value
+  // (no credit change applied) instead of the stale calculated value
+  const lowCarbonDisplayData = useMemo(() => {
+    const data = summaryData?.lowCarbonFuelTargetSummary
+    if (!data || !isLowCarbonFuelExempted) return data
+
+    // Low carbon table: line 12 = index 0, line 17 = index 5, line 22 = index 10
+    const LINE_17_INDEX = 5
+    const LINE_22_INDEX = 10
+    const line17Value = data[LINE_17_INDEX]?.value ?? 0
+
+    return data.map((row, index) => {
+      if (index === LINE_22_INDEX) {
+        return { ...row, value: Math.max(line17Value, 0) }
+      }
+      return row
+    })
+  }, [summaryData?.lowCarbonFuelTargetSummary, isLowCarbonFuelExempted])
+
+  const handleCheckboxToggle = useCallback(
+    (enabled: boolean) => {
+      setPenaltyOverrideEnabled(enabled)
+      const updatedData = {
+        ...summaryData,
+        penaltyOverrideEnabled: enabled,
+        // If enabling, set audit fields immediately
+        ...(enabled
+          ? {
+              penaltyOverrideDate: new Date().toISOString(),
+              penaltyOverrideUser: currentUser?.userProfileId
+            }
+          : {
+              renewablePenaltyOverride: null,
+              lowCarbonPenaltyOverride: null,
+              penaltyOverrideDate: null,
+              penaltyOverrideUser: null
+            })
+      }
+      console.log('Checkbox toggle - sending to backend:', updatedData)
+      updateComplianceReportSummary(updatedData)
+    },
+    [summaryData, updateComplianceReportSummary, currentUser]
+  )
+
+  // Only show full loading screen on initial load, not on background refetches
+  // Background refetches (isFetching) happen after cell edits and should show inline spinners instead
+  if (isLoading && !summaryData) {
+    return <Loading message={t('report:summaryLoadingMsg')} />
+  }
+
+  if (isError) {
+    return (
+      <BCTypography color="error">{t('report:errorRetrieving')}</BCTypography>
+    )
+  }
+
+  return (
+    <>
+      <BCTypography color="primary" variant="h5" mb={1} mt={2} component="div">
+        {t('report:summaryAndDeclaration')}
+      </BCTypography>
+      <Accordion defaultExpanded>
+        <AccordionSummary
+          expandIcon={<ExpandMore sx={{ width: '2rem', height: '2rem' }} />}
+          aria-controls="panel1-content"
+        >
+          <BCTypography color="primary" variant="h6" component="div">
+            {t('report:summary')}
+          </BCTypography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <TogglePanel
+            label="Compare mode"
+            disabled={!enableCompareMode}
+            onComponent={<CompareReports />}
+            offComponent={
+              <>
+                {shouldHideRenewableSummary(
+                  summaryData?.renewableFuelTargetSummary
+                ) ? (
+                  <Box sx={{ mb: 3 }}>
+                    <BCTypography variant="h6" color="primary" sx={{ mb: 1 }}>
+                      {t('report:renewableFuelTargetSummary')}
+                    </BCTypography>
+                    <BCTypography
+                      variant="body1"
+                      color="text.secondary"
+                      data-test="no-renewable-fuel-message"
+                    >
+                      {t('report:noRenewableFuelRequirement')}
+                    </BCTypography>
+                  </Box>
+                ) : (
+                  <SummaryTable
+                    data-test="renewable-summary"
+                    title={t('report:renewableFuelTargetSummary')}
+                    titleTooltip={
+                      summaryData?.lines6And8Locked
+                        ? 'Lines 6/8 locked from assessed snapshot'
+                        : summaryData?.lines7And9Locked
+                          ? 'Lines 7/9 locked from assessed snapshot'
+                          : undefined
+                    }
+                    columns={
+                      summaryData
+                        ? renewableFuelColumns(
+                            t,
+                            summaryData.renewableFuelTargetSummary!,
+                            canEdit,
+                            compliancePeriodYear,
+                            summaryData?.lines7And9Locked,
+                            summaryData?.lines6And8Locked
+                          )
+                        : []
+                    }
+                    data={summaryData?.renewableFuelTargetSummary}
+                    onCellEditStopped={handleCellEdit}
+                    useParenthesis={true}
+                    lines7And9Locked={summaryData?.lines7And9Locked}
+                    lines6And8Locked={summaryData?.lines6And8Locked}
+                    savingCellKey={savingCellKey}
+                    tableType="renewable"
+                    exemptedLines={isRenewableFuelExempted ? [4, 11] : []}
+                  />
+                )}
+                <SummaryTable
+                  data-test="low-carbon-summary"
+                  title={t('report:lowCarbonFuelTargetSummary')}
+                  columns={lowCarbonColumns(t)}
+                  data={lowCarbonDisplayData}
+                  width={'80.65%'}
+                  compliancePeriodYear={compliancePeriodYear}
+                  exemptedLines={isLowCarbonFuelExempted ? [18, 20, 21] : []}
+                />
+                <SummaryTable
+                  data-test="non-compliance-summary"
+                  title={t('report:nonCompliancePenaltySummary')}
+                  columns={nonComplianceColumns(
+                    t,
+                    penaltyOverrideEnabled,
+                    showPenaltyStatusColumns,
+                    showPenaltyStatusColumns,
+                    penaltyStatusEditableCells
+                  )}
+                  data={nonCompliancePenaltyDisplayData ?? undefined}
+                  width={'80.65%'}
+                  onCellEditStopped={
+                    isGovernmentUser || penaltyOverrideEnabled
+                      ? handlePenaltyOverrideCellEdit
+                      : undefined
+                  }
+                  onBooleanCellEditStopped={
+                    showPenaltyStatusColumns
+                      ? handlePenaltyStatusCellEdit
+                      : undefined
+                  }
+                  savingCellKey={savingCellKey}
+                  tableType="penalty"
+                  exemptedLines={[
+                    ...(isRenewableFuelExempted ? [11] : []),
+                    ...(isLowCarbonFuelExempted ? [21] : [])
+                  ]}
+                />
+                {hasRoles(roles.director) &&
+                  parseInt(String(compliancePeriodYear)) >= 2024 &&
+                  (currentStatus ===
+                    COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST ||
+                    currentStatus ===
+                      COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER) && (
+                    <Box sx={{ mb: 2 }}>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={penaltyOverrideEnabled}
+                            onChange={(e) =>
+                              handleCheckboxToggle(e.target.checked)
+                            }
+                            data-test="penalty-override-checkbox"
+                          />
+                        }
+                        label="Override penalty calculations"
+                      />
+                    </Box>
+                  )}
+              </>
+            }
+          />
+          {currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT && (
+            <>
+              {!isGovernmentUser && (
+                <SigningAuthorityDeclaration
+                  onChange={setIsSigningAuthorityDeclared}
+                  checked={isSigningAuthorityDeclared}
+                  hasAuthority={hasRoles(roles.signing_authority)}
+                  hasRecords={hasRecords}
+                  hasValidAddress={hasValidAddress}
+                />
+              )}
+
+              <Stack direction="row" justifyContent="flex-start" mt={2} gap={2}>
+                {buttonClusterConfig[currentStatus]?.map(
+                  (config) =>
+                    config && (
+                      <BCButton
+                        key={config.id}
+                        data-test={config.id}
+                        id={config.id}
+                        size="small"
+                        variant={config.variant}
+                        color={config.color}
+                        onClick={methods.handleSubmit(config.handler)}
+                        startIcon={
+                          config.startIcon && (
+                            <FontAwesomeIcon
+                              icon={config.startIcon}
+                              className="small-icon"
+                            />
+                          )
+                        }
+                        disabled={config.disabled}
+                      >
+                        {config.label}
+                      </BCButton>
+                    )
+                )}
+              </Stack>
+            </>
+          )}
+        </AccordionDetails>
+      </Accordion>
+    </>
+  )
+}
+
+export default ComplianceReportSummary

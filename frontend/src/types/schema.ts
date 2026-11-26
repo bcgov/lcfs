@@ -104,3 +104,14 @@ export interface SummaryColumn {
   editableCells?: (string | number)[]
   cellConstraints?: Record<string | number, { min: number; max?: number }>
 }
+
+export interface RenewableFuelSummaryRow {
+  line?: number
+  gasoline: number
+  diesel: number
+  jetFuel: number
+  maxGasoline?: number
+  maxDiesel?: number
+  maxJetFuel?: number
+  [key: string]: string | number | undefined
+}

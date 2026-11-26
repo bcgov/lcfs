@@ -3,13 +3,25 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiRoutes } from '@/constants/routes/index'
 import type { QueryOptions, ExtMutationOptions } from './types'
 
+export interface OrganizationSnapshotData extends Record<string, unknown> {
+  name?: string
+  operatingName?: string
+  email?: string
+  phone?: string
+  serviceAddress?: string
+  recordsAddress?: string
+  headOfficeAddress?: string
+  contactName?: string
+  isEdited?: boolean
+}
+
 // Default cache configuration
 const DEFAULT_STALE_TIME = 5 * 60 * 1000 // 5 minutes
 const DEFAULT_CACHE_TIME = 10 * 60 * 1000 // 10 minutes
 
 export const useOrganizationSnapshot = (
   complianceReportId: number | string | undefined | null,
-  options: QueryOptions<unknown> = {}
+  options: QueryOptions<OrganizationSnapshotData> = {}
 ) => {
   const client = useApiService()
 
@@ -20,7 +32,7 @@ export const useOrganizationSnapshot = (
     ...restOptions
   } = options
 
-  return useQuery({
+  return useQuery<OrganizationSnapshotData>({
     queryKey: ['organization-snapshot', complianceReportId],
     queryFn: async () => {
       if (!complianceReportId) {

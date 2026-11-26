@@ -11,12 +11,14 @@ import Checkbox from '@mui/material/Checkbox'
 import { AddressAutocomplete } from './AddressAutocomplete'
 import type { AddressOption } from './AddressAutocomplete'
 import type { ChangeEventHandler } from 'react'
-import type { Control, FieldValues } from 'react-hook-form'
+import type { Control, FieldPath, FieldValues } from 'react-hook-form'
 import { addressHasPostalCode, type AddressValue } from './addressHelpers'
 
-export interface BCFormAddressAutocompleteProps {
-  name: string
-  control: Control<FieldValues>
+export interface BCFormAddressAutocompleteProps<
+  TFieldValues extends FieldValues = FieldValues
+> {
+  name: FieldPath<TFieldValues>
+  control: Control<TFieldValues>
   label?: string
   optional?: boolean
   checkbox?: boolean
@@ -27,7 +29,7 @@ export interface BCFormAddressAutocompleteProps {
   onSelectAddress?: (address: AddressOption | string) => void
 }
 
-export const BCFormAddressAutocomplete = ({
+export const BCFormAddressAutocomplete = <TFieldValues extends FieldValues>({
   name,
   control,
   label,
@@ -38,7 +40,7 @@ export const BCFormAddressAutocomplete = ({
   isChecked,
   disabled,
   onSelectAddress
-}: BCFormAddressAutocompleteProps) => {
+}: BCFormAddressAutocompleteProps<TFieldValues>) => {
   const [showTooltip, setShowTooltip] = useState(false)
 
   const promptForPostalCode = (addressValue: AddressValue) => {

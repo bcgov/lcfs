@@ -1,0 +1,466 @@
+import { useEffect, useState } from 'react'
+import type { ChangeEvent, ChangeEventHandler } from 'react'
+import BCTypography from '@/components/BCTypography'
+import { useTranslation } from 'react-i18next'
+import { useUpdateOrganizationSnapshot } from '@/hooks/useOrganizationSnapshot.js'
+import { FormProvider, useForm } from 'react-hook-form'
+import { BCFormText } from '@/components/BCForm/BCFormText'
+import { BCFormAddressAutocomplete } from '@/components/BCForm/BCFormAddressAutocomplete'
+import { yupResolver } from '@hookform/resolvers/yup'
+import { defaultValues } from '@/views/Users/AddEditUser/_schema.js'
+import Box from '@mui/material/Box'
+import Stack from '@mui/material/Stack'
+import List from '@mui/material/List'
+import ListItem from '@mui/material/ListItem'
+import BCButton from '@/components/BCButton/index.jsx'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
+import * as Yup from 'yup'
+import { PHONE_REGEX } from '@/constants/common'
+import BCModal from '@/components/BCModal'
+import { useNavigate } from 'react-router-dom'
+import { ROUTES } from '@/routes/routes.js'
+import {
+  addressHasPostalCode,
+  addressWithPostalCode
+} from './organizationAddressUtils'
+
+interface OrganizationFormValues {
+  name: string
+  operatingName: string
+  email: string
+  phone: string
+  serviceAddress: string
+  recordsAddress: string
+  headOfficeAddress: string
+  contactName?: string
+}
+
+interface OrganizationSnapshot extends Partial<OrganizationFormValues> {
+  contactName?: string
+  isEdited?: boolean
+}
+
+type OrganizationFieldName = keyof OrganizationFormValues | 'contactName'
+
+interface OrganizationFormField {
+  name: OrganizationFieldName
+  label: string
+  checkbox?: boolean
+  checkboxLabel?: string
+  onCheckboxChange?: ChangeEventHandler<HTMLInputElement>
+  isChecked?: boolean
+  disabled?: boolean
+  onSelectAddress?: (
+    address:
+      | string
+      | { fullAddress?: string; postalCode?: string; postal_code?: string }
+  ) => void
+}
+
+interface OrganizationAddressProps {
+  snapshotData?: OrganizationSnapshot | null
+  complianceReportId?: number | string | null
+  isEditing: boolean
+  setIsEditing: (editing: boolean) => void
+  isGovernmentUser: boolean
+  orgID?: number | string
+  reportID?: number | string
+}
+
+// Required organization fields for compliance report submission
+const REQUIRED_ORG_FIELDS = [
+  'name',
+  'operatingName',
+  'email',
+  'phone',
+  'serviceAddress',
+  'recordsAddress',
+  'headOfficeAddress'
+]
+
+export const OrganizationAddress = ({
+  snapshotData,
+  complianceReportId,
+  isEditing,
+  setIsEditing,
+  isGovernmentUser,
+  orgID,
+  reportID
+}: OrganizationAddressProps) => {
+  const { t } = useTranslation(['common', 'report', 'org'])
+  const navigate = useNavigate()
+  const [modalData, setModalData] = useState<{
+    title: string
+    content: string
+  } | null>(null)
+  const [sameAsLegalName, setSameAsLegalName] = useState(false)
+  const [recordsSameAsService, setRecordsSameAsService] = useState(false)
+  const [headOfficeSameAsService, setHeadOfficeSameAsService] = useState(false)
+
+  const validationSchema = Yup.object({
+    name: Yup.string().required('Legal name is required.'),
+    operatingName: Yup.string().required('Operating name is required.'),
+    phone: Yup.string()
+      .required('Phone number is required.')
+      .matches(PHONE_REGEX, 'Phone number is not valid'),
+    email: Yup.string()
+      .required('Email address is required.')
+      .email('Please enter a valid email address.'),
+    serviceAddress: Yup.string()
+      .required('Service address is required.')
+      .test(
+        'postal-code',
+        'Service address must include a valid postal code.',
+        addressHasPostalCode
+      ),
+    recordsAddress: Yup.string()
+      .required('Records address is required.')
+      .test(
+        'postal-code',
+        'Records address must include a valid postal code.',
+        addressHasPostalCode
+      ),
+    headOfficeAddress: Yup.string().required('Head office address is required.')
+  })
+
+  // Hook for updating the organization snapshot
+  const { mutate: updateComplianceReport, isPending: isUpdating } =
+    useUpdateOrganizationSnapshot(complianceReportId)
+
+  // Setting up the form
+  const form = useForm<OrganizationFormValues>({
+    resolver: yupResolver(validationSchema),
+    mode: 'onChange',
+    defaultValues
+  })
+  const { handleSubmit, control, setValue, watch, reset } = form
+
+  const serviceAddress = watch('serviceAddress')
+  const legalName = watch('name')
+
+  // If 'same as service address' is checked, automatically update records address
+  useEffect(() => {
+    if (recordsSameAsService && serviceAddress) {
+      setValue('recordsAddress', serviceAddress)
+    }
+    if (headOfficeSameAsService && serviceAddress) {
+      setValue('headOfficeAddress', serviceAddress)
+    }
+  }, [recordsSameAsService, serviceAddress, setValue, headOfficeSameAsService])
+
+  // If 'same as legal name' is checked, automatically update operating name
+  useEffect(() => {
+    if (sameAsLegalName && legalName) {
+      setValue('operatingName', legalName)
+    }
+  }, [sameAsLegalName, legalName, setValue])
+
+  // Submission handlers
+  const onSubmit = async (data: OrganizationFormValues) => {
+    await updateComplianceReport(data)
+    setIsEditing(false)
+  }
+
+  const onError = () => setModalData(null)
+
+  const onCancel = () => {
+    reset(snapshotData ?? undefined)
+    setIsEditing(false)
+  }
+
+  // Checkbox to keep records address synced with service address
+  const handleSameAddressChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setRecordsSameAsService(event.target.checked)
+    if (event.target.checked) {
+      setValue('recordsAddress', serviceAddress)
+    }
+  }
+  const handleSameHeadOfficeAddressChange = (
+    event: ChangeEvent<HTMLInputElement>
+  ) => {
+    setHeadOfficeSameAsService(event.target.checked)
+    if (event.target.checked) {
+      setValue('headOfficeAddress', serviceAddress)
+    }
+  }
+
+  // Checkbox to keep operating name synced with legal name
+  const handleSameNameChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setSameAsLegalName(event.target.checked)
+    if (event.target.checked) {
+      setValue('operatingName', legalName)
+    }
+  }
+
+  // Helpers to select addresses
+  const handleSelectServiceAddress = (
+    addressData:
+      | string
+      | { fullAddress?: string; postalCode?: string; postal_code?: string }
+  ) => {
+    const selectedAddress = addressWithPostalCode(addressData)
+    setValue('serviceAddress', selectedAddress, { shouldValidate: true })
+
+    // If 'same as service address' is checked, automatically update records too
+    if (recordsSameAsService) {
+      setValue('recordsAddress', selectedAddress, { shouldValidate: true })
+    }
+    if (headOfficeSameAsService) {
+      setValue('headOfficeAddress', selectedAddress, { shouldValidate: true })
+    }
+  }
+
+  const handleSelectRecordsAddress = (
+    addressData:
+      | string
+      | { fullAddress?: string; postalCode?: string; postal_code?: string }
+  ) => {
+    setValue('recordsAddress', addressWithPostalCode(addressData), {
+      shouldValidate: true
+    })
+  }
+
+  const handleSelectHeadOfficeAddress = (
+    addressData:
+      | string
+      | { fullAddress?: string; postalCode?: string; postal_code?: string }
+  ) => {
+    setValue('headOfficeAddress', addressWithPostalCode(addressData), {
+      shouldValidate: true
+    })
+  }
+  // Sync state with snapshot data on load
+  useEffect(() => {
+    if (snapshotData) {
+      reset(snapshotData)
+      setSameAsLegalName(snapshotData.name === snapshotData.operatingName)
+      setRecordsSameAsService(
+        snapshotData.serviceAddress === snapshotData.recordsAddress
+      )
+      setHeadOfficeSameAsService(
+        snapshotData.serviceAddress === snapshotData.headOfficeAddress
+      )
+    }
+  }, [reset, snapshotData])
+
+  // Required fields for the read-only view
+  const requiredFields = REQUIRED_ORG_FIELDS
+
+  // Define which form fields use regular text input vs address autocomplete
+  const textFormFields: OrganizationFormField[] = [
+    {
+      name: 'name',
+      label: t('org:legalNameLabel')
+    },
+    {
+      name: 'operatingName',
+      label: t('org:operatingNameLabel'),
+      checkbox: true,
+      checkboxLabel: 'same as legal name',
+      onCheckboxChange: handleSameNameChange,
+      isChecked: sameAsLegalName,
+      disabled: sameAsLegalName
+    },
+    {
+      name: 'phone',
+      label: t('org:phoneNbrLabel')
+    },
+    {
+      name: 'email',
+      label: t('org:emailAddrLabel')
+    },
+    {
+      name: 'contactName',
+      label: t('org:contactNameLabel')
+    },
+    {
+      name: 'headOfficeAddress',
+      label: isEditing
+        ? t('report:hoAddrLabelEdit')
+        : t('report:hoAddrLabelView'),
+      onSelectAddress: handleSelectHeadOfficeAddress,
+      onCheckboxChange: handleSameHeadOfficeAddressChange,
+      checkbox: true,
+      checkboxLabel: 'same as address for service',
+      isChecked: headOfficeSameAsService,
+      disabled: headOfficeSameAsService
+    }
+  ]
+
+  const addressFormFields: OrganizationFormField[] = [
+    {
+      name: 'serviceAddress',
+      label: isEditing
+        ? t('report:orgDetailsForm.serviceAddrLabelEdit')
+        : t('report:orgDetailsForm.serviceAddrLabelView'),
+      onSelectAddress: handleSelectServiceAddress
+    },
+    {
+      name: 'recordsAddress',
+      label: t('report:orgDetailsForm.bcRecordLabel'),
+      checkbox: true,
+      checkboxLabel: 'same as address for service',
+      onCheckboxChange: handleSameAddressChange,
+      isChecked: recordsSameAsService,
+      disabled: recordsSameAsService,
+      onSelectAddress: handleSelectRecordsAddress
+    }
+  ]
+
+  // Merge text + address fields for read-only view
+  const allFormFields = [
+    ...textFormFields.slice(0, -1),
+    ...addressFormFields,
+    textFormFields[textFormFields.length - 1]
+  ]
+  const headOffice = textFormFields[textFormFields.length - 1]
+
+  // Helper to show either the value or 'Required' in read-only mode
+  const displayAddressValue = (value: string | null | undefined) =>
+    value?.trim() ? value : ''
+
+  const handleUpdateOrgInfo = () => {
+    navigate(ROUTES.ORGANIZATIONS.VIEW.replace(':orgID', String(orgID)), {
+      state: { organizationSnapshot: snapshotData, reportID }
+    })
+  }
+
+  return (
+    <BCTypography variant="body4" color="text">
+      {!isEditing && (
+        <>
+          <List
+            sx={{
+              listStyleType: 'disc',
+              listStylePosition: 'outside',
+              pl: 2.5,
+              '& .MuiListItem-root': {
+                display: 'list-item',
+                py: 0.5,
+                paddingLeft: 0
+              }
+            }}
+          >
+            {allFormFields.map(({ name, label }) => {
+              const value = displayAddressValue(snapshotData?.[name])
+              if (name === 'contactName' && !value) {
+                return null
+              }
+
+              return (
+                <ListItem key={name} sx={{ display: 'flex' }}>
+                  <strong>{label}:</strong>{' '}
+                  <span>
+                    {value ||
+                      (requiredFields.includes(name) && (
+                        <BCTypography variant="body4" color="error">
+                          Required
+                        </BCTypography>
+                      ))}
+                  </span>
+                </ListItem>
+              )
+            })}
+          </List>
+          {isGovernmentUser && snapshotData?.isEdited && (
+            <BCButton
+              variant="outlined"
+              color="primary"
+              onClick={handleUpdateOrgInfo}
+              style={{ marginTop: '1rem' }}
+            >
+              {t('report:updateOrgInfo')}
+            </BCButton>
+          )}
+        </>
+      )}
+
+      {isEditing && (
+        <form onSubmit={handleSubmit(onSubmit, onError)}>
+          <FormProvider {...form}>
+            <Stack spacing={1} mb={3}>
+              {/* Regular text fields */}
+              {textFormFields.slice(0, -1).map((field) => (
+                <BCFormText<OrganizationFormValues>
+                  data-test={field.name}
+                  key={field.name}
+                  control={control}
+                  label={field.label}
+                  name={field.name}
+                  checkbox={field.checkbox}
+                  checkboxLabel={field.checkboxLabel}
+                  onCheckboxChange={field.onCheckboxChange}
+                  isChecked={field.isChecked}
+                  disabled={field.disabled}
+                />
+              ))}
+
+              {/* Address autocomplete fields */}
+              {addressFormFields.map((field) => (
+                <BCFormAddressAutocomplete<OrganizationFormValues>
+                  data-test={field.name}
+                  key={field.name}
+                  control={control}
+                  label={field.label}
+                  name={field.name}
+                  checkbox={field.checkbox}
+                  checkboxLabel={field.checkboxLabel}
+                  onCheckboxChange={field.onCheckboxChange}
+                  isChecked={field.isChecked}
+                  disabled={field.disabled}
+                  onSelectAddress={field.onSelectAddress}
+                />
+              ))}
+              {/* Head office address */}
+              <BCFormText<OrganizationFormValues>
+                data-test={headOffice.name}
+                key={headOffice.name}
+                control={control}
+                label={headOffice.label}
+                name={headOffice.name}
+                checkbox={headOffice.checkbox}
+                checkboxLabel={headOffice.checkboxLabel}
+                onCheckboxChange={headOffice.onCheckboxChange}
+                isChecked={headOffice.isChecked}
+                disabled={headOffice.disabled}
+              />
+            </Stack>
+            <Box display="flex">
+              <BCButton
+                type="submit"
+                variant="contained"
+                size="medium"
+                color="primary"
+                data-test="saveUser"
+                isLoading={isUpdating}
+                startIcon={
+                  <FontAwesomeIcon icon={faFloppyDisk} className="small-icon" />
+                }
+              >
+                <BCTypography variant="button">{t('saveBtn')}</BCTypography>
+              </BCButton>
+              <BCButton
+                type="button"
+                variant="outlined"
+                color="primary"
+                disabled={isUpdating}
+                sx={{ ml: 2 }}
+                onClick={onCancel}
+              >
+                <BCTypography variant="subtitle2" textTransform="none">
+                  {t('cancelBtn')}
+                </BCTypography>
+              </BCButton>
+            </Box>
+          </FormProvider>
+        </form>
+      )}
+      <BCModal
+        open={!!modalData}
+        onClose={() => setModalData(null)}
+        data={modalData}
+      />
+    </BCTypography>
+  )
+}

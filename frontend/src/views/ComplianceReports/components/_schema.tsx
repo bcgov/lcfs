@@ -1,5 +1,5 @@
 import type { ICellRendererParams, ColDef } from 'ag-grid-community'
-import type { SummaryColumn } from '@/types/schema'
+import type { RenewableFuelSummaryRow, SummaryColumn } from '@/types/schema'
 import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
 import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
 import { SUMMARY } from '@/constants/common'
@@ -218,16 +218,7 @@ export const reportsColDefs = (
   }
 ]
 
-type RenewableFuelLine = {
-  gasoline: number
-  diesel: number
-  jetFuel: number
-  maxGasoline?: number
-  maxDiesel?: number
-  maxJetFuel?: number
-}
-
-type RenewableFuelData = Record<string, RenewableFuelLine>
+type RenewableFuelData = RenewableFuelSummaryRow[]
 
 export const renewableFuelColumns = (
   t: (key: string) => string,
