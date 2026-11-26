@@ -1193,6 +1193,14 @@ class ComplianceReportSummaryService:
         existing_summary.lines_7_and_9_locked = lines_7_and_9_locked
         summary.lines_6_and_8_locked = summary_model.is_locked
         existing_summary.lines_6_and_8_locked = summary_model.is_locked
+        calculated_rows = {row.line: row for row in renewable_fuel_target_summary}
+        for row in existing_summary.renewable_fuel_target_summary:
+            if row.line in (6, 8) and row.line in calculated_rows:
+                calculated_row = calculated_rows[row.line]
+                row.description = calculated_row.description
+                row.max_gasoline = calculated_row.max_gasoline
+                row.max_diesel = calculated_row.max_diesel
+                row.max_jet_fuel = calculated_row.max_jet_fuel
 
         if existing_summary.model_dump(mode="json") != summary.model_dump(mode="json"):
             logger.info(

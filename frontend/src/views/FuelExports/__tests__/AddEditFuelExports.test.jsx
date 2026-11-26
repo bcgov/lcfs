@@ -39,7 +39,7 @@ vi.mock('@/utils/array', () => ({
   isArrayEmpty: vi.fn()
 }))
 
-vi.mock('@/utils/schedules.js', () => ({
+vi.mock('@/utils/schedules', () => ({
   handleScheduleDelete: vi.fn(),
   handleScheduleSave: vi.fn()
 }))
@@ -250,7 +250,7 @@ describe('AddEditFuelExports', () => {
 
     // Setup mocked utility functions
     const arrayUtils = await import('@/utils/array')
-    const scheduleUtils = await import('@/utils/schedules.js')
+    const scheduleUtils = await import('@/utils/schedules')
 
     arrayUtils.isArrayEmpty.mockImplementation(
       (arr) => !arr || arr.length === 0
@@ -510,7 +510,7 @@ describe('AddEditFuelExports', () => {
         onCellEditingStopped(mockUnchangedEvent)
       })
 
-      const { handleScheduleSave } = await import('@/utils/schedules.js')
+      const { handleScheduleSave } = await import('@/utils/schedules')
       expect(handleScheduleSave).not.toHaveBeenCalled()
     })
 
@@ -531,7 +531,7 @@ describe('AddEditFuelExports', () => {
     })
 
     it('processes save with schedule handler', async () => {
-      const { handleScheduleSave } = await import('@/utils/schedules.js')
+      const { handleScheduleSave } = await import('@/utils/schedules')
       handleScheduleSave.mockResolvedValue({
         saved: true,
         fuelType: { fuelType: 'Processed' }
@@ -560,7 +560,7 @@ describe('AddEditFuelExports', () => {
         triggerButton.click()
       })
 
-      const { handleScheduleDelete } = await import('@/utils/schedules.js')
+      const { handleScheduleDelete } = await import('@/utils/schedules')
       expect(handleScheduleDelete).toHaveBeenCalled()
     })
 
@@ -578,7 +578,7 @@ describe('AddEditFuelExports', () => {
         onAction('undo', { node: mockNode })
       })
 
-      const { handleScheduleDelete } = await import('@/utils/schedules.js')
+      const { handleScheduleDelete } = await import('@/utils/schedules')
       expect(handleScheduleDelete).toHaveBeenCalled()
     })
   })

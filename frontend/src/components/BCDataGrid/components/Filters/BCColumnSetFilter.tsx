@@ -26,7 +26,7 @@ const checkedIcon = <CheckBox fontSize="small" />
  */
 export interface BCColumnSetFilterProps {
   apiQuery: (params?: Record<string, unknown>) => {
-    data?: Array<Record<string, unknown>>
+    data?: Array<Record<string, unknown>> | null
     isLoading?: boolean
   }
   apiOptionField?: string

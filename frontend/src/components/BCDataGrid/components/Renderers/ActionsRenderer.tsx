@@ -14,7 +14,7 @@ import type { GridApi } from 'ag-grid-community'
 export interface ActionsRendererProps {
   api: GridApi
   node: { rowIndex: number | null }
-  data: { validationStatus?: string; [key: string]: unknown }
+  data: { validationStatus?: string | null; [key: string]: unknown }
   enableDuplicate?: boolean
   enableEdit?: boolean
   enableDelete?: boolean

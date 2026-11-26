@@ -34,6 +34,11 @@ services:
 
   #  clamav:
   #    image: clamav/clamav:stable_base
+  #    environment:
+  #      # Keep at or above MAX_FILE_SIZE_MB (backend/lcfs/utils/constants.py),
+  #      # otherwise clamd cuts large uploads off and they are rejected.
+  #      CLAMD_CONF_StreamMaxLength: 50M
+  #      CLAMD_CONF_MaxFileSize: 50M
   #    volumes:
   #      - clamsocket:/var/run/clamav/
   #      - clamav:/var/lib/clamav

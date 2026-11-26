@@ -8,7 +8,7 @@ from starlette.responses import StreamingResponse
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.login_bg_image.schema import LoginBgImageSchema, LoginBgImageUpdateSchema
 from lcfs.web.api.login_bg_image.services import LoginBgImageService
-from lcfs.web.core.decorators import view_handler
+from lcfs.web.core.decorators import view_handler, public_view_handler
 
 logger = structlog.get_logger(__name__)
 
@@ -20,7 +20,9 @@ router = APIRouter()
     response_model=Optional[LoginBgImageSchema],
     status_code=status.HTTP_200_OK,
 )
+@public_view_handler
 async def get_active_image(
+    request: Request,
     service: LoginBgImageService = Depends(),
 ):
     """Returns the currently active login background image metadata. No auth required."""
@@ -31,7 +33,9 @@ async def get_active_image(
     "/{image_id}/stream",
     status_code=status.HTTP_200_OK,
 )
+@public_view_handler
 async def stream_image(
+    request: Request,
     image_id: int,
     service: LoginBgImageService = Depends(),
 ):

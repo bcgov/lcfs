@@ -149,6 +149,19 @@ describe('PublicMarketData', () => {
     expect(screen.queryByTestId('kpi-avgPrice')).not.toBeInTheDocument()
   })
 
+  test('renders the data disclaimer instead of the aggregated/anonymized pill', ({
+    render,
+    theme
+  }) => {
+    render(<PublicMarketData />, [theme])
+    expect(screen.getByTestId('market-data-disclaimer')).toHaveTextContent(
+      'publicDashboard.marketData.disclaimer'
+    )
+    expect(
+      screen.queryByText('publicDashboard.marketData.aggregatedNote')
+    ).not.toBeInTheDocument()
+  })
+
   test('renders the CO2 impact band and report downloads', ({
     render,
     theme

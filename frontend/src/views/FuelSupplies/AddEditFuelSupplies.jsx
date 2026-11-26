@@ -11,7 +11,7 @@ import {
   useSaveFuelSupply
 } from '@/hooks/useFuelSupply'
 import '@/utils/formatters'
-import { handleScheduleDelete } from '@/utils/schedules.js'
+import { handleScheduleDelete } from '@/utils/schedules'
 import {
   processFuelSupplyRowData,
   calculateColumnVisibility,
