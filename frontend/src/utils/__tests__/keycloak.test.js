@@ -122,19 +122,16 @@ describe('Keycloak Utils', () => {
       expect(localStorage.clear).toHaveBeenCalled()
     })
 
-    it('uses the shared logout flow when idToken is missing', () => {
-      // Mock the case where idToken is missing
+    it('sends the SiteMinder redirect through Keycloak without embedding an ID token', () => {
       const tempKeycloak = getKeycloak()
-      Object.defineProperty(tempKeycloak, 'idToken', { value: null })
-      Object.defineProperty(tempKeycloak, 'tokenParsed', {
-        value: { ...tempKeycloak.tokenParsed, idToken: null }
-      })
-
-      // Call the logout function with reassigned keycloak
-      vi.spyOn(console, 'error')
       logout()
 
-      expect(console.error).toHaveBeenCalledWith('idToken is not available')
+      expect(tempKeycloak.logout).toHaveBeenCalledWith({
+        redirectUri:
+          CONFIG.KEYCLOAK.SM_LOGOUT_URL +
+          encodeURIComponent(CONFIG.KEYCLOAK.POST_LOGOUT_URL)
+      })
+      expect(window.location.href).toBe('https://example.com')
     })
 
     it('uses the local Keycloak logout callback', () => {

@@ -86,7 +86,7 @@
     "marketData": {
       "title": "Credit market data",
       "subtitle": "Credit transfer activity under the Low Carbon Fuel Standard. Prices are volume-weighted averages across all reported transfers; individual transactions are never shown.",
-      "aggregatedNote": "Aggregated · anonymized",
+      "disclaimer": "Credit market data are presented in aggregated and anonymized form; individual transactions are not disclosed. Data are updated monthly, with annual and quarterly statistics reflecting data reported through the end of the previous month. Published data may be updated to reflect additional information or corrections.",
       "downloadExcel": "Download Excel",
       "downloadAllExcel": "Download all Excel",
       "downloadCsv": "Download CSV",
@@ -229,7 +229,6 @@
       "releaseNotesDesc": "Recent updates and change history."
     },
     "login": {
-      "prompt": "Are you a fuel supplier or government analyst? Log in to file and review compliance reports.",
       "bceid": "Log in with BCeID",
       "idir": "Log in with IDIR"
     },
