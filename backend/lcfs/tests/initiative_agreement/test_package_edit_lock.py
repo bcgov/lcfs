@@ -641,9 +641,7 @@ async def test_bceid_agreement_file_bin_answers_to_the_lock(
     )
 
     assert response.status_code == (
-        status.HTTP_404_NOT_FOUND
-        if lifecycle == DRAFT
-        else status.HTTP_409_CONFLICT
+        status.HTTP_404_NOT_FOUND if lifecycle == DRAFT else status.HTTP_409_CONFLICT
     )
     assert await _state(dbsession, pkg) == before
 
