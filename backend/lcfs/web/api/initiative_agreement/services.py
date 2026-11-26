@@ -526,7 +526,7 @@ class InitiativeAgreementServices:
             raise DataNotFoundException(
                 f"Initiative Agreement with id {initiative_agreement_id} not found"
             )
-        ensure_package_editable(agreement)
+        await self._lock_editable_package(agreement.initiative_agreement_id)
 
         provided = data.model_fields_set
 
@@ -626,7 +626,7 @@ class InitiativeAgreementServices:
                 f"Initiative Agreement with id {initiative_agreement_id} not found"
             )
 
-        ensure_package_editable(agreement)
+        await self._lock_editable_package(initiative_agreement_id)
 
         name = (data.name or "").strip()
         if not name:
@@ -686,7 +686,7 @@ class InitiativeAgreementServices:
         shows what was altered and by whom.
         """
         action = await self._get_action_or_404(designated_action_id, user)
-        ensure_package_editable(action.initiative_agreement)
+        await self._lock_editable_package(action.initiative_agreement_id)
 
         changes = {}
 
@@ -1297,7 +1297,7 @@ class InitiativeAgreementServices:
     ) -> EvidenceRequirementSchema:
         """Add an evidence requirement to an action (the wireframe's Add EOC)."""
         action = await self._get_action_or_404(designated_action_id, user)
-        ensure_package_editable(action.initiative_agreement)
+        await self._lock_editable_package(action.initiative_agreement_id)
         title = (data.title or "").strip()
         if not title:
             raise HTTPException(
@@ -1347,7 +1347,7 @@ class InitiativeAgreementServices:
             evidence_requirement_id, user
         )
         if self._changes_requirement_wording(requirement, data):
-            ensure_package_editable(action.initiative_agreement)
+            await self._lock_editable_package(action.initiative_agreement_id)
 
         # The text an analyst saves deliberately — title, description and
         # evaluation — is recorded with its before and after, the way a
@@ -1480,7 +1480,7 @@ class InitiativeAgreementServices:
         requirement, action = await self._get_requirement_or_404(
             evidence_requirement_id, user
         )
-        ensure_package_editable(action.initiative_agreement)
+        await self._lock_editable_package(action.initiative_agreement_id)
         requirement.is_active = False
         requirement.update_user = getattr(user, "keycloak_username", None)
         await self.repo.db.flush()
@@ -1742,6 +1742,25 @@ class InitiativeAgreementServices:
                 )
             )
 
+    async def _lock_editable_package(self, initiative_agreement_id: int):
+        """Refuse a direct edit unless the agreement's package is open to one
+        (#5554), holding the agreement's row until the edit is saved.
+
+        The status is read under the lock, so a concurrent Set to Underway
+        cannot slip between this check and the edit's save: it either waits
+        for the edit, or the edit waits for it and is refused. Every package
+        write calls this before it changes anything.
+        """
+        agreement = await self.repo.lock_agreement_for_package_edit(
+            initiative_agreement_id
+        )
+        if agreement is None:
+            raise DataNotFoundException(
+                f"Initiative Agreement with id {initiative_agreement_id} not found"
+            )
+        ensure_package_editable(agreement)
+        return agreement
+
     async def _agreement_or_404(self, initiative_agreement_id: int, user):
         """The agreement, unless it is missing or hidden from the caller."""
         agreement = await self.repo.get_initiative_agreement_by_id(
@@ -1811,9 +1830,8 @@ class InitiativeAgreementServices:
         data: InitiativeAgreementNoteCreateSchema,
         user,
     ) -> InitiativeAgreementNoteSchema:
-        ensure_package_editable(
-            await self._agreement_or_404(initiative_agreement_id, user)
-        )
+        await self._agreement_or_404(initiative_agreement_id, user)
+        await self._lock_editable_package(initiative_agreement_id)
         try:
             note = await self.repo.add_initiative_agreement_note(
                 initiative_agreement_id=initiative_agreement_id,
@@ -1835,9 +1853,8 @@ class InitiativeAgreementServices:
         data: InitiativeAgreementNoteUpdateSchema,
         user,
     ) -> InitiativeAgreementNoteSchema:
-        ensure_package_editable(
-            await self._agreement_or_404(initiative_agreement_id, user)
-        )
+        await self._agreement_or_404(initiative_agreement_id, user)
+        await self._lock_editable_package(initiative_agreement_id)
         note_text = self._require_note_text(data.note_text)
         try:
             await self.repo.update_initiative_agreement_note(
@@ -1855,9 +1872,8 @@ class InitiativeAgreementServices:
     async def delete_note(
         self, initiative_agreement_id: int, note_id: int, user
     ) -> None:
-        ensure_package_editable(
-            await self._agreement_or_404(initiative_agreement_id, user)
-        )
+        await self._agreement_or_404(initiative_agreement_id, user)
+        await self._lock_editable_package(initiative_agreement_id)
         await self.repo.delete_initiative_agreement_note(
             initiative_agreement_id, note_id
         )
