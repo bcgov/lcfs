@@ -9,9 +9,8 @@ page can.
 
 Each write route is exercised twice: on a Draft it goes through, on an
 Underway agreement it is refused with 409 and nothing about the package
-changes. Whether government can see a Draft at all is a separate rule
-(#5186, changing with #5553), so these tests switch it off and key only on
-the lock.
+changes. A Draft is government's own preparation (#5553), so IDIR sees and
+edits it while the organization does not see it at all.
 """
 
 from datetime import datetime, timezone
@@ -61,15 +60,6 @@ ME = "mockuser"
 
 BCEID_PROPONENT = [RoleEnum.IA_PROPONENT, RoleEnum.SUPPLIER]
 BCEID_SIGNER = [RoleEnum.IA_SIGNER, RoleEnum.SUPPLIER]
-
-
-@pytest.fixture(autouse=True)
-def every_status_visible(monkeypatch):
-    """Take the Draft visibility rule out of the picture (see the module
-    docstring), so a Draft answers to the lock alone. It patches the rule's
-    function rather than its tuple, which #5553 renames when it moves Drafts
-    from government's sight to the organizations'."""
-    monkeypatch.setattr(workflow, "hidden_lifecycle_statuses", lambda user: ())
 
 
 @pytest.fixture(autouse=True)
@@ -635,8 +625,9 @@ async def test_bceid_cannot_edit_an_underway_package(
 async def test_bceid_agreement_file_bin_answers_to_the_lock(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession, lifecycle
 ):
-    """Proponents may bin files on an agreement, which is a package edit:
-    open on a Draft, refused once Underway."""
+    """Proponents may bin files on an agreement, which is a package edit,
+    so it is refused once Underway. A Draft is hidden from the organization
+    altogether (#5553), so to them it reads as missing."""
     pkg = await _package(dbsession, lifecycle, "IA-26LCKP")
     before = await _state(dbsession, pkg)
     set_mock_user(fastapi_app, BCEID_PROPONENT)
@@ -649,12 +640,12 @@ async def test_bceid_agreement_file_bin_answers_to_the_lock(
         )
     )
 
-    if lifecycle == DRAFT:
-        assert response.status_code == status.HTTP_204_NO_CONTENT
-        assert await _state(dbsession, pkg) != before
-    else:
-        assert response.status_code == status.HTTP_409_CONFLICT
-        assert await _state(dbsession, pkg) == before
+    assert response.status_code == (
+        status.HTTP_404_NOT_FOUND
+        if lifecycle == DRAFT
+        else status.HTTP_409_CONFLICT
+    )
+    assert await _state(dbsession, pkg) == before
 
 
 @pytest.mark.anyio
