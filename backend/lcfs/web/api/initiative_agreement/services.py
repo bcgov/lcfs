@@ -83,6 +83,7 @@ from lcfs.web.api.initiative_agreement.schema import (
 from lcfs.web.api.initiative_agreement.workflow import (
     ACTION_APPROVE,
     LIFECYCLE_STATUSES_OPEN_TO_NEW_ACTIONS,
+    IN_REVIEW_STATUSES,
     STATUS_APPROVED,
     STATUS_NOT_STARTED,
     TRANSITIONS,
@@ -914,12 +915,14 @@ class InitiativeAgreementServices:
         action = await self._get_action_or_404(
             designated_action_id, user, for_update=True
         )
-        if action.transaction_id is not None or (
-            action.current_status and action.current_status.status == STATUS_APPROVED
+        current_status = action.current_status.status if action.current_status else None
+        if (
+            action.transaction_id is not None
+            or current_status not in IN_REVIEW_STATUSES
         ):
             raise HTTPException(
                 status_code=400,
-                detail="Recommended credits cannot be changed after approval.",
+                detail="Recommended credits can only be changed while an action is in review.",
             )
         if credits is not None:
             if credits < 0:

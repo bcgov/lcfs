@@ -352,7 +352,7 @@ async def create_supplemental_report(
     response_model=ComplianceReportBaseSchema,
     status_code=status.HTTP_201_CREATED,
 )
-@view_handler([RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
+@view_handler([RoleEnum.ANALYST])
 async def create_government_adjustment(
     request: Request,
     report_id: int,
@@ -410,7 +410,7 @@ async def export_compliance_report(
 
 
 @router.delete("/{report_id}", status_code=status.HTTP_204_NO_CONTENT)
-@view_handler([RoleEnum.GOVERNMENT])
+@view_handler([RoleEnum.ANALYST, RoleEnum.DIRECTOR])
 async def delete_compliance_report(
     request: Request,
     report_id: int,

@@ -3,6 +3,9 @@ import pytest
 from httpx import AsyncClient
 from fastapi import FastAPI, status
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.web.api.admin_adjustment.schema import AdminAdjustmentCreateSchema
+from lcfs.web.api.admin_adjustment.validation import AdminAdjustmentValidation
+from fastapi import HTTPException
 
 
 @pytest.mark.anyio
@@ -120,3 +123,19 @@ async def test_fail_update_processed_admin_adjustment(
     }
     response = await client.put(url, json=admin_adjustment_update_payload)
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.anyio
+async def test_create_admin_adjustment_rejects_approved_status():
+    validation = AdminAdjustmentValidation()
+    request = MagicMock(user=MagicMock(role_names={RoleEnum.ANALYST}))
+    payload = AdminAdjustmentCreateSchema(
+        compliance_units=1000,
+        current_status="Approved",
+        to_organization_id=1,
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await validation.validate_admin_adjustment_create(request, payload)
+
+    assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
