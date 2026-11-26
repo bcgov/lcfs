@@ -23,17 +23,24 @@ from lcfs.web.api.role.schema import user_has_roles
 LIFECYCLE_STATUS_DRAFT = "Draft"
 LIFECYCLE_STATUS_UNDERWAY = "Underway"
 
-# Where a new agreement starts, by who starts it (#5186); the first rule the
-# creator matches wins. An agreement government enters is live from the
-# start. Draft is kept for the applications BCeID proponents will start.
-INITIAL_LIFECYCLE_STATUS_RULES = (
-    (RoleEnum.GOVERNMENT, LIFECYCLE_STATUS_UNDERWAY),
-    (RoleEnum.SUPPLIER, LIFECYCLE_STATUS_DRAFT),
-)
+# Where a new agreement starts, by who starts it; the first rule the creator
+# matches wins. Government prepares an agreement as a Draft, and a Director
+# sets it Underway once the package is complete (#5553). Nobody else starts
+# one.
+INITIAL_LIFECYCLE_STATUS_RULES = ((RoleEnum.GOVERNMENT, LIFECYCLE_STATUS_DRAFT),)
 
-# A draft is a proponent's application that has not been submitted, so IDIR
-# users do not see it: not in the grids, the counts or the status filter.
-LIFECYCLE_STATUSES_HIDDEN_FROM_GOVERNMENT = (LIFECYCLE_STATUS_DRAFT,)
+# A draft is government's internal preparation, so the organization does not
+# see it until it is Underway: not in the grids, the counts, the status
+# filter or anything that belongs to the package (#5553). This reverses
+# #5186, where a draft was a proponent's application hidden from IDIR.
+LIFECYCLE_STATUSES_HIDDEN_FROM_ORGANIZATIONS = (LIFECYCLE_STATUS_DRAFT,)
+
+# Setting an agreement Underway releases the whole package (the agreement,
+# its notes, designated actions and evidence requirements) to the
+# organization. The package has one lifecycle, the agreement's, so the
+# children move with it in the same update (#5553).
+SET_UNDERWAY_ROLES = (RoleEnum.DIRECTOR,)
+LIFECYCLE_STATUSES_SETTABLE_UNDERWAY = (LIFECYCLE_STATUS_DRAFT,)
 
 # Designated actions can be added while an agreement is being drafted or is
 # underway. A completed or terminated agreement takes no new ones.
@@ -53,10 +60,11 @@ def initial_lifecycle_status(user):
 
 
 def hidden_lifecycle_statuses(user):
-    """Lifecycle statuses kept out of this user's sight."""
+    """Lifecycle statuses kept out of this user's sight. Anyone who is not
+    government, including an unknown caller, does not see drafts."""
     if user is not None and user_has_roles(user, [RoleEnum.GOVERNMENT]):
-        return LIFECYCLE_STATUSES_HIDDEN_FROM_GOVERNMENT
-    return ()
+        return ()
+    return LIFECYCLE_STATUSES_HIDDEN_FROM_ORGANIZATIONS
 
 
 def is_hidden_from(agreement, user) -> bool:
