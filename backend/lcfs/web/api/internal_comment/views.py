@@ -157,7 +157,15 @@ async def get_mentionable_users(
     response_model=InternalCommentResponseSchema,
     status_code=status.HTTP_201_CREATED,
 )
-@view_handler([RoleEnum.GOVERNMENT, RoleEnum.CI_APPLICANT, RoleEnum.SUPPLIER])
+@view_handler(
+    [
+        RoleEnum.GOVERNMENT,
+        RoleEnum.CI_APPLICANT,
+        RoleEnum.SUPPLIER,
+        RoleEnum.LCJFIP_APPLICANT,
+        RoleEnum.LCJFIP_ADMINISTRATOR,
+    ]
+)
 async def create_comment(
     request: Request,
     comment_data: InternalCommentCreateSchema,
@@ -182,7 +190,15 @@ async def create_comment(
     response_model=List[InternalCommentResponseSchema],
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.GOVERNMENT, RoleEnum.CI_APPLICANT, RoleEnum.SUPPLIER])
+@view_handler(
+    [
+        RoleEnum.GOVERNMENT,
+        RoleEnum.CI_APPLICANT,
+        RoleEnum.SUPPLIER,
+        RoleEnum.LCJFIP_APPLICANT,
+        RoleEnum.LCJFIP_ADMINISTRATOR,
+    ]
+)
 async def get_comments(
     request: Request,
     entity_type: str,
@@ -205,7 +221,15 @@ async def get_comments(
 
 
 @router.put("/{internal_comment_id}", response_model=InternalCommentResponseSchema)
-@view_handler([RoleEnum.GOVERNMENT, RoleEnum.CI_APPLICANT, RoleEnum.SUPPLIER])
+@view_handler(
+    [
+        RoleEnum.GOVERNMENT,
+        RoleEnum.CI_APPLICANT,
+        RoleEnum.SUPPLIER,
+        RoleEnum.LCJFIP_APPLICANT,
+        RoleEnum.LCJFIP_ADMINISTRATOR,
+    ]
+)
 async def update_comment(
     request: Request,
     internal_comment_id: int,
