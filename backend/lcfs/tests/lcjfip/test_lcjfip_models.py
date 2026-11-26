@@ -737,7 +737,7 @@ async def test_application_view_rolls_up_a_cash_application(dbsession):
         "lcjfip_application_id",
         application.lcjfip_application_id,
     )
-    assert row["application_number"] == f"LCJFIP-{application.lcjfip_application_id}"
+    assert row["application_number"] == f"JF-{application.lcjfip_application_id}"
     assert row["application_status"] == "Submitted"
     assert row["application_period"] == "Test intake"
     assert row["car_types"] == f"{CAR_704}, {CAR_705}"

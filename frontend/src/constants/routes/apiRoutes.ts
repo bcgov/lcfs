@@ -146,6 +146,8 @@ export const apiRoutes = {
   lcjfipReferenceData: '/lcjfip/reference-data',
   lcjfipFuelCodes: '/lcjfip/fuel-codes',
   lcjfipApplications: '/lcjfip/applications',
+  lcjfipApplicationsList: '/lcjfip/applications/list',
+  lcjfipStatuses: '/lcjfip/statuses',
   lcjfipApplication: '/lcjfip/applications/:applicationId',
   submitLcjfipApplication: '/lcjfip/applications/:applicationId/submit',
 

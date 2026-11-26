@@ -14,8 +14,9 @@ const createGatedElement = (Component: ComponentType) =>
 // first save opens its draft the form stays mounted, with whatever it shows.
 const applicationElement = createGatedElement(LCJFIPApplication)
 
-// The application form's crumb reads Home > Jet fuel > LCJFIP application:
-// Crumb.tsx hides the structural lcjfip/applications segments.
+// Both the index and the form read Home > Jet fuel > LCJFIP application, as
+// in the mock-ups (#5541). On the form, Crumb.tsx hides the structural
+// lcjfip/applications segments and "Jet fuel" leads back to the index.
 const applicationHandle = {
   title: 'LCJFIP application',
   crumb: () => 'LCJFIP application'
@@ -25,11 +26,7 @@ export const lcjfipRoutes: AppRouteObject[] = [
   {
     path: ROUTES.LCJFIP.MAIN,
     element: createGatedElement(LCJFIP),
-    // The title is the breadcrumb's last crumb: Home > Jet fuel > LCJFIP.
-    handle: {
-      title: 'LCJFIP',
-      crumb: () => 'LCJFIP'
-    }
+    handle: applicationHandle
   },
   {
     path: ROUTES.LCJFIP.NEW_APPLICATION,
