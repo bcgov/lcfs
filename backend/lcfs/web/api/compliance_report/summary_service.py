@@ -997,6 +997,40 @@ class ComplianceReportSummaryService:
                 "diesel": current_line_9_diesel,
                 "jet_fuel": current_line_9_jet,
             }
+            # Supplemental versions: seed Lines 6 and 8 from the assessed
+            # baseline when they are blank.
+            if compliance_report.version > 0:
+                if summary_model.line_6_renewable_fuel_retained_gasoline in [None, 0]:
+                    summary_model.line_6_renewable_fuel_retained_gasoline = (
+                        prev_compliance_report.summary.line_6_renewable_fuel_retained_gasoline
+                        or 0
+                    )
+                if summary_model.line_6_renewable_fuel_retained_diesel in [None, 0]:
+                    summary_model.line_6_renewable_fuel_retained_diesel = (
+                        prev_compliance_report.summary.line_6_renewable_fuel_retained_diesel
+                        or 0
+                    )
+                if summary_model.line_6_renewable_fuel_retained_jet_fuel in [None, 0]:
+                    summary_model.line_6_renewable_fuel_retained_jet_fuel = (
+                        prev_compliance_report.summary.line_6_renewable_fuel_retained_jet_fuel
+                        or 0
+                    )
+                if summary_model.line_8_obligation_deferred_gasoline in [None, 0]:
+                    summary_model.line_8_obligation_deferred_gasoline = (
+                        prev_compliance_report.summary.line_8_obligation_deferred_gasoline
+                        or 0
+                    )
+                if summary_model.line_8_obligation_deferred_diesel in [None, 0]:
+                    summary_model.line_8_obligation_deferred_diesel = (
+                        prev_compliance_report.summary.line_8_obligation_deferred_diesel
+                        or 0
+                    )
+                if summary_model.line_8_obligation_deferred_jet_fuel in [None, 0]:
+                    summary_model.line_8_obligation_deferred_jet_fuel = (
+                        prev_compliance_report.summary.line_8_obligation_deferred_jet_fuel
+                        or 0
+                    )
+
         elif prev_compliance_report:
             # Pre-2025 reports with a previous report: read previous values
             # without forcing them back into the current summary model.
