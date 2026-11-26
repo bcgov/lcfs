@@ -53,6 +53,45 @@ def create_mock_summary(**kwargs):
     return summary
 
 
+@pytest.mark.parametrize(
+    "transfer,previous_retained,previous_obligation,expected_retention,expected_deferral",
+    [
+        (32372545, 293664, 0, 675827, 0),
+        (-1000000, 0, 0, 0, 675827),
+        (0, 9500000, 0, 157770, 0),
+        (10000000, 0, 10000000, 0, 675827),
+        (9342230, 0, 0, 0, 0),
+        (9342229, 0, 0, 0, 0),
+    ],
+)
+def test_diesel_caps_include_transfers_and_previous_year(
+    mock_service,
+    transfer,
+    previous_retained,
+    previous_obligation,
+    expected_retention,
+    expected_deferral,
+):
+    result = mock_service.calculate_renewable_fuel_target_summary(
+        fossil_quantities={"diesel": 164782415},
+        renewable_quantities={"diesel": 4174308},
+        previous_retained={"diesel": previous_retained},
+        previous_obligation={"diesel": previous_obligation},
+        notional_transfers_sums={"diesel": transfer},
+        compliance_period=2025,
+        prev_summary=create_mock_summary(
+            line_6_renewable_fuel_retained_diesel=expected_retention,
+            line_8_obligation_deferred_diesel=expected_deferral,
+        ),
+    )
+    line_6 = result[5]
+    line_8 = result[7]
+    assert line_6.max_diesel == expected_retention
+    assert line_8.max_diesel == expected_deferral
+    assert line_6.diesel == expected_retention
+    assert line_8.diesel == expected_deferral
+
+
 @pytest.mark.anyio
 async def test_line_6_retention_small_excess_less_than_prescribed(mock_service):
     """

@@ -1,0 +1,384 @@
+import { render, screen, fireEvent, act } from '@testing-library/react'
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vite-plus/test'
+import React from 'react'
+import { BCGridEditor } from '../BCGridEditor'
+import type { BCGridEditorProps, BCGridRow } from '../types'
+import type { AgGridReact } from 'ag-grid-react'
+import type {
+  BCAlert2Handle,
+  BCAlert2Props
+} from '@/components/BCAlert/BCAlert2'
+
+// Use global test configuration from testSetup.ts (data-test attribute)
+
+// Minimal essential mocks
+vi.mock('@/utils/grid/eventHandlers', () => ({
+  isEqual: vi.fn((a: unknown, b: unknown) => a === b)
+}))
+vi.mock('papaparse', () => ({
+  default: {
+    parse: vi.fn(() => ({
+      data: [
+        { field: 'value', length: 2 },
+        { field: 'value', length: 2 }
+      ]
+    }))
+  }
+}))
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => (key === 'asterisk' ? '* denotes required field' : key)
+  })
+}))
+
+vi.mock('@/components/BCAlert', () => ({
+  BCAlert2: React.forwardRef<BCAlert2Handle, BCAlert2Props>(
+    function MockAlert(_props, ref) {
+      React.useImperativeHandle(ref, () => ({
+        triggerAlert: vi.fn(),
+        clearAlert: vi.fn()
+      }))
+      return <div data-test="alert-box" />
+    }
+  )
+}))
+
+vi.mock('@/components/BCBox', () => ({
+  default: ({ children }: React.PropsWithChildren) => (
+    <div data-test="bc-box">{children}</div>
+  )
+}))
+
+vi.mock('@/components/BCButton', () => ({
+  default: ({
+    children,
+    onClick,
+    ...props
+  }: React.ComponentProps<'button'> & { 'data-test'?: string }) => (
+    <button onClick={onClick} data-test={props['data-test']} {...props}>
+      {children}
+    </button>
+  )
+}))
+
+vi.mock('@/components/BCTypography', () => ({
+  default: ({
+    children,
+    dangerouslySetInnerHTML
+  }: React.ComponentProps<'div'>) => (
+    <div data-test="bc-typography">
+      {dangerouslySetInnerHTML?.__html?.toString() || children}
+    </div>
+  )
+}))
+
+vi.mock('@mui/material/Menu', () => ({
+  default: ({ children, open }: React.PropsWithChildren<{ open?: boolean }>) =>
+    open ? <div data-test="menu">{children}</div> : null
+}))
+
+vi.mock('@mui/material/MenuItem', () => ({
+  default: ({ children, onClick }: React.ComponentProps<'div'>) => (
+    <div data-test="menu-item" onClick={onClick}>
+      {children}
+    </div>
+  )
+}))
+
+vi.mock('@mui/material/TextField', () => ({
+  default: (props: React.ComponentProps<'input'>) => (
+    <input data-test="textfield" {...props} />
+  )
+}))
+
+vi.mock('@mui/material/styles', () => ({
+  styled: (component: React.ComponentType) => () => component
+}))
+
+vi.mock('@/components/BCModal', () => ({
+  default: ({ open, data }: { open?: boolean; data?: { title?: string } }) =>
+    open ? <div data-test="bc-modal">{data?.title}</div> : null
+}))
+
+// Simplified grid API mock
+type MockGridBaseProps = Omit<
+  Partial<BCGridEditorProps>,
+  'onCellClicked' | 'onGridReady'
+> & {
+  onCellClicked?: (params: { data: BCGridRow }) => void | Promise<void>
+  onGridReady?: (event: {
+    api: typeof mockGridApi
+    columnApi: Record<string, never>
+  }) => void
+}
+let mockBCGridBaseProps: MockGridBaseProps = {}
+const mockGridApi = {
+  applyTransaction: vi.fn(() => ({ add: [{ rowIndex: 0 }] })),
+  getAllDisplayedColumns: vi.fn(() => [
+    { colDef: { field: 'name', editable: true }, getColId: () => 'name' }
+  ]),
+  forEachNode: vi.fn((callback: (node: { data: BCGridRow }) => void) =>
+    callback({ data: { validationStatus: 'valid' } })
+  ),
+  getColumnDefs: vi.fn(() => []),
+  ensureIndexVisible: vi.fn(),
+  setFocusedCell: vi.fn(),
+  startEditingCell: vi.fn(),
+  getDisplayedRowCount: vi.fn(() => 0)
+}
+
+vi.mock('@/components/BCDataGrid/BCGridBase', () => ({
+  BCGridBase: React.forwardRef<
+    { api: typeof mockGridApi; columnApi: Record<string, never> },
+    MockGridBaseProps
+  >(function MockGridBase(props, ref) {
+    mockBCGridBaseProps = props
+    React.useImperativeHandle(ref, () => ({ api: mockGridApi, columnApi: {} }))
+    const { onGridReady } = props
+    // Prevent setTimeout errors by calling onGridReady properly
+    React.useEffect(() => {
+      if (onGridReady) {
+        setTimeout(() => {
+          // Check if component is still mounted before calling onGridReady
+          if (typeof ref !== 'function' && ref?.current) {
+            onGridReady({ api: mockGridApi, columnApi: {} })
+          }
+        }, 0)
+      }
+    }, [onGridReady, ref])
+
+    return <div data-test="bc-grid-base">Grid Base</div>
+  })
+}))
+
+describe('BCGridEditor - Simplified Coverage Test Suite', () => {
+  let defaultProps: BCGridEditorProps
+  let mockGridRef: { current: AgGridReact<BCGridRow> | null }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.useFakeTimers()
+    mockGridRef = { current: null }
+    defaultProps = {
+      gridRef: mockGridRef,
+      alertRef: { current: null },
+      rowData: [],
+      columnDefs: [{ field: 'name', editable: true }]
+    }
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    // Clear any pending timers to prevent memory leaks and unhandled errors
+    vi.runOnlyPendingTimers()
+    vi.useRealTimers()
+  })
+
+  // Essential functionality tests
+  it('renders component with basic structure', () => {
+    render(<BCGridEditor {...defaultProps} />)
+
+    expect(screen.getByTestId('bc-grid-base')).toBeInTheDocument()
+    expect(screen.getByTestId('alert-box')).toBeInTheDocument()
+    expect(screen.getByTestId('add-row-btn')).toBeInTheDocument()
+  })
+
+  it('handles showAddRowsButton prop', () => {
+    const { rerender } = render(
+      <BCGridEditor {...defaultProps} showAddRowsButton={true} />
+    )
+    expect(screen.getByTestId('add-row-btn')).toBeInTheDocument()
+
+    rerender(<BCGridEditor {...defaultProps} showAddRowsButton={false} />)
+    expect(screen.queryByTestId('add-row-btn')).not.toBeInTheDocument()
+  })
+
+  it('executes add row functionality', async () => {
+    render(<BCGridEditor {...defaultProps} addMultiRow={true} />)
+
+    const addButton = screen.getByTestId('add-row-btn')
+    await fireEvent.click(addButton)
+
+    expect(screen.getByTestId('menu')).toBeInTheDocument()
+
+    const menuItem = screen.getAllByTestId('menu-item')[0]
+    await fireEvent.click(menuItem)
+
+    expect(mockGridApi.applyTransaction).toHaveBeenCalled()
+  })
+
+  it('executes save functionality', async () => {
+    const mockOnSave = vi.fn()
+
+    render(
+      <BCGridEditor
+        {...defaultProps}
+        saveButtonProps={{ enabled: true, text: 'Save', onSave: mockOnSave }}
+      />
+    )
+
+    const saveButton = screen.getByTestId('save-btn')
+    await fireEvent.click(saveButton)
+
+    expect(mockGridApi.forEachNode).toHaveBeenCalled()
+    expect(mockOnSave).toHaveBeenCalled()
+  })
+
+  it('shows save button when enabled', () => {
+    render(
+      <BCGridEditor
+        {...defaultProps}
+        saveButtonProps={{ enabled: true, text: 'Save', onSave: vi.fn() }}
+      />
+    )
+
+    expect(screen.getByTestId('save-btn')).toBeInTheDocument()
+  })
+
+  it('hides save button when disabled', () => {
+    render(
+      <BCGridEditor {...defaultProps} saveButtonProps={{ enabled: false }} />
+    )
+
+    expect(screen.queryByTestId('save-btn')).not.toBeInTheDocument()
+  })
+
+  it('handles various prop combinations', () => {
+    render(
+      <BCGridEditor
+        {...defaultProps}
+        enablePaste={false}
+        addMultiRow={true}
+        showMandatoryColumns={false}
+        onCellValueChanged={vi.fn()}
+        onCellEditingStopped={vi.fn()}
+        onAction={vi.fn()}
+      />
+    )
+
+    expect(screen.getByTestId('bc-grid-base')).toBeInTheDocument()
+  })
+
+  it('handles null callbacks gracefully', () => {
+    render(
+      <BCGridEditor
+        {...defaultProps}
+        onCellValueChanged={null}
+        onCellEditingStopped={null}
+        onAction={null}
+      />
+    )
+
+    expect(screen.getByTestId('bc-grid-base')).toBeInTheDocument()
+  })
+
+  it('handles Excel paste when onCellEditingStopped is null', async () => {
+    render(
+      <BCGridEditor
+        {...defaultProps}
+        enablePaste={true}
+        onCellEditingStopped={null}
+      />
+    )
+    const event = new Event('paste', { bubbles: true, cancelable: true })
+    Object.defineProperty(event, 'clipboardData', {
+      value: { getData: () => 'pasted value' }
+    })
+
+    await act(async () => {
+      window.dispatchEvent(event)
+      await Promise.resolve()
+    })
+
+    expect(mockGridApi.applyTransaction).toHaveBeenCalled()
+  })
+
+  it('passes the original clicked cell event to the action callback', async () => {
+    const onAction = vi.fn()
+    const target = document.createElement('button')
+    target.dataset.action = 'duplicate'
+    const rowData = { id: 'row-1', name: 'Fuel' }
+    const cellEvent = {
+      column: { colId: 'action', getColId: () => 'action' },
+      data: rowData,
+      node: { data: rowData },
+      event: { target },
+      api: mockGridApi
+    }
+
+    render(<BCGridEditor {...defaultProps} onAction={onAction} />)
+
+    await act(async () => {
+      const onCellClicked = mockBCGridBaseProps.onCellClicked
+      if (!onCellClicked) {
+        throw new Error('Expected BCGridBase to receive onCellClicked')
+      }
+      await onCellClicked(cellEvent)
+    })
+
+    expect(onAction).toHaveBeenCalledOnce()
+    expect(onAction).toHaveBeenCalledWith('duplicate', cellEvent)
+  })
+
+  it('handles custom paste handler', () => {
+    const mockHandlePaste = vi.fn()
+
+    render(
+      <BCGridEditor
+        {...defaultProps}
+        enablePaste={true}
+        handlePaste={mockHandlePaste}
+      />
+    )
+
+    expect(screen.getByTestId('bc-grid-base')).toBeInTheDocument()
+  })
+
+  it('shows modal for invalid grid save', async () => {
+    // Mock invalid grid
+    mockGridApi.forEachNode.mockImplementation(
+      (callback: (node: { data: BCGridRow }) => void) => {
+        callback({ data: { validationStatus: 'error' } })
+      }
+    )
+
+    render(
+      <BCGridEditor
+        {...defaultProps}
+        saveButtonProps={{
+          enabled: true,
+          text: 'Save',
+          onSave: vi.fn(),
+          confirmText: 'Are you sure?'
+        }}
+      />
+    )
+
+    const saveButton = screen.getByTestId('save-btn')
+    await act(async () => {
+      await fireEvent.click(saveButton)
+    })
+
+    expect(screen.getByTestId('bc-modal')).toBeInTheDocument()
+  })
+
+  it('covers different addMultiRow states', () => {
+    const { rerender } = render(
+      <BCGridEditor {...defaultProps} addMultiRow={true} />
+    )
+    expect(screen.getByTestId('add-row-btn')).toBeInTheDocument()
+
+    rerender(<BCGridEditor {...defaultProps} addMultiRow={false} />)
+    expect(screen.getByTestId('add-row-btn')).toBeInTheDocument()
+  })
+
+  it('covers enablePaste branches', () => {
+    const { rerender } = render(
+      <BCGridEditor {...defaultProps} enablePaste={true} />
+    )
+    expect(screen.getByTestId('bc-grid-base')).toBeInTheDocument()
+
+    rerender(<BCGridEditor {...defaultProps} enablePaste={false} />)
+    expect(screen.getByTestId('bc-grid-base')).toBeInTheDocument()
+  })
+})

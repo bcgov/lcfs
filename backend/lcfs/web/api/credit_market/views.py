@@ -2,7 +2,7 @@ import structlog
 from fastapi import APIRouter, Depends, Request, Query, status
 
 from lcfs.db.models.user.Role import RoleEnum
-from lcfs.web.core.decorators import view_handler
+from lcfs.web.core.decorators import view_handler, public_view_handler
 from lcfs.web.api.credit_market.services import CreditMarketServices
 from lcfs.web.api.credit_market.schema import (
     CreditMarketOverviewSchema,
@@ -20,6 +20,7 @@ logger = structlog.get_logger(__name__)
     response_model=CreditMarketPublicOverviewSchema,
     status_code=status.HTTP_200_OK,
 )
+@public_view_handler
 async def get_credit_market_public_overview(
     request: Request,
     interval: str = Query(
@@ -43,6 +44,7 @@ async def get_credit_market_public_overview(
     response_model=PublicMarketReportSchema,
     status_code=status.HTTP_200_OK,
 )
+@public_view_handler
 async def get_credit_market_public_report(
     request: Request,
     service: CreditMarketServices = Depends(),

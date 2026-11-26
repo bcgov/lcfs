@@ -8,7 +8,7 @@ from lcfs.web.api.release_notes.schema import (
     ReleaseNoteUpdateSchema,
 )
 from lcfs.web.api.release_notes.services import ReleaseNotesService
-from lcfs.web.core.decorators import view_handler
+from lcfs.web.core.decorators import view_handler, public_view_handler
 
 logger = structlog.get_logger(__name__)
 
@@ -20,7 +20,9 @@ router = APIRouter()
     response_model=List[ReleaseNoteOverrideSchema],
     status_code=status.HTTP_200_OK,
 )
+@public_view_handler
 async def get_release_note_overrides(
+    request: Request,
     service: ReleaseNotesService = Depends(),
 ):
     """
