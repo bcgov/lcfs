@@ -287,7 +287,7 @@ describe('SummaryTable', () => {
   })
 
   describe('Basic Rendering', () => {
-    it('shows backend-calculated maxima in the renewable line description', () => {
+    it('shows only the applicable maxima in renewable line descriptions', () => {
       customRender(
         <SummaryTable
           tableType="renewable"
@@ -295,9 +295,18 @@ describe('SummaryTable', () => {
           data={[
             {
               line: 6,
-              description: 'Renewable fuel retained',
+              description:
+                'Volume of eligible renewable fuel retained (up to lesser of excess and 5% of Line 4 - gasoline=351,988; diesel=675,827; jet fuel=0)',
               maxGasoline: 351_988,
               maxDiesel: 675_827,
+              maxJetFuel: 0
+            },
+            {
+              line: 8,
+              description:
+                'Volume of eligible renewable obligation deferred (up to lesser of deficiency and 5% of Line 4 - gasoline=351,988; diesel=675,827; jet fuel=0)',
+              maxGasoline: 0,
+              maxDiesel: 0,
               maxJetFuel: 0
             }
           ]}
@@ -305,10 +314,15 @@ describe('SummaryTable', () => {
       )
 
       const description = screen.getByText(
-        'Renewable fuel retained Maximum: gasoline=351,988; diesel=675,827; jet fuel=0.'
+        'Volume of eligible renewable fuel retained (up to lesser of excess and 5% of Line 4) Maximum: gasoline=351,988; diesel=675,827; jet fuel=0.'
       )
       expect(description).toBeInTheDocument()
       expect(description).toHaveStyle({ whiteSpace: 'normal' })
+      expect(
+        screen.getByText(
+          'Volume of eligible renewable obligation deferred (up to lesser of deficiency and 5% of Line 4) Maximum: gasoline=0; diesel=0; jet fuel=0.'
+        )
+      ).toBeInTheDocument()
     })
 
     it('renders table with title and basic structure', () => {
