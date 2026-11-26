@@ -1,7 +1,8 @@
 from datetime import date, datetime
-from typing import List, Optional, Union
+from decimal import Decimal
+from typing import Annotated, List, Optional, Union
 
-from pydantic import Field, field_validator
+from pydantic import Field, PlainSerializer, field_validator
 
 from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
     AGREEMENT_TYPE_INITIATIVE_AGREEMENT,
@@ -500,3 +501,37 @@ class EOCSchema(BaseSchema):
     evidence_responses: dict[str, EOCRequirementResponseSchema] = Field(
         default_factory=dict
     )
+
+
+# Quill markup is verbose; this still leaves room well beyond the seven or
+# eight paragraphs a long note runs to.
+NOTE_TEXT_MAX_LENGTH = 100_000
+NOTE_NUMBER_MAX = 999_999
+
+# Numbers are decimal so a note can slot between two others (1.1), but they
+# are shown and entered as plain numbers, not strings.
+NoteNumber = Annotated[
+    Decimal,
+    Field(gt=0, le=NOTE_NUMBER_MAX, decimal_places=2),
+]
+NoteNumberOut = Annotated[Decimal, PlainSerializer(float, return_type=float)]
+
+
+class InitiativeAgreementNoteSchema(BaseSchema):
+    initiative_agreement_note_id: int
+    initiative_agreement_id: int
+    note_number: NoteNumberOut
+    note_text: str
+    last_edited_by: Optional[AssignedAnalystSchema] = None
+    last_edited_date: Optional[datetime] = None
+
+
+class InitiativeAgreementNoteCreateSchema(BaseSchema):
+    # Absent means "the next number in sequence".
+    note_number: Optional[NoteNumber] = None
+    note_text: str = Field(..., max_length=NOTE_TEXT_MAX_LENGTH)
+
+
+class InitiativeAgreementNoteUpdateSchema(BaseSchema):
+    note_number: NoteNumber
+    note_text: str = Field(..., max_length=NOTE_TEXT_MAX_LENGTH)

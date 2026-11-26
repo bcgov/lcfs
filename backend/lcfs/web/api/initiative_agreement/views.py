@@ -26,6 +26,9 @@ from lcfs.web.api.initiative_agreement.schema import (
     IAAnalystSchema,
     InitiativeAgreementCreateSchema,
     InitiativeAgreementLifecycleStatusSchema,
+    InitiativeAgreementNoteCreateSchema,
+    InitiativeAgreementNoteSchema,
+    InitiativeAgreementNoteUpdateSchema,
     InitiativeAgreementProfileSchema,
     InitiativeAgreementSchema,
     InitiativeAgreementsListSchema,
@@ -397,6 +400,88 @@ async def get_designated_action_document_targets(
         }
         for action_id, action_number in targets
     ]
+
+
+@router.get(
+    "/{initiative_agreement_id}/notes",
+    response_model=List[InitiativeAgreementNoteSchema],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(IA_IDIR_ROLES)
+async def get_notes(
+    request: Request,
+    initiative_agreement_id: int,
+    service: InitiativeAgreementServices = Depends(),
+):
+    """The agreement's notes, ordered by note number."""
+    return await service.get_notes(initiative_agreement_id, request.user)
+
+
+@router.get(
+    "/{initiative_agreement_id}/notes/next-number",
+    response_model=float,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(IA_REVIEW_ROLES)
+async def get_next_note_number(
+    request: Request,
+    initiative_agreement_id: int,
+    service: InitiativeAgreementServices = Depends(),
+):
+    """The note number the add-note form starts from."""
+    return float(
+        await service.get_next_note_number(initiative_agreement_id, request.user)
+    )
+
+
+@router.post(
+    "/{initiative_agreement_id}/notes",
+    response_model=InitiativeAgreementNoteSchema,
+    status_code=status.HTTP_201_CREATED,
+)
+@view_handler(IA_REVIEW_ROLES)
+async def create_note(
+    request: Request,
+    initiative_agreement_id: int,
+    data: InitiativeAgreementNoteCreateSchema = Body(...),
+    service: InitiativeAgreementServices = Depends(),
+):
+    """Add a note to the agreement."""
+    return await service.create_note(initiative_agreement_id, data, request.user)
+
+
+@router.put(
+    "/{initiative_agreement_id}/notes/{note_id}",
+    response_model=InitiativeAgreementNoteSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(IA_REVIEW_ROLES)
+async def update_note(
+    request: Request,
+    initiative_agreement_id: int,
+    note_id: int,
+    data: InitiativeAgreementNoteUpdateSchema = Body(...),
+    service: InitiativeAgreementServices = Depends(),
+):
+    """Change a note's number or content."""
+    return await service.update_note(
+        initiative_agreement_id, note_id, data, request.user
+    )
+
+
+@router.delete(
+    "/{initiative_agreement_id}/notes/{note_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+@view_handler(IA_REVIEW_ROLES)
+async def delete_note(
+    request: Request,
+    initiative_agreement_id: int,
+    note_id: int,
+    service: InitiativeAgreementServices = Depends(),
+):
+    """Permanently remove a note."""
+    await service.delete_note(initiative_agreement_id, note_id, request.user)
 
 
 @router.get("/{initiative_agreement_id}", response_model=InitiativeAgreementSchema)

@@ -154,9 +154,7 @@ class InitiativeAgreement(BaseModel, Auditable, EffectiveDates):
     project_location = Column(
         Text,
         nullable=True,
-        comment=(
-            "Project location"
-        ),
+        comment=("Project location"),
     )
     contact_name = Column(
         String(500), nullable=True, comment="Agreement contact person name"
@@ -210,6 +208,12 @@ class InitiativeAgreement(BaseModel, Auditable, EffectiveDates):
     )
     lifecycle_history = relationship(
         "InitiativeAgreementLifecycleHistory", back_populates="initiative_agreement"
+    )
+    notes = relationship(
+        "InitiativeAgreementNote",
+        back_populates="initiative_agreement",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
     initiative_agreement_internal_comments = relationship(
         "InitiativeAgreementInternalComment", back_populates="initiative_agreement"

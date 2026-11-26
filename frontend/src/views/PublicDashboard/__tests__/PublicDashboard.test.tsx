@@ -202,6 +202,21 @@ describe('PublicDashboard', () => {
     expect(screen.queryByTestId('legislation-link')).not.toBeInTheDocument()
   })
 
+  test('does not render the redundant login CTA band near the footer', ({
+    render,
+    theme,
+    router
+  }) => {
+    render(<PublicDashboard />, [theme, router])
+    expect(screen.getAllByTestId('public-login-bceid')).toHaveLength(1)
+    expect(screen.getAllByTestId('public-login-idir')).toHaveLength(1)
+    expect(
+      screen.queryByText(
+        'Are you a fuel supplier or government analyst? Log in to file and review compliance reports.'
+      )
+    ).not.toBeInTheDocument()
+  })
+
   test('triggers keycloak login from the login buttons', ({
     render,
     theme,

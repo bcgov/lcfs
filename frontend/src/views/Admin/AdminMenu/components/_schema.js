@@ -200,6 +200,13 @@ export const userActivityColDefs = [
     valueFormatter: dateFormatter,
     floatingFilterComponent: BCDateFloatingFilter,
     suppressFloatingFilterButton: true
+  },
+  {
+    colId: 'user',
+    field: 'user',
+    headerName: 'User',
+    minWidth: 420,
+    filter: 'agTextColumnFilter'
   }
 ]
 

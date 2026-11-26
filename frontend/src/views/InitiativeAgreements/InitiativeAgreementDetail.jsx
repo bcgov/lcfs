@@ -37,6 +37,7 @@ import { DesignatedActionsGrid } from './components/DesignatedActionsGrid'
 import { AddDesignatedAction } from './components/AddDesignatedAction'
 import { AgreementEditForm } from './components/AgreementEditForm'
 import { DeletedItems } from './components/DeletedItems'
+import { NotesAccordion } from './components/NotesAccordion'
 import { DocumentTree } from './components/DocumentTree'
 
 // The shared document machinery keys on this string for initiative agreements.
@@ -388,6 +389,12 @@ const InitiativeAgreementDetailBase = () => {
             </BCButton>
           ))}
         </BCBox>
+      </Role>
+
+      {/* Notes are IDIR-only: the API refuses proponents. Directors read;
+          only the two review roles can change them. */}
+      <Role roles={[roles.ia_analyst, roles.ia_manager, roles.director]}>
+        <NotesAccordion initiativeAgreementId={initiativeAgreementId} />
       </Role>
 
       {/* The designated-action grid is the IDIR story (#4896); the

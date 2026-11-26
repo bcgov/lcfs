@@ -57,6 +57,9 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreementLifecycleHistory imp
 from lcfs.db.models.initiative_agreement.InitiativeAgreementLifecycleStatus import (
     InitiativeAgreementLifecycleStatus,
 )
+from lcfs.db.models.initiative_agreement.InitiativeAgreementNote import (
+    InitiativeAgreementNote,
+)
 from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
     InitiativeAgreementStatus,
 )
@@ -1001,6 +1004,159 @@ class InitiativeAgreementRepository:
         await self.db.flush()
         await self.db.refresh(requirement)
         return requirement
+
+    async def _lock_agreement(self, initiative_agreement_id: int) -> None:
+        """Row-lock the agreement so concurrent note saves queue up rather
+        than both passing the number check."""
+        locked = await self.db.scalar(
+            select(InitiativeAgreement.initiative_agreement_id)
+            .where(
+                InitiativeAgreement.initiative_agreement_id == initiative_agreement_id
+            )
+            .with_for_update()
+        )
+        if locked is None:
+            raise DataNotFoundException(
+                f"Initiative Agreement with id {initiative_agreement_id} not found"
+            )
+
+    async def _ensure_note_number_free(
+        self,
+        initiative_agreement_id: int,
+        note_number: Decimal,
+        exclude_note_id: Optional[int] = None,
+    ) -> None:
+        query = select(InitiativeAgreementNote.initiative_agreement_note_id).where(
+            InitiativeAgreementNote.initiative_agreement_id == initiative_agreement_id,
+            InitiativeAgreementNote.note_number == note_number,
+        )
+        if exclude_note_id is not None:
+            query = query.where(
+                InitiativeAgreementNote.initiative_agreement_note_id != exclude_note_id
+            )
+        if await self.db.scalar(query) is not None:
+            raise ValueError(
+                f"Note number {note_number} is already in use for this "
+                "initiative agreement."
+            )
+
+    @repo_handler
+    async def next_note_number(self, initiative_agreement_id: int) -> Decimal:
+        """The number after the agreement's highest note."""
+        highest = await self.db.scalar(
+            select(func.max(InitiativeAgreementNote.note_number)).where(
+                InitiativeAgreementNote.initiative_agreement_id
+                == initiative_agreement_id
+            )
+        )
+        return (highest or Decimal(0)) + Decimal(1)
+
+    @repo_handler
+    async def get_notes_with_editors(
+        self, initiative_agreement_id: int, note_id: Optional[int] = None
+    ) -> List[Tuple[InitiativeAgreementNote, Optional[UserProfile]]]:
+        """An agreement's notes in number order, each with the user who last
+        edited it. Notes record that user as the audit ``update_user``
+        (a Keycloak username), so the profile is joined on it; it is None
+        for a user no longer on file."""
+        query = (
+            select(InitiativeAgreementNote, UserProfile)
+            .outerjoin(
+                UserProfile,
+                UserProfile.keycloak_username == InitiativeAgreementNote.update_user,
+            )
+            .where(
+                InitiativeAgreementNote.initiative_agreement_id
+                == initiative_agreement_id
+            )
+            .order_by(asc(InitiativeAgreementNote.note_number))
+            .execution_options(populate_existing=True)
+        )
+        if note_id is not None:
+            query = query.where(
+                InitiativeAgreementNote.initiative_agreement_note_id == note_id
+            )
+        return [(note, editor) for note, editor in (await self.db.execute(query)).all()]
+
+    @repo_handler
+    async def update_initiative_agreement_note(
+        self,
+        initiative_agreement_id: int,
+        note_id: int,
+        note_text: str,
+        note_number: Decimal,
+        username: Optional[str] = None,
+    ) -> InitiativeAgreementNote:
+        """Change a note's number or text; the editor is recorded as the
+        audit ``update_user``."""
+        await self._lock_agreement(initiative_agreement_id)
+        note = await self.db.scalar(
+            select(InitiativeAgreementNote)
+            .where(
+                InitiativeAgreementNote.initiative_agreement_note_id == note_id,
+                InitiativeAgreementNote.initiative_agreement_id
+                == initiative_agreement_id,
+            )
+            .execution_options(populate_existing=True)
+        )
+        if note is None:
+            raise DataNotFoundException(f"Note with id {note_id} not found")
+
+        if note.note_number == note_number and note.note_text == note_text:
+            # Nothing changed, so the last edit must not move to this user.
+            return note
+        if note.note_number != note_number:
+            await self._ensure_note_number_free(
+                initiative_agreement_id, note_number, exclude_note_id=note_id
+            )
+        note.note_number = note_number
+        note.note_text = note_text
+        note.update_user = username
+        await self.db.flush()
+        await self.db.refresh(note)
+        return note
+
+    @repo_handler
+    async def delete_initiative_agreement_note(
+        self, initiative_agreement_id: int, note_id: int
+    ) -> None:
+        note = await self.db.scalar(
+            select(InitiativeAgreementNote).where(
+                InitiativeAgreementNote.initiative_agreement_note_id == note_id,
+                InitiativeAgreementNote.initiative_agreement_id
+                == initiative_agreement_id,
+            )
+        )
+        if note is None:
+            raise DataNotFoundException(f"Note with id {note_id} not found")
+        await self.db.delete(note)
+        await self.db.flush()
+
+    @repo_handler
+    async def add_initiative_agreement_note(
+        self,
+        initiative_agreement_id: int,
+        note_text: str,
+        note_number: Optional[Decimal] = None,
+        username: Optional[str] = None,
+    ) -> InitiativeAgreementNote:
+        """Create a note, serializing number allocation per agreement."""
+        await self._lock_agreement(initiative_agreement_id)
+
+        if note_number is None:
+            note_number = await self.next_note_number(initiative_agreement_id)
+        await self._ensure_note_number_free(initiative_agreement_id, note_number)
+
+        note = InitiativeAgreementNote(
+            initiative_agreement_id=initiative_agreement_id,
+            note_number=note_number,
+            note_text=note_text,
+            create_user=username,
+            update_user=username,
+        )
+        self.db.add(note)
+        await self.db.flush()
+        return note
 
     @repo_handler
     async def get_active_ia_analysts(self) -> List[UserProfile]:

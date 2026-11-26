@@ -1,9 +1,11 @@
 import json
 import math
 from datetime import datetime, timezone
+from decimal import Decimal
 from html import unescape
 from typing import List, Optional
 
+import nh3
 import structlog
 from fastapi import Depends, HTTPException, Request
 
@@ -32,6 +34,9 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
 from lcfs.db.models.initiative_agreement.InitiativeAgreementLifecycleHistory import (
     InitiativeAgreementLifecycleHistory,
 )
+from lcfs.db.models.initiative_agreement.InitiativeAgreementNote import (
+    InitiativeAgreementNote,
+)
 from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
     InitiativeAgreementStatusEnum,
 )
@@ -49,6 +54,7 @@ from lcfs.web.api.initiative_agreement.repo import InitiativeAgreementRepository
 from lcfs.web.api.initiative_agreement.rich_text import sanitize_eoc_rich_text
 from lcfs.web.api.initiative_agreement.schema import (
     AllDesignatedActionsListSchema,
+    AssignedAnalystSchema,
     DesignatedActionListItemSchema,
     AgreementCreateSchema,
     AgreementUpdateSchema,
@@ -67,6 +73,9 @@ from lcfs.web.api.initiative_agreement.schema import (
     IAAnalystSchema,
     InitiativeAgreementCreateSchema,
     InitiativeAgreementListItemSchema,
+    InitiativeAgreementNoteCreateSchema,
+    InitiativeAgreementNoteSchema,
+    InitiativeAgreementNoteUpdateSchema,
     InitiativeAgreementProfileSchema,
     InitiativeAgreementSchema,
     InitiativeAgreementsListSchema,
@@ -109,6 +118,49 @@ logger = structlog.get_logger(__name__)
 
 # Upper bound on grid page size; the frontend asks for 25.
 MAX_PAGE_SIZE = 200
+
+# Mirrors the allow-list the client enforces in sanitizeCommentHtml.ts. The
+# client sanitizes before save and display, but an API caller can bypass it,
+# so the server re-sanitizes before persistence.
+_NOTE_ALLOWED_TAGS = {
+    "a",
+    "b",
+    "blockquote",
+    "br",
+    "code",
+    "div",
+    "em",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "i",
+    "li",
+    "ol",
+    "p",
+    "pre",
+    "s",
+    "span",
+    "strong",
+    "u",
+    "ul",
+}
+_NOTE_ALLOWED_ATTRIBUTES = {"*": {"class", "href", "rel", "target", "title"}}
+
+
+def _sanitize_note_html(note_text: Optional[str]) -> str:
+    """The note HTML with any markup outside the rich-text allow-list
+    stripped."""
+    if not note_text:
+        return ""
+    return nh3.clean(
+        note_text,
+        tags=_NOTE_ALLOWED_TAGS,
+        attributes=_NOTE_ALLOWED_ATTRIBUTES,
+        link_rel=None,
+    )
 
 
 class InitiativeAgreementServices:
@@ -2197,3 +2249,117 @@ class InitiativeAgreementServices:
                 status_code=404, detail="Submitted document snapshot not found"
             )
         return SimpleNamespace(**metadata)
+
+    async def _agreement_or_404(self, initiative_agreement_id: int, user):
+        """The agreement, unless it is missing or hidden from the caller."""
+        agreement = await self.repo.get_initiative_agreement_by_id(
+            initiative_agreement_id
+        )
+        if not agreement or is_hidden_from(agreement, user):
+            raise DataNotFoundException(
+                f"Initiative Agreement with id {initiative_agreement_id} not found"
+            )
+        return agreement
+
+    @staticmethod
+    def _require_note_text(note_text: Optional[str]) -> str:
+        """The sanitized note HTML, unless it holds no text (an empty Quill
+        editor submits ``<p><br></p>``). The client also sanitizes before
+        display, but the server re-sanitizes before persistence so an API
+        caller can't bypass it and store disallowed markup."""
+        sanitized = _sanitize_note_html(note_text)
+        if not unescape(sanitize_comment_text(sanitized)).strip():
+            raise HTTPException(status_code=400, detail="A note is required.")
+        return sanitized
+
+    @staticmethod
+    def _note_schema(
+        note: InitiativeAgreementNote, editor: Optional[UserProfile]
+    ) -> InitiativeAgreementNoteSchema:
+        """A note as the notes accordion shows it: the audit update fields
+        are the "last edited" user and date."""
+        return InitiativeAgreementNoteSchema(
+            initiative_agreement_note_id=note.initiative_agreement_note_id,
+            initiative_agreement_id=note.initiative_agreement_id,
+            note_number=note.note_number,
+            note_text=note.note_text,
+            last_edited_by=(
+                AssignedAnalystSchema.model_validate(editor) if editor else None
+            ),
+            last_edited_date=note.update_date,
+        )
+
+    async def _get_note_schema(
+        self, initiative_agreement_id: int, note_id: int
+    ) -> InitiativeAgreementNoteSchema:
+        rows = await self.repo.get_notes_with_editors(initiative_agreement_id, note_id)
+        if not rows:
+            raise DataNotFoundException(f"Note with id {note_id} not found")
+        return self._note_schema(*rows[0])
+
+    @service_handler
+    async def get_notes(
+        self, initiative_agreement_id: int, user
+    ) -> List[InitiativeAgreementNoteSchema]:
+        """An agreement's notes, in note-number order."""
+        await self._agreement_or_404(initiative_agreement_id, user)
+        rows = await self.repo.get_notes_with_editors(initiative_agreement_id)
+        return [self._note_schema(note, editor) for note, editor in rows]
+
+    @service_handler
+    async def get_next_note_number(self, initiative_agreement_id: int, user) -> Decimal:
+        """The number the add-note form starts from."""
+        await self._agreement_or_404(initiative_agreement_id, user)
+        return await self.repo.next_note_number(initiative_agreement_id)
+
+    @service_handler
+    async def create_note(
+        self,
+        initiative_agreement_id: int,
+        data: InitiativeAgreementNoteCreateSchema,
+        user,
+    ) -> InitiativeAgreementNoteSchema:
+        await self._agreement_or_404(initiative_agreement_id, user)
+        try:
+            note = await self.repo.add_initiative_agreement_note(
+                initiative_agreement_id=initiative_agreement_id,
+                note_text=self._require_note_text(data.note_text),
+                note_number=data.note_number,
+                username=getattr(user, "keycloak_username", None),
+            )
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
+        return await self._get_note_schema(
+            initiative_agreement_id, note.initiative_agreement_note_id
+        )
+
+    @service_handler
+    async def update_note(
+        self,
+        initiative_agreement_id: int,
+        note_id: int,
+        data: InitiativeAgreementNoteUpdateSchema,
+        user,
+    ) -> InitiativeAgreementNoteSchema:
+        await self._agreement_or_404(initiative_agreement_id, user)
+        note_text = self._require_note_text(data.note_text)
+        try:
+            await self.repo.update_initiative_agreement_note(
+                initiative_agreement_id,
+                note_id,
+                note_text,
+                data.note_number,
+                username=getattr(user, "keycloak_username", None),
+            )
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
+        return await self._get_note_schema(initiative_agreement_id, note_id)
+
+    @service_handler
+    async def delete_note(
+        self, initiative_agreement_id: int, note_id: int, user
+    ) -> None:
+        await self._agreement_or_404(initiative_agreement_id, user)
+        await self.repo.delete_initiative_agreement_note(
+            initiative_agreement_id, note_id
+        )
