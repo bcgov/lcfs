@@ -1,3 +1,6 @@
+import type { OptionsData } from '@/types/schema'
+import type { FuelSupplyCellParams } from '../_utils'
+import type { RenewableClaimColumnVisibility } from '@/utils/renewableClaimUtils'
 import { describe, expect, it, vi, beforeEach } from 'vite-plus/test'
 import '../_utils'
 
@@ -35,10 +38,10 @@ vi.mock('@/utils/array', () => ({
 
 describe('fuelSupplyUtils', () => {
   // Import actual implementations for testing
-  let actualUtils
+  let actualUtils: typeof import('../_utils')
 
   beforeEach(async () => {
-    actualUtils = await vi.importActual('../_utils')
+    actualUtils = await vi.importActual<typeof import('../_utils')>('../_utils')
   })
 
   describe('processFuelSupplyRowData', () => {
@@ -153,7 +156,7 @@ describe('fuelSupplyUtils', () => {
     }
 
     it('returns false for both columns when no fuel types', () => {
-      const result = actualUtils.calculateColumnVisibility([], null, '2024')
+      const result = actualUtils.calculateColumnVisibility([], null!, '2024')
       expect(result).toEqual({
         shouldShowIsCanadaProduced: false,
         shouldShowIsQ1Supplied: false
@@ -163,7 +166,7 @@ describe('fuelSupplyUtils', () => {
     it('returns false for both columns when rowData is empty', () => {
       const result = actualUtils.calculateColumnVisibility(
         [],
-        mockOptionsData,
+        mockOptionsData as OptionsData,
         '2024'
       )
       expect(result).toEqual({
@@ -184,7 +187,7 @@ describe('fuelSupplyUtils', () => {
 
       const result = actualUtils.calculateColumnVisibility(
         rowData,
-        mockOptionsData,
+        mockOptionsData as OptionsData,
         '2025'
       )
       expect(result.shouldShowIsCanadaProduced).toBe(true)
@@ -217,17 +220,17 @@ describe('fuelSupplyUtils', () => {
 
       const result = actualUtils.calculateColumnVisibility(
         rowData,
-        optionsWithNonCanadian,
+        optionsWithNonCanadian as OptionsData,
         '2025'
       )
       expect(result.shouldShowIsQ1Supplied).toBe(true)
     })
 
     it('handles missing fuel type gracefully', () => {
-      const rowData = [{ fuelType: null }]
+      const rowData = [{ fuelType: null! }]
       const result = actualUtils.calculateColumnVisibility(
         rowData,
-        mockOptionsData,
+        mockOptionsData as OptionsData,
         '2024'
       )
       expect(result).toEqual({
@@ -267,7 +270,7 @@ describe('fuelSupplyUtils', () => {
 
       const result = actualUtils.calculateColumnVisibility(
         rowData,
-        complexOptionsData,
+        complexOptionsData as OptionsData,
         '2025'
       )
       expect(result.shouldShowIsCanadaProduced).toBe(true)
@@ -276,13 +279,22 @@ describe('fuelSupplyUtils', () => {
   })
 
   describe('updateGridColumnsVisibility', () => {
-    let mockGridApi
-    let mockGridRef
+    let mockGridApi: {
+      getColumn: ReturnType<
+        typeof vi.fn<(colId: string) => { isVisible: () => boolean } | null>
+      >
+      setColumnsVisible: ReturnType<
+        typeof vi.fn<(columns: string[], visible: boolean) => void>
+      >
+    }
+    let mockGridRef: { current: { api: typeof mockGridApi } }
 
     beforeEach(() => {
       mockGridApi = {
-        getColumn: vi.fn(),
-        setColumnsVisible: vi.fn()
+        getColumn:
+          vi.fn<(colId: string) => { isVisible: () => boolean } | null>(),
+        setColumnsVisible:
+          vi.fn<(columns: string[], visible: boolean) => void>()
       }
       mockGridRef = {
         current: { api: mockGridApi }
@@ -290,12 +302,18 @@ describe('fuelSupplyUtils', () => {
     })
 
     it('does nothing when gridRef is null', () => {
-      actualUtils.updateGridColumnsVisibility({ current: null }, {})
+      actualUtils.updateGridColumnsVisibility(
+        { current: null },
+        {} as RenewableClaimColumnVisibility
+      )
       expect(mockGridApi.setColumnsVisible).not.toHaveBeenCalled()
     })
 
     it('does nothing when api is not available', () => {
-      actualUtils.updateGridColumnsVisibility({ current: {} }, {})
+      actualUtils.updateGridColumnsVisibility(
+        { current: {} },
+        {} as RenewableClaimColumnVisibility
+      )
       expect(mockGridApi.setColumnsVisible).not.toHaveBeenCalled()
     })
 
@@ -349,7 +367,8 @@ describe('fuelSupplyUtils', () => {
     const mockParams = {
       node: {
         data: { fuelType: 'Diesel' },
-        setDataValue: vi.fn()
+        setDataValue: vi.fn(),
+        updateData: vi.fn()
       }
     }
 
@@ -359,8 +378,8 @@ describe('fuelSupplyUtils', () => {
 
     it('updates row data when fuel type is found with single options', () => {
       actualUtils.handleFuelTypeChange(
-        mockParams,
-        mockOptionsData,
+        mockParams as FuelSupplyCellParams,
+        mockOptionsData as OptionsData,
         mockUpdateRowDataValues
       )
 
@@ -392,8 +411,8 @@ describe('fuelSupplyUtils', () => {
       }
 
       actualUtils.handleFuelTypeChange(
-        mockParams,
-        multiOptionData,
+        mockParams as FuelSupplyCellParams,
+        multiOptionData as OptionsData,
         mockUpdateRowDataValues
       )
 
@@ -412,8 +431,8 @@ describe('fuelSupplyUtils', () => {
       }
 
       actualUtils.handleFuelTypeChange(
-        mockParamsNotFound,
-        mockOptionsData,
+        mockParamsNotFound as FuelSupplyCellParams,
+        mockOptionsData as OptionsData,
         mockUpdateRowDataValues
       )
       expect(mockUpdateRowDataValues).not.toHaveBeenCalled()
@@ -448,8 +467,8 @@ describe('fuelSupplyUtils', () => {
 
     it('updates row data when fuel category matches', () => {
       actualUtils.handleFuelCategoryChange(
-        mockParams,
-        mockOptionsData,
+        mockParams as FuelSupplyCellParams,
+        mockOptionsData as OptionsData,
         mockUpdateRowDataValues
       )
 
@@ -468,8 +487,8 @@ describe('fuelSupplyUtils', () => {
       }
 
       actualUtils.handleFuelCategoryChange(
-        mockParamsNotFound,
-        mockOptionsData,
+        mockParamsNotFound as FuelSupplyCellParams,
+        mockOptionsData as OptionsData,
         mockUpdateRowDataValues
       )
       expect(mockUpdateRowDataValues).not.toHaveBeenCalled()
@@ -490,10 +509,11 @@ describe('fuelSupplyUtils', () => {
         node: { data: { quantity: 100 } },
         colDef: { field: 'quantity' }
       }
-      const validationFn = (value) => value > 0
+      const validationFn = (value: unknown) =>
+        typeof value === 'number' && value > 0
 
       const result = actualUtils.validateFuelSupply(
-        mockParams,
+        mockParams as FuelSupplyCellParams,
         validationFn,
         'Error message',
         mockAlertRef,
@@ -508,10 +528,11 @@ describe('fuelSupplyUtils', () => {
         node: { data: { quantity: -1 } },
         colDef: { field: 'quantity' }
       }
-      const validationFn = (value) => value > 0
+      const validationFn = (value: unknown) =>
+        typeof value === 'number' && value > 0
 
       const result = actualUtils.validateFuelSupply(
-        mockParams,
+        mockParams as FuelSupplyCellParams,
         validationFn,
         'Error message',
         mockAlertRef,
@@ -529,10 +550,11 @@ describe('fuelSupplyUtils', () => {
         node: { data: { quantity: -1 } },
         colDef: { field: 'otherField' }
       }
-      const validationFn = (value) => value > 0
+      const validationFn = (value: unknown) =>
+        typeof value === 'number' && value > 0
 
       const result = actualUtils.validateFuelSupply(
-        mockParams,
+        mockParams as FuelSupplyCellParams,
         validationFn,
         'Error message',
         mockAlertRef,
@@ -543,7 +565,8 @@ describe('fuelSupplyUtils', () => {
     })
 
     it('validates direct params when no field specified', () => {
-      const validationFn = (value) => value > 0
+      const validationFn = (value: unknown) =>
+        typeof value === 'number' && value > 0
 
       const resultPass = actualUtils.validateFuelSupply(
         100,
@@ -580,16 +603,21 @@ describe('fuelSupplyUtils', () => {
 
     it('returns null when old and new values are the same', async () => {
       // Import the actual implementation for testing
-      const actualUtils = await vi.importActual('../_utils')
+      const actualUtils =
+        await vi.importActual<typeof import('../_utils')>('../_utils')
 
       const params = {
         oldValue: 'same',
         newValue: 'same',
-        node: { data: { quantity: 100 }, updateData: vi.fn() }
+        node: {
+          data: { quantity: 100 },
+          updateData: vi.fn(),
+          setDataValue: vi.fn()
+        }
       }
 
       const result = await actualUtils.processCellEditingComplete({
-        params,
+        params: params as FuelSupplyCellParams,
         validateFn: mockValidateFn,
         alertRef: mockAlertRef,
         saveRow: mockSaveRow,
@@ -603,17 +631,22 @@ describe('fuelSupplyUtils', () => {
     })
 
     it('returns null when validation fails', async () => {
-      const actualUtils = await vi.importActual('../_utils')
+      const actualUtils =
+        await vi.importActual<typeof import('../_utils')>('../_utils')
       mockValidateFn.mockReturnValue(false)
 
       const params = {
         oldValue: 'old',
         newValue: 'new',
-        node: { data: { quantity: -1 }, updateData: vi.fn() }
+        node: {
+          data: { quantity: -1 },
+          updateData: vi.fn(),
+          setDataValue: vi.fn()
+        }
       }
 
       const result = await actualUtils.processCellEditingComplete({
-        params,
+        params: params as FuelSupplyCellParams,
         validateFn: mockValidateFn,
         alertRef: mockAlertRef,
         saveRow: mockSaveRow,

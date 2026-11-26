@@ -1,19 +1,16 @@
 import { waitFor } from '@testing-library/react'
 import { describe, beforeEach, afterEach, expect, vi } from 'vite-plus/test'
 import { test } from '@/tests/utils/fixtures'
-import { useApiService } from '@/services/useApiService'
 import { useOrganizationFuelSupply } from '../useFuelSupply'
 
-vi.mock('@/services/useApiService')
+const mockPost = vi.hoisted(() => vi.fn())
+vi.mock('@/services/useApiService', () => ({
+  useApiService: () => ({ post: mockPost })
+}))
 
 describe('useOrganizationFuelSupply', () => {
-  const mockPost = vi.fn()
-
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(useApiService).mockReturnValue({
-      post: mockPost
-    })
   })
 
   afterEach(() => {
@@ -89,9 +86,9 @@ describe('useOrganizationFuelSupply', () => {
       pagination
     )
     expect(result.current.data).toEqual(mockResponseData)
-    expect(result.current.data.fuelSupplies).toHaveLength(2)
-    expect(result.current.data.analytics.totalVolume).toBe(125000)
-    expect(result.current.data.pagination.total).toBe(2)
+    expect(result.current.data!.fuelSupplies).toHaveLength(2)
+    expect(result.current.data!.analytics.totalVolume).toBe(125000)
+    expect(result.current.data!.pagination.total).toBe(2)
   })
 
   test('should handle year filter in pagination', async ({
@@ -151,8 +148,8 @@ describe('useOrganizationFuelSupply', () => {
       '/fuel-supply/organization/1',
       pagination
     )
-    expect(result.current.data.fuelSupplies).toHaveLength(1)
-    expect(result.current.data.fuelSupplies[0].compliancePeriod).toBe('2023')
+    expect(result.current.data!.fuelSupplies).toHaveLength(1)
+    expect(result.current.data!.fuelSupplies[0].compliancePeriod).toBe('2023')
   })
 
   test('should handle empty results', async ({ renderHook, query }) => {
@@ -188,9 +185,9 @@ describe('useOrganizationFuelSupply', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
-    expect(result.current.data.fuelSupplies).toHaveLength(0)
-    expect(result.current.data.analytics.totalVolume).toBe(0)
-    expect(result.current.data.pagination.total).toBe(0)
+    expect(result.current.data!.fuelSupplies).toHaveLength(0)
+    expect(result.current.data!.analytics.totalVolume).toBe(0)
+    expect(result.current.data!.pagination.total).toBe(0)
   })
 
   test('should handle pagination correctly', async ({ renderHook, query }) => {
@@ -237,11 +234,11 @@ describe('useOrganizationFuelSupply', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
-    expect(result.current.data.fuelSupplies).toHaveLength(5)
-    expect(result.current.data.pagination.page).toBe(2)
-    expect(result.current.data.pagination.size).toBe(5)
-    expect(result.current.data.pagination.total).toBe(13)
-    expect(result.current.data.pagination.totalPages).toBe(3)
+    expect(result.current.data!.fuelSupplies).toHaveLength(5)
+    expect(result.current.data!.pagination.page).toBe(2)
+    expect(result.current.data!.pagination.size).toBe(5)
+    expect(result.current.data!.pagination.total).toBe(13)
+    expect(result.current.data!.pagination.totalPages).toBe(3)
   })
 
   test('should not fetch when organization ID is missing', async ({
@@ -368,7 +365,7 @@ describe('useOrganizationFuelSupply', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
-    expect(result.current.data.fuelSupplies[0].reportSubmissionDate).toBeNull()
-    expect(result.current.data.analytics.mostRecentSubmission).toBeNull()
+    expect(result.current.data!.fuelSupplies[0].reportSubmissionDate).toBeNull()
+    expect(result.current.data!.analytics.mostRecentSubmission).toBeNull()
   })
 })

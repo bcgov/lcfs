@@ -3,18 +3,29 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { FuelSupplyChangelog } from '../FuelSupplyChangelog'
 
 // Import the mocked modules for configuration
-import {
-  useComplianceReportWithCache,
-  useGetChangeLog
-} from '@/hooks/useComplianceReports'
-import { useParams } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { changelogColDefs, changelogCommonColDefs } from '../_schema'
+import { getFuelSupplyChangelogRowStyle, getFuelSupplyRowId } from '../_utils'
+
+type HookResult = { data?: unknown; isLoading: boolean }
+type MockProps = {
+  gridKey?: string | null
+  onPaginationChange?: (pagination: { page: number; size: number }) => void
+}
+type GridViewerRows = Array<{ fuelSupplyId: number | string }>
+type PaginationSnapshot = { page: number; size: number; total: number }
+type QuerySnapshot = { items: GridViewerRows; pagination?: PaginationSnapshot }
+const testMocks = vi.hoisted(() => ({
+  useComplianceReportWithCache: vi.fn<(...args: unknown[]) => HookResult>(),
+  useGetChangeLog: vi.fn<(...args: unknown[]) => HookResult>(),
+  useParams: vi.fn<() => Record<string, string>>(),
+  useTranslation: vi.fn<() => { t: (key: string) => string }>(),
+  useFuelSupplyOptions: vi.fn<(...args: unknown[]) => HookResult>()
+}))
 
 // Mock all external dependencies
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  BCGridViewer: vi.fn(({ gridKey, onPaginationChange }) => {
+  BCGridViewer: vi.fn(({ gridKey, onPaginationChange }: MockProps) => {
     const handlePaginationTest = () => {
       if (onPaginationChange && typeof onPaginationChange === 'function') {
         onPaginationChange({ page: 2, size: 10 })
@@ -47,8 +58,8 @@ vi.mock('@/components/Loading', () => ({
 }))
 
 vi.mock('@/hooks/useComplianceReports', () => ({
-  useComplianceReportWithCache: vi.fn(),
-  useGetChangeLog: vi.fn()
+  useComplianceReportWithCache: testMocks.useComplianceReportWithCache,
+  useGetChangeLog: testMocks.useGetChangeLog
 }))
 
 vi.mock('@/constants/schedules', () => ({
@@ -71,20 +82,15 @@ vi.mock('@/themes/base/colors', () => ({
 }))
 
 vi.mock('react-router-dom', () => ({
-  useParams: vi.fn()
+  useParams: testMocks.useParams
 }))
 
 vi.mock('react-i18next', () => ({
-  useTranslation: vi.fn()
+  useTranslation: testMocks.useTranslation
 }))
 
 vi.mock('@/hooks/useFuelSupply', () => ({
-  useFuelSupplyOptions: vi.fn(() => ({
-    data: {
-      fuelTypes: []
-    },
-    isLoading: false
-  }))
+  useFuelSupplyOptions: testMocks.useFuelSupplyOptions
 }))
 
 vi.mock('../_schema', () => ({
@@ -131,26 +137,71 @@ describe('FuelSupplyChangelog', () => {
     }
   ]
 
-  const mockTranslate = vi.fn((key) => key)
+  const mockTranslate = vi.fn((key: string) => key)
+
+  const isGridViewerRows = (value: unknown): value is GridViewerRows =>
+    Array.isArray(value) &&
+    value.every(
+      (item) =>
+        typeof item === 'object' &&
+        item !== null &&
+        'fuelSupplyId' in item &&
+        (typeof item.fuelSupplyId === 'string' ||
+          typeof item.fuelSupplyId === 'number')
+    )
+
+  const isPaginationSnapshot = (value: unknown): value is PaginationSnapshot =>
+    typeof value === 'object' &&
+    value !== null &&
+    'page' in value &&
+    typeof value.page === 'number' &&
+    'size' in value &&
+    typeof value.size === 'number' &&
+    'total' in value &&
+    typeof value.total === 'number'
+
+  const getGridViewerProps = (index = 0) => {
+    const props = vi.mocked(BCGridViewer).mock.calls[index]?.[0]
+    if (!props) throw new Error(`Grid viewer call ${index} was not recorded`)
+    return props
+  }
+
+  const getQuerySnapshot = (index: number): QuerySnapshot => {
+    const data = getGridViewerProps(index).queryData?.data
+    if (!data || !isGridViewerRows(data.items)) {
+      throw new Error(`Grid viewer call ${index} has no item data`)
+    }
+    const items = data.items
+    const pagination = data.pagination
+    if (pagination === undefined) return { items, pagination: undefined }
+    if (!isPaginationSnapshot(pagination)) {
+      throw new Error(`Grid viewer call ${index} has invalid pagination`)
+    }
+    return { items, pagination }
+  }
 
   beforeEach(() => {
     vi.clearAllMocks()
 
-    useParams.mockReturnValue({
+    testMocks.useParams.mockReturnValue({
       complianceReportId: mockComplianceReportId,
       compliancePeriod: mockCompliancePeriod
     })
 
-    useTranslation.mockReturnValue({
+    testMocks.useTranslation.mockReturnValue({
       t: mockTranslate
     })
+    testMocks.useFuelSupplyOptions.mockReturnValue({
+      data: { fuelTypes: [] },
+      isLoading: false
+    })
 
-    useComplianceReportWithCache.mockReturnValue({
+    testMocks.useComplianceReportWithCache.mockReturnValue({
       data: mockComplianceReport,
       isLoading: false
     })
 
-    useGetChangeLog.mockReturnValue({
+    testMocks.useGetChangeLog.mockReturnValue({
       data: mockChangelogData,
       isLoading: false
     })
@@ -158,7 +209,7 @@ describe('FuelSupplyChangelog', () => {
 
   describe('Loading States', () => {
     it('should show loading when currentReport is loading', () => {
-      useComplianceReportWithCache.mockReturnValue({
+      testMocks.useComplianceReportWithCache.mockReturnValue({
         data: null,
         isLoading: true
       })
@@ -169,7 +220,7 @@ describe('FuelSupplyChangelog', () => {
     })
 
     it('should show loading when changelog data is loading', () => {
-      useGetChangeLog.mockReturnValue({
+      testMocks.useGetChangeLog.mockReturnValue({
         data: null,
         isLoading: true
       })
@@ -196,7 +247,7 @@ describe('FuelSupplyChangelog', () => {
     })
 
     it('should render with empty changelog data gracefully', () => {
-      useGetChangeLog.mockReturnValue({
+      testMocks.useGetChangeLog.mockReturnValue({
         data: [],
         isLoading: false
       })
@@ -209,7 +260,7 @@ describe('FuelSupplyChangelog', () => {
     })
 
     it('should handle null changelog data', () => {
-      useGetChangeLog.mockReturnValue({
+      testMocks.useGetChangeLog.mockReturnValue({
         data: null,
         isLoading: false
       })
@@ -234,13 +285,7 @@ describe('FuelSupplyChangelog', () => {
     it('should convert fuelSupplyId to string', () => {
       render(<FuelSupplyChangelog />)
 
-      const gridViewer = vi.mocked(BCGridViewer)
-      expect(gridViewer).toHaveBeenCalled()
-
-      const firstCall = gridViewer.mock.calls[0]
-      const getRowId = firstCall[0].getRowId
-
-      const result = getRowId({ data: { fuelSupplyId: 123 } })
+      const result = getFuelSupplyRowId(123)
       expect(result).toBe('123')
     })
   })
@@ -249,13 +294,7 @@ describe('FuelSupplyChangelog', () => {
     it('should apply DELETE styling when highlight is true', () => {
       render(<FuelSupplyChangelog />)
 
-      const gridViewer = vi.mocked(BCGridViewer)
-      const firstCall = gridViewer.mock.calls[2] // Third item (small version)
-      const gridOptions = firstCall[0].gridOptions
-
-      const deleteRowStyle = gridOptions.getRowStyle({
-        data: { actionType: 'DELETE' }
-      })
+      const deleteRowStyle = getFuelSupplyChangelogRowStyle('DELETE', true)
       expect(deleteRowStyle).toEqual({
         backgroundColor: '#ffebee'
       })
@@ -264,13 +303,7 @@ describe('FuelSupplyChangelog', () => {
     it('should apply CREATE styling when highlight is true', () => {
       render(<FuelSupplyChangelog />)
 
-      const gridViewer = vi.mocked(BCGridViewer)
-      const firstCall = gridViewer.mock.calls[2] // Third item (small version)
-      const gridOptions = firstCall[0].gridOptions
-
-      const createRowStyle = gridOptions.getRowStyle({
-        data: { actionType: 'CREATE' }
-      })
+      const createRowStyle = getFuelSupplyChangelogRowStyle('CREATE', true)
       expect(createRowStyle).toEqual({
         backgroundColor: '#e8f5e8'
       })
@@ -279,37 +312,23 @@ describe('FuelSupplyChangelog', () => {
     it('should return undefined styling for other action types when highlight is true', () => {
       render(<FuelSupplyChangelog />)
 
-      const gridViewer = vi.mocked(BCGridViewer)
-      const firstCall = gridViewer.mock.calls[2] // Third item (small version)
-      const gridOptions = firstCall[0].gridOptions
-
-      const otherRowStyle = gridOptions.getRowStyle({
-        data: { actionType: 'OTHER' }
-      })
+      const otherRowStyle = getFuelSupplyChangelogRowStyle('OTHER', true)
       expect(otherRowStyle).toBeUndefined()
     })
 
     it('should return undefined when highlight is false', () => {
       render(<FuelSupplyChangelog />)
 
-      const gridViewer = vi.mocked(BCGridViewer)
-      const firstCall = gridViewer.mock.calls[0] // First item (current version, highlight=false)
-      const gridOptions = firstCall[0].gridOptions
-
-      const rowStyle = gridOptions.getRowStyle({
-        data: { actionType: 'DELETE' }
-      })
+      const rowStyle = getFuelSupplyChangelogRowStyle('DELETE', false)
       expect(rowStyle).toBeUndefined()
     })
 
     it('should include translation key for no rows template', () => {
       render(<FuelSupplyChangelog />)
 
-      const gridViewer = vi.mocked(BCGridViewer)
-      const firstCall = gridViewer.mock.calls[0]
-      const gridOptions = firstCall[0].gridOptions
+      const gridOptions = getGridViewerProps(0).gridOptions
 
-      expect(gridOptions.overlayNoRowsTemplate).toBe(
+      expect(gridOptions?.overlayNoRowsTemplate).toBe(
         'fuelSupply:noFuelSuppliesFound'
       )
       expect(mockTranslate).toHaveBeenCalledWith(
@@ -322,36 +341,30 @@ describe('FuelSupplyChangelog', () => {
     it('should not paginate for small datasets that are not current/original', () => {
       render(<FuelSupplyChangelog />)
 
-      const gridViewer = vi.mocked(BCGridViewer)
-      const smallVersionCall = gridViewer.mock.calls[2] // Small version with 1 item
-      const queryData = smallVersionCall[0].queryData
+      const queryData = getQuerySnapshot(2)
 
-      expect(queryData.data.items).toHaveLength(1)
-      expect(queryData.data.pagination).toBeUndefined()
+      expect(queryData.items).toHaveLength(1)
+      expect(queryData.pagination).toBeUndefined()
     })
 
     it('should paginate for current/original versions regardless of size', () => {
       render(<FuelSupplyChangelog />)
 
-      const gridViewer = vi.mocked(BCGridViewer)
-      const originalVersionCall = gridViewer.mock.calls[1] // Original version (version 0)
-      const queryData = originalVersionCall[0].queryData
+      const queryData = getQuerySnapshot(1)
 
-      expect(queryData.data.pagination).toBeDefined()
-      expect(queryData.data.pagination.page).toBe(1)
-      expect(queryData.data.pagination.size).toBe(10)
+      expect(queryData.pagination).toBeDefined()
+      expect(queryData.pagination?.page).toBe(1)
+      expect(queryData.pagination?.size).toBe(10)
     })
 
     it('should paginate for large datasets', () => {
       render(<FuelSupplyChangelog />)
 
-      const gridViewer = vi.mocked(BCGridViewer)
-      const largeDatasetCall = gridViewer.mock.calls[0] // Current version with 15 items
-      const queryData = largeDatasetCall[0].queryData
+      const queryData = getQuerySnapshot(0)
 
-      expect(queryData.data.pagination).toBeDefined()
-      expect(queryData.data.items.length).toBeLessThanOrEqual(10) // Paginated
-      expect(queryData.data.pagination.total).toBe(15)
+      expect(queryData.pagination).toBeDefined()
+      expect(queryData.items.length).toBeLessThanOrEqual(10) // Paginated
+      expect(queryData.pagination?.total).toBe(15)
     })
   })
 
@@ -487,7 +500,7 @@ describe('FuelSupplyChangelog', () => {
     it('should call useComplianceReportWithCache with correct complianceReportId', () => {
       render(<FuelSupplyChangelog />)
 
-      expect(useComplianceReportWithCache).toHaveBeenCalledWith(
+      expect(testMocks.useComplianceReportWithCache).toHaveBeenCalledWith(
         mockComplianceReportId
       )
     })
@@ -495,7 +508,7 @@ describe('FuelSupplyChangelog', () => {
     it('should call useGetChangeLog with correct parameters', () => {
       render(<FuelSupplyChangelog />)
 
-      expect(useGetChangeLog).toHaveBeenCalledWith({
+      expect(testMocks.useGetChangeLog).toHaveBeenCalledWith({
         complianceReportGroupUuid: 'test-group-uuid',
         dataType: 'fuel-supplies'
       })
@@ -504,7 +517,7 @@ describe('FuelSupplyChangelog', () => {
     it('should call useTranslation with correct namespaces', () => {
       render(<FuelSupplyChangelog />)
 
-      expect(useTranslation).toHaveBeenCalledWith([
+      expect(testMocks.useTranslation).toHaveBeenCalledWith([
         'common',
         'fuelSupply',
         'report'

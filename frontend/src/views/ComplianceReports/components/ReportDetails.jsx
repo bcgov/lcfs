@@ -39,7 +39,7 @@ import { AllocationAgreementSummary } from '@/views/AllocationAgreements/Allocat
 import { FinalSupplyEquipmentSummary } from '@/views/FinalSupplyEquipments/FinalSupplyEquipmentSummary'
 import { FuelExportChangelog } from '@/views/FuelExports/FuelExportChangelog.jsx'
 import { FuelExportSummary } from '@/views/FuelExports/FuelExportSummary'
-import { FuelSupplyChangelog } from '@/views/FuelSupplies/FuelSupplyChangelog.jsx'
+import { FuelSupplyChangelog } from '@/views/FuelSupplies/FuelSupplyChangelog'
 import { FuelSupplySummary } from '@/views/FuelSupplies/FuelSupplySummary'
 import { NotionalTransferChangelog } from '@/views/NotionalTransfers/NotionalTransferChangelog.jsx'
 import { NotionalTransferSummary } from '@/views/NotionalTransfers/NotionalTransferSummary'

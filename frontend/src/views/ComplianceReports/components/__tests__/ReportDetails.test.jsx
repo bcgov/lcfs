@@ -135,7 +135,7 @@ vi.mock('@/views/FuelSupplies/FuelSupplySummary', () => ({
   FuelSupplySummary: () => <div>Fuel Supply Summary</div>
 }))
 
-vi.mock('@/views/FuelSupplies/FuelSupplyChangelog.jsx', () => ({
+vi.mock('@/views/FuelSupplies/FuelSupplyChangelog', () => ({
   FuelSupplyChangelog: () => <div>Fuel Supply Changelog</div>
 }))
 
