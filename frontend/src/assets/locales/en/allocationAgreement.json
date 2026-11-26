@@ -10,7 +10,10 @@
     "title": "Allocation agreements",
     "description": "Allocation agreements from all compliance report versions except those in Draft status. Select a row to open its compliance report.",
     "showAgreementsInvolve": "Show allocation agreements that involve",
-    "selectOrganization": "Select organization"
+    "selectOrganization": "Select organization",
+    "downloadExcel": "Download Excel",
+    "downloadingExcel": "Downloading Excel...",
+    "downloadError": "Failed to download allocation agreements."
   },
   "allocationAgreementColLabels": {
     "status": "Status",

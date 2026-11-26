@@ -5,8 +5,19 @@ import userEvent from '@testing-library/user-event'
 import { AllocationAgreementsIndex } from '../AllocationAgreementsIndex'
 import { allocationAgreementsIndexColDefs } from '../_indexSchema'
 import { test } from '@/tests/utils/fixtures'
+import * as XLSX from 'xlsx'
 
 const mockNavigate = vi.fn()
+const mockApiPost = vi.fn()
+vi.mock('xlsx', async (importOriginal) => ({
+  ...(await importOriginal()),
+  utils: {
+    book_new: vi.fn(() => ({})),
+    book_append_sheet: vi.fn(),
+    aoa_to_sheet: vi.fn(() => ({}))
+  },
+  writeFile: vi.fn()
+}))
 vi.mock('react-router-dom', async (orig) => ({
   ...(await orig()),
   useNavigate: () => mockNavigate
@@ -95,10 +106,17 @@ vi.mock('@/hooks/useAllocationAgreement', () => ({
   useGetAllocationAgreementsIndex: (...args) => mockUseIndex(...args)
 }))
 
+vi.mock('@/services/useApiService', () => ({
+  useApiService: () => ({ post: mockApiPost })
+}))
+
 describe('AllocationAgreementsIndex', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     sessionStorage.clear()
+    mockApiPost.mockResolvedValue({
+      data: { allocationAgreements: [], pagination: { total: 0 } }
+    })
     lastGridProps = undefined
     mockUseIndex.mockReturnValue({
       data: { allocationAgreements: [], pagination: { total: 0 } },
@@ -246,6 +264,63 @@ describe('AllocationAgreementsIndex', () => {
     await userEvent.click(screen.getByText('click-row'))
 
     expect(mockNavigate).toHaveBeenCalledWith('/compliance-reporting/2024/42')
+  })
+
+  test('exports matching index rows with the active organization and grid filters', async ({
+    render,
+    query,
+    theme,
+    router
+  }) => {
+    render(<AllocationAgreementsIndex />, [query, theme, router])
+
+    await userEvent.click(screen.getByText('change-paging'))
+    await userEvent.click(screen.getByText('pick-org'))
+    mockApiPost.mockResolvedValueOnce({
+      data: {
+        allocationAgreements: [
+          {
+            status: 'Submitted',
+            compliancePeriod: '2024',
+            reportingOrganization: 'Org One',
+            allocationTransactionType: 'Allocated From',
+            transactionPartner: 'Org Two',
+            quantity: 1200
+          }
+        ],
+        pagination: { total: 1, page: 1, size: 500, totalPages: 1 }
+      }
+    })
+    await userEvent.click(
+      screen.getByTestId('allocation-agreements-index-download')
+    )
+
+    expect(mockApiPost).toHaveBeenCalledWith(
+      '/allocation-agreement/index/export',
+      expect.objectContaining({
+        page: 1,
+        size: 500,
+        organizationId: 5,
+        sortOrders: [{ field: 'status', direction: 'asc' }],
+        filters: [expect.objectContaining({ field: 'compliancePeriod' })]
+      })
+    )
+    expect(XLSX.writeFile).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.stringMatching(/^allocation_agreements_.*\.xlsx$/),
+      { bookType: 'xlsx' }
+    )
+    expect(XLSX.utils.aoa_to_sheet).toHaveBeenCalledWith([
+      allocationAgreementsIndexColDefs().map((column) => column.headerName),
+      expect.arrayContaining([
+        'Submitted',
+        '2024',
+        'Org One',
+        'Allocated From',
+        'Org Two',
+        '1,200'
+      ])
+    ])
   })
 })
 

@@ -743,6 +743,31 @@ async def test_paging_past_the_end_still_reports_the_total(dbsession, repo, look
     assert total == 2
 
 
+async def test_export_all_returns_filtered_rows_beyond_page_size(
+    dbsession, repo, lookups
+):
+    org = await _org(dbsession, "Index Export Org")
+    report = await _report(dbsession, lookups, org, ComplianceReportStatusEnum.Assessed)
+    expected = [
+        await _agreement(dbsession, lookups, report, "Index Export Partner")
+        for _ in range(3)
+    ]
+    await _agreement(dbsession, lookups, report, "Unrelated Export Partner")
+
+    rows, total = await repo.get_allocation_agreements_index(
+        _pagination(
+            page=2,
+            size=1,
+            filters=[_text("transaction_partner", "equals", "Index Export Partner")],
+        ),
+        organization_id=org.organization_id,
+        export_all=True,
+    )
+
+    assert _ids(rows) == {agreement.allocation_agreement_id for agreement in expected}
+    assert total == 3
+
+
 @pytest.mark.parametrize(
     "field", sorted(AllocationAgreementRepository._index_columns())
 )

@@ -159,6 +159,23 @@ async def get_allocation_agreements_index(
 
 
 @router.post(
+    "/index/export",
+    response_model=AllocationAgreementIndexResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def export_allocation_agreements_index(
+    request: Request,
+    request_data: AllocationAgreementIndexRequestSchema = Body(...),
+    service: AllocationAgreementServices = Depends(),
+) -> AllocationAgreementIndexResponseSchema:
+    """Return every matching index row for the Excel download."""
+    return await service.get_allocation_agreements_index(
+        request_data, export_all=True
+    )
+
+
+@router.post(
     "/save",
     status_code=status.HTTP_200_OK,
 )
