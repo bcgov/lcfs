@@ -2,10 +2,10 @@
   {
     "version": "1.3.13",
     "tag": "v1.3.13",
-    "date": "2026-11-20",
+    "date": "2026-11-26",
     "releaseUrl": "https://github.com/bcgov/lcfs/releases/tag/v1.3.13",
     "fullChangelogUrl": "https://github.com/bcgov/lcfs/compare/v1.3.12...v1.3.13",
-    "summary": "This release includes 11 new features, 11 bug fixes, 3 dependency updates and 25 other changes. Highlights: LCJFIP security groups; Upload utility document deletion and restore; Add allocation agreements index page; Add comments and attachments to organization penalty log.",
+    "summary": "This release includes 11 new features, 11 bug fixes, 3 dependency updates and 27 other changes. Highlights: LCJFIP security groups; Upload utility document deletion and restore; Add allocation agreements index page; Add comments and attachments to organization penalty log.",
     "sections": {
       "features": [
         "LCFS - LCJFIP security groups",
@@ -55,9 +55,9 @@
         "Test Release v1.3.12+2",
         "LCFS - CI application changes requested (#4830)",
         "Add query timeouts and connection pool monitoring - 4100",
-        "TS migration PR 03/44: Theme overrides and entry point",
-        "TS migration PR 04/44: Utilities",
-        "TS migration PR 05/44: Shared UI primitives",
+        "TS Migration 03/44: Theme overrides and entry point",
+        "TS Migration 04/44: General utilities",
+        "TS Migration 05/44: Shared UI primitives",
         "🧪 Experimental: Add isolated local Keycloak stacks for parallel development",
         "remove local Keycloak PR checks",
         "carry local files into worktrees",
@@ -65,7 +65,9 @@
         "Fix user activity filters for compliance reports",
         "Address internal tech debt - 5426",
         "LCFS - Make maintenance jobs and the audit username safe under PgBouncer transaction pooling",
-        "TS migration PR 06/44: Authentication and authorization"
+        "TS Migration 06/44: Authentication and authorization",
+        "Test Release v1.3.13",
+        "Fix renewable fuel summary editing limits"
       ]
     },
     "contributors": []
