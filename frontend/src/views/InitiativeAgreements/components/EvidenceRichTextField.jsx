@@ -4,7 +4,7 @@ import Box from '@mui/material/Box'
 import IconButton from '@mui/material/IconButton'
 import EditIcon from '@mui/icons-material/Edit'
 import ReactQuill from 'react-quill-new'
-import '@dotwee/quill/dist/quill.snow.css'
+import 'quill-next/dist/quill.snow.css'
 
 import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'

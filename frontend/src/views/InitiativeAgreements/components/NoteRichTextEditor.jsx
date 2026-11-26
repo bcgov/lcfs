@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import ReactQuill from 'react-quill-new'
-import '@dotwee/quill/dist/quill.snow.css'
+import 'quill-next/dist/quill.snow.css'
 
 import BCBox from '@/components/BCBox'
 

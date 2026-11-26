@@ -20,14 +20,23 @@ test('spreadsheet support uses the patched SheetJS vendor build', () => {
   )
 })
 
-test('rich text editor uses the maintained React wrapper and patched Quill fork', () => {
+test('rich text editor resolves Quill Next through the maintained React wrapper', () => {
   assert.ok(packageJson.dependencies['react-quill-new'])
   assert.equal(packageJson.dependencies['react-quill'], undefined)
-  assert.equal(packageJson.dependencies['@dotwee/quill'], '2.0.9')
-  assert.equal(packageJson.overrides.quill, 'npm:@dotwee/quill@2.0.9')
+  assert.equal(packageJson.dependencies.quill, 'npm:quill-next@2.2.6')
+  assert.equal(packageJson.dependencies['quill-next'], '2.2.6')
   assert.equal(
-    lock.packages['node_modules/react-quill-new/node_modules/quill'].version,
-    '2.0.9'
+    packageJson.overrides['react-quill-new'].quill,
+    'npm:quill-next@2.2.6'
+  )
+  assert.equal(lock.packages['node_modules/quill'].version, '2.2.6')
+  assert.match(
+    lock.packages['node_modules/quill'].resolved,
+    /quill-next-2\.2\.6\.tgz$/
   )
   assert.equal(lock.packages['node_modules/react-quill'], undefined)
+  assert.equal(
+    lock.packages['node_modules/react-quill-new/node_modules/quill'],
+    undefined
+  )
 })
