@@ -1,10 +1,11 @@
 """Data access for LCJFIP applications (#5532)."""
 
+import re
 from datetime import date
-from typing import List, Optional, Sequence
+from typing import List, Optional, Sequence, Tuple
 
 from fastapi import Depends
-from sqlalchemy import delete, or_, select
+from sqlalchemy import String, and_, asc, cast, delete, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -22,6 +23,7 @@ from lcfs.db.models.lcjfip import (
     LCJFIPApplicationHistory,
     LCJFIPApplicationPeriod,
     LCJFIPApplicationStatus,
+    LCJFIPApplicationStatusEnum,
     LCJFIPCarType,
     LCJFIPCertificateType,
     LCJFIPFeedstockSource,
@@ -35,11 +37,75 @@ from lcfs.db.models.organization.OrganizationStatus import (
     OrganizationStatus,
     OrgStatusEnum,
 )
+from lcfs.db.models.user.UserProfile import UserProfile
+from lcfs.web.api.base import PaginationRequestSchema, apply_filter_conditions
 from lcfs.web.core.decorators import repo_handler
 
 # The fuel type of low carbon jet fuel. Fuel codes of other jet-category fuel
 # types (electricity, hydrogen, fossil jet fuel) are not LCJF.
 LCJF_FUEL_TYPE = "Alternative jet fuel"
+
+# ---------------------------------------------------------------------------
+# Applications index (#5541)
+# ---------------------------------------------------------------------------
+
+
+# Grid fields, after FilterModel/SortOrder turn them into snake_case, mapped
+# to the columns they filter and sort. Fields not listed here are ignored.
+_STATUS = LCJFIPApplicationStatus.status
+_ORGANIZATION_NAME = Organization.name
+_CONTACT_NAME = func.concat_ws(" ", UserProfile.first_name, UserProfile.last_name)
+# Submission is stored in UTC; the grid shows and filters the Pacific date.
+_SUBMITTED_LOCAL = func.timezone("America/Vancouver", LCJFIPApplication.signed_date)
+
+_LIST_COLUMNS = {
+    "status": _STATUS,
+    "application_number": LCJFIPApplication.lcjfip_application_id,
+    "organization_name": _ORGANIZATION_NAME,
+    "contact_name": _CONTACT_NAME,
+    "submitted_date": _SUBMITTED_LOCAL,
+}
+
+
+def _filter_value(filter_model):
+    if filter_model.filter_type == "set":
+        return filter_model.values or []
+    if filter_model.filter_type == "date":
+        if filter_model.type == "inRange":
+            return [
+                filter_model.date_from,
+                filter_model.date_to or filter_model.date_from,
+            ]
+        return filter_model.filter or filter_model.date_from
+    return filter_model.filter
+
+
+def _list_condition(filter_model):
+    """One grid filter as a SQL condition, or None to ignore it."""
+    field = filter_model.field
+    if field not in _LIST_COLUMNS:
+        return None
+    value = _filter_value(filter_model)
+    if value in (None, "", []):
+        return None
+    if field == "application_number":
+        # "JF-12", "jf12" and "12" all mean application 12.
+        digits = re.sub(r"\D", "", str(value))
+        if not digits:
+            return None
+        return apply_filter_conditions(
+            cast(LCJFIPApplication.lcjfip_application_id, String),
+            digits,
+            filter_model.type,
+            "text",
+        )
+    if field == "submitted_date":
+        return apply_filter_conditions(
+            _SUBMITTED_LOCAL, value, filter_model.type, "date"
+        )
+    return apply_filter_conditions(
+        _LIST_COLUMNS[field], value, filter_model.type, filter_model.filter_type
+    )
 
 
 class LCJFIPRepository:
@@ -199,13 +265,89 @@ class LCJFIPRepository:
             )
 
     @repo_handler
-    async def list_for_organization(
-        self, organization_id: int
-    ) -> List[LCJFIPApplication]:
+    async def list_paginated(
+        self,
+        pagination: PaginationRequestSchema,
+        organization_id: Optional[int] = None,
+        exclude_draft: bool = False,
+    ) -> Tuple[List[Tuple[LCJFIPApplication, str, Optional[str], str]], int]:
+        """
+        A page of applications for the index grid, with the total count.
+
+        Each row is (application, status, organization name, contact name).
+        organization_id limits the rows to one organization (BCeID users);
+        exclude_draft leaves Drafts out (government users).
+        """
+        query = (
+            select(
+                LCJFIPApplication,
+                _STATUS.label("status_name"),
+                _ORGANIZATION_NAME.label("organization_name"),
+                _CONTACT_NAME.label("contact_name"),
+            )
+            .join(LCJFIPApplication.status)
+            .outerjoin(
+                Organization,
+                Organization.organization_id == LCJFIPApplication.organization_id,
+            )
+            .outerjoin(
+                UserProfile,
+                UserProfile.user_profile_id
+                == LCJFIPApplication.contact_user_profile_id,
+            )
+        )
+        conditions = []
+        if organization_id is not None:
+            conditions.append(LCJFIPApplication.organization_id == organization_id)
+        if exclude_draft:
+            conditions.append(_STATUS != LCJFIPApplicationStatusEnum.Draft.value)
+        for filter_model in pagination.filters:
+            condition = _list_condition(filter_model)
+            if condition is not None:
+                conditions.append(condition)
+        if conditions:
+            query = query.where(and_(*conditions))
+
+        order_by = []
+        for order in pagination.sort_orders:
+            column = _LIST_COLUMNS.get(order.field)
+            if column is not None:
+                order_by.append(
+                    desc(column).nulls_last()
+                    if order.direction.lower() == "desc"
+                    else asc(column).nulls_last()
+                )
+        if not order_by:
+            order_by = [desc(LCJFIPApplication.update_date)]
+        # A unique tiebreaker keeps rows from repeating or vanishing across
+        # pages when the sort column ties.
+        order_by.append(desc(LCJFIPApplication.lcjfip_application_id))
+
+        total = (
+            await self.db.execute(
+                select(func.count()).select_from(
+                    query.with_only_columns(
+                        LCJFIPApplication.lcjfip_application_id
+                    ).subquery()
+                )
+            )
+        ).scalar_one()
+
         result = await self.db.execute(
-            select(LCJFIPApplication)
-            .where(LCJFIPApplication.organization_id == organization_id)
-            .order_by(LCJFIPApplication.lcjfip_application_id.desc())
+            query.options(selectinload(LCJFIPApplication.incentive_option))
+            .order_by(*order_by)
+            .offset((pagination.page - 1) * pagination.size)
+            .limit(pagination.size)
+        )
+        return [tuple(row) for row in result.all()], total
+
+    @repo_handler
+    async def get_statuses(self) -> List[LCJFIPApplicationStatus]:
+        result = await self.db.execute(
+            select(LCJFIPApplicationStatus).order_by(
+                LCJFIPApplicationStatus.display_order,
+                LCJFIPApplicationStatus.status,
+            )
         )
         return list(result.scalars().all())
 

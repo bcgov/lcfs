@@ -77,6 +77,8 @@ export const apiRoutes = {
   getInitiativeAgreementsList: '/initiative-agreements/list',
   createAgreement: '/initiative-agreements/agreements',
   updateAgreement: '/initiative-agreements/agreements/:initiativeAgreementId',
+  setAgreementUnderway:
+    '/initiative-agreements/agreements/:initiativeAgreementId/underway',
   getInitiativeAgreementStatuses: '/initiative-agreements/statuses',
   getInitiativeAgreement:
     '/initiative-agreements/:initiativeAgreementId/profile',
@@ -146,6 +148,8 @@ export const apiRoutes = {
   lcjfipReferenceData: '/lcjfip/reference-data',
   lcjfipFuelCodes: '/lcjfip/fuel-codes',
   lcjfipApplications: '/lcjfip/applications',
+  lcjfipApplicationsList: '/lcjfip/applications/list',
+  lcjfipStatuses: '/lcjfip/statuses',
   lcjfipApplication: '/lcjfip/applications/:applicationId',
   submitLcjfipApplication: '/lcjfip/applications/:applicationId/submit',
 

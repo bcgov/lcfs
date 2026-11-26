@@ -263,9 +263,9 @@ class InternalCommentService:
         self, entity_type: EntityTypeEnum, entity_id: int
     ) -> None:
         """
-        A proponent's unsubmitted draft agreement is hidden from government
-        (#5186). Its comment thread, and those of its designated actions,
-        read as missing, like the agreement itself.
+        A draft agreement that government is still preparing is hidden from
+        the organization (#5553). Its comment thread, and those of its
+        designated actions, read as missing, like the agreement itself.
         """
         # Imported here: the initiative agreement package imports this
         # service, so a module-level import would be circular.
@@ -300,7 +300,7 @@ class InternalCommentService:
     async def require_visible_comment(self, internal_comment_id: int) -> None:
         """
         A comment on a draft agreement, or on one of its designated actions,
-        reads as missing to government (#5186), like its thread.
+        reads as missing outside government (#5553), like its thread.
         """
         from lcfs.web.api.initiative_agreement.workflow import is_hidden_from
 
@@ -1007,7 +1007,8 @@ class InternalCommentService:
             search=filters.search,
             sort_by=filters.sort_by.value,
             sort_order=filters.sort_order.value,
-            # A draft agreement's comments are hidden from government (#5186).
+            # A draft agreement's comments are hidden from the organization
+            # (#5553).
             hidden_lifecycle_statuses=tuple(hidden_lifecycle_statuses(current_user)),
         )
 

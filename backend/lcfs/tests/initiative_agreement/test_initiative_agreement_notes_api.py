@@ -335,9 +335,11 @@ async def test_proponents_cannot_see_or_touch_notes(
 
 
 @pytest.mark.anyio
-async def test_notes_of_a_draft_or_missing_agreement_read_as_not_found(
+async def test_notes_are_kept_on_a_draft_and_a_missing_agreement_is_not_found(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
+    """A draft is government's own preparation (#5553), so its notes are
+    written while it is prepared."""
     draft = await _agreement(
         dbsession,
         "IA-26NOTE12",
@@ -348,7 +350,7 @@ async def test_notes_of_a_draft_or_missing_agreement_read_as_not_found(
     on_draft = await _add(client, fastapi_app, draft)
     missing = await client.get("/api/initiative-agreements/999999/notes")
 
-    assert on_draft.status_code == status.HTTP_404_NOT_FOUND
+    assert on_draft.status_code == status.HTTP_201_CREATED, on_draft.text
     assert missing.status_code == status.HTTP_404_NOT_FOUND
 
 
