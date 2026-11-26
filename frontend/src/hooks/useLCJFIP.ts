@@ -1,7 +1,7 @@
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { QueryOptions } from './types'
+import type { PaginationParams, QueryOptions } from './types'
 
 // Low carbon jet fuel incentive program (LCJFIP) application API (#5532).
 
@@ -90,13 +90,29 @@ export type LCJFIPApplication = {
   updateDate: string | null
 }
 
+/** One row of the applications index (#5541). */
 export type LCJFIPApplicationListItem = {
   lcjfipApplicationId: number
   applicationNumber: string
   status: string
-  signedDate: string | null
-  createDate: string | null
+  organizationName: string | null
+  contactName: string | null
+  submittedDate: string | null
+  incentiveType: 'Cash' | 'Credit' | null
+  // Empty until the award (#5284) and disbursement (#5285, #5286) stories.
+  incentiveAwardDate: string | null
+  authorizedDisbursement: number | null
   updateDate: string | null
+}
+
+export type LCJFIPApplicationsPage = {
+  applications: LCJFIPApplicationListItem[]
+  pagination: {
+    total: number
+    page: number
+    size: number
+    totalPages: number
+  }
 }
 
 export type LCJFIPApplicationPayload = {
@@ -123,7 +139,10 @@ export type LCJFIPDeclarations = {
 export const LCJFIP_QUERY_KEYS = {
   referenceData: ['lcjfip-reference-data'],
   fuelCodes: ['lcjfip-fuel-codes'],
+  // The index pages share this prefix, so invalidating it refreshes all.
   list: ['lcjfip-applications'],
+  page: (pagination: PaginationParams) => ['lcjfip-applications', pagination],
+  statuses: ['lcjfip-statuses'],
   detail: (id: number | string) => ['lcjfip-application', String(id)]
 }
 
@@ -158,15 +177,42 @@ export const useLCJFIPFuelCodes = (
   })
 }
 
+/** A page of the applications index, filtered and sorted on the server. */
 export const useLCJFIPApplications = (
-  options: QueryOptions<LCJFIPApplicationListItem[]> = {}
+  { page = 1, size = 10, sortOrders = [], filters = [] }: PaginationParams = {},
+  options: QueryOptions<LCJFIPApplicationsPage> = {}
 ) => {
   const client = useApiService()
   return useQuery({
-    queryKey: LCJFIP_QUERY_KEYS.list,
+    queryKey: LCJFIP_QUERY_KEYS.page({ page, size, sortOrders, filters }),
     queryFn: async () =>
-      (await client.get(apiRoutes.lcjfipApplications))
-        .data as LCJFIPApplicationListItem[],
+      (
+        await client.post(apiRoutes.lcjfipApplicationsList, {
+          page,
+          size,
+          sortOrders,
+          filters
+        })
+      ).data as LCJFIPApplicationsPage,
+    ...options
+  })
+}
+
+/**
+ * Statuses for the index's status filter: the ones the user can see (no
+ * Draft for government users), as { status } options.
+ */
+export const useLCJFIPStatuses = (
+  options: QueryOptions<{ status: string }[]> = {}
+) => {
+  const client = useApiService()
+  return useQuery({
+    queryKey: LCJFIP_QUERY_KEYS.statuses,
+    queryFn: async () =>
+      ((await client.get(apiRoutes.lcjfipStatuses)).data as string[]).map(
+        (status) => ({ status })
+      ),
+    staleTime: 60 * 60 * 1000,
     ...options
   })
 }

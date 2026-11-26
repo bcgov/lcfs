@@ -24,9 +24,15 @@ from lcfs.db.models.lcjfip import (
 from lcfs.utils.dates import to_pacific_date
 from lcfs.web.api.lcjfip import calculations
 from lcfs.web.api.lcjfip.repo import LCJFIPRepository
+from lcfs.web.api.base import (
+    PaginationRequestSchema,
+    PaginationResponseSchema,
+    calculate_total_pages,
+)
 from lcfs.web.api.lcjfip.schema import (
     LCJFIPApplicationListItemSchema,
     LCJFIPApplicationSaveSchema,
+    LCJFIPApplicationsListSchema,
     LCJFIPApplicationSchema,
     LCJFIPContactSchema,
     LCJFIPFuelCodeOptionSchema,
@@ -38,6 +44,7 @@ from lcfs.web.api.lcjfip.schema import (
     LCJFIPPurchaseDetailSchema,
     LCJFIPReferenceDataSchema,
     LCJFIPSubmitSchema,
+    application_number,
 )
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import ValidationErrorException
@@ -193,18 +200,53 @@ class LCJFIPServices:
 
     @service_handler
     async def list_applications(
-        self, organization_id: int
-    ) -> List[LCJFIPApplicationListItemSchema]:
-        return [
+        self,
+        pagination: PaginationRequestSchema,
+        organization_id: Optional[int],
+        exclude_draft: bool,
+    ) -> LCJFIPApplicationsListSchema:
+        """A page of the applications index (#5541)."""
+        rows, total = await self.repo.list_paginated(
+            pagination, organization_id=organization_id, exclude_draft=exclude_draft
+        )
+        applications = [
             LCJFIPApplicationListItemSchema(
                 lcjfip_application_id=application.lcjfip_application_id,
-                application_number=f"LCJFIP-{application.lcjfip_application_id}",
-                status=application.status.status,
-                signed_date=application.signed_date,
-                create_date=application.create_date,
+                application_number=application_number(
+                    application.lcjfip_application_id
+                ),
+                status=status_name,
+                organization_name=organization_name,
+                contact_name=contact_name or None,
+                submitted_date=application.signed_date,
+                incentive_type=(
+                    application.incentive_option.incentive_type.value
+                    if application.incentive_option
+                    else None
+                ),
                 update_date=application.update_date,
             )
-            for application in await self.repo.list_for_organization(organization_id)
+            for application, status_name, organization_name, contact_name in rows
+        ]
+        return LCJFIPApplicationsListSchema(
+            applications=applications,
+            pagination=PaginationResponseSchema(
+                total=total,
+                page=pagination.page,
+                size=pagination.size,
+                total_pages=calculate_total_pages(total, pagination.size),
+            ),
+        )
+
+    @service_handler
+    async def get_statuses(self, exclude_draft: bool) -> List[str]:
+        """Statuses for the index's status filter, in workflow order."""
+        return [
+            row.status
+            for row in await self.repo.get_statuses()
+            if not (
+                exclude_draft and row.status == LCJFIPApplicationStatusEnum.Draft.value
+            )
         ]
 
     @service_handler
@@ -234,7 +276,7 @@ class LCJFIPServices:
         supplier = application.fuel_supplier_organization
         return LCJFIPApplicationSchema(
             lcjfip_application_id=application.lcjfip_application_id,
-            application_number=f"LCJFIP-{application.lcjfip_application_id}",
+            application_number=application_number(application.lcjfip_application_id),
             status=application.status.status,
             organization=_to_org_info(application.organization),
             contact=(

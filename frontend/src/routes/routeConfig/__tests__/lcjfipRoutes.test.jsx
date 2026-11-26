@@ -5,13 +5,18 @@ import { afterEach, describe, expect, vi } from 'vite-plus/test'
 import { CONFIG, FEATURE_FLAGS } from '@/constants/config'
 import { roles } from '@/constants/roles'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useLCJFIPApplications } from '@/hooks/useLCJFIP'
 import ROUTES from '@/routes/routes'
 import { test } from '@/tests/utils/fixtures'
 import { lcjfipRoutes } from '../lcjfipRoutes'
 
 vi.mock('@/hooks/useCurrentUser')
+vi.mock('@/hooks/useLCJFIP')
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
+  BCGridViewer: () => <div data-test="lcjfip-grid" />
+}))
 
-const PAGE_TITLE = 'Low carbon jet fuel incentive program (LCJFIP)'
+const PAGE_TITLE = 'Low carbon jet fuel incentive program (LCJFIP) application'
 const initialFlag = CONFIG.feature_flags.lcjfip
 
 const renderRoute = (render, { router, theme, i18n }) => {
@@ -30,12 +35,12 @@ describe('lcjfipRoutes', () => {
     CONFIG.feature_flags.lcjfip = initialFlag
   })
 
-  test('serves the page under Jet fuel, titled LCJFIP for the breadcrumb', () => {
+  test('serves the index under Jet fuel, crumbed as in the mock-up (#5541)', () => {
     expect(FEATURE_FLAGS.LCJFIP).toBe('lcjfip')
     const [route] = lcjfipRoutes
     expect(route.path).toBe('/jet-fuel/lcjfip')
-    expect(route.handle.title).toBe('LCJFIP')
-    expect(route.handle.crumb()).toBe('LCJFIP')
+    expect(route.handle.title).toBe('LCJFIP application')
+    expect(route.handle.crumb()).toBe('LCJFIP application')
   })
 
   test('serves the application form, titled for the breadcrumb (#5532)', () => {
@@ -61,6 +66,11 @@ describe('lcjfipRoutes', () => {
     i18n
   }) => {
     CONFIG.feature_flags.lcjfip = true
+    vi.mocked(useLCJFIPApplications).mockReturnValue({
+      data: { applications: [], pagination: {} },
+      isLoading: false,
+      isError: false
+    })
     vi.mocked(useCurrentUser).mockReturnValue({
       data: { isGovernmentUser: true, roles: [{ name: roles.director }] }
     })

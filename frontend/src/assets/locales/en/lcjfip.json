@@ -1,14 +1,20 @@
 {
   "programEmail": "strategicinvestment.lcfs@gov.bc.ca",
-  "landing": {
-    "applicationsHeading": "Your applications",
-    "newApplication": "New application",
+  "index": {
+    "title": "Low carbon jet fuel incentive program (LCJFIP) application",
+    "newApplication": "New LCJFIP application",
     "noApplications": "Your organization has not started an LCJFIP application.",
-    "applicationColumn": "Application",
-    "statusColumn": "Status",
-    "lastUpdatedColumn": "Last updated",
-    "submittedColumn": "Submitted",
-    "loadError": "The applications could not be loaded."
+    "noSubmittedApplications": "No LCJFIP applications have been submitted.",
+    "loadError": "The applications could not be loaded.",
+    "columns": {
+      "status": "Status",
+      "applicationNumber": "Application ID",
+      "organization": "Organization",
+      "contact": "Contact",
+      "submittedDate": "Submission date",
+      "incentiveAwardDate": "Incentive award date",
+      "authorizedDisbursement": "Authorized disbursement"
+    }
   },
   "applicationTitle": "Low carbon jet fuel incentive program (LCJFIP) application",
   "steps": {
