@@ -16,46 +16,120 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 import { defaultColDef, fuelExportColDefs } from './_schema'
 import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
+import type { FloatingAlertHandle } from '@/components/BCAlert/FloatingAlert'
+import type {
+  BCGridEditContext,
+  BCGridRow,
+  BCGridRef
+} from '@/components/BCDataGrid/types'
+import type { GridErrors, GridWarnings, OptionsData } from '@/types/schema'
+import type { ScheduleGridParams } from '@/utils/schedules'
+import type {
+  CellValueChangedEvent,
+  ColDef,
+  FirstDataRenderedEvent,
+  GridOptions,
+  GridReadyEvent
+} from 'ag-grid-community'
+
+interface FuelExportRow extends BCGridRow {
+  id?: string | number
+  complianceReportId?: string | number
+  compliancePeriod?: string
+  isNewSupplementalEntry?: boolean
+  validationStatus?: string
+  [key: string]: unknown
+}
+
+interface FuelExportRelation {
+  category?: unknown
+  fuelType?: unknown
+  name?: unknown
+  fuelCode?: unknown
+  type?: unknown
+}
+
+interface FuelExportRecord extends BCGridRow {
+  complianceReportId?: number | string
+  ciOfFuel?: number | null
+  fuelCategory?: FuelExportRelation | string | null
+  fuelType?: FuelExportRelation | string | null
+  provisionOfTheAct?: FuelExportRelation | string | null
+  fuelCode?: FuelExportRelation | string | null
+  endUse?: FuelExportRelation | string | null
+}
+
+interface FuelExportData {
+  fuelExports: FuelExportRecord[]
+}
+
+const isScheduleGridParams = (
+  params: unknown
+): params is ScheduleGridParams<FuelExportRow> =>
+  typeof params === 'object' &&
+  params !== null &&
+  'node' in params &&
+  'api' in params
+
+const relationValue = (
+  value: unknown,
+  key: 'category' | 'fuelType' | 'name' | 'fuelCode' | 'type'
+): unknown => {
+  if (typeof value !== 'object' || value === null) return undefined
+  const relation = value as Record<string, unknown>
+  return relation[key]
+}
 
 export const AddEditFuelExports = () => {
-  const [rowData, setRowData] = useState([])
-  const gridRef = useRef(null)
+  const [rowData, setRowData] = useState<FuelExportRow[]>([])
+  const gridRef = useRef<BCGridRef['current']>(null)
 
-  const [errors, setErrors] = useState({})
-  const [warnings, setWarnings] = useState({})
-  const [columnDefs, setColumnDefs] = useState([])
+  const [errors, setErrors] = useState<GridErrors>({})
+  const [warnings, setWarnings] = useState<GridWarnings>({})
+  const [columnDefs, setColumnDefs] = useState<ColDef<BCGridRow>[]>([])
   const [gridReady, setGridReady] = useState(false)
-  const alertRef = useRef()
+  const alertRef = useRef<FloatingAlertHandle>(null)
   // Pending grid timers, cleared on unmount. `onGridReady` is invoked by the
   // grid asynchronously and can land after unmount, so clearing alone is not
   // enough — isMountedRef also stops a late call scheduling a fresh timer.
   // Without both, the queued callback calls setState against a torn-down
   // environment ("window is not defined").
-  const gridTimersRef = useRef([])
+  const gridTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
   const isMountedRef = useRef(true)
   const location = useLocation()
   const { t } = useTranslation(['common', 'fuelExport'])
-  const params = useParams()
-  const { complianceReportId, compliancePeriod } = params
+  const { complianceReportId, compliancePeriod } = useParams<{
+    complianceReportId: string
+    compliancePeriod: string
+  }>()
   const navigate = useNavigate()
-  const { data: currentReport, isLoading } =
-    useComplianceReportWithCache(complianceReportId)
+  const { data: currentReport, isLoading } = useComplianceReportWithCache(
+    complianceReportId!
+  )
 
   const isSupplemental = currentReport?.report?.version !== 0
 
   const {
-    data: optionsData,
+    data: rawOptionsData,
     isLoading: optionsLoading,
     isFetched
   } = useFuelExportOptions({ compliancePeriod })
-  const { mutateAsync: saveRow } = useSaveFuelExport({ complianceReportId })
-
-  const { data, isLoading: fuelExportsLoading } = useGetFuelExportsList({
-    complianceReportId,
-    changelog: isSupplemental
+  const optionsData = rawOptionsData as OptionsData | undefined
+  const { mutateAsync: saveRow } = useSaveFuelExport({
+    complianceReportId: complianceReportId!
   })
 
-  const gridOptions = useMemo(
+  const { data: rawFuelExportsData, isLoading: fuelExportsLoading } =
+    useGetFuelExportsList(
+      {
+        complianceReportId,
+        changelog: isSupplemental
+      },
+      {}
+    )
+  const data = rawFuelExportsData as FuelExportData | undefined
+
+  const gridOptions = useMemo<GridOptions<BCGridRow>>(
     () => ({
       overlayNoRowsTemplate: t('fuelExport:noFuelExportsFound'),
       stopEditingWhenCellsLoseFocus: false,
@@ -79,21 +153,21 @@ export const AddEditFuelExports = () => {
   }, [location.state])
 
   const onGridReady = useCallback(
-    async (params) => {
+    async (params: GridReadyEvent<BCGridRow>) => {
       if (!isMountedRef.current) return
       if (!isArrayEmpty(data)) {
-        const updatedRowData = data.fuelExports.map((item) => ({
+        const updatedRowData = data!.fuelExports.map((item) => ({
           ...item,
           ciOfFuel: item.ciOfFuel,
           complianceReportId,
           compliancePeriod,
-          fuelCategory: item.fuelCategory?.category,
-          fuelType: item.fuelType?.fuelType,
-          provisionOfTheAct: item.provisionOfTheAct?.name,
-          fuelCode: item.fuelCode?.fuelCode,
-          endUse: item.endUse?.type,
+          fuelCategory: relationValue(item.fuelCategory, 'category'),
+          fuelType: relationValue(item.fuelType, 'fuelType'),
+          provisionOfTheAct: relationValue(item.provisionOfTheAct, 'name'),
+          fuelCode: relationValue(item.fuelCode, 'fuelCode'),
+          endUse: relationValue(item.endUse, 'type'),
           isNewSupplementalEntry:
-            isSupplemental && item.complianceReportId === +complianceReportId,
+            isSupplemental && item.complianceReportId === +complianceReportId!,
           id: uuid()
         }))
         setRowData([
@@ -129,14 +203,13 @@ export const AddEditFuelExports = () => {
   }, [])
 
   useEffect(() => {
-    if (optionsData?.fuelTypes?.length > 0) {
+    if (optionsData?.fuelTypes && optionsData.fuelTypes.length > 0) {
       const updatedColumnDefs = fuelExportColDefs(
         optionsData,
         errors,
         warnings,
         gridReady,
-        isSupplemental,
-        compliancePeriod
+        isSupplemental
       )
       setColumnDefs(updatedColumnDefs)
     }
@@ -151,17 +224,17 @@ export const AddEditFuelExports = () => {
 
   useEffect(() => {
     if (!fuelExportsLoading && !isArrayEmpty(data)) {
-      const updatedRowData = data.fuelExports.map((item) => ({
+      const updatedRowData = data!.fuelExports.map((item) => ({
         ...item,
         complianceReportId,
         compliancePeriod,
-        fuelCategory: item.fuelCategory?.category,
-        fuelType: item.fuelType?.fuelType,
-        provisionOfTheAct: item.provisionOfTheAct?.name,
-        fuelCode: item.fuelCode?.fuelCode,
-        endUse: item.endUse?.type,
+        fuelCategory: relationValue(item.fuelCategory, 'category'),
+        fuelType: relationValue(item.fuelType, 'fuelType'),
+        provisionOfTheAct: relationValue(item.provisionOfTheAct, 'name'),
+        fuelCode: relationValue(item.fuelCode, 'fuelCode'),
+        endUse: relationValue(item.endUse, 'type'),
         isNewSupplementalEntry:
-          isSupplemental && item.complianceReportId === +complianceReportId,
+          isSupplemental && item.complianceReportId === +complianceReportId!,
         id: uuid()
       }))
       setRowData([
@@ -179,15 +252,19 @@ export const AddEditFuelExports = () => {
     isSupplemental
   ])
 
-  const onFirstDataRendered = useCallback((params) => {
-    params.api?.autoSizeAllColumns?.({ scaleUpToFitGridWidth: true })
-  }, [])
+  const onFirstDataRendered = useCallback(
+    (params: FirstDataRenderedEvent<BCGridRow>) => {
+      params.api?.autoSizeAllColumns?.({ scaleUpToFitGridWidth: true })
+    },
+    []
+  )
 
   const onCellValueChanged = useCallback(
-    async (params) => {
-      if (params.column.colId === 'fuelTypeId') {
+    async (params: CellValueChangedEvent<BCGridRow>) => {
+      if (!params.data) return
+      if (params.column.getColId() === 'fuelTypeId') {
         const selectedFuelType = optionsData?.fuelTypes?.find(
-          (obj) => params.node.data.fuelType === obj.fuelType
+          (obj) => params.data?.fuelType === obj.fuelType
         )
         if (selectedFuelType) {
           const fuelCategoryOptions = selectedFuelType.fuelCategories.map(
@@ -213,9 +290,9 @@ export const AddEditFuelExports = () => {
         }
       }
 
-      if (params.column.colId === 'fuelCategory') {
+      if (params.column.getColId() === 'fuelCategory') {
         const selectedFuelType = optionsData?.fuelTypes?.find(
-          (obj) => params.node.data.fuelType === obj.fuelType
+          (obj) => params.data?.fuelType === obj.fuelType
         )
 
         if (selectedFuelType) {
@@ -247,7 +324,7 @@ export const AddEditFuelExports = () => {
         'exportDate'
       ]
 
-      if (recalcFields.includes(params.column.colId)) {
+      if (recalcFields.includes(params.column.getColId())) {
         // remove the stored value so the getter recalculates
         params.node.setDataValue('ciOfFuel', null)
 
@@ -263,11 +340,12 @@ export const AddEditFuelExports = () => {
   )
 
   const onCellEditingStopped = useCallback(
-    async (params) => {
+    async (params: BCGridEditContext<BCGridRow>) => {
+      if (!params.data) return
       if (params.oldValue === params.newValue) return
 
       params.node.updateData({
-        ...params.node.data,
+        ...(params.node.data ?? params.data),
         validationStatus: 'pending'
       })
 
@@ -277,20 +355,34 @@ export const AddEditFuelExports = () => {
       })
 
       // clean up any null or empty string values
-      let updatedData = Object.entries(params.node.data)
-        .filter(([, value]) => value !== null && value !== '')
-        .reduce((acc, [key, value]) => {
-          acc[key] = value
-          return acc
-        }, {})
+      const updatedData: BCGridRow = {}
+      Object.entries(params.node.data ?? params.data).forEach(
+        ([key, value]) => {
+          if (value !== null && value !== '') updatedData[key] = value
+        }
+      )
 
       updatedData.compliancePeriod = compliancePeriod
 
-      updatedData = await handleScheduleSave({
+      const savedData = await handleScheduleSave({
         alertRef,
         idField: 'fuelExportId',
         labelPrefix: 'fuelExport:fuelExportColLabels',
-        params,
+        params: {
+          node: {
+            data: params.data,
+            updateData: (row) => params.node.updateData(row)
+          },
+          api: {
+            forEachNode: (callback) =>
+              params.api.forEachNode((node) =>
+                callback({
+                  data: node.data ?? {},
+                  updateData: (row) => node.updateData(row)
+                })
+              )
+          }
+        },
         setErrors,
         setWarnings,
         saveRow,
@@ -298,44 +390,49 @@ export const AddEditFuelExports = () => {
         updatedData
       })
 
-      updatedData = {
-        ...updatedData,
-        fuelType: updatedData.fuelType?.fuelType ?? updatedData.fuelType,
+      const normalizedData: FuelExportRow = {
+        ...savedData,
+        fuelType:
+          relationValue(savedData.fuelType, 'fuelType') ?? savedData.fuelType,
         fuelCategory:
-          updatedData.fuelCategory?.category ?? updatedData.fuelCategory,
+          relationValue(savedData.fuelCategory, 'category') ??
+          savedData.fuelCategory,
         provisionOfTheAct:
-          updatedData.provisionOfTheAct?.name ?? updatedData.provisionOfTheAct,
-        fuelCode: updatedData.fuelCode?.fuelCode ?? updatedData.fuelCode,
-        endUseType: updatedData.endUse?.type ?? updatedData.endUseType
+          relationValue(savedData.provisionOfTheAct, 'name') ??
+          savedData.provisionOfTheAct,
+        fuelCode:
+          relationValue(savedData.fuelCode, 'fuelCode') ?? savedData.fuelCode,
+        endUseType:
+          relationValue(savedData.endUse, 'type') ?? savedData.endUseType
       }
 
-      params.node.updateData(updatedData)
+      params.node.updateData(normalizedData)
     },
     [saveRow, t, compliancePeriod]
   )
 
-  const onAction = async (action, params) => {
-    if (action === 'delete' || action === 'undo') {
-      await handleScheduleDelete(
-        params,
-        'fuelExportId',
-        saveRow,
-        alertRef,
-        setRowData,
-        {
-          complianceReportId,
-          compliancePeriod
-        },
-        'fuelTypeId' // First editable column for focus after clearing
-      )
-    }
+  const onAction = async (action: string, params?: unknown) => {
+    if (action !== 'delete' && action !== 'undo') return
+    if (!isScheduleGridParams(params)) return
+    await handleScheduleDelete(
+      params,
+      'fuelExportId',
+      saveRow,
+      alertRef,
+      setRowData,
+      {
+        complianceReportId,
+        compliancePeriod
+      },
+      'fuelTypeId' // First editable column for focus after clearing
+    )
   }
 
   const handleNavigateBack = useCallback(() => {
     navigate(
       buildPath(ROUTES.REPORTS.VIEW, {
-        compliancePeriod,
-        complianceReportId
+        compliancePeriod: compliancePeriod!,
+        complianceReportId: complianceReportId!
       }),
       {
         state: {

@@ -34,16 +34,24 @@ const setupFuelExportChangelogMocks = ({
   initialQuantity,
   updatedQuantity,
   units
+}: {
+  reportId: string
+  fuelType: string
+  fuelCategory: string
+  provisionOfTheAct: string
+  initialQuantity: string
+  updatedQuantity: string
+  units: string
 }) => {
   const previousReportId = 991004
 
-  // Supplier users call /organization/:orgID/reports/:reportID, not /reports/:reportID,
-  // so match any URL containing /reports/:reportID.
+  // The report detail URL may include an organization prefix, so match only the
+  // terminal /reports/:reportID endpoint and leave its summary subroutes alone.
   //
   // Use req.on('before:response') instead of req.continue() to avoid
   // the "Socket closed before finished writing response" race condition
   // that occurs when the browser connection closes mid-proxy write.
-  cy.intercept('GET', `**/reports/${reportId}**`, (req) => {
+  cy.intercept('GET', `**/reports/${reportId}`, (req) => {
     req.on('before:response', (res) => {
       const report = res.body?.report || {}
       res.body = {
@@ -60,11 +68,16 @@ const setupFuelExportChangelogMocks = ({
     })
   }).as('mockFuelExportReport')
 
-  // Return a record associated with the *previous* report version so that
-  // wasEdited() returns true and the Change-log toggle becomes enabled.
+  cy.intercept('GET', `**/reports/${reportId}/schedule-overview`, {
+    fuelExports: { count: 1, activeCount: 1, deletedCount: 0, wasEdited: true }
+  }).as('mockFuelExportScheduleOverview')
+
+  // Preserve the server-computed edit flag and include a record from the
+  // previous report version for the schedule summary.
   cy.intercept('POST', '**/api/fuel-exports/list-all**', {
     statusCode: 200,
     body: {
+      wasEdited: true,
       fuelExports: [
         {
           fuelExportId: 1,
@@ -132,7 +145,12 @@ const setupFuelExportChangelogMocks = ({
 
 When(
   'the supplier adds a fuel export record with fuel type {string}, fuel category {string}, provision {string}, and quantity {string}',
-  (fuelType, fuelCategory, provisionOfTheAct, quantity) => {
+  (
+    fuelType: string,
+    fuelCategory: string,
+    provisionOfTheAct: string,
+    quantity: string
+  ) => {
     // FuelExports requires endUseId and provisionOfTheActId in the save request,
     // but the frontend cannot auto-populate them for Ethanol (multiple EER ratios
     // share one end-use type, and Ethanol has two provisions). Instead of touching
@@ -172,6 +190,7 @@ When(
 
     cy.get(SELECTORS.scheduleLink).click()
     cy.get(SELECTORS.addRowButton).click({ force: true })
+    cy.wait(500)
 
     cy.get('div.ag-center-cols-container div.ag-row', { timeout: 20000 })
       .last()
@@ -182,11 +201,16 @@ When(
 
         // The FuelExport schema uses field: 'fuelTypeId' with valueGetter returning
         // params.data.fuelType, so the AG Grid cell col-id attribute is 'fuelTypeId'.
-        cy.selectWithRetry(
-          `${rowSelector} div.ag-cell[col-id="fuelTypeId"]`,
-          `[data-testid="select-${fuelType}"]`,
-          0
-        )
+        const fuelTypeCell = `${rowSelector} div.ag-cell[col-id="fuelTypeId"]`
+        cy.get(fuelTypeCell, { timeout: 20000 }).first().scrollIntoView()
+        cy.get(fuelTypeCell, { timeout: 20000 })
+          .first()
+          .should('be.visible')
+          .click({ force: true })
+        cy.get(`[data-testid="select-${fuelType}"]`, { timeout: 10000 })
+          .first()
+          .should('be.visible')
+          .click({ force: true })
         // fuelCategory is auto-populated via onCellValueChanged when the selected
         // fuel type has only one category (e.g. Ethanol → Gasoline). The cell is
         // intentionally non-editable in that case, so we skip it.
@@ -206,12 +230,12 @@ When(
 
 When(
   'the supplier updates the first fuel export quantity to {string}',
-  (updatedQuantity) => {
+  (updatedQuantity: string) => {
     // Set up the updated list-all mock BEFORE any navigation. After the edit
     // save triggers React Query cache invalidation the background-refetch will
     // use this mock. The Then step then reads the fresh cache (120 000) without
     // making another network call.
-    cy.get('@lastFuelExportFuelType').then((fuelType) => {
+    cy.get('@lastFuelExportFuelType').then((fuelType: string) => {
       cy.intercept('POST', '**/api/fuel-exports/list-all**', {
         statusCode: 200,
         body: {
@@ -256,7 +280,7 @@ When(
 
 When(
   'the supplier opens the fuel export changelog view for fuel type {string} with original quantity {string} and updated quantity {string}',
-  (fuelType, initialQuantity, updatedQuantity) => {
+  (fuelType: string, initialQuantity: string, updatedQuantity: string) => {
     // Use cy.visit() so location.state has no newReport:true → ReportDetails is rendered.
     cy.location('pathname').then((pathname) => {
       const normalizedPath = pathname.replace(/\/+$/, '')
@@ -264,6 +288,7 @@ When(
         /\/compliance-reporting\/(\d+)\/(\d+)$/
       )
       expect(pathMatch, 'compliance report view path').to.exist
+      if (!pathMatch) throw new Error('Expected a compliance report view path')
       const compliancePeriod = pathMatch[1]
       const reportId = pathMatch[2]
       const canonicalViewPath = `/compliance-reporting/${compliancePeriod}/${reportId}`
@@ -278,18 +303,34 @@ When(
         units: 'L'
       })
 
-      // Fresh visit so location.state is null → ReportDetails accordions render.
-      // Always use canonical path shape (no trailing slash).
-      cy.visit(canonicalViewPath)
-
-      cy.wait('@mockFuelExportSummary', { timeout: 30000 })
+      // Navigate from a clean root route with router state that expands the
+      // schedule, as the report view does after returning from an edit screen.
+      cy.visit('/')
+      cy.window().then((window) => {
+        const state = {
+          usr: { newReport: false, expandedSchedule: 'fuelExports' },
+          key: 'fuel-export-cypress',
+          idx: 1
+        }
+        window.history.pushState(state, '', canonicalViewPath)
+        window.dispatchEvent(new PopStateEvent('popstate', { state }))
+      })
+      cy.get('[data-test="compliance-report-header"]').should('be.visible')
+      cy.scrollTo('bottom')
+      cy.wait('@mockFuelExportScheduleOverview')
+        .its('response.body.fuelExports.count')
+        .should('eq', 1)
 
       // Expand the Fuel-export accordion in ReportDetails.
       // The actual data-test is panel${index}-summary (index-based), so use
       // text content to reliably find the right accordion.
-      cy.contains('[data-test$="-summary"]', 'Export fuel', {
+      cy.contains('.MuiAccordion-root', 'Export fuel', {
         timeout: 30000
-      }).click()
+      })
+        .find('[data-test$="-summary"]')
+        .click()
+
+      cy.wait('@mockFuelExportSummary', { timeout: 30000 })
 
       // Click the Change-log toggle. Use force:true because the accordion's
       // Collapse animation may leave the label with visibility:hidden briefly.
@@ -302,26 +343,29 @@ When(
 // Then steps
 // ---------------------------------------------------------------------------
 
-Then('the fuel export summary includes fuel type {string}', (fuelType) => {
-  cy.get(SELECTORS.scheduleLink, { timeout: 20000 })
-    .should('be.visible')
-    .click()
-  // onGridReady auto-starts editing the last (empty) row's fuelTypeId cell.
-  // Target only cells NOT in inline-editing mode so the dropdown option text
-  // does not confuse cy.contains.
-  cy.contains(
-    'div.ag-cell[col-id="fuelTypeId"]:not(.ag-cell-inline-editing)',
-    fuelType,
-    { timeout: 30000 }
-  )
-    .scrollIntoView()
-    .should('exist')
-})
+Then(
+  'the fuel export summary includes fuel type {string}',
+  (fuelType: string) => {
+    cy.get(SELECTORS.scheduleLink, { timeout: 20000 })
+      .should('be.visible')
+      .click()
+    // onGridReady auto-starts editing the last (empty) row's fuelTypeId cell.
+    // Target only cells NOT in inline-editing mode so the dropdown option text
+    // does not confuse cy.contains.
+    cy.contains(
+      'div.ag-cell[col-id="fuelTypeId"]:not(.ag-cell-inline-editing)',
+      fuelType,
+      { timeout: 30000 }
+    )
+      .scrollIntoView()
+      .should('exist')
+  }
+)
 
 Then(
   'the fuel export summary includes quantity {string}',
-  (formattedQuantity) => {
-    cy.get('@lastFuelExportFuelType').then((fuelType) => {
+  (formattedQuantity: string) => {
+    cy.get('@lastFuelExportFuelType').then((fuelType: string) => {
       // Register the updated list-all mock BEFORE any navigation so that any
       // request fired after the visit below returns the updated quantity.
       cy.intercept('POST', '**/api/fuel-exports/list-all**', {

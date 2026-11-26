@@ -41,7 +41,7 @@ Cypress.on('uncaught:exception', (err) => {
   const isGridTransactionRace =
     message.includes(
       "Cannot read properties of undefined (reading 'applyTransaction')"
-    ) && stack.includes('BCGridEditor.jsx')
+    ) && /BCGridEditor\.(?:jsx|tsx)/.test(stack)
 
   if (isTrackLoginError || isGridTransactionRace) {
     return false

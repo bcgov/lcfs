@@ -47,7 +47,7 @@ export const useFuelExportOptions = (
 }
 
 export const useGetFuelExports = (
-  params: Record<string, unknown>,
+  params: Record<string, unknown> | string | null,
   pagination: PaginationParams,
   options: QueryOptions<unknown> = {}
 ) => {
@@ -68,8 +68,9 @@ export const useGetFuelExports = (
       }
 
       const requestData = {
-        ...(typeof params === 'string' && { complianceReportId: params }),
-        ...(typeof params !== 'string' && params),
+        ...(typeof params === 'string'
+          ? { complianceReportId: params }
+          : (params ?? {})),
         ...pagination
       }
 

@@ -757,7 +757,7 @@ export const BCGridViewer = forwardRef<
 
     const handleSortChanged = useCallback(() => {
       if (isRestoringFromCache.current) return
-      const columnState = gridRef.current?.api.getColumnState()
+      const columnState = gridRef.current?.api?.getColumnState?.()
       const sortTemp = columnState
         ?.filter((col: ColumnState) => col.sort)
         .sort(
