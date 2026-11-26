@@ -163,7 +163,7 @@ vi.mock('@/views/OtherUses/OtherUsesSummary', () => ({
   OtherUsesSummary: () => <div>Other Uses Summary</div>
 }))
 
-vi.mock('@/views/OtherUses/OtherUsesChangelog.jsx', () => ({
+vi.mock('@/views/OtherUses/OtherUsesChangelog', () => ({
   OtherUsesChangelog: () => <div>Other Uses Changelog</div>
 }))
 

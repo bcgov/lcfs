@@ -423,7 +423,7 @@ describe('useOtherUses', () => {
       const file = new File(['csv content'], 'other-uses.csv', {
         type: 'text/csv'
       })
-      result.current.mutate({ file })
+      result.current.mutate({ file, isOverwrite: false })
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -447,7 +447,7 @@ describe('useOtherUses', () => {
       const file = new File(['csv content'], 'other-uses.csv', {
         type: 'text/csv'
       })
-      result.current.mutate({ file })
+      result.current.mutate({ file, isOverwrite: false })
 
       await waitFor(() => {
         expect(result.current.isError).toBe(true)

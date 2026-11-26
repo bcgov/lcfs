@@ -9,47 +9,95 @@ import {
   useSaveOtherUses
 } from '@/hooks/useOtherUses'
 import { cleanEmptyStringValues } from '@/utils/formatters'
-import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules'
+import {
+  handleScheduleDelete,
+  handleScheduleSave,
+  type ScheduleGridParams,
+  type ScheduleSaveParams
+} from '@/utils/schedules'
 import Grid2 from '@mui/material/Grid2'
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
-import {
-  defaultColDef,
-  otherUsesColDefs,
-  PROVISION_APPROVED_FUEL_CODE,
-  isFuelCodeProvision
-} from './_schema'
+import { defaultColDef, otherUsesColDefs, isFuelCodeProvision } from './_schema'
 import { NEW_REGULATION_YEAR } from '@/constants/common'
 import {
   calculateRenewableClaimColumnVisibility,
   applyRenewableClaimColumnVisibility
 } from '@/utils/renewableClaimUtils'
 import { isOtherExpectedUseMissing } from './otherUsesHelpers'
+import type { FloatingAlertHandle } from '@/components/BCAlert/FloatingAlert'
+import type {
+  BCGridEditContext,
+  BCGridRow,
+  BCGridRef
+} from '@/components/BCDataGrid/types'
+import type {
+  FuelType,
+  GridErrors,
+  GridWarnings,
+  OptionsData
+} from '@/types/schema'
+import type {
+  CellValueChangedEvent,
+  FirstDataRenderedEvent,
+  GridReadyEvent,
+  IRowNode
+} from 'ag-grid-community'
+
+interface OtherUseRow extends BCGridRow {
+  id?: string | number
+  complianceReportId?: number
+  compliancePeriod?: string
+  isValid?: boolean
+  isNewSupplementalEntry?: boolean
+  fuelType?: string
+  fuelCode?: string
+  provisionOfTheAct?: string
+  expectedUse?: string | null
+  rationale?: string | null
+  [key: string]: unknown
+}
+
+interface OtherUseFuelType extends FuelType {
+  units?: string
+}
+
+const isScheduleGridParams = (
+  params: unknown
+): params is ScheduleGridParams<OtherUseRow> =>
+  typeof params === 'object' &&
+  params !== null &&
+  'node' in params &&
+  'api' in params
 
 export const AddEditOtherUses = () => {
-  const [rowData, setRowData] = useState([])
-  const [errors, setErrors] = useState({})
-  const [warnings, setWarnings] = useState({})
+  const [rowData, setRowData] = useState<OtherUseRow[]>([])
+  const [errors, setErrors] = useState<GridErrors>({})
+  const [warnings, setWarnings] = useState<GridWarnings>({})
 
-  const gridRef = useRef(null)
-  const alertRef = useRef()
+  const gridRef = useRef<BCGridRef['current']>(null)
+  const alertRef = useRef<FloatingAlertHandle>(null)
   const location = useLocation()
   const { t } = useTranslation(['common', 'otherUses', 'reports'])
-  const { complianceReportId, compliancePeriod } = useParams()
+  const { complianceReportId, compliancePeriod } = useParams<{
+    complianceReportId: string
+    compliancePeriod: string
+  }>()
 
   const {
-    data: optionsData,
+    data: rawOptionsData,
     isLoading: optionsLoading,
     isFetched
   } = useOtherUsesOptions({ compliancePeriod })
+  const optionsData = rawOptionsData as OptionsData | undefined
 
   const { mutateAsync: saveRow } = useSaveOtherUses(complianceReportId)
   const navigate = useNavigate()
 
   const { data: complianceReport, isLoading: complianceReportLoading } =
-    useComplianceReportWithCache(complianceReportId)
+    useComplianceReportWithCache(complianceReportId!)
 
   const { data: otherUses, isLoading: usesLoading } = useGetAllOtherUsesList({
     complianceReportId,
@@ -62,13 +110,13 @@ export const AddEditOtherUses = () => {
   )
 
   const numericComplianceReportId = useMemo(
-    () => +complianceReportId,
+    () => Number(complianceReportId),
     [complianceReportId]
   )
 
   // Utility function to ensure consistent row ID assignment
   const ensureRowId = useCallback(
-    (row) => {
+    (row: OtherUseRow): OtherUseRow => {
       if (row.id) return row
 
       return {
@@ -86,7 +134,7 @@ export const AddEditOtherUses = () => {
   )
 
   const processRowData = useCallback(
-    (data) => {
+    (data: OtherUseRow[] | undefined) => {
       if (!data?.length) {
         return [
           {
@@ -98,7 +146,7 @@ export const AddEditOtherUses = () => {
         ]
       }
 
-      const processedData = data.map((item) => ({
+      const processedData: OtherUseRow[] = data.map((item) => ({
         ...ensureRowId(item),
         complianceReportId: numericComplianceReportId,
         isNewSupplementalEntry:
@@ -134,7 +182,9 @@ export const AddEditOtherUses = () => {
     if (usesLoading || !isFetched) return
 
     try {
-      const processedData = processRowData(otherUses)
+      const processedData = processRowData(
+        otherUses as OtherUseRow[] | undefined
+      )
       setRowData(processedData)
     } catch (error) {
       console.error('Error processing row data:', error)
@@ -162,30 +212,38 @@ export const AddEditOtherUses = () => {
     compliancePeriod
   ])
 
-  const findCiOfFuel = useCallback((data, optionsData) => {
-    if (!optionsData?.fuelTypes || !data.fuelType) return 0
+  const findCiOfFuel = useCallback(
+    (data: OtherUseRow, optionsData?: OptionsData) => {
+      if (!optionsData?.fuelTypes || !data.fuelType) return 0
 
-    const fuelType = optionsData.fuelTypes.find(
-      (obj) => data.fuelType === obj.fuelType
-    )
-
-    if (!fuelType) return 0
-
-    if (isFuelCodeProvision(data.provisionOfTheAct)) {
-      const fuelCode = fuelType.fuelCodes?.find(
-        (item) => item.fuelCode === data.fuelCode
+      const fuelType = optionsData.fuelTypes.find(
+        (obj) => data.fuelType === obj.fuelType
       )
-      return fuelCode?.carbonIntensity || 0
-    }
 
-    return fuelType.defaultCarbonIntensity || 0
-  }, [])
+      if (!fuelType) return 0
+
+      if (isFuelCodeProvision(data.provisionOfTheAct)) {
+        const fuelCode = fuelType.fuelCodes?.find(
+          (item) => item.fuelCode === data.fuelCode
+        )
+        return fuelCode?.carbonIntensity || 0
+      }
+
+      return fuelType.defaultCarbonIntensity || 0
+    },
+    []
+  )
 
   const validate = useCallback(
-    (params, validationFn, errorMessage, field = null) => {
-      const value = field ? params.node?.data[field] : params
+    (
+      params: BCGridEditContext<BCGridRow>,
+      validationFn: (value: unknown) => boolean,
+      errorMessage: string,
+      field: string | null = null
+    ) => {
+      const value = field ? params.node.data?.[field] : params
 
-      if (field && params.colDef.field !== field) {
+      if (field && params.colDef?.field !== field) {
         return true
       }
 
@@ -202,8 +260,8 @@ export const AddEditOtherUses = () => {
   )
 
   const onGridReady = useCallback(
-    (params) => {
-      if (!params?.api) return
+    (params: GridReadyEvent<BCGridRow>) => {
+      if (!params.api) return
 
       try {
         // Auto-focus the last row (new empty row for input) after data is loaded
@@ -228,8 +286,9 @@ export const AddEditOtherUses = () => {
   )
 
   const onAction = useCallback(
-    async (action, params) => {
+    async (action: string, params?: unknown) => {
       if (action === 'delete' || action === 'undo') {
+        if (!isScheduleGridParams(params)) return
         await handleScheduleDelete(
           params,
           'otherUsesId',
@@ -244,42 +303,46 @@ export const AddEditOtherUses = () => {
     [saveRow, numericComplianceReportId]
   )
 
-  const updateNodeData = useCallback((node, field, value) => {
-    if (node?.setDataValue) {
-      node.setDataValue(field, value)
-    }
-  }, [])
+  const updateNodeData = useCallback(
+    (node: IRowNode<BCGridRow>, field: string, value: unknown) => {
+      if (node?.setDataValue) {
+        node.setDataValue(field, value)
+      }
+    },
+    []
+  )
 
   const updateGridColumnsVisibility = useCallback(() => {
     if (!gridRef.current?.api) return
 
     const columnVisibility = calculateRenewableClaimColumnVisibility(
       rowData,
-      optionsData,
-      compliancePeriod,
-      PROVISION_APPROVED_FUEL_CODE
+      optionsData as OptionsData,
+      compliancePeriod ?? ''
     )
 
     applyRenewableClaimColumnVisibility(gridRef, columnVisibility)
   }, [rowData, optionsData, compliancePeriod])
 
   const onCellValueChanged = useCallback(
-    async (params) => {
+    async (params: CellValueChangedEvent<BCGridRow>) => {
+      if (!params.data || !params.node.data) return
+      const data = params.data as OtherUseRow
+      const field = params.colDef.field
       if (
-        !['fuelType', 'fuelCode', 'provisionOfTheAct'].includes(
-          params.colDef.field
-        )
+        !field ||
+        !['fuelType', 'fuelCode', 'provisionOfTheAct'].includes(field)
       ) {
         return
       }
 
       const fuelType = optionsData?.fuelTypes?.find(
-        (obj) => params.data.fuelType === obj.fuelType
-      )
+        (obj) => data.fuelType === obj.fuelType
+      ) as OtherUseFuelType | undefined
 
       if (!fuelType) return
 
-      const ciOfFuel = findCiOfFuel(params.data, optionsData)
+      const ciOfFuel = findCiOfFuel(data, optionsData as OptionsData)
       updateNodeData(params.node, 'ciOfFuel', ciOfFuel)
 
       // Auto-populate fields based on the selected fuel type
@@ -302,7 +365,7 @@ export const AddEditOtherUses = () => {
       }
 
       // Auto-populate fuel code for approved fuel code scenarios
-      if (isFuelCodeProvision(params.node.data.provisionOfTheAct)) {
+      if (isFuelCodeProvision(data.provisionOfTheAct)) {
         const fuelCodeOptions =
           fuelType.fuelCodes?.map((code) => code.fuelCode) || []
         if (fuelCodeOptions.length === 1) {
@@ -324,15 +387,17 @@ export const AddEditOtherUses = () => {
   )
 
   const onCellEditingStopped = useCallback(
-    async (params) => {
+    async (params: BCGridEditContext<BCGridRow>) => {
+      if (!params.data) return
+      const data = params.data as OtherUseRow
       if (params.oldValue === params.newValue) return
 
-      const rowId = params.node?.data?.id
+      const rowId = data.id
       const nextErrors = { ...errors }
 
       const isValid = validate(
         params,
-        (value) => value !== null && !isNaN(value) && value > 0,
+        (value) => value !== null && !isNaN(Number(value)) && Number(value) > 0,
         'Quantity supplied must be greater than 0.',
         'quantitySupplied'
       )
@@ -341,10 +406,10 @@ export const AddEditOtherUses = () => {
         return
       }
 
-      if (isOtherExpectedUseMissing(params.data)) {
+      if (isOtherExpectedUseMissing(data)) {
         setErrors({
           ...nextErrors,
-          [rowId]: ['rationale']
+          [String(rowId)]: ['rationale']
         })
         params.node.updateData({
           ...params.data,
@@ -371,8 +436,8 @@ export const AddEditOtherUses = () => {
         setErrors(nextErrors)
       }
 
-      params.data.complianceReportId = numericComplianceReportId
-      params.data.validationStatus = 'pending'
+      data.complianceReportId = numericComplianceReportId
+      data.validationStatus = 'pending'
 
       alertRef.current?.triggerAlert({
         message: 'Updating row...',
@@ -380,13 +445,27 @@ export const AddEditOtherUses = () => {
       })
 
       try {
-        let updatedData = cleanEmptyStringValues(params.data)
+        let updatedData = cleanEmptyStringValues(data)
 
         updatedData = await handleScheduleSave({
           alertRef,
           idField: 'otherUsesId',
           labelPrefix: 'otherUses:otherUsesColLabels',
-          params,
+          params: {
+            node: {
+              data: params.node.data ?? {},
+              updateData: (row) => params.node.updateData(row)
+            },
+            api: {
+              forEachNode: (callback) =>
+                params.api.forEachNode((node) =>
+                  callback({
+                    data: node.data ?? {},
+                    updateData: (row) => node.updateData(row)
+                  })
+                )
+            }
+          } satisfies ScheduleSaveParams<BCGridRow>,
           setErrors,
           setWarnings,
           saveRow,
@@ -410,8 +489,8 @@ export const AddEditOtherUses = () => {
   const handleNavigateBack = useCallback(() => {
     navigate(
       buildPath(ROUTES.REPORTS.VIEW, {
-        compliancePeriod,
-        complianceReportId
+        compliancePeriod: compliancePeriod!,
+        complianceReportId: complianceReportId!
       }),
       {
         state: {
@@ -426,11 +505,11 @@ export const AddEditOtherUses = () => {
   const columnDefs = useMemo(
     () =>
       otherUsesColDefs(
-        optionsData,
+        optionsData as OptionsData,
         errors,
         warnings,
         isSupplemental,
-        compliancePeriod
+        compliancePeriod ?? ''
       ),
     [optionsData, errors, warnings, isSupplemental, compliancePeriod]
   )
@@ -451,9 +530,12 @@ export const AddEditOtherUses = () => {
     updateGridColumnsVisibility()
   }, [rowData, optionsData, updateGridColumnsVisibility])
 
-  const onFirstDataRendered = useCallback((params) => {
-    params.api?.autoSizeAllColumns?.({ scaleUpToFitGridWidth: true })
-  }, [])
+  const onFirstDataRendered = useCallback(
+    (params: FirstDataRenderedEvent<BCGridRow>) => {
+      params.api?.autoSizeAllColumns?.({ scaleUpToFitGridWidth: true })
+    },
+    []
+  )
 
   // Show loading state
   if (optionsLoading || usesLoading || complianceReportLoading) {
@@ -469,7 +551,7 @@ export const AddEditOtherUses = () => {
         <BCTypography variant="body4" color="text" my={2} component="div">
           {t('otherUses:newOtherUsesGuide')}
         </BCTypography>
-        {parseInt(compliancePeriod) >= NEW_REGULATION_YEAR && (
+        {parseInt(compliancePeriod ?? '') >= NEW_REGULATION_YEAR && (
           <BCTypography variant="body4" color="text" my={2} component="div">
             {t('otherUses:newOtherUsesGuide2025')}
           </BCTypography>
@@ -479,7 +561,7 @@ export const AddEditOtherUses = () => {
       <BCGridEditor
         gridRef={gridRef}
         alertRef={alertRef}
-        getRowId={(params) => params.data.id}
+        getRowId={(params) => String(params.data.id)}
         columnDefs={columnDefs}
         defaultColDef={defaultColDef}
         onGridReady={onGridReady}

@@ -1,6 +1,14 @@
 import { describe, expect, it, vi, beforeEach } from 'vite-plus/test'
 import { isOtherExpectedUseMissing } from '../otherUsesHelpers'
 
+interface TestOtherUseRow {
+  id?: string
+  data?: string
+  complianceReportId?: number
+  isValid?: boolean
+  isNewSupplementalEntry?: boolean
+}
+
 // Mock all external dependencies to prevent memory leaks
 vi.mock('react-router-dom', () => ({
   useNavigate: () => vi.fn(),
@@ -13,7 +21,7 @@ vi.mock('react-router-dom', () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => key
+    t: (key: string) => key
   })
 }))
 
@@ -40,7 +48,7 @@ vi.mock('@/hooks/useComplianceReports', () => ({
 }))
 
 vi.mock('@/utils/formatters', () => ({
-  cleanEmptyStringValues: (data) => data
+  cleanEmptyStringValues: (data: unknown) => data
 }))
 
 vi.mock('@/utils/schedules', () => ({
@@ -90,7 +98,7 @@ describe('AddEditOtherUses', () => {
 
   describe('Business Logic Tests', () => {
     it('should handle ensureRowId logic correctly', () => {
-      const row = { id: 'existing-id', data: 'test' }
+      const row: TestOtherUseRow = { id: 'existing-id', data: 'test' }
       const numericComplianceReportId = 123
       const isSupplemental = false
 
@@ -102,9 +110,9 @@ describe('AddEditOtherUses', () => {
             isValid: true,
             complianceReportId: numericComplianceReportId,
             ...(isSupplemental &&
-              row.complianceReportId === numericComplianceReportId && {
-                isNewSupplementalEntry: true
-              })
+            row.complianceReportId === numericComplianceReportId
+              ? { isNewSupplementalEntry: true }
+              : {})
           }
 
       expect(result.id).toBe('existing-id')
@@ -112,7 +120,7 @@ describe('AddEditOtherUses', () => {
     })
 
     it('should generate new ID when missing', () => {
-      const row = { data: 'test' }
+      const row: TestOtherUseRow = { data: 'test' }
       const numericComplianceReportId = 123
       const isSupplemental = false
 
@@ -124,9 +132,9 @@ describe('AddEditOtherUses', () => {
             isValid: true,
             complianceReportId: numericComplianceReportId,
             ...(isSupplemental &&
-              row.complianceReportId === numericComplianceReportId && {
-                isNewSupplementalEntry: true
-              })
+            row.complianceReportId === numericComplianceReportId
+              ? { isNewSupplementalEntry: true }
+              : {})
           }
 
       expect(result.id).toBe('test-uuid')
@@ -135,7 +143,7 @@ describe('AddEditOtherUses', () => {
     })
 
     it('should add supplemental flag when conditions met', () => {
-      const row = { complianceReportId: 123 }
+      const row: TestOtherUseRow = { complianceReportId: 123 }
       const numericComplianceReportId = 123
       const isSupplemental = true
 
@@ -147,21 +155,21 @@ describe('AddEditOtherUses', () => {
             isValid: true,
             complianceReportId: numericComplianceReportId,
             ...(isSupplemental &&
-              row.complianceReportId === numericComplianceReportId && {
-                isNewSupplementalEntry: true
-              })
+            row.complianceReportId === numericComplianceReportId
+              ? { isNewSupplementalEntry: true }
+              : {})
           }
 
       expect(result.isNewSupplementalEntry).toBe(true)
     })
 
     it('should handle column visibility state', () => {
-      const columnVisibilityState = {
+      const columnVisibilityState: Record<string, boolean> = {
         isCanadaProduced: false,
         isQ1Supplied: false
       }
 
-      const setColumnsVisible = (columns, visible) => {
+      const setColumnsVisible = (columns: string[], visible: boolean) => {
         columns.forEach((column) => {
           columnVisibilityState[column] = visible
         })
@@ -172,9 +180,11 @@ describe('AddEditOtherUses', () => {
     })
 
     it('should check column visibility', () => {
-      const columnVisibilityState = { isQ1Supplied: true }
+      const columnVisibilityState: Record<string, boolean> = {
+        isQ1Supplied: true
+      }
 
-      const getColumn = (column) => ({
+      const getColumn = (column: string) => ({
         isVisible: () => columnVisibilityState[column]
       })
 
