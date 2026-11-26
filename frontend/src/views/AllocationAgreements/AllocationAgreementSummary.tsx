@@ -5,23 +5,75 @@ import { useTranslation } from 'react-i18next'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { LinkRenderer } from '@/utils/grid/cellRenderers'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
-import { defaultInitialPagination } from '@/constants/schedules'
-import '@/hooks/useAllocationAgreement.js'
+import {
+  defaultInitialPagination,
+  type PaginationOptions,
+  type PaginationFilter,
+  type PaginationSortOrder
+} from '@/constants/schedules'
+import type { GetRowIdParams, GridOptions } from 'ag-grid-community'
+import type {
+  BCGridRow,
+  BCGridQueryData,
+  BCGridRef,
+  BCPaginationOptions
+} from '@/components/BCDataGrid/types'
 import { allocationAgreementSummaryColDef } from './_schema'
+
+interface AllocationAgreement extends BCGridRow {
+  allocationAgreementId: number | string
+  actionType?: string | null
+}
+
+interface AllocationAgreementSummaryProps {
+  data?: { allocationAgreements?: AllocationAgreement[] } | null
+  status?: string
+  isEarlyIssuance?: boolean
+}
+
+interface SummaryFilter extends PaginationFilter {
+  field: string
+  type: string
+  filter?: string
+}
+
+interface SummarySortOrder extends PaginationSortOrder {
+  field: string
+  direction: string
+}
+
+interface SummaryPagination extends Omit<
+  PaginationOptions,
+  'filters' | 'sortOrders'
+> {
+  filters: SummaryFilter[]
+  sortOrders: SummarySortOrder[]
+  [key: string]: unknown
+}
+
+const compareValues = (leftValue: unknown, rightValue: unknown): number => {
+  // Type assertions let TypeScript accept the original JavaScript relational
+  // comparison. They do not alter the runtime operands or coercion behavior.
+  const left = leftValue as string | number
+  const right = rightValue as string | number
+  if (left > right) return 1
+  if (left < right) return -1
+  return 0
+}
 
 export const AllocationAgreementSummary = ({
   data,
   status,
   isEarlyIssuance
-}) => {
-  const [paginationOptions, setPaginationOptions] = useState(
-    defaultInitialPagination
+}: AllocationAgreementSummaryProps) => {
+  const [paginationOptions, setPaginationOptions] = useState<SummaryPagination>(
+    defaultInitialPagination as SummaryPagination
   )
-  const gridRef = useRef()
+  const gridRef = useRef<BCGridRef['current']>(null)
   const { t } = useTranslation(['common', 'allocationAgreement'])
 
   // Client-side pagination logic
-  const paginatedData = useMemo(() => {
+  const paginatedData = useMemo<BCGridQueryData<AllocationAgreement>>(() => {
     if (!data?.allocationAgreements) {
       return {
         data: {
@@ -38,7 +90,7 @@ export const AllocationAgreementSummary = ({
       }
     }
 
-    let filteredData = [
+    let filteredData: AllocationAgreement[] = [
       ...(data.allocationAgreements.filter(
         (item) => item.actionType !== 'DELETE'
       ) || [])
@@ -47,7 +99,8 @@ export const AllocationAgreementSummary = ({
     // Apply filters if any
     if (paginationOptions.filters && paginationOptions.filters.length > 0) {
       paginationOptions.filters.forEach((filter) => {
-        if (filter.type === 'contains' && filter.filter) {
+        const filterText = filter.filter
+        if (filter.type === 'contains' && filterText) {
           filteredData = filteredData.filter((item) => {
             const fieldValue = item[filter.field]
             return (
@@ -55,7 +108,7 @@ export const AllocationAgreementSummary = ({
               fieldValue
                 .toString()
                 .toLowerCase()
-                .includes(filter.filter.toLowerCase())
+                .includes(filterText.toLowerCase())
             )
           })
         }
@@ -69,13 +122,7 @@ export const AllocationAgreementSummary = ({
     ) {
       paginationOptions.sortOrders.forEach((sort) => {
         filteredData.sort((a, b) => {
-          const aVal = a[sort.field]
-          const bVal = b[sort.field]
-
-          let comparison = 0
-          if (aVal > bVal) comparison = 1
-          if (aVal < bVal) comparison = -1
-
+          const comparison = compareValues(a[sort.field], b[sort.field])
           return sort.direction === 'desc' ? -comparison : comparison
         })
       })
@@ -101,7 +148,7 @@ export const AllocationAgreementSummary = ({
     }
   }, [data?.allocationAgreements, paginationOptions])
 
-  const gridOptions = useMemo(
+  const gridOptions = useMemo<GridOptions<BCGridRow>>(
     () => ({
       overlayNoRowsTemplate: t(
         'allocationAgreement:noAllocationAgreementsFound'
@@ -131,12 +178,12 @@ export const AllocationAgreementSummary = ({
   )
 
   const columns = useMemo(
-    () => allocationAgreementSummaryColDef(isEarlyIssuance),
+    () => allocationAgreementSummaryColDef(isEarlyIssuance!),
     [isEarlyIssuance]
   )
 
-  const getRowId = (params) => {
-    return params.data.allocationAgreementId.toString()
+  const getRowId = (params: GetRowIdParams<BCGridRow>) => {
+    return (params.data!.allocationAgreementId as string | number).toString()
   }
 
   return (
@@ -154,11 +201,10 @@ export const AllocationAgreementSummary = ({
           defaultColDef={defaultColDef}
           suppressPagination={(data?.allocationAgreements?.length || 0) <= 10}
           paginationOptions={paginationOptions}
-          onPaginationChange={(newPagination) =>
-            setPaginationOptions((prev) => ({
-              ...prev,
-              ...newPagination
-            }))
+          onPaginationChange={(newPagination: BCPaginationOptions) =>
+            setPaginationOptions(
+              (prev) => ({ ...prev, ...newPagination }) as SummaryPagination
+            )
           }
           enablePageCaching={false}
         />

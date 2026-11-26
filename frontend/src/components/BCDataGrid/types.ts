@@ -110,10 +110,12 @@ export interface BCGridEditorProps<
     | null
   columnDefs?: ColDef<TData>[]
   defaultColDef?: ColDef<TData>
+  gridOptions?: GridOptions<TData>
   enablePaste?: boolean
   getRowId?: (params: GetRowIdParams<TData>) => string
   gridRef?: BCGridRef
   handlePaste?: (event: ClipboardEvent, context?: unknown) => void
+  loadingMessage?: string
   onAction?:
     | ((
         action: string,

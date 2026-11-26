@@ -3,6 +3,26 @@ import { describe, expect, beforeEach, vi } from 'vite-plus/test'
 import { AllocationAgreementSummary } from '../AllocationAgreementSummary'
 import { test } from '@/tests/utils/fixtures'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
+import type {
+  BCPaginationOptions,
+  BCGridRow
+} from '@/components/BCDataGrid/types'
+
+interface SummaryViewerProps {
+  gridKey?: string
+  queryData?: {
+    data?: {
+      pagination?: { total?: number; page?: number; size?: number }
+      [key: string]: unknown
+    } | null
+  }
+  dataKey?: string
+  suppressPagination?: boolean
+  paginationOptions?: BCPaginationOptions
+  getRowId?: (params: { data?: BCGridRow }) => string
+  enableCopyButton?: boolean
+  onPaginationChange?: (pagination: BCPaginationOptions) => void
+}
 
 // Mock react-router-dom
 vi.mock('react-router-dom', () => ({
@@ -12,7 +32,7 @@ vi.mock('react-router-dom', () => ({
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: vi.fn(() => ({
-    t: (key) => key
+    t: (key: string) => key
   }))
 }))
 
@@ -27,48 +47,54 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
     getRowId,
     enableCopyButton,
     onPaginationChange
-  }) => (
-    <div data-test="bc-grid-viewer">
-      <div data-test="grid-key">{gridKey}</div>
-      <div data-test="data-key">{dataKey}</div>
-      <div data-test="row-count">
-        {queryData?.data?.[dataKey]?.length || 0} rows
+  }: SummaryViewerProps) => {
+    const rows =
+      dataKey && Array.isArray(queryData?.data?.[dataKey])
+        ? (queryData.data[dataKey] as unknown[])
+        : []
+    return (
+      <div data-test="bc-grid-viewer">
+        <div data-test="grid-key">{gridKey}</div>
+        <div data-test="data-key">{dataKey}</div>
+        <div data-test="row-count">{rows.length} rows</div>
+        <div data-test="total-count">
+          {queryData?.data?.pagination?.total || 0} total
+        </div>
+        <div data-test="pagination-suppressed">
+          {suppressPagination ? 'pagination-suppressed' : 'pagination-enabled'}
+        </div>
+        <div data-test="suppress-pagination-value">
+          {String(suppressPagination)}
+        </div>
+        <div data-test="get-row-id">
+          {getRowId ? 'has-get-row-id' : 'no-get-row-id'}
+        </div>
+        <div data-test="copy-button">
+          {enableCopyButton ? 'copy-enabled' : 'copy-disabled'}
+        </div>
+        <div data-test="has-pagination-options">
+          {paginationOptions ? 'has-pagination' : 'no-pagination'}
+        </div>
+        <div data-test="has-pagination-change">
+          {onPaginationChange ? 'has-change-handler' : 'no-change-handler'}
+        </div>
+        <div data-test="current-page">
+          {queryData?.data?.pagination?.page || 1}
+        </div>
+        <div data-test="page-size">
+          {queryData?.data?.pagination?.size || 10}
+        </div>
+        <button
+          data-test="simulate-pagination-change"
+          onClick={() =>
+            onPaginationChange && onPaginationChange({ page: 2, size: 20 })
+          }
+        >
+          Simulate Pagination Change
+        </button>
       </div>
-      <div data-test="total-count">
-        {queryData?.data?.pagination?.total || 0} total
-      </div>
-      <div data-test="pagination-suppressed">
-        {suppressPagination ? 'pagination-suppressed' : 'pagination-enabled'}
-      </div>
-      <div data-test="suppress-pagination-value">
-        {String(suppressPagination)}
-      </div>
-      <div data-test="get-row-id">
-        {getRowId ? 'has-get-row-id' : 'no-get-row-id'}
-      </div>
-      <div data-test="copy-button">
-        {enableCopyButton ? 'copy-enabled' : 'copy-disabled'}
-      </div>
-      <div data-test="has-pagination-options">
-        {paginationOptions ? 'has-pagination' : 'no-pagination'}
-      </div>
-      <div data-test="has-pagination-change">
-        {onPaginationChange ? 'has-change-handler' : 'no-change-handler'}
-      </div>
-      <div data-test="current-page">
-        {queryData?.data?.pagination?.page || 1}
-      </div>
-      <div data-test="page-size">{queryData?.data?.pagination?.size || 10}</div>
-      <button
-        data-test="simulate-pagination-change"
-        onClick={() =>
-          onPaginationChange && onPaginationChange({ page: 2, size: 20 })
-        }
-      >
-        Simulate Pagination Change
-      </button>
-    </div>
-  )
+    )
+  }
 }))
 
 // Mock the schema
@@ -96,7 +122,7 @@ vi.mock('@/constants/schedules', () => ({
 }))
 
 // Mock useGetAllAllocationAgreements hook
-vi.mock('@/hooks/useAllocationAgreement.js', () => ({
+vi.mock('@/hooks/useAllocationAgreement', () => ({
   useGetAllAllocationAgreements: vi.fn(() => ({}))
 }))
 

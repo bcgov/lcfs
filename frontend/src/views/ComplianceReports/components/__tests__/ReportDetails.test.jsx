@@ -147,14 +147,9 @@ vi.mock('@/views/AllocationAgreements/AllocationAgreementSummary', () => ({
   AllocationAgreementSummary: () => <div>Allocation Agreement Summary</div>
 }))
 
-vi.mock(
-  '@/views/AllocationAgreements/AllocationAgreementChangelog.jsx',
-  () => ({
-    AllocationAgreementChangelog: () => (
-      <div>Allocation Agreement Changelog</div>
-    )
-  })
-)
+vi.mock('@/views/AllocationAgreements/AllocationAgreementChangelog', () => ({
+  AllocationAgreementChangelog: () => <div>Allocation Agreement Changelog</div>
+}))
 
 vi.mock('@/views/NotionalTransfers/NotionalTransferSummary', () => ({
   NotionalTransferSummary: () => <div>Notional Transfer Summary</div>
