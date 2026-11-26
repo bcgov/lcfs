@@ -16,7 +16,7 @@ No backfill: versions are written only when a change order touches a
 record.
 
 Revision ID: fce153b2e467
-Revises: c3a7e91d5f48
+Revises: f29bf127e5a5
 Create Date: 2026-11-24 15:00:00.000000
 """
 
@@ -25,7 +25,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision = "fce153b2e467"
-down_revision = "c3a7e91d5f48"
+down_revision = "f29bf127e5a5"
 branch_labels = None
 depends_on = None
 

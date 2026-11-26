@@ -1,138 +1,86 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom'
-import Link from '@mui/material/Link'
-import Paper from '@mui/material/Paper'
-import Stack from '@mui/material/Stack'
-import Table from '@mui/material/Table'
-import TableBody from '@mui/material/TableBody'
-import TableCell from '@mui/material/TableCell'
-import TableHead from '@mui/material/TableHead'
-import TableRow from '@mui/material/TableRow'
-import AddIcon from '@mui/icons-material/Add'
-import BCAlert, { FloatingAlert } from '@/components/BCAlert'
+import { useLocation, useNavigate } from 'react-router-dom'
+import AddCircleIcon from '@mui/icons-material/AddCircle'
+import { FloatingAlert } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
-import Loading from '@/components/Loading'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { lcjfipBceidRoles, lcjfipIdirRoles } from '@/constants/roles'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useLCJFIPApplications } from '@/hooks/useLCJFIP'
+import type {
+  BCGridQueryData,
+  BCPaginationOptions
+} from '@/components/BCDataGrid/types'
+import type { PaginationParams } from '@/hooks/types'
+import {
+  useLCJFIPApplications,
+  type LCJFIPApplicationListItem
+} from '@/hooks/useLCJFIP'
 import ROUTES from '@/routes/routes'
+import { LinkRenderer } from '@/utils/grid/cellRenderers'
+import {
+  getSessionPagination,
+  gridCacheKey,
+  removeGridCache
+} from '@/utils/grid/sessionGridCache'
 import withRole from '@/utils/withRole'
+import { defaultSortModel, lcjfipApplicationColDefs } from './_schema'
 
-const formatDate = (value: string | null) =>
-  value
-    ? new Date(value).toLocaleDateString('en-CA', {
-        timeZone: 'America/Vancouver'
-      })
-    : ''
+export const LCJFIP_APPLICATIONS_GRID_KEY = 'lcjfip-applications-grid'
 
-/** The applicant organization's applications and the way to start one. */
-const ApplicantApplications = () => {
-  const { t } = useTranslation(['lcjfip'])
-  const navigate = useNavigate()
-  const {
-    data: applications = [],
-    isLoading,
-    isError
-  } = useLCJFIPApplications()
-
-  return (
-    <section
-      style={{ marginTop: 24 }}
-      aria-labelledby="lcjfip-applications-heading"
-    >
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        justifyContent="space-between"
-        alignItems={{ xs: 'flex-start', sm: 'center' }}
-        spacing={2}
-        mb={2}
-      >
-        <BCTypography
-          id="lcjfip-applications-heading"
-          variant="h6"
-          component="h3"
-          color="primary"
-        >
-          {t('lcjfip:landing.applicationsHeading')}
-        </BCTypography>
-        <BCButton
-          variant="contained"
-          color="primary"
-          startIcon={<AddIcon />}
-          onClick={() => navigate(ROUTES.LCJFIP.NEW_APPLICATION)}
-          data-test="lcjfip-new-application"
-        >
-          {t('lcjfip:landing.newApplication')}
-        </BCButton>
-      </Stack>
-
-      {isLoading ? (
-        <Loading />
-      ) : isError ? (
-        <BCAlert severity="error">{t('lcjfip:landing.loadError')}</BCAlert>
-      ) : applications.length === 0 ? (
-        <BCTypography variant="body2" data-test="lcjfip-no-applications">
-          {t('lcjfip:landing.noApplications')}
-        </BCTypography>
-      ) : (
-        <Paper variant="outlined">
-          <Table size="small" data-test="lcjfip-applications">
-            <TableHead>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 600 }}>
-                  {t('lcjfip:landing.applicationColumn')}
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>
-                  {t('lcjfip:landing.statusColumn')}
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>
-                  {t('lcjfip:landing.submittedColumn')}
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>
-                  {t('lcjfip:landing.lastUpdatedColumn')}
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {applications.map((application) => (
-                <TableRow key={application.lcjfipApplicationId}>
-                  <TableCell>
-                    <Link
-                      component={RouterLink}
-                      to={ROUTES.LCJFIP.APPLICATION.replace(
-                        ':applicationId',
-                        String(application.lcjfipApplicationId)
-                      )}
-                    >
-                      {application.applicationNumber}
-                    </Link>
-                  </TableCell>
-                  <TableCell>{application.status}</TableCell>
-                  <TableCell>{formatDate(application.signedDate)}</TableCell>
-                  <TableCell>{formatDate(application.updateDate)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Paper>
-      )}
-    </section>
-  )
+const initialPaginationOptions: BCPaginationOptions = {
+  page: 1,
+  size: 10,
+  sortOrders: defaultSortModel,
+  filters: []
 }
 
-// Landing page for the Low carbon jet fuel incentive program (#5488). BCeID
-// applicants see their applications (#5532); the IDIR side is a later card.
+const applicationUrl = (data: LCJFIPApplicationListItem) =>
+  ROUTES.LCJFIP.APPLICATION.replace(
+    ':applicationId',
+    String(data.lcjfipApplicationId)
+  )
+
+// The Low carbon jet fuel incentive program's applications index (#5541).
+// BCeID applicants see their organization's applications, Drafts included,
+// and start new ones; government users see every organization's submitted
+// applications.
 export const LCJFIPBase = () => {
-  const { t } = useTranslation(['common'])
+  const { t } = useTranslation(['lcjfip', 'common'])
   const location = useLocation()
+  const navigate = useNavigate()
   const alertRef = useRef<{
-    triggerAlert: (payload: { severity: 'success'; message: string }) => void
+    triggerAlert: (payload: {
+      severity: 'success' | 'error'
+      message: string
+    }) => void
   } | null>(null)
+  const gridRef = useRef(null)
   const { data: currentUser } = useCurrentUser()
   const isGovernment = !!currentUser?.isGovernmentUser
+
+  const [paginationOptions, setPaginationOptions] = useState(() =>
+    getSessionPagination(LCJFIP_APPLICATIONS_GRID_KEY, initialPaginationOptions)
+  )
+  const applicationsQuery = useLCJFIPApplications(
+    paginationOptions as PaginationParams
+  )
+  const queryData: BCGridQueryData = useMemo(
+    () => ({
+      data: applicationsQuery.data,
+      isLoading: applicationsQuery.isLoading,
+      isError: applicationsQuery.isError,
+      error: applicationsQuery.error
+    }),
+    [
+      applicationsQuery.data,
+      applicationsQuery.isLoading,
+      applicationsQuery.isError,
+      applicationsQuery.error
+    ]
+  )
 
   useEffect(() => {
     const state = location.state as { message?: string } | null
@@ -143,6 +91,36 @@ export const LCJFIPBase = () => {
       })
     }
   }, [location.state])
+
+  useEffect(() => {
+    if (applicationsQuery.isError) {
+      alertRef.current?.triggerAlert({
+        severity: 'error',
+        message: t('lcjfip:index.loadError')
+      })
+    }
+  }, [applicationsQuery.isError, t])
+
+  const columnDefs = useMemo(
+    () => lcjfipApplicationColDefs(t, { isGovernment }),
+    [t, isGovernment]
+  )
+  const defaultColDef = useMemo(
+    () => ({
+      cellRenderer: LinkRenderer,
+      cellRendererParams: {
+        isAbsolute: true,
+        url: ({ data }: { data: LCJFIPApplicationListItem }) =>
+          applicationUrl(data)
+      }
+    }),
+    []
+  )
+  const handleClearFilters = useCallback(() => {
+    setPaginationOptions(initialPaginationOptions)
+    removeGridCache(gridCacheKey(LCJFIP_APPLICATIONS_GRID_KEY, 'filter'))
+    removeGridCache(gridCacheKey(LCJFIP_APPLICATIONS_GRID_KEY, 'pagination'))
+  }, [])
 
   return (
     <BCBox>
@@ -155,9 +133,47 @@ export const LCJFIPBase = () => {
         color="primary"
         data-test="lcjfip-title"
       >
-        {t('lcjfipPageTitle')}
+        {t('lcjfip:index.title')}
       </BCTypography>
-      {!isGovernment && <ApplicantApplications />}
+
+      {!isGovernment && (
+        <BCButton
+          variant="contained"
+          color="primary"
+          startIcon={<AddCircleIcon />}
+          onClick={() => navigate(ROUTES.LCJFIP.NEW_APPLICATION)}
+          sx={{ mt: 3 }}
+          data-test="lcjfip-new-application"
+        >
+          {t('lcjfip:index.newApplication')}
+        </BCButton>
+      )}
+
+      <BCBox component="div" sx={{ mt: 3, height: '100%', width: '100%' }}>
+        <BCGridViewer
+          gridRef={gridRef}
+          gridKey={LCJFIP_APPLICATIONS_GRID_KEY}
+          columnDefs={columnDefs}
+          defaultColDef={defaultColDef}
+          getRowId={(params) => String(params.data.lcjfipApplicationId)}
+          overlayNoRowsTemplate={
+            isGovernment
+              ? t('lcjfip:index.noSubmittedApplications')
+              : t('lcjfip:index.noApplications')
+          }
+          queryData={queryData}
+          dataKey="applications"
+          paginationOptions={paginationOptions}
+          onPaginationChange={(newPagination: BCPaginationOptions) =>
+            setPaginationOptions((previous) => ({
+              ...previous,
+              ...newPagination
+            }))
+          }
+          persistForLoginSession
+          onClearFilters={handleClearFilters}
+        />
+      </BCBox>
     </BCBox>
   )
 }

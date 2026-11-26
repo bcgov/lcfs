@@ -716,9 +716,8 @@ class DocumentService:
 
         A comment on a draft agreement, or on one of its designated actions,
         reads as missing outside government (#5553), like its thread, and so
-        do its attachments. A comment on a Draft LCJFIP application reads as
-        missing to government, as the application is still the applicant's
-        own (#5532).
+        do its attachments. A comment on a Draft LCJFIP application, which is
+        still the applicant's own, reads as missing to government (#5532).
         """
         comment = await self.db.get(InternalComment, parent_id)
         if not comment:

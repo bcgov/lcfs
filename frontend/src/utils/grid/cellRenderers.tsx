@@ -1060,6 +1060,15 @@ export const ChargingSiteStatusRenderer = createStatusRenderer(
   }
 )
 
+// LCJFIP applications index (#5541). Statuses after Submitted come with the
+// review stories; until then they fall back to the info colour.
+export const LCJFIPApplicationStatusRenderer = createStatusRenderer({
+  Draft: 'info',
+  Submitted: 'warning',
+  Approved: 'success',
+  Rejected: 'error'
+})
+
 export const CIApplicationStatusRenderer = createStatusRenderer(
   {
     Draft: 'info',
