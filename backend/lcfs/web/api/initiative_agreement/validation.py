@@ -1,6 +1,12 @@
+from typing import Optional
+
 from fastapi import Depends, HTTPException, Request
 from starlette import status
 
+from lcfs.db.models.document.Document import Document
+from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
+    RECORD_KIND_AGREEMENT,
+)
 from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
     InitiativeAgreementStatusEnum,
 )
@@ -11,7 +17,10 @@ from lcfs.web.api.initiative_agreement.schema import (
 )
 from lcfs.web.api.initiative_agreement.repo import InitiativeAgreementRepository
 from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
-from lcfs.web.api.initiative_agreement.workflow import is_hidden_from
+from lcfs.web.api.initiative_agreement.workflow import (
+    ensure_package_document_writable,
+    is_hidden_from,
+)
 from lcfs.web.api.role.schema import user_has_roles
 
 
@@ -56,8 +65,8 @@ class InitiativeAgreementValidation:
         initiative_agreement = await self.repo.get_initiative_agreement_by_id(
             initiative_agreement_id
         )
-        # To an IDIR user, a proponent's unsubmitted draft (#5186) reads as
-        # no agreement at all.
+        # Outside government, a draft that government is still preparing
+        # (#5553) reads as no agreement at all.
         if not initiative_agreement or is_hidden_from(
             initiative_agreement, self.request.user
         ):
@@ -83,3 +92,46 @@ class InitiativeAgreementValidation:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="User does not have access to this initiative agreement.",
             )
+
+    async def validate_package_document_write(
+        self,
+        parent_type: str,
+        parent_id: int,
+        document_id: Optional[int] = None,
+        folder_change: bool = False,
+    ):
+        """Refuse a file write on an agreement's package that is not open to
+        edits (#5554): an upload, replacement, rename, move, bin, restore or
+        delete, and any folder change, on the agreement or one of its
+        designated actions.
+
+        *document_id* names the file a write acts on; without one, and
+        without *folder_change*, the write is a new upload. That decides
+        whether a BCeID write is the caller's own evidence, which the lock
+        leaves to the evidence submission (see is_eoc_evidence_write).
+
+        Call it after the parent's access check, which reports a missing or
+        hidden parent. Legacy credit awards share the initiativeAgreement
+        parent type but are no package: their files are managed on the
+        transaction pages, so they pass.
+        """
+        if parent_type == "initiativeAgreement":
+            agreement = await self.repo.get_initiative_agreement_by_id(parent_id)
+        elif parent_type == "designatedAction":
+            action = await self.repo.get_designated_action_by_id(parent_id)
+            agreement = action.initiative_agreement if action else None
+        else:
+            return
+        if agreement is None or agreement.record_kind != RECORD_KIND_AGREEMENT:
+            return
+        file_owner = None
+        if document_id is not None:
+            document = await self.repo.db.get(Document, document_id)
+            file_owner = document.create_user if document else None
+        ensure_package_document_writable(
+            agreement,
+            parent_type,
+            self.request.user,
+            new_file=document_id is None and not folder_change,
+            file_owner=file_owner,
+        )

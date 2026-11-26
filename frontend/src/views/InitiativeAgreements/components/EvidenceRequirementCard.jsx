@@ -66,7 +66,10 @@ export const EvidenceRequirementCard = ({
   onSave,
   onRemove,
   canEdit,
-  canEditDefinition = canEdit,
+  // Rewording or removing the requirement is a package edit (#5554): whether
+  // this caller may do it now (see EvidenceOfCompletion). The assessment
+  // canEdit covers is the review, which carries on.
+  canEditWording = canEdit,
   missingInformationReadOnly,
   actions,
   allRequestsComplete,
@@ -300,7 +303,7 @@ export const EvidenceRequirementCard = ({
                 recordId={requirement.evidenceRequirementId}
               />
             </Box>
-            {canEditDefinition && !removing && (
+            {canEditWording && !removing && (
               <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                 <Tooltip
                   title={t('initiativeAgreement:evidence.removeRequirement')}
@@ -354,7 +357,7 @@ export const EvidenceRequirementCard = ({
               'description',
               'description',
               'evidenceSummary',
-              canEditDefinition && !removing
+              canEditWording && !removing
             )}
             allowPencil={false}
             required

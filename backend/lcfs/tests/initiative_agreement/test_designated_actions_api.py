@@ -535,8 +535,9 @@ async def test_action_documents_list_and_are_org_gated(
 
 
 # ---------------------------------------------------------------------------
-# Creating designated actions, which is possible while the agreement is a
-# draft or underway. Agreements government enters start Underway (#5186).
+# Creating designated actions, which is possible while the agreement's
+# package is open to edits (#5554): while government prepares it as a Draft
+# (#5553). test_package_edit_lock.py covers the lock.
 # ---------------------------------------------------------------------------
 
 
@@ -548,13 +549,19 @@ def _create_action_url(fastapi_app, agreement):
 
 
 async def _open_agreement(dbsession, code):
-    """An agreement as an analyst creates it: Underway."""
+    """An agreement as government creates it: a Draft, its package still
+    open to edits (#5553, #5554)."""
     org_id, _ = await _two_org_ids(dbsession)
-    return await _seed_agreement(dbsession, org_id, code)
+    return await _seed_agreement(
+        dbsession,
+        org_id,
+        code,
+        lifecycle_status_id=await _lifecycle_status_id(dbsession, "Draft"),
+    )
 
 
 @pytest.mark.anyio
-async def test_an_analyst_adds_an_action_to_an_underway_agreement(
+async def test_an_analyst_adds_an_action(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
     agreement = await _open_agreement(dbsession, "IA-26NEW1")
@@ -613,16 +620,17 @@ async def test_actions_cannot_be_added_once_the_agreement_is_closed(
         _create_action_url(fastapi_app, agreement), json={"name": "Too late"}
     )
 
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert "draft or underway" in response.json()["detail"].lower()
+    # The package is read-only once the agreement is closed (#5554).
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert lifecycle in response.json()["detail"]
 
 
 @pytest.mark.anyio
-async def test_an_analyst_cannot_reach_a_draft_to_add_an_action(
+async def test_an_analyst_adds_an_action_to_a_draft(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
-    """A draft is a proponent's unsubmitted application, which IDIR users
-    do not see (#5186), so to them it does not exist."""
+    """A draft is government's own preparation (#5553), and setting out its
+    schedule is part of that."""
     org_id, _ = await _two_org_ids(dbsession)
     agreement = await _seed_agreement(
         dbsession,
@@ -633,10 +641,11 @@ async def test_an_analyst_cannot_reach_a_draft_to_add_an_action(
     set_mock_user(fastapi_app, IDIR_IA_ANALYST)
 
     response = await client.post(
-        _create_action_url(fastapi_app, agreement), json={"name": "Hidden"}
+        _create_action_url(fastapi_app, agreement), json={"name": "Prepared"}
     )
 
-    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.status_code == status.HTTP_201_CREATED, response.text
+    assert response.json()["actionNumber"] == 1
 
 
 @pytest.mark.anyio
@@ -741,6 +750,7 @@ async def _action_history(dbsession, action):
 
 
 @pytest.mark.anyio
+@pytest.mark.usefixtures("underway_packages_editable")
 async def test_an_analyst_corrects_an_action_and_it_is_recorded(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
@@ -767,10 +777,11 @@ async def test_an_analyst_corrects_an_action_and_it_is_recorded(
 
 
 @pytest.mark.anyio
-async def test_an_action_can_be_corrected_after_the_agreement_is_underway(
+async def test_an_action_cannot_be_corrected_once_the_agreement_is_underway(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
-    """A wrong figure should be fixable rather than worked around."""
+    """Once Underway the agreement's package is read-only (#5554): a wrong
+    figure is corrected through a change order, not edited in place."""
     org_id, _ = await _two_org_ids(dbsession)
     agreement = await _seed_agreement(dbsession, org_id, "IA-26EDT2")
     action = await _seed_action(dbsession, agreement, 1, "Commission station")
@@ -782,11 +793,14 @@ async def test_an_action_can_be_corrected_after_the_agreement_is_underway(
         _edit_url(fastapi_app, action), json={"name": "Corrected while underway"}
     )
 
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json()["name"] == "Corrected while underway"
+    assert response.status_code == status.HTTP_409_CONFLICT
+    await dbsession.refresh(action)
+    assert action.name == "Commission station"
+    assert await _action_history(dbsession, action) == []
 
 
 @pytest.mark.anyio
+@pytest.mark.usefixtures("underway_packages_editable")
 async def test_editing_nothing_records_nothing(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
@@ -805,6 +819,7 @@ async def test_editing_nothing_records_nothing(
 
 
 @pytest.mark.anyio
+@pytest.mark.usefixtures("underway_packages_editable")
 async def test_the_completion_date_can_be_set_and_cleared(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
@@ -825,6 +840,7 @@ async def test_the_completion_date_can_be_set_and_cleared(
 
 
 @pytest.mark.anyio
+@pytest.mark.usefixtures("underway_packages_editable")
 async def test_an_edit_cannot_blank_the_name_or_go_negative(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
@@ -843,6 +859,7 @@ async def test_an_edit_cannot_blank_the_name_or_go_negative(
 
 
 @pytest.mark.anyio
+@pytest.mark.usefixtures("underway_packages_editable")
 async def test_a_manager_may_also_correct_an_action(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
@@ -1247,11 +1264,11 @@ async def test_both_grids_filter_and_sort_by_the_date_for_completion(
 
 
 @pytest.mark.anyio
-async def test_actions_of_a_draft_are_hidden_from_government(
+async def test_government_sees_a_drafts_actions(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
-    """A draft is a proponent's unsubmitted application (#5186): its actions
-    stay out of the tab, and its grid and action pages read as missing."""
+    """A draft is government's own preparation (#5553): its actions are in
+    the tab, and its grid and action pages open."""
     org_id, _ = await _two_org_ids(dbsession)
     draft = await _seed_agreement(
         dbsession,
@@ -1265,10 +1282,11 @@ async def test_actions_of_a_draft_are_hidden_from_government(
     tab = await client.post(
         _all_url(fastapi_app), json={**PAGINATION_BODY, "size": 200}
     )
-    assert _names(tab, {"Proposed work"}) == []
+    assert _names(tab, {"Proposed work"}) == ["Proposed work"]
 
     grid = await client.post(_list_url(fastapi_app, draft), json=PAGINATION_BODY)
-    assert grid.status_code == status.HTTP_404_NOT_FOUND
+    assert grid.status_code == status.HTTP_200_OK
+    assert [a["name"] for a in grid.json()["designatedActions"]] == ["Proposed work"]
 
     profile = await client.get(
         fastapi_app.url_path_for(
@@ -1276,7 +1294,7 @@ async def test_actions_of_a_draft_are_hidden_from_government(
             designated_action_id=action.designated_action_id,
         )
     )
-    assert profile.status_code == status.HTTP_404_NOT_FOUND
+    assert profile.status_code == status.HTTP_200_OK
 
 
 # Which record a route addresses.
@@ -1346,15 +1364,27 @@ async def test_every_route_to_a_drafts_action_reads_as_missing(
     fastapi_app: FastAPI,
     set_mock_user,
     dbsession,
+    monkeypatch,
     route,
     method,
     target,
     body,
     roles,
 ):
-    """Not only the profile: the action's evidence, history and every edit
-    read as missing too (#5186). Reads return nothing and writes change
-    nothing."""
+    """Not only the profile: to a caller who does not see drafts, the
+    action's evidence, history and every edit read as missing too (#5553).
+    Reads return nothing and writes change nothing.
+
+    These routes are IDIR-only and government sees drafts, so the rule is
+    made to hide drafts from this caller. That still shows every route
+    applies it, rather than relying on the role check alone."""
+    from lcfs.web.api.initiative_agreement import workflow
+
+    monkeypatch.setattr(
+        workflow,
+        "hidden_lifecycle_statuses",
+        lambda user: (workflow.LIFECYCLE_STATUS_DRAFT,),
+    )
     org_id, _ = await _two_org_ids(dbsession)
     draft = await _seed_agreement(
         dbsession,
@@ -1434,62 +1464,20 @@ async def _comment_thread_for(dbsession, lifecycle_status, ia_code, entity):
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize("lifecycle", ["Draft", "Underway"])
 @pytest.mark.parametrize("entity", ["initiativeAgreement", "designatedAction"])
-async def test_a_drafts_comment_threads_read_as_missing(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession, entity
+async def test_government_comment_threads_are_open_in_draft_and_underway(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    dbsession,
+    entity,
+    lifecycle,
 ):
-    """The comments API is separate from the agreement's routes, so it
-    applies the same rule: a draft's comment threads, and its actions',
-    read as missing to IDIR users (#5186). Nothing is returned and nothing
-    is added."""
-    entity_type, entity_id, link_model, link_column = await _comment_thread_for(
-        dbsession, "Draft", "IA-26HIDC", entity
-    )
-    comment = InternalComment(comment="Kept from government", visibility="Public")
-    dbsession.add(comment)
-    await dbsession.flush()
-    dbsession.add(
-        link_model(
-            internal_comment_id=comment.internal_comment_id,
-            **{link_column.key: entity_id},
-        )
-    )
-    await dbsession.flush()
-    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
-
-    read = await client.get(
-        fastapi_app.url_path_for(
-            "get_comments", entity_type=entity_type, entity_id=entity_id
-        )
-    )
-    write = await client.post(
-        fastapi_app.url_path_for("create_comment"),
-        json={
-            "entityType": entity_type,
-            "entityId": entity_id,
-            "comment": "Added by IDIR",
-            "visibility": "Public",
-        },
-    )
-
-    assert read.status_code == status.HTTP_404_NOT_FOUND
-    assert "Kept from government" not in read.text
-    assert write.status_code == status.HTTP_404_NOT_FOUND
-    linked = await dbsession.execute(
-        select(link_model.internal_comment_id).where(link_column == entity_id)
-    )
-    assert linked.scalars().all() == [comment.internal_comment_id]
-
-
-@pytest.mark.anyio
-@pytest.mark.parametrize("entity", ["initiativeAgreement", "designatedAction"])
-async def test_an_underway_agreements_comment_threads_stay_open(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession, entity
-):
-    """The rule hides drafts only: an underway agreement's threads, and its
-    actions', still take and return comments."""
+    """Government prepares a draft (#5553), so a draft's threads, and its
+    actions', take and return comments as an underway agreement's do."""
     entity_type, entity_id, _, _ = await _comment_thread_for(
-        dbsession, "Underway", "IA-26OPNC", entity
+        dbsession, lifecycle, "IA-26OPNC", entity
     )
     # A thread lists comments with their author's name, so the mock user
     # needs a profile.
@@ -1519,12 +1507,25 @@ async def test_an_underway_agreements_comment_threads_stay_open(
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize(
+    "roles, sees_the_draft",
+    [
+        (IDIR_IA_ANALYST, True),
+        ([RoleEnum.SUPPLIER, RoleEnum.IA_PROPONENT], False),
+    ],
+)
 async def test_the_organization_comment_log_leaves_out_a_drafts_comments(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    dbsession,
+    roles,
+    sees_the_draft,
 ):
     """The organization's comment log gathers comments from all its records.
-    A draft agreement's comments stay out of it for IDIR users (#5186), and
-    an underway agreement's still show."""
+    A draft agreement's comments stay out of the organization's own view of
+    it (#5553); government sees them, and an underway agreement's show to
+    both."""
     org_id, _ = await _two_org_ids(dbsession)
     analyst = await _seed_ia_analyst(dbsession, "dreed", "Dana", "Reed")
     for lifecycle_status, ia_code, text_ in (
@@ -1551,7 +1552,7 @@ async def test_the_organization_comment_log_leaves_out_a_drafts_comments(
             )
         )
     await dbsession.flush()
-    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+    set_mock_user(fastapi_app, roles, {"organization_id": org_id})
 
     response = await client.get(
         fastapi_app.url_path_for("get_organization_comments", organization_id=org_id),
@@ -1561,17 +1562,16 @@ async def test_the_organization_comment_log_leaves_out_a_drafts_comments(
     assert response.status_code == status.HTTP_200_OK, response.text
     texts = [c["comment"] for c in response.json()["comments"]]
     assert "About the underway agreement" in texts
-    assert "About the draft" not in texts
+    assert ("About the draft" in texts) is sees_the_draft
 
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("entity", ["initiativeAgreement", "designatedAction"])
-async def test_a_comment_on_a_draft_cannot_be_edited(
+async def test_a_comment_on_a_draft_can_be_edited_by_its_author(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession, entity
 ):
-    """A comment is edited by its own id, not through its thread. On a draft
-    agreement or one of its actions it reads as missing too (#5186), even to
-    its author, and its text does not change."""
+    """A comment is edited by its own id, not through its thread. A draft is
+    government's own preparation (#5553), so its author edits it there."""
     _, entity_id, link_model, link_column = await _comment_thread_for(
         dbsession, "Draft", "IA-26EDTC", entity
     )
@@ -1597,9 +1597,9 @@ async def test_a_comment_on_a_draft_cannot_be_edited(
         json={"comment": "Changed"},
     )
 
-    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.status_code == status.HTTP_200_OK, response.text
     await dbsession.refresh(comment)
-    assert comment.comment == "Original"
+    assert "Changed" in comment.comment
 
 
 async def _attached_comment(dbsession, lifecycle_status, ia_code, entity):
@@ -1646,15 +1646,20 @@ async def test_attachments_on_a_drafts_comments_read_as_missing(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession, entity
 ):
     """Attachments are served by the documents API, not the comments API,
-    so it applies the same rule: files on a draft's comments, and its
-    actions', can't be listed, downloaded or removed by IDIR users (#5186),
-    even by the comment's author."""
+    so it applies the same rule: outside government, files on a draft's
+    comments, and its actions', can't be listed, downloaded or removed
+    (#5553), even by the comment's author."""
     from lcfs.db.models.comment.InternalComment import (
         internal_comment_document_association,
     )
 
     comment, document = await _attached_comment(dbsession, "Draft", "IA-26ATTD", entity)
-    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+    org_id, _ = await _two_org_ids(dbsession)
+    set_mock_user(
+        fastapi_app,
+        [RoleEnum.SUPPLIER, RoleEnum.IA_PROPONENT],
+        {"organization_id": org_id},
+    )
     address = {
         "parent_type": "internal_comment",
         "parent_id": comment.internal_comment_id,
@@ -1686,11 +1691,17 @@ async def test_attachments_on_a_drafts_comments_read_as_missing(
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize("lifecycle", ["Draft", "Underway"])
 @pytest.mark.parametrize("entity", ["initiativeAgreement", "designatedAction"])
-async def test_attachments_on_an_underway_agreements_comments_stay_listed(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession, entity
+async def test_government_lists_attachments_in_draft_and_underway(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    dbsession,
+    entity,
+    lifecycle,
 ):
-    comment, _ = await _attached_comment(dbsession, "Underway", "IA-26ATTU", entity)
+    comment, _ = await _attached_comment(dbsession, lifecycle, "IA-26ATTU", entity)
     set_mock_user(fastapi_app, IDIR_IA_ANALYST)
 
     listed = await client.get(

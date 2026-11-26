@@ -23,9 +23,12 @@ import { AddEvidenceRequirementModal } from './AddEvidenceRequirementModal'
 export const EvidenceOfCompletion = ({
   designatedActionId,
   canEdit = true,
-  // The requirement's wording, which the Director may also edit inside a
-  // change order; canEdit covers the review (#5555).
-  canEditDefinition = canEdit,
+  // The requirements themselves (adding, rewording, removing) are part of
+  // the agreement's package (#5554): whether this caller may change them
+  // now. Read-only once the package is; in a change order draft the
+  // Director may change them too (#5555). The review that canEdit governs
+  // carries on either way.
+  canEditWording = canEdit,
   inChangeOrder = false,
   renderRequestAction = null,
   missingInformationReadOnly = false
@@ -125,19 +128,21 @@ export const EvidenceOfCompletion = ({
             {t('report:collapseAll')}
           </Link>
         </BCTypography>
-        <Role roles={packageEditorRoles(inChangeOrder)}>
-          <BCButton
-            type="button"
-            variant="outlined"
-            color="primary"
-            size="small"
-            startIcon={<AddIcon sx={{ width: '1rem', height: '1rem' }} />}
-            data-test="eoc-add-button"
-            onClick={() => setAdding(true)}
-          >
-            {t('initiativeAgreement:evidence.addEoc')}
-          </BCButton>
-        </Role>
+        {canEditWording && (
+          <Role roles={packageEditorRoles(inChangeOrder)}>
+            <BCButton
+              type="button"
+              variant="outlined"
+              color="primary"
+              size="small"
+              startIcon={<AddIcon sx={{ width: '1rem', height: '1rem' }} />}
+              data-test="eoc-add-button"
+              onClick={() => setAdding(true)}
+            >
+              {t('initiativeAgreement:evidence.addEoc')}
+            </BCButton>
+          </Role>
+        )}
       </Box>
 
       {isLoading ? (
@@ -157,7 +162,7 @@ export const EvidenceOfCompletion = ({
                 )
               }
               canEdit={canEdit}
-              canEditDefinition={canEditDefinition}
+              canEditWording={canEditWording}
               missingInformationReadOnly={missingInformationReadOnly}
               actions={renderRequestAction?.(
                 requirement,

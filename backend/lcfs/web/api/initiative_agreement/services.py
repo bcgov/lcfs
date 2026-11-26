@@ -100,20 +100,23 @@ from lcfs.web.api.initiative_agreement.schema import (
 )
 from lcfs.web.api.initiative_agreement.workflow import (
     ACTION_APPROVE,
-    LIFECYCLE_STATUSES_OPEN_TO_NEW_ACTIONS,
+    LIFECYCLE_STATUS_UNDERWAY,
+    LIFECYCLE_STATUSES_SETTABLE_UNDERWAY,
     PACKAGE_EDITOR_ROLES,
+    SET_UNDERWAY_ROLES,
     STATUS_APPROVED,
     STATUS_NOT_STARTED,
     TRANSITIONS,
     WORKFLOW_ACTIONS,
     change_order_actions,
+    ensure_package_editable,
     has_any_role,
     hidden_lifecycle_statuses,
     initial_lifecycle_status,
     is_government,
     is_hidden_from,
+    is_package_editable,
     lifecycle_status_aliases,
-    may_edit_package,
 )
 from lcfs.web.api.internal_comment.schema import (
     AudienceScopeEnum,
@@ -230,21 +233,6 @@ class InitiativeAgreementServices:
         if alias not in cache:
             cache[alias] = await self.repo.get_lifecycle_status_by_name(alias)
         return cache[alias] or lifecycle_status
-
-    @staticmethod
-    def _require_package_editor(user, change_order) -> None:
-        """Analysts and managers edit a package's content; inside a change
-        order the Director does too (#5555)."""
-        if not may_edit_package(user, change_order is not None):
-            raise HTTPException(
-                status_code=403,
-                detail=(
-                    "You are not permitted to edit this agreement outside a "
-                    "change order."
-                    if user is not None and has_any_role(user, [RoleEnum.DIRECTOR])
-                    else "You are not permitted to edit this agreement."
-                ),
-            )
 
     async def _change_order_of_action(self, action):
         """The open change order of the action's agreement, if any."""
@@ -434,6 +422,7 @@ class InitiativeAgreementServices:
                 ),
                 user,
             ),
+            package_editable=is_package_editable(agreement),
         )
         return view.apply(AGREEMENT, agreement, profile)
 
@@ -452,8 +441,8 @@ class InitiativeAgreementServices:
 
         The starting lifecycle status depends on who creates it (see
         INITIAL_LIFECYCLE_STATUS_RULES). An agreement government enters
-        starts Underway. Draft is kept for the applications BCeID
-        proponents will start.
+        starts as a Draft, hidden from the organization until a Director
+        sets it Underway (#5553).
         """
         if data.organization_id is not None:
             organization = await self.org_service.get_organization(data.organization_id)
@@ -527,6 +516,15 @@ class InitiativeAgreementServices:
         )
         # The status history starts with the status the agreement was
         # created in; the table's audit trigger records the insert itself.
+        await self._record_lifecycle_status(agreement, lifecycle_status, user)
+        return await self.get_initiative_agreement_profile(
+            agreement.initiative_agreement_id
+        )
+
+    async def _record_lifecycle_status(self, agreement, lifecycle_status, user):
+        """Append the status the agreement just entered, and who put it
+        there, to its lifecycle history."""
+        username = getattr(user, "keycloak_username", None)
         display_name = " ".join(
             p
             for p in (getattr(user, "first_name", ""), getattr(user, "last_name", ""))
@@ -544,9 +542,75 @@ class InitiativeAgreementServices:
                 update_user=username,
             )
         )
-        return await self.get_initiative_agreement_profile(
-            agreement.initiative_agreement_id
+
+    @service_handler
+    async def set_agreement_underway(
+        self, initiative_agreement_id: int, user
+    ) -> InitiativeAgreementProfileSchema:
+        """Release a completed draft package to its organization (#5553).
+
+        Only a Director may do it, and only from Draft. The package (the
+        agreement, its notes, designated actions and evidence requirements)
+        has one lifecycle, the agreement's, so this single update moves all
+        of it and can never leave part of it behind. The history row records
+        who did it and when, in the same transaction.
+
+        The agreement's row is locked first, so two Directors confirming at
+        once cannot both move it and record the change twice.
+        """
+        if not any(user_has_roles(user, [role]) for role in SET_UNDERWAY_ROLES):
+            raise HTTPException(
+                status_code=403,
+                detail="Only a Director can set an initiative agreement to Underway.",
+            )
+
+        agreement = await self.repo.get_initiative_agreement_by_id(
+            initiative_agreement_id, for_update=True
         )
+        if (
+            not agreement
+            or agreement.record_kind != RECORD_KIND_AGREEMENT
+            or is_hidden_from(agreement, user)
+        ):
+            raise DataNotFoundException(
+                f"Initiative Agreement with id {initiative_agreement_id} not found"
+            )
+
+        lifecycle = (
+            agreement.lifecycle_status.status if agreement.lifecycle_status else None
+        )
+        if lifecycle not in LIFECYCLE_STATUSES_SETTABLE_UNDERWAY:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Only a draft agreement can be set to Underway; this one "
+                    f"is '{lifecycle or 'not set'}'."
+                ),
+            )
+        # Underway opens the package to the organization, and the edit that
+        # would fill in a missing organization is closed after it.
+        if agreement.to_organization_id is None:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Set the agreement's organization before setting it to Underway."
+                ),
+            )
+
+        underway = await self.repo.get_lifecycle_status_by_name(
+            LIFECYCLE_STATUS_UNDERWAY
+        )
+        if underway is None:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Lifecycle status '{LIFECYCLE_STATUS_UNDERWAY}' is not configured.",
+            )
+
+        agreement.lifecycle_status = underway
+        agreement.update_user = getattr(user, "keycloak_username", None)
+        await self.repo.db.flush()
+        await self._record_lifecycle_status(agreement, underway, user)
+        return await self.get_initiative_agreement_profile(initiative_agreement_id)
 
     @service_handler
     async def update_agreement(
@@ -555,9 +619,9 @@ class InitiativeAgreementServices:
         data: AgreementUpdateSchema,
         user,
     ) -> InitiativeAgreementProfileSchema:
-        """Edit an agreement's details, in any lifecycle status the caller
-        can see. A draft is hidden from government (#5186), so it reads as
-        missing here too.
+        """Edit an agreement's details while its package is open to edits
+        (#5554). A draft is hidden from anyone outside government (#5553),
+        so it reads as missing to them here too.
 
         In a change order draft the edit is staged as the change order's
         version of the details; the organization keeps the accepted ones
@@ -574,7 +638,7 @@ class InitiativeAgreementServices:
                 f"Initiative Agreement with id {initiative_agreement_id} not found"
             )
         change_order = await self.change_orders.open_change_order_for(agreement)
-        self._require_package_editor(user, change_order)
+        ensure_package_editable(agreement, user)
 
         provided = data.model_fields_set
 
@@ -672,13 +736,13 @@ class InitiativeAgreementServices:
         data: DesignatedActionCreateSchema,
         user,
     ) -> DesignatedActionSchema:
-        """Add a designated action to an agreement that is still open.
+        """Add a designated action while the agreement's package is open to
+        edits (#5554).
 
-        Agreements government enters start Underway (#5186), and that is
-        when an analyst sets out the schedule. A completed or terminated
-        agreement takes no new actions. One added in a change order draft
-        waits for the Director's acceptance before the organization sees it
-        (#5555).
+        An analyst sets out the schedule while government prepares the
+        agreement as a Draft (#5553). Once it is Underway, a new action
+        comes through a change order, and waits for the Director's
+        acceptance before the organization sees it (#5555).
         """
         agreement = await self.repo.get_initiative_agreement_by_id(
             initiative_agreement_id
@@ -687,20 +751,8 @@ class InitiativeAgreementServices:
             raise DataNotFoundException(
                 f"Initiative Agreement with id {initiative_agreement_id} not found"
             )
+        ensure_package_editable(agreement, user)
         change_order = await self.change_orders.open_change_order_for(agreement)
-        self._require_package_editor(user, change_order)
-
-        lifecycle = (
-            agreement.lifecycle_status.status if agreement.lifecycle_status else None
-        )
-        if lifecycle not in LIFECYCLE_STATUSES_OPEN_TO_NEW_ACTIONS:
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    "Designated actions can only be added while the agreement "
-                    f"is a draft or underway; this one is '{lifecycle or 'not set'}'."
-                ),
-            )
 
         name = (data.name or "").strip()
         if not name:
@@ -759,14 +811,15 @@ class InitiativeAgreementServices:
     ) -> DesignatedActionSchema:
         """Correct a designated action's details.
 
-        Outside a change order the edit applies at once and every change is
-        recorded with its before and after. In a change order draft it is
-        staged as the action's next version, and the history records it when
-        the Director accepts (#5555).
+        Editable while the agreement's package is open to edits (#5554). In
+        a Draft the edit applies at once and every change is recorded with
+        its before and after. In a change order draft it is staged as the
+        action's next version, and the history records it when the Director
+        accepts (#5555).
         """
         action = await self._get_action_or_404(designated_action_id, user)
         change_order = await self._change_order_of_action(action)
-        self._require_package_editor(user, change_order)
+        ensure_package_editable(action.initiative_agreement, user)
         current = (
             await self.change_orders.working_values(
                 change_order, DESIGNATED_ACTION, action
@@ -861,13 +914,13 @@ class InitiativeAgreementServices:
         action the change order itself added goes at once. Credits already
         issued for an action keep it in the package."""
         action = await self._get_action_or_404(designated_action_id, user)
+        ensure_package_editable(action.initiative_agreement, user)
         change_order = await self._change_order_of_action(action)
         if change_order is None:
             raise HTTPException(
                 status_code=400,
                 detail=("A designated action can only be removed in a change order."),
             )
-        self._require_package_editor(user, change_order)
         if action.transaction_id is not None:
             raise HTTPException(
                 status_code=400,
@@ -1047,6 +1100,12 @@ class InitiativeAgreementServices:
                 if view.change_order is not None
                 else None
             ),
+            package_editable=is_package_editable(action.initiative_agreement),
+            agreement_lifecycle_status=(
+                action.initiative_agreement.lifecycle_status.status
+                if action.initiative_agreement.lifecycle_status
+                else None
+            ),
         )
 
     async def _get_action_or_404(
@@ -1054,8 +1113,8 @@ class InitiativeAgreementServices:
     ) -> DesignatedAction:
         """The action, unless it is missing or its agreement is hidden from
         the caller. Every route to an action comes through here, so a
-        draft's actions read as missing everywhere, not only on the
-        profile (#5186)."""
+        draft's actions read as missing to the organization everywhere,
+        not only on the profile (#5553)."""
         if user is None and self.request:
             user = self.request.user
         action = await self.repo.get_designated_action_by_id(
@@ -1081,8 +1140,8 @@ class InitiativeAgreementServices:
         )
 
     async def _get_requirement_or_404(self, evidence_requirement_id: int, user):
-        """The evidence requirement, unless it is missing or its action is
-        hidden from the caller (see _get_action_or_404)."""
+        """The evidence requirement and its action, unless it is missing or
+        its action is hidden from the caller (see _get_action_or_404)."""
         requirement = await self.repo.get_evidence_requirement(evidence_requirement_id)
         action = (
             await self.repo.get_designated_action_by_id(
@@ -1105,7 +1164,7 @@ class InitiativeAgreementServices:
             raise DataNotFoundException(
                 f"Evidence requirement with id {evidence_requirement_id} not found"
             )
-        return requirement
+        return requirement, action
 
     def _user_may(self, transition, user) -> bool:
         return any(user_has_roles(user, [role]) for role in transition.roles)
@@ -1490,7 +1549,7 @@ class InitiativeAgreementServices:
         (#5555)."""
         action = await self._get_action_or_404(designated_action_id, user)
         change_order = await self._change_order_of_action(action)
-        self._require_package_editor(user, change_order)
+        ensure_package_editable(action.initiative_agreement, user)
         title = (data.title or "").strip()
         if not title:
             raise HTTPException(
@@ -1536,15 +1595,16 @@ class InitiativeAgreementServices:
         round's finding is not lost when information is requested: the round
         is captured with its full payload in designated_action_history.
 
-        The wording (title, description, type, number) is the package's
-        content: in a change order draft an edit to it is staged as the
-        requirement's next version. The assessment is workflow and always
-        applies at once (#5555).
+        The wording (title, description, type and number) is part of the
+        package and changes only while it is open to edits (#5554). In a
+        change order draft an edit to it is staged as the requirement's next
+        version (#5555). The assessment is the analyst review, which is what
+        an Underway package is for, so it stays open and is never versioned.
         """
-        requirement = await self._get_requirement_or_404(evidence_requirement_id, user)
-        action = await self.repo.get_designated_action_by_id(
-            requirement.designated_action_id
+        requirement, action = await self._get_requirement_or_404(
+            evidence_requirement_id, user
         )
+        agreement = action.initiative_agreement
         change_order = await self._change_order_of_action(action)
         definition_fields = {
             "title",
@@ -1567,18 +1627,21 @@ class InitiativeAgreementServices:
                     provided.add(name)
             elif value is not None or name == "missing_information":
                 provided.add(name)
-        if provided & definition_fields:
-            self._require_package_editor(user, change_order)
         if provided & review_fields and not has_any_role(user, PACKAGE_EDITOR_ROLES):
             raise HTTPException(
                 status_code=403,
                 detail="Only an IA analyst or manager can record an assessment.",
             )
         if change_order is not None and provided & definition_fields:
+            # Staged against the change order's working values; unchanged
+            # wording sent with an assessment stages nothing.
+            ensure_package_editable(agreement, user)
             await self._stage_requirement_definition(
                 change_order, requirement, data, user
             )
             data = data.model_copy(update={name: None for name in definition_fields})
+        elif self._changes_requirement_wording(requirement, data):
+            ensure_package_editable(agreement, user)
 
         # The text an analyst saves deliberately — title, description and
         # evaluation — is recorded with its before and after, the way a
@@ -1722,6 +1785,28 @@ class InitiativeAgreementServices:
             EvidenceRequirementSchema.model_validate(requirement),
         )
 
+    @staticmethod
+    def _changes_requirement_wording(
+        requirement: EvidenceRequirement, data: EvidenceRequirementUpdateSchema
+    ) -> bool:
+        """Whether this update would change the requirement's wording. A
+        value sent unchanged is not a change, so a client that saves the
+        whole card does not trip the package lock with an assessment."""
+        sent = {
+            "title": (data.title or "").strip() if data.title is not None else None,
+            "description": (
+                (data.description or "").strip()
+                if data.description is not None
+                else None
+            ),
+            "evidence_type": data.evidence_type,
+            "requirement_number": data.requirement_number,
+        }
+        return any(
+            value is not None and value != getattr(requirement, field)
+            for field, value in sent.items()
+        )
+
     @service_handler
     async def deactivate_evidence_requirement(
         self, evidence_requirement_id: int, user
@@ -1730,12 +1815,11 @@ class InitiativeAgreementServices:
         requirement that was once reviewed is part of the record. In a
         change order draft the removal waits for the Director's acceptance
         (#5555)."""
-        requirement = await self._get_requirement_or_404(evidence_requirement_id, user)
-        action = await self.repo.get_designated_action_by_id(
-            requirement.designated_action_id
+        requirement, action = await self._get_requirement_or_404(
+            evidence_requirement_id, user
         )
+        ensure_package_editable(action.initiative_agreement, user)
         change_order = await self._change_order_of_action(action)
-        self._require_package_editor(user, change_order)
         if change_order is not None:
             await self.change_orders.stage_removal(
                 change_order, EVIDENCE_REQUIREMENT, requirement, user
@@ -2096,7 +2180,7 @@ class InitiativeAgreementServices:
     ) -> InitiativeAgreementNoteSchema:
         agreement = await self._agreement_or_404(initiative_agreement_id, user)
         change_order = await self.change_orders.open_change_order_for(agreement)
-        self._require_package_editor(user, change_order)
+        ensure_package_editable(agreement, user)
         taken = (
             await self.change_orders.note_numbers_in_use(
                 initiative_agreement_id, change_order, include_live=True
@@ -2133,7 +2217,7 @@ class InitiativeAgreementServices:
     ) -> InitiativeAgreementNoteSchema:
         agreement = await self._agreement_or_404(initiative_agreement_id, user)
         change_order = await self.change_orders.open_change_order_for(agreement)
-        self._require_package_editor(user, change_order)
+        ensure_package_editable(agreement, user)
         note_text = self._require_note_text(data.note_text)
         if change_order is not None:
             await self._stage_note_update(
@@ -2199,7 +2283,7 @@ class InitiativeAgreementServices:
     ) -> None:
         agreement = await self._agreement_or_404(initiative_agreement_id, user)
         change_order = await self.change_orders.open_change_order_for(agreement)
-        self._require_package_editor(user, change_order)
+        ensure_package_editable(agreement, user)
         if change_order is not None:
             note = await self._change_order_note(agreement, change_order, note_id)
             await self.change_orders.stage_removal(change_order, NOTE, note, user)

@@ -17,10 +17,6 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
     RECORD_KIND_AGREEMENT,
     RECORD_KIND_LEGACY_AWARD,
 )
-from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
-    InitiativeAgreementStatus,
-    InitiativeAgreementStatusEnum,
-)
 from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.user.Role import RoleEnum
 
@@ -290,22 +286,30 @@ async def test_lifecycle_statuses_endpoint(
 
     assert response.status_code == status.HTTP_200_OK
     statuses = [row["status"] for row in response.json()]
-    # IDIR users do not see drafts, so the filter does not offer one (#5186).
-    assert statuses == ["Underway", "Change order draft", "Completed", "Terminated"]
+    # Government prepares drafts, so its filter offers them (#5553), and it
+    # sees a change order draft by name (#5555).
+    assert statuses == [
+        "Draft",
+        "Underway",
+        "Change order draft",
+        "Completed",
+        "Terminated",
+    ]
 
 
 @pytest.mark.anyio
-async def test_lifecycle_statuses_offer_draft_to_a_proponent(
+async def test_lifecycle_statuses_hide_draft_from_a_proponent(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    """A draft is the proponent's own application, so their filter keeps it."""
+    """A draft is government's preparation, which the organization does not
+    see, so a proponent's filter does not offer it (#5553)."""
     set_mock_user(fastapi_app, [RoleEnum.IA_PROPONENT, RoleEnum.SUPPLIER])
     url = fastapi_app.url_path_for("get_initiative_agreement_statuses")
     response = await client.get(url)
 
     assert response.status_code == status.HTTP_200_OK
     statuses = [row["status"] for row in response.json()]
-    assert statuses == ["Draft", "Underway", "Completed", "Terminated"]
+    assert statuses == ["Underway", "Completed", "Terminated"]
 
 
 @pytest.mark.anyio
@@ -417,14 +421,15 @@ async def _seed_visible_and_draft(dbsession, fastapi_app, org_id):
 
 
 @pytest.mark.anyio
-async def test_drafts_are_hidden_from_government(
+async def test_drafts_are_hidden_from_the_organization(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
-    """A draft is a proponent's application that has not been submitted
-    yet. IDIR users do not see it in the grid or on its page (#5186)."""
+    """A draft is government's internal preparation. The organization's
+    own proponents do not see it in the grid or on its page until it is
+    Underway (#5553)."""
     org1, _ = await _two_org_ids(dbsession)
     list_url, profile_url = await _seed_visible_and_draft(dbsession, fastapi_app, org1)
-    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
+    set_mock_user(fastapi_app, [RoleEnum.IA_PROPONENT], {"organization_id": org1})
 
     response = await client.post(list_url, json={**PAGINATION_BODY, "size": 200})
     codes = {r["iaCode"] for r in response.json()["initiativeAgreements"]}
@@ -450,12 +455,13 @@ async def test_drafts_are_hidden_from_government(
 
 
 @pytest.mark.anyio
-async def test_a_proponent_still_sees_their_own_draft(
+async def test_government_sees_drafts(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
+    """Government prepares the draft, so IDIR sees it (#5553)."""
     org1, _ = await _two_org_ids(dbsession)
     list_url, profile_url = await _seed_visible_and_draft(dbsession, fastapi_app, org1)
-    set_mock_user(fastapi_app, [RoleEnum.IA_PROPONENT], {"organization_id": org1})
+    set_mock_user(fastapi_app, IDIR_IA_ANALYST)
 
     response = await client.post(list_url, json={**PAGINATION_BODY, "size": 200})
     codes = {r["iaCode"] for r in response.json()["initiativeAgreements"]}
@@ -799,7 +805,7 @@ async def test_dashboard_counts_cover_only_agreement_kind_rows(
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert data["underway"] == 2
-    # IDIR users do not see drafts, so the card does not count them (#5186).
+    # The card shows agreements underway only; drafts are not counted.
     assert "draft" not in data
 
 
@@ -884,11 +890,11 @@ async def _lifecycle_history(dbsession, agreement_id):
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("idir_role", [RoleEnum.IA_ANALYST, RoleEnum.IA_MANAGER])
-async def test_create_agreement_starts_underway(
+async def test_create_agreement_starts_as_a_draft(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession, idir_role
 ):
-    """An agreement government enters starts Underway. Draft is kept for the
-    applications BCeID proponents will start (#5186)."""
+    """An agreement government enters starts as a Draft, its internal
+    preparation, until a Director sets it Underway (#5553)."""
     org_id, _ = await _two_org_ids(dbsession)
     set_mock_user(fastapi_app, [idir_role, RoleEnum.GOVERNMENT])
 
@@ -907,7 +913,7 @@ async def test_create_agreement_starts_underway(
     body = response.json()
     assert body["iaCode"] == code
     assert body["agreementType"] == "Initiative Agreement"
-    assert body["lifecycleStatus"]["status"] == "Underway"
+    assert body["lifecycleStatus"]["status"] == "Draft"
     assert body["organization"]["organizationId"] == org_id
     assert body["designatedActions"] == []
     # Entry date is stamped by the server, not taken from the caller.
@@ -918,7 +924,7 @@ async def test_create_agreement_starts_underway(
     history = await _lifecycle_history(dbsession, body["initiativeAgreementId"])
     assert len(history) == 1
     assert history[0].lifecycle_status_id == await _lifecycle_status_id(
-        dbsession, "Underway"
+        dbsession, "Draft"
     )
     assert history[0].user_profile_id == 1
     assert history[0].display_name == "Test User"
@@ -940,7 +946,7 @@ async def test_create_agreement_starts_underway(
         },
     )
     rows = list_response.json()["initiativeAgreements"]
-    assert [r["lifecycleStatus"]["status"] for r in rows] == ["Underway"]
+    assert [r["lifecycleStatus"]["status"] for r in rows] == ["Draft"]
 
 
 @pytest.mark.anyio
@@ -956,7 +962,7 @@ async def test_create_agreement_without_an_organization(
     assert response.status_code == status.HTTP_201_CREATED
     body = response.json()
     assert body["organization"] is None
-    assert body["lifecycleStatus"]["status"] == "Underway"
+    assert body["lifecycleStatus"]["status"] == "Draft"
     agreement = await dbsession.get(InitiativeAgreement, body["initiativeAgreementId"])
     assert agreement.to_organization_id is None
 
@@ -976,8 +982,8 @@ async def test_create_agreement_rejects_an_unknown_organization(
 
 
 def test_initial_status_follows_who_creates_the_agreement():
-    """The rule a future BCeID application path will use: a proponent's
-    agreement starts as a draft, government's starts Underway (#5186)."""
+    """Government's agreement starts as a draft (#5553). No rule covers
+    anyone else, so nobody else can start one."""
     from types import SimpleNamespace
 
     from lcfs.web.api.initiative_agreement.workflow import (
@@ -989,34 +995,52 @@ def test_initial_status_follows_who_creates_the_agreement():
 
     assert (
         initial_lifecycle_status(user(RoleEnum.GOVERNMENT, RoleEnum.IA_ANALYST))
-        == "Underway"
+        == "Draft"
     )
     assert (
-        initial_lifecycle_status(user(RoleEnum.SUPPLIER, RoleEnum.IA_PROPONENT))
-        == "Draft"
+        initial_lifecycle_status(user(RoleEnum.SUPPLIER, RoleEnum.IA_PROPONENT)) is None
     )
     assert initial_lifecycle_status(user(RoleEnum.IA_PROPONENT)) is None
 
 
-@pytest.mark.anyio
-async def test_a_proponent_application_would_start_as_a_hidden_draft(dbsession):
-    """The creation endpoint is closed to proponents until the BCeID story
-    opens it, so this drives the service directly. It checks that the
-    assignment logic already supports that path: a proponent's agreement is
-    a Draft, its history records that, and IDIR users do not see it."""
+def test_drafts_are_hidden_from_everyone_outside_government():
+    """The organization does not see a draft, and neither does an unknown
+    caller: the check fails closed (#5553)."""
     from types import SimpleNamespace
+
+    from lcfs.web.api.initiative_agreement.workflow import is_hidden_from
+
+    def agreement(lifecycle):
+        return SimpleNamespace(lifecycle_status=SimpleNamespace(status=lifecycle))
+
+    government = SimpleNamespace(role_names=[RoleEnum.GOVERNMENT, RoleEnum.DIRECTOR])
+    proponent = SimpleNamespace(role_names=[RoleEnum.SUPPLIER, RoleEnum.IA_PROPONENT])
+
+    assert not is_hidden_from(agreement("Draft"), government)
+    assert is_hidden_from(agreement("Draft"), proponent)
+    assert is_hidden_from(agreement("Draft"), None)
+    for lifecycle in ("Underway", "Completed", "Terminated"):
+        assert not is_hidden_from(agreement(lifecycle), government)
+        assert not is_hidden_from(agreement(lifecycle), proponent)
+
+
+@pytest.mark.anyio
+async def test_a_proponent_cannot_start_an_agreement(dbsession):
+    """The creation endpoint is closed to proponents, and the service
+    refuses them too: no initial-status rule covers them (#5553)."""
+    from types import SimpleNamespace
+
+    from fastapi import HTTPException
 
     from lcfs.web.api.initiative_agreement.repo import InitiativeAgreementRepository
     from lcfs.web.api.initiative_agreement.schema import AgreementCreateSchema
     from lcfs.web.api.initiative_agreement.services import (
         InitiativeAgreementServices,
     )
-    from lcfs.web.api.initiative_agreement.workflow import is_hidden_from
 
     org_id, _ = await _two_org_ids(dbsession)
-    repo = InitiativeAgreementRepository(dbsession)
     service = InitiativeAgreementServices(
-        repo=repo,
+        repo=InitiativeAgreementRepository(dbsession),
         org_service=SimpleNamespace(
             get_organization=lambda organization_id: _async_value(True)
         ),
@@ -1031,20 +1055,19 @@ async def test_a_proponent_application_would_start_as_a_hidden_draft(dbsession):
         last_name="Proponent",
     )
 
-    created = await service.create_agreement(
-        AgreementCreateSchema(organization_id=org_id, ia_code="IA-26BCEID"),
-        proponent,
-    )
+    with pytest.raises(HTTPException) as error:
+        await service.create_agreement(
+            AgreementCreateSchema(organization_id=org_id, ia_code="IA-26BCEID"),
+            proponent,
+        )
 
-    assert created.lifecycle_status.status == "Draft"
-    history = await _lifecycle_history(dbsession, created.initiative_agreement_id)
-    assert [h.display_name for h in history] == ["Pat Proponent"]
-    agreement = await repo.get_initiative_agreement_by_id(
-        created.initiative_agreement_id
+    assert error.value.status_code == status.HTTP_403_FORBIDDEN
+    assert (
+        await InitiativeAgreementRepository(dbsession).get_agreement_by_ia_code(
+            "IA-26BCEID"
+        )
+        is None
     )
-    government = SimpleNamespace(role_names=[RoleEnum.GOVERNMENT])
-    assert is_hidden_from(agreement, government)
-    assert not is_hidden_from(agreement, proponent)
 
 
 async def _async_value(value):
@@ -1108,6 +1131,7 @@ async def test_create_agreement_is_closed_to_a_proponent(
 
 
 @pytest.mark.anyio
+@pytest.mark.usefixtures("underway_packages_editable")
 async def test_update_agreement_edits_a_submitted_agreement(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
@@ -1150,6 +1174,7 @@ async def test_update_agreement_edits_a_submitted_agreement(
 
 
 @pytest.mark.anyio
+@pytest.mark.usefixtures("underway_packages_editable")
 async def test_update_agreement_leaves_omitted_fields_alone(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
@@ -1173,6 +1198,7 @@ async def test_update_agreement_leaves_omitted_fields_alone(
 
 
 @pytest.mark.anyio
+@pytest.mark.usefixtures("underway_packages_editable")
 async def test_update_agreement_may_keep_its_own_code(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
@@ -1190,6 +1216,7 @@ async def test_update_agreement_may_keep_its_own_code(
 
 
 @pytest.mark.anyio
+@pytest.mark.usefixtures("underway_packages_editable")
 async def test_update_agreement_rejects_another_agreements_code(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
@@ -1208,6 +1235,7 @@ async def test_update_agreement_rejects_another_agreements_code(
 
 
 @pytest.mark.anyio
+@pytest.mark.usefixtures("underway_packages_editable")
 async def test_update_agreement_requires_a_code(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
@@ -1241,6 +1269,7 @@ async def test_update_agreement_rejects_a_code_longer_than_the_column(
 
 
 @pytest.mark.anyio
+@pytest.mark.usefixtures("underway_packages_editable")
 async def test_update_agreement_rejects_an_unknown_type(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
@@ -1258,6 +1287,7 @@ async def test_update_agreement_rejects_an_unknown_type(
 
 
 @pytest.mark.anyio
+@pytest.mark.usefixtures("underway_packages_editable")
 async def test_update_agreement_rejects_an_end_before_its_start(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
@@ -1289,17 +1319,17 @@ async def test_update_agreement_404s_on_a_missing_agreement(
 
 
 @pytest.mark.anyio
-async def test_update_agreement_cannot_reach_a_draft(
+async def test_update_agreement_edits_a_draft(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
-    """A draft is hidden from IDIR users (#5186), so its page 404s and so
-    does an edit; nothing on it changes."""
+    """A draft is government's own preparation (#5553), so an analyst edits
+    it like any agreement they can see."""
     org_id, _ = await _two_org_ids(dbsession)
     draft = await _seed_agreement(
         dbsession,
         org_id,
         "IA-26EDTD",
-        title="Proponent's title",
+        title="First title",
         lifecycle_status_id=await _lifecycle_status_id(dbsession, "Draft"),
     )
     set_mock_user(fastapi_app, IDIR_IA_ANALYST)
@@ -1309,12 +1339,13 @@ async def test_update_agreement_cannot_reach_a_draft(
     )
     response = await client.put(url, json={"title": "Changed by IDIR"})
 
-    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.status_code == status.HTTP_200_OK, response.text
     await dbsession.refresh(draft)
-    assert draft.title == "Proponent's title"
+    assert draft.title == "Changed by IDIR"
 
 
 @pytest.mark.anyio
+@pytest.mark.usefixtures("underway_packages_editable")
 async def test_update_agreement_fills_in_a_missing_organization(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
@@ -1336,6 +1367,7 @@ async def test_update_agreement_fills_in_a_missing_organization(
 
 
 @pytest.mark.anyio
+@pytest.mark.usefixtures("underway_packages_editable")
 async def test_update_agreement_cannot_change_or_clear_a_set_organization(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
@@ -1363,6 +1395,7 @@ async def test_update_agreement_cannot_change_or_clear_a_set_organization(
 
 
 @pytest.mark.anyio
+@pytest.mark.usefixtures("underway_packages_editable")
 async def test_update_agreement_refuses_an_unknown_organization(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
@@ -1380,43 +1413,28 @@ async def test_update_agreement_refuses_an_unknown_organization(
 
 
 @pytest.mark.anyio
-async def test_the_legacy_award_update_cannot_reach_a_draft(
+async def test_the_legacy_read_cannot_reach_a_draft_from_the_organization(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
-    """The Transactions page's award update shares this table. A draft is
-    hidden from government (#5186) there too: it reads as missing and its
-    status does not move."""
+    """The older by-id read is open to every role. A draft is hidden from
+    the organization (#5553) there too: it reads as missing."""
     org_id, _ = await _two_org_ids(dbsession)
-    legacy_draft_id = (
-        await dbsession.execute(
-            select(InitiativeAgreementStatus.initiative_agreement_status_id).where(
-                InitiativeAgreementStatus.status == InitiativeAgreementStatusEnum.Draft
-            )
-        )
-    ).scalar_one()
     draft = await _seed_agreement(
         dbsession,
         org_id,
         "IA-26LEGD",
-        compliance_units=500,
-        current_status_id=legacy_draft_id,
         lifecycle_status_id=await _lifecycle_status_id(dbsession, "Draft"),
     )
-    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
+    set_mock_user(fastapi_app, [RoleEnum.IA_PROPONENT], {"organization_id": org_id})
 
-    response = await client.put(
-        fastapi_app.url_path_for("update_initiative_agreement"),
-        json={
-            "initiativeAgreementId": draft.initiative_agreement_id,
-            "complianceUnits": 500,
-            "currentStatus": "Recommended",
-            "toOrganizationId": org_id,
-        },
+    response = await client.get(
+        fastapi_app.url_path_for(
+            "get_initiative_agreement",
+            initiative_agreement_id=draft.initiative_agreement_id,
+        )
     )
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    await dbsession.refresh(draft)
-    assert draft.current_status_id == legacy_draft_id
 
 
 @pytest.mark.anyio

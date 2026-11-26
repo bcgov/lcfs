@@ -149,6 +149,10 @@ class FakeInitiativeAgreementValidation:
     async def validate_organization_access(self, parent_id: int):
         return
 
+    async def validate_package_document_write(self, *args, **kwargs):
+        # The package lock (#5554) has its own tests.
+        return
+
 
 class FakeAdminAdjustmentValidation:
     async def validate_organization_access(self, parent_id: int):

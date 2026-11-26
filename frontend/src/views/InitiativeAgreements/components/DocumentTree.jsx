@@ -159,12 +159,16 @@ const FileLabel = ({
   onCancelRename,
   // Present only for files inside a folder: a root file has nowhere
   // higher to go, so the control is absent rather than disabled.
-  onMoveToRoot
+  onMoveToRoot,
+  // Preview and download only (see DocumentTree's readOnly).
+  readOnly = false
 }) => {
   const { t } = useTranslation(['initiativeAgreement'])
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: docDragId(file.documentId)
+    id: docDragId(file.documentId),
+    disabled: readOnly
   })
+  const canRenameHere = canRename && !readOnly
   const displayName = file.displayName || file.fileName
 
   if (renaming) {
@@ -201,7 +205,7 @@ const FileLabel = ({
         component="span"
         variant="subtitle2"
         onDoubleClick={(event) => {
-          if (!canRename) return
+          if (!canRenameHere) return
           event.stopPropagation()
           onStartRename()
         }}
@@ -211,7 +215,7 @@ const FileLabel = ({
           overflow: 'hidden',
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',
-          cursor: canRename ? 'text' : 'default'
+          cursor: canRenameHere ? 'text' : 'default'
         }}
       >
         {displayName}
@@ -226,7 +230,7 @@ const FileLabel = ({
       {/* Double-click is the mouse shortcut, but it is only a shortcut:
           a rename reachable no other way would be mouse-only, which axe
           cannot see and a keyboard user cannot get past. */}
-      {canRename && (
+      {canRenameHere && (
         <IconButton
           size="small"
           data-test={`tree-file-rename-${file.documentId}`}
@@ -264,7 +268,7 @@ const FileLabel = ({
       {/* Dragging to the top level is possible but the drop zone only
           exists mid-drag, below the tree, where nobody finds it. A
           button is discoverable and works from the keyboard. */}
-      {onMoveToRoot && (
+      {onMoveToRoot && !readOnly && (
         <IconButton
           size="small"
           data-test={`tree-file-to-root-${file.documentId}`}
@@ -281,31 +285,35 @@ const FileLabel = ({
       )}
       {/* Removing a file sends it to the bin below; nothing is
           destroyed. */}
-      <IconButton
-        size="small"
-        data-test={`tree-file-delete-${file.documentId}`}
-        aria-label={t('initiativeAgreement:folders.deleteFile', {
-          name: file.fileName
-        })}
-        onClick={(event) => {
-          event.stopPropagation()
-          onDelete(file.documentId)
-        }}
-      >
-        <DeleteOutlineIcon fontSize="inherit" />
-      </IconButton>
-      <IconButton
-        size="small"
-        {...attributes}
-        {...listeners}
-        data-test={`tree-file-handle-${file.documentId}`}
-        aria-label={t('initiativeAgreement:folders.fileDragHandle', {
-          name: file.fileName
-        })}
-        sx={{ cursor: 'grab' }}
-      >
-        <DragIndicatorIcon fontSize="inherit" />
-      </IconButton>
+      {!readOnly && (
+        <IconButton
+          size="small"
+          data-test={`tree-file-delete-${file.documentId}`}
+          aria-label={t('initiativeAgreement:folders.deleteFile', {
+            name: file.fileName
+          })}
+          onClick={(event) => {
+            event.stopPropagation()
+            onDelete(file.documentId)
+          }}
+        >
+          <DeleteOutlineIcon fontSize="inherit" />
+        </IconButton>
+      )}
+      {!readOnly && (
+        <IconButton
+          size="small"
+          {...attributes}
+          {...listeners}
+          data-test={`tree-file-handle-${file.documentId}`}
+          aria-label={t('initiativeAgreement:folders.fileDragHandle', {
+            name: file.fileName
+          })}
+          sx={{ cursor: 'grab' }}
+        >
+          <DragIndicatorIcon fontSize="inherit" />
+        </IconButton>
+      )}
     </Box>
   )
 }
@@ -321,7 +329,9 @@ const FolderLabel = ({
   onOpenMenu,
   onStartRename,
   onOsFileDrop,
-  externalDragSuppressed
+  externalDragSuppressed,
+  // No rename, drop, drag or folder menu (see DocumentTree's readOnly).
+  readOnly = false
 }) => {
   const { t } = useTranslation(['initiativeAgreement'])
   const {
@@ -334,11 +344,11 @@ const FolderLabel = ({
     // Nesting under another folder is the only thing folder-drag does, so
     // when subfolders are off the handle is inert rather than a drag that
     // could only ever be refused.
-    disabled: folder.isSystem || dragDisabled
+    disabled: folder.isSystem || dragDisabled || readOnly
   })
   const { setNodeRef: setDropRef, isOver } = useDroppable({
     id: folderDragId(folder.folderId),
-    disabled: invalid
+    disabled: invalid || readOnly
   })
   const [osDragOver, setOsDragOver] = useState(false)
 
@@ -353,6 +363,7 @@ const FolderLabel = ({
   }
 
   const isExternalFileDrag = (event) =>
+    !readOnly &&
     !externalDragSuppressed &&
     Array.from(event.dataTransfer?.types ?? []).includes('Files')
 
@@ -370,7 +381,7 @@ const FolderLabel = ({
       }}
       data-test={`tree-folder-${folder.folderId}`}
       onDoubleClick={(event) => {
-        if (folder.isSystem) return
+        if (folder.isSystem || readOnly) return
         event.stopPropagation()
         onStartRename()
       }}
@@ -409,7 +420,7 @@ const FolderLabel = ({
           name: folder.name
         })}
         sx={{
-          cursor: dragDisabled ? 'default' : 'grab',
+          cursor: dragDisabled || readOnly ? 'default' : 'grab',
           color: 'primary.main',
           fontWeight: 700
         }}
@@ -435,7 +446,7 @@ const FolderLabel = ({
       <BCTypography component="span" variant="subtitle2" color="text.secondary">
         ({folder.documentCount})
       </BCTypography>
-      {!folder.isSystem && (
+      {!folder.isSystem && !readOnly && (
         <IconButton
           size="small"
           data-test={`folder-menu-${folder.folderId}`}
@@ -483,7 +494,12 @@ export const DocumentTree = ({
   title,
   headerAction,
   allowSubfolders = false,
-  enablePreview = false
+  enablePreview = false,
+  // Browse, preview and download only: no upload, folder, move, rename,
+  // bin or restore controls. The initiative agreement pages set it while
+  // the agreement's package is read-only (#5554); the API refuses those
+  // writes regardless.
+  readOnly = false
 }) => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const { data: tree, isLoading } = useDocumentTree(parentType, parentID)
@@ -799,6 +815,7 @@ export const DocumentTree = ({
           folder={folder}
           invalid={dragState?.invalid?.has(folder.folderId) ?? false}
           dragDisabled={!allowSubfolders}
+          readOnly={readOnly}
           renaming={renamingId === folder.folderId}
           onCommitRename={(value) => commitRename(folder.folderId, value)}
           onCancelRename={() => setRenamingId(null)}
@@ -822,6 +839,7 @@ export const DocumentTree = ({
               parentID={parentID}
               enablePreview={enablePreview}
               onMoveToRoot={(documentId) => runDocumentMove([documentId], null)}
+              readOnly={readOnly}
               onDownload={downloadDocument}
               onDelete={(documentId) =>
                 setPendingDelete({ documentId, fileName: file.fileName })
@@ -897,17 +915,19 @@ export const DocumentTree = ({
           </BCTypography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             {headerAction}
-            <BCButton
-              type="button"
-              variant="outlined"
-              color="primary"
-              size="small"
-              startIcon={<CreateNewFolderOutlinedIcon fontSize="small" />}
-              data-test="new-folder-button"
-              onClick={() => setCreating({ parentFolderId: null })}
-            >
-              {t('initiativeAgreement:folders.newFolder')}
-            </BCButton>
+            {!readOnly && (
+              <BCButton
+                type="button"
+                variant="outlined"
+                color="primary"
+                size="small"
+                startIcon={<CreateNewFolderOutlinedIcon fontSize="small" />}
+                data-test="new-folder-button"
+                onClick={() => setCreating({ parentFolderId: null })}
+              >
+                {t('initiativeAgreement:folders.newFolder')}
+              </BCButton>
+            )}
           </Box>
         </Box>
 
@@ -957,6 +977,7 @@ export const DocumentTree = ({
                       parentType={parentType}
                       parentID={parentID}
                       enablePreview={enablePreview}
+                      readOnly={readOnly}
                       onDownload={downloadDocument}
                       onDelete={(documentId) =>
                         setPendingDelete({
@@ -1049,16 +1070,22 @@ export const DocumentTree = ({
         }}
       />
 
-      <DeletedItems parentType={parentType} parentID={parentID} />
+      {/* Everything in the bin can only be restored or destroyed, and
+          neither is open while the tree is read-only. */}
+      {!readOnly && (
+        <DeletedItems parentType={parentType} parentID={parentID} />
+      )}
 
-      <BCTypography
-        variant="body4"
-        color="text.secondary"
-        component="p"
-        sx={{ mt: 1.5, textAlign: 'center' }}
-      >
-        {t('initiativeAgreement:folders.helperText')}
-      </BCTypography>
+      {!readOnly && (
+        <BCTypography
+          variant="body4"
+          color="text.secondary"
+          component="p"
+          sx={{ mt: 1.5, textAlign: 'center' }}
+        >
+          {t('initiativeAgreement:folders.helperText')}
+        </BCTypography>
+      )}
 
       <input
         ref={uploadInputRef}

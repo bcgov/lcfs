@@ -47,7 +47,8 @@ vi.mock('@/hooks/useInitiativeAgreements', () => ({
   useRecordVersions: () => ({ data: [], isLoading: false }),
   useStartChangeOrder: () => ({ mutate: vi.fn(), isPending: false }),
   useAcceptChangeOrder: () => ({ mutate: vi.fn(), isPending: false }),
-  useDiscardChangeOrder: () => ({ mutate: vi.fn(), isPending: false })
+  useDiscardChangeOrder: () => ({ mutate: vi.fn(), isPending: false }),
+  useSetAgreementUnderway: () => ({ mutateAsync: vi.fn() })
 }))
 
 const mockDocuments = vi.fn()
@@ -84,10 +85,11 @@ vi.mock('../components/DeletedItems', () => ({
 }))
 
 vi.mock('../components/NotesAccordion', () => ({
-  NotesAccordion: ({ initiativeAgreementId }) => (
+  NotesAccordion: ({ initiativeAgreementId, readOnly }) => (
     <div
       data-test="notes-accordion"
       data-agreement-id={initiativeAgreementId}
+      data-read-only={String(!!readOnly)}
     />
   )
 }))
@@ -132,7 +134,10 @@ const agreement = {
   projectDescription: 'A description of the project.',
   agreementStartDate: '2026-06-19',
   agreementEndDate: '2027-05-03',
-  lifecycleStatus: { status: 'Underway' },
+  // A package still open to edits (#5554); lockedAgreement below is the
+  // same agreement once it is Underway.
+  lifecycleStatus: { status: 'Draft' },
+  packageEditable: true,
   organization: {
     organizationId: 1,
     name: 'Test Organization',
@@ -146,6 +151,12 @@ const agreement = {
       postalcodeZipcode: 'V6G 2P3'
     }
   }
+}
+
+const lockedAgreement = {
+  ...agreement,
+  lifecycleStatus: { status: 'Underway' },
+  packageEditable: false
 }
 
 describe('InitiativeAgreementDetail', () => {
@@ -171,7 +182,7 @@ describe('InitiativeAgreementDetail', () => {
     ).toHaveTextContent('IA-26ORG1')
     expect(screen.getByText('Test Organization')).toBeInTheDocument()
     expect(screen.getByTestId('agreement-status-chip')).toHaveTextContent(
-      'Underway'
+      'Draft'
     )
     expect(screen.getByText(/697 Burrard Street/)).toBeInTheDocument()
     expect(screen.getByText('604-555-0100')).toBeInTheDocument()
@@ -393,21 +404,58 @@ describe('InitiativeAgreementDetail', () => {
     )
   })
 
-  test('offers to add an action while the agreement is underway (#5186)', ({
+  test('offers to add an action while the package is editable (#5554)', ({
     render,
     app
   }) => {
-    // Agreements government enters start Underway, so that is where the
-    // schedule is set out.
     render(<InitiativeAgreementDetail />, app)
     expect(screen.getByTestId('add-designated-action')).toBeInTheDocument()
   })
 
-  test.for(['Completed', 'Terminated'])(
+  test('offers Set to Underway to a director on a draft (#5553)', ({
+    render,
+    app
+  }) => {
+    mockRoles = [{ name: roles.director }]
+    mockAgreement.mockReturnValue({
+      data: { ...agreement, lifecycleStatus: { status: 'Draft' } },
+      isLoading: false,
+      isError: false,
+      error: null
+    })
+    render(<InitiativeAgreementDetail />, app)
+    expect(screen.getByTestId('set-underway-button')).toBeInTheDocument()
+  })
+
+  test.for([
+    ['an IA analyst on a draft', roles.ia_analyst, 'Draft'],
+    ['an IA manager on a draft', roles.ia_manager, 'Draft'],
+    ['a director once underway', roles.director, 'Underway']
+  ])(
+    'does not offer Set to Underway to %s',
+    ([, role, status], { render, app }) => {
+      mockRoles = [{ name: role }]
+      mockAgreement.mockReturnValue({
+        data: {
+          ...(status === 'Underway' ? lockedAgreement : agreement),
+          lifecycleStatus: { status }
+        },
+        isLoading: false,
+        isError: false,
+        error: null
+      })
+      render(<InitiativeAgreementDetail />, app)
+      expect(
+        screen.queryByTestId('set-underway-button')
+      ).not.toBeInTheDocument()
+    }
+  )
+
+  test.for(['Underway', 'Completed', 'Terminated'])(
     'does not offer to add an action to a %s agreement',
     (status, { render, app }) => {
       mockAgreement.mockReturnValue({
-        data: { ...agreement, lifecycleStatus: { status } },
+        data: { ...lockedAgreement, lifecycleStatus: { status } },
         isLoading: false,
         isError: false,
         error: null
@@ -501,7 +549,7 @@ describe('InitiativeAgreementDetail', () => {
       screen.getByText('initiativeAgreement:detail.noOrganization')
     ).toBeInTheDocument()
     expect(screen.getByTestId('agreement-status-chip')).toHaveTextContent(
-      'Underway'
+      'Draft'
     )
   })
 
@@ -517,6 +565,97 @@ describe('InitiativeAgreementDetail', () => {
     })
     render(<InitiativeAgreementDetail />, app)
     expect(screen.getByText('Test Organization')).toBeInTheDocument()
+  })
+
+  describe('once the package is read-only (#5554)', () => {
+    beforeEach(() => {
+      mockAgreement.mockReturnValue({
+        data: lockedAgreement,
+        isLoading: false,
+        isError: false,
+        error: null
+      })
+    })
+
+    test('says why, naming the status, with no change order action yet', ({
+      render,
+      app
+    }) => {
+      render(<InitiativeAgreementDetail />, app)
+      const notice = screen.getByTestId('package-lock-notice')
+      expect(notice).toHaveTextContent(
+        'initiativeAgreement:detail.packageLockedTitle'
+      )
+      // #5555 fills this slot with "Start change order".
+      expect(
+        screen.queryByTestId('package-lock-notice-action')
+      ).not.toBeInTheDocument()
+    })
+
+    test('shows no notice while the package is editable', ({ render, app }) => {
+      mockAgreement.mockReturnValue({
+        data: agreement,
+        isLoading: false,
+        isError: false,
+        error: null
+      })
+      render(<InitiativeAgreementDetail />, app)
+      expect(
+        screen.queryByTestId('package-lock-notice')
+      ).not.toBeInTheDocument()
+    })
+
+    test.for([roles.ia_analyst, roles.ia_manager])(
+      'gives a %s no Edit, upload or add-action control',
+      (role, { render, app }) => {
+        mockRoles = [{ name: role }]
+        render(<InitiativeAgreementDetail />, app)
+        expect(screen.queryByTestId('edit-agreement')).not.toBeInTheDocument()
+        expect(
+          screen.queryByTestId('upload-documents-button')
+        ).not.toBeInTheDocument()
+        expect(
+          screen.queryByTestId('add-designated-action')
+        ).not.toBeInTheDocument()
+      }
+    )
+
+    test('makes the document tree and the notes read-only', ({
+      render,
+      app
+    }) => {
+      render(<InitiativeAgreementDetail />, app)
+      expect(treeProps).toHaveBeenLastCalledWith(
+        expect.objectContaining({ readOnly: true })
+      )
+      expect(screen.getByTestId('notes-accordion')).toHaveAttribute(
+        'data-read-only',
+        'true'
+      )
+    })
+
+    test('keeps the comment thread and the actions grid', ({ render, app }) => {
+      render(<InitiativeAgreementDetail />, app)
+      expect(screen.getByTestId('comments-component')).toBeInTheDocument()
+      expect(screen.getByTestId('designated-actions-grid')).toBeInTheDocument()
+    })
+
+    test('gives a BCeID proponent the read-only list and no notice', ({
+      render,
+      app
+    }) => {
+      mockRoles = [{ name: roles.ia_proponent }]
+      render(<InitiativeAgreementDetail />, app)
+      expect(screen.queryByTestId('edit-agreement')).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId('upload-documents-button')
+      ).not.toBeInTheDocument()
+      expect(screen.queryByTestId('document-tree')).not.toBeInTheDocument()
+      // The notice speaks to the staff who would otherwise edit.
+      expect(
+        screen.queryByTestId('package-lock-notice')
+      ).not.toBeInTheDocument()
+    })
   })
 })
 

@@ -11,10 +11,11 @@ import { Role } from '@/components/Role'
 import { packageEditorRoles } from './packageEditors'
 import { useUpdateDesignatedAction } from '@/hooks/useInitiativeAgreements'
 
-// Correcting a designated action. Available at any point in the
-// agreement's life: an analyst who spots a wrong figure or a mistyped
-// name should be able to fix it rather than work around it. Every change
-// is recorded in the activity trail with its before and after.
+// Correcting a designated action while the agreement's package is open to
+// edits (#5554); the detail page leaves it out once the package is
+// read-only. In a change order draft the Director may edit too, and the
+// change waits for acceptance (#5555). Every change is recorded in the
+// activity trail with its before and after.
 export const EditDesignatedAction = ({
   action,
   onChanged,

@@ -1,4 +1,5 @@
 import structlog
+from typing import Optional
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
 
 from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
@@ -33,9 +34,15 @@ async def _validate_parent_access(
     service: DocumentFolderServices,
     document_service: DocumentService,
     ia_validate: InitiativeAgreementValidation,
+    write: bool = False,
+    document_id: Optional[int] = None,
 ) -> None:
     """Allow-list first, then the same access resolution the shared
-    document routes use: a designated action's audience is its agreement's."""
+    document routes use: a designated action's audience is its agreement's.
+    A *write* also needs the agreement's package open to edits (#5554):
+    binning, restoring or deleting a file and every folder change edit it.
+    *document_id* names the file a write acts on; without one it is a
+    folder change."""
     service.ensure_parent_type_enabled(parent_type)
     if parent_type == "designatedAction":
         agreement_id = await document_service.get_designated_action_agreement_id(
@@ -59,6 +66,13 @@ async def _validate_parent_access(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Unsupported document parent type.",
+        )
+    if write:
+        await ia_validate.validate_package_document_write(
+            parent_type,
+            parent_id,
+            document_id,
+            folder_change=document_id is None,
         )
 
 
@@ -129,7 +143,13 @@ async def soft_delete_document(
     object and the row, which is exactly what must not happen here.
     """
     await _validate_parent_access(
-        parent_type, parent_id, service, document_service, ia_validate
+        parent_type,
+        parent_id,
+        service,
+        document_service,
+        ia_validate,
+        write=True,
+        document_id=document_id,
     )
     await service.soft_delete_document(
         parent_type, parent_id, document_id, request.user
@@ -153,7 +173,13 @@ async def restore_document(
     """Return a document to the tree, or to the top level if the folder
     it came from has since been removed."""
     await _validate_parent_access(
-        parent_type, parent_id, service, document_service, ia_validate
+        parent_type,
+        parent_id,
+        service,
+        document_service,
+        ia_validate,
+        write=True,
+        document_id=document_id,
     )
     await service.restore_document(parent_type, parent_id, document_id, request.user)
 
@@ -174,7 +200,13 @@ async def hard_delete_document(
 ) -> None:
     """Permanently remove a deleted file owned and removed by this user."""
     await _validate_parent_access(
-        parent_type, parent_id, service, document_service, ia_validate
+        parent_type,
+        parent_id,
+        service,
+        document_service,
+        ia_validate,
+        write=True,
+        document_id=document_id,
     )
     await service.hard_delete_document(
         parent_type, parent_id, document_id, request.user, document_service
@@ -197,7 +229,7 @@ async def create_document_folder(
     ia_validate: InitiativeAgreementValidation = Depends(),
 ) -> FolderSchema:
     await _validate_parent_access(
-        parent_type, parent_id, service, document_service, ia_validate
+        parent_type, parent_id, service, document_service, ia_validate, write=True
     )
     return await service.create_folder(parent_type, parent_id, data)
 
@@ -218,7 +250,7 @@ async def move_document_folder_items(
 ) -> None:
     """Bulk placement — one call per drag; a null folder moves to root."""
     await _validate_parent_access(
-        parent_type, parent_id, service, document_service, ia_validate
+        parent_type, parent_id, service, document_service, ia_validate, write=True
     )
     await service.move_items(parent_type, parent_id, data)
 
@@ -241,7 +273,7 @@ async def update_document_folder(
 ) -> FolderSchema:
     """Rename and move, one route."""
     await _validate_parent_access(
-        parent_type, parent_id, service, document_service, ia_validate
+        parent_type, parent_id, service, document_service, ia_validate, write=True
     )
     return await service.update_folder(parent_type, parent_id, folder_id, data)
 
@@ -261,7 +293,7 @@ async def delete_document_folder(
     ia_validate: InitiativeAgreementValidation = Depends(),
 ) -> None:
     await _validate_parent_access(
-        parent_type, parent_id, service, document_service, ia_validate
+        parent_type, parent_id, service, document_service, ia_validate, write=True
     )
     await service.delete_folder(parent_type, parent_id, folder_id, request.user)
 
@@ -282,6 +314,6 @@ async def restore_document_folder(
 ) -> None:
     """Bring a folder back where it was, with what was inside it."""
     await _validate_parent_access(
-        parent_type, parent_id, service, document_service, ia_validate
+        parent_type, parent_id, service, document_service, ia_validate, write=True
     )
     await service.restore_folder(parent_type, parent_id, folder_id, request.user)

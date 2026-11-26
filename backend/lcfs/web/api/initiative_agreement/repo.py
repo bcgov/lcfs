@@ -304,8 +304,11 @@ class InitiativeAgreementRepository:
 
     @repo_handler
     async def get_initiative_agreement_by_id(
-        self, initiative_agreement_id: int
+        self, initiative_agreement_id: int, *, for_update: bool = False
     ) -> Optional[InitiativeAgreement]:
+        """The agreement, or None. ``for_update`` locks its row until the
+        transaction ends and re-reads it, so a lifecycle change sees the
+        status another request may have just committed."""
         query = (
             select(InitiativeAgreement)
             .options(
@@ -325,6 +328,10 @@ class InitiativeAgreementRepository:
                 InitiativeAgreement.initiative_agreement_id == initiative_agreement_id
             )
         )
+        if for_update:
+            query = query.with_for_update(of=InitiativeAgreement).execution_options(
+                populate_existing=True
+            )
         result = await self.db.execute(query)
         return result.scalars().first()
 

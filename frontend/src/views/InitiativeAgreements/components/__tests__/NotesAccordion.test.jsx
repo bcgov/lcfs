@@ -333,6 +333,17 @@ describe('NotesAccordion', () => {
     )
   })
 
+  test('an analyst gets no add, edit or delete controls once the package is read-only (#5554)', ({
+    render,
+    app
+  }) => {
+    render(<NotesAccordion initiativeAgreementId={5} readOnly />, app)
+
+    expect(screen.getByTestId('note-1')).toBeInTheDocument()
+    expect(screen.queryByTestId('add-note-button')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('edit-note-1')).not.toBeInTheDocument()
+  })
+
   test('directors read notes but get no add, edit or delete controls', ({
     render,
     app

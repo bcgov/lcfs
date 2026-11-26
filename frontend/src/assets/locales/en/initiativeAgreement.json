@@ -31,6 +31,8 @@
   },
   "detail": {
     "title": "Initiative agreement",
+    "packageLockedTitle": "This agreement is {{status}}, so its package is read-only.",
+    "packageLockedBody": "Agreement information, notes, designated actions, evidence of completion requirements and documents can't be changed directly. Changes are made through a change order. Reviews, comments and evidence submissions carry on as usual.",
     "agreementHeader": "Initiative agreement",
     "agreementBrief": "Agreement brief",
     "documents": "Initiative Agreement documents",
@@ -76,7 +78,7 @@
     "creditsLabel": "Compliance units to be issued",
     "dateLabel": "Date for completion",
     "create": "Add designated action",
-    "closedToNewActions": "Designated actions cannot be added to a completed or terminated agreement.",
+    "closedToNewActions": "This agreement's package is read-only, so designated actions can't be added to it.",
     "createFailed": "The designated action could not be added.",
     "edit": "Edit details",
     "editTitle": "Edit designated action",
@@ -308,6 +310,14 @@
     "endBeforeStart": "The end date cannot be before the start date.",
     "success": "Agreement {{code}} updated.",
     "failed": "The agreement could not be updated."
+  },
+  "setUnderway": {
+    "button": "Set to Underway",
+    "title": "Set to Underway",
+    "message": "Setting this IA to Underway enables the organization to access this information. No further edits can be made other than by using the Change order process.",
+    "confirm": "Set to Underway",
+    "success": "Agreement {{code}} is now Underway.",
+    "failed": "The agreement could not be set to Underway."
   },
   "create": {
     "button": "New initiative agreement",

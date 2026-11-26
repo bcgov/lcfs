@@ -67,10 +67,11 @@ vi.mock('@/components/Documents/DocumentUploadDialog', () => ({
 vi.mock('../components/DocumentTree', () => ({
   // The tree owns the section's card and header, so the page's own
   // controls reach the screen through it.
-  DocumentTree: ({ title, headerAction, allowSubfolders }) => (
+  DocumentTree: ({ title, headerAction, allowSubfolders, readOnly }) => (
     <div
       data-test="document-tree"
       data-allow-subfolders={allowSubfolders ? 'true' : 'false'}
+      data-read-only={String(!!readOnly)}
     >
       <span>{title}</span>
       {headerAction}
@@ -83,14 +84,14 @@ vi.mock('../components/EvidenceOfCompletion', () => ({
   // The section renders a request action beside each requested EOC.
   EvidenceOfCompletion: ({
     canEdit,
-    canEditDefinition,
+    canEditWording,
     missingInformationReadOnly,
     renderRequestAction
   }) => (
     <div
       data-test="evidence-of-completion"
       data-can-edit={String(canEdit)}
-      data-can-edit-definition={String(canEditDefinition)}
+      data-can-edit-wording={String(canEditWording)}
       data-missing-information-read-only={String(missingInformationReadOnly)}
     >
       {renderRequestAction?.(
@@ -142,7 +143,10 @@ const action = {
   iaCode: 'IA-26ORG1',
   siblingActionIds: [9, 12, 15],
   missingInformation: 'The signed stage two permit.',
-  availableActions: ['accept_evidence', 'recommend_to_manager']
+  availableActions: ['accept_evidence', 'recommend_to_manager'],
+  // The agreement's package is still open to edits (#5554).
+  packageEditable: true,
+  agreementLifecycleStatus: 'Draft'
 }
 
 describe('DesignatedActionDetail', () => {
@@ -419,6 +423,69 @@ describe('DesignatedActionDetail', () => {
     render(<DesignatedActionDetail />, app)
     expect(screen.getByTestId('alert-box')).toHaveTextContent('boom')
   })
+
+  describe("once the agreement's package is read-only (#5554)", () => {
+    beforeEach(() => {
+      mockProfile.mockReturnValue({
+        data: {
+          ...action,
+          packageEditable: false,
+          agreementLifecycleStatus: 'Underway'
+        },
+        isLoading: false,
+        isError: false,
+        error: null
+      })
+    })
+
+    test('says why', ({ render, app }) => {
+      render(<DesignatedActionDetail />, app)
+      expect(screen.getByTestId('package-lock-notice')).toHaveTextContent(
+        'initiativeAgreement:detail.packageLockedTitle'
+      )
+    })
+
+    test('offers no edit or upload control', ({ render, app }) => {
+      render(<DesignatedActionDetail />, app)
+      expect(
+        screen.queryByTestId('edit-designated-action')
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId('upload-documents-button')
+      ).not.toBeInTheDocument()
+      expect(screen.getByTestId('document-tree')).toHaveAttribute(
+        'data-read-only',
+        'true'
+      )
+    })
+
+    test('locks the evidence requirements but keeps the review open', ({
+      render,
+      app
+    }) => {
+      render(<DesignatedActionDetail />, app)
+      const eoc = screen.getByTestId('evidence-of-completion')
+      expect(eoc).toHaveAttribute('data-can-edit-wording', 'false')
+      expect(eoc).toHaveAttribute('data-can-edit', 'true')
+      // The recommendation and the workflow carry on.
+      expect(
+        screen.getByTestId('recommended-credits-input')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByTestId('designated-action-workflow-decision')
+      ).toBeInTheDocument()
+      expect(screen.getByTestId('comments-component')).toBeInTheDocument()
+    })
+  })
+
+  test('shows no notice while the package is editable', ({ render, app }) => {
+    render(<DesignatedActionDetail />, app)
+    expect(screen.queryByTestId('package-lock-notice')).not.toBeInTheDocument()
+    expect(screen.getByTestId('evidence-of-completion')).toHaveAttribute(
+      'data-can-edit-wording',
+      'true'
+    )
+  })
 })
 
 describe('DesignatedActionDetail in a change order (#5555)', () => {
@@ -470,7 +537,7 @@ describe('DesignatedActionDetail in a change order (#5555)', () => {
 
     const section = screen.getByTestId('evidence-of-completion')
     expect(section).toHaveAttribute('data-can-edit', 'false')
-    expect(section).toHaveAttribute('data-can-edit-definition', 'true')
+    expect(section).toHaveAttribute('data-can-edit-wording', 'true')
     expect(screen.getByTestId('edit-designated-action')).toBeInTheDocument()
   })
 

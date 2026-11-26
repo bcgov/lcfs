@@ -104,7 +104,7 @@ async def test_initiative_agreement_counts_success_for_ia_manager(
         response = await client.get("/api/dashboard/initiative-agreement-counts")
 
         assert response.status_code == status.HTTP_200_OK
-        # No draft count: IDIR users do not see drafts (#5186).
+        # The card shows agreements underway only; drafts are not counted.
         assert response.json() == {"underway": 5}
 
 
