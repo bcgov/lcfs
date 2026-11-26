@@ -143,6 +143,16 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
         return response
 
 
+# Middleware to add security-related response headers (LCFS-SEC-024).
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        # Prevents browsers from MIME-sniffing a response away from its
+        # declared Content-Type (e.g. treating a downloaded file as HTML/JS).
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        return response
+
+
 # Middleware to set context variables
 class ContextMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
@@ -193,11 +203,15 @@ def get_app() -> FastAPI:
         ],  # Expose so frontend can read ref on error responses
     )
 
-    # Apply middlewares
+    # Apply middlewares. Starlette treats the most recently added middleware as
+    # the outermost layer, so SecurityHeadersMiddleware is added last to ensure
+    # it sees (and can annotate) every response, including error responses
+    # produced by the other middlewares and exception handlers below.
     app.add_middleware(AuthenticationMiddleware, backend=LazyAuthenticationBackend(app))
     app.add_middleware(MiddlewareExceptionWrapper)
     app.add_middleware(CorrelationIdMiddleware)
     app.add_middleware(ContextMiddleware)
+    app.add_middleware(SecurityHeadersMiddleware)
 
     # Register exception handlers
     app.add_exception_handler(HTTPException, http_exception_handler)
