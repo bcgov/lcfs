@@ -163,6 +163,9 @@ class RenewableFuelTargetCalculator:
 
         decimal_retained_renewables = {}
         decimal_deferred_renewables = {}
+        retention_caps = {}
+        deferral_caps = {}
+        prescribed_caps = {}
 
         for category in ["gasoline", "diesel", "jet_fuel"]:
             current_required_quantity_dec = (
@@ -176,11 +179,13 @@ class RenewableFuelTargetCalculator:
             prescribed_portion = (
                 current_required_quantity_dec * Decimal("0.05")
             ).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+            prescribed_caps[category] = int(prescribed_portion)
 
             excess = max(
                 DECIMAL_ZERO, raw_net_supplied - current_required_quantity_dec
             )
             max_retention = min(excess, prescribed_portion)
+            retention_caps[category] = int(max_retention)
 
             line_6_value = Decimal(
                 str(
@@ -198,6 +203,7 @@ class RenewableFuelTargetCalculator:
                 DECIMAL_ZERO, current_required_quantity_dec - raw_net_supplied
             )
             max_deferral = min(deficiency, prescribed_portion)
+            deferral_caps[category] = int(max_deferral)
 
             line_8_value = Decimal(
                 str(
@@ -361,7 +367,14 @@ class RenewableFuelTargetCalculator:
         summary: List[ComplianceReportSummaryRowSchema] = []
         for line, values in summary_lines.items():
             additional_kwargs = {}
-            if line == 7:
+            if line in (6, 8):
+                caps = retention_caps if line == 6 else deferral_caps
+                additional_kwargs = {
+                    "max_gasoline": caps["gasoline"],
+                    "max_diesel": caps["diesel"],
+                    "max_jet_fuel": caps["jet_fuel"],
+                }
+            elif line == 7:
                 additional_kwargs = {
                     "max_gasoline": int(line7_max_caps.get("gasoline", DECIMAL_ZERO)),
                     "max_diesel": int(line7_max_caps.get("diesel", DECIMAL_ZERO)),
@@ -374,9 +387,9 @@ class RenewableFuelTargetCalculator:
 
             if line in [6, 8]:
                 description_value = description_template.format(
-                    "{:,}".format(round(summary_lines[4]["gasoline"] * 0.05)),
-                    "{:,}".format(round(summary_lines[4]["diesel"] * 0.05)),
-                    "{:,}".format(round(summary_lines[4]["jet_fuel"] * 0.05)),
+                    "{:,}".format(prescribed_caps["gasoline"]),
+                    "{:,}".format(prescribed_caps["diesel"]),
+                    "{:,}".format(prescribed_caps["jet_fuel"]),
                 )
             elif line == 4:
                 diesel_percent_display = "8%" if compliance_period >= 2025 else "4%"
