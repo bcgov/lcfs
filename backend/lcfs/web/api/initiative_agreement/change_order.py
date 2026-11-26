@@ -679,6 +679,12 @@ class ChangeOrderService:
                 {"action": None, "changed": {}, "requirements": []},
             )
 
+        # No edit can be in flight here. The agreement's row is held FOR
+        # UPDATE since _locked_open_change_order, and every package edit takes
+        # it FOR KEY SHARE before it reads the change order and keeps it until
+        # it commits (services._lock_editable_package). An edit that started
+        # first has committed and is loaded below; one that starts now waits,
+        # then sees the agreement Underway and is refused.
         pending_by_type = {
             record_type.key: await self._pending_versions(record_type, change_order_id)
             for record_type in RECORD_TYPES.values()

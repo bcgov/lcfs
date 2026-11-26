@@ -1310,6 +1310,53 @@ async def test_an_edit_racing_acceptance_is_refused_once_it_is_accepted(
 
 
 @pytest.mark.anyio
+async def test_an_acceptance_waits_for_an_edit_in_flight_and_applies_it(
+    dbsession_factory,
+):
+    """An edit saved while the change order is a Draft, but not yet
+    committed when the Director accepts, must not be lost: acceptance waits
+    for it and applies it with the rest."""
+    ids = await _committed_package(dbsession_factory, "IA-26RACE-CO5", staged_edit=True)
+    try:
+        async with dbsession_factory() as editing:
+            async with editing.begin():
+                await _service(editing, ANALYST).update_designated_action(
+                    ids.action_id,
+                    DesignatedActionUpdateSchema(name="Edit in flight"),
+                    ANALYST,
+                )
+
+                async def accept():
+                    async with dbsession_factory() as accepting:
+                        async with accepting.begin():
+                            return await _service(
+                                accepting, DIRECTOR
+                            ).accept_change_order(
+                                ids.agreement_id, date(2025, 12, 1), DIRECTOR
+                            )
+
+                acceptance = asyncio.create_task(accept())
+                await asyncio.sleep(1)
+                # Without the shared lock acceptance would load the pending
+                # versions now, without this edit, and the edit would land
+                # on an accepted change order and never apply.
+                assert not acceptance.done()
+
+        profile = await asyncio.wait_for(acceptance, timeout=10)
+
+        assert profile.lifecycle_status.status == "Underway"
+        async with dbsession_factory() as check:
+            live = await check.get(DesignatedAction, ids.action_id)
+            assert (live.name, live.credit_allocation) == ("Edit in flight", 1500)
+        assert [
+            (v.version, v.name, v.credit_allocation)
+            for v in await _action_versions(dbsession_factory, ids)
+        ] == [(0, "Build the plant", 1000), (1, "Edit in flight", 1500)]
+    finally:
+        await _purge(dbsession_factory, ids)
+
+
+@pytest.mark.anyio
 async def test_an_edit_racing_a_discard_is_refused_once_it_is_discarded(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession_factory
 ):
