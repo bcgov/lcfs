@@ -17,6 +17,9 @@ class ComplianceReportSummary(BaseModel, Auditable):
     )
     quarter = Column(Integer, nullable=True)  # Null for annual reports
     is_locked = Column(Boolean, default=False)
+    supplemental_renewable_initialized = Column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
 
     # Renewable fuel target summary
     line_1_fossil_derived_base_fuel_gasoline = Column(Float, nullable=False, default=0)
