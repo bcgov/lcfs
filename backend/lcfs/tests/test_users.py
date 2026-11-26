@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 from io import BytesIO
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 import pytest
 from fastapi import FastAPI
 from httpx import AsyncClient
@@ -8,6 +10,52 @@ from starlette import status
 
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.user.schema import UsersSchema
+from lcfs.web.api.user.services import UserServices
+
+
+@pytest.mark.anyio
+async def test_export_falls_back_to_keycloak_email_when_email_is_missing() -> None:
+    users = [
+        {
+            "last_name": "Primary",
+            "first_name": "Email",
+            "email": "alternate@example.com",
+            "keycloak_email": "identity@example.com",
+            "keycloak_username": "primary",
+            "title": "",
+            "phone": "",
+            "mobile_phone": "",
+            "is_active": True,
+            "roles": [],
+            "organization": {"name": "Example Org"},
+        },
+        {
+            "last_name": "Fallback",
+            "first_name": "Email",
+            "email": None,
+            "keycloak_email": "identity@example.com",
+            "keycloak_username": "fallback",
+            "title": "",
+            "phone": "",
+            "mobile_phone": "",
+            "is_active": True,
+            "roles": [],
+            "organization": {"name": "Example Org"},
+        },
+    ]
+    repo = SimpleNamespace(
+        get_users_paginated=AsyncMock(return_value=(users, len(users)))
+    )
+    service = UserServices(repo=repo)
+
+    response = await service.export_users("xlsx")
+    content = b"".join([chunk async for chunk in response.body_iterator])
+    exported = pd.read_excel(BytesIO(content), engine="openpyxl")
+
+    assert exported["Email"].tolist() == [
+        "alternate@example.com",
+        "identity@example.com",
+    ]
 
 
 @pytest.mark.anyio

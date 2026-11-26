@@ -141,7 +141,7 @@ class UserServices:
                 [
                     user["last_name"],
                     user["first_name"],
-                    user["email"],
+                    user.get("email") or user.get("keycloak_email"),
                     user["keycloak_username"],
                     user["title"],
                     user["phone"],
