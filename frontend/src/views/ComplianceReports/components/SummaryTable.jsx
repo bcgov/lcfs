@@ -620,7 +620,11 @@ const SummaryTable = ({
                             row.maxDiesel != null &&
                             row.maxJetFuel != null
                           ) {
-                            return `${rawValue} Maximum: gasoline=${Number(row.maxGasoline).toLocaleString('en-CA')}; diesel=${Number(row.maxDiesel).toLocaleString('en-CA')}; jet fuel=${Number(row.maxJetFuel).toLocaleString('en-CA')}.`
+                            const description = String(rawValue).replace(
+                              / - gasoline=[^;]*; diesel=[^;]*; jet fuel=[^)]*(?=\))/,
+                              ''
+                            )
+                            return `${description} Maximum: gasoline=${Number(row.maxGasoline).toLocaleString('en-CA')}; diesel=${Number(row.maxDiesel).toLocaleString('en-CA')}; jet fuel=${Number(row.maxJetFuel).toLocaleString('en-CA')}.`
                           }
 
                           return rawValue
