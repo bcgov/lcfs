@@ -819,15 +819,52 @@ class UserRepository:
         Returns:
             Tuple: List of activities and total count.
         """
+        # Resolve the actor once after applying any per-user scope. This gives
+        # the all-user feed a filterable name/username without changing the
+        # activity rows' user_profile_id semantics.
+        user_scope_conditions = conditions
+        scoped_activities = (
+            select(combined_query)
+            .where(and_(*user_scope_conditions))
+            .subquery("scoped_activities")
+        )
+        actor_name = func.nullif(
+            func.trim(
+                func.concat_ws(
+                    " ", UserProfile.first_name, UserProfile.last_name
+                )
+            ),
+            "",
+        )
+        actor_username = func.nullif(UserProfile.keycloak_username, "")
+        user_label = case(
+            (
+                and_(actor_name.is_not(None), actor_username.is_not(None)),
+                func.concat(actor_name, " (", actor_username, ")"),
+            ),
+            (actor_name.is_not(None), actor_name),
+            else_=func.coalesce(actor_username, "Unknown user"),
+        )
+        activities_with_user = (
+            select(*scoped_activities.c, user_label.label("user"))
+            .select_from(
+                scoped_activities.outerjoin(
+                    UserProfile,
+                    scoped_activities.c.user_id == UserProfile.user_profile_id,
+                )
+            )
+            .subquery("activities_with_user")
+        )
+
         # Apply filters from pagination, silently skipping any field not
-        # present on the unioned activity query.
+        # present on the activity response query.
         displayed_transaction_id = case(
-            (combined_query.c.transaction_type == "Transfer", "CT"),
-            (combined_query.c.transaction_type == "AdminAdjustment", "AA"),
-            (combined_query.c.transaction_type == "InitiativeAgreement", "IA"),
-            (combined_query.c.transaction_type == "ComplianceReport", "CR"),
+            (activities_with_user.c.transaction_type == "Transfer", "CT"),
+            (activities_with_user.c.transaction_type == "AdminAdjustment", "AA"),
+            (activities_with_user.c.transaction_type == "InitiativeAgreement", "IA"),
+            (activities_with_user.c.transaction_type == "ComplianceReport", "CR"),
             else_="",
-        ) + cast(combined_query.c.transaction_id, String)
+        ) + cast(activities_with_user.c.transaction_id, String)
 
         def _transaction_id_filter(filter_model):
             filter_value = (
@@ -844,17 +881,17 @@ class UserRepository:
             )
 
         builder = PaginatedQueryBuilder(
-            combined_query.c,
+            activities_with_user.c,
             custom_sorts={"transaction_id": displayed_transaction_id},
             custom_filters={"transaction_id": _transaction_id_filter},
         )
-        known_fields = set(combined_query.c.keys())
+        known_fields = set(activities_with_user.c.keys())
         # FilterModel normalizes incoming camelCase grid fields to snake_case.
         relevant_filters = [f for f in pagination.filters if f.field in known_fields]
-        conditions.extend(builder.build_conditions(relevant_filters))
+        filter_conditions = builder.build_conditions(relevant_filters)
 
         final_query = builder.apply_sorting(
-            select(combined_query).where(and_(*conditions)),
+            select(activities_with_user).where(and_(*filter_conditions)),
             pagination.sort_orders,
             default_field="create_date",
         )
@@ -868,7 +905,9 @@ class UserRepository:
 
         # Get total count for pagination
         count_query = (
-            select(func.count()).select_from(combined_query).where(and_(*conditions))
+            select(func.count())
+            .select_from(activities_with_user)
+            .where(and_(*filter_conditions))
         )
         total_count_result = await self.db.execute(count_query)
         total_count = total_count_result.scalar()

@@ -10,6 +10,7 @@ from lcfs.web.api.calculator.schema import (
     LookupTableResponseSchema,
 )
 from lcfs.web.api.calculator.services import CalculatorService
+from lcfs.web.core.decorators import public_view_handler
 
 router = APIRouter()
 
@@ -20,6 +21,7 @@ router = APIRouter()
     response_model=List[CompliancePeriodBaseSchema],
     status_code=status.HTTP_200_OK,
 )
+@public_view_handler
 async def get_calculator_compliance_periods(
     request: Request, service: CalculatorService = Depends()
 ) -> str:
@@ -34,6 +36,7 @@ async def get_calculator_compliance_periods(
     tags=["public"],
     status_code=status.HTTP_200_OK,
 )
+@public_view_handler
 async def get_calculator_fuel_types(
     request: Request,
     compliance_period: int,
@@ -54,6 +57,7 @@ async def get_calculator_fuel_types(
     tags=["public"],
     status_code=status.HTTP_200_OK,
 )
+@public_view_handler
 async def get_calculator_fuel_type_options(
     request: Request,
     compliance_period: str,
@@ -75,6 +79,7 @@ async def get_calculator_fuel_type_options(
     tags=["public"],
     status_code=status.HTTP_200_OK,
 )
+@public_view_handler
 async def get_calculated_data(
     request: Request,
     compliance_period: str,
@@ -101,6 +106,7 @@ async def get_calculated_data(
     tags=["public"],
     status_code=status.HTTP_200_OK,
 )
+@public_view_handler
 async def get_quantity_from_compliance_units(
     request: Request,
     compliance_period: str,
@@ -127,6 +133,7 @@ async def get_quantity_from_compliance_units(
     response_model=LookupTableResponseSchema,
     status_code=status.HTTP_200_OK,
 )
+@public_view_handler
 async def get_lookup_table_data(
     request: Request,
     compliance_year: int,

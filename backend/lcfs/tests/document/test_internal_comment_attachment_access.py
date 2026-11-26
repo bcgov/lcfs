@@ -21,12 +21,16 @@ from lcfs.web.api.initiative_agreement.workflow import (
 )
 
 
-def _service_with_comment(comment, owner_organization_ids=(), agreement=None):
+def _service_with_comment(
+    comment, owner_organization_ids=(), agreement=None, on_draft_lcjfip=False
+):
     """Build a DocumentService with a mocked db.
 
     ``get()`` returns the comment; ``execute()`` stands in for the live
     lookups of the organizations owning the comment's readable entities and
-    of the initiative agreement the comment belongs to, if any.
+    of the initiative agreement the comment belongs to, if any. Whether the
+    comment is on a Draft LCJFIP application is stubbed separately; the API
+    tests in tests/lcjfip run that query for real.
     """
     rows = [(organization_id,) for organization_id in owner_organization_ids]
     result = SimpleNamespace(
@@ -38,6 +42,9 @@ def _service_with_comment(comment, owner_organization_ids=(), agreement=None):
     service.db = SimpleNamespace(
         get=AsyncMock(return_value=comment),
         execute=AsyncMock(return_value=result),
+    )
+    service._is_comment_on_draft_lcjfip_application = AsyncMock(
+        return_value=on_draft_lcjfip
     )
     return service
 
@@ -233,6 +240,37 @@ async def test_government_reads_attachments_on_a_draft_agreements_comment():
         1, _user(username="reader", roles=[RoleEnum.GOVERNMENT]), write=False
     )
     assert result is not None
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("write", [False, True], ids=["read", "write"])
+async def test_a_comment_on_a_draft_lcjfip_application_reads_as_missing_to_government(
+    write,
+):
+    """A Draft LCJFIP application is still the applicant's own (#5532), so
+    government can't list, download, add or remove its comments' files."""
+    service = _service_with_comment(
+        _comment(create_user="author"), on_draft_lcjfip=True
+    )
+    with pytest.raises(HTTPException) as exc:
+        await service.verify_internal_comment_access(
+            1, _user(username="author", roles=[RoleEnum.GOVERNMENT]), write=write
+        )
+    assert exc.value.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_the_applicant_reads_attachments_on_its_draft_lcjfip_application():
+    service = _service_with_comment(
+        _comment(visibility="Public"),
+        owner_organization_ids=[7],
+        on_draft_lcjfip=True,
+    )
+    result = await service.verify_internal_comment_access(
+        1, _user(username="reader", organization_id=7), write=False
+    )
+    assert result is not None
+    service._is_comment_on_draft_lcjfip_application.assert_not_awaited()
 
 
 @pytest.mark.anyio
