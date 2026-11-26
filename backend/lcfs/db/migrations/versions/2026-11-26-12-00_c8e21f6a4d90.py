@@ -1,14 +1,14 @@
 """Track initialization of supplemental renewable summary values.
 
 Revision ID: c8e21f6a4d90
-Revises: b7a04f59fdf3
+Revises: c3a7e91d5f48
 """
 
 from alembic import op
 import sqlalchemy as sa
 
 revision = "c8e21f6a4d90"
-down_revision = "b7a04f59fdf3"
+down_revision = "c3a7e91d5f48"
 branch_labels = None
 depends_on = None
 
