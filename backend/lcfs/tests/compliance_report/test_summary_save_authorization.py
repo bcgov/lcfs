@@ -198,6 +198,7 @@ async def test_update_saves_the_cut_down_summary(
     )
 
     assert result == "recalculated"
+    assert report.summary.supplemental_renewable_initialized is True
     saved = mock_summary_repo.save_compliance_report_summary.call_args.args[0]
     assert saved.compliance_report_id == REPORT_ID
     assert [row.line for row in saved.renewable_fuel_target_summary] == [6, 7, 8, 9]
