@@ -90,17 +90,11 @@ export const AllocationAgreementsIndex = () => {
       )
       const worksheet = XLSX.utils.aoa_to_sheet([headers, ...exportRows])
       const workbook = XLSX.utils.book_new()
-      XLSX.utils.book_append_sheet(
-        workbook,
-        worksheet,
-        'Allocation agreements'
-      )
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Allocation agreements')
       const date = new Date().toISOString().slice(0, 10)
-      XLSX.writeFile(
-        workbook,
-        `allocation_agreements_${date}.xlsx`,
-        { bookType: 'xlsx' }
-      )
+      XLSX.writeFile(workbook, `allocation_agreements_${date}.xlsx`, {
+        bookType: 'xlsx'
+      })
     } catch (error) {
       enqueueSnackbar(
         error?.message ||
@@ -205,7 +199,9 @@ export const AllocationAgreementsIndex = () => {
           )}
         />
         <DownloadButton
-          label={t('allocationAgreement:allocationAgreementIndex.downloadExcel')}
+          label={t(
+            'allocationAgreement:allocationAgreementIndex.downloadExcel'
+          )}
           downloadLabel={t(
             'allocationAgreement:allocationAgreementIndex.downloadingExcel'
           )}
