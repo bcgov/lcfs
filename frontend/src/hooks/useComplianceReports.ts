@@ -4,7 +4,10 @@ import { useApiService } from '@/services/useApiService'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCurrentUser } from './useCurrentUser'
 import useComplianceReportStore from '@/stores/useComplianceReportStore'
-import type { ReportId } from '@/stores/useComplianceReportStore'
+import type {
+  ComplianceReport,
+  ReportId
+} from '@/stores/useComplianceReportStore'
 import type { QueryOptions, ExtMutationOptions } from './types'
 
 interface PenaltySummaryRow {
@@ -130,7 +133,7 @@ export const useCreateComplianceReport = (
 export const useGetComplianceReport = (
   orgID: number | string | undefined | null,
   reportID: number | string | undefined | null,
-  options: QueryOptions<unknown> = {}
+  options: QueryOptions<ComplianceReport> = {}
 ) => {
   const client = useApiService()
   const { setCurrentReport, cacheReport } = useComplianceReportStore()
@@ -158,7 +161,7 @@ export const useGetComplianceReport = (
             String(reportID ?? '')
           )
 
-      const { data } = await client.get(path)
+      const { data } = await client.get<ComplianceReport>(path)
       setCurrentReport(data)
       cacheReport(reportID, data)
       return data
@@ -174,7 +177,7 @@ export const useGetComplianceReport = (
 
 export const useComplianceReportWithCache = (
   reportId: number | string,
-  options: QueryOptions<unknown> = {}
+  options: QueryOptions<ComplianceReport> = {}
 ) => {
   const { getCachedReport, shouldFetchReport } = useComplianceReportStore()
 
@@ -816,9 +819,9 @@ export const useGetComplianceReportStatuses = (
   })
 }
 
-export const useGetChangeLog = (
+export const useGetChangeLog = <TData = unknown>(
   { complianceReportGroupUuid, dataType }: Record<string, unknown>,
-  options: QueryOptions<unknown> = {}
+  options: QueryOptions<TData> = {}
 ) => {
   const client = useApiService()
 
@@ -845,7 +848,7 @@ export const useGetChangeLog = (
         )
         .replace(':dataType', String(dataType ?? ''))
 
-      const response = await client.get(path)
+      const response = await client.get<TData>(path)
       return response.data
     },
     enabled: enabled && !!complianceReportGroupUuid && !!dataType,

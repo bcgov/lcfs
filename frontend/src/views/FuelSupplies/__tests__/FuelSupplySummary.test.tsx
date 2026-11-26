@@ -1,22 +1,42 @@
-import { act, screen, fireEvent } from '@testing-library/react'
+import {
+  act,
+  screen,
+  fireEvent,
+  type RenderOptions,
+  type RenderResult
+} from '@testing-library/react'
+import type { ReactNode } from 'react'
 import { describe, expect, beforeEach, vi } from 'vite-plus/test'
 import { FuelSupplySummary } from '../FuelSupplySummary'
 import { test } from '@/tests/utils/fixtures'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { useFuelSupplyColumnStore } from '@/stores/useFuelSupplyColumnStore'
 
-let render
-const fixtureOptions = undefined
-const it = (name, fn) =>
+let render: (ui: ReactNode, options?: RenderOptions) => RenderResult
+const it = (name: string, fn: () => void | Promise<void>) =>
   test(name, ({ render: fixtureRender, theme }) => {
     render = (ui, options) => fixtureRender(ui, [theme], options)
     return fn()
   })
 
+type MockGridRows = Array<Record<string, unknown>>
+type MockGridQueryData = { data?: Record<string, MockGridRows> | null }
+type MockGridViewerProps = {
+  gridKey?: string | null
+  queryData: MockGridQueryData
+  dataKey: string
+  suppressPagination?: boolean
+  onPaginationChange?: (pagination: { page: number; size: number }) => void
+  getRowId?: (params: { data: Record<string, unknown> }) => string
+  suppressMovableColumns?: boolean
+  columnState?: Array<{ colId?: string }>
+  onColumnStateChange?: (state: Array<{ colId?: string }>) => void
+}
+
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => key
+    t: (key: string) => key
   })
 }))
 
@@ -32,11 +52,11 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
     suppressMovableColumns,
     columnState,
     onColumnStateChange
-  }) => {
+  }: MockGridViewerProps) => {
     // Simulate calling getRowId function to achieve function coverage
     const mockRowId =
-      getRowId && queryData?.data?.[dataKey]?.[0]
-        ? getRowId({ data: queryData.data[dataKey][0] })
+      getRowId && queryData?.data?.[String(dataKey)]?.[0]
+        ? getRowId({ data: queryData.data[String(dataKey)][0] })
         : 'no-row-id'
 
     return (
@@ -44,7 +64,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
         <div data-test="grid-key">{gridKey}</div>
         <div data-test="data-key">{dataKey}</div>
         <div data-test="row-count">
-          {queryData?.data?.[dataKey]?.length || 0} rows
+          {queryData?.data?.[String(dataKey)]?.length || 0} rows
         </div>
         <div data-test="pagination-suppressed">
           {suppressPagination ? 'pagination-suppressed' : 'pagination-enabled'}
@@ -128,8 +148,7 @@ describe('FuelSupplySummary', () => {
         data={{ fuelSupplies: [] }}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
         isEarlyIssuance={false}
-      />,
-      { fixtureOptions }
+      />
     )
 
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
@@ -143,8 +162,7 @@ describe('FuelSupplySummary', () => {
         data={{ fuelSupplies: [] }}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
         isEarlyIssuance={false}
-      />,
-      { fixtureOptions }
+      />
     )
 
     expect(screen.getByTestId('row-count')).toHaveTextContent('0 rows')
@@ -163,8 +181,7 @@ describe('FuelSupplySummary', () => {
         data={mockData}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
         isEarlyIssuance={false}
-      />,
-      { fixtureOptions }
+      />
     )
 
     expect(screen.getByTestId('row-count')).toHaveTextContent('2 rows')
@@ -184,8 +201,7 @@ describe('FuelSupplySummary', () => {
         data={mockData}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
         isEarlyIssuance={false}
-      />,
-      { fixtureOptions }
+      />
     )
 
     // Should show 2 rows (excluding the deleted one)
@@ -206,8 +222,7 @@ describe('FuelSupplySummary', () => {
         data={mockData}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
         isEarlyIssuance={false}
-      />,
-      { fixtureOptions }
+      />
     )
 
     expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
@@ -229,8 +244,7 @@ describe('FuelSupplySummary', () => {
         data={mockData}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
         isEarlyIssuance={false}
-      />,
-      { fixtureOptions }
+      />
     )
 
     expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
@@ -244,8 +258,7 @@ describe('FuelSupplySummary', () => {
         data={{ fuelSupplies: [] }}
         status={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
         isEarlyIssuance={false}
-      />,
-      { fixtureOptions }
+      />
     )
 
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
@@ -257,8 +270,7 @@ describe('FuelSupplySummary', () => {
         data={{ fuelSupplies: [] }}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
         isEarlyIssuance={true}
-      />,
-      { fixtureOptions }
+      />
     )
 
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
@@ -270,8 +282,7 @@ describe('FuelSupplySummary', () => {
         data={undefined}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
         isEarlyIssuance={false}
-      />,
-      { fixtureOptions }
+      />
     )
 
     expect(screen.getByTestId('row-count')).toHaveTextContent('0 rows')
@@ -283,8 +294,7 @@ describe('FuelSupplySummary', () => {
         data={{}}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
         isEarlyIssuance={false}
-      />,
-      { fixtureOptions }
+      />
     )
 
     expect(screen.getByTestId('row-count')).toHaveTextContent('0 rows')
@@ -325,7 +335,7 @@ describe('FuelSupplySummary', () => {
         )
       }
 
-      render(<TestComponent />, { fixtureOptions })
+      render(<TestComponent />)
       expect(screen.getByTestId('row-count')).toHaveTextContent('3 rows')
     })
 
@@ -363,7 +373,7 @@ describe('FuelSupplySummary', () => {
         )
       }
 
-      render(<TestComponent />, { fixtureOptions })
+      render(<TestComponent />)
       expect(screen.getByTestId('row-count')).toHaveTextContent('3 rows')
     })
   })
@@ -383,8 +393,7 @@ describe('FuelSupplySummary', () => {
           data={mockData}
           status={COMPLIANCE_REPORT_STATUSES.DRAFT}
           isEarlyIssuance={false}
-        />,
-        { fixtureOptions }
+        />
       )
 
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
@@ -404,8 +413,7 @@ describe('FuelSupplySummary', () => {
           data={mockData}
           status={COMPLIANCE_REPORT_STATUSES.DRAFT}
           isEarlyIssuance={false}
-        />,
-        { fixtureOptions }
+        />
       )
 
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
@@ -425,8 +433,7 @@ describe('FuelSupplySummary', () => {
           data={mockData}
           status={COMPLIANCE_REPORT_STATUSES.DRAFT}
           isEarlyIssuance={false}
-        />,
-        { fixtureOptions }
+        />
       )
 
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
@@ -441,8 +448,7 @@ describe('FuelSupplySummary', () => {
           data={{ fuelSupplies: [] }}
           status={COMPLIANCE_REPORT_STATUSES.DRAFT}
           isEarlyIssuance={false}
-        />,
-        { fixtureOptions }
+        />
       )
 
       // suppressMovableColumns should explicitly be false to allow drag
@@ -457,8 +463,7 @@ describe('FuelSupplySummary', () => {
           data={{ fuelSupplies: [] }}
           status={COMPLIANCE_REPORT_STATUSES.DRAFT}
           isEarlyIssuance={false}
-        />,
-        { fixtureOptions }
+        />
       )
 
       expect(screen.getByTestId('column-state')).toHaveTextContent('null')
@@ -470,8 +475,7 @@ describe('FuelSupplySummary', () => {
           data={{ fuelSupplies: [] }}
           status={COMPLIANCE_REPORT_STATUSES.DRAFT}
           isEarlyIssuance={false}
-        />,
-        { fixtureOptions }
+        />
       )
 
       expect(useFuelSupplyColumnStore.getState().columnState).toBeNull()
@@ -496,8 +500,7 @@ describe('FuelSupplySummary', () => {
           data={{ fuelSupplies: [] }}
           status={COMPLIANCE_REPORT_STATUSES.DRAFT}
           isEarlyIssuance={false}
-        />,
-        { fixtureOptions }
+        />
       )
 
       expect(screen.getByTestId('column-state')).toHaveTextContent(
@@ -519,8 +522,7 @@ describe('FuelSupplySummary', () => {
           data={mockData}
           status={COMPLIANCE_REPORT_STATUSES.DRAFT}
           isEarlyIssuance={false}
-        />,
-        { fixtureOptions }
+        />
       )
 
       const paginationButton = screen.getByTestId('trigger-pagination-change')
@@ -543,8 +545,7 @@ describe('FuelSupplySummary', () => {
           data={mockData}
           status={COMPLIANCE_REPORT_STATUSES.DRAFT}
           isEarlyIssuance={false}
-        />,
-        { fixtureOptions }
+        />
       )
 
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
@@ -562,8 +563,7 @@ describe('FuelSupplySummary', () => {
           data={mockData}
           status={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
           isEarlyIssuance={false}
-        />,
-        { fixtureOptions }
+        />
       )
 
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
@@ -588,7 +588,7 @@ describe('FuelSupplySummary', () => {
         )
       }
 
-      render(<TestComponent />, { fixtureOptions })
+      render(<TestComponent />)
       expect(screen.getByTestId('row-count')).toHaveTextContent('1 rows')
     })
 
@@ -609,7 +609,7 @@ describe('FuelSupplySummary', () => {
         )
       }
 
-      render(<TestComponent />, { fixtureOptions })
+      render(<TestComponent />)
       expect(screen.getByTestId('row-count')).toHaveTextContent('1 rows')
     })
 
@@ -635,7 +635,7 @@ describe('FuelSupplySummary', () => {
         )
       }
 
-      render(<TestComponent />, { fixtureOptions })
+      render(<TestComponent />)
       expect(screen.getByTestId('row-count')).toHaveTextContent('1 rows')
     })
   })

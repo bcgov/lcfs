@@ -212,12 +212,17 @@ export const canEditQ1Supplied = (
 }
 
 interface RenewableClaimGridApi {
-  getColumn?: (column: string) => { isVisible?: () => boolean } | undefined
+  getColumn?: (
+    column: string
+  ) => { isVisible?: () => boolean } | null | undefined
   setColumnsVisible?: (columns: string[], visible: boolean) => void
 }
 
 export const applyRenewableClaimColumnVisibility = (
-  gridRef: { current?: { api?: RenewableClaimGridApi } } | null | undefined,
+  gridRef:
+    | { current?: { api?: RenewableClaimGridApi | null } | null }
+    | null
+    | undefined,
   columnVisibility?: Partial<RenewableClaimColumnVisibility> | null
 ): void => {
   const api = gridRef?.current?.api

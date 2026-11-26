@@ -7,34 +7,88 @@ import {
 } from '@/hooks/useComplianceReports'
 import { defaultInitialPagination } from '@/constants/schedules'
 import { useFuelSupplyOptions } from '@/hooks/useFuelSupply'
-import colors from '@/themes/base/colors'
 import Box from '@mui/material/Box'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { changelogColDefs, changelogCommonColDefs } from './_schema'
 import { useParams } from 'react-router-dom'
+import { getFuelSupplyChangelogRowStyle, getFuelSupplyRowId } from './_utils'
+import type { GridOptions, GetRowIdParams } from 'ag-grid-community'
+import type {
+  BCGridQueryData,
+  BCGridRow,
+  BCPaginationOptions
+} from '@/components/BCDataGrid/types'
 
-export const FuelSupplyChangelog = ({ isEarlyIssuance = false }) => {
-  const { complianceReportId, compliancePeriod } = useParams()
+interface FuelSupplyChangelogRow extends Record<string, unknown> {
+  fuelSupplyId: number | string
+  actionType?: string
+}
+
+interface ChangelogEntry {
+  version: number
+  nickname: string
+  fuelSupplies: FuelSupplyChangelogRow[]
+}
+
+type ChangelogPagination = {
+  page: number
+  size: number
+  filters: Array<{ field?: string; type?: string; filter?: unknown }>
+  sortOrders: Array<{ field?: string; direction?: string }>
+}
+
+const emptyChangelogPagination: ChangelogPagination = {
+  ...defaultInitialPagination,
+  filters: [],
+  sortOrders: []
+}
+
+interface ChangelogQueryData extends BCGridQueryData<BCGridRow> {
+  data: {
+    [key: string]: unknown
+    items: FuelSupplyChangelogRow[]
+    pagination?: { page: number; size: number; total: number }
+  }
+  error?: null
+  isError?: false
+  isLoading?: false
+}
+
+export const FuelSupplyChangelog = ({
+  isEarlyIssuance = false
+}: {
+  isEarlyIssuance?: boolean
+}) => {
+  const { complianceReportId, compliancePeriod } = useParams<{
+    complianceReportId: string
+    compliancePeriod: string
+  }>()
   const { data: currentReport, isLoading: currentReportLoading } =
-    useComplianceReportWithCache(complianceReportId)
+    useComplianceReportWithCache(complianceReportId!)
   const { data: optionsData, isLoading: optionsLoading } = useFuelSupplyOptions(
     { compliancePeriod }
   )
   const { t } = useTranslation(['common', 'fuelSupply', 'report'])
 
   // State for pagination - one per changelog item
-  const [paginationStates, setPaginationStates] = useState({})
+  const [paginationStates, setPaginationStates] = useState<
+    Record<number, ChangelogPagination>
+  >({})
 
   const { data: changelogData, isLoading: changelogDataLoading } =
-    useGetChangeLog({
+    useGetChangeLog<ChangelogEntry[]>({
       complianceReportGroupUuid:
         currentReport?.report.complianceReportGroupUuid,
       dataType: 'fuel-supplies'
     })
 
-  const getRowId = (params) => {
-    return params.data.fuelSupplyId.toString()
+  const getRowId = (params: GetRowIdParams<BCGridRow>) => {
+    const fuelSupplyId = params.data.fuelSupplyId
+    if (typeof fuelSupplyId !== 'string' && typeof fuelSupplyId !== 'number') {
+      throw new TypeError('Fuel supply row is missing its ID')
+    }
+    return getFuelSupplyRowId(fuelSupplyId)
   }
 
   const currentOrOriginalColumnDefs = useMemo(
@@ -42,7 +96,7 @@ export const FuelSupplyChangelog = ({ isEarlyIssuance = false }) => {
       changelogCommonColDefs(
         false,
         isEarlyIssuance,
-        parseInt(compliancePeriod),
+        parseInt(compliancePeriod ?? ''),
         optionsData
       ),
     [isEarlyIssuance, compliancePeriod, optionsData]
@@ -53,7 +107,7 @@ export const FuelSupplyChangelog = ({ isEarlyIssuance = false }) => {
       changelogColDefs(
         true,
         isEarlyIssuance,
-        parseInt(compliancePeriod),
+        parseInt(compliancePeriod ?? ''),
         optionsData
       ),
     [isEarlyIssuance, compliancePeriod, optionsData]
@@ -68,7 +122,7 @@ export const FuelSupplyChangelog = ({ isEarlyIssuance = false }) => {
     []
   )
 
-  const gridOptions = (highlight = true) => ({
+  const gridOptions = (highlight = true): GridOptions<BCGridRow> => ({
     overlayNoRowsTemplate: t('fuelSupply:noFuelSuppliesFound'),
     autoSizeStrategy: {
       type: 'fitCellContents',
@@ -77,27 +131,16 @@ export const FuelSupplyChangelog = ({ isEarlyIssuance = false }) => {
     },
     enableCellTextSelection: true,
     ensureDomOrder: true,
-    getRowStyle: (params) => {
-      if (!highlight) return
-      if (params.data.actionType === 'DELETE') {
-        return {
-          backgroundColor: colors.alerts.error.background
-        }
-      }
-      if (params.data.actionType === 'CREATE') {
-        return {
-          backgroundColor: colors.alerts.success.background
-        }
-      }
-    }
+    getRowStyle: (params) =>
+      getFuelSupplyChangelogRowStyle(params.data?.actionType, highlight)
   })
 
   // Client-side pagination function
   const getPaginatedData = (
-    fuelSupplies,
-    index,
-    isCurrentOrOriginalVersion
-  ) => {
+    fuelSupplies: FuelSupplyChangelogRow[],
+    index: number,
+    isCurrentOrOriginalVersion: boolean
+  ): ChangelogQueryData => {
     const shouldPaginate =
       isCurrentOrOriginalVersion || fuelSupplies.length >= 10
 
@@ -107,21 +150,22 @@ export const FuelSupplyChangelog = ({ isEarlyIssuance = false }) => {
     }
 
     const paginationOptions =
-      paginationStates[index] || defaultInitialPagination
+      paginationStates[index] || emptyChangelogPagination
     let filteredData = [...fuelSupplies]
 
     // Apply filters if any
     if (paginationOptions.filters && paginationOptions.filters.length > 0) {
       paginationOptions.filters.forEach((filter) => {
-        if (filter.type === 'contains' && filter.filter) {
+        const searchTerm = filter.filter
+        if (filter.type === 'contains' && typeof searchTerm === 'string') {
           filteredData = filteredData.filter((item) => {
-            const fieldValue = item[filter.field]
+            const fieldValue = filter.field ? item[filter.field] : undefined
             return (
               fieldValue &&
               fieldValue
                 .toString()
                 .toLowerCase()
-                .includes(filter.filter.toLowerCase())
+                .includes(searchTerm.toLowerCase())
             )
           })
         }
@@ -135,8 +179,12 @@ export const FuelSupplyChangelog = ({ isEarlyIssuance = false }) => {
     ) {
       paginationOptions.sortOrders.forEach((sort) => {
         filteredData.sort((a, b) => {
-          const aVal = a[sort.field]
-          const bVal = b[sort.field]
+          const aVal = (sort.field ? a[sort.field] : undefined) as
+            | string
+            | number
+          const bVal = (sort.field ? b[sort.field] : undefined) as
+            | string
+            | number
 
           let comparison = 0
           if (aVal > bVal) comparison = 1
@@ -167,15 +215,16 @@ export const FuelSupplyChangelog = ({ isEarlyIssuance = false }) => {
     }
   }
 
-  const handlePaginationChange = (index) => (newPagination) => {
-    setPaginationStates((prev) => ({
-      ...prev,
-      [index]: {
-        ...(prev[index] || defaultInitialPagination),
-        ...newPagination
-      }
-    }))
-  }
+  const handlePaginationChange =
+    (index: number) => (newPagination: BCPaginationOptions) => {
+      setPaginationStates((prev) => ({
+        ...prev,
+        [index]: {
+          ...(prev[index] || emptyChangelogPagination),
+          ...newPagination
+        } as ChangelogPagination
+      }))
+    }
 
   if (changelogDataLoading || currentReportLoading || optionsLoading) {
     return <Loading />
@@ -183,11 +232,11 @@ export const FuelSupplyChangelog = ({ isEarlyIssuance = false }) => {
 
   return (
     <Box>
-      {changelogData?.map((item, i) => {
+      {(changelogData as ChangelogEntry[] | undefined)?.map((item, i) => {
         const isCurrentOrOriginalVersion = i === 0 || item.version === 0
         const shouldPaginate = item.fuelSupplies.length >= 10
         const paginationOptions =
-          paginationStates[i] || defaultInitialPagination
+          paginationStates[i] || emptyChangelogPagination
         const queryData = getPaginatedData(
           item.fuelSupplies,
           i,

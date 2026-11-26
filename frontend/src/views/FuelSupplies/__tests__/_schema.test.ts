@@ -1,3 +1,10 @@
+import type { OptionsData } from '@/types/schema'
+import type {
+  ValueSetterParams,
+  EditableCallbackParams,
+  ValueGetterParams,
+  ValueFormatterParams
+} from 'ag-grid-community'
 import { describe, it, expect } from 'vite-plus/test'
 import {
   PROVISION_APPROVED_FUEL_CODE,
@@ -67,9 +74,10 @@ describe('Fuel Supply Schema', () => {
   describe('Provision of the Act Selection', () => {
     it('should clear fuel code and UCI when GHGenius is selected and reset CI to default', () => {
       const provisionColDef = fuelSupplyColDefs(
-        mockOptionsData,
+        mockOptionsData as OptionsData,
         mockErrors,
         mockWarnings,
+        '2024',
         isSupplemental
       ).find((col) => col.field === 'provisionOfTheAct')
 
@@ -84,7 +92,9 @@ describe('Fuel Supply Schema', () => {
         }
       }
 
-      const result = provisionColDef.valueSetter(mockParams)
+      const result = (
+        provisionColDef!.valueSetter as (params: ValueSetterParams) => boolean
+      )(mockParams as ValueSetterParams)
 
       expect(result).toBe(true)
       expect(mockParams.data.fuelCode).toBeNull()
@@ -95,9 +105,10 @@ describe('Fuel Supply Schema', () => {
 
     it('should clear fuel code and CI values when approved fuel code is selected', () => {
       const provisionColDef = fuelSupplyColDefs(
-        mockOptionsData,
+        mockOptionsData as OptionsData,
         mockErrors,
         mockWarnings,
+        '2024',
         isSupplemental
       ).find((col) => col.field === 'provisionOfTheAct')
 
@@ -112,7 +123,9 @@ describe('Fuel Supply Schema', () => {
         }
       }
 
-      const result = provisionColDef.valueSetter(mockParams)
+      const result = (
+        provisionColDef!.valueSetter as (params: ValueSetterParams) => boolean
+      )(mockParams as ValueSetterParams)
 
       expect(result).toBe(true)
       expect(mockParams.data.fuelCode).toBeNull()
@@ -123,9 +136,10 @@ describe('Fuel Supply Schema', () => {
 
     it('should reset to default CI when switching from fuel code to default provision', () => {
       const provisionColDef = fuelSupplyColDefs(
-        mockOptionsData,
+        mockOptionsData as OptionsData,
         mockErrors,
         mockWarnings,
+        '2024',
         isSupplemental
       ).find((col) => col.field === 'provisionOfTheAct')
 
@@ -140,7 +154,9 @@ describe('Fuel Supply Schema', () => {
         }
       }
 
-      const result = provisionColDef.valueSetter(mockParams)
+      const result = (
+        provisionColDef!.valueSetter as (params: ValueSetterParams) => boolean
+      )(mockParams as ValueSetterParams)
 
       expect(result).toBe(true)
       expect(mockParams.data.fuelCode).toBeNull()
@@ -151,9 +167,10 @@ describe('Fuel Supply Schema', () => {
 
     it('should reset to category default CI for Other fuel type when switching from fuel code', () => {
       const provisionColDef = fuelSupplyColDefs(
-        mockOptionsData,
+        mockOptionsData as OptionsData,
         mockErrors,
         mockWarnings,
+        '2024',
         isSupplemental
       ).find((col) => col.field === 'provisionOfTheAct')
 
@@ -169,7 +186,9 @@ describe('Fuel Supply Schema', () => {
         }
       }
 
-      const result = provisionColDef.valueSetter(mockParams)
+      const result = (
+        provisionColDef!.valueSetter as (params: ValueSetterParams) => boolean
+      )(mockParams as ValueSetterParams)
 
       expect(result).toBe(true)
       expect(mockParams.data.fuelCode).toBeNull()
@@ -182,9 +201,10 @@ describe('Fuel Supply Schema', () => {
   describe('CI of Fuel Field', () => {
     it('should be editable when GHGenius is selected', () => {
       const ciOfFuelColDef = fuelSupplyColDefs(
-        mockOptionsData,
+        mockOptionsData as OptionsData,
         mockErrors,
         mockWarnings,
+        '2024',
         isSupplemental
       ).find((col) => col.field === 'ciOfFuel')
 
@@ -194,14 +214,21 @@ describe('Fuel Supply Schema', () => {
         }
       }
 
-      expect(ciOfFuelColDef.editable(mockParams)).toBe(true)
+      expect(
+        (
+          ciOfFuelColDef!.editable as (
+            params: EditableCallbackParams
+          ) => boolean
+        )(mockParams as EditableCallbackParams)
+      ).toBe(true)
     })
 
     it('should not be editable when GHGenius is not selected', () => {
       const ciOfFuelColDef = fuelSupplyColDefs(
-        mockOptionsData,
+        mockOptionsData as OptionsData,
         mockErrors,
         mockWarnings,
+        '2024',
         isSupplemental
       ).find((col) => col.field === 'ciOfFuel')
 
@@ -211,14 +238,21 @@ describe('Fuel Supply Schema', () => {
         }
       }
 
-      expect(ciOfFuelColDef.editable(mockParams)).toBe(false)
+      expect(
+        (
+          ciOfFuelColDef!.editable as (
+            params: EditableCallbackParams
+          ) => boolean
+        )(mockParams as EditableCallbackParams)
+      ).toBe(false)
     })
 
     it('should update ciOfFuel value when edited', () => {
       const ciOfFuelColDef = fuelSupplyColDefs(
-        mockOptionsData,
+        mockOptionsData as OptionsData,
         mockErrors,
         mockWarnings,
+        '2024',
         isSupplemental
       ).find((col) => col.field === 'ciOfFuel')
 
@@ -230,7 +264,9 @@ describe('Fuel Supply Schema', () => {
         }
       }
 
-      const result = ciOfFuelColDef.valueSetter(mockParams)
+      const result = (
+        ciOfFuelColDef!.valueSetter as (params: ValueSetterParams) => boolean
+      )(mockParams as ValueSetterParams)
 
       expect(result).toBe(true)
       expect(mockParams.data.ciOfFuel).toBe(75.5)
@@ -240,9 +276,10 @@ describe('Fuel Supply Schema', () => {
   describe('Fuel Code Field', () => {
     it('should be editable only when approved fuel code is selected and fuel codes are available', () => {
       const fuelCodeColDef = fuelSupplyColDefs(
-        mockOptionsData,
+        mockOptionsData as OptionsData,
         mockErrors,
         mockWarnings,
+        '2024',
         isSupplemental
       ).find((col) => col.field === 'fuelCode')
 
@@ -253,14 +290,21 @@ describe('Fuel Supply Schema', () => {
         }
       }
 
-      expect(fuelCodeColDef.editable(mockParams)).toBe(true)
+      expect(
+        (
+          fuelCodeColDef!.editable as (
+            params: EditableCallbackParams
+          ) => boolean
+        )(mockParams as EditableCallbackParams)
+      ).toBe(true)
     })
 
     it('should not be editable when approved fuel code is selected but no fuel codes are available', () => {
       const fuelCodeColDef = fuelSupplyColDefs(
-        mockOptionsData,
+        mockOptionsData as OptionsData,
         mockErrors,
         mockWarnings,
+        '2024',
         isSupplemental
       ).find((col) => col.field === 'fuelCode')
 
@@ -271,14 +315,21 @@ describe('Fuel Supply Schema', () => {
         }
       }
 
-      expect(fuelCodeColDef.editable(mockParams)).toBe(false)
+      expect(
+        (
+          fuelCodeColDef!.editable as (
+            params: EditableCallbackParams
+          ) => boolean
+        )(mockParams as EditableCallbackParams)
+      ).toBe(false)
     })
 
     it('should not be editable when GHGenius is selected', () => {
       const fuelCodeColDef = fuelSupplyColDefs(
-        mockOptionsData,
+        mockOptionsData as OptionsData,
         mockErrors,
         mockWarnings,
+        '2024',
         isSupplemental
       ).find((col) => col.field === 'fuelCode')
 
@@ -289,14 +340,21 @@ describe('Fuel Supply Schema', () => {
         }
       }
 
-      expect(fuelCodeColDef.editable(mockParams)).toBe(false)
+      expect(
+        (
+          fuelCodeColDef!.editable as (
+            params: EditableCallbackParams
+          ) => boolean
+        )(mockParams as EditableCallbackParams)
+      ).toBe(false)
     })
 
     it('should auto-populate fuel code when only one is available', () => {
       const fuelCodeColDef = fuelSupplyColDefs(
-        mockOptionsData,
+        mockOptionsData as OptionsData,
         mockErrors,
         mockWarnings,
+        '2024',
         isSupplemental
       ).find((col) => col.field === 'fuelCode')
 
@@ -309,7 +367,9 @@ describe('Fuel Supply Schema', () => {
         }
       }
 
-      const value = fuelCodeColDef.valueGetter(mockParams)
+      const value = (
+        fuelCodeColDef!.valueGetter as (params: ValueGetterParams) => unknown
+      )(mockParams as ValueGetterParams)
 
       expect(value).toBe('TEST-001')
       expect(mockParams.data.fuelCodeId).toBe(1)
@@ -319,23 +379,32 @@ describe('Fuel Supply Schema', () => {
   describe('Energy Content Field', () => {
     it('rounds CNG energy content for display while preserving other fuel decimals', () => {
       const energyColDef = fuelSupplyColDefs(
-        mockOptionsData,
+        mockOptionsData as OptionsData,
         mockErrors,
         mockWarnings,
+        '2024',
         isSupplemental
       ).find((col) => col.field === 'energy')
 
       expect(
-        energyColDef.valueFormatter({
+        (
+          energyColDef!.valueFormatter as (
+            params: ValueFormatterParams
+          ) => string
+        )({
           value: 1234.56,
           data: { fuelType: 'CNG', fuelCategory: 'Diesel' }
-        })
+        } as ValueFormatterParams)
       ).toBe('1,235')
       expect(
-        energyColDef.valueFormatter({
+        (
+          energyColDef!.valueFormatter as (
+            params: ValueFormatterParams
+          ) => string
+        )({
           value: 1234.56,
           data: { fuelType: 'Test Fuel', fuelCategory: 'Gasoline' }
-        })
+        } as ValueFormatterParams)
       ).toBe('1,234.56')
     })
   })

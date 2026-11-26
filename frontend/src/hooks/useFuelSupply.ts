@@ -8,6 +8,99 @@ import type {
   PaginationParams,
   ExtMutationOptions
 } from './types'
+import type { OptionsData } from '@/types/schema'
+
+export interface FuelSupplyListData {
+  fuelSupplies: Array<Record<string, unknown>>
+}
+
+export interface OrganizationFuelSupplyFuelTypeYoy {
+  fuelType: string
+  fuelCategory: string | null
+  totalVolume: number
+  priorYearVolume: number | null
+  volumeChange: number
+  pctChangeYoy: number | null
+  totalComplianceUnits: number
+  positiveComplianceUnits: boolean
+  isNew: boolean
+  isDiscontinued: boolean
+  renewable: boolean
+  fossilDerived: boolean
+}
+
+export interface OrganizationFuelSupplySelectedYearSummary {
+  reportingYear: string | null
+  priorYear: string | null
+  totalVolume: number
+  priorYearVolume: number | null
+  volumeChange: number
+  volumePctChangeYoy: number | null
+  totalComplianceUnits: number
+  priorYearComplianceUnits: number | null
+  complianceUnitsChange: number | null
+  complianceUnitsPctChangeYoy: number | null
+  totalRenewableVolume: number
+  priorYearRenewableVolume: number | null
+  renewableVolumeChange: number | null
+  renewableVolumePctChangeYoy: number | null
+  negativeYoyFuelTypeCount: number
+  newFuelTypeCount: number
+  newFuelTypes: string[]
+  biggestSingleMover: OrganizationFuelSupplyFuelTypeYoy | null
+}
+
+export interface OrganizationFuelSupplyData {
+  fuelSupplies: Array<{
+    compliancePeriod?: string
+    reportSubmissionDate?: string | null
+    [key: string]: unknown
+  }>
+  analytics: {
+    totalVolume: number
+    totalFuelTypes: number
+    totalReports: number
+    mostRecentSubmission: string | null
+    totalByFuelType: Record<string, number>
+    totalByYear: Record<string, number>
+    totalByFuelCategory: Record<string, number>
+    totalByProvision: Record<string, number>
+    selectedYearSummary: OrganizationFuelSupplySelectedYearSummary
+    fuelTypeYoy: OrganizationFuelSupplyFuelTypeYoy[]
+    complianceUnitCreditDebitTrend: Array<{
+      reportingYear: string
+      complianceUnitGroup: string
+      complianceUnits: number
+    }>
+    fuelTypeVolumeTrend: Array<{
+      reportingYear: string
+      fuelType: string
+      fuelCategory: string | null
+      totalVolume: number
+      fossilDerived: boolean
+    }>
+    fuelCategoryTrend: Array<{
+      reportingYear: string
+      fuelCategory: string
+      totalEnergy: number
+      totalLitres: number
+      totalComplianceUnits: number
+    }>
+    renewableLiquidFuelVolumeTrend: Array<{
+      reportingYear: string
+      renewableCategory: 'Renewable' | 'Non-renewable'
+      totalVolume: number
+    }>
+    renewableLiquidFuelTypesByCategory: Record<string, string[]>
+    topFuelCodes: Array<{ fuelCode: string; totalVolume: number }>
+  }
+  pagination: {
+    page: number
+    size: number
+    total: number
+    totalPages: number
+  }
+}
 
 // Default cache configuration
 const DEFAULT_STALE_TIME = 5 * 60 * 1000 // 5 minutes
@@ -16,7 +109,7 @@ const OPTIONS_STALE_TIME = 30 * 60 * 1000 // 30 minutes (options change less fre
 
 export const useFuelSupplyOptions = (
   params: Record<string, unknown>,
-  options: QueryOptions<unknown> = {}
+  options: QueryOptions<OptionsData> = {}
 ) => {
   const client = useApiService()
 
@@ -35,7 +128,7 @@ export const useFuelSupplyOptions = (
       }
 
       const path = `${apiRoutes.fuelSupplyOptions}compliancePeriod=${params.compliancePeriod}`
-      const response = await client.get(path)
+      const response = await client.get<OptionsData>(path)
       return response.data
     },
     enabled: enabled && !!params?.compliancePeriod,
@@ -88,8 +181,8 @@ export const useGetFuelSuppliesList = (
     complianceReportId,
     mode = REPORT_SCHEDULES_VIEW.VIEW
   }: Record<string, unknown>,
-  pagination: PaginationParams,
-  options: QueryOptions<unknown> = {}
+  pagination?: PaginationParams,
+  options: QueryOptions<FuelSupplyListData> = {}
 ) => {
   const client = useApiService()
 
@@ -107,11 +200,14 @@ export const useGetFuelSuppliesList = (
         throw new Error('Compliance report ID is required')
       }
 
-      const response = await client.post(apiRoutes.getAllFuelSupplies, {
-        complianceReportId,
-        mode,
-        ...pagination
-      })
+      const response = await client.post<FuelSupplyListData>(
+        apiRoutes.getAllFuelSupplies,
+        {
+          complianceReportId,
+          mode,
+          ...pagination
+        }
+      )
       return response.data
     },
     enabled: enabled && !!complianceReportId,
@@ -346,7 +442,7 @@ export const useDeleteFuelSupply = (
 export const useOrganizationFuelSupply = (
   organizationId: number | string | undefined | null,
   pagination: PaginationParams,
-  options: QueryOptions<unknown> = {}
+  options: QueryOptions<OrganizationFuelSupplyData> = {}
 ) => {
   const client = useApiService()
 
@@ -368,7 +464,10 @@ export const useOrganizationFuelSupply = (
         ':orgID',
         String(organizationId ?? '')
       )
-      const response = await client.post(path, pagination)
+      const response = await client.post<OrganizationFuelSupplyData>(
+        path,
+        pagination
+      )
       return response.data
     },
     enabled: enabled && !!organizationId,

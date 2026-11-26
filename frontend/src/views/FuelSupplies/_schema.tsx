@@ -44,7 +44,7 @@ type NumberCellFormatter = NonNullable<ColDef['valueFormatter']>
 const isFuelSupplyQ1Editable = (
   data: { isCanadaProduced?: boolean; [key: string]: unknown },
   compliancePeriod: string | number,
-  optionsData: OptionsData
+  optionsData: OptionsData | undefined
 ) => {
   const isCanadaProducedEditable = canEditCanadianProduced(
     data,
@@ -74,7 +74,7 @@ export const isFuelCodeProvision = (provision: string | undefined) =>
   provision === PROVISION_APPROVED_FUEL_CODE_LEGACY
 
 export const fuelSupplyColDefs = (
-  optionsData: OptionsData,
+  optionsData: OptionsData | undefined,
   errors: GridErrors,
   warnings: GridWarnings,
   compliancePeriod: string | number,
@@ -1071,7 +1071,7 @@ export const changelogCommonColDefs = (
   highlight: boolean = true,
   isEarlyIssuance: boolean = false,
   complianceYear: string | number,
-  optionsData: OptionsData
+  optionsData: OptionsData | undefined
 ): ColDef[] => {
   const baseColumns: ColDef[] = [
     {
@@ -1373,7 +1373,7 @@ export const changelogColDefs = (
   highlight: boolean = true,
   isEarlyIssuance: boolean = false,
   complianceYear: string | number,
-  optionsData: OptionsData
+  optionsData: OptionsData | undefined
 ): ColDef[] => {
   const baseColumns: ColDef[] = [
     {

@@ -22,6 +22,7 @@ import {
   processCellEditingComplete,
   createGridOptions
 } from './_utils'
+import type { FuelSupplyCellParams, FuelSupplyRow } from './_utils'
 import Grid2 from '@mui/material/Grid2'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -31,21 +32,45 @@ import * as schema from './_schema'
 // Legacy schema removed - all fuel supplies (including TFRS-migrated) use standard schema
 import { REPORT_SCHEDULES_VIEW } from '@/constants/statuses'
 import Loading from '@/components/Loading'
+import type {
+  CellValueChangedEvent,
+  FirstDataRenderedEvent,
+  GridReadyEvent
+} from 'ag-grid-community'
+import type {
+  BCGridEditContext,
+  BCGridRef
+} from '@/components/BCDataGrid/types'
+import type { FloatingAlertHandle } from '@/components/BCAlert/FloatingAlert'
+import type { GridErrors, GridWarnings } from '@/types/schema'
+import type { ScheduleGridParams, ScheduleRow } from '@/utils/schedules'
+
+const isScheduleGridParams = (
+  params: unknown
+): params is ScheduleGridParams<FuelSupplyRow> =>
+  typeof params === 'object' &&
+  params !== null &&
+  'node' in params &&
+  'api' in params
 
 export const AddEditFuelSupplies = () => {
-  const [rowData, setRowData] = useState([])
-  const gridRef = useRef(null)
-  const [, setGridApi] = useState()
-  const [errors, setErrors] = useState({})
-  const [warnings, setWarnings] = useState({})
-  const alertRef = useRef()
+  const [rowData, setRowData] = useState<FuelSupplyRow[]>([])
+  const gridRef = useRef<BCGridRef['current']>(null)
+  const [, setGridApi] = useState<GridReadyEvent['api'] | undefined>()
+  const [errors, setErrors] = useState<GridErrors>({})
+  const [warnings, setWarnings] = useState<GridWarnings>({})
+  const alertRef = useRef<FloatingAlertHandle | null>(null)
   const location = useLocation()
   const { t } = useTranslation(['common', 'fuelSupply', 'reports'])
-  const { complianceReportId, compliancePeriod } = useParams()
+  const { complianceReportId, compliancePeriod } = useParams<{
+    complianceReportId: string
+    compliancePeriod: string
+  }>()
   const navigate = useNavigate()
 
-  const { data: currentReport, isLoading } =
-    useComplianceReportWithCache(complianceReportId)
+  const { data: currentReport, isLoading } = useComplianceReportWithCache(
+    complianceReportId!
+  )
 
   // Memoize derived values
   const reportState = useMemo(() => {
@@ -68,7 +93,7 @@ export const AddEditFuelSupplies = () => {
   } = useFuelSupplyOptions({ compliancePeriod })
 
   const { mutateAsync: saveRow } = useSaveFuelSupply(
-    { complianceReportId },
+    { complianceReportId: complianceReportId! },
     { invalidateListQuery: false }
   )
 
@@ -88,7 +113,7 @@ export const AddEditFuelSupplies = () => {
         optionsData,
         errors,
         warnings,
-        compliancePeriod,
+        compliancePeriod ?? '',
         isSupplemental,
         isEarlyIssuance
       ),
@@ -107,7 +132,7 @@ export const AddEditFuelSupplies = () => {
       processFuelSupplyRowData({
         fuelSupplyData,
         fuelSuppliesLoading,
-        complianceReportId,
+        complianceReportId: complianceReportId!,
         compliancePeriod,
         isSupplemental
       }),
@@ -140,7 +165,7 @@ export const AddEditFuelSupplies = () => {
   }, [location?.state?.message, location?.state?.severity])
 
   // Seed once per report; subsequent refetches must not reorder user-added rows.
-  const seededReportRef = useRef(null)
+  const seededReportRef = useRef<string | undefined>(undefined)
   useEffect(() => {
     if (
       seededReportRef.current !== complianceReportId &&
@@ -156,7 +181,7 @@ export const AddEditFuelSupplies = () => {
     return () => clearTimeout(timeoutId)
   }, [updateColumnsVisibility])
 
-  const onGridReady = useCallback(async (params) => {
+  const onGridReady = useCallback(async (params: GridReadyEvent) => {
     setGridApi(params.api)
 
     setTimeout(() => {
@@ -170,20 +195,23 @@ export const AddEditFuelSupplies = () => {
     }, 100)
   }, [])
 
-  const onFirstDataRendered = useCallback((params) => {
+  const onFirstDataRendered = useCallback((params: FirstDataRenderedEvent) => {
     params.api?.autoSizeAllColumns?.()
   }, [])
 
-  const updateRowDataValues = useCallback((node, updates) => {
-    Object.entries(updates).forEach(([key, value]) => {
-      node.setDataValue(key, value)
-    })
-  }, [])
+  const updateRowDataValues = useCallback(
+    (node: FuelSupplyCellParams['node'], updates: Record<string, unknown>) => {
+      Object.entries(updates).forEach(([key, value]) => {
+        node.setDataValue(key, value)
+      })
+    },
+    []
+  )
 
   const onCellValueChanged = useCallback(
-    async (params) => {
+    async (params: CellValueChangedEvent) => {
       setWarnings({})
-      const { colId } = params.column
+      const colId = params.column.getColId()
 
       if (colId === 'fuelType') {
         handleFuelTypeChange(params, optionsData, updateRowDataValues)
@@ -205,7 +233,7 @@ export const AddEditFuelSupplies = () => {
   const manualAddRef = useRef(false)
 
   const onCellEditingStopped = useCallback(
-    async (params) => {
+    async (params: BCGridEditContext) => {
       const isNewRow = !params.node?.data?.fuelSupplyId // capture before save
 
       const updatedData = await processCellEditingComplete({
@@ -246,7 +274,7 @@ export const AddEditFuelSupplies = () => {
   )
 
   const onAction = useCallback(
-    async (action, params) => {
+    async (action: string, params?: unknown) => {
       try {
         if (action === 'add') {
           manualAddRef.current = true
@@ -254,20 +282,21 @@ export const AddEditFuelSupplies = () => {
         }
 
         if (action === 'delete' || action === 'undo') {
+          if (!isScheduleGridParams(params)) return
           const success = await handleScheduleDelete(
             params,
             'fuelSupplyId',
             saveRow,
             alertRef,
-            setRowData,
+            (rows: ScheduleRow[]) => setRowData(rows),
             { complianceReportId, compliancePeriod },
             'fuelType' // First editable column for focus after clearing
           )
 
           // Clear validation status
           if (success) {
-            params.api.forEachNode((rowNode) => {
-              rowNode.updateData({
+            params.api.forEachNode?.((rowNode) => {
+              rowNode.updateData!({
                 ...rowNode.data,
                 validationStatus: undefined
               })
@@ -284,8 +313,8 @@ export const AddEditFuelSupplies = () => {
   const handleNavigateBack = useCallback(() => {
     navigate(
       buildPath(ROUTES.REPORTS.VIEW, {
-        compliancePeriod,
-        complianceReportId
+        compliancePeriod: compliancePeriod!,
+        complianceReportId: complianceReportId!
       }),
       {
         state: {
@@ -307,7 +336,7 @@ export const AddEditFuelSupplies = () => {
         <BCTypography variant="h5" color="primary">
           {t('fuelSupply:fuelSupplyTitle')}
         </BCTypography>
-        {compliancePeriod >= NEW_REGULATION_YEAR ? (
+        {Number(compliancePeriod) >= NEW_REGULATION_YEAR ? (
           <>
             <BCTypography variant="body4" color="text" my={2} component="div">
               {t('fuelSupply:fuelSupplyGuide2025Later')}
@@ -327,7 +356,7 @@ export const AddEditFuelSupplies = () => {
                 defaultColDef={schema.defaultColDef}
                 onGridReady={onGridReady}
                 rowData={rowData}
-                gridOptions={gridOptions}
+                {...gridOptions}
                 loading={optionsLoading || fuelSuppliesLoading}
                 onCellValueChanged={onCellValueChanged}
                 onCellEditingStopped={onCellEditingStopped}
@@ -361,7 +390,7 @@ export const AddEditFuelSupplies = () => {
                 defaultColDef={schema.defaultColDef}
                 onGridReady={onGridReady}
                 rowData={rowData}
-                gridOptions={gridOptions}
+                {...gridOptions}
                 loading={optionsLoading || fuelSuppliesLoading}
                 onCellValueChanged={onCellValueChanged}
                 onCellEditingStopped={onCellEditingStopped}
