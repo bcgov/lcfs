@@ -3,7 +3,11 @@ from fastapi.exceptions import RequestValidationError
 
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
-from lcfs.web.api.fuel_supply.schema import FuelSupplyCreateUpdateSchema
+from lcfs.web.api.fuel_supply.schema import (
+    FuelSupplyCreateUpdateSchema,
+    FuelSupplyStoredSchema,
+)
+from lcfs.web.utils.schema_validators import other_fuel_energy_density_valid
 
 
 class FuelSupplyValidation:
@@ -23,10 +27,10 @@ class FuelSupplyValidation:
         self, fuel_supply: FuelSupplyCreateUpdateSchema
     ):
         prev_fs = await self.fs_repo.get_prev_fuel_supply_by_group_uuid(
-            fuel_supply.group_uuid
+            fuel_supply.group_uuid, fuel_supply.compliance_report_id
         )
         if prev_fs:
-            prev_fs_data = FuelSupplyCreateUpdateSchema.model_validate(
+            prev_fs_data = FuelSupplyStoredSchema.model_validate(
                 prev_fs, context={"skip_quantity_validation": True}
             )
             return await self.fs_repo.check_duplicate(prev_fs_data)
@@ -51,16 +55,7 @@ class FuelSupplyValidation:
                     ]
                 )
 
-            if fuel_supply.energy_density is None or fuel_supply.energy_density <= 0:
-                raise RequestValidationError(
-                    [
-                        {
-                            "loc": ("energyDensity",),
-                            "msg": "Energy Density must be greater than zero when using Other fuel type",
-                            "type": "value_error",
-                        }
-                    ]
-                )
+            other_fuel_energy_density_valid(fuel_supply.energy_density)
 
         # End use is required for 2024 and later compliance periods
         if (

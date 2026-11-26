@@ -221,13 +221,13 @@ class GeocoderCache:
                 return entry.value
                 
             except (json.JSONDecodeError, KeyError, TypeError) as e:
-                logger.warning(f"Failed to deserialize cache entry for key {redis_key}: {e}")
+                logger.warning(f"Failed to deserialize a geocoder cache entry: {e}")
                 await self.redis_client.delete(redis_key)
                 await self._increment_stat("misses")
                 return None
                 
         except RedisError as e:
-            logger.warning(f"Redis error during get operation for key {key}: {e}")
+            logger.warning(f"Redis error during geocoder cache get: {e}")
             await self._increment_stat("misses")
             return None
     
@@ -260,12 +260,12 @@ class GeocoderCache:
             )
             
             await self._increment_stat("sets")
-            logger.debug(f"Cached entry for key {redis_key} with TTL {ttl}s")
-            
+            logger.debug(f"Cached a geocoder entry with TTL {ttl}s")
+
         except RedisError as e:
-            logger.warning(f"Redis error during set operation for key {key}: {e}")
+            logger.warning(f"Redis error during geocoder cache set: {e}")
         except Exception as e:
-            logger.warning(f"Failed to serialize value for key {key}: {e}")
+            logger.warning(f"Failed to serialize a geocoder cache value: {e}")
     
     async def delete(self, key: str) -> bool:
         """Delete a key from Redis cache."""
@@ -274,7 +274,7 @@ class GeocoderCache:
             result = await self.redis_client.delete(redis_key)
             return result > 0
         except RedisError as e:
-            logger.warning(f"Redis error during delete operation for key {key}: {e}")
+            logger.warning(f"Redis error during geocoder cache delete: {e}")
             return False
     
     async def clear(self) -> None:

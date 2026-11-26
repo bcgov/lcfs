@@ -20,7 +20,10 @@ from lcfs.db.models.organization.OrganizationType import OrganizationType
 from lcfs.db.models.transaction import Transaction
 from lcfs.db.models.transaction.Transaction import TransactionActionEnum
 from lcfs.db.models.user.Role import RoleEnum
-from lcfs.db.models.user.role_domains import ORG_CONTROLLABLE_ROLES
+from lcfs.db.models.user.role_domains import (
+    DEPENDENT_ORG_ROLES,
+    ORG_CONTROLLABLE_ROLES,
+)
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder, SpreadsheetColumn
 from lcfs.web.api.base import (
     calculate_total_pages,
@@ -105,12 +108,13 @@ class OrganizationsService:
         """Persist the organization's available-role set and auto-remove
         withdrawn roles from the organization's users (#4565).
 
-        IA Signer rides on IA Proponent: withdrawing IA Proponent also strips
-        IA Signer from users, though IA Signer itself is never stored in the
+        Dependent roles ride on their parent: withdrawing IA Proponent also
+        strips IA Signer, and withdrawing LCJFIP Applicant strips LCJFIP
+        Administrator, though dependents are never stored in the
         available-role table.
         """
         role_id_map = await self.repo.get_role_ids_by_enums(
-            list(ORG_CONTROLLABLE_ROLES | {RoleEnum.IA_SIGNER})
+            list(ORG_CONTROLLABLE_ROLES | set(DEPENDENT_ORG_ROLES.values()))
         )
         new_ids = {role_id_map[RoleEnum(name)] for name in available_role_names}
         old_ids = await self.repo.get_available_role_ids(organization_id)
@@ -120,8 +124,9 @@ class OrganizationsService:
         removed_ids = old_ids - new_ids
         if not removed_ids:
             return
-        if role_id_map.get(RoleEnum.IA_PROPONENT) in removed_ids:
-            removed_ids.add(role_id_map[RoleEnum.IA_SIGNER])
+        for parent, dependent in DEPENDENT_ORG_ROLES.items():
+            if role_id_map.get(parent) in removed_ids and dependent in role_id_map:
+                removed_ids.add(role_id_map[dependent])
 
         affected = await self.repo.delete_user_roles_for_org(
             organization_id, list(removed_ids)

@@ -56,11 +56,11 @@ class NotionalTransferCreateSchema(BaseSchema):
     is_canada_produced: Optional[bool] = False
     is_q1_supplied: Optional[bool] = False
     received_or_transferred: ReceivedOrTransferredEnumSchema
-    quantity: Optional[int] = None
-    q1_quantity: Optional[int] = None
-    q2_quantity: Optional[int] = None
-    q3_quantity: Optional[int] = None
-    q4_quantity: Optional[int] = None
+    quantity: Optional[int] = Field(default=None, ge=0)
+    q1_quantity: Optional[int] = Field(default=None, ge=0)
+    q2_quantity: Optional[int] = Field(default=None, ge=0)
+    q3_quantity: Optional[int] = Field(default=None, ge=0)
+    q4_quantity: Optional[int] = Field(default=None, ge=0)
     notional_transfer_id: Optional[int] = None
     compliance_report_id: int
     deleted: Optional[bool] = None
@@ -80,7 +80,18 @@ class NotionalTransferCreateSchema(BaseSchema):
 
 
 class NotionalTransferSchema(NotionalTransferCreateSchema):
-    pass
+    """A saved notional transfer row, read back as it is stored.
+
+    The quantity bounds apply to saves. Rows saved before the quantity CHECK
+    constraint may hold negative values, which the migration leaves in place,
+    so reading a stored row does not apply them.
+    """
+
+    quantity: Optional[int] = None
+    q1_quantity: Optional[int] = None
+    q2_quantity: Optional[int] = None
+    q3_quantity: Optional[int] = None
+    q4_quantity: Optional[int] = None
 
 
 class PaginatedNotionalTransferRequestSchema(BaseSchema):

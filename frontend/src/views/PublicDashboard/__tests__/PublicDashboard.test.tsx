@@ -1,12 +1,14 @@
 import { test } from '@/tests/utils/fixtures'
 import { screen, fireEvent } from '@testing-library/react'
-import { describe, expect, vi, beforeEach } from 'vite-plus/test'
+import { describe, expect, vi, beforeEach, afterEach } from 'vite-plus/test'
+import { CONFIG } from '@/constants/config'
 import { ROUTES } from '@/routes/routes'
 import common from '@/assets/locales/en/common.json'
 import { PublicDashboard } from '../PublicDashboard'
 
 const loginMock = vi.fn()
 const navigateMock = vi.fn()
+const originalLocalAuth = CONFIG.KEYCLOAK.LOCAL_AUTH
 
 vi.mock('echarts-for-react', () => ({ default: () => null }))
 
@@ -60,10 +62,16 @@ vi.mock('react-i18next', () => ({
 
 describe('PublicDashboard', () => {
   beforeEach(() => {
+    CONFIG.KEYCLOAK.LOCAL_AUTH = false
+    loginMock.mockReset()
     keycloakState.initialized = false
     keycloakState.authenticated = false
     navigateMock.mockReset()
     sessionStorage.clear()
+  })
+
+  afterEach(() => {
+    CONFIG.KEYCLOAK.LOCAL_AUTH = originalLocalAuth
   })
 
   test('forwards a just-authenticated visitor into the app dashboard', ({
@@ -204,6 +212,22 @@ describe('PublicDashboard', () => {
     expect(loginMock).toHaveBeenCalledWith(
       expect.objectContaining({ idpHint: 'bceidbusiness' })
     )
+  })
+
+  test('uses local Keycloak without an identity-provider hint', ({
+    render,
+    theme,
+    router
+  }) => {
+    CONFIG.KEYCLOAK.LOCAL_AUTH = true
+    render(<PublicDashboard />, [theme, router])
+
+    fireEvent.click(screen.getAllByTestId('public-login-local')[0])
+    expect(screen.queryByTestId('public-login-bceid')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('public-login-idir')).not.toBeInTheDocument()
+    expect(loginMock).toHaveBeenCalledWith({
+      redirectUri: window.location.origin
+    })
   })
 
   test('renders a "Trouble logging in?" link pointing to the CMS Lite support page', ({

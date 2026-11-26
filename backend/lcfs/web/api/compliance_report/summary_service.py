@@ -682,12 +682,12 @@ class ComplianceReportSummaryService:
         if compliance_report.compliance_period:
             compliance_year = int(compliance_report.compliance_period.description)
 
-        await self.repo.save_compliance_report_summary(
-            self._editable_summary_data(
-                compliance_report, summary_data, user, compliance_year
-            ),
-            compliance_year,
+        editable_summary = self._editable_summary_data(
+            compliance_report, summary_data, user, compliance_year
         )
+        if editable_summary.renewable_fuel_target_summary:
+            compliance_report.summary.supplemental_renewable_initialized = True
+        await self.repo.save_compliance_report_summary(editable_summary, compliance_year)
 
         self._clear_compliance_report_summary_cache(compliance_report)
 
@@ -999,7 +999,10 @@ class ComplianceReportSummaryService:
             }
             # Supplemental versions: seed Lines 6 and 8 from the assessed
             # baseline when they are blank.
-            if compliance_report.version > 0:
+            if (
+                compliance_report.version > 0
+                and not summary_model.supplemental_renewable_initialized
+            ):
                 if summary_model.line_6_renewable_fuel_retained_gasoline in [None, 0]:
                     summary_model.line_6_renewable_fuel_retained_gasoline = (
                         prev_compliance_report.summary.line_6_renewable_fuel_retained_gasoline
@@ -1030,6 +1033,8 @@ class ComplianceReportSummaryService:
                         prev_compliance_report.summary.line_8_obligation_deferred_jet_fuel
                         or 0
                     )
+                summary_model.supplemental_renewable_initialized = True
+                await self.repo.db.flush()
 
         elif prev_compliance_report:
             # Pre-2025 reports with a previous report: read previous values
@@ -1193,6 +1198,14 @@ class ComplianceReportSummaryService:
         existing_summary.lines_7_and_9_locked = lines_7_and_9_locked
         summary.lines_6_and_8_locked = summary_model.is_locked
         existing_summary.lines_6_and_8_locked = summary_model.is_locked
+        calculated_rows = {row.line: row for row in renewable_fuel_target_summary}
+        for row in existing_summary.renewable_fuel_target_summary:
+            if row.line in (6, 8) and row.line in calculated_rows:
+                calculated_row = calculated_rows[row.line]
+                row.description = calculated_row.description
+                row.max_gasoline = calculated_row.max_gasoline
+                row.max_diesel = calculated_row.max_diesel
+                row.max_jet_fuel = calculated_row.max_jet_fuel
 
         if existing_summary.model_dump(mode="json") != summary.model_dump(mode="json"):
             logger.info(

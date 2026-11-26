@@ -18,6 +18,7 @@ from fastapi.exceptions import RequestValidationError
 from starlette.responses import StreamingResponse, JSONResponse
 
 from lcfs.db import dependencies
+from lcfs.db.dependencies import extended_statement_timeout
 from lcfs.web.core.decorators import view_handler
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.allocation_agreement.schema import (
@@ -28,6 +29,8 @@ from lcfs.web.api.allocation_agreement.schema import (
     DeleteAllocationAgreementResponseSchema,
     PaginatedAllocationAgreementRequestSchema,
     AllocationAgreementAllSchema,
+    AllocationAgreementIndexRequestSchema,
+    AllocationAgreementIndexResponseSchema,
     OrganizationDetailsSchema,
 )
 from lcfs.web.api.allocation_agreement.services import AllocationAgreementServices
@@ -134,6 +137,25 @@ async def get_allocation_agreements_paginated(
 
 
 @router.post(
+    "/index",
+    response_model=AllocationAgreementIndexResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def get_allocation_agreements_index(
+    request: Request,
+    request_data: AllocationAgreementIndexRequestSchema = Body(...),
+    service: AllocationAgreementServices = Depends(),
+) -> AllocationAgreementIndexResponseSchema:
+    """
+    IDIR index of allocation agreements across all non-Draft compliance report
+    versions, with filtering, sorting, paging and an organization filter that
+    matches the reporting organization or the transaction partner. Read-only.
+    """
+    return await service.get_allocation_agreements_index(request_data)
+
+
+@router.post(
     "/save",
     status_code=status.HTTP_200_OK,
 )
@@ -217,6 +239,7 @@ async def search_table_options_strings(
     "/export/{report_id}",
     response_class=StreamingResponse,
     status_code=status.HTTP_200_OK,
+    dependencies=[Depends(extended_statement_timeout)],
 )
 @view_handler(
     [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
@@ -288,7 +311,10 @@ async def import_allocation_agreements(
             status_code=400, detail="Invalid compliance report id. Must be an integer."
         )
 
-    await validate.validate_organization_access(compliance_report_id)
+    compliance_report = await validate.validate_organization_access(
+        compliance_report_id
+    )
+    await validate.validate_compliance_report_access(compliance_report)
 
     # Check if overwrite is allowed
     compliance_report = await compliance_report_services.get_compliance_report_by_id(

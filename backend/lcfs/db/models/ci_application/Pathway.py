@@ -22,6 +22,16 @@ class Pathway(BaseModel, Auditable, Versioning):
         nullable=False,
         comment="CI application this pathway belongs to",
     )
+    fuel_production_facility_id = Column(
+        Integer,
+        ForeignKey(
+            "fuel_production_facility.fuel_production_facility_id",
+            ondelete="SET NULL",
+        ),
+        nullable=True,
+        index=True,
+        comment="Facility producing the fuel for this pathway",
+    )
 
     # ---------- Application type / fuel code type ----------
     application_type_id = Column(
@@ -103,6 +113,11 @@ class Pathway(BaseModel, Auditable, Versioning):
     # ---------- Relationships ----------
     ci_application = relationship(
         "CIApplication",
+        back_populates="pathways",
+        lazy="selectin",
+    )
+    fuel_production_facility = relationship(
+        "FuelProductionFacility",
         back_populates="pathways",
         lazy="selectin",
     )

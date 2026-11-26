@@ -129,6 +129,7 @@ for write operations. Exact per-endpoint roles are declared in each module's
 | `/transfers` | Credit transfers between organizations | Supplier & Government (recording: Director) |
 | `/reports` | Compliance reports (annual supply reporting) | Supplier & Government |
 | `/allocation-agreement` | Allocation-agreement line items on a report | Supplier (Compliance Reporting/Signing) & Government |
+| `/allocation-agreement/index` (`POST`) | Read-only, server-side filtered/sorted/paged index of allocation agreements across all non-Draft compliance report versions (powers the IDIR *Compliance reporting → Allocation agreements* subtab). Optional `organizationId` matches the report's reporting organization **or** the agreement's transaction partner legal name; DELETE tombstones are excluded | Government |
 | `/fuel-supply` | Fuel-supply line items on a report | Supplier & Government |
 | `/fuel-exports` | Fuel-export line items on a report | Supplier & Government |
 | `/notional-transfers` | Notional-transfer line items on a report | Supplier & Government |

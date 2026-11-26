@@ -12,6 +12,10 @@ from .FuelCode import FuelCode
 from .FuelCodeHistory import FuelCodeHistory
 from .FuelCodePrefix import FuelCodePrefix
 from .FuelCodeStatus import FuelCodeStatus
+from .FuelProductionFacility import (
+    FuelProductionFacility,
+    fuel_production_facility_document_association,
+)
 from .FuelType import FuelType
 from .ProvisionOfTheAct import ProvisionOfTheAct
 from .TransportMode import TransportMode
@@ -36,6 +40,8 @@ __all__ = [
     "FuelCodeListView",
     "FuelCodePrefix",
     "FuelCodeStatus",
+    "FuelProductionFacility",
+    "fuel_production_facility_document_association",
     "FuelType",
     "ProvisionOfTheAct",
     "TransportMode",

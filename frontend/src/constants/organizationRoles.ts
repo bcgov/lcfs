@@ -11,7 +11,8 @@ export const orgAvailableRoleOptions: OrgAvailableRoleOption[] = [
   { value: roles.compliance_reporting, label: 'Compliance reporting' },
   { value: roles.transfers, label: 'Credit transfer' },
   { value: roles.ci_applicant, label: 'CI applicant' },
-  { value: roles.ia_proponent, label: 'IA proponent' }
+  { value: roles.ia_proponent, label: 'IA proponent' },
+  { value: roles.lcjfip_applicant, label: 'LCJFIP applicant' }
 ]
 
 // Display labels for an organization's available roles, in canonical order.
@@ -35,7 +36,8 @@ export const orgTypeDefaultRoles: Record<string, string[]> = {
   credit_trader: [roles.transfers],
   aggregator: [roles.transfers],
   fuel_producer: [roles.ci_applicant],
-  initiative_agreement_holder: [roles.ia_proponent]
+  initiative_agreement_holder: [roles.ia_proponent],
+  lcjfip: [roles.lcjfip_applicant]
 }
 
 // Roles to add when the given org type keys have just been checked,

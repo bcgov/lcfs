@@ -222,8 +222,17 @@ class Organization(BaseModel, Auditable, EffectiveDates):
         back_populates="organization",
         lazy="selectin",
     )
+    fuel_production_facilities = relationship(
+        "FuelProductionFacility",
+        back_populates="organization",
+    )
     organization_internal_comments = relationship(
         "OrganizationInternalComment", back_populates="organization"
+    )
+    lcjfip_applications = relationship(
+        "LCJFIPApplication",
+        foreign_keys="LCJFIPApplication.organization_id",
+        back_populates="organization",
     )
 
 

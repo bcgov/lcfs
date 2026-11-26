@@ -80,6 +80,7 @@ export const ROUTES = {
     VIEW: '/compliance-reporting/:compliancePeriod/:complianceReportId',
     COMPARE: '/compare-reporting',
     REPORT_OPENINGS: '/compliance-reporting/report-openings',
+    ALLOCATION_AGREEMENTS_INDEX: '/compliance-reporting/allocation-agreements',
     CHARGING_SITE: {
       INDEX: '/compliance-reporting/charging-sites',
       VIEW: '/compliance-reporting/charging-sites/:siteId',
@@ -160,6 +161,12 @@ export const ROUTES = {
     VIEW: '/initiative-agreements/:initiativeAgreementId',
     ACTION_VIEW:
       '/initiative-agreements/:initiativeAgreementId/designated-actions/:designatedActionId'
+  },
+
+  // Low carbon jet fuel incentive program. Nested under /jet-fuel so the
+  // breadcrumb reads Home > Jet fuel > LCJFIP, as in the wireframe (#5488).
+  LCJFIP: {
+    MAIN: '/jet-fuel/lcjfip'
   },
 
   FORMS: {

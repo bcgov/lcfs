@@ -1,9 +1,21 @@
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient
+} from '@tanstack/react-query'
 import type { AxiosRequestConfig, AxiosResponse } from 'axios'
 import { invalidateComplianceReportRelatedQueries } from './reportQueryInvalidation'
 import type { QueryOptions, ExtMutationOptions } from './types'
+
+// Facility documents are embedded in the CI facility list and application
+// detail responses, so those caches must refresh alongside the documents.
+const invalidateFuelProductionFacilityQueries = (queryClient: QueryClient) => {
+  queryClient.invalidateQueries({ queryKey: ['ci-application-facilities'] })
+  queryClient.invalidateQueries({ queryKey: ['ci-application'] })
+}
 
 // Default cache configuration
 const DEFAULT_CACHE_TIME = 15 * 60 * 1000 // 15 minutes
@@ -51,7 +63,13 @@ export const useUploadDocument = (
   parentID: number | string | undefined | null,
   options: ExtMutationOptions<
     unknown,
-    File | Blob | { file: File | Blob; documentCategory?: string }
+    | File
+    | Blob
+    | {
+        file: File | Blob
+        documentCategory?: string
+        replaceDocumentId?: number
+      }
   > = {}
 ) => {
   const client = useApiService()
@@ -68,15 +86,26 @@ export const useUploadDocument = (
 
   return useMutation({
     mutationFn: async (
-      input: File | Blob | { file: File | Blob; documentCategory?: string }
+      input:
+        | File
+        | Blob
+        | {
+            file: File | Blob
+            documentCategory?: string
+            replaceDocumentId?: number
+          }
     ) => {
       // Backwards compatible: callers can either pass a File directly
       // (legacy signature) or a { file, documentCategory } object so
       // CI applications can route uploads to a specific category bucket
       // (technical_report / ghgenius_model / supporting).
-      const { file, documentCategory } =
+      const { file, documentCategory, replaceDocumentId } =
         input instanceof File || input instanceof Blob
-          ? { file: input, documentCategory: undefined }
+          ? {
+              file: input,
+              documentCategory: undefined,
+              replaceDocumentId: undefined
+            }
           : input || {}
 
       if (!file) {
@@ -98,9 +127,17 @@ export const useUploadDocument = (
         headers: {
           'Content-Type': 'multipart/form-data'
         },
-        params: documentCategory
-          ? { document_category: documentCategory }
-          : undefined,
+        params:
+          documentCategory || replaceDocumentId
+            ? {
+                ...(documentCategory
+                  ? { document_category: documentCategory }
+                  : {}),
+                ...(replaceDocumentId
+                  ? { replace_document_id: replaceDocumentId }
+                  : {})
+              }
+            : undefined,
         onUploadProgress
       })
     },
@@ -119,6 +156,12 @@ export const useUploadDocument = (
         // Invalidate any parent entity that might display document counts or status
         if (parentType === 'compliance_report') {
           invalidateComplianceReportRelatedQueries(queryClient, parentID)
+        } else if (parentType === 'ci_application') {
+          queryClient.invalidateQueries({
+            queryKey: ['ci-application', String(parentID)]
+          })
+        } else if (parentType === 'fuel_production_facility') {
+          invalidateFuelProductionFacilityQueries(queryClient)
         }
       }
 
@@ -134,7 +177,7 @@ export const useUploadDocument = (
 export const useDeleteDocument = (
   parentType: string,
   parentID: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, unknown> = {}
+  options: ExtMutationOptions<unknown, unknown> & { deleteToBin?: boolean } = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -143,6 +186,10 @@ export const useDeleteDocument = (
     onSuccess,
     onError,
     invalidateRelatedQueries = true,
+    // Parents with a document bin delete through it; the shared route
+    // refuses them. Initiative agreements opt in from their own page,
+    // because legacy credit awards share the parent type and have no bin.
+    deleteToBin = parentType === 'designatedAction',
     ...restOptions
   } = options
 
@@ -155,9 +202,14 @@ export const useDeleteDocument = (
         throw new Error('Parent ID and Parent Type are required')
       }
 
-      const path = apiRoutes.getDocument
+      const path = (
+        deleteToBin
+          ? apiRoutes.documentFolderDeleteDocument
+          : apiRoutes.getDocument
+      )
         .replace(':parentID', String(parentID ?? ''))
         .replace(':parentType', String(parentType ?? ''))
+        .replace(':documentId', String(documentID ?? ''))
         .replace(':documentID', String(documentID ?? ''))
 
       return await client.delete(path)
@@ -167,13 +219,80 @@ export const useDeleteDocument = (
       queryClient.invalidateQueries({
         queryKey: ['documents', parentType, parentID]
       })
+      if (deleteToBin) {
+        queryClient.invalidateQueries({
+          queryKey: ['document-tree', parentType, String(parentID)]
+        })
+        queryClient.invalidateQueries({
+          queryKey: ['document-tree-deleted', parentType, String(parentID)]
+        })
+        queryClient.invalidateQueries({
+          queryKey: ['initiative-agreements', 'document-restore-targets']
+        })
+      }
 
       if (invalidateRelatedQueries) {
         if (parentType === 'compliance_report') {
           invalidateComplianceReportRelatedQueries(queryClient, parentID)
+        } else if (parentType === 'ci_application') {
+          queryClient.invalidateQueries({
+            queryKey: ['ci-application', String(parentID)]
+          })
+        } else if (parentType === 'fuel_production_facility') {
+          invalidateFuelProductionFacilityQueries(queryClient)
         }
       }
 
+      onSuccess?.(data, variables, context)
+    },
+    onError: (error, variables, context) => {
+      onError?.(error, variables, context)
+    },
+    ...restOptions
+  })
+}
+
+// An IDIR Administrator approves or rejects a macro-enabled workbook
+export const useReviewDocumentScan = (
+  parentType: string,
+  parentID: number | string | undefined | null,
+  options: ExtMutationOptions<
+    unknown,
+    { documentID: number | string; decision: 'approve' | 'reject' }
+  > = {}
+) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+
+  const { onSuccess, onError, ...restOptions } = options
+
+  return useMutation({
+    mutationFn: async ({
+      documentID,
+      decision
+    }: {
+      documentID: number | string
+      decision: 'approve' | 'reject'
+    }) => {
+      const path = apiRoutes.reviewDocumentScan
+        .replace(':parentID', String(parentID ?? ''))
+        .replace(':parentType', String(parentType ?? ''))
+        .replace(':documentID', String(documentID ?? ''))
+
+      return await client.put(path, { decision })
+    },
+    onSuccess: (data, variables, context) => {
+      queryClient.invalidateQueries({
+        queryKey: ['documents', parentType, parentID]
+      })
+      // The CI application summary lists documents from its detail query
+      if (parentType === 'ci_application') {
+        queryClient.invalidateQueries({
+          queryKey: ['ci-application', String(parentID)]
+        })
+      } else if (parentType === 'fuel_production_facility') {
+        invalidateFuelProductionFacilityQueries(queryClient)
+      }
       onSuccess?.(data, variables, context)
     },
     onError: (error, variables, context) => {
@@ -395,6 +514,12 @@ export const useUpdateDocument = (
       if (invalidateRelatedQueries) {
         if (parentType === 'compliance_report') {
           invalidateComplianceReportRelatedQueries(queryClient, parentID)
+        } else if (parentType === 'ci_application') {
+          queryClient.invalidateQueries({
+            queryKey: ['ci-application', String(parentID)]
+          })
+        } else if (parentType === 'fuel_production_facility') {
+          invalidateFuelProductionFacilityQueries(queryClient)
         }
       }
 

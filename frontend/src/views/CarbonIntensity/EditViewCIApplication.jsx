@@ -31,6 +31,7 @@ import {
 } from '@/hooks/useCIApplication'
 
 import { CIApplicationProgress } from './components/CIApplicationProgress'
+import { getCIApplicationDisplayStatus } from './components/ciApplicationDisplayStatus'
 import { getCIResumeStep } from './ciResumeStep'
 import { ApplicationInformationStep } from './components/ApplicationInformationStep'
 import { ApplicationSummary } from './components/ApplicationSummary'
@@ -246,6 +247,25 @@ const EditViewCIApplicationBase = () => {
     [updateStep3, goToStep, t]
   )
 
+  const handleSupplementalDocumentsSubmit = useCallback(
+    async (payload) => {
+      try {
+        await updateStep3(payload)
+        alertRef.current?.triggerAlert?.({
+          message: t('carbonIntensity:step3.saveSuccess'),
+          severity: 'success'
+        })
+        setIsDocumentEditorOpen(false)
+      } catch (err) {
+        alertRef.current?.triggerAlert?.({
+          message: getApiError(err, 'Failed to submit additional documents.'),
+          severity: 'error'
+        })
+      }
+    },
+    [updateStep3, t]
+  )
+
   const handleStep2Save = useCallback(
     async (payload) => {
       try {
@@ -289,11 +309,13 @@ const EditViewCIApplicationBase = () => {
           })
         }
         goToStep(1)
+        return true
       } catch (err) {
         alertRef.current?.triggerAlert?.({
           message: getApiError(err, 'Failed to save application information.'),
           severity: 'error'
         })
+        return false
       }
     },
     [isAdd, createDraft, updateStep1, navigate, goToStep, t]
@@ -352,6 +374,7 @@ const EditViewCIApplicationBase = () => {
   }, [ciApplication, currentUser])
 
   const isDraft = ciApplication?.status?.status === 'Draft'
+  const displayStatus = getCIApplicationDisplayStatus(ciApplication)
   const isSubmittedOrTerminal = Boolean(
     ciApplication?.status?.status && ciApplication.status.status !== 'Draft'
   )
@@ -395,8 +418,9 @@ const EditViewCIApplicationBase = () => {
         onSave={handleStep1Save}
         onDelete={canDelete ? openDeleteConfirmation : null}
         isSaving={isSaving || isDeleting}
-        readOnly={!isAdd && !isDraft}
+        readOnly={isGovernment || (!isAdd && !isDraft)}
         showEffectiveDateNotice={!isGovernment}
+        showOrgInfoConfirmation={!isGovernment}
       />
     ),
     step2: ciApplicationId ? (
@@ -485,9 +509,7 @@ const EditViewCIApplicationBase = () => {
 
       {!isAdd && ciApplication?.status?.status && (
         <Box mb={2}>
-          <BCAlert severity="info">
-            {`Status: ${ciApplication.status.status}`}
-          </BCAlert>
+          <BCAlert severity="info">{`Status: ${displayStatus}`}</BCAlert>
         </Box>
       )}
 
@@ -588,6 +610,7 @@ const EditViewCIApplicationBase = () => {
                   }
                   onEditDocuments={() => setIsDocumentEditorOpen(true)}
                   canEditPathways={canSupplementallyEditPathways}
+                  showOrgInfoConfirmation={!isGovernment}
                   pathwayEditorOptionsData={tableOptions}
                   onSavePathways={handleStep2Save}
                   onPathwayValidationError={(message) =>
@@ -611,8 +634,14 @@ const EditViewCIApplicationBase = () => {
             data-test={`ci-step-accordion-${step.key}`}
             sx={{ mb: 1, scrollMarginTop: 96 }}
           >
-            <AccordionSummary expandIcon={<ExpandMore />}>
-              <BCTypography variant="subtitle1" sx={{ fontWeight: 600 }}>
+            <AccordionSummary
+              expandIcon={<ExpandMore sx={{ width: '2rem', height: '2rem' }} />}
+            >
+              <BCTypography
+                variant="subtitle1"
+                sx={{ fontWeight: 600 }}
+                color="primary"
+              >
                 {`${index + 1}. ${t(step.labelKey)}`}
               </BCTypography>
             </AccordionSummary>
@@ -642,11 +671,15 @@ const EditViewCIApplicationBase = () => {
                 content: (
                   <DocumentsModellingStep
                     ciApplication={ciApplication}
-                    onSave={async () => {}}
-                    isSaving={false}
+                    onSave={
+                      canSupplementallyEditDocuments
+                        ? handleSupplementalDocumentsSubmit
+                        : async () => {}
+                    }
+                    isSaving={isUpdatingStep3}
                     readOnly={false}
                     showTitle={false}
-                    showSaveControls={false}
+                    showSaveControls={canSupplementallyEditDocuments}
                   />
                 )
               }

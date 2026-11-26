@@ -18,8 +18,9 @@ import {
   fuelCodeColDefs,
   normalizeTransportModeDistancesForSave
 } from './_schema'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import BCAlert from '@/components/BCAlert'
 import BCButton from '@/components/BCButton'
 import BCModal from '@/components/BCModal'
 import BCTypography from '@/components/BCTypography'
@@ -102,6 +103,11 @@ const formatFastApiDetail = (detail) => {
     .join('; ')
 }
 
+// The API's explanation when it has one (e.g. why a fuel code is locked),
+// else the generic request error.
+const describeApiError = (error) =>
+  formatFastApiDetail(error.response?.data?.detail) || error.message
+
 const AddEditFuelCodeBase = () => {
   const { fuelCodeID } = useParams()
   const gridRef = useRef(null)
@@ -140,7 +146,10 @@ const AddEditFuelCodeBase = () => {
 
   // state setters
   const updateState = useCallback((updates) => {
-    setState((prev) => ({ ...prev, ...updates }))
+    setState((prev) => ({
+      ...prev,
+      ...(typeof updates === 'function' ? updates(prev) : updates)
+    }))
   }, [])
 
   const updatePendingUpdates = useCallback((updater) => {
@@ -217,6 +226,9 @@ const AddEditFuelCodeBase = () => {
     const hasNotesValidationError =
       isNotesRequired && (!rowData[0]?.notes || rowData[0].notes.trim() === '')
 
+    // Set when these pages can no longer process the fuel code (#5308).
+    const legacyLockReason = existingFuelCode?.legacyLockReason ?? null
+
     return {
       isEditable,
       isAnalyst,
@@ -226,7 +238,8 @@ const AddEditFuelCodeBase = () => {
       titleText,
       showGuideText,
       isNotesRequired,
-      hasNotesValidationError
+      hasNotesValidationError,
+      legacyLockReason
     }
   }, [existingFuelCode, hasRoles, isInEditMode, isUpdating, t, rowData])
 
@@ -402,11 +415,13 @@ const AddEditFuelCodeBase = () => {
           }`
         }
 
-        // Update errors state
+        // Mark the row as unsaved (an empty list when the API names no
+        // fields), so Save stays disabled until the row saves.
         updateState((prev) => ({
           errors: {
             ...prev.errors,
-            [rowId]: error.response?.data?.errors?.[0]?.fields
+            [rowId]:
+              error.response?.data?.errors?.flatMap((e) => e.fields ?? []) ?? []
           }
         }))
 
@@ -527,7 +542,10 @@ const AddEditFuelCodeBase = () => {
       }
 
       params.api.applyTransaction({ remove: [params.node.data] })
-      updateState({ modalData: null })
+      updateState((prev) => ({
+        modalData: null,
+        errors: { ...prev.errors, [params.node.data.id]: undefined }
+      }))
     },
     [fuelCodeMutation, handleError, updateState]
   )
@@ -740,7 +758,10 @@ const AddEditFuelCodeBase = () => {
           }
           await handleSaveSuccess()
         } catch (error) {
-          handleError(error, `Error saving fuel code: ${error.message}`)
+          handleError(
+            error,
+            `Error saving fuel code: ${describeApiError(error)}`
+          )
         } finally {
           setButtonOperationState(false)
         }
@@ -770,7 +791,10 @@ const AddEditFuelCodeBase = () => {
             severity: 'success'
           })
         } catch (error) {
-          handleError(error, `Error enabling edit mode: ${error.message}`)
+          handleError(
+            error,
+            `Error enabling edit mode: ${describeApiError(error)}`
+          )
         } finally {
           setButtonOperationState(false)
         }
@@ -791,7 +815,10 @@ const AddEditFuelCodeBase = () => {
             severity: 'success'
           })
         } catch (error) {
-          handleError(error, `Error recommending fuel code: ${error.message}`)
+          handleError(
+            error,
+            `Error recommending fuel code: ${describeApiError(error)}`
+          )
         } finally {
           setButtonOperationState(false)
         }
@@ -812,7 +839,10 @@ const AddEditFuelCodeBase = () => {
             severity: 'success'
           })
         } catch (error) {
-          handleError(error, `Error approving fuel code: ${error.message}`)
+          handleError(
+            error,
+            `Error approving fuel code: ${describeApiError(error)}`
+          )
         } finally {
           setButtonOperationState(false)
         }
@@ -835,7 +865,10 @@ const AddEditFuelCodeBase = () => {
             })
           }
         } catch (error) {
-          handleError(error, `Error deleting fuel code: ${error.message}`)
+          handleError(
+            error,
+            `Error deleting fuel code: ${describeApiError(error)}`
+          )
         } finally {
           setButtonOperationState(false)
         }
@@ -863,7 +896,10 @@ const AddEditFuelCodeBase = () => {
             severity: 'success'
           })
         } catch (error) {
-          handleError(error, `Error returning to analyst: ${error.message}`)
+          handleError(
+            error,
+            `Error returning to analyst: ${describeApiError(error)}`
+          )
         } finally {
           setButtonOperationState(false)
         }
@@ -878,7 +914,7 @@ const AddEditFuelCodeBase = () => {
       ...baseHandlers,
       hasChanges: rowData.some((row) => row.modified),
       hasValidationErrors:
-        Object.keys(errors).length > 0 ||
+        Object.values(errors).some(Boolean) ||
         computedValues.hasNotesValidationError,
       isComplete: !!existingFuelCode,
       canEdit: computedValues.isEditable && !isUpdating,
@@ -892,7 +928,8 @@ const AddEditFuelCodeBase = () => {
       isInEditMode,
       isUpdating,
       isButtonOperationInProgress: state.isButtonOperationInProgress,
-      currentButtonOperation: state.currentButtonOperation
+      currentButtonOperation: state.currentButtonOperation,
+      isLocked: !!computedValues.legacyLockReason
     })
   }, [
     existingFuelCode,
@@ -954,6 +991,29 @@ const AddEditFuelCodeBase = () => {
             <BCTypography variant="body2" mt={2} mb={3} color="warning.main">
               {t('fuelCode:notesRequiredWarning')}
             </BCTypography>
+          )}
+          {computedValues.legacyLockReason && (
+            <BCAlert
+              severity="info"
+              noFade
+              sx={{ mt: 2 }}
+              data-test="fuel-code-legacy-lock"
+            >
+              {t(`fuelCode:legacyLock.${computedValues.legacyLockReason}`)}
+              {existingFuelCode.openCiApplicationId && (
+                <>
+                  {' '}
+                  <Link
+                    to={ROUTES.CI_APPLICATIONS.EDIT.replace(
+                      ':ciApplicationId',
+                      existingFuelCode.openCiApplicationId
+                    )}
+                  >
+                    {t('fuelCode:legacyLock.ciApplicationLink')}
+                  </Link>
+                </>
+              )}
+            </BCAlert>
           )}
         </div>
 

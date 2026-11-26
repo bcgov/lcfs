@@ -8,9 +8,11 @@ from lcfs.services.scheduler.scheduler import (
     shutdown_scheduler,
     scheduler,
 )
+from lcfs.services.jobs import jobs
 from lcfs.services.jobs.jobs import (
     check_overdue_supplemental_reports,
     refresh_fse_reporting_materialized_views,
+    reindex_compliance_report_tables,
 )
 from lcfs.settings import settings
 
@@ -303,17 +305,26 @@ async def test_scheduler_job_defaults(mock_app):
     assert scheduler._job_defaults["misfire_grace_time"] == 600
 
 
-def _fse_refresh_connection(dirty_generations):
+def _fse_refresh_engine(scalar_results):
     """
-    A connection whose scalar() answers the refresh job in order: the advisory
-    lock, the refresh objects check, then the dirty_generation reads.
+    An engine whose begin() yields one connection; scalar() answers the refresh
+    job in order: the advisory lock, the refresh objects check, then the
+    dirty_generation reads.
     """
     conn = AsyncMock()
-    conn.execution_options.return_value = conn
-    conn.scalar.side_effect = [True, True, *dirty_generations]
+    conn.scalar.side_effect = scalar_results
     app = MagicMock()
-    app.state.db_engine.connect = AsyncMock(return_value=conn)
+    app.state.db_engine.begin.return_value.__aenter__.return_value = conn
+    app.state.db_engine.begin.return_value.__aexit__.return_value = False
     return app, conn
+
+
+def _fse_refresh_connection(dirty_generations):
+    return _fse_refresh_engine([True, True, *dirty_generations])
+
+
+def _sql(call):
+    return str(call.args[0])
 
 
 def _refreshed_generations(conn):
@@ -326,7 +337,7 @@ def _refreshed_generations(conn):
 
 def _refresh_count(conn):
     return sum(
-        "REFRESH MATERIALIZED VIEW CONCURRENTLY" in str(call.args[0])
+        "REFRESH MATERIALIZED VIEW CONCURRENTLY" in _sql(call)
         for call in conn.execute.call_args_list
     )
 
@@ -338,7 +349,7 @@ async def test_refresh_fse_reporting_mvs_skips_when_nothing_is_dirty():
     assert await refresh_fse_reporting_materialized_views(app) is False
 
     assert _refresh_count(conn) == 0
-    conn.close.assert_awaited_once()
+    app.state.db_engine.begin.return_value.__aexit__.assert_awaited_once()
 
 
 @pytest.mark.anyio
@@ -356,17 +367,148 @@ async def test_refresh_fse_reporting_mvs_leaves_writes_made_during_a_refresh():
 
 
 @pytest.mark.anyio
+async def test_refresh_fse_reporting_mvs_uses_one_transaction_and_a_transaction_lock():
+    """Behind PgBouncer transaction pooling a session lock and its unlock can
+    land on different server connections, so the lock must end with the
+    transaction and the job must not run in AUTOCOMMIT."""
+    app, conn = _fse_refresh_connection([5])
+
+    assert await refresh_fse_reporting_materialized_views(app) is True
+
+    app.state.db_engine.begin.assert_called_once_with()
+    app.state.db_engine.connect.assert_not_called()
+    conn.execution_options.assert_not_called()
+    assert "pg_try_advisory_xact_lock" in _sql(conn.scalar.call_args_list[0])
+    statements = [_sql(call) for call in conn.execute.call_args_list]
+    assert not any("pg_advisory_unlock" in sql for sql in statements)
+
+
+@pytest.mark.anyio
 async def test_refresh_fse_reporting_mvs_skips_when_another_run_holds_the_lock():
-    conn = AsyncMock()
-    conn.execution_options.return_value = conn
-    conn.scalar.side_effect = [False]
-    app = MagicMock()
-    app.state.db_engine.connect = AsyncMock(return_value=conn)
+    app, conn = _fse_refresh_engine([False])
 
     assert await refresh_fse_reporting_materialized_views(app) is False
 
     assert _refresh_count(conn) == 0
-    conn.close.assert_awaited_once()
+    assert conn.scalar.await_count == 1
+
+
+@pytest.mark.anyio
+async def test_refresh_fse_reporting_mvs_failure_rolls_back_and_reraises():
+    app, conn = _fse_refresh_connection([5])
+    conn.execute.side_effect = RuntimeError("refresh failed")
+
+    with pytest.raises(RuntimeError, match="refresh failed"):
+        await refresh_fse_reporting_materialized_views(app)
+
+    # The transaction context saw the error, so it rolls back and the
+    # transaction-scoped lock goes with it.
+    exc_type = app.state.db_engine.begin.return_value.__aexit__.await_args.args[0]
+    assert exc_type is RuntimeError
+
+
+def _reindex_app():
+    driver_connection = AsyncMock()
+    raw_connection = MagicMock(driver_connection=driver_connection)
+    conn = AsyncMock()
+    conn.get_raw_connection.return_value = raw_connection
+    app = MagicMock()
+    app.state.db_engine.connect.return_value.__aenter__.return_value = conn
+    app.state.db_engine.connect.return_value.__aexit__.return_value = False
+    return app, driver_connection
+
+
+def _reindexed_tables(driver_connection):
+    return [
+        call.args[0].removeprefix("REINDEX TABLE CONCURRENTLY ")
+        for call in driver_connection.execute.call_args_list
+    ]
+
+
+@pytest.mark.anyio
+async def test_reindex_skips_when_another_run_holds_the_lease():
+    app, driver_connection = _reindex_app()
+    with (
+        patch.object(jobs, "_claim_job_lease", AsyncMock(return_value=False)),
+        patch.object(jobs, "_release_job_lease", AsyncMock()) as release,
+    ):
+        assert await reindex_compliance_report_tables(app) is False
+
+    driver_connection.execute.assert_not_called()
+    release.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_reindex_runs_each_table_as_a_simple_query_and_releases_the_lease():
+    app, driver_connection = _reindex_app()
+    with (
+        patch.object(jobs, "_claim_job_lease", AsyncMock(return_value=True)),
+        patch.object(jobs, "_renew_job_lease", AsyncMock(return_value=True)) as renew,
+        patch.object(jobs, "_release_job_lease", AsyncMock()) as release,
+    ):
+        assert await reindex_compliance_report_tables(app) is True
+
+    # Driver-level execute() with no arguments is the simple query protocol:
+    # no prepared statement to lose between server connections.
+    calls = driver_connection.execute.call_args_list
+    assert _reindexed_tables(driver_connection) == list(jobs.COMPLIANCE_REINDEX_TABLES)
+    assert all(len(call.args) == 1 for call in calls)
+    assert renew.await_count == len(jobs.COMPLIANCE_REINDEX_TABLES)
+    release.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_reindex_failure_releases_the_lease():
+    app, driver_connection = _reindex_app()
+    driver_connection.execute.side_effect = RuntimeError("reindex failed")
+    with (
+        patch.object(jobs, "_claim_job_lease", AsyncMock(return_value=True)),
+        patch.object(jobs, "_release_job_lease", AsyncMock()) as release,
+    ):
+        with pytest.raises(RuntimeError, match="reindex failed"):
+            await reindex_compliance_report_tables(app)
+
+    release.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_reindex_claim_failure_is_raised_without_a_release():
+    app, driver_connection = _reindex_app()
+    claim_fails = AsyncMock(side_effect=RuntimeError("database unavailable"))
+    with (
+        patch.object(jobs, "_claim_job_lease", claim_fails),
+        patch.object(jobs, "_release_job_lease", AsyncMock()) as release,
+    ):
+        with pytest.raises(RuntimeError, match="database unavailable"):
+            await reindex_compliance_report_tables(app)
+
+    driver_connection.execute.assert_not_called()
+    release.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_reindex_stops_when_the_lease_is_taken_over():
+    app, driver_connection = _reindex_app()
+    with (
+        patch.object(jobs, "_claim_job_lease", AsyncMock(return_value=True)),
+        patch.object(jobs, "_renew_job_lease", AsyncMock(return_value=False)),
+        patch.object(jobs, "_release_job_lease", AsyncMock()),
+    ):
+        assert await reindex_compliance_report_tables(app) is False
+
+    assert _reindexed_tables(driver_connection) == [jobs.COMPLIANCE_REINDEX_TABLES[0]]
+
+
+@pytest.mark.anyio
+async def test_reindex_lease_release_failure_does_not_mask_the_result():
+    app, _ = _reindex_app()
+    release_fails = AsyncMock(side_effect=RuntimeError("db gone"))
+    with (
+        patch.object(jobs, "_claim_job_lease", AsyncMock(return_value=True)),
+        patch.object(jobs, "_renew_job_lease", AsyncMock(return_value=True)),
+        patch.object(jobs, "_release_job_lease", release_fails),
+    ):
+        assert await reindex_compliance_report_tables(app) is True
 
 
 @pytest.fixture(autouse=True)

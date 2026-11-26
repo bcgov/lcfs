@@ -11,6 +11,7 @@ from lcfs.db.models.compliance import (
 )
 import structlog
 from fastapi import Depends, HTTPException
+from fastapi.exceptions import RequestValidationError
 from sqlalchemy import (
     BigInteger,
     and_,
@@ -35,6 +36,11 @@ from sqlalchemy.orm import joinedload, contains_eager, selectinload
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
+from lcfs.db.models.ci_application import (
+    CIApplication,
+    CIApplicationFuelCodeAssociation,
+    CIApplicationStatus,
+)
 from lcfs.db.models.fuel import (
     CategoryCarbonIntensity,
     DefaultCarbonIntensity,
@@ -49,6 +55,7 @@ from lcfs.db.models.fuel.FeedstockFuelTransportMode import FeedstockFuelTranspor
 from lcfs.db.models.fuel.FinishedFuelTransportMode import FinishedFuelTransportMode
 from lcfs.db.models.fuel.FuelCategory import FuelCategory
 from lcfs.db.models.fuel.FuelCode import FuelCode
+from lcfs.db.models.fuel.FuelProductionFacility import FuelProductionFacility
 from lcfs.db.models.fuel.FuelCodePrefix import FuelCodePrefix
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus, FuelCodeStatusEnum
 from lcfs.db.models.fuel.FuelInstance import FuelInstance
@@ -85,6 +92,25 @@ class CarbonIntensityResult:
     eer: float
     energy_density: float | None
     uci: float | None
+    unrecognized: bool = False
+
+    def reported_energy_density(self, sent: float | None) -> float | None:
+        """The energy density a schedule row is calculated with.
+
+        The standard value for the fuel type and year wins. A value sent with
+        the row is used only for an unrecognized ("Other") fuel, which has no
+        standard value; validation bounds it before it gets here.
+        """
+        if self.energy_density is not None:
+            return self.energy_density
+        return sent if self.unrecognized else None
+
+
+def fuel_code_validation_error(problem: str) -> RequestValidationError:
+    """The 422 a schedule save gets for a fuel code it may not use."""
+    return RequestValidationError(
+        [{"loc": ("fuelCode",), "msg": problem, "type": "value_error"}]
+    )
 
 
 def _row_mapping(row: Any) -> dict[str, Any]:
@@ -122,7 +148,7 @@ class FuelCodeRepository:
         self.db = db
 
     def get_fuel_code_bulletin_pagination_params(
-        self, pagination: PaginationRequestSchema
+        self, pagination: PaginationRequestSchema, *, include_internal: bool = False
     ) -> tuple[list, list]:
         conditions = []
         filter_field_map = {
@@ -149,6 +175,10 @@ class FuelCodeRepository:
 
             filter_option = filter.type
             filter_type = filter.filter_type
+            if not include_internal and filter.field not in filter_field_map:
+                raise HTTPException(
+                    status_code=400, detail="Unsupported public bulletin filter"
+                )
             field = (
                 filter_field_map[filter.field]
                 if filter.field in filter_field_map
@@ -169,6 +199,7 @@ class FuelCodeRepository:
         limit: Optional[int] = None,
         conditions: Optional[list] = None,
         sort_orders: Optional[list] = None,
+        include_internal: bool = False,
     ):
         """
         Returns paginated approved fuel code bulletin rows.
@@ -176,45 +207,51 @@ class FuelCodeRepository:
         bulletin_type: 'current' or 'archived'
         Current:
           - Approved fuel codes
-          - Effective after compliance period start
-          - Still active beyond compliance period start
+          - Not expired before the current reporting year, including future-effective codes
 
         Archived:
-          - Approved fuel codes not in current
+          - Approved fuel codes expired before the current reporting year
         """
-        query = select(
-            FuelCodeListView.fuel_code_id,
-            FuelCodeListView.prefix,
-            FuelCodeListView.fuel_suffix,
-            FuelCodeListView.fuel_type,
+        columns = [
+            func.concat(FuelCodeListView.prefix, FuelCodeListView.fuel_suffix).label(
+                "fuel_code"
+            ),
+            FuelCodeListView.fuel_type.label("fuel"),
             FuelCodeListView.company,
             FuelCodeListView.carbon_intensity,
             FuelCodeListView.effective_date,
-            FuelCodeListView.expiration_date,
-            FuelCodeListView.status,
-            FuelCodeListView.edrms,
-            FuelCodeListView.contact_name,
-            FuelCodeListView.contact_email,
-            FuelCodeListView.application_date,
-            FuelCodeListView.approval_date,
-            FuelCodeListView.feedstock,
-            FuelCodeListView.feedstock_location,
-            FuelCodeListView.feedstock_misc,
-            FuelCodeListView.co_processed,
-            FuelCodeListView.fuel_production_facility_city,
-            FuelCodeListView.fuel_production_facility_province_state,
-            FuelCodeListView.fuel_production_facility_country,
-            FuelCodeListView.facility_nameplate_capacity,
-            FuelCodeListView.facility_nameplate_capacity_unit,
-            FuelCodeListView.feedstock_fuel_transport_modes,
-            FuelCodeListView.finished_fuel_transport_modes,
-            FuelCodeListView.former_company,
-            FuelCodeListView.notes,
-        ).where(
+            FuelCodeListView.expiration_date.label("expiry_date"),
+        ]
+        if include_internal:
+            columns.extend(
+                [
+                    FuelCodeListView.fuel_code_id,
+                    FuelCodeListView.prefix,
+                    FuelCodeListView.fuel_suffix,
+                    FuelCodeListView.status,
+                    FuelCodeListView.edrms,
+                    FuelCodeListView.contact_name,
+                    FuelCodeListView.contact_email,
+                    FuelCodeListView.application_date,
+                    FuelCodeListView.approval_date,
+                    FuelCodeListView.feedstock,
+                    FuelCodeListView.feedstock_location,
+                    FuelCodeListView.feedstock_misc,
+                    FuelCodeListView.co_processed,
+                    FuelCodeListView.fuel_production_facility_city,
+                    FuelCodeListView.fuel_production_facility_province_state,
+                    FuelCodeListView.fuel_production_facility_country,
+                    FuelCodeListView.facility_nameplate_capacity,
+                    FuelCodeListView.facility_nameplate_capacity_unit,
+                    FuelCodeListView.feedstock_fuel_transport_modes,
+                    FuelCodeListView.finished_fuel_transport_modes,
+                    FuelCodeListView.former_company,
+                    FuelCodeListView.notes,
+                ]
+            )
+        query = select(*columns).where(
             cast(FuelCodeListView.status, String) == FuelCodeStatusEnum.Approved.value
         )
-        # compliance_period end would 31st March of next compliance year, so add 1 year to start and set to 31st March
-        compliance_period_end = date(compliance_period_start.year + 1, 3, 31)
         count_query = (
             select(func.count())
             .select_from(FuelCodeListView)
@@ -224,12 +261,10 @@ class FuelCodeRepository:
             )
         )
 
-        current_conditions = and_(
-            FuelCodeListView.effective_date < compliance_period_end,
-            or_(
-                FuelCodeListView.expiration_date.is_(None),
-                FuelCodeListView.expiration_date > compliance_period_start,
-            ),
+        expiration_cutoff = date(compliance_period_start.year, 1, 1)
+        current_conditions = or_(
+            FuelCodeListView.expiration_date.is_(None),
+            FuelCodeListView.expiration_date >= expiration_cutoff,
         )
 
         # Apply bulletin type filter
@@ -298,59 +333,10 @@ class FuelCodeRepository:
 
         formatted_rows = []
         for row in rows:
-            r = row._mapping
-            effective_date = r["effective_date"]
-            expiration_date = r["expiration_date"]
-            application_date = r["application_date"]
-            approval_date = r["approval_date"]
-
-            if isinstance(effective_date, datetime):
-                effective_date = effective_date.date()
-            if isinstance(expiration_date, datetime):
-                expiration_date = expiration_date.date()
-            if isinstance(application_date, datetime):
-                application_date = application_date.date()
-            if isinstance(approval_date, datetime):
-                approval_date = approval_date.date()
-
             formatted_rows.append(
                 {
-                    "fuel_code_id": r["fuel_code_id"],
-                    "fuel_code": f'{r["prefix"]}{r["fuel_suffix"]}',
-                    "fuel": r["fuel_type"],
-                    "company": r["company"],
-                    "carbon_intensity": r["carbon_intensity"],
-                    "effective_date": effective_date,
-                    "expiry_date": expiration_date,
-                    "prefix": r["prefix"],
-                    "fuel_suffix": r["fuel_suffix"],
-                    "status": r["status"],
-                    "edrms": r["edrms"],
-                    "contact_name": r["contact_name"],
-                    "contact_email": r["contact_email"],
-                    "application_date": application_date,
-                    "approval_date": approval_date,
-                    "feedstock": r["feedstock"],
-                    "feedstock_location": r["feedstock_location"],
-                    "feedstock_misc": r["feedstock_misc"],
-                    "co_processed": r["co_processed"],
-                    "fuel_production_facility_city": r["fuel_production_facility_city"],
-                    "fuel_production_facility_province_state": r[
-                        "fuel_production_facility_province_state"
-                    ],
-                    "fuel_production_facility_country": r[
-                        "fuel_production_facility_country"
-                    ],
-                    "facility_nameplate_capacity": r["facility_nameplate_capacity"],
-                    "facility_nameplate_capacity_unit": r[
-                        "facility_nameplate_capacity_unit"
-                    ],
-                    "feedstock_fuel_transport_modes": r[
-                        "feedstock_fuel_transport_modes"
-                    ],
-                    "finished_fuel_transport_modes": r["finished_fuel_transport_modes"],
-                    "former_company": r["former_company"],
-                    "notes": r["notes"],
+                    key: value.date() if isinstance(value, datetime) else value
+                    for key, value in row._mapping.items()
                 }
             )
 
@@ -421,6 +407,9 @@ class FuelCodeRepository:
                     ),
                     joinedload(FuelCode.fuel_type).joinedload(FuelType.provision_1),
                     joinedload(FuelCode.fuel_type).joinedload(FuelType.provision_2),
+                    selectinload(FuelCode.fuel_production_facility).selectinload(
+                        FuelProductionFacility.fuel_codes
+                    ),
                 )
                 .where(FuelCode.fuel_code_id == latest_row.fuel_code_id)
             )
@@ -776,7 +765,7 @@ class FuelCodeRepository:
         Queries fuel codes from the database with optional filters, pagination, and sorting.
 
         When ``organization_id`` is supplied the result is scoped to that
-        organisation (used by "My fuel codes").
+        organisation's Approved fuel codes (used by "My fuel codes").
 
         When exclude_archived is True, Approved fuel codes outside the current compliance
         period are omitted. Non-Approved codes (Draft, Recommended, Deleted) are unaffected.
@@ -803,6 +792,10 @@ class FuelCodeRepository:
         query = select(FuelCodeListView)
 
         if organization_id is not None:
+            conditions.append(
+                cast(FuelCodeListView.status, String)
+                == FuelCodeStatusEnum.Approved.value
+            )
             # The view doesn't expose organization_id; subquery against the
             # underlying table so we filter on the FK rather than on the
             # brittle company text column.
@@ -984,6 +977,9 @@ class FuelCodeRepository:
                 ),
                 joinedload(FuelCode.fuel_type).joinedload(FuelType.provision_1),
                 joinedload(FuelCode.fuel_type).joinedload(FuelType.provision_2),
+                selectinload(FuelCode.fuel_production_facility).selectinload(
+                    FuelProductionFacility.fuel_codes
+                ),
             )
             .where(FuelCode.fuel_code_id == fuel_code_id)
         )
@@ -1345,9 +1341,7 @@ class FuelCodeRepository:
         is used for table options so one exhausted prefix doesn't block the
         rest of the Add/Edit grid.
         """
-        base_code = cast(
-            func.split_part(FuelCode.fuel_suffix, ".", 1), BigInteger
-        )
+        base_code = cast(func.split_part(FuelCode.fuel_suffix, ".", 1), BigInteger)
 
         if prefix in {"BCLCF", "C-BCLCF"}:
             highest_used_query = (
@@ -1384,29 +1378,22 @@ class FuelCodeRepository:
             select(literal(min_code - 1, type_=BigInteger).label("base_code")),
             select(parsed_codes.c.base_code),
         ).cte("codes_with_start")
-        ordered_codes = (
-            select(
-                codes_with_start.c.base_code,
-                func.lead(codes_with_start.c.base_code)
-                .over(order_by=codes_with_start.c.base_code)
-                .label("next_base_code"),
-            )
-            .cte("ordered_codes")
-        )
+        ordered_codes = select(
+            codes_with_start.c.base_code,
+            func.lead(codes_with_start.c.base_code)
+            .over(order_by=codes_with_start.c.base_code)
+            .label("next_base_code"),
+        ).cte("ordered_codes")
         first_gap = (
             select(func.min(ordered_codes.c.base_code + 1))
-            .where(
-                ordered_codes.c.next_base_code > ordered_codes.c.base_code + 1
-            )
+            .where(ordered_codes.c.next_base_code > ordered_codes.c.base_code + 1)
             .scalar_subquery()
         )
         highest_used_plus_one = select(
             func.coalesce(func.max(parsed_codes.c.base_code), min_code - 1) + 1
         ).scalar_subquery()
         next_base_code = func.coalesce(first_gap, highest_used_plus_one)
-        query = select(
-            (cast(next_base_code, String) + ".0").label("next_fuel_code")
-        )
+        query = select((cast(next_base_code, String) + ".0").label("next_fuel_code"))
         result = (await self.db.execute(query)).scalar_one_or_none()
         next_base_number = int(str(result).split(".", 1)[0])
         return _format_main_fuel_suffix(
@@ -1426,9 +1413,7 @@ class FuelCodeRepository:
         main number.
         """
         main_version_int = int(input_version)
-        main_version = cast(
-            func.split_part(FuelCode.fuel_suffix, ".", 1), BigInteger
-        )
+        main_version = cast(func.split_part(FuelCode.fuel_suffix, ".", 1), BigInteger)
         sub_version = cast(func.split_part(FuelCode.fuel_suffix, ".", 2), Integer)
         reserved_sub_versions = {
             int(suffix.split(".", 1)[1])
@@ -1682,6 +1667,75 @@ class FuelCodeRepository:
 
         return result.scalar_one_or_none()
 
+    async def ensure_fuel_code_reportable(
+        self,
+        fuel_code_id: Optional[int],
+        *,
+        fuel_type_id: Optional[int],
+        compliance_report_id: int,
+        check_effective_dates: bool = True,
+    ) -> None:
+        """Reject a fuel code a schedule row in this report may not claim (422).
+
+        The fuel code sets the row's carbon intensity, so it must be an
+        Approved code for the row's fuel type, effective during the report's
+        compliance year: the same codes the schedule's fuel code list offers.
+        The compliance year is the stored report's.
+
+        *check_effective_dates* is False when an existing row keeps the code it
+        already had: reports from before 2024 carry codes that expired before
+        their year, and re-saving those rows must keep working.
+
+        Not wrapped in ``repo_handler``: the 422 must reach the view as is.
+        """
+        if fuel_code_id is None:
+            return
+
+        fuel_code = (
+            await self.db.execute(
+                select(
+                    FuelCodeStatus.status,
+                    FuelCode.fuel_type_id,
+                    FuelCode.effective_date,
+                    FuelCode.expiration_date,
+                )
+                .join(
+                    FuelCodeStatus,
+                    FuelCode.fuel_status_id == FuelCodeStatus.fuel_code_status_id,
+                )
+                .where(FuelCode.fuel_code_id == fuel_code_id)
+            )
+        ).one_or_none()
+
+        problem = None
+        if fuel_code is None or fuel_code.status != FuelCodeStatusEnum.Approved:
+            problem = "must be an approved fuel code"
+        elif fuel_code.fuel_type_id != fuel_type_id:
+            problem = "does not match the fuel type"
+        elif check_effective_dates:
+            compliance_year = int(
+                await self.db.scalar(
+                    select(CompliancePeriod.description)
+                    .join(
+                        ComplianceReport,
+                        ComplianceReport.compliance_period_id
+                        == CompliancePeriod.compliance_period_id,
+                    )
+                    .where(ComplianceReport.compliance_report_id == compliance_report_id)
+                )
+            )
+            if (
+                fuel_code.effective_date is not None
+                and fuel_code.effective_date > date(compliance_year, 12, 31)
+            ) or (
+                fuel_code.expiration_date is not None
+                and fuel_code.expiration_date < date(compliance_year, 1, 1)
+            ):
+                problem = f"is not effective in {compliance_year}"
+
+        if problem:
+            raise fuel_code_validation_error(problem)
+
     @repo_handler
     async def get_standardized_fuel_data(
         self,
@@ -1819,6 +1873,7 @@ class FuelCodeRepository:
             eer=eer,
             energy_density=energy_density,
             uci=uci.intensity if uci else None,
+            unrecognized=bool(fuel_type.unrecognized),
         )
 
     @repo_handler
@@ -1917,6 +1972,33 @@ class FuelCodeRepository:
         )
         result = await self.db.execute(exists_query)
         return result.scalar()
+
+    @repo_handler
+    async def get_open_ci_application_id(self, fuel_code_id: int) -> Optional[int]:
+        """
+        Return the CI application that generated this fuel code and hasn't been
+        completed yet, or None. A completed application has approved its
+        generated fuel codes; until then they belong to the application.
+        """
+        return await self.db.scalar(
+            select(CIApplicationFuelCodeAssociation.ci_application_id)
+            .join(
+                CIApplication,
+                CIApplication.ci_application_id
+                == CIApplicationFuelCodeAssociation.ci_application_id,
+            )
+            .join(
+                CIApplicationStatus,
+                CIApplicationStatus.ci_application_status_id
+                == CIApplication.status_id,
+            )
+            .where(
+                CIApplicationFuelCodeAssociation.fuel_code_id == fuel_code_id,
+                CIApplicationStatus.status != "Completed",
+            )
+            .order_by(CIApplicationFuelCodeAssociation.ci_application_id.desc())
+            .limit(1)
+        )
 
     @repo_handler
     async def get_expiring_fuel_codes(self) -> List[FuelCode]:

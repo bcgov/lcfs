@@ -13,6 +13,19 @@ def user_repo(dbsession):
     return UserRepository(db=dbsession)
 
 
+def test_activity_queries_include_compliance_report_history():
+    repo = UserRepository(db=MagicMock())
+    combined_query, conditions = repo._build_activity_queries()
+
+    query_sql = str(
+        combined_query.element.compile(compile_kwargs={"literal_binds": True})
+    )
+
+    assert "compliance_report_history" in query_sql
+    assert "'ComplianceReport'" in query_sql
+    assert conditions == []
+
+
 # Tests for get_full_name
 @pytest.mark.anyio
 async def test_get_full_name_success(dbsession, user_repo):
@@ -252,6 +265,28 @@ async def test_bceid_ia_signer_added_with_proponent():
     names = {ur.role.name for ur in user.user_roles}
     assert RoleEnum.IA_PROPONENT in names
     assert RoleEnum.IA_SIGNER in names
+
+
+@pytest.mark.anyio
+async def test_bceid_lcjfip_roles_can_be_assigned_to_bceid_user():
+    repo = _make_repo_with_find(None)
+    user = MagicMock()
+    user.user_roles = [_user_role(RoleEnum.SUPPLIER)]
+    existing = {RoleEnum.SUPPLIER}
+
+    await repo.update_bceid_roles(
+        user,
+        [
+            RoleEnum.LCJFIP_APPLICANT,
+            RoleEnum.LCJFIP_ADMINISTRATOR,
+            RoleEnum.SUPPLIER,
+        ],
+        existing,
+    )
+
+    names = {ur.role.name for ur in user.user_roles}
+    assert RoleEnum.LCJFIP_APPLICANT in names
+    assert RoleEnum.LCJFIP_ADMINISTRATOR in names
 
 
 @pytest.mark.anyio

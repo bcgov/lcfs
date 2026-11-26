@@ -147,6 +147,9 @@ export const GovernmentDecisionStep = ({
   )
   const [requestedPathwayChanges, setRequestedPathwayChanges] = useState(false)
   const [requestedDocumentation, setRequestedDocumentation] = useState(false)
+  const previousDocumentUploadEnabled = useRef(
+    Boolean(ciApplication?.documentUploadEnabled)
+  )
   const [returnReason, setReturnReason] = useState('')
   const [returnReasonError, setReturnReasonError] = useState<string | null>(
     null
@@ -168,6 +171,14 @@ export const GovernmentDecisionStep = ({
     priorityScoreVerificationAttempted,
     setPriorityScoreVerificationAttempted
   ] = useState(false)
+
+  useEffect(() => {
+    const documentUploadEnabled = Boolean(ciApplication?.documentUploadEnabled)
+    if (previousDocumentUploadEnabled.current && !documentUploadEnabled) {
+      setRequestedDocumentation(false)
+    }
+    previousDocumentUploadEnabled.current = documentUploadEnabled
+  }, [ciApplication?.documentUploadEnabled])
 
   const priorityScoreNumber = Number(priorityScore)
   const isPriorityScoreValid =

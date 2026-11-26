@@ -77,6 +77,27 @@ class ChargingEquipmentServices:
             target_organization_id,
         )
 
+    async def _ensure_site_belongs_to_user(
+        self, user: UserProfile, charging_site_id: Optional[int]
+    ) -> None:
+        """404 unless the charging site is the caller's organization's.
+
+        Government users pass. Another organization's site reads as missing,
+        so a guessed ID does not confirm that a site exists.
+        """
+        site_organization_id = (
+            await self.repo.get_charging_site_organization_id(charging_site_id)
+            if charging_site_id is not None
+            else None
+        )
+        if site_organization_id is None or (
+            not user.is_government and site_organization_id != user.organization_id
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Charging site not found",
+            )
+
     @service_handler
     async def get_charging_equipment_list(
         self,
@@ -261,9 +282,9 @@ class ChargingEquipmentServices:
     ) -> ChargingEquipmentBaseSchema:
         """Create new charging equipment."""
 
-        # Check authorization for the charging site
-        # This would need a charging_site repo method to verify ownership
-        # For now, we'll trust the site_id is valid for the user
+        # The equipment goes on, and is reported by, the site's organization,
+        # so the site must be the caller's.
+        await self._ensure_site_belongs_to_user(user, equipment_data.charging_site_id)
 
         equipment_dict = equipment_data.model_dump()
 
@@ -332,6 +353,10 @@ class ChargingEquipmentServices:
         new_site_id = equipment_dict.get(
             "charging_site_id", existing.charging_site_id
         )
+        # Moving equipment to another site: the destination must be the
+        # caller's too, not only the site it is on now.
+        if new_site_id != existing.charging_site_id:
+            await self._ensure_site_belongs_to_user(user, new_site_id)
         duplicate = await self.repo.check_duplicate_serial_number(
             charging_site_id=new_site_id,
             serial_number=new_serial,

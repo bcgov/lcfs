@@ -648,15 +648,18 @@ class FuelSupplyRepository:
 
     @repo_handler
     async def get_fuel_supply_by_group_version(
-        self, group_uuid: str, version: int
+        self, group_uuid: str, version: int, compliance_report_id: int
     ) -> Optional[FuelSupply]:
         """
-        Retrieve a specific FuelSupply record by group UUID, version, and user_type.
-        This method explicitly requires user_type to avoid ambiguity.
+        Retrieve a specific FuelSupply record by group UUID and version, from
+        the chain of the given compliance report only.
         """
         query = select(FuelSupply).where(
             FuelSupply.group_uuid == group_uuid,
             FuelSupply.version == version,
+            FuelSupply.compliance_report_id.in_(
+                VersioningQueryHelper.report_chain_ids(compliance_report_id)
+            ),
         )
 
         result = await self.db.execute(query)
@@ -664,15 +667,20 @@ class FuelSupplyRepository:
 
     @repo_handler
     async def get_prev_fuel_supply_by_group_uuid(
-        self, group_uuid: str
+        self, group_uuid: str, compliance_report_id: int
     ) -> Optional[FuelSupply]:
         """
-        Retrieve the latest FuelSupply record for a given group UUID.
-        Ordered by `version` in descending order.
+        Retrieve the version before the latest FuelSupply record for a given
+        group UUID, from the chain of the given compliance report only.
         """
         query = (
             select(FuelSupply)
-            .where(FuelSupply.group_uuid == group_uuid)
+            .where(
+                FuelSupply.group_uuid == group_uuid,
+                FuelSupply.compliance_report_id.in_(
+                    VersioningQueryHelper.report_chain_ids(compliance_report_id)
+                ),
+            )
             .order_by(
                 FuelSupply.version.desc(),
             )
@@ -685,15 +693,20 @@ class FuelSupplyRepository:
 
     @repo_handler
     async def get_latest_fuel_supply_by_group_uuid(
-        self, group_uuid: str
+        self, group_uuid: str, compliance_report_id: int
     ) -> Optional[FuelSupply]:
         """
-        Retrieve the latest FuelSupply record for a given group UUID.
-        Ordered by `version` in descending order.
+        Retrieve the latest FuelSupply record for a given group UUID, from the
+        chain of the given compliance report only.
         """
         query = (
             select(FuelSupply)
-            .where(FuelSupply.group_uuid == group_uuid)
+            .where(
+                FuelSupply.group_uuid == group_uuid,
+                FuelSupply.compliance_report_id.in_(
+                    VersioningQueryHelper.report_chain_ids(compliance_report_id)
+                ),
+            )
             .order_by(
                 FuelSupply.version.desc(),
             )

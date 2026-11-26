@@ -18,7 +18,8 @@ import {
   bceidTextFields,
   defaultValues,
   statusOptions,
-  allowedBceidRoleValues
+  allowedBceidRoleValues,
+  DEPENDENT_BCEID_ROLES
 } from './_schema'
 import { ROUTES, buildPath } from '@/routes/routes'
 import { BCFormRadio } from '@/components/BCForm/BCFormRadio'
@@ -170,8 +171,8 @@ export const AddEditUser = ({
     if (bceidRoles.length > 0) {
       setValue('readOnly', '')
     }
-    // IA Signer depends on IA Proponent — clear it from form state when IA Proponent is removed.
-    // For BCeID callers the backend (services.py) restores IA Signer regardless of form state.
+    // IA Signer requires the user's IA Proponent assignment. LCJFIP
+    // Administrator only requires the organization's Applicant availability.
     if (
       bceidRoles.includes(roles.ia_signer.toLowerCase()) &&
       !bceidRoles.includes(roles.ia_proponent.toLowerCase())
@@ -262,6 +263,12 @@ export const AddEditUser = ({
     () => allowedBceidRoleValues(availableRoles),
     [availableRoles]
   )
+  // Only government (IDIR) users may assign dependent roles such as IA Signer
+  // and LCJFIP Administrator.
+  const governmentManagedRoles = useMemo(
+    () => Object.values(DEPENDENT_BCEID_ROLES).map((r) => r.toLowerCase()),
+    []
+  )
 
   const buildPayload = (data) => {
     const isIDIRUser = !orgID && !hasRoles(roles.supplier)
@@ -288,11 +295,18 @@ export const AddEditUser = ({
           ? [
               ...data.adminRole,
               ...(data.readOnly === ''
-                ? (data.bceidRoles || []).filter(
-                    (role) =>
+                ? (data.bceidRoles || []).filter((role) => {
+                    if (
+                      governmentManagedRoles.includes(role) &&
+                      !isCurrentUserGovernment
+                    ) {
+                      return false
+                    }
+                    return (
                       allowedBceidRoles == null ||
                       allowedBceidRoles.includes(role)
-                  )
+                    )
+                  })
                 : []),
               data.idirRole,
               data.iaRole,

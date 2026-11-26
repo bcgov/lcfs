@@ -160,7 +160,16 @@ export const BCGridBase = forwardRef<BCGridBaseHandle, BCGridBaseProps>(
       (params: CellKeyDownEvent<BCGridRow>) => {
         const e = params.event as KeyboardEvent
 
-        if (e.code === 'Enter' && params.node) {
+        // While a cell is being edited, Enter belongs to its editor. Clicking
+        // the first button would hit editor controls such as the date clear.
+        const isEditing = params.api
+          .getEditingCells()
+          .some(
+            (cell) =>
+              cell.rowIndex === params.rowIndex && cell.column === params.column
+          )
+
+        if (e.code === 'Enter' && params.node && !isEditing) {
           const target = e.target as Element
           const cellEl = target.closest('.ag-cell')
           if (!cellEl) return

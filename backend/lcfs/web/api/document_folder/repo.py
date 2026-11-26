@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional, Sequence, Set, Tuple
 
 from fastapi import Depends
-from sqlalchemy import delete, desc, func, select
+from sqlalchemy import Column, Table, delete, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db.dependencies import get_async_db_session
@@ -9,9 +9,51 @@ from lcfs.db.models.document import Document, DocumentFolder, DocumentFolderItem
 from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.initiative_agreement.DesignatedAction import (
+    DesignatedAction,
     designated_action_document_association,
 )
+from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
+    InitiativeAgreement,
+    initiative_agreement_document_association,
+)
 from lcfs.web.core.decorators import repo_handler
+from lcfs.web.exception.exceptions import DataNotFoundException
+
+# How each folder-enabled parent links to its documents. Keyed like
+# FOLDER_ENABLED_PARENT_TYPES, which the views check before any of this
+# runs, so a missing entry is a programming error rather than a request
+# to refuse.
+FOLDER_PARENT_ASSOCIATIONS: Dict[str, Tuple[Table, str]] = {
+    "designatedAction": (
+        designated_action_document_association,
+        "designated_action_id",
+    ),
+    "initiativeAgreement": (
+        initiative_agreement_document_association,
+        "initiative_agreement_id",
+    ),
+}
+
+
+# The row each parent type locks to serialize its folder mutations, and the
+# name its not-found error uses. Keyed like FOLDER_PARENT_ASSOCIATIONS.
+FOLDER_PARENT_ROWS: Dict[str, Tuple[type, Column, str]] = {
+    "designatedAction": (
+        DesignatedAction,
+        DesignatedAction.designated_action_id,
+        "Designated action",
+    ),
+    "initiativeAgreement": (
+        InitiativeAgreement,
+        InitiativeAgreement.initiative_agreement_id,
+        "Initiative agreement",
+    ),
+}
+
+
+def _association(parent_type: str) -> Tuple[Table, Column]:
+    table, column_name = FOLDER_PARENT_ASSOCIATIONS[parent_type]
+    return table, table.c[column_name]
 
 
 class DocumentFolderRepository:
@@ -19,6 +61,16 @@ class DocumentFolderRepository:
         self, db: AsyncSession = Depends(get_async_db_session, scope="function")
     ):
         self.db = db
+
+    @repo_handler
+    async def lock_parent(self, parent_type: str, parent_id: int) -> None:
+        """Serialize folder mutations until the shared request transaction ends."""
+        model, key, label = FOLDER_PARENT_ROWS[parent_type]
+        result = await self.db.execute(
+            select(key).where(key == parent_id).with_for_update(of=model)
+        )
+        if result.scalar_one_or_none() is None:
+            raise DataNotFoundException(f"{label} {parent_id} not found")
 
     @repo_handler
     async def get_folders(
@@ -56,45 +108,43 @@ class DocumentFolderRepository:
         await self.db.flush()
 
     @repo_handler
-    async def get_parent_documents(self, parent_id: int) -> List[Document]:
-        """Documents associated with the designated action."""
+    async def get_parent_documents(
+        self, parent_type: str, parent_id: int
+    ) -> List[Document]:
+        """Live documents associated with the parent."""
+        table, parent_column = _association(parent_type)
         result = await self.db.execute(
             select(Document)
-            .join(
-                designated_action_document_association,
-                designated_action_document_association.c.document_id
-                == Document.document_id,
-            )
-            .where(
-                designated_action_document_association.c.designated_action_id
-                == parent_id,
-                Document.deleted_date.is_(None),
-            )
+            .join(table, table.c.document_id == Document.document_id)
+            .where(parent_column == parent_id, Document.deleted_date.is_(None))
             .order_by(Document.file_name)
         )
         return list(result.scalars().all())
 
     @repo_handler
     async def get_deleted_documents(
-        self, parent_id: int, limit: int = 50, offset: int = 0
+        self,
+        parent_type: str,
+        parent_id: int,
+        username: str,
+        limit: int = 50,
+        offset: int = 0,
     ) -> Tuple[List[Document], int]:
-        """The bin for one parent, newest deletion first.
+        """The current user's bin for one parent, newest deletion first.
 
-        Paginated from the start: nothing is ever purged, so this list
-        only grows and the screen will need paging eventually even though
-        it does not today.
+        Paginated from the start because the bin may grow beyond what the
+        panel should fetch in one request.
         """
+        table, parent_column = _association(parent_type)
         base = (
             select(Document)
-            .join(
-                designated_action_document_association,
-                designated_action_document_association.c.document_id
-                == Document.document_id,
-            )
+            .join(table, table.c.document_id == Document.document_id)
             .where(
-                designated_action_document_association.c.designated_action_id
-                == parent_id,
+                parent_column == parent_id,
                 Document.deleted_date.isnot(None),
+                # Keycloak usernames include their identity-provider suffix,
+                # so only the exact actor account can see an item.
+                (Document.create_user == username) | (Document.deleted_by == username),
             )
         )
         total = (
@@ -111,23 +161,24 @@ class DocumentFolderRepository:
 
     @repo_handler
     async def get_document_for_parent(
-        self, document_id: int, parent_id: int
+        self,
+        parent_type: str,
+        document_id: int,
+        parent_id: int,
+        *,
+        for_update: bool = False,
     ) -> Optional[Document]:
         """A document, but only if it belongs to this parent."""
-        result = await self.db.execute(
+        table, parent_column = _association(parent_type)
+        query = (
             select(Document)
-            .join(
-                designated_action_document_association,
-                designated_action_document_association.c.document_id
-                == Document.document_id,
-            )
-            .where(
-                Document.document_id == document_id,
-                designated_action_document_association.c.designated_action_id
-                == parent_id,
-            )
+            .join(table, table.c.document_id == Document.document_id)
+            .where(Document.document_id == document_id, parent_column == parent_id)
             .execution_options(populate_existing=True)
         )
+        if for_update:
+            query = query.with_for_update(of=Document)
+        result = await self.db.execute(query)
         return result.scalars().first()
 
     @repo_handler
@@ -159,12 +210,12 @@ class DocumentFolderRepository:
         return resolved
 
     @repo_handler
-    async def get_associated_document_ids(self, parent_id: int) -> Set[int]:
+    async def get_associated_document_ids(
+        self, parent_type: str, parent_id: int
+    ) -> Set[int]:
+        table, parent_column = _association(parent_type)
         result = await self.db.execute(
-            select(designated_action_document_association.c.document_id).where(
-                designated_action_document_association.c.designated_action_id
-                == parent_id
-            )
+            select(table.c.document_id).where(parent_column == parent_id)
         )
         return set(result.scalars().all())
 
@@ -251,7 +302,7 @@ class DocumentFolderRepository:
     async def get_documents_in_folders(
         self, folder_ids: Sequence[int]
     ) -> List[Document]:
-        """Live documents placed in any of these folders."""
+        """All documents placed in any of these folders, including binned files."""
         if not folder_ids:
             return []
         result = await self.db.execute(
@@ -262,7 +313,6 @@ class DocumentFolderRepository:
             )
             .where(
                 DocumentFolderItem.folder_id.in_(folder_ids),
-                Document.deleted_date.is_(None),
             )
         )
         return list(result.scalars().all())

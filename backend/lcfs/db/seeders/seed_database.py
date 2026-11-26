@@ -26,6 +26,15 @@ async def seed_database(environment):
 
                 if environment == "dev":
                     await seed_dev(session)
+                    if settings.local_keycloak_enabled:
+                        # Keep local identity fixtures out of the normal dev
+                        # seeder unless the local Keycloak Compose override is
+                        # explicitly enabled.
+                        from lcfs.db.seeders.dev.local_keycloak_user_seeder import (
+                            seed_local_keycloak_users,
+                        )
+
+                        await seed_local_keycloak_users(session)
                 elif environment == "prod":
                     await seed_prod(session)
                 elif environment == "staging":
