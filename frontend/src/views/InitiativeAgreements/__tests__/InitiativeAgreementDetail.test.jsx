@@ -78,6 +78,15 @@ vi.mock('../components/DeletedItems', () => ({
   )
 }))
 
+vi.mock('../components/NotesAccordion', () => ({
+  NotesAccordion: ({ initiativeAgreementId }) => (
+    <div
+      data-test="notes-accordion"
+      data-agreement-id={initiativeAgreementId}
+    />
+  )
+}))
+
 const daGridProps = vi.fn()
 vi.mock('../components/DesignatedActionsGrid', () => ({
   DesignatedActionsGrid: (props) => {
@@ -427,6 +436,26 @@ describe('InitiativeAgreementDetail', () => {
     expect(
       screen.queryByTestId('designated-actions-grid')
     ).not.toBeInTheDocument()
+  })
+
+  test('shows the notes accordion to a director', ({ render, app }) => {
+    mockRoles = [{ name: roles.director }]
+    render(<InitiativeAgreementDetail />, app)
+
+    expect(screen.getByTestId('notes-accordion')).toHaveAttribute(
+      'data-agreement-id',
+      '5'
+    )
+  })
+
+  test('hides the notes accordion from a BCeID proponent', ({
+    render,
+    app
+  }) => {
+    mockRoles = [{ name: roles.ia_proponent }]
+    render(<InitiativeAgreementDetail />, app)
+
+    expect(screen.queryByTestId('notes-accordion')).not.toBeInTheDocument()
   })
 
   test('shows the dual-mode comment thread to IDIR IA roles', ({
