@@ -52,7 +52,10 @@ describe('useNotionalTransfer', () => {
       }
       mockApiService.get.mockResolvedValue({ data: mockOptions })
 
-      const { result } = renderHook(() => useNotionalTransferOptions(), [query])
+      const { result } = renderHook(
+        () => useNotionalTransferOptions({}),
+        [query]
+      )
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)

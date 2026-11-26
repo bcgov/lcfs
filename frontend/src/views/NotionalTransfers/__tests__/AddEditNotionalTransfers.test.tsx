@@ -1,18 +1,58 @@
-import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
-import {
-  useGetAllNotionalTransfersList,
-  useNotionalTransferOptions,
-  useSaveNotionalTransfer
-} from '@/hooks/useNotionalTransfer'
 import { test } from '@/tests/utils/fixtures'
 import { screen, waitFor, act, fireEvent } from '@testing-library/react'
 import { beforeEach, describe, expect, vi } from 'vite-plus/test'
 import { AddEditNotionalTransfers } from '../AddEditNotionalTransfers'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules'
+import type { ReactNode, PropsWithChildren, HTMLAttributes } from 'react'
+import type { RenderOptions, RenderResult } from '@testing-library/react'
+import type { BCGridRow } from '@/components/BCDataGrid/types'
+import type { FloatingAlertHandle } from '@/components/BCAlert/FloatingAlert'
 
-let render
-const fixtureOptions = undefined
-const it = (name, fn) =>
+type TestQueryResult = {
+  data?: unknown
+  isLoading: boolean
+  isFetched?: boolean
+}
+type TestMutationResult = {
+  mutateAsync: (data: Record<string, unknown>) => Promise<unknown>
+}
+type GridEditorMockProps = {
+  onGridReady?: (params: Record<string, unknown>) => void
+  rowData?: BCGridRow[]
+  columnDefs?: unknown[]
+  onCellEditingStopped?: (params: Record<string, unknown>) => unknown
+  onAction?: (action: string, params?: unknown) => unknown
+  loading?: boolean
+  saveButtonProps?: { enabled?: boolean; onSave?: () => void; text?: ReactNode }
+}
+type NotionalTransferMockRow = BCGridRow & {
+  id?: string | number
+  legalName?: string
+}
+type MockFunction = ReturnType<typeof vi.fn>
+type GridReadyMockParams = {
+  api: {
+    sizeColumnsToFit: MockFunction
+    getLastDisplayedRowIndex: MockFunction
+    startEditingCell: MockFunction
+  }
+}
+
+const hookMocks = vi.hoisted(() => ({
+  useComplianceReportWithCache: vi.fn<() => TestQueryResult>(),
+  useNotionalTransferOptions: vi.fn<() => TestQueryResult>(),
+  useGetAllNotionalTransfersList: vi.fn<() => TestQueryResult>(),
+  useSaveNotionalTransfer: vi.fn<() => TestMutationResult>()
+}))
+
+type FixtureRender = (
+  ui: ReactNode,
+  options?: Omit<RenderOptions, 'wrapper'>
+) => RenderResult
+type ContainerMockProps = PropsWithChildren<HTMLAttributes<HTMLDivElement>>
+
+let render: FixtureRender
+const it = (name: string, fn: () => unknown) =>
   test(name, ({ render: fixtureRender, theme }) => {
     render = (ui, options) => fixtureRender(ui, [theme], options)
     return fn()
@@ -33,13 +73,19 @@ vi.mock('react-router-dom', () => ({
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => key
+    t: (key: string) => key
   })
 }))
 
 // Mock all hooks
-vi.mock('@/hooks/useComplianceReports')
-vi.mock('@/hooks/useNotionalTransfer')
+vi.mock('@/hooks/useComplianceReports', () => ({
+  useComplianceReportWithCache: hookMocks.useComplianceReportWithCache
+}))
+vi.mock('@/hooks/useNotionalTransfer', () => ({
+  useNotionalTransferOptions: hookMocks.useNotionalTransferOptions,
+  useGetAllNotionalTransfersList: hookMocks.useGetAllNotionalTransfersList,
+  useSaveNotionalTransfer: hookMocks.useSaveNotionalTransfer
+}))
 
 // Mock utility functions
 vi.mock('@/utils/schedules', () => ({
@@ -49,7 +95,8 @@ vi.mock('@/utils/schedules', () => ({
 
 // Mock array utility
 vi.mock('@/utils/array', () => ({
-  isArrayEmpty: (arr) => !arr || arr.length === 0
+  isArrayEmpty: (arr: unknown) =>
+    !arr || (Array.isArray(arr) && arr.length === 0)
 }))
 
 // Mock constants
@@ -68,7 +115,7 @@ vi.mock('@/routes/routes', () => ({
     }
   },
   buildPath: vi.fn(
-    (route, params) =>
+    (_route: string, params: Record<string, string>) =>
       `/reports/${params.compliancePeriod}/${params.complianceReportId}`
   )
 }))
@@ -79,32 +126,36 @@ vi.mock('uuid', () => ({
 }))
 
 // Mock BCGridEditor with comprehensive API
-let mockOnGridReady = null
-let mockOnCellEditingStopped = null
-let mockOnAction = null
+let mockOnGridReady: GridEditorMockProps['onGridReady'] | null
+let mockOnCellEditingStopped: GridEditorMockProps['onCellEditingStopped'] | null
+let mockOnAction: GridEditorMockProps['onAction'] | null
 
 vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
   BCGridEditor: ({
     onGridReady,
     rowData,
+    columnDefs,
     onCellEditingStopped,
     onAction,
     loading,
     saveButtonProps
-  }) => {
+  }: GridEditorMockProps) => {
     mockOnGridReady = onGridReady
     mockOnCellEditingStopped = onCellEditingStopped
     mockOnAction = onAction
 
     return (
       <div data-test="bc-grid-editor">
+        <div data-test="column-def-count">{columnDefs?.length ?? 0}</div>
         <div data-test="loading">{loading ? 'loading' : 'not-loading'}</div>
         <div data-test="row-data">
-          {rowData?.map((row, index) => (
-            <div key={index} data-test="grid-row">
-              {row.id} - {row.legalName || 'empty'}
-            </div>
-          ))}
+          {(rowData as NotionalTransferMockRow[] | undefined)?.map(
+            (row, index) => (
+              <div key={index} data-test="grid-row">
+                {row.id} - {row.legalName || 'empty'}
+              </div>
+            )
+          )}
         </div>
         <button
           data-test="trigger-grid-ready"
@@ -170,7 +221,7 @@ vi.mock('@/components/Loading', () => ({
 
 // Mock other components
 vi.mock('@/components/BCBox', () => ({
-  default: ({ children, ...props }) => (
+  default: ({ children, ...props }: ContainerMockProps) => (
     <div data-test="bc-box" {...props}>
       {children}
     </div>
@@ -178,7 +229,7 @@ vi.mock('@/components/BCBox', () => ({
 }))
 
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, ...props }) => (
+  default: ({ children, ...props }: ContainerMockProps) => (
     <div data-test="bc-typography" {...props}>
       {children}
     </div>
@@ -186,7 +237,7 @@ vi.mock('@/components/BCTypography', () => ({
 }))
 
 vi.mock('@mui/material/Grid2', () => ({
-  default: ({ children, ...props }) => (
+  default: ({ children, ...props }: ContainerMockProps) => (
     <div data-test="grid2" {...props}>
       {children}
     </div>
@@ -215,8 +266,11 @@ describe('AddEditNotionalTransfers', () => {
     }
   }
 
-  const defaultNotionalTransfersData = []
-  const defaultOptionsData = { organizations: [] }
+  const defaultNotionalTransfersData: NotionalTransferMockRow[] = []
+  const defaultOptionsData = {
+    fuelCategories: [{ category: 'Diesel', fuelCategoryId: 1 }],
+    receivedOrTransferred: ['Received', 'Transferred']
+  }
 
   beforeEach(() => {
     vi.resetAllMocks()
@@ -238,54 +292,54 @@ describe('AddEditNotionalTransfers', () => {
     })
 
     // Mock useComplianceReportWithCache
-    vi.mocked(useComplianceReportWithCache).mockReturnValue({
+    hookMocks.useComplianceReportWithCache.mockReturnValue({
       data: defaultComplianceReport,
       isLoading: false
     })
 
     // Mock useNotionalTransferOptions
-    vi.mocked(useNotionalTransferOptions).mockReturnValue({
+    hookMocks.useNotionalTransferOptions.mockReturnValue({
       data: defaultOptionsData,
       isLoading: false,
       isFetched: true
     })
 
     // Mock useGetAllNotionalTransfersList
-    vi.mocked(useGetAllNotionalTransfersList).mockReturnValue({
+    hookMocks.useGetAllNotionalTransfersList.mockReturnValue({
       data: defaultNotionalTransfersData,
       isLoading: false
     })
 
     // Mock useSaveNotionalTransfer
-    vi.mocked(useSaveNotionalTransfer).mockReturnValue({
+    hookMocks.useSaveNotionalTransfer.mockReturnValue({
       mutateAsync: mockSaveRow
     })
   })
 
   describe('Basic Rendering', () => {
     it('shows loading component when options are loading', () => {
-      vi.mocked(useNotionalTransferOptions).mockReturnValue({
+      hookMocks.useNotionalTransferOptions.mockReturnValue({
         data: null,
         isLoading: true,
         isFetched: false
       })
 
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
       expect(screen.getByTestId('loading-component')).toBeInTheDocument()
     })
 
     it('shows loading component when transfers are loading', () => {
-      vi.mocked(useGetAllNotionalTransfersList).mockReturnValue({
+      hookMocks.useGetAllNotionalTransfersList.mockReturnValue({
         data: null,
         isLoading: true
       })
 
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
       expect(screen.getByTestId('loading-component')).toBeInTheDocument()
     })
 
     it('renders the component when data is loaded', () => {
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
 
       expect(
         screen.getByText('notionalTransfer:newNotionalTransferTitle')
@@ -297,34 +351,30 @@ describe('AddEditNotionalTransfers', () => {
     })
 
     it('does not render when not fetched', () => {
-      vi.mocked(useNotionalTransferOptions).mockReturnValue({
+      hookMocks.useNotionalTransferOptions.mockReturnValue({
         data: null,
         isLoading: false,
         isFetched: false
       })
 
-      const { container } = render(<AddEditNotionalTransfers />, {
-        fixtureOptions
-      })
+      const { container } = render(<AddEditNotionalTransfers />, {})
       expect(container.firstChild).toBeNull()
     })
 
     it('does not render when compliance report is loading', () => {
-      vi.mocked(useComplianceReportWithCache).mockReturnValue({
+      hookMocks.useComplianceReportWithCache.mockReturnValue({
         data: null,
         isLoading: true
       })
 
-      const { container } = render(<AddEditNotionalTransfers />, {
-        fixtureOptions
-      })
+      const { container } = render(<AddEditNotionalTransfers />, {})
       expect(container.firstChild).toBeNull()
     })
   })
 
   describe('Data Loading and State', () => {
     it('initializes with one empty row when no existing transfers', () => {
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
 
       const rows = screen.getAllByTestId('grid-row')
       expect(rows.length).toBe(1)
@@ -332,7 +382,7 @@ describe('AddEditNotionalTransfers', () => {
     })
 
     it('loads existing notional transfers when available', () => {
-      vi.mocked(useGetAllNotionalTransfersList).mockReturnValue({
+      hookMocks.useGetAllNotionalTransfersList.mockReturnValue({
         data: [
           { notionalTransferId: 1, legalName: 'Organization A', quantity: 100 },
           { notionalTransferId: 2, legalName: 'Organization B', quantity: 200 }
@@ -340,7 +390,7 @@ describe('AddEditNotionalTransfers', () => {
         isLoading: false
       })
 
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
 
       const rows = screen.getAllByTestId('grid-row')
       expect(rows.length).toBe(3) // 2 existing + 1 empty
@@ -350,7 +400,7 @@ describe('AddEditNotionalTransfers', () => {
     })
 
     it('handles supplemental report correctly', () => {
-      vi.mocked(useComplianceReportWithCache).mockReturnValue({
+      hookMocks.useComplianceReportWithCache.mockReturnValue({
         data: {
           report: {
             version: 1, // Supplemental
@@ -361,12 +411,12 @@ describe('AddEditNotionalTransfers', () => {
         isLoading: false
       })
 
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
 
     it('handles early issuance report correctly', () => {
-      vi.mocked(useComplianceReportWithCache).mockReturnValue({
+      hookMocks.useComplianceReportWithCache.mockReturnValue({
         data: {
           report: {
             version: 0,
@@ -377,12 +427,12 @@ describe('AddEditNotionalTransfers', () => {
         isLoading: false
       })
 
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
 
     it('handles missing organization name gracefully', () => {
-      vi.mocked(useComplianceReportWithCache).mockReturnValue({
+      hookMocks.useComplianceReportWithCache.mockReturnValue({
         data: {
           report: {
             version: 0,
@@ -393,47 +443,46 @@ describe('AddEditNotionalTransfers', () => {
         isLoading: false
       })
 
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
   })
 
   describe('Validate Function', () => {
-    let validateFunction
-    let mockParams
-    let mockValidationFn
-    let mockAlertRef
+    type ValidationParams = {
+      node?: { data?: Record<string, unknown> }
+      colDef?: { field?: string }
+      [key: string]: unknown
+    }
+    const mockValidationFn = vi.fn<(value: unknown) => boolean>()
+    let mockParams: ValidationParams
+    let mockAlertRef: { current: FloatingAlertHandle | null }
+    const validateFunction = (
+      params: ValidationParams,
+      validationFn: (value: unknown) => boolean,
+      errorMessage: string,
+      alertRef: { current: FloatingAlertHandle | null },
+      field?: string
+    ): boolean => {
+      const value = field ? params.node?.data?.[field] : params
+
+      if (field && params.colDef?.field !== field) return true
+      if (!validationFn(value)) {
+        alertRef.current?.triggerAlert({
+          message: errorMessage,
+          severity: 'error'
+        })
+        return false
+      }
+      return true
+    }
 
     beforeEach(() => {
       mockAlertRef = { current: { triggerAlert: vi.fn() } }
-      mockValidationFn = vi.fn()
+      mockValidationFn.mockReset()
       mockParams = {
         node: { data: { quantity: 100 } },
         colDef: { field: 'quantity' }
-      }
-
-      // Access validate function through onCellEditingStopped callback test
-      validateFunction = (
-        params,
-        validationFn,
-        errorMessage,
-        alertRef,
-        field
-      ) => {
-        const value = field ? params.node?.data[field] : params
-
-        if (field && params.colDef.field !== field) {
-          return true
-        }
-
-        if (!validationFn(value)) {
-          alertRef.current?.triggerAlert({
-            message: errorMessage,
-            severity: 'error'
-          })
-          return false
-        }
-        return true
       }
     })
 
@@ -464,14 +513,14 @@ describe('AddEditNotionalTransfers', () => {
       )
 
       expect(result).toBe(false)
-      expect(mockAlertRef.current.triggerAlert).toHaveBeenCalledWith({
+      expect(mockAlertRef.current?.triggerAlert).toHaveBeenCalledWith({
         message: 'Quantity must be greater than 0',
         severity: 'error'
       })
     })
 
     it('returns true when field does not match', () => {
-      mockParams.colDef.field = 'legalName'
+      mockParams.colDef!.field = 'legalName'
 
       const result = validateFunction(
         mockParams,
@@ -515,7 +564,7 @@ describe('AddEditNotionalTransfers', () => {
   })
 
   describe('onGridReady Function', () => {
-    let mockParams
+    let mockParams: GridReadyMockParams
 
     beforeEach(() => {
       mockParams = {
@@ -528,12 +577,12 @@ describe('AddEditNotionalTransfers', () => {
     })
 
     it('handles grid ready with existing transfers', async () => {
-      vi.mocked(useGetAllNotionalTransfersList).mockReturnValue({
+      hookMocks.useGetAllNotionalTransfersList.mockReturnValue({
         data: [{ notionalTransferId: 1, legalName: 'Organization A' }],
         isLoading: false
       })
 
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
 
       const triggerButton = screen.getByTestId('trigger-grid-ready')
       fireEvent.click(triggerButton)
@@ -544,7 +593,7 @@ describe('AddEditNotionalTransfers', () => {
     })
 
     it('handles grid ready with no existing transfers', async () => {
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
 
       const triggerButton = screen.getByTestId('trigger-grid-ready')
       fireEvent.click(triggerButton)
@@ -554,12 +603,12 @@ describe('AddEditNotionalTransfers', () => {
     })
 
     it('calls API methods correctly', async () => {
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
 
       // Simulate the onGridReady callback
       await act(async () => {
         if (mockOnGridReady) {
-          mockOnGridReady(mockParams)
+          mockOnGridReady?.(mockParams)
         }
       })
 
@@ -572,14 +621,14 @@ describe('AddEditNotionalTransfers', () => {
 
     it('handles error in try-catch block', async () => {
       // Mock console.error to avoid noise in test output
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation()
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
-      vi.mocked(useGetAllNotionalTransfersList).mockReturnValue({
+      hookMocks.useGetAllNotionalTransfersList.mockReturnValue({
         data: [{ notionalTransferId: 1, legalName: 'Organization A' }],
         isLoading: false
       })
 
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
 
       // Manually trigger error by providing invalid data structure
       const triggerButton = screen.getByTestId('trigger-grid-ready')
@@ -591,11 +640,11 @@ describe('AddEditNotionalTransfers', () => {
     it('sets timeout for cell editing', async () => {
       vi.useFakeTimers()
 
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
 
       await act(async () => {
         if (mockOnGridReady) {
-          mockOnGridReady(mockParams)
+          mockOnGridReady?.(mockParams)
         }
       })
 
@@ -613,14 +662,14 @@ describe('AddEditNotionalTransfers', () => {
     })
 
     it('ensures row IDs are assigned', async () => {
-      vi.mocked(useGetAllNotionalTransfersList).mockReturnValue({
+      hookMocks.useGetAllNotionalTransfersList.mockReturnValue({
         data: [
           { legalName: 'No ID Row' } // Missing ID
         ],
         isLoading: false
       })
 
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
 
       const rows = screen.getAllByTestId('grid-row')
       expect(rows.length).toBe(2) // Original + empty row
@@ -630,7 +679,7 @@ describe('AddEditNotionalTransfers', () => {
 
   describe('onCellEditingStopped Function', () => {
     it('returns early when old value equals new value', async () => {
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
 
       if (mockOnCellEditingStopped) {
         const params = {
@@ -641,7 +690,7 @@ describe('AddEditNotionalTransfers', () => {
         }
 
         await act(async () => {
-          mockOnCellEditingStopped(params)
+          mockOnCellEditingStopped?.(params)
         })
 
         expect(params.node.setDataValue).not.toHaveBeenCalled()
@@ -649,7 +698,7 @@ describe('AddEditNotionalTransfers', () => {
     })
 
     it('handles legalName field with string value', async () => {
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
 
       if (mockOnCellEditingStopped) {
         const mockSetDataValue = vi.fn()
@@ -667,7 +716,7 @@ describe('AddEditNotionalTransfers', () => {
         }
 
         await act(async () => {
-          mockOnCellEditingStopped(params)
+          mockOnCellEditingStopped?.(params)
         })
 
         expect(mockSetDataValue).toHaveBeenCalledWith(
@@ -678,7 +727,7 @@ describe('AddEditNotionalTransfers', () => {
     })
 
     it('handles legalName field with object value', async () => {
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
 
       if (mockOnCellEditingStopped) {
         const mockSetDataValue = vi.fn()
@@ -696,7 +745,7 @@ describe('AddEditNotionalTransfers', () => {
         }
 
         await act(async () => {
-          mockOnCellEditingStopped(params)
+          mockOnCellEditingStopped?.(params)
         })
 
         expect(mockSetDataValue).toHaveBeenCalledWith(
@@ -707,9 +756,12 @@ describe('AddEditNotionalTransfers', () => {
     })
 
     it('calls handleScheduleSave with correct parameters', async () => {
-      vi.mocked(handleScheduleSave).mockResolvedValue({ updated: true })
+      vi.mocked(handleScheduleSave).mockResolvedValue({
+        updated: true,
+        validationStatus: 'success' as const
+      })
 
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
 
       if (mockOnCellEditingStopped) {
         const params = {
@@ -724,14 +776,17 @@ describe('AddEditNotionalTransfers', () => {
         }
 
         await act(async () => {
-          mockOnCellEditingStopped(params)
+          mockOnCellEditingStopped?.(params)
         })
 
         expect(handleScheduleSave).toHaveBeenCalledWith({
           alertRef: expect.anything(),
           idField: 'notionalTransferId',
           labelPrefix: 'notionalTransfer:notionalTransferColLabels',
-          params,
+          params: {
+            node: expect.objectContaining({ data: params.node.data }),
+            api: expect.any(Object)
+          },
           setErrors: expect.any(Function),
           setWarnings: expect.any(Function),
           saveRow: mockSaveRow,
@@ -742,10 +797,14 @@ describe('AddEditNotionalTransfers', () => {
     })
 
     it('updates node data with handleScheduleSave result', async () => {
-      const saveResult = { saved: true, id: 456 }
+      const saveResult = {
+        saved: true,
+        id: 456,
+        validationStatus: 'success' as const
+      }
       vi.mocked(handleScheduleSave).mockResolvedValue(saveResult)
 
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
 
       if (mockOnCellEditingStopped) {
         const mockUpdateData = vi.fn()
@@ -762,23 +821,72 @@ describe('AddEditNotionalTransfers', () => {
         }
 
         await act(async () => {
-          mockOnCellEditingStopped(params)
+          mockOnCellEditingStopped?.(params)
         })
 
         expect(mockUpdateData).toHaveBeenCalledWith(saveResult)
       }
     })
+
+    it('forwards row updates when schedule save checks warning rows', async () => {
+      const warningRowNode = {
+        data: { notionalTransferId: 42 },
+        updateData: vi.fn()
+      }
+      vi.mocked(handleScheduleSave).mockImplementationOnce(
+        async ({ params: scheduleParams, updatedData }) => {
+          scheduleParams.api?.forEachNode?.((rowNode) => {
+            rowNode.updateData?.({
+              ...rowNode.data,
+              validationStatus: 'warning'
+            })
+          })
+          return { ...updatedData, validationStatus: 'warning' }
+        }
+      )
+
+      render(<AddEditNotionalTransfers />)
+
+      if (mockOnCellEditingStopped) {
+        const params = {
+          oldValue: 5,
+          newValue: 10,
+          colDef: { field: 'quantity' },
+          node: {
+            data: { quantity: 10 },
+            setDataValue: vi.fn(),
+            updateData: vi.fn()
+          },
+          api: {
+            forEachNode: (callback: (rowNode: typeof warningRowNode) => void) =>
+              callback(warningRowNode)
+          }
+        }
+
+        await act(async () => {
+          mockOnCellEditingStopped?.(params)
+        })
+      }
+
+      expect(warningRowNode.updateData).toHaveBeenCalledWith({
+        notionalTransferId: 42,
+        validationStatus: 'warning'
+      })
+    })
   })
 
   describe('onAction Function', () => {
     it('handles delete action', async () => {
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
 
       if (mockOnAction) {
-        const params = { node: { data: { id: 'test-id' } } }
+        const params = {
+          node: { data: { id: 'test-id' } },
+          api: {}
+        }
 
         await act(async () => {
-          mockOnAction('delete', params)
+          mockOnAction?.('delete', params)
         })
 
         expect(handleScheduleDelete).toHaveBeenCalledWith(
@@ -794,13 +902,16 @@ describe('AddEditNotionalTransfers', () => {
     })
 
     it('handles undo action', async () => {
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
 
       if (mockOnAction) {
-        const params = { node: { data: { id: 'test-id' } } }
+        const params = {
+          node: { data: { id: 'test-id' } },
+          api: {}
+        }
 
         await act(async () => {
-          mockOnAction('undo', params)
+          mockOnAction?.('undo', params)
         })
 
         expect(handleScheduleDelete).toHaveBeenCalledWith(
@@ -816,11 +927,11 @@ describe('AddEditNotionalTransfers', () => {
     })
 
     it('ignores other actions', async () => {
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
 
       if (mockOnAction) {
         await act(async () => {
-          mockOnAction('other', {})
+          mockOnAction?.('other', {})
         })
 
         expect(handleScheduleDelete).not.toHaveBeenCalled()
@@ -830,7 +941,7 @@ describe('AddEditNotionalTransfers', () => {
 
   describe('handleNavigateBack Function', () => {
     it('navigates with correct parameters', async () => {
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
 
       const saveButton = screen.getByTestId('save-button')
       fireEvent.click(saveButton)
@@ -852,57 +963,60 @@ describe('AddEditNotionalTransfers', () => {
         state: {}
       })
 
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
 
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
 
     it('sets column definitions when options data is available', () => {
-      const optionsData = { organizations: ['Org1', 'Org2'] }
-      vi.mocked(useNotionalTransferOptions).mockReturnValue({
+      const optionsData = {
+        fuelCategories: [{ category: 'Diesel', fuelCategoryId: 1 }],
+        receivedOrTransferred: ['Received', 'Transferred']
+      }
+      hookMocks.useNotionalTransferOptions.mockReturnValue({
         data: optionsData,
         isLoading: false,
         isFetched: true
       })
 
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
 
-      // Column definitions should be set (can't directly test state, but component renders)
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
+      expect(
+        Number(screen.getByTestId('column-def-count').textContent)
+      ).toBeGreaterThan(0)
     })
 
     it('does not set column definitions when options are loading', () => {
-      vi.mocked(useNotionalTransferOptions).mockReturnValue({
+      hookMocks.useNotionalTransferOptions.mockReturnValue({
         data: null,
         isLoading: true,
         isFetched: false
       })
 
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
 
       expect(screen.getByTestId('loading-component')).toBeInTheDocument()
     })
 
     it('does not set column definitions when options data is empty', () => {
-      vi.mocked(useNotionalTransferOptions).mockReturnValue({
+      hookMocks.useNotionalTransferOptions.mockReturnValue({
         data: [],
         isLoading: false,
         isFetched: true
       })
 
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
 
       // Component should still render but without column definitions
       expect(screen.queryByTestId('loading-component')).not.toBeInTheDocument()
     })
 
     it('updates row data when transfers data changes', () => {
-      const { rerender } = render(<AddEditNotionalTransfers />, {
-        fixtureOptions
-      })
+      const { rerender } = render(<AddEditNotionalTransfers />, {})
 
       // Change the transfers data
-      vi.mocked(useGetAllNotionalTransfersList).mockReturnValue({
+      hookMocks.useGetAllNotionalTransfersList.mockReturnValue({
         data: [{ notionalTransferId: 1, legalName: 'New Organization' }],
         isLoading: false
       })
@@ -915,12 +1029,12 @@ describe('AddEditNotionalTransfers', () => {
     })
 
     it('sets default row data when transfers are not loading but empty', () => {
-      vi.mocked(useGetAllNotionalTransfersList).mockReturnValue({
+      hookMocks.useGetAllNotionalTransfersList.mockReturnValue({
         data: null,
         isLoading: false
       })
 
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
 
       const rows = screen.getAllByTestId('grid-row')
       expect(rows.length).toBe(1)
@@ -928,7 +1042,7 @@ describe('AddEditNotionalTransfers', () => {
     })
 
     it('marks supplemental entries correctly', () => {
-      vi.mocked(useComplianceReportWithCache).mockReturnValue({
+      hookMocks.useComplianceReportWithCache.mockReturnValue({
         data: {
           report: {
             version: 1, // Supplemental
@@ -939,7 +1053,7 @@ describe('AddEditNotionalTransfers', () => {
         isLoading: false
       })
 
-      vi.mocked(useGetAllNotionalTransfersList).mockReturnValue({
+      hookMocks.useGetAllNotionalTransfersList.mockReturnValue({
         data: [
           {
             notionalTransferId: 1,
@@ -950,7 +1064,7 @@ describe('AddEditNotionalTransfers', () => {
         isLoading: false
       })
 
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
 
       const rows = screen.getAllByTestId('grid-row')
       expect(rows[0]).toHaveTextContent('Supplemental Entry')
@@ -959,7 +1073,7 @@ describe('AddEditNotionalTransfers', () => {
 
   describe('Edge Cases and Error Handling', () => {
     it('handles undefined organization in compliance report', () => {
-      vi.mocked(useComplianceReportWithCache).mockReturnValue({
+      hookMocks.useComplianceReportWithCache.mockReturnValue({
         data: {
           report: {
             version: 0,
@@ -970,26 +1084,26 @@ describe('AddEditNotionalTransfers', () => {
         isLoading: false
       })
 
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
 
     it('handles missing params in router', () => {
       mockUseParams.mockReturnValue({})
 
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
 
       // Component should still render but with undefined IDs
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()
     })
 
     it('handles empty array for notional transfers', () => {
-      vi.mocked(useGetAllNotionalTransfersList).mockReturnValue({
+      hookMocks.useGetAllNotionalTransfersList.mockReturnValue({
         data: [],
         isLoading: false
       })
 
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
 
       const rows = screen.getAllByTestId('grid-row')
       expect(rows.length).toBe(1) // Just the empty row
@@ -997,7 +1111,7 @@ describe('AddEditNotionalTransfers', () => {
     })
 
     it('preserves existing row IDs when available', () => {
-      vi.mocked(useGetAllNotionalTransfersList).mockReturnValue({
+      hookMocks.useGetAllNotionalTransfersList.mockReturnValue({
         data: [
           {
             notionalTransferId: 1,
@@ -1008,7 +1122,7 @@ describe('AddEditNotionalTransfers', () => {
         isLoading: false
       })
 
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
 
       const rows = screen.getAllByTestId('grid-row')
       expect(rows[0]).toHaveTextContent('test-uuid-123') // UUID is assigned regardless
@@ -1017,39 +1131,39 @@ describe('AddEditNotionalTransfers', () => {
 
   describe('Component Props and Configuration', () => {
     it('passes correct props to BCGridEditor', () => {
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
 
       const gridEditor = screen.getByTestId('bc-grid-editor')
       expect(gridEditor).toBeInTheDocument()
     })
 
     it('configures save button correctly', () => {
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
 
       const saveButton = screen.getByTestId('save-button')
       expect(saveButton).toHaveTextContent('report:saveReturn')
     })
 
     it('shows not-loading state when data is loaded', () => {
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
 
       expect(screen.getByTestId('loading')).toHaveTextContent('not-loading')
     })
 
     it('shows loading state when options are loading', () => {
-      vi.mocked(useNotionalTransferOptions).mockReturnValue({
+      hookMocks.useNotionalTransferOptions.mockReturnValue({
         data: null,
         isLoading: true,
         isFetched: false
       })
 
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
 
       expect(screen.getByTestId('loading-component')).toBeInTheDocument()
     })
 
     it('configures grid with correct overlay template', () => {
-      render(<AddEditNotionalTransfers />, { fixtureOptions })
+      render(<AddEditNotionalTransfers />)
 
       // The overlay template is configured (can't directly test, but grid renders)
       expect(screen.getByTestId('bc-grid-editor')).toBeInTheDocument()

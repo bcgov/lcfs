@@ -443,7 +443,7 @@ export const useImportNotionalTransfers = (
   complianceReportId: number | string | undefined | null,
   options: ExtMutationOptions<
     unknown,
-    { file: File; isOverwrite: boolean }
+    { file: File; isOverwrite?: boolean }
   > = {}
 ) => {
   const client = useApiService()
@@ -462,7 +462,7 @@ export const useImportNotionalTransfers = (
       isOverwrite
     }: {
       file: File
-      isOverwrite: boolean
+      isOverwrite?: boolean
     }) => {
       if (!complianceReportId) {
         throw new Error('Compliance report ID is required')
