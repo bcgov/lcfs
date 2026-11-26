@@ -11,10 +11,33 @@ import {
 import { test } from '@/tests/utils/fixtures'
 import '@/themes/base/colors'
 import '@/constants/schedules'
+import type { ReactNode, HTMLAttributes, PropsWithChildren } from 'react'
+import type { RenderOptions, RenderResult } from '@testing-library/react'
 
-let render
+type HookResult = { data?: unknown; isLoading: boolean }
+type ChangelogRow = { fuelExportId?: number | string; [key: string]: unknown }
+type ChangelogViewerProps = {
+  gridKey?: string | null
+  queryData?: { data?: { items?: ChangelogRow[] } }
+  getRowId?: (params: { data: ChangelogRow }) => string
+  columnDefs?: Array<{ field?: string }>
+  suppressPagination?: boolean
+}
+type ChangelogRenderOptions = Omit<RenderOptions, 'wrapper'> & {
+  fixtureOptions?: undefined
+}
+type ContainerProps = PropsWithChildren<HTMLAttributes<HTMLDivElement>>
+
+const hookMocks = vi.hoisted(() => ({
+  useComplianceReportWithCache: vi.fn<() => HookResult>(),
+  useGetChangeLog: vi.fn<() => HookResult>(),
+  useTranslation: vi.fn<() => { t: (key: string) => string }>(),
+  useParams:
+    vi.fn<() => { complianceReportId: string; compliancePeriod: string }>()
+}))
+let render: (ui: ReactNode, options?: ChangelogRenderOptions) => RenderResult
 const fixtureOptions = undefined
-const it = (name, fn) =>
+const it = (name: string, fn: () => unknown) =>
   test(name, ({ render: fixtureRender }) => {
     render = (ui, options) => fixtureRender(ui, [], options)
     return fn()
@@ -22,16 +45,16 @@ const it = (name, fn) =>
 
 // Mock all dependencies
 vi.mock('react-i18next', () => ({
-  useTranslation: vi.fn()
+  useTranslation: hookMocks.useTranslation
 }))
 
 vi.mock('react-router-dom', () => ({
-  useParams: vi.fn()
+  useParams: hookMocks.useParams
 }))
 
 vi.mock('@/hooks/useComplianceReports', () => ({
-  useComplianceReportWithCache: vi.fn(),
-  useGetChangeLog: vi.fn()
+  useComplianceReportWithCache: hookMocks.useComplianceReportWithCache,
+  useGetChangeLog: hookMocks.useGetChangeLog
 }))
 
 vi.mock('@/components/Loading', () => ({
@@ -40,7 +63,13 @@ vi.mock('@/components/Loading', () => ({
 
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: vi.fn(
-    ({ gridKey, queryData, getRowId, columnDefs, suppressPagination }) => (
+    ({
+      gridKey,
+      queryData,
+      getRowId,
+      columnDefs,
+      suppressPagination
+    }: ChangelogViewerProps) => (
       <div data-test="bc-grid-viewer">
         <div data-test="grid-key">{gridKey}</div>
         <div data-test="row-count">{queryData?.data?.items?.length || 0}</div>
@@ -61,15 +90,19 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 }))
 
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, ...props }) => <div {...props}>{children}</div>
+  default: ({ children, ...props }: ContainerProps) => (
+    <div {...props}>{children}</div>
+  )
 }))
 
 vi.mock('@mui/material/Box', () => ({
-  default: ({ children, ...props }) => <div {...props}>{children}</div>
+  default: ({ children, ...props }: ContainerProps) => (
+    <div {...props}>{children}</div>
+  )
 }))
 
 vi.mock('@mui/material/TextField', () => ({
-  default: (props) => <input {...props} />
+  default: (props: React.ComponentProps<'input'>) => <input {...props} />
 }))
 
 vi.mock('./_schema', () => ({
@@ -90,7 +123,7 @@ vi.mock('./_schema', () => ({
 }))
 
 describe('FuelExportChangelog', () => {
-  const mockTranslate = vi.fn((key) => key)
+  const mockTranslate = vi.fn((key: string) => key)
   const mockParams = {
     complianceReportId: '123',
     compliancePeriod: '2023'
@@ -104,13 +137,13 @@ describe('FuelExportChangelog', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
-    useTranslation.mockReturnValue({ t: mockTranslate })
-    useParams.mockReturnValue(mockParams)
-    useComplianceReportWithCache.mockReturnValue({
+    hookMocks.useTranslation.mockReturnValue({ t: mockTranslate })
+    hookMocks.useParams.mockReturnValue(mockParams)
+    hookMocks.useComplianceReportWithCache.mockReturnValue({
       data: mockCurrentReport,
       isLoading: false
     })
-    useGetChangeLog.mockReturnValue({
+    hookMocks.useGetChangeLog.mockReturnValue({
       data: [],
       isLoading: false
     })
@@ -118,7 +151,7 @@ describe('FuelExportChangelog', () => {
 
   describe('Component Rendering', () => {
     it('should render loading component when currentReportLoading is true', () => {
-      useComplianceReportWithCache.mockReturnValue({
+      hookMocks.useComplianceReportWithCache.mockReturnValue({
         data: null,
         isLoading: true
       })
@@ -129,7 +162,7 @@ describe('FuelExportChangelog', () => {
     })
 
     it('should render loading component when changelogDataLoading is true', () => {
-      useGetChangeLog.mockReturnValue({
+      hookMocks.useGetChangeLog.mockReturnValue({
         data: null,
         isLoading: true
       })
@@ -140,11 +173,11 @@ describe('FuelExportChangelog', () => {
     })
 
     it('should render loading component when both are loading', () => {
-      useComplianceReportWithCache.mockReturnValue({
+      hookMocks.useComplianceReportWithCache.mockReturnValue({
         data: null,
         isLoading: true
       })
-      useGetChangeLog.mockReturnValue({
+      hookMocks.useGetChangeLog.mockReturnValue({
         data: null,
         isLoading: true
       })
@@ -163,7 +196,7 @@ describe('FuelExportChangelog', () => {
         }
       ]
 
-      useGetChangeLog.mockReturnValue({
+      hookMocks.useGetChangeLog.mockReturnValue({
         data: changelogData,
         isLoading: false
       })
@@ -175,7 +208,7 @@ describe('FuelExportChangelog', () => {
     })
 
     it('should render empty content when changelogData is empty', () => {
-      useGetChangeLog.mockReturnValue({
+      hookMocks.useGetChangeLog.mockReturnValue({
         data: [],
         isLoading: false
       })
@@ -197,7 +230,7 @@ describe('FuelExportChangelog', () => {
         }
       ]
 
-      useGetChangeLog.mockReturnValue({
+      hookMocks.useGetChangeLog.mockReturnValue({
         data: changelogData,
         isLoading: false
       })
@@ -219,7 +252,7 @@ describe('FuelExportChangelog', () => {
         }
       ]
 
-      useGetChangeLog.mockReturnValue({
+      hookMocks.useGetChangeLog.mockReturnValue({
         data: changelogData,
         isLoading: false
       })
@@ -242,7 +275,7 @@ describe('FuelExportChangelog', () => {
         }
       ]
 
-      useGetChangeLog.mockReturnValue({
+      hookMocks.useGetChangeLog.mockReturnValue({
         data: changelogData,
         isLoading: false
       })
@@ -268,7 +301,7 @@ describe('FuelExportChangelog', () => {
         }
       ]
 
-      useGetChangeLog.mockReturnValue({
+      hookMocks.useGetChangeLog.mockReturnValue({
         data: changelogData,
         isLoading: false
       })
@@ -297,7 +330,7 @@ describe('FuelExportChangelog', () => {
         }
       ]
 
-      useGetChangeLog.mockReturnValue({
+      hookMocks.useGetChangeLog.mockReturnValue({
         data: changelogData,
         isLoading: false
       })
@@ -324,7 +357,7 @@ describe('FuelExportChangelog', () => {
         }
       ]
 
-      useGetChangeLog.mockReturnValue({
+      hookMocks.useGetChangeLog.mockReturnValue({
         data: changelogData,
         isLoading: false
       })
@@ -348,7 +381,7 @@ describe('FuelExportChangelog', () => {
         }
       ]
 
-      useGetChangeLog.mockReturnValue({
+      hookMocks.useGetChangeLog.mockReturnValue({
         data: changelogData,
         isLoading: false
       })
@@ -372,7 +405,7 @@ describe('FuelExportChangelog', () => {
         }
       ]
 
-      useGetChangeLog.mockReturnValue({
+      hookMocks.useGetChangeLog.mockReturnValue({
         data: changelogData,
         isLoading: false
       })
@@ -399,7 +432,7 @@ describe('FuelExportChangelog', () => {
         }
       ]
 
-      useGetChangeLog.mockReturnValue({
+      hookMocks.useGetChangeLog.mockReturnValue({
         data: changelogData,
         isLoading: false
       })
@@ -430,7 +463,7 @@ describe('FuelExportChangelog', () => {
         }
       ]
 
-      useGetChangeLog.mockReturnValue({
+      hookMocks.useGetChangeLog.mockReturnValue({
         data: changelogData,
         isLoading: false
       })
@@ -454,7 +487,7 @@ describe('FuelExportChangelog', () => {
         }
       ]
 
-      useGetChangeLog.mockReturnValue({
+      hookMocks.useGetChangeLog.mockReturnValue({
         data: changelogData,
         isLoading: false
       })
@@ -483,7 +516,7 @@ describe('FuelExportChangelog', () => {
         }
       ]
 
-      useGetChangeLog.mockReturnValue({
+      hookMocks.useGetChangeLog.mockReturnValue({
         data: changelogData,
         isLoading: false
       })
@@ -514,7 +547,7 @@ describe('FuelExportChangelog', () => {
         }
       ]
 
-      useGetChangeLog.mockReturnValue({
+      hookMocks.useGetChangeLog.mockReturnValue({
         data: changelogData,
         isLoading: false
       })
@@ -535,7 +568,7 @@ describe('FuelExportChangelog', () => {
         }
       ]
 
-      useGetChangeLog.mockReturnValue({
+      hookMocks.useGetChangeLog.mockReturnValue({
         data: changelogData,
         isLoading: false
       })
@@ -549,7 +582,7 @@ describe('FuelExportChangelog', () => {
 
   describe('Edge Cases', () => {
     it('should handle null changelogData', () => {
-      useGetChangeLog.mockReturnValue({
+      hookMocks.useGetChangeLog.mockReturnValue({
         data: null,
         isLoading: false
       })
@@ -569,7 +602,7 @@ describe('FuelExportChangelog', () => {
         }
       ]
 
-      useGetChangeLog.mockReturnValue({
+      hookMocks.useGetChangeLog.mockReturnValue({
         data: changelogData,
         isLoading: false
       })
@@ -581,7 +614,7 @@ describe('FuelExportChangelog', () => {
     })
 
     it('should handle missing complianceReportGroupUuid', () => {
-      useComplianceReportWithCache.mockReturnValue({
+      hookMocks.useComplianceReportWithCache.mockReturnValue({
         data: { report: {} },
         isLoading: false
       })
@@ -595,7 +628,7 @@ describe('FuelExportChangelog', () => {
     })
 
     it('should handle missing current report data', () => {
-      useComplianceReportWithCache.mockReturnValue({
+      hookMocks.useComplianceReportWithCache.mockReturnValue({
         data: null,
         isLoading: false
       })
@@ -655,7 +688,7 @@ describe('FuelExportChangelog', () => {
         }
       ]
 
-      useGetChangeLog.mockReturnValue({
+      hookMocks.useGetChangeLog.mockReturnValue({
         data: changelogData,
         isLoading: false
       })
@@ -681,7 +714,7 @@ describe('FuelExportChangelog', () => {
         }
       ]
 
-      useGetChangeLog.mockReturnValue({
+      hookMocks.useGetChangeLog.mockReturnValue({
         data: changelogData,
         isLoading: false
       })
@@ -711,7 +744,7 @@ describe('FuelExportChangelog', () => {
         }
       ]
 
-      useGetChangeLog.mockReturnValue({
+      hookMocks.useGetChangeLog.mockReturnValue({
         data: changelogData,
         isLoading: false
       })
@@ -736,7 +769,7 @@ describe('FuelExportChangelog', () => {
         }
       ]
 
-      useGetChangeLog.mockReturnValue({
+      hookMocks.useGetChangeLog.mockReturnValue({
         data: changelogData,
         isLoading: false
       })
@@ -758,7 +791,7 @@ describe('FuelExportChangelog', () => {
         }
       ]
 
-      useGetChangeLog.mockReturnValue({
+      hookMocks.useGetChangeLog.mockReturnValue({
         data: changelogData,
         isLoading: false
       })
@@ -777,7 +810,7 @@ describe('FuelExportChangelog', () => {
         }
       ]
 
-      useGetChangeLog.mockReturnValue({
+      hookMocks.useGetChangeLog.mockReturnValue({
         data: changelogData,
         isLoading: false
       })
@@ -795,7 +828,7 @@ describe('FuelExportChangelog', () => {
         }
       ]
 
-      useGetChangeLog.mockReturnValue({
+      hookMocks.useGetChangeLog.mockReturnValue({
         data: updatedData,
         isLoading: false
       })

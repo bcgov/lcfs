@@ -410,7 +410,7 @@ describe('useFuelExport', () => {
       const file = new File(['csv content'], 'exports.csv', {
         type: 'text/csv'
       })
-      result.current.mutate({ file })
+      result.current.mutate({ file, isOverwrite: false })
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -434,7 +434,7 @@ describe('useFuelExport', () => {
       const file = new File(['csv content'], 'exports.csv', {
         type: 'text/csv'
       })
-      result.current.mutate({ file })
+      result.current.mutate({ file, isOverwrite: false })
 
       await waitFor(() => {
         expect(result.current.isError).toBe(true)

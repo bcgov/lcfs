@@ -34,6 +34,14 @@ const setupFuelExportChangelogMocks = ({
   initialQuantity,
   updatedQuantity,
   units
+}: {
+  reportId: string
+  fuelType: string
+  fuelCategory: string
+  provisionOfTheAct: string
+  initialQuantity: string
+  updatedQuantity: string
+  units: string
 }) => {
   const previousReportId = 991004
 
@@ -132,7 +140,12 @@ const setupFuelExportChangelogMocks = ({
 
 When(
   'the supplier adds a fuel export record with fuel type {string}, fuel category {string}, provision {string}, and quantity {string}',
-  (fuelType, fuelCategory, provisionOfTheAct, quantity) => {
+  (
+    fuelType: string,
+    fuelCategory: string,
+    provisionOfTheAct: string,
+    quantity: string
+  ) => {
     // FuelExports requires endUseId and provisionOfTheActId in the save request,
     // but the frontend cannot auto-populate them for Ethanol (multiple EER ratios
     // share one end-use type, and Ethanol has two provisions). Instead of touching
@@ -206,12 +219,12 @@ When(
 
 When(
   'the supplier updates the first fuel export quantity to {string}',
-  (updatedQuantity) => {
+  (updatedQuantity: string) => {
     // Set up the updated list-all mock BEFORE any navigation. After the edit
     // save triggers React Query cache invalidation the background-refetch will
     // use this mock. The Then step then reads the fresh cache (120 000) without
     // making another network call.
-    cy.get('@lastFuelExportFuelType').then((fuelType) => {
+    cy.get('@lastFuelExportFuelType').then((fuelType: string) => {
       cy.intercept('POST', '**/api/fuel-exports/list-all**', {
         statusCode: 200,
         body: {
@@ -256,7 +269,7 @@ When(
 
 When(
   'the supplier opens the fuel export changelog view for fuel type {string} with original quantity {string} and updated quantity {string}',
-  (fuelType, initialQuantity, updatedQuantity) => {
+  (fuelType: string, initialQuantity: string, updatedQuantity: string) => {
     // Use cy.visit() so location.state has no newReport:true → ReportDetails is rendered.
     cy.location('pathname').then((pathname) => {
       const normalizedPath = pathname.replace(/\/+$/, '')
@@ -264,6 +277,7 @@ When(
         /\/compliance-reporting\/(\d+)\/(\d+)$/
       )
       expect(pathMatch, 'compliance report view path').to.exist
+      if (!pathMatch) throw new Error('Expected a compliance report view path')
       const compliancePeriod = pathMatch[1]
       const reportId = pathMatch[2]
       const canonicalViewPath = `/compliance-reporting/${compliancePeriod}/${reportId}`
@@ -302,26 +316,29 @@ When(
 // Then steps
 // ---------------------------------------------------------------------------
 
-Then('the fuel export summary includes fuel type {string}', (fuelType) => {
-  cy.get(SELECTORS.scheduleLink, { timeout: 20000 })
-    .should('be.visible')
-    .click()
-  // onGridReady auto-starts editing the last (empty) row's fuelTypeId cell.
-  // Target only cells NOT in inline-editing mode so the dropdown option text
-  // does not confuse cy.contains.
-  cy.contains(
-    'div.ag-cell[col-id="fuelTypeId"]:not(.ag-cell-inline-editing)',
-    fuelType,
-    { timeout: 30000 }
-  )
-    .scrollIntoView()
-    .should('exist')
-})
+Then(
+  'the fuel export summary includes fuel type {string}',
+  (fuelType: string) => {
+    cy.get(SELECTORS.scheduleLink, { timeout: 20000 })
+      .should('be.visible')
+      .click()
+    // onGridReady auto-starts editing the last (empty) row's fuelTypeId cell.
+    // Target only cells NOT in inline-editing mode so the dropdown option text
+    // does not confuse cy.contains.
+    cy.contains(
+      'div.ag-cell[col-id="fuelTypeId"]:not(.ag-cell-inline-editing)',
+      fuelType,
+      { timeout: 30000 }
+    )
+      .scrollIntoView()
+      .should('exist')
+  }
+)
 
 Then(
   'the fuel export summary includes quantity {string}',
-  (formattedQuantity) => {
-    cy.get('@lastFuelExportFuelType').then((fuelType) => {
+  (formattedQuantity: string) => {
+    cy.get('@lastFuelExportFuelType').then((fuelType: string) => {
       // Register the updated list-all mock BEFORE any navigation so that any
       // request fired after the visit below returns the updated quantity.
       cy.intercept('POST', '**/api/fuel-exports/list-all**', {

@@ -2,11 +2,26 @@ import 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, beforeEach, vi } from 'vite-plus/test'
 import { FuelExportSummary } from '../FuelExportSummary'
+import type { PropsWithChildren, HTMLAttributes } from 'react'
+
+type SummaryViewerProps = {
+  gridKey?: string
+  queryData?: { data?: Record<string, unknown> }
+  dataKey: string
+  gridOptions?: { overlayNoRowsTemplate?: string }
+  defaultColDef?: { cellRenderer?: unknown }
+  suppressPagination?: boolean
+  paginationOptions?: unknown
+  getRowId?: (params: { data: Record<string, unknown> }) => string
+  enableCopyButton?: boolean
+  onPaginationChange?: (pagination: { page: number; size: number }) => void
+}
+type ContainerProps = PropsWithChildren<HTMLAttributes<HTMLDivElement>>
 
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => key
+    t: (key: string) => key
   })
 }))
 
@@ -23,13 +38,15 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
     getRowId,
     enableCopyButton,
     onPaginationChange
-  }) => {
+  }: SummaryViewerProps) => {
+    const rows = queryData?.data?.[dataKey]
+    const firstRow = Array.isArray(rows) ? rows[0] : undefined
     return (
       <div data-test="bc-grid-viewer">
         <div data-test="grid-key">{gridKey}</div>
         <div data-test="data-key">{dataKey}</div>
         <div data-test="row-count">
-          {queryData?.data?.[dataKey]?.length || 0} rows
+          {Array.isArray(rows) ? rows.length : 0} rows
         </div>
         <div data-test="pagination-suppressed">
           {suppressPagination ? 'pagination-suppressed' : 'pagination-enabled'}
@@ -65,8 +82,8 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
         </button>
         {/* Test getRowId function */}
         <div data-test="get-row-id-result">
-          {getRowId && queryData?.data?.[dataKey]?.[0]
-            ? getRowId({ data: queryData.data[dataKey][0] })
+          {getRowId && firstRow && typeof firstRow === 'object'
+            ? getRowId({ data: firstRow as Record<string, unknown> })
             : 'no-result'}
         </div>
       </div>
@@ -76,7 +93,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 
 // Mock the schema - enhanced to support showFuelTypeOther parameter
 vi.mock('@/views/FuelExports/_schema', () => {
-  const mockColDefs = vi.fn((showFuelTypeOther) => [
+  const mockColDefs = vi.fn((showFuelTypeOther: boolean) => [
     { field: 'fuelType', headerName: 'Fuel Type' },
     { field: 'quantity', headerName: 'Quantity' },
     { field: 'destination', headerName: 'Destination' },
@@ -106,7 +123,7 @@ vi.mock('@/constants/schedules', () => ({
 
 // Mock other components
 vi.mock('@/components/BCBox', () => ({
-  default: ({ children, ...props }) => (
+  default: ({ children, ...props }: ContainerProps) => (
     <div data-test="bc-box" {...props}>
       {children}
     </div>
@@ -114,7 +131,7 @@ vi.mock('@/components/BCBox', () => ({
 }))
 
 vi.mock('@mui/material/Grid2', () => ({
-  default: ({ children, ...props }) => (
+  default: ({ children, ...props }: ContainerProps) => (
     <div data-test="mui-grid2" {...props}>
       {children}
     </div>

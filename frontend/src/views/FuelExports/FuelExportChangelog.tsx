@@ -13,25 +13,56 @@ import { useTranslation } from 'react-i18next'
 
 import { changelogColDefs, changelogCommonColDefs } from './_schema'
 import { useParams } from 'react-router-dom'
+import type {
+  BCGridRow,
+  BCPaginationOptions
+} from '@/components/BCDataGrid/types'
+import type { ColDef, GridOptions } from 'ag-grid-community'
+
+interface FuelExportChange extends BCGridRow {
+  fuelExportId: number | string
+  actionType?: string
+}
+
+interface FuelExportVersion {
+  version: number
+  nickname: string
+  fuelExports: FuelExportChange[]
+}
+
+const compareValues = (left: unknown, right: unknown): number => {
+  if (typeof left === 'string' && typeof right === 'string') {
+    if (left > right) return 1
+    if (left < right) return -1
+    return 0
+  }
+  const leftNumber = Number(left)
+  const rightNumber = Number(right)
+  if (leftNumber > rightNumber) return 1
+  if (leftNumber < rightNumber) return -1
+  return 0
+}
 
 export const FuelExportChangelog = () => {
   const { t } = useTranslation(['common', 'fuelExport', 'report'])
-  const { complianceReportId } = useParams()
+  const { complianceReportId } = useParams<{ complianceReportId: string }>()
   const { data: currentReport, isLoading: currentReportLoading } =
-    useComplianceReportWithCache(complianceReportId)
+    useComplianceReportWithCache(complianceReportId!)
 
   // State for pagination - one per changelog item
-  const [paginationStates, setPaginationStates] = useState({})
+  const [paginationStates, setPaginationStates] = useState<
+    Record<number, BCPaginationOptions>
+  >({})
 
   const { data: changelogData, isLoading: changelogDataLoading } =
-    useGetChangeLog({
+    useGetChangeLog<FuelExportVersion[]>({
       complianceReportGroupUuid:
         currentReport?.report.complianceReportGroupUuid,
       dataType: 'fuel-exports'
     })
 
-  const getRowId = (params) => {
-    return params.data.fuelExportId.toString()
+  const getRowId = (params: { data: BCGridRow }) => {
+    return String(params.data.fuelExportId)
   }
 
   const currentOrOriginalColumnDefs = useMemo(
@@ -42,7 +73,7 @@ export const FuelExportChangelog = () => {
   const changedColumnDefs = useMemo(() => changelogColDefs(), [])
 
   const defaultColDef = useMemo(
-    () => ({
+    (): ColDef<BCGridRow> => ({
       floatingFilter: false,
       filter: false,
       sortable: false
@@ -50,7 +81,7 @@ export const FuelExportChangelog = () => {
     []
   )
 
-  const gridOptions = (highlight = true) => ({
+  const gridOptions = (highlight = true): GridOptions<BCGridRow> => ({
     overlayNoRowsTemplate: t('fuelExport:noFuelExportsFound'),
     autoSizeStrategy: {
       type: 'fitCellContents',
@@ -61,12 +92,12 @@ export const FuelExportChangelog = () => {
     ensureDomOrder: true,
     getRowStyle: (params) => {
       if (!highlight) return
-      if (params.data.actionType === 'DELETE') {
+      if (params.data?.actionType === 'DELETE') {
         return {
           backgroundColor: colors.alerts.error.background
         }
       }
-      if (params.data.actionType === 'CREATE') {
+      if (params.data?.actionType === 'CREATE') {
         return {
           backgroundColor: colors.alerts.success.background
         }
@@ -75,7 +106,11 @@ export const FuelExportChangelog = () => {
   })
 
   // Client-side pagination function
-  const getPaginatedData = (fuelExports, index, isCurrentOrOriginalVersion) => {
+  const getPaginatedData = (
+    fuelExports: FuelExportChange[],
+    index: number,
+    isCurrentOrOriginalVersion: boolean
+  ) => {
     if (!isCurrentOrOriginalVersion) {
       // No pagination for non-current/original versions
       return { data: { items: fuelExports } }
@@ -83,20 +118,25 @@ export const FuelExportChangelog = () => {
 
     const paginationOptions =
       paginationStates[index] || defaultInitialPagination
+    const page = paginationOptions.page ?? defaultInitialPagination.page
+    const size = paginationOptions.size ?? defaultInitialPagination.size
     let filteredData = [...fuelExports]
 
     // Apply filters if any
     if (paginationOptions.filters && paginationOptions.filters.length > 0) {
       paginationOptions.filters.forEach((filter) => {
-        if (filter.type === 'contains' && filter.filter) {
+        if (
+          filter.type === 'contains' &&
+          typeof filter.filter === 'string' &&
+          filter.filter
+        ) {
+          const searchText = filter.filter.toLowerCase()
+          const field = String(filter.field)
           filteredData = filteredData.filter((item) => {
-            const fieldValue = item[filter.field]
+            const fieldValue = item[field]
             return (
               fieldValue &&
-              fieldValue
-                .toString()
-                .toLowerCase()
-                .includes(filter.filter.toLowerCase())
+              fieldValue.toString().toLowerCase().includes(searchText)
             )
           })
         }
@@ -109,13 +149,9 @@ export const FuelExportChangelog = () => {
       paginationOptions.sortOrders.length > 0
     ) {
       paginationOptions.sortOrders.forEach((sort) => {
+        const field = String(sort.field)
         filteredData.sort((a, b) => {
-          const aVal = a[sort.field]
-          const bVal = b[sort.field]
-
-          let comparison = 0
-          if (aVal > bVal) comparison = 1
-          if (aVal < bVal) comparison = -1
+          const comparison = compareValues(a[field], b[field])
 
           return sort.direction === 'desc' ? -comparison : comparison
         })
@@ -123,16 +159,16 @@ export const FuelExportChangelog = () => {
     }
 
     const total = filteredData.length
-    const startIndex = (paginationOptions.page - 1) * paginationOptions.size
-    const endIndex = startIndex + paginationOptions.size
+    const startIndex = (page - 1) * size
+    const endIndex = startIndex + size
     const paginatedItems = filteredData.slice(startIndex, endIndex)
 
     return {
       data: {
         items: paginatedItems,
         pagination: {
-          page: paginationOptions.page,
-          size: paginationOptions.size,
+          page,
+          size,
           total
         }
       },
@@ -142,15 +178,16 @@ export const FuelExportChangelog = () => {
     }
   }
 
-  const handlePaginationChange = (index) => (newPagination) => {
-    setPaginationStates((prev) => ({
-      ...prev,
-      [index]: {
-        ...(prev[index] || defaultInitialPagination),
-        ...newPagination
-      }
-    }))
-  }
+  const handlePaginationChange =
+    (index: number) => (newPagination: BCPaginationOptions) => {
+      setPaginationStates((prev) => ({
+        ...prev,
+        [index]: {
+          ...(prev[index] || defaultInitialPagination),
+          ...newPagination
+        }
+      }))
+    }
 
   if (changelogDataLoading || currentReportLoading) {
     return <Loading />

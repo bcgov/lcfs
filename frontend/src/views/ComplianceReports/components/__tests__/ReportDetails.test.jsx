@@ -171,7 +171,7 @@ vi.mock('@/views/FuelExports/FuelExportSummary', () => ({
   FuelExportSummary: () => <div>Fuel Export Summary</div>
 }))
 
-vi.mock('@/views/FuelExports/FuelExportChangelog.jsx', () => ({
+vi.mock('@/views/FuelExports/FuelExportChangelog.tsx', () => ({
   FuelExportChangelog: () => <div>Fuel Export Changelog</div>
 }))
 
