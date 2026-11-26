@@ -42,10 +42,10 @@ vi.mock('@/hooks/useGovernmentNotification', () => ({
 }))
 
 // Mock ReactQuill
-vi.mock('react-quill', () => ({
+vi.mock('react-quill-new', () => ({
   default: ({ value, onChange, placeholder }) => (
     <textarea
-      data-test="react-quill"
+      data-test="react-quill-new"
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}

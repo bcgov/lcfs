@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
-import ReactQuill from 'react-quill'
+import ReactQuill from 'react-quill-new'
 import { GlobalStyles } from '@mui/system'
 import Chip from '@mui/material/Chip'
 import Alert from '@mui/material/Alert'
@@ -9,7 +9,7 @@ import ToggleButton from '@mui/material/ToggleButton'
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import LanguageIcon from '@mui/icons-material/Language'
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined'
-import 'react-quill/dist/quill.snow.css'
+import '@dotwee/quill/dist/quill.snow.css'
 import { useTranslation } from 'react-i18next'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
@@ -33,7 +33,7 @@ import './quillExtensions'
 import { quillAttachIcon } from '@/utils/quillAttachIcon'
 
 // Register a paperclip icon for the custom Quill "attach" toolbar button.
-// `react-quill` exposes Quill as a static property of its default export
+// `react-quill-new` exposes Quill as a static property of its default export
 // (not a separate named export), so access it that way to stay safe across
 // bundler CJS/ESM interop. Quill's icon registry is global — register once.
 const Quill = ReactQuill.Quill
@@ -436,7 +436,7 @@ const CommentForm = ({
         placeholder={placeholder}
         theme="snow"
         modules={quillModules}
-        formats={['bold', 'italic', 'list', 'bullet', 'mention']}
+        formats={['bold', 'italic', 'list', 'mention']}
       />
     </div>
   )

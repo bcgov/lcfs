@@ -1,6 +1,6 @@
 import { test } from '@/tests/utils/fixtures'
 import { screen, fireEvent, waitFor, act } from '@testing-library/react'
-import ReactQuill from 'react-quill'
+import ReactQuill from 'react-quill-new'
 import { describe, vi, beforeAll, expect } from 'vite-plus/test'
 import { useState } from 'react'
 import CommentForm from '../CommentForm'
@@ -39,7 +39,7 @@ const mentionableUsers = [
 
 // Properly controlled, like the real Comments/CommentList wiring — a no-op
 // onChange would desync `commentText` from Quill's live content and cause
-// react-quill to re-parse/trim on every re-render, which isn't realistic.
+// react-quill-new to re-parse/trim on every re-render, which isn't realistic.
 const ControlledCommentForm = () => {
   const [commentText, setCommentText] = useState('Hello ')
   return (

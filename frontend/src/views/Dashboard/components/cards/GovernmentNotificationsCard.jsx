@@ -14,8 +14,8 @@ import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
 import CloseIcon from '@mui/icons-material/Close'
 import { GlobalStyles } from '@mui/system'
-import ReactQuill from 'react-quill'
-import 'react-quill/dist/quill.snow.css'
+import ReactQuill from 'react-quill-new'
+import '@dotwee/quill/dist/quill.snow.css'
 import DOMPurify from 'dompurify'
 import BCTypography from '@/components/BCTypography'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
@@ -368,7 +368,7 @@ const GovernmentNotificationsCard = () => {
                   bindings: { tab: false }
                 }
               }}
-              formats={['bold', 'italic', 'list', 'bullet', 'link']}
+              formats={['bold', 'italic', 'list', 'link']}
               placeholder={t(
                 'dashboard:governmentNotifications.messagePlaceholder'
               )}

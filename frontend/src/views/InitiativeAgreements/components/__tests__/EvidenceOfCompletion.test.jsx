@@ -14,7 +14,7 @@ import { evidencePlainText } from '../evidenceRichText'
 import { roles } from '@/constants/roles'
 import { test } from '@/tests/utils/fixtures'
 
-vi.mock('react-quill', async () => {
+vi.mock('react-quill-new', async () => {
   const React = await import('react')
   const MockQuill = React.forwardRef(function MockQuill(
     { value, onChange, readOnly, modules, formats },
@@ -771,7 +771,6 @@ describe('EvidenceOfCompletion', () => {
       'italic',
       'align',
       'list',
-      'bullet',
       'indent',
       'link'
     ])

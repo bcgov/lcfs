@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
-import ReactQuill from 'react-quill'
-import 'react-quill/dist/quill.snow.css'
+import ReactQuill from 'react-quill-new'
+import '@dotwee/quill/dist/quill.snow.css'
 
 import BCBox from '@/components/BCBox'
 
@@ -14,7 +14,7 @@ const NOTE_MODULES = {
   keyboard: { bindings: { tab: false } }
 }
 
-const NOTE_FORMATS = ['bold', 'italic', 'list', 'bullet', 'indent', 'link']
+const NOTE_FORMATS = ['bold', 'italic', 'list', 'indent', 'link']
 
 // Emits the editor's HTML unchanged: rewriting it on every keystroke would
 // reset the cursor. The form sanitizes on save and the server again on store.

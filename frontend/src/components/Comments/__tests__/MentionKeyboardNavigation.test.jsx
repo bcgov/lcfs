@@ -25,7 +25,7 @@ beforeAll(() => {
   })
 })
 
-// Real react-quill so the toolbar button + keyboard handling under test are
+// Real react-quill-new so the toolbar button + keyboard handling under test are
 // the actual production code path, not a stub.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
