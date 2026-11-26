@@ -62,6 +62,10 @@ vi.mock('@/components/Documents/DocumentUploadDialog', () => ({
   default: ({ open }) => (open ? <div data-test="upload-dialog" /> : null)
 }))
 
+vi.mock('../components/ProponentEOC', () => ({
+  ProponentEOC: () => <div data-test="portal-eoc" />
+}))
+
 vi.mock('../components/DocumentTree', () => ({
   // The tree owns the section's card and header, so the page's own
   // controls reach the screen through it.

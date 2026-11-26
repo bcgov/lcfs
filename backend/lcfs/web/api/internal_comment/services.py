@@ -238,6 +238,53 @@ class InternalCommentService:
             return getattr(user_org, "organization_id", None)
         return getattr(current_user, "organization_id", None)
 
+    def _require_comment_entity_role(self, entity_type: EntityTypeEnum) -> None:
+        """Keep portal comment roles scoped to the entity types they serve."""
+        if self._is_government_user():
+            return
+        role_names = self.request.user.role_names
+        has_ia_role = any(
+            role in role_names for role in (RoleEnum.IA_PROPONENT, RoleEnum.IA_SIGNER)
+        )
+        roles_by_entity = {
+            EntityTypeEnum.COMPLIANCE_REPORT: (
+                RoleEnum.SUPPLIER,
+                RoleEnum.CI_APPLICANT,
+            ),
+            EntityTypeEnum.CI_APPLICATION: (
+                RoleEnum.SUPPLIER,
+                RoleEnum.CI_APPLICANT,
+            ),
+            EntityTypeEnum.DESIGNATED_ACTION: (
+                RoleEnum.IA_PROPONENT,
+                RoleEnum.IA_SIGNER,
+            ),
+        }
+        required_roles = roles_by_entity.get(entity_type, ())
+        if has_ia_role and entity_type == EntityTypeEnum.COMPLIANCE_REPORT:
+            # IA roles must not grant access to non-DA threads. Preserve the
+            # legacy portal access for users who also hold another BCeID role,
+            # but ignore Supplier here because the auth layer may add it as a
+            # baseline role for IA users.
+            ia_roles = {RoleEnum.IA_PROPONENT, RoleEnum.IA_SIGNER}
+            legacy_portal_roles = {
+                RoleEnum.SUPPLIER,
+                RoleEnum.MANAGE_USERS,
+                RoleEnum.TRANSFER,
+                RoleEnum.COMPLIANCE_REPORTING,
+                RoleEnum.SIGNING_AUTHORITY,
+                RoleEnum.READ_ONLY,
+                RoleEnum.CI_APPLICANT,
+                RoleEnum.LCJFIP_APPLICANT,
+            }
+            required_roles = tuple(
+                role for role in legacy_portal_roles - ia_roles - {RoleEnum.SUPPLIER}
+            )
+        elif has_ia_role and entity_type == EntityTypeEnum.CI_APPLICATION:
+            required_roles = (RoleEnum.CI_APPLICANT,)
+        if not any(role in role_names for role in required_roles):
+            raise HTTPException(status_code=403, detail="Forbidden resource")
+
     async def _require_own_organization(
         self, entity_type: EntityTypeEnum, entity_id: int
     ) -> None:
@@ -250,6 +297,7 @@ class InternalCommentService:
         resolves to no organization fails closed rather than revealing
         whether it exists.
         """
+        self._require_comment_entity_role(entity_type)
         org_id, _ = await self.repo.get_entity_org_and_year(entity_type, entity_id)
         user_org_id = self._user_organization_id()
         if org_id is None or user_org_id is None or org_id != user_org_id:
@@ -288,6 +336,22 @@ class InternalCommentService:
         agreement = await self.repo.get_parent_initiative_agreement_of_comment(
             internal_comment_id
         )
+        if not self._is_government_user():
+            entity = await self.repo.get_comment_entity(internal_comment_id)
+            if entity is None:
+                raise HTTPException(status_code=403, detail="Forbidden resource")
+            await self._require_own_organization(*entity)
+            if entity[0] in (
+                EntityTypeEnum.COMPLIANCE_REPORT,
+                EntityTypeEnum.CI_APPLICATION,
+                EntityTypeEnum.DESIGNATED_ACTION,
+            ):
+                comment = await self.repo.get_internal_comment_by_id(
+                    internal_comment_id
+                )
+                visibility = getattr(comment.visibility, "value", comment.visibility)
+                if visibility != CommentVisibilityEnum.PUBLIC.value:
+                    raise HTTPException(status_code=403, detail="Forbidden resource")
         if agreement is not None and is_hidden_from(agreement, self.request.user):
             raise HTTPException(status_code=404, detail="Internal comment not found.")
 
@@ -549,6 +613,7 @@ class InternalCommentService:
             if data.entity_type not in (
                 EntityTypeEnum.COMPLIANCE_REPORT,
                 EntityTypeEnum.CI_APPLICATION,
+                EntityTypeEnum.DESIGNATED_ACTION,
             ):
                 raise HTTPException(status_code=403, detail="Forbidden resource")
             if data.visibility != CommentVisibilityEnum.PUBLIC:
@@ -691,6 +756,7 @@ class InternalCommentService:
             if entity_type not in (
                 EntityTypeEnum.COMPLIANCE_REPORT,
                 EntityTypeEnum.CI_APPLICATION,
+                EntityTypeEnum.DESIGNATED_ACTION,
             ):
                 raise HTTPException(status_code=403, detail="Forbidden resource")
             await self._require_own_organization(entity_type, entity_id)

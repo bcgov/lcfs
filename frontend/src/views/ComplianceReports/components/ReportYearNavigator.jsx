@@ -1,34 +1,8 @@
-import BCTypography from '@/components/BCTypography'
 import ROUTES from '@/routes/routes'
-import ChevronLeft from '@mui/icons-material/ChevronLeft'
-import ChevronRight from '@mui/icons-material/ChevronRight'
-import Box from '@mui/material/Box'
-import IconButton from '@mui/material/IconButton'
-import Tooltip from '@mui/material/Tooltip'
 import PropTypes from 'prop-types'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-
-const navButtonSx = {
-  backgroundColor: '#003366',
-  color: 'white !important',
-  borderRadius: '50%',
-  width: 25,
-  height: 25,
-  padding: 0,
-  '& .MuiSvgIcon-root': {
-    color: 'white',
-    fontSize: '18px !important'
-  },
-  '&:hover': {
-    backgroundColor: '#004080',
-    '& .MuiSvgIcon-root': { color: 'white' }
-  },
-  '&.Mui-disabled': {
-    backgroundColor: '#c0c0c0',
-    color: '#808080'
-  }
-}
+import AdjacentItemNavigation from '@/components/AdjacentItemNavigation'
 
 /**
  * Year navigation with arrows, disabled if no adjacent report.
@@ -68,52 +42,27 @@ export const ReportYearNavigator = ({
     : t('report:yearNavigator.noNext')
 
   return (
-    <Box
-      data-test="report-year-navigator"
-      sx={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}
-    >
-      <Tooltip title={previousTooltip} placement="top" arrow>
-        <span>
-          <IconButton
-            data-test="report-year-navigator-previous"
-            aria-label={t('report:yearNavigator.previous')}
-            size="small"
-            onClick={() => goTo(previous)}
-            disabled={previousDisabled}
-            sx={navButtonSx}
-          >
-            <ChevronLeft />
-          </IconButton>
-        </span>
-      </Tooltip>
-      <BCTypography
-        variant="h5"
-        component="span"
-        data-test="report-year-navigator-current"
-        sx={{
-          minWidth: '3.5rem',
-          textAlign: 'center',
-          color: '#003366',
-          fontWeight: 'bold'
-        }}
-      >
-        {currentCompliancePeriod}
-      </BCTypography>
-      <Tooltip title={nextTooltip} placement="top" arrow>
-        <span>
-          <IconButton
-            data-test="report-year-navigator-next"
-            aria-label={t('report:yearNavigator.next')}
-            size="small"
-            onClick={() => goTo(next)}
-            disabled={nextDisabled}
-            sx={navButtonSx}
-          >
-            <ChevronRight />
-          </IconButton>
-        </span>
-      </Tooltip>
-    </Box>
+    <AdjacentItemNavigation
+      currentLabel={currentCompliancePeriod}
+      currentLabelVariant="h5"
+      currentLabelSx={{
+        minWidth: '3.5rem',
+        textAlign: 'center',
+        color: '#003366',
+        fontWeight: 'bold'
+      }}
+      onPrevious={() => goTo(previous)}
+      onNext={() => goTo(next)}
+      previousDisabled={previousDisabled}
+      nextDisabled={nextDisabled}
+      previousTooltip={previousTooltip}
+      nextTooltip={nextTooltip}
+      previousAriaLabel={t('report:yearNavigator.previous')}
+      nextAriaLabel={t('report:yearNavigator.next')}
+      testIdPrefix="report-year-navigator"
+      gap={2}
+      containerSx={{ display: 'inline-flex' }}
+    />
   )
 }
 

@@ -592,4 +592,30 @@ describe('DocumentTree', () => {
       screen.getByText('initiativeAgreement:folders.empty')
     ).toBeInTheDocument()
   })
+  test('protects government items while retaining downloads and owned controls', ({
+    render,
+    app
+  }) => {
+    const protectedTree = structuredClone(tree)
+    protectedTree.folders[0].canManage = false
+    protectedTree.folders[0].documents[0].canManage = false
+    protectedTree.rootDocuments[0].canManage = true
+    mockTree.mockReturnValue({ data: protectedTree, isLoading: false })
+    render(
+      <DocumentTree
+        parentType="designatedAction"
+        parentID="9"
+        allowSubfolders
+      />,
+      app
+    )
+    expect(screen.queryByTestId('folder-menu-12')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('tree-file-delete-88')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('tree-file-rename-88')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('tree-file-handle-88')).not.toBeInTheDocument()
+    expect(screen.getByTestId('tree-file-download-88')).toBeInTheDocument()
+    expect(screen.getByTestId('tree-file-delete-90')).toBeInTheDocument()
+    fireEvent.doubleClick(screen.getByText('permit.pdf'))
+    expect(screen.queryByTestId('folder-name-input')).not.toBeInTheDocument()
+  })
 })

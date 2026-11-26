@@ -1,19 +1,16 @@
 import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import Divider from '@mui/material/Divider'
 import Stack from '@mui/material/Stack'
 import Step from '@mui/material/Step'
 import StepLabel from '@mui/material/StepLabel'
 import Stepper from '@mui/material/Stepper'
 import TextField from '@mui/material/TextField'
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
-import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
-import BCButton from '@/components/BCButton'
 import InitiativeAgreementTabs from './components/InitiativeAgreementTabs'
 import BCTypography from '@/components/BCTypography'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
@@ -22,7 +19,7 @@ import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
 import Loading from '@/components/Loading'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
-import { ROUTES, buildPath } from '@/routes/routes'
+import { ROUTES } from '@/routes/routes'
 import { dateFormatter } from '@/utils/formatters'
 import withRole from '@/utils/withRole'
 
@@ -43,6 +40,8 @@ import {
   PLACEMENT_EVIDENCE
 } from './components/DesignatedActionWorkflow'
 import { EditDesignatedAction } from './components/EditDesignatedAction'
+import { ProponentEOC } from './components/ProponentEOC'
+import DesignatedActionNavigation from './components/DesignatedActionNavigation'
 import { DesignatedActionHistoryPanel } from './components/DesignatedActionHistoryPanel'
 
 // The shared document machinery keys on this string for designated actions.
@@ -68,30 +67,8 @@ const LabelValue = ({ label, value }) => (
   </BCTypography>
 )
 
-const navButtonSx = {
-  backgroundColor: '#003366',
-  color: 'white !important',
-  borderRadius: '50%',
-  width: 25,
-  height: 25,
-  padding: 0,
-  '& .MuiSvgIcon-root': {
-    color: 'white',
-    fontSize: '18px !important'
-  },
-  '&:hover': {
-    backgroundColor: '#004080',
-    '& .MuiSvgIcon-root': { color: 'white' }
-  },
-  '&.Mui-disabled': {
-    backgroundColor: '#c0c0c0',
-    color: '#808080'
-  }
-}
-
-const DesignatedActionDetailBase = () => {
+const DesignatedActionDetailIDIR = () => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
-  const navigate = useNavigate()
   const { initiativeAgreementId, designatedActionId } = useParams()
   const [uploadOpen, setUploadOpen] = useState(false)
 
@@ -192,22 +169,6 @@ const DesignatedActionDetailBase = () => {
 
   const displayOrder = action.currentStatus?.displayOrder ?? 0
   const actionLabel = `DA${action.actionNumber}-IA${action.initiativeAgreementId}`
-  const siblings = action.siblingActionIds || []
-  const currentIndex = siblings.indexOf(Number(designatedActionId))
-  const previousId = currentIndex > 0 ? siblings[currentIndex - 1] : null
-  const nextId =
-    currentIndex >= 0 && currentIndex < siblings.length - 1
-      ? siblings[currentIndex + 1]
-      : null
-
-  const goToSibling = (siblingId) =>
-    navigate(
-      buildPath(ROUTES.INITIATIVE_AGREEMENTS.ACTION_VIEW, {
-        initiativeAgreementId,
-        designatedActionId: siblingId
-      })
-    )
-
   const renderRequestAction = (
     requirement,
     allRequestsComplete,
@@ -299,37 +260,13 @@ const DesignatedActionDetailBase = () => {
                   </BCBox>
                 )}
               </BCBox>
-              <BCBox sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <BCButton
-                  variant="contained"
-                  color="primary"
-                  iconOnly
-                  size="small"
-                  data-test="previous-action-button"
-                  aria-label={t(
-                    'initiativeAgreement:actionDetail.previousAction'
-                  )}
-                  disabled={!previousId}
-                  onClick={() => goToSibling(previousId)}
-                  sx={navButtonSx}
-                >
-                  <ChevronLeftIcon />
-                </BCButton>
-                <BCTypography variant="body4">{actionLabel}</BCTypography>
-                <BCButton
-                  variant="contained"
-                  color="primary"
-                  iconOnly
-                  size="small"
-                  data-test="next-action-button"
-                  aria-label={t('initiativeAgreement:actionDetail.nextAction')}
-                  disabled={!nextId}
-                  onClick={() => goToSibling(nextId)}
-                  sx={navButtonSx}
-                >
-                  <ChevronRightIcon />
-                </BCButton>
-              </BCBox>
+              <DesignatedActionNavigation
+                siblingActionIds={action.siblingActionIds}
+                designatedActionId={designatedActionId}
+                initiativeAgreementId={initiativeAgreementId}
+                actionNumber={action.actionNumber}
+                actionLabel={actionLabel}
+              />
             </BCBox>
 
             <Stack spacing={0.5}>
@@ -479,6 +416,12 @@ const DesignatedActionDetailBase = () => {
         parentID={designatedActionId}
       />
 
+      <ProponentEOC
+        key={designatedActionId}
+        designatedActionId={designatedActionId}
+        readOnly
+      />
+
       {/* The audit trail behind every workflow step (#4898). */}
       <Role roles={[roles.ia_analyst, roles.ia_manager, roles.director]}>
         <DesignatedActionHistoryPanel designatedActionId={designatedActionId} />
@@ -497,9 +440,29 @@ const DesignatedActionDetailBase = () => {
   )
 }
 
+const DesignatedActionDetailBase = () => {
+  const { hasRoles } = useCurrentUser()
+  const { designatedActionId } = useParams()
+  if (hasRoles?.(roles.ia_proponent) || hasRoles?.(roles.ia_signer)) {
+    return (
+      <ProponentEOC
+        key={designatedActionId}
+        designatedActionId={designatedActionId}
+      />
+    )
+  }
+  return <DesignatedActionDetailIDIR />
+}
+
 export const DesignatedActionDetail = withRole(
   DesignatedActionDetailBase,
-  [roles.ia_analyst, roles.ia_manager, roles.director],
+  [
+    roles.ia_analyst,
+    roles.ia_manager,
+    roles.director,
+    roles.ia_proponent,
+    roles.ia_signer
+  ],
   ROUTES.DASHBOARD
 )
 DesignatedActionDetail.displayName = 'DesignatedActionDetail'

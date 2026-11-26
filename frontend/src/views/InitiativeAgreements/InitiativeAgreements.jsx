@@ -148,7 +148,13 @@ const InitiativeAgreementsBase = () => {
 
 export const InitiativeAgreements = withRole(
   InitiativeAgreementsBase,
-  [roles.ia_proponent, roles.ia_analyst, roles.ia_manager, roles.director],
+  [
+    roles.ia_proponent,
+    roles.ia_signer,
+    roles.ia_analyst,
+    roles.ia_manager,
+    roles.director
+  ],
   ROUTES.DASHBOARD
 )
 InitiativeAgreements.displayName = 'InitiativeAgreements'

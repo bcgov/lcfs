@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import Divider from '@mui/material/Divider'
 import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
@@ -21,7 +21,8 @@ import { SupportingDocumentSummary } from '@/views/SupportingDocuments/Supportin
 import { roles } from '@/constants/roles'
 import { INITIATIVE_AGREEMENT_OPEN_TO_NEW_ACTIONS } from '@/constants/statuses'
 import { useDocuments } from '@/hooks/useDocuments'
-import { ROUTES } from '@/routes/routes'
+import BCButton from '@/components/BCButton'
+import { ROUTES, buildPath } from '@/routes/routes'
 import { constructAddress } from '@/utils/constructAddress'
 import { dateFormatter } from '@/utils/formatters'
 import withRole from '@/utils/withRole'
@@ -83,6 +84,7 @@ const DeletedActionRestoreBins = ({ initiativeAgreementId }) => {
 const InitiativeAgreementDetailBase = () => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const { initiativeAgreementId } = useParams()
+  const navigate = useNavigate()
   const [uploadOpen, setUploadOpen] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const alertRef = useRef()
@@ -368,6 +370,27 @@ const InitiativeAgreementDetailBase = () => {
         />
       </Role>
 
+      <Role roles={[roles.ia_proponent, roles.ia_signer]}>
+        <BCBox mt={3}>
+          <BCTypography variant="h6">Designated actions</BCTypography>
+          {agreement?.designatedActions?.map((action) => (
+            <BCButton
+              key={action.designatedActionId}
+              onClick={() =>
+                navigate(
+                  buildPath(ROUTES.INITIATIVE_AGREEMENTS.ACTION_VIEW, {
+                    initiativeAgreementId,
+                    designatedActionId: action.designatedActionId
+                  })
+                )
+              }
+            >
+              {action.actionNumber}. {action.name} — Evidence of completion
+            </BCButton>
+          ))}
+        </BCBox>
+      </Role>
+
       {/* Notes are IDIR-only: the API refuses proponents. Directors read;
           only the two review roles can change them. */}
       <Role roles={[roles.ia_analyst, roles.ia_manager, roles.director]}>
@@ -425,7 +448,13 @@ const InitiativeAgreementDetailBase = () => {
 
 export const InitiativeAgreementDetail = withRole(
   InitiativeAgreementDetailBase,
-  [roles.ia_proponent, roles.ia_analyst, roles.ia_manager, roles.director],
+  [
+    roles.ia_proponent,
+    roles.ia_signer,
+    roles.ia_analyst,
+    roles.ia_manager,
+    roles.director
+  ],
   ROUTES.DASHBOARD
 )
 InitiativeAgreementDetail.displayName = 'InitiativeAgreementDetail'
