@@ -237,29 +237,9 @@ export const renewableFuelColumns = (
   lines7And9Locked: boolean = false,
   lines6And8Locked: boolean = false
 ): SummaryColumn[] => {
-  /**
-   * Editable Lines Logic:
-   *
-   * Lines 6 & 7:
-   * - Only visible if cells G2, D2, and J2 do not show a balance of zero and
-   *   there is a surplus above the renewable requirement.
-   *
-   * Lines 8 & 9:
-   * - When I am short of my renewable obligation and in a penalty situation,
-   *   then the free text fields in cells G8, D8, and J8 are available
-   *   for input and I see the fields only if there is a deficiency.
-   *
-   * Line 8:
-   * - Line 8 is editable when Line 2 < Line 4 (indicating a deficiency).
-   * - For Jet Fuel, Line 8 is unavailable until 2028.
-   * - From 2028 onward, Jet Fuel follows the same logic as Gasoline and Diesel.
-   */
-
   let gasolineEditableCells: number[] = []
   let dieselEditableCells: number[] = []
   let jetFuelEditableCells: number[] = []
-
-  const safeRound = (value: number = 0) => Math.round(value || 0)
 
   const toRoundedOrUndefined = (value: unknown) => {
     const numericValue = Number(value)
@@ -322,111 +302,37 @@ export const renewableFuelColumns = (
     constraint: { min: number; max?: number } | undefined
   ) => (lines7And9Locked ? (constraint ?? { min: 0 }) : { min: 0 })
 
-  // Line 6 (Retention) caps - LCFA s.10(2): Lesser of excess and 5% of Line 4
+  // Caps use the backend's unrounded requirements and Lines 2, 5, 7 and 9.
   const line6Caps = {
-    gasoline: safeRound(
-      Math.min(
-        Math.max(
-          0,
-          (data[SUMMARY.LINE_2]?.gasoline || 0) -
-            (data[SUMMARY.LINE_4]?.gasoline || 0)
-        ), // excess
-        0.05 * (data[SUMMARY.LINE_4]?.gasoline || 0) // prescribed portion
-      )
-    ),
-    diesel: safeRound(
-      Math.min(
-        Math.max(
-          0,
-          (data[SUMMARY.LINE_2]?.diesel || 0) -
-            (data[SUMMARY.LINE_4]?.diesel || 0)
-        ),
-        0.05 * (data[SUMMARY.LINE_4]?.diesel || 0)
-      )
-    ),
-    jetFuel: safeRound(
-      Math.min(
-        Math.max(
-          0,
-          (data[SUMMARY.LINE_2]?.jetFuel || 0) -
-            (data[SUMMARY.LINE_4]?.jetFuel || 0)
-        ),
-        0.05 * (data[SUMMARY.LINE_4]?.jetFuel || 0)
-      )
-    )
+    gasoline: data[SUMMARY.LINE_6]?.maxGasoline ?? 0,
+    diesel: data[SUMMARY.LINE_6]?.maxDiesel ?? 0,
+    jetFuel: data[SUMMARY.LINE_6]?.maxJetFuel ?? 0
   }
 
-  // Line 8 (Deferral) caps - LCFA s.10(3): Lesser of deficiency and 5% of Line 4
   const line8Caps = {
-    gasoline: safeRound(
-      Math.min(
-        Math.max(
-          0,
-          (data[SUMMARY.LINE_4]?.gasoline || 0) -
-            (data[SUMMARY.LINE_2]?.gasoline || 0)
-        ), // deficiency
-        0.05 * (data[SUMMARY.LINE_4]?.gasoline || 0) // prescribed portion
-      )
-    ),
-    diesel: safeRound(
-      Math.min(
-        Math.max(
-          0,
-          (data[SUMMARY.LINE_4]?.diesel || 0) -
-            (data[SUMMARY.LINE_2]?.diesel || 0)
-        ),
-        0.05 * (data[SUMMARY.LINE_4]?.diesel || 0)
-      )
-    ),
-    jetFuel: safeRound(
-      Math.min(
-        Math.max(
-          0,
-          (data[SUMMARY.LINE_4]?.jetFuel || 0) -
-            (data[SUMMARY.LINE_2]?.jetFuel || 0)
-        ),
-        0.05 * (data[SUMMARY.LINE_4]?.jetFuel || 0)
-      )
-    )
+    gasoline: data[SUMMARY.LINE_8]?.maxGasoline ?? 0,
+    diesel: data[SUMMARY.LINE_8]?.maxDiesel ?? 0,
+    jetFuel: data[SUMMARY.LINE_8]?.maxJetFuel ?? 0
   }
 
-  // ========= Gasoline Logic ============
-  // Line 6 is editable when there is a surplus (Line 2 > Line 4)
-  // Line 8 is editable when there is a deficiency (Line 2 < Line 4)
-  // Only one should be editable at a time
-  if (data[SUMMARY.LINE_2].gasoline > data[SUMMARY.LINE_4].gasoline) {
-    // Surplus: Line 6 editable, Line 8 not editable
+  if (line6Caps.gasoline > 0) {
     gasolineEditableCells = [SUMMARY.LINE_6]
-  } else if (data[SUMMARY.LINE_2].gasoline < data[SUMMARY.LINE_4].gasoline) {
-    // Deficiency: Line 8 editable, Line 6 not editable
+  } else if (line8Caps.gasoline > 0) {
     gasolineEditableCells = [SUMMARY.LINE_8]
   }
 
-  // ============ Diesel Logic ============
-  // Line 6 is editable when there is a surplus (Line 2 > Line 4)
-  // Line 8 is editable when there is a deficiency (Line 2 < Line 4)
-  // Only one should be editable at a time
-  if (data[SUMMARY.LINE_2].diesel > data[SUMMARY.LINE_4].diesel) {
-    // Surplus: Line 6 editable, Line 8 not editable
+  if (line6Caps.diesel > 0) {
     dieselEditableCells = [SUMMARY.LINE_6]
-  } else if (data[SUMMARY.LINE_2].diesel < data[SUMMARY.LINE_4].diesel) {
-    // Deficiency: Line 8 editable, Line 6 not editable
+  } else if (line8Caps.diesel > 0) {
     dieselEditableCells = [SUMMARY.LINE_8]
   }
 
-  // ============ Jet Fuel Logic ============
-  // Line 6 is editable when there is a surplus (Line 2 > Line 4)
-  // Line 8 is editable when there is a deficiency (Line 2 < Line 4)
-  // Only one should be editable at a time
-  // Line 8 is only available for Jet Fuel from 2028 onward
-  if (data[SUMMARY.LINE_2].jetFuel > data[SUMMARY.LINE_4].jetFuel) {
-    // Surplus: Line 6 editable, Line 8 not editable
+  if (line6Caps.jetFuel > 0) {
     jetFuelEditableCells = [SUMMARY.LINE_6]
   } else if (
-    data[SUMMARY.LINE_2].jetFuel < data[SUMMARY.LINE_4].jetFuel &&
+    line8Caps.jetFuel > 0 &&
     parseInt(compliancePeriodYear as string) >= 2028
   ) {
-    // Deficiency: Line 8 editable (only from 2028 onward), Line 6 not editable
     jetFuelEditableCells = [SUMMARY.LINE_8]
   }
 
