@@ -1983,8 +1983,12 @@ async def test_calculate_summary_filters_ineligible_renewable_fuel_post_2025(
 
     await compliance_report_summary_service.calculate_compliance_report_summary(1)
 
-    assert summary_model.line_6_renewable_fuel_retained_diesel == 0
-    assert summary_model.line_8_obligation_deferred_gasoline == 0
+    assert summary_model.line_6_renewable_fuel_retained_diesel == (
+        100 if with_previous_report else 0
+    )
+    assert summary_model.line_8_obligation_deferred_gasoline == (
+        50 if with_previous_report else 0
+    )
 
     # Ensure renewable aggregation excluded ineligible supply but kept eligible ones.
     assert captured_records, "Expected renewable aggregation records to be captured"
