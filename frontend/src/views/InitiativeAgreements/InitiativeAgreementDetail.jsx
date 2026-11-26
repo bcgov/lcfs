@@ -38,6 +38,7 @@ import { DeletedItems } from './components/DeletedItems'
 import { NotesAccordion } from './components/NotesAccordion'
 import { DocumentTree } from './components/DocumentTree'
 import { PackageLockNotice } from './components/PackageLockNotice'
+import { SetUnderwayButton } from './components/SetUnderwayButton'
 
 // The shared document machinery keys on this string for initiative agreements.
 const PARENT_TYPE = 'initiativeAgreement'
@@ -439,6 +440,27 @@ const InitiativeAgreementDetailBase = () => {
           />
         </BCBox>
       </Role>
+
+      {/* Releases a completed draft package to its organization (#5553). */}
+      <SetUnderwayButton
+        agreement={agreement}
+        onSuccess={() =>
+          alertRef.current?.triggerAlert({
+            severity: 'success',
+            message: t('initiativeAgreement:setUnderway.success', {
+              code: agreement.iaCode || referenceNumber
+            })
+          })
+        }
+        onError={(err) =>
+          alertRef.current?.triggerAlert({
+            severity: 'error',
+            message:
+              err?.response?.data?.detail ||
+              t('initiativeAgreement:setUnderway.failed')
+          })
+        }
+      />
     </BCBox>
   )
 }

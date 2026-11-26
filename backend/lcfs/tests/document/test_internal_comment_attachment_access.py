@@ -198,18 +198,41 @@ async def test_penalty_log_attachment_modification_matches_comment_permissions(
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("write", [False, True], ids=["read", "write"])
-async def test_a_comment_on_a_draft_agreement_reads_as_missing_to_government(write):
-    """A draft agreement is hidden from government (#5186), its comment
+async def test_a_comment_on_a_draft_agreement_reads_as_missing_outside_government(
+    write,
+):
+    """A draft agreement is hidden from the organization (#5553), its comment
     threads included, so the attachments on those comments are too: not
     listed, downloaded, added or removed, even by the comment's author."""
     service = _service_with_comment(
-        _comment(create_user="author"), agreement=_agreement(LIFECYCLE_STATUS_DRAFT)
+        _comment(create_user="author", visibility="Public"),
+        owner_organization_ids=(7,),
+        agreement=_agreement(LIFECYCLE_STATUS_DRAFT),
     )
     with pytest.raises(HTTPException) as exc:
         await service.verify_internal_comment_access(
-            1, _user(username="author", roles=[RoleEnum.GOVERNMENT]), write=write
+            1,
+            _user(
+                username="author",
+                roles=[RoleEnum.SUPPLIER, RoleEnum.IA_PROPONENT],
+                organization_id=7,
+            ),
+            write=write,
         )
     assert exc.value.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_government_reads_attachments_on_a_draft_agreements_comment():
+    """Government prepares the draft (#5553), so its comments' files are
+    government's to read."""
+    service = _service_with_comment(
+        _comment(), agreement=_agreement(LIFECYCLE_STATUS_DRAFT)
+    )
+    result = await service.verify_internal_comment_access(
+        1, _user(username="reader", roles=[RoleEnum.GOVERNMENT]), write=False
+    )
+    assert result is not None
 
 
 @pytest.mark.anyio

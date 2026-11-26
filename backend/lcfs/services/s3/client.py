@@ -662,8 +662,8 @@ class DocumentService:
           belonging to their own organization.
 
         A comment on a draft agreement, or on one of its designated actions,
-        reads as missing to government (#5186), like its thread, and so do
-        its attachments.
+        reads as missing outside government (#5553), like its thread, and so
+        do its attachments.
         """
         comment = await self.db.get(InternalComment, parent_id)
         if not comment:

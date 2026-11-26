@@ -42,7 +42,8 @@ vi.mock('@/hooks/useInitiativeAgreements', () => ({
     ],
     isError: false
   }),
-  useUpdateAgreement: () => ({ mutate: vi.fn(), isPending: false })
+  useUpdateAgreement: () => ({ mutate: vi.fn(), isPending: false }),
+  useSetAgreementUnderway: () => ({ mutateAsync: vi.fn() })
 }))
 
 const mockDocuments = vi.fn()
@@ -405,6 +406,45 @@ describe('InitiativeAgreementDetail', () => {
     render(<InitiativeAgreementDetail />, app)
     expect(screen.getByTestId('add-designated-action')).toBeInTheDocument()
   })
+
+  test('offers Set to Underway to a director on a draft (#5553)', ({
+    render,
+    app
+  }) => {
+    mockRoles = [{ name: roles.director }]
+    mockAgreement.mockReturnValue({
+      data: { ...agreement, lifecycleStatus: { status: 'Draft' } },
+      isLoading: false,
+      isError: false,
+      error: null
+    })
+    render(<InitiativeAgreementDetail />, app)
+    expect(screen.getByTestId('set-underway-button')).toBeInTheDocument()
+  })
+
+  test.for([
+    ['an IA analyst on a draft', roles.ia_analyst, 'Draft'],
+    ['an IA manager on a draft', roles.ia_manager, 'Draft'],
+    ['a director once underway', roles.director, 'Underway']
+  ])(
+    'does not offer Set to Underway to %s',
+    ([, role, status], { render, app }) => {
+      mockRoles = [{ name: role }]
+      mockAgreement.mockReturnValue({
+        data: {
+          ...(status === 'Underway' ? lockedAgreement : agreement),
+          lifecycleStatus: { status }
+        },
+        isLoading: false,
+        isError: false,
+        error: null
+      })
+      render(<InitiativeAgreementDetail />, app)
+      expect(
+        screen.queryByTestId('set-underway-button')
+      ).not.toBeInTheDocument()
+    }
+  )
 
   test.for(['Underway', 'Completed', 'Terminated'])(
     'does not offer to add an action to a %s agreement',

@@ -65,8 +65,8 @@ class InitiativeAgreementValidation:
         initiative_agreement = await self.repo.get_initiative_agreement_by_id(
             initiative_agreement_id
         )
-        # To an IDIR user, a proponent's unsubmitted draft (#5186) reads as
-        # no agreement at all.
+        # Outside government, a draft that government is still preparing
+        # (#5553) reads as no agreement at all.
         if not initiative_agreement or is_hidden_from(
             initiative_agreement, self.request.user
         ):
