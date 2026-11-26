@@ -45,13 +45,13 @@ const setupFuelExportChangelogMocks = ({
 }) => {
   const previousReportId = 991004
 
-  // Supplier users call /organization/:orgID/reports/:reportID, not /reports/:reportID,
-  // so match any URL containing /reports/:reportID.
+  // The report detail URL may include an organization prefix, so match only the
+  // terminal /reports/:reportID endpoint and leave its summary subroutes alone.
   //
   // Use req.on('before:response') instead of req.continue() to avoid
   // the "Socket closed before finished writing response" race condition
   // that occurs when the browser connection closes mid-proxy write.
-  cy.intercept('GET', `**/reports/${reportId}**`, (req) => {
+  cy.intercept('GET', `**/reports/${reportId}`, (req) => {
     req.on('before:response', (res) => {
       const report = res.body?.report || {}
       res.body = {
@@ -68,11 +68,16 @@ const setupFuelExportChangelogMocks = ({
     })
   }).as('mockFuelExportReport')
 
-  // Return a record associated with the *previous* report version so that
-  // wasEdited() returns true and the Change-log toggle becomes enabled.
+  cy.intercept('GET', `**/reports/${reportId}/schedule-overview`, {
+    fuelExports: { count: 1, activeCount: 1, deletedCount: 0, wasEdited: true }
+  }).as('mockFuelExportScheduleOverview')
+
+  // Preserve the server-computed edit flag and include a record from the
+  // previous report version for the schedule summary.
   cy.intercept('POST', '**/api/fuel-exports/list-all**', {
     statusCode: 200,
     body: {
+      wasEdited: true,
       fuelExports: [
         {
           fuelExportId: 1,
@@ -185,6 +190,7 @@ When(
 
     cy.get(SELECTORS.scheduleLink).click()
     cy.get(SELECTORS.addRowButton).click({ force: true })
+    cy.wait(500)
 
     cy.get('div.ag-center-cols-container div.ag-row', { timeout: 20000 })
       .last()
@@ -195,11 +201,16 @@ When(
 
         // The FuelExport schema uses field: 'fuelTypeId' with valueGetter returning
         // params.data.fuelType, so the AG Grid cell col-id attribute is 'fuelTypeId'.
-        cy.selectWithRetry(
-          `${rowSelector} div.ag-cell[col-id="fuelTypeId"]`,
-          `[data-testid="select-${fuelType}"]`,
-          0
-        )
+        const fuelTypeCell = `${rowSelector} div.ag-cell[col-id="fuelTypeId"]`
+        cy.get(fuelTypeCell, { timeout: 20000 }).first().scrollIntoView()
+        cy.get(fuelTypeCell, { timeout: 20000 })
+          .first()
+          .should('be.visible')
+          .click({ force: true })
+        cy.get(`[data-testid="select-${fuelType}"]`, { timeout: 10000 })
+          .first()
+          .should('be.visible')
+          .click({ force: true })
         // fuelCategory is auto-populated via onCellValueChanged when the selected
         // fuel type has only one category (e.g. Ethanol → Gasoline). The cell is
         // intentionally non-editable in that case, so we skip it.
@@ -292,18 +303,34 @@ When(
         units: 'L'
       })
 
-      // Fresh visit so location.state is null → ReportDetails accordions render.
-      // Always use canonical path shape (no trailing slash).
-      cy.visit(canonicalViewPath)
-
-      cy.wait('@mockFuelExportSummary', { timeout: 30000 })
+      // Navigate from a clean root route with router state that expands the
+      // schedule, as the report view does after returning from an edit screen.
+      cy.visit('/')
+      cy.window().then((window) => {
+        const state = {
+          usr: { newReport: false, expandedSchedule: 'fuelExports' },
+          key: 'fuel-export-cypress',
+          idx: 1
+        }
+        window.history.pushState(state, '', canonicalViewPath)
+        window.dispatchEvent(new PopStateEvent('popstate', { state }))
+      })
+      cy.get('[data-test="compliance-report-header"]').should('be.visible')
+      cy.scrollTo('bottom')
+      cy.wait('@mockFuelExportScheduleOverview')
+        .its('response.body.fuelExports.count')
+        .should('eq', 1)
 
       // Expand the Fuel-export accordion in ReportDetails.
       // The actual data-test is panel${index}-summary (index-based), so use
       // text content to reliably find the right accordion.
-      cy.contains('[data-test$="-summary"]', 'Export fuel', {
+      cy.contains('.MuiAccordion-root', 'Export fuel', {
         timeout: 30000
-      }).click()
+      })
+        .find('[data-test$="-summary"]')
+        .click()
+
+      cy.wait('@mockFuelExportSummary', { timeout: 30000 })
 
       // Click the Change-log toggle. Use force:true because the accordion's
       // Collapse animation may leave the label with visibility:hidden briefly.

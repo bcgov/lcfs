@@ -8,7 +8,7 @@ services:
       KC_BOOTSTRAP_ADMIN_PASSWORD: "${LCFS_KEYCLOAK_ADMIN_PASSWORD:-development_only}"
       KC_HTTP_ENABLED: "true"
       KC_HEALTH_ENABLED: "true"
-      KC_HOSTNAME: "http://${LCFS_LOCAL_KEYCLOAK_HOSTNAME:-lcfs-keycloak.localhost}:${LCFS_KEYCLOAK_PUBLISHED_PORT:-8180}"
+      KC_HOSTNAME: "${KC_HOSTNAME:-http://${LCFS_LOCAL_KEYCLOAK_HOSTNAME:-lcfs-keycloak.localhost}:${LCFS_KEYCLOAK_PUBLISHED_PORT:-8180}}"
       KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
     ports:
       - "127.0.0.1:${LCFS_KEYCLOAK_PUBLISHED_PORT:-8180}:8080"
@@ -35,7 +35,7 @@ services:
       LCFS_LOCAL_KEYCLOAK_ENABLED: "true"
       LCFS_WELL_KNOWN_ENDPOINT: http://keycloak:8080/realms/lcfs-local/.well-known/openid-configuration
       LCFS_KEYCLOAK_AUDIENCE: low-carbon-fuel-standard-5147
-      LCFS_KEYCLOAK_ISSUER: "http://${LCFS_LOCAL_KEYCLOAK_HOSTNAME:-lcfs-keycloak.localhost}:${LCFS_KEYCLOAK_PUBLISHED_PORT:-8180}/realms/lcfs-local"
+      LCFS_KEYCLOAK_ISSUER: "${LCFS_KEYCLOAK_ISSUER:-http://${LCFS_LOCAL_KEYCLOAK_HOSTNAME:-lcfs-keycloak.localhost}:${LCFS_KEYCLOAK_PUBLISHED_PORT:-8180}/realms/lcfs-local}"
       # Use a separate Redis DB so the local realm never reuses cached keys
       # from the external development Keycloak when switching auth modes.
       LCFS_REDIS_BASE: 1
@@ -69,7 +69,7 @@ services:
       VITE_LOCAL_KEYCLOAK: "true"
       VITE_KEYCLOAK_REALM: lcfs-local
       VITE_KEYCLOAK_CLIENT_ID: low-carbon-fuel-standard-5147
-      VITE_KEYCLOAK_AUTH_URL: "http://${LCFS_LOCAL_KEYCLOAK_HOSTNAME:-lcfs-keycloak.localhost}:${LCFS_KEYCLOAK_PUBLISHED_PORT:-8180}"
+      VITE_KEYCLOAK_AUTH_URL: "${VITE_KEYCLOAK_AUTH_URL:-http://${LCFS_LOCAL_KEYCLOAK_HOSTNAME:-lcfs-keycloak.localhost}:${LCFS_KEYCLOAK_PUBLISHED_PORT:-8180}}"
     depends_on:
       backend:
         condition: service_healthy
