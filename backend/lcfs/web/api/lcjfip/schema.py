@@ -6,13 +6,20 @@ from typing import List, Optional
 
 from pydantic import Field, field_validator, model_validator
 
-from lcfs.web.api.base import BaseSchema
+from lcfs.web.api.base import BaseSchema, PaginationResponseSchema
 
 # Column limits from the data model (#5501), so out-of-range input is a 422
 # rather than a database error.
 MAX_LITRES = 10**12
 MAX_PRICE = Decimal("999999.9999")
 MAX_CARBON_INTENSITY = Decimal("99999999.99")
+
+# Applications are numbered JF-<id> in the portal and in Metabase (#5541).
+APPLICATION_NUMBER_PREFIX = "JF-"
+
+
+def application_number(application_id: int) -> str:
+    return f"{APPLICATION_NUMBER_PREFIX}{application_id}"
 
 
 def _blank_to_none(value):
@@ -204,9 +211,24 @@ class LCJFIPApplicationSchema(BaseSchema):
 
 
 class LCJFIPApplicationListItemSchema(BaseSchema):
+    """One row of the applications index (#5541)."""
+
     lcjfip_application_id: int
     application_number: str
     status: str
-    signed_date: Optional[datetime] = None
-    create_date: Optional[datetime] = None
+    organization_name: Optional[str] = None
+    contact_name: Optional[str] = None
+    submitted_date: Optional[datetime] = None
+    # Cash or Credit, from the preferred incentive option; it sets the unit
+    # of the authorized disbursement.
+    incentive_type: Optional[str] = None
+    # The award letter (#5284) and disbursement (#5285, #5286) stories add
+    # these. Until then they are always empty, never placeholder values.
+    incentive_award_date: Optional[date] = None
+    authorized_disbursement: Optional[float] = None
     update_date: Optional[datetime] = None
+
+
+class LCJFIPApplicationsListSchema(BaseSchema):
+    applications: List[LCJFIPApplicationListItemSchema]
+    pagination: PaginationResponseSchema
