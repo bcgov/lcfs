@@ -3,15 +3,56 @@ import { screen, waitFor } from '@testing-library/react'
 import { describe, expect, beforeEach, vi } from 'vite-plus/test'
 import { OtherUsesChangelog } from '../OtherUsesChangelog'
 import { test } from '@/tests/utils/fixtures'
+import type {
+  ReactNode,
+  PropsWithChildren,
+  HTMLAttributes,
+  InputHTMLAttributes,
+  ButtonHTMLAttributes,
+  ComponentType
+} from 'react'
+import type { RenderOptions, RenderResult } from '@testing-library/react'
+import type {
+  BCGridRow,
+  BCPaginationOptions
+} from '@/components/BCDataGrid/types'
 
-import {
-  useComplianceReportWithCache,
-  useGetChangeLog
-} from '@/hooks/useComplianceReports'
+interface OtherUsesTestRow extends BCGridRow {
+  otherUsesId: number | string
+  actionType?: string
+}
+interface GridViewerMockProps {
+  gridKey?: string
+  queryData?: { data?: { items?: OtherUsesTestRow[] } | null }
+  getRowId?: (params: { data: OtherUsesTestRow }) => string
+  suppressPagination?: boolean
+  paginationOptions?: BCPaginationOptions
+  onPaginationChange?: (pagination: BCPaginationOptions) => void
+}
+type ContainerMockProps = PropsWithChildren<HTMLAttributes<HTMLElement>> & {
+  variant?: string
+  color?: string
+}
+type ButtonMockProps = PropsWithChildren<
+  ButtonHTMLAttributes<HTMLButtonElement>
+> & {
+  variant?: string
+  color?: string
+}
+type ChangelogRenderOptions = Omit<RenderOptions, 'wrapper'> & {
+  fixtureOptions?: undefined
+}
 
-let render
+type HookResult = { data?: unknown; isLoading: boolean }
+const hookMocks = vi.hoisted(() => ({
+  useComplianceReportWithCache: vi.fn<() => HookResult>(),
+  useGetChangeLog: vi.fn<() => HookResult>()
+}))
+const { useComplianceReportWithCache, useGetChangeLog } = hookMocks
+
+let render: (ui: ReactNode, options?: ChangelogRenderOptions) => RenderResult
 const fixtureOptions = undefined
-const it = (name, fn) =>
+const it = (name: string, fn: () => unknown) =>
   test(name, ({ render: fixtureRender }) => {
     render = (ui, options) => fixtureRender(ui, [], options)
     return fn()
@@ -19,14 +60,14 @@ const it = (name, fn) =>
 
 // Mock hooks
 vi.mock('@/hooks/useComplianceReports', () => ({
-  useComplianceReportWithCache: vi.fn(),
-  useGetChangeLog: vi.fn()
+  useComplianceReportWithCache: hookMocks.useComplianceReportWithCache,
+  useGetChangeLog: hookMocks.useGetChangeLog
 }))
 
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => key
+    t: (key: string) => key
   })
 }))
 
@@ -58,43 +99,43 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
     suppressPagination,
     paginationOptions,
     onPaginationChange
-  }) => (
-    <div data-test="bc-grid-viewer">
-      <div data-test="grid-key">{gridKey}</div>
-      <div data-test="row-count">
-        {queryData?.data?.items?.length || 0} rows
-      </div>
-      <div data-test="pagination-suppressed">
-        {suppressPagination ? 'pagination-suppressed' : 'pagination-enabled'}
-      </div>
-      <div data-test="has-pagination-options">
-        {paginationOptions ? 'has-pagination' : 'no-pagination'}
-      </div>
-      <div data-test="has-pagination-change">
-        {onPaginationChange ? 'has-change-handler' : 'no-change-handler'}
-      </div>
-      <div data-test="get-row-id">
-        {getRowId ? 'has-get-row-id' : 'no-get-row-id'}
-      </div>
-      {/* Test getRowId function */}
-      {getRowId && queryData?.data?.items?.length > 0 && (
-        <div data-test="row-id-result">
-          {getRowId({ data: queryData.data.items[0] })}
+  }: GridViewerMockProps) => {
+    const items = queryData?.data?.items ?? []
+    const firstItem = items[0]
+    return (
+      <div data-test="bc-grid-viewer">
+        <div data-test="grid-key">{gridKey}</div>
+        <div data-test="row-count">{items.length} rows</div>
+        <div data-test="pagination-suppressed">
+          {suppressPagination ? 'pagination-suppressed' : 'pagination-enabled'}
         </div>
-      )}
-      {/* Simulate items for testing */}
-      {queryData?.data?.items?.map((item, index) => (
-        <div key={index} data-test="grid-item">
-          {item.otherUsesId} - {item.actionType}
+        <div data-test="has-pagination-options">
+          {paginationOptions ? 'has-pagination' : 'no-pagination'}
         </div>
-      ))}
-    </div>
-  )
+        <div data-test="has-pagination-change">
+          {onPaginationChange ? 'has-change-handler' : 'no-change-handler'}
+        </div>
+        <div data-test="get-row-id">
+          {getRowId ? 'has-get-row-id' : 'no-get-row-id'}
+        </div>
+        {/* Test getRowId function */}
+        {getRowId && firstItem && (
+          <div data-test="row-id-result">{getRowId({ data: firstItem })}</div>
+        )}
+        {/* Simulate items for testing */}
+        {items.map((item, index) => (
+          <div key={index} data-test="grid-item">
+            {item.otherUsesId} - {item.actionType}
+          </div>
+        ))}
+      </div>
+    )
+  }
 }))
 
 // Mock BCTypography
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, ...props }) => (
+  default: ({ children, ...props }: ContainerMockProps) => (
     <div
       data-test="bc-typography"
       data-variant={props.variant}
@@ -144,7 +185,7 @@ vi.mock('@/themes/base/colors', () => ({
 
 // Mock MUI components
 vi.mock('@mui/material/Box', () => ({
-  default: ({ children, ...props }) => (
+  default: ({ children, ...props }: ContainerMockProps) => (
     <div data-test="mui-box" {...props}>
       {children}
     </div>
@@ -152,11 +193,13 @@ vi.mock('@mui/material/Box', () => ({
 }))
 
 vi.mock('@mui/material/TextField', () => ({
-  default: (props) => <input data-test="mui-textfield" {...props} />
+  default: (props: InputHTMLAttributes<HTMLInputElement>) => (
+    <input data-test="mui-textfield" {...props} />
+  )
 }))
 
 vi.mock('@mui/material/Button', () => ({
-  default: ({ children, ...props }) => (
+  default: ({ children, ...props }: ButtonMockProps) => (
     <button data-test="mui-button" {...props}>
       {children}
     </button>
@@ -164,7 +207,7 @@ vi.mock('@mui/material/Button', () => ({
 }))
 
 vi.mock('@mui/material/IconButton', () => ({
-  default: ({ children, ...props }) => (
+  default: ({ children, ...props }: ButtonMockProps) => (
     <button data-test="mui-icon-button" {...props}>
       {children}
     </button>
@@ -172,7 +215,7 @@ vi.mock('@mui/material/IconButton', () => ({
 }))
 
 vi.mock('@mui/material/Typography', () => ({
-  default: ({ children, ...props }) => (
+  default: ({ children, ...props }: ContainerMockProps) => (
     <div data-test="mui-typography" {...props}>
       {children}
     </div>
@@ -180,7 +223,7 @@ vi.mock('@mui/material/Typography', () => ({
 }))
 
 vi.mock('@mui/material/Grid', () => ({
-  default: ({ children, ...props }) => (
+  default: ({ children, ...props }: ContainerMockProps) => (
     <div data-test="mui-grid" {...props}>
       {children}
     </div>
@@ -188,7 +231,7 @@ vi.mock('@mui/material/Grid', () => ({
 }))
 
 vi.mock('@mui/material/Paper', () => ({
-  default: ({ children, ...props }) => (
+  default: ({ children, ...props }: ContainerMockProps) => (
     <div data-test="mui-paper" {...props}>
       {children}
     </div>
@@ -196,7 +239,7 @@ vi.mock('@mui/material/Paper', () => ({
 }))
 
 vi.mock('@mui/material/Card', () => ({
-  default: ({ children, ...props }) => (
+  default: ({ children, ...props }: ContainerMockProps) => (
     <div data-test="mui-card" {...props}>
       {children}
     </div>
@@ -204,7 +247,7 @@ vi.mock('@mui/material/Card', () => ({
 }))
 
 vi.mock('@mui/material/CardContent', () => ({
-  default: ({ children, ...props }) => (
+  default: ({ children, ...props }: ContainerMockProps) => (
     <div data-test="mui-card-content" {...props}>
       {children}
     </div>
@@ -213,8 +256,8 @@ vi.mock('@mui/material/CardContent', () => ({
 
 // Mock MUI styles
 vi.mock('@mui/material/styles', () => ({
-  styled: (component) => () => component,
-  useTheme: () => ({ spacing: (val) => `${val * 8}px` })
+  styled: (component: ComponentType) => () => component,
+  useTheme: () => ({ spacing: (value: number) => `${value * 8}px` })
 }))
 
 describe('OtherUsesChangelog', () => {
@@ -226,7 +269,7 @@ describe('OtherUsesChangelog', () => {
 
   beforeEach(() => {
     vi.resetAllMocks()
-    vi.mocked(useComplianceReportWithCache).mockReturnValue({
+    useComplianceReportWithCache.mockReturnValue({
       data: mockCurrentReport,
       isLoading: false
     })
@@ -234,7 +277,7 @@ describe('OtherUsesChangelog', () => {
 
   describe('Loading States', () => {
     it('shows loading component when changelog data is loading', () => {
-      vi.mocked(useGetChangeLog).mockReturnValue({
+      useGetChangeLog.mockReturnValue({
         data: null,
         isLoading: true
       })
@@ -244,11 +287,11 @@ describe('OtherUsesChangelog', () => {
     })
 
     it('shows loading component when current report is loading', () => {
-      vi.mocked(useComplianceReportWithCache).mockReturnValue({
+      useComplianceReportWithCache.mockReturnValue({
         data: null,
         isLoading: true
       })
-      vi.mocked(useGetChangeLog).mockReturnValue({
+      useGetChangeLog.mockReturnValue({
         data: [],
         isLoading: false
       })
@@ -258,11 +301,11 @@ describe('OtherUsesChangelog', () => {
     })
 
     it('shows loading component when both are loading', () => {
-      vi.mocked(useComplianceReportWithCache).mockReturnValue({
+      useComplianceReportWithCache.mockReturnValue({
         data: null,
         isLoading: true
       })
-      vi.mocked(useGetChangeLog).mockReturnValue({
+      useGetChangeLog.mockReturnValue({
         data: null,
         isLoading: true
       })
@@ -274,7 +317,7 @@ describe('OtherUsesChangelog', () => {
 
   describe('Empty State Handling', () => {
     it('renders empty state when no changelog data', () => {
-      vi.mocked(useGetChangeLog).mockReturnValue({
+      useGetChangeLog.mockReturnValue({
         data: [],
         isLoading: false
       })
@@ -285,7 +328,7 @@ describe('OtherUsesChangelog', () => {
     })
 
     it('handles undefined changelog data', () => {
-      vi.mocked(useGetChangeLog).mockReturnValue({
+      useGetChangeLog.mockReturnValue({
         data: undefined,
         isLoading: false
       })
@@ -304,7 +347,7 @@ describe('OtherUsesChangelog', () => {
         }
       ]
 
-      vi.mocked(useGetChangeLog).mockReturnValue({
+      useGetChangeLog.mockReturnValue({
         data: mockChangelogData,
         isLoading: false
       })
@@ -332,7 +375,7 @@ describe('OtherUsesChangelog', () => {
         }
       ]
 
-      vi.mocked(useGetChangeLog).mockReturnValue({
+      useGetChangeLog.mockReturnValue({
         data: mockChangelogData,
         isLoading: false
       })
@@ -362,7 +405,7 @@ describe('OtherUsesChangelog', () => {
         }
       ]
 
-      vi.mocked(useGetChangeLog).mockReturnValue({
+      useGetChangeLog.mockReturnValue({
         data: mockChangelogData,
         isLoading: false
       })
@@ -394,7 +437,7 @@ describe('OtherUsesChangelog', () => {
         }
       ]
 
-      vi.mocked(useGetChangeLog).mockReturnValue({
+      useGetChangeLog.mockReturnValue({
         data: mockChangelogData,
         isLoading: false
       })
@@ -419,7 +462,7 @@ describe('OtherUsesChangelog', () => {
         }
       ]
 
-      vi.mocked(useGetChangeLog).mockReturnValue({
+      useGetChangeLog.mockReturnValue({
         data: mockChangelogData,
         isLoading: false
       })
@@ -444,7 +487,7 @@ describe('OtherUsesChangelog', () => {
         }
       ]
 
-      vi.mocked(useGetChangeLog).mockReturnValue({
+      useGetChangeLog.mockReturnValue({
         data: mockChangelogData,
         isLoading: false
       })
@@ -475,7 +518,7 @@ describe('OtherUsesChangelog', () => {
         }
       ]
 
-      vi.mocked(useGetChangeLog).mockReturnValue({
+      useGetChangeLog.mockReturnValue({
         data: mockChangelogData,
         isLoading: false
       })
@@ -506,7 +549,7 @@ describe('OtherUsesChangelog', () => {
         }
       ]
 
-      vi.mocked(useGetChangeLog).mockReturnValue({
+      useGetChangeLog.mockReturnValue({
         data: mockChangelogData,
         isLoading: false
       })
@@ -533,7 +576,7 @@ describe('OtherUsesChangelog', () => {
         }
       ]
 
-      vi.mocked(useGetChangeLog).mockReturnValue({
+      useGetChangeLog.mockReturnValue({
         data: mockChangelogData,
         isLoading: false
       })
@@ -572,7 +615,7 @@ describe('OtherUsesChangelog', () => {
         }
       ]
 
-      vi.mocked(useGetChangeLog).mockReturnValue({
+      useGetChangeLog.mockReturnValue({
         data: mockChangelogData,
         isLoading: false
       })
@@ -618,7 +661,7 @@ describe('OtherUsesChangelog', () => {
         }
       ]
 
-      vi.mocked(useGetChangeLog).mockReturnValue({
+      useGetChangeLog.mockReturnValue({
         data: mockChangelogData,
         isLoading: false
       })
@@ -656,7 +699,7 @@ describe('OtherUsesChangelog', () => {
         }
       ]
 
-      vi.mocked(useGetChangeLog).mockReturnValue({
+      useGetChangeLog.mockReturnValue({
         data: mockChangelogData,
         isLoading: false
       })
@@ -688,7 +731,7 @@ describe('OtherUsesChangelog', () => {
         }
       ]
 
-      vi.mocked(useGetChangeLog).mockReturnValue({
+      useGetChangeLog.mockReturnValue({
         data: mockChangelogData,
         isLoading: false
       })
@@ -705,12 +748,12 @@ describe('OtherUsesChangelog', () => {
 
   describe('Error Handling', () => {
     it('handles missing report data gracefully', () => {
-      vi.mocked(useComplianceReportWithCache).mockReturnValue({
+      useComplianceReportWithCache.mockReturnValue({
         data: null,
         isLoading: false
       })
 
-      vi.mocked(useGetChangeLog).mockReturnValue({
+      useGetChangeLog.mockReturnValue({
         data: [],
         isLoading: false
       })
@@ -731,7 +774,7 @@ describe('OtherUsesChangelog', () => {
         }
       ]
 
-      vi.mocked(useGetChangeLog).mockReturnValue({
+      useGetChangeLog.mockReturnValue({
         data: mockChangelogData,
         isLoading: false
       })
@@ -755,7 +798,7 @@ describe('OtherUsesChangelog', () => {
         }
       ]
 
-      vi.mocked(useGetChangeLog).mockReturnValue({
+      useGetChangeLog.mockReturnValue({
         data: mockChangelogData,
         isLoading: false
       })
@@ -777,7 +820,7 @@ describe('OtherUsesChangelog', () => {
         }
       ]
 
-      vi.mocked(useGetChangeLog).mockReturnValue({
+      useGetChangeLog.mockReturnValue({
         data: mockChangelogData,
         isLoading: false
       })
@@ -802,7 +845,7 @@ describe('OtherUsesChangelog', () => {
         }
       ]
 
-      vi.mocked(useGetChangeLog).mockReturnValue({
+      useGetChangeLog.mockReturnValue({
         data: mockChangelogData,
         isLoading: false
       })
@@ -823,7 +866,7 @@ describe('OtherUsesChangelog', () => {
           }
         ]
 
-        vi.mocked(useGetChangeLog).mockReturnValue({
+        useGetChangeLog.mockReturnValue({
           data: mockChangelogData,
           isLoading: false
         })
@@ -843,7 +886,7 @@ describe('OtherUsesChangelog', () => {
           }
         ]
 
-        vi.mocked(useGetChangeLog).mockReturnValue({
+        useGetChangeLog.mockReturnValue({
           data: mockChangelogData,
           isLoading: false
         })
@@ -863,7 +906,7 @@ describe('OtherUsesChangelog', () => {
           }
         ]
 
-        vi.mocked(useGetChangeLog).mockReturnValue({
+        useGetChangeLog.mockReturnValue({
           data: mockChangelogData,
           isLoading: false
         })
@@ -883,7 +926,7 @@ describe('OtherUsesChangelog', () => {
           }
         ]
 
-        vi.mocked(useGetChangeLog).mockReturnValue({
+        useGetChangeLog.mockReturnValue({
           data: mockChangelogData,
           isLoading: false
         })
@@ -907,7 +950,7 @@ describe('OtherUsesChangelog', () => {
           }
         ]
 
-        vi.mocked(useGetChangeLog).mockReturnValue({
+        useGetChangeLog.mockReturnValue({
           data: mockChangelogData,
           isLoading: false
         })
@@ -934,7 +977,7 @@ describe('OtherUsesChangelog', () => {
           }
         ]
 
-        vi.mocked(useGetChangeLog).mockReturnValue({
+        useGetChangeLog.mockReturnValue({
           data: mockChangelogData,
           isLoading: false
         })
@@ -962,7 +1005,7 @@ describe('OtherUsesChangelog', () => {
           }
         ]
 
-        vi.mocked(useGetChangeLog).mockReturnValue({
+        useGetChangeLog.mockReturnValue({
           data: mockChangelogData,
           isLoading: false
         })
@@ -985,7 +1028,7 @@ describe('OtherUsesChangelog', () => {
           }
         ]
 
-        vi.mocked(useGetChangeLog).mockReturnValue({
+        useGetChangeLog.mockReturnValue({
           data: mockChangelogData,
           isLoading: false
         })
@@ -1015,7 +1058,7 @@ describe('OtherUsesChangelog', () => {
           }
         ]
 
-        vi.mocked(useGetChangeLog).mockReturnValue({
+        useGetChangeLog.mockReturnValue({
           data: mockChangelogData,
           isLoading: false
         })

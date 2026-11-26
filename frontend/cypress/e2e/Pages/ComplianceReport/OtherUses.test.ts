@@ -8,6 +8,17 @@ const SELECTORS = {
 }
 const OTHER_USES_CHANGELOG_GROUP_UUID = 'mock-other-uses-group'
 
+interface OtherUsesChangelogMockOptions {
+  reportId: string
+  fuelType: string
+  fuelCategory: string
+  provisionOfTheAct: string
+  initialQuantity: string
+  updatedQuantity: string
+  units: string
+  expectedUse: string
+}
+
 /**
  * Click the save button and wait until we are back on the compliance report
  * VIEW page (URL ends with /<compliancePeriod>/<reportId> with no extra path).
@@ -34,7 +45,7 @@ const setupOtherUsesChangelogMocks = ({
   updatedQuantity,
   units,
   expectedUse
-}) => {
+}: OtherUsesChangelogMockOptions) => {
   const previousReportId = 991002
 
   // Supplier users call /organization/:orgID/reports/:reportID, not /reports/:reportID,
@@ -134,12 +145,12 @@ const setupOtherUsesChangelogMocks = ({
 When(
   'the supplier adds an other uses record with fuel type {string}, fuel category {string}, provision {string}, quantity {string}, units {string}, and expected use {string}',
   (
-    fuelType,
-    fuelCategory,
-    provisionOfTheAct,
-    quantitySupplied,
-    units,
-    expectedUse
+    fuelType: string,
+    fuelCategory: string,
+    provisionOfTheAct: string,
+    quantitySupplied: string,
+    units: string,
+    expectedUse: string
   ) => {
     cy.get(SELECTORS.scheduleLink).click()
     cy.get(SELECTORS.addRowButton).click({ force: true })
@@ -147,8 +158,9 @@ When(
     cy.get('div.ag-center-cols-container div.ag-row', { timeout: 20000 })
       .last()
       .invoke('attr', 'row-index')
-      .then((rowIndex) => {
+      .then((rowIndex: string | undefined) => {
         expect(rowIndex, 'newly added other uses row-index').to.exist
+        if (!rowIndex) throw new Error('New other uses row has no row-index')
         const rowSelector = `div.ag-row[row-index="${rowIndex}"]`
 
         cy.selectWithRetry(
@@ -192,17 +204,18 @@ When(
 
 When(
   'the supplier updates the first other uses quantity to {string}',
-  (updatedQuantity) => {
+  (updatedQuantity: string) => {
     cy.get(SELECTORS.scheduleLink).click()
     // Edit the existing row created in the previous step.
-    cy.get('@lastOtherUsesFuelType').then((fuelType) => {
+    cy.get('@lastOtherUsesFuelType').then((fuelType: string) => {
       cy.contains('div.ag-cell[col-id="fuelType"]', fuelType, {
         timeout: 30000
       })
         .closest('div.ag-row')
         .invoke('attr', 'row-index')
-        .then((rowIndex) => {
+        .then((rowIndex: string | undefined) => {
           expect(rowIndex, 'row-index for created other uses row').to.exist
+          if (!rowIndex) throw new Error('Other uses row has no row-index')
           const rowSelector = `div.ag-row[row-index="${rowIndex}"]`
           cy.inputTextWithRetry(
             `${rowSelector} div.ag-cell[col-id="quantitySupplied"]`,
@@ -217,14 +230,16 @@ When(
 
 When(
   'the supplier opens the other uses changelog view for fuel type {string} with original quantity {string} and updated quantity {string}',
-  (fuelType, initialQuantity, updatedQuantity) => {
+  (fuelType: string, initialQuantity: string, updatedQuantity: string) => {
     // Use cy.visit() so location.state has no newReport:true → ReportDetails is rendered.
-    cy.location('pathname').then((pathname) => {
+    cy.location('pathname').then((pathname: string) => {
       const normalizedPath = pathname.replace(/\/+$/, '')
       const pathMatch = normalizedPath.match(
         /\/compliance-reporting\/(\d+)\/(\d+)$/
       )
       expect(pathMatch, 'compliance report view path').to.exist
+      if (!pathMatch)
+        throw new Error('Unable to determine compliance report path')
       const compliancePeriod = pathMatch[1]
       const reportId = pathMatch[2]
       const canonicalViewPath = `/compliance-reporting/${compliancePeriod}/${reportId}`
@@ -264,23 +279,26 @@ When(
 // Then steps
 // ---------------------------------------------------------------------------
 
-Then('the other uses summary includes fuel type {string}', (fuelType) => {
-  cy.get(SELECTORS.scheduleLink, { timeout: 20000 })
-    .should('be.visible')
-    .click()
-  cy.contains('[col-id="fuelType"]', fuelType, { timeout: 30000 })
-    .scrollIntoView()
-    .should('exist')
-})
+Then(
+  'the other uses summary includes fuel type {string}',
+  (fuelType: string) => {
+    cy.get(SELECTORS.scheduleLink, { timeout: 20000 })
+      .should('be.visible')
+      .click()
+    cy.contains('[col-id="fuelType"]', fuelType, { timeout: 30000 })
+      .scrollIntoView()
+      .should('exist')
+  }
+)
 
 Then(
   'the other uses summary includes quantity {string}',
-  (formattedQuantity) => {
+  (formattedQuantity: string) => {
     cy.get(SELECTORS.scheduleLink, { timeout: 20000 })
       .should('be.visible')
       .click()
     // Assert quantity on the same row as the created fuel type.
-    cy.get('@lastOtherUsesFuelType').then((fuelType) => {
+    cy.get('@lastOtherUsesFuelType').then((fuelType: string) => {
       cy.contains('div.ag-cell[col-id="fuelType"]', fuelType, {
         timeout: 30000
       })

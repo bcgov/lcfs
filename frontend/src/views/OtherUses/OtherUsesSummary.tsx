@@ -22,8 +22,8 @@ interface OtherUse {
 }
 
 interface OtherUsesSummaryProps {
-  data?: { otherUses?: OtherUse[] }
-  status?: string
+  data?: { otherUses?: OtherUse[] | null } | null
+  status?: string | null
 }
 
 interface PaginationFilter {

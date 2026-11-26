@@ -2,6 +2,16 @@ import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import { screen, fireEvent, waitFor } from '@testing-library/react'
 import { test } from '@/tests/utils/fixtures'
 import { AddEditOtherUses } from '../AddEditOtherUses'
+interface GridReadyMockParams {
+  api: {
+    getLastDisplayedRowIndex: () => number
+    startEditingCell: (params: { rowIndex: number; colKey: string }) => void
+  }
+}
+interface GridEditorMockProps {
+  onGridReady?: (params: GridReadyMockParams) => void
+  autoSizeStrategy?: unknown
+}
 
 // Hook results must be stable objects: fresh ones each render re-trigger the
 // page's data effects forever.
@@ -11,12 +21,12 @@ const { mockGridApi, gridEditorProps, hookResults } = vi.hoisted(() => ({
     getLastDisplayedRowIndex: vi.fn(() => 0),
     startEditingCell: vi.fn()
   },
-  gridEditorProps: { current: null },
+  gridEditorProps: { current: null as GridEditorMockProps | null },
   hookResults: {
     navigate: vi.fn(),
     location: { state: null },
     params: { complianceReportId: '123', compliancePeriod: '2024' },
-    translation: { t: (key) => key },
+    translation: { t: (key: string) => key },
     options: {
       data: { fuelTypes: [], expectedUses: [] },
       isLoading: false,
@@ -28,8 +38,8 @@ const { mockGridApi, gridEditorProps, hookResults } = vi.hoisted(() => ({
   }
 }))
 
-vi.mock('react-router-dom', async (orig) => ({
-  ...(await orig()),
+vi.mock('react-router-dom', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('react-router-dom')>()),
   useNavigate: () => hookResults.navigate,
   useLocation: () => hookResults.location,
   useParams: () => hookResults.params
@@ -49,16 +59,19 @@ vi.mock('@/hooks/useComplianceReports', () => ({
   useComplianceReportWithCache: () => hookResults.report
 }))
 
-vi.mock('../_schema', async (orig) => {
+vi.mock('../_schema', async (importOriginal) => {
   const colDefs = [{ field: 'fuelType' }]
-  return { ...(await orig()), otherUsesColDefs: () => colDefs }
+  return {
+    ...(await importOriginal<typeof import('../_schema')>()),
+    otherUsesColDefs: () => colDefs
+  }
 })
 
 vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
-  BCGridEditor: (props) => {
+  BCGridEditor: (props: GridEditorMockProps) => {
     gridEditorProps.current = props
     return (
-      <button onClick={() => props.onGridReady({ api: mockGridApi })}>
+      <button onClick={() => props.onGridReady?.({ api: mockGridApi })}>
         Grid Ready
       </button>
     )
@@ -79,6 +92,6 @@ describe('AddEditOtherUses', () => {
       expect(mockGridApi.startEditingCell).toHaveBeenCalled()
     })
     expect(mockGridApi.sizeColumnsToFit).not.toHaveBeenCalled()
-    expect(gridEditorProps.current.autoSizeStrategy).toBeUndefined()
+    expect(gridEditorProps.current?.autoSizeStrategy).toBeUndefined()
   })
 })

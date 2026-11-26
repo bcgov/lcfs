@@ -3,10 +3,38 @@ import { describe, expect, beforeEach, vi } from 'vite-plus/test'
 import { OtherUsesSummary } from '../OtherUsesSummary'
 import { test } from '@/tests/utils/fixtures'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
+import type {
+  BCPaginationOptions,
+  BCGridRow
+} from '@/components/BCDataGrid/types'
+import type { ReactNode } from 'react'
+import type { RenderOptions, RenderResult } from '@testing-library/react'
 
-let render
+interface SummaryViewerMockProps {
+  gridKey?: string
+  queryData?: {
+    data?: {
+      pagination?: { total?: number; page?: number; size?: number }
+      [key: string]: unknown
+    } | null
+  }
+  dataKey?: string
+  defaultColDef?: { cellRenderer?: unknown }
+  suppressPagination?: boolean
+  onPaginationChange?: (pagination: BCPaginationOptions) => void
+  getRowId?: (params: { data: BCGridRow }) => string
+  autoSizeStrategy?: unknown
+  enableCellTextSelection?: boolean
+  enablePageCaching?: boolean
+}
+
+type SummaryRenderOptions = Omit<RenderOptions, 'wrapper'> & {
+  fixtureOptions?: undefined
+}
+
+let render: (ui: ReactNode, options?: SummaryRenderOptions) => RenderResult
 const fixtureOptions = undefined
-const it = (name, fn) =>
+const it = (name: string, fn: () => unknown) =>
   test(name, ({ render: fixtureRender, theme }) => {
     render = (ui, options) => fixtureRender(ui, [theme], options)
     return fn()
@@ -25,53 +53,61 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
     autoSizeStrategy,
     enableCellTextSelection,
     enablePageCaching
-  }) => (
-    <div data-test="bc-grid-viewer">
-      <div data-test="grid-key">{gridKey}</div>
-      <div data-test="data-key">{dataKey}</div>
-      <div data-test="row-count">
-        {queryData?.data?.[dataKey]?.length || 0} rows
+  }: SummaryViewerMockProps) => {
+    const rows = queryData?.data?.[dataKey ?? '']
+    const rowCount = Array.isArray(rows) ? rows.length : 0
+    return (
+      <div data-test="bc-grid-viewer">
+        <div data-test="grid-key">{gridKey}</div>
+        <div data-test="data-key">{dataKey}</div>
+        <div data-test="row-count">{rowCount} rows</div>
+        <div data-test="total-count">
+          {queryData?.data?.pagination?.total || 0} total
+        </div>
+        <div data-test="current-page">
+          {queryData?.data?.pagination?.page || 1}
+        </div>
+        <div data-test="page-size">
+          {queryData?.data?.pagination?.size || 10}
+        </div>
+        <div data-test="pagination-suppressed">
+          {suppressPagination ? 'pagination-suppressed' : 'pagination-enabled'}
+        </div>
+        <div data-test="has-pagination-change">
+          {onPaginationChange
+            ? 'has-pagination-change'
+            : 'no-pagination-change'}
+        </div>
+        <div data-test="has-get-row-id">
+          {getRowId ? 'has-get-row-id' : 'no-get-row-id'}
+        </div>
+        <div data-test="has-auto-size">
+          {autoSizeStrategy ? 'has-auto-size' : 'no-auto-size'}
+        </div>
+        <div data-test="cell-text-selection">
+          {enableCellTextSelection
+            ? 'text-selection-enabled'
+            : 'text-selection-disabled'}
+        </div>
+        <div data-test="page-caching">
+          {enablePageCaching ? 'page-caching-enabled' : 'page-caching-disabled'}
+        </div>
+        <div data-test="default-col-def-cell-renderer">
+          {defaultColDef?.cellRenderer
+            ? 'has-cell-renderer'
+            : 'no-cell-renderer'}
+        </div>
+        <button
+          data-test="pagination-trigger"
+          onClick={() =>
+            onPaginationChange && onPaginationChange({ page: 2, size: 5 })
+          }
+        >
+          Change Pagination
+        </button>
       </div>
-      <div data-test="total-count">
-        {queryData?.data?.pagination?.total || 0} total
-      </div>
-      <div data-test="current-page">
-        {queryData?.data?.pagination?.page || 1}
-      </div>
-      <div data-test="page-size">{queryData?.data?.pagination?.size || 10}</div>
-      <div data-test="pagination-suppressed">
-        {suppressPagination ? 'pagination-suppressed' : 'pagination-enabled'}
-      </div>
-      <div data-test="has-pagination-change">
-        {onPaginationChange ? 'has-pagination-change' : 'no-pagination-change'}
-      </div>
-      <div data-test="has-get-row-id">
-        {getRowId ? 'has-get-row-id' : 'no-get-row-id'}
-      </div>
-      <div data-test="has-auto-size">
-        {autoSizeStrategy ? 'has-auto-size' : 'no-auto-size'}
-      </div>
-      <div data-test="cell-text-selection">
-        {enableCellTextSelection
-          ? 'text-selection-enabled'
-          : 'text-selection-disabled'}
-      </div>
-      <div data-test="page-caching">
-        {enablePageCaching ? 'page-caching-enabled' : 'page-caching-disabled'}
-      </div>
-      <div data-test="default-col-def-cell-renderer">
-        {defaultColDef?.cellRenderer ? 'has-cell-renderer' : 'no-cell-renderer'}
-      </div>
-      <button
-        data-test="pagination-trigger"
-        onClick={() =>
-          onPaginationChange && onPaginationChange({ page: 2, size: 5 })
-        }
-      >
-        Change Pagination
-      </button>
-    </div>
-  )
+    )
+  }
 }))
 
 // Mock the schema
