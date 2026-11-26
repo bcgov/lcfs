@@ -2,12 +2,22 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 
-const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url)))
-const lock = JSON.parse(await readFile(new URL('../package-lock.json', import.meta.url)))
+const packageJson = JSON.parse(
+  await readFile(new URL('../package.json', import.meta.url))
+)
+const lock = JSON.parse(
+  await readFile(new URL('../package-lock.json', import.meta.url))
+)
 
 test('spreadsheet support uses the patched SheetJS vendor build', () => {
-  assert.match(packageJson.dependencies.xlsx, /^https:\/\/cdn\.sheetjs\.com\/xlsx-0\.20\.[2-9]/)
-  assert.match(lock.packages['node_modules/xlsx'].resolved, /^https:\/\/cdn\.sheetjs\.com\/xlsx-0\.20\./)
+  assert.match(
+    packageJson.dependencies.xlsx,
+    /^https:\/\/cdn\.sheetjs\.com\/xlsx-0\.20\.[2-9]/
+  )
+  assert.match(
+    lock.packages['node_modules/xlsx'].resolved,
+    /^https:\/\/cdn\.sheetjs\.com\/xlsx-0\.20\./
+  )
 })
 
 test('rich text editor uses the maintained React wrapper and patched Quill fork', () => {

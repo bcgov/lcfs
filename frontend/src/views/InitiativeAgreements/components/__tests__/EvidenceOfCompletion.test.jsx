@@ -765,15 +765,7 @@ describe('EvidenceOfCompletion', () => {
       JSON.parse(
         screen.getByTestId('eoc-description-1').getAttribute('data-formats')
       )
-    ).toEqual([
-      'size',
-      'bold',
-      'italic',
-      'align',
-      'list',
-      'indent',
-      'link'
-    ])
+    ).toEqual(['size', 'bold', 'italic', 'align', 'list', 'indent', 'link'])
     expect(
       JSON.parse(
         screen.getByTestId('eoc-description-1').getAttribute('data-toolbar')
