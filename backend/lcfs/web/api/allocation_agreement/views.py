@@ -162,6 +162,7 @@ async def get_allocation_agreements_index(
     "/index/export",
     response_model=AllocationAgreementIndexResponseSchema,
     status_code=status.HTTP_200_OK,
+    dependencies=[Depends(extended_statement_timeout)],
 )
 @view_handler([RoleEnum.GOVERNMENT])
 async def export_allocation_agreements_index(
