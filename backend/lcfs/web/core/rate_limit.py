@@ -53,14 +53,36 @@ def _default_limit() -> RateLimit:
 def client_ip(request: Request) -> str:
     """Resolve the originating client IP for rate-limiting purposes.
 
-    Uvicorn is configured with ``--proxy-headers`` and
-    ``--forwarded-allow-ips="*"`` (see ``lcfs.__main__``), which
-    rewrites ``request.client.host`` to the left-most ``X-Forwarded-For``
-    entry when the request arrives via the OpenShift router. Because
-    LCFS pods are never directly reachable from the internet, that
-    router is the only possible TCP peer, so we can trust the rewritten
-    value without an additional CIDR allow-list here.
+    Uvicorn runs with ``--proxy-headers`` and ``--forwarded-allow-ips="*"``
+    (see ``lcfs.__main__``), which makes it rewrite ``request.client.host``
+    to the LEFT-MOST ``X-Forwarded-For`` entry. That entry is whatever the
+    caller put in their own request and is fully attacker-controlled -- a
+    client can send ``X-Forwarded-For: 1.1.1.1`` and get a fresh rate-limit
+    bucket on every request. ``request.client.host`` can therefore not be
+    trusted for this.
+
+    LCFS pods are never directly reachable from the internet, so the
+    OpenShift router is the only possible TCP peer and the only hop that
+    can append to ``X-Forwarded-For``. The entry *it* appends -- the
+    right-most one -- is the one real, un-spoofable signal we have, so we
+    read the raw header ourselves and use that instead of the (possibly
+    attacker-chosen) value uvicorn rewrote ``request.client.host`` to.
+
+    ``X-Forwarded-For`` can legally arrive as several header lines rather
+    than a single comma-joined one. ``Headers.get()`` only returns the
+    first such line, so a caller could smuggle a spoofed value in first
+    and hide the router-appended (trustworthy) one from us. We use
+    ``getlist()`` to collect every line before splitting on commas.
     """
+    forwarded_for_lines = request.headers.getlist("x-forwarded-for")
+    hops = [
+        hop.strip()
+        for line in forwarded_for_lines
+        for hop in line.split(",")
+        if hop.strip()
+    ]
+    if hops:
+        return hops[-1]
     return request.client.host if request.client else "unknown"
 
 

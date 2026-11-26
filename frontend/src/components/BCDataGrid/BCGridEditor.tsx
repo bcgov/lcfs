@@ -283,16 +283,18 @@ export const BCGridEditor = ({
 
       // Save rows sequentially so each save completes before the next starts.
       // This prevents cache invalidation from wiping unsaved rows.
-      for (const node of transactions!.add) {
-        await onCellEditingStopped!({
-          node,
-          data: node.data,
-          oldValue: '',
-          newValue: node.data![colDef.field as string],
-          colDef,
-          column: firstEditableCol || editableColumns[0],
-          api: gridApi
-        } as import('./types').BCGridEditContext<BCGridRow>)
+      if (onCellEditingStopped) {
+        for (const node of transactions!.add) {
+          await onCellEditingStopped({
+            node,
+            data: node.data,
+            oldValue: '',
+            newValue: node.data![colDef.field as string],
+            colDef,
+            column: firstEditableCol || editableColumns[0],
+            api: gridApi
+          } as import('./types').BCGridEditContext<BCGridRow>)
+        }
       }
     },
     [findFirstEditableColumn, onCellEditingStopped, ref]

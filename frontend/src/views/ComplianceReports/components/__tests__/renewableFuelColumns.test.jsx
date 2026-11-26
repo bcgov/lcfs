@@ -33,8 +33,54 @@ const createBaseSummaryData = () => {
     jetFuel: 0
   }
 
+  rows[SUMMARY.LINE_6] = {
+    ...rows[SUMMARY.LINE_6],
+    maxGasoline: 7_500,
+    maxDiesel: 0,
+    maxJetFuel: 0
+  }
+  rows[SUMMARY.LINE_8] = {
+    ...rows[SUMMARY.LINE_8],
+    maxGasoline: 0,
+    maxDiesel: 500,
+    maxJetFuel: 0
+  }
+
   return rows
 }
+
+describe('renewableFuelColumns retention and deferral', () => {
+  it('uses backend caps instead of comparing displayed Lines 2 and 4', () => {
+    const data = createBaseSummaryData()
+    data[SUMMARY.LINE_2].diesel = 4_174_308
+    data[SUMMARY.LINE_4].diesel = 13_516_538
+    data[SUMMARY.LINE_6].maxDiesel = 675_827
+    data[SUMMARY.LINE_8].maxDiesel = 0
+    data[SUMMARY.LINE_6].maxGasoline = 0
+    data[SUMMARY.LINE_8].maxGasoline = 123
+
+    const columns = renewableFuelColumns(t, data, true, '2025')
+    const diesel = columns.find((column) => column.id === 'diesel')
+    const gasoline = columns.find((column) => column.id === 'gasoline')
+
+    expect(diesel.editableCells).toContain(SUMMARY.LINE_6)
+    expect(diesel.editableCells).not.toContain(SUMMARY.LINE_8)
+    expect(diesel.cellConstraints[SUMMARY.LINE_6].max).toBe(675_827)
+    expect(gasoline.editableCells).toContain(SUMMARY.LINE_8)
+    expect(gasoline.editableCells).not.toContain(SUMMARY.LINE_6)
+    expect(gasoline.cellConstraints[SUMMARY.LINE_8].max).toBe(123)
+  })
+
+  it('does not enable either line when both caps are zero', () => {
+    const data = createBaseSummaryData()
+    data[SUMMARY.LINE_6].maxGasoline = 0
+    const gasoline = renewableFuelColumns(t, data, true, '2025').find(
+      (column) => column.id === 'gasoline'
+    )
+    expect(gasoline.editableCells).not.toContain(SUMMARY.LINE_6)
+    expect(gasoline.editableCells).not.toContain(SUMMARY.LINE_8)
+  })
+})
 
 describe('renewableFuelColumns line 7 behaviour', () => {
   it.each(['2023', '2024'])(

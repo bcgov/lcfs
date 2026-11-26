@@ -10,6 +10,7 @@
 .spyproject
 
 # Environment and local configuration
+.private/
 .env
 .venv
 ENV/
