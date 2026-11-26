@@ -205,23 +205,27 @@ def ensure_package_editable(agreement, user=None) -> None:
     one that user may not edit.
 
     Every write path that changes the package calls this, so the lock holds
-    for an API call as well as the page. A closed package is 409, not 403:
-    the request is understood and allowed for this caller, but the
-    agreement's state refuses it, and view_handler would replace a 403's
-    message. A caller who may not edit an open package is 403.
+    for an API call as well as the page. A caller who may not edit the
+    package in its current state (the Director outside a change order) is
+    403. A closed package is 409, not 403: the request is understood and
+    allowed for this caller, but the agreement's state refuses it, and
+    view_handler would replace a 403's message.
     """
-    if not is_package_editable(agreement):
-        raise HTTPException(
-            status_code=409,
-            detail=(
-                f"This initiative agreement is {_lifecycle(agreement) or 'not set'}, "
-                "so its package can't be edited directly."
-            ),
-        )
-    if user is not None and not is_package_editable(agreement, user):
+    lifecycle = _lifecycle(agreement)
+    if user is not None and not may_edit_package(
+        user, lifecycle == LIFECYCLE_STATUS_CHANGE_ORDER_DRAFT
+    ):
         raise HTTPException(
             status_code=403,
             detail="You are not permitted to edit this initiative agreement.",
+        )
+    if lifecycle not in LIFECYCLE_STATUSES_EDITABLE:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"This initiative agreement is {lifecycle or 'not set'}, "
+                "so its package can't be edited directly."
+            ),
         )
 
 

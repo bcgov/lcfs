@@ -787,13 +787,26 @@ async def test_the_director_edits_only_inside_a_change_order(dbsession):
 @pytest.mark.anyio
 async def test_a_designated_action_is_removed_only_in_a_change_order(dbsession):
     package = await _package(dbsession, "IA-26CO18")
+    analyst = _service(dbsession, ANALYST)
 
-    with pytest.raises(HTTPException) as error:
-        await _service(dbsession, ANALYST).remove_designated_action(
+    # Underway, the package is locked (#5554).
+    with pytest.raises(HTTPException) as locked:
+        await analyst.remove_designated_action(
             package.second.designated_action_id, ANALYST
         )
+    assert locked.value.status_code == 409
 
-    assert error.value.status_code == 400
+    # In a Draft it is open, but removal is a change order's.
+    package.agreement.lifecycle_status_id = await _lifecycle_status_id(
+        dbsession, "Draft"
+    )
+    await dbsession.flush()
+    await dbsession.refresh(package.agreement, ["lifecycle_status"])
+    with pytest.raises(HTTPException) as draft:
+        await analyst.remove_designated_action(
+            package.second.designated_action_id, ANALYST
+        )
+    assert draft.value.status_code == 400
 
 
 @pytest.mark.anyio
@@ -1049,3 +1062,63 @@ async def test_versions_are_idir_only(
     )
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+# --- With the Underway edit lock (#5554) -------------------------------------
+
+
+@pytest.mark.anyio
+async def test_the_package_is_locked_again_once_the_change_order_is_accepted(
+    dbsession,
+):
+    package = await _package(dbsession, "IA-26CO27")
+    with pytest.raises(HTTPException) as before:
+        await _edit_first_action(dbsession, package)
+    assert before.value.status_code == 409
+
+    await _start(dbsession, package)
+    await _edit_first_action(dbsession, package)
+    profile = await _accept(dbsession, package)
+
+    assert profile.package_editable is False
+    with pytest.raises(HTTPException) as after:
+        await _edit_first_action(dbsession, package, name="One more change")
+    assert after.value.status_code == 409
+
+
+def _agreement_in(lifecycle):
+    return SimpleNamespace(lifecycle_status=SimpleNamespace(status=lifecycle))
+
+
+def test_attachments_can_change_in_a_change_order_draft_but_not_underway():
+    from lcfs.web.api.initiative_agreement.workflow import (
+        ensure_package_document_writable,
+    )
+
+    # No error: files on the agreement and its actions are open in the draft.
+    for parent_type in ("initiativeAgreement", "designatedAction"):
+        ensure_package_document_writable(
+            _agreement_in(CHANGE_ORDER_DRAFT), parent_type, DIRECTOR
+        )
+    with pytest.raises(HTTPException) as error:
+        ensure_package_document_writable(
+            _agreement_in("Underway"), "initiativeAgreement", ANALYST
+        )
+    assert error.value.status_code == 409
+
+
+def test_the_lock_lets_the_director_edit_only_in_a_change_order():
+    from lcfs.web.api.initiative_agreement.workflow import (
+        ensure_package_editable,
+        is_package_editable,
+    )
+
+    assert is_package_editable(_agreement_in("Draft"), ANALYST)
+    assert not is_package_editable(_agreement_in("Draft"), DIRECTOR)
+    assert is_package_editable(_agreement_in(CHANGE_ORDER_DRAFT), DIRECTOR)
+    # Without a user the lock answers for the lifecycle alone, as the
+    # profile's package_editable does.
+    assert is_package_editable(_agreement_in(CHANGE_ORDER_DRAFT))
+    with pytest.raises(HTTPException) as error:
+        ensure_package_editable(_agreement_in("Draft"), DIRECTOR)
+    assert error.value.status_code == 403

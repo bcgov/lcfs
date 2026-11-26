@@ -25,24 +25,33 @@ const errorDetail = (err, fallback) =>
   err?.response?.data?.detail || err?.message || fallback
 
 /**
- * The agreement's change order controls (#5555): Start on an underway
- * agreement, and while one is drafted, a banner with Accept (Director) and
- * Discard (manager or Director). The server decides which actions the
- * caller has (`changeOrderActions`); this renders only those.
+ * The draft banner while a change order is open (#5555), with Accept
+ * (Director) and Discard (manager or Director). The server decides which
+ * actions the caller has (`changeOrderActions`); this renders only those.
+ * An organization never gets a change order, so it renders nothing for one.
  */
 export const ChangeOrderPanel = ({ agreement, onNotify }) => {
-  // An organization never gets a change order or any action, so this
-  // renders nothing for it.
+  if (!agreement.changeOrder) return null
+  return <ChangeOrderControls agreement={agreement} onNotify={onNotify} />
+}
+
+/**
+ * "Start change order" for an underway agreement (#5555), with its
+ * confirmation. It sits in the read-only notice's action slot (#5554).
+ */
+export const StartChangeOrderButton = ({ agreement, onNotify }) => {
   if (
-    !agreement.changeOrder &&
+    agreement.changeOrder ||
     !(agreement.changeOrderActions ?? []).includes('start')
   ) {
     return null
   }
-  return <ChangeOrderControls agreement={agreement} onNotify={onNotify} />
+  return (
+    <ChangeOrderControls agreement={agreement} onNotify={onNotify} inline />
+  )
 }
 
-const ChangeOrderControls = ({ agreement, onNotify }) => {
+const ChangeOrderControls = ({ agreement, onNotify, inline = false }) => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const agreementId = agreement.initiativeAgreementId
   const actions = agreement.changeOrderActions ?? []
@@ -142,7 +151,11 @@ const ChangeOrderControls = ({ agreement, onNotify }) => {
   )
 
   return (
-    <Box data-test="change-order-panel" sx={{ mb: 3 }}>
+    <Box
+      component={inline ? 'span' : 'div'}
+      data-test={inline ? 'start-change-order-control' : 'change-order-panel'}
+      sx={inline ? undefined : { mb: 3 }}
+    >
       {changeOrder ? (
         <BCAlert
           severity="warning"
@@ -204,18 +217,17 @@ const ChangeOrderControls = ({ agreement, onNotify }) => {
           </Box>
         </BCAlert>
       ) : (
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <BCButton
-            type="button"
-            variant="outlined"
-            color="primary"
-            size="small"
-            data-test="start-change-order"
-            onClick={() => open('start')}
-          >
-            {t('initiativeAgreement:changeOrder.start')}
-          </BCButton>
-        </Box>
+        <BCButton
+          type="button"
+          variant="outlined"
+          color="primary"
+          size="small"
+          data-test="start-change-order"
+          onClick={() => open('start')}
+          sx={{ whiteSpace: 'nowrap' }}
+        >
+          {t('initiativeAgreement:changeOrder.start')}
+        </BCButton>
       )}
 
       <BCModal

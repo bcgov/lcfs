@@ -185,7 +185,12 @@ const InitiativeAgreementDetailBase = () => {
             // here (#5555). A BCeID-initiated change order can add its own
             // action here later.
             action={
-              <StartChangeOrderButton agreement={agreement} onNotify={notify} />
+              agreement.changeOrderActions?.includes('start') ? (
+                <StartChangeOrderButton
+                  agreement={agreement}
+                  onNotify={notify}
+                />
+              ) : null
             }
           />
         </Role>

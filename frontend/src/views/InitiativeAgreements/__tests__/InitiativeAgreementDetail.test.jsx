@@ -1,6 +1,6 @@
 import 'react'
 import { describe, expect, vi, beforeEach } from 'vite-plus/test'
-import { fireEvent, screen } from '@testing-library/react'
+import { fireEvent, screen, within } from '@testing-library/react'
 import { roles } from '@/constants/roles'
 import { InitiativeAgreementDetail } from '../InitiativeAgreementDetail'
 import { useInitiativeAgreementPageStore } from '@/stores/useInitiativeAgreementPageStore'
@@ -577,7 +577,7 @@ describe('InitiativeAgreementDetail', () => {
       })
     })
 
-    test('says why, naming the status, with no change order action yet', ({
+    test('says why, naming the status, with no action the API did not offer', ({
       render,
       app
     }) => {
@@ -586,10 +586,27 @@ describe('InitiativeAgreementDetail', () => {
       expect(notice).toHaveTextContent(
         'initiativeAgreement:detail.packageLockedTitle'
       )
-      // #5555 fills this slot with "Start change order".
       expect(
         screen.queryByTestId('package-lock-notice-action')
       ).not.toBeInTheDocument()
+    })
+
+    test('offers Start change order in the notice when the API does (#5555)', ({
+      render,
+      app
+    }) => {
+      mockAgreement.mockReturnValue({
+        data: { ...lockedAgreement, changeOrderActions: ['start'] },
+        isLoading: false,
+        isError: false,
+        error: null
+      })
+      render(<InitiativeAgreementDetail />, app)
+      expect(
+        within(screen.getByTestId('package-lock-notice-action')).getByTestId(
+          'start-change-order'
+        )
+      ).toBeInTheDocument()
     })
 
     test('shows no notice while the package is editable', ({ render, app }) => {

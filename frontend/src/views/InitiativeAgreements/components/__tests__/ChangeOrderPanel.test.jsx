@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, vi } from 'vite-plus/test'
 import { format, addDays } from 'date-fns'
 
-import { ChangeOrderPanel } from '../ChangeOrderPanel'
+import { ChangeOrderPanel, StartChangeOrderButton } from '../ChangeOrderPanel'
 import { ChangeOrderStateChip } from '../ChangeOrderStateChip'
 import { test } from '@/tests/utils/fixtures'
 
@@ -54,9 +54,16 @@ describe('ChangeOrderPanel', () => {
   test('renders nothing for an organization', ({ render, app }) => {
     // The API gives an organization neither a change order nor an action,
     // even while IDIR drafts one.
-    render(<ChangeOrderPanel agreement={underway()} />, app)
+    render(
+      <>
+        <ChangeOrderPanel agreement={underway()} />
+        <StartChangeOrderButton agreement={underway()} />
+      </>,
+      app
+    )
 
     expect(screen.queryByTestId('change-order-panel')).toBeNull()
+    expect(screen.queryByTestId('start-change-order')).toBeNull()
   })
 
   test('starts a change order after confirmation', async ({ render, app }) => {
@@ -66,7 +73,7 @@ describe('ChangeOrderPanel', () => {
       onSuccess({ changeOrder: { changeOrderNumber: 1 } })
     )
     render(
-      <ChangeOrderPanel
+      <StartChangeOrderButton
         agreement={underway({ changeOrderActions: ['start'] })}
         onNotify={onNotify}
       />,
