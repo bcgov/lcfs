@@ -755,26 +755,6 @@ export const PublicDashboard = () => {
           </BCBox>
         </BCBox>
       </BCBox>
-
-      {/* Login CTA band */}
-      <BCBox sx={{ ...fullBleed, backgroundColor: NAVY, mt: 'auto' }}>
-        <BCBox
-          sx={{
-            ...innerContainer,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 3,
-            py: 3.5,
-            flexWrap: 'wrap'
-          }}
-        >
-          <BCTypography sx={{ fontSize: 17, color: '#fff', maxWidth: 640 }}>
-            {t('publicDashboard.login.prompt')}
-          </BCTypography>
-          {renderLoginButtons()}
-        </BCBox>
-      </BCBox>
     </BCBox>
   )
 }

@@ -1732,24 +1732,22 @@ export const PublicMarketData = () => {
             >
               {t('publicDashboard.marketData.subtitle')}
             </BCTypography>
+            <BCTypography
+              sx={{
+                fontSize: 13,
+                color: '#5A6B7A',
+                lineHeight: 1.6,
+                mt: 1
+              }}
+              data-test="market-data-disclaimer"
+            >
+              {t('publicDashboard.marketData.disclaimer')}
+            </BCTypography>
           </BCBox>
           <BCBox
             className="no-print"
             sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}
           >
-            <BCBox
-              sx={{
-                fontSize: 12,
-                color: LINK,
-                border: '1px solid #B7CCE0',
-                borderRadius: '99px',
-                px: 1.5,
-                py: 0.5,
-                background: '#F4F8FB'
-              }}
-            >
-              {t('publicDashboard.marketData.aggregatedNote')}
-            </BCBox>
             <Button
               disableElevation
               onClick={downloadCombinedExcel}

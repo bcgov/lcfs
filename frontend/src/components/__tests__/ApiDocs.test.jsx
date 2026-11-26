@@ -57,7 +57,11 @@ describe('ApiDocs.jsx', () => {
       i18n
     }) => {
       keycloak.useKeycloak.mockReturnValue({
-        keycloak: { authenticated: true, idToken: 'idToken' }
+        keycloak: {
+          authenticated: true,
+          idToken: 'idToken',
+          token: 'accessToken'
+        }
       })
 
       render(<ApiDocs />, [query, theme, localization, router, i18n])
@@ -68,7 +72,7 @@ describe('ApiDocs.jsx', () => {
       expect(
         screen.getByText('http://localhost:8000/api/openapi.json')
       ).toBeInTheDocument()
-      expect(screen.getByText('Bearer idToken')).toBeInTheDocument()
+      expect(screen.getByText('Bearer accessToken')).toBeInTheDocument()
     })
   })
 })
