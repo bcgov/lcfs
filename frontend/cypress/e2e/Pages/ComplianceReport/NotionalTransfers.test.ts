@@ -8,6 +8,16 @@ const SELECTORS = {
 }
 const NOTIONAL_CHANGELOG_GROUP_UUID = 'mock-notional-transfers-group'
 
+interface NotionalChangelogMockParams {
+  reportId: string
+  legalName: string
+  addressForService: string
+  fuelCategory: string
+  receivedOrTransferred: string
+  initialQuantity: string
+  updatedQuantity: string
+}
+
 /**
  * Click the save button and wait until we are back on the compliance report
  * VIEW page (i.e. the URL ends with /<compliancePeriod>/<reportId> and has no
@@ -35,7 +45,7 @@ const setupNotionalChangelogMocks = ({
   receivedOrTransferred,
   initialQuantity,
   updatedQuantity
-}) => {
+}: NotionalChangelogMockParams): void => {
   const previousReportId = 991001
 
   // Override the report response to inject chain / group-uuid data.
@@ -135,11 +145,11 @@ const setupNotionalChangelogMocks = ({
 When(
   'the supplier adds a notional transfer with legal name {string}, address {string}, fuel category {string}, transfer type {string}, and quantity {string}',
   (
-    legalName,
-    addressForService,
-    fuelCategory,
-    receivedOrTransferred,
-    quantity
+    legalName: string,
+    addressForService: string,
+    fuelCategory: string,
+    receivedOrTransferred: string,
+    quantity: string
   ) => {
     cy.get(SELECTORS.scheduleLink).click()
     cy.get(SELECTORS.addRowButton).click({ force: true })
@@ -147,8 +157,9 @@ When(
     cy.get('div.ag-center-cols-container div.ag-row', { timeout: 20000 })
       .last()
       .invoke('attr', 'row-index')
-      .then((rowIndex) => {
+      .then((rowIndex: string | undefined) => {
         expect(rowIndex, 'newly added notional row-index').to.exist
+        if (!rowIndex) throw new Error('New notional row-index not found')
         const rowSelector = `div.ag-row[row-index="${rowIndex}"]`
 
         // legalName uses AsyncSuggestionEditor – the body click at the start of
@@ -189,17 +200,18 @@ When(
 
 When(
   'the supplier updates the first notional transfer quantity to {string}',
-  (updatedQuantity) => {
+  (updatedQuantity: string) => {
     cy.get(SELECTORS.scheduleLink).click()
     // Edit all fields on the row created in the previous step.
-    cy.get('@lastNotionalLegalName').then((legalName) => {
+    cy.get('@lastNotionalLegalName').then((legalName: string) => {
       cy.contains('div.ag-cell[col-id="legalName"]', legalName, {
         timeout: 30000
       })
         .closest('div.ag-row')
         .invoke('attr', 'row-index')
-        .then((rowIndex) => {
+        .then((rowIndex: string | undefined) => {
           expect(rowIndex, 'row-index for created notional row').to.exist
+          if (!rowIndex) throw new Error('Created notional row-index not found')
           const rowSelector = `div.ag-row[row-index="${rowIndex}"]`
           cy.inputTextWithRetry(
             `${rowSelector} div.ag-cell[col-id="addressForService"]`,
@@ -229,16 +241,17 @@ When(
 
 When(
   'the supplier opens the notional transfer changelog view for {string} with original quantity {string} and updated quantity {string}',
-  (legalName, initialQuantity, updatedQuantity) => {
+  (legalName: string, initialQuantity: string, updatedQuantity: string) => {
     // We are currently on the compliance report VIEW page (after saveAndReturn).
     // Use cy.visit() (not cy.reload()) so that location.state has no newReport:true,
     // which ensures ReportDetails accordions are rendered.
-    cy.location('pathname').then((pathname) => {
+    cy.location('pathname').then((pathname: string) => {
       const normalizedPath = pathname.replace(/\/+$/, '')
       const pathMatch = normalizedPath.match(
         /\/compliance-reporting\/(\d+)\/(\d+)$/
       )
       expect(pathMatch, 'compliance report view path').to.exist
+      if (!pathMatch) throw new Error('Compliance report view path not found')
       const compliancePeriod = pathMatch[1]
       const reportId = pathMatch[2]
       const canonicalViewPath = `/compliance-reporting/${compliancePeriod}/${reportId}`
@@ -283,7 +296,7 @@ When(
 
 Then(
   'the notional transfer summary includes legal name {string}',
-  (legalName) => {
+  (legalName: string) => {
     // Navigate back to the schedule page and confirm the grid row is visible.
     cy.get(SELECTORS.scheduleLink, { timeout: 20000 })
       .should('be.visible')
@@ -296,12 +309,12 @@ Then(
 
 Then(
   'the notional transfer summary includes quantity {string}',
-  (formattedQuantity) => {
+  (formattedQuantity: string) => {
     cy.get(SELECTORS.scheduleLink, { timeout: 20000 })
       .should('be.visible')
       .click()
     // Assert quantity on the same row as the created legal name.
-    cy.get('@lastNotionalLegalName').then((legalName) => {
+    cy.get('@lastNotionalLegalName').then((legalName: string) => {
       cy.contains('div.ag-cell[col-id="legalName"]', legalName, {
         timeout: 30000
       })

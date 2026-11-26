@@ -1,12 +1,42 @@
 import 'react'
-import { screen } from '@testing-library/react'
+import { fireEvent, screen } from '@testing-library/react'
 import { describe, expect, beforeEach, vi } from 'vite-plus/test'
 import { NotionalTransferChangelog } from '../NotionalTransferChangelog'
 import { test } from '@/tests/utils/fixtures'
+import type { ReactNode, HTMLAttributes, PropsWithChildren } from 'react'
+import type { RenderOptions, RenderResult } from '@testing-library/react'
+import type { BCPaginationOptions } from '@/components/BCDataGrid/types'
 
-let render
-const fixtureOptions = undefined
-const it = (name, fn) =>
+type HookResult = { data?: unknown; isLoading: boolean }
+type NotionalTransferRow = {
+  notionalTransferId: number | string
+  actionType?: string
+  isCanadaProduced?: boolean
+}
+type ChangelogViewerProps = {
+  gridKey?: string | null
+  columnDefs?: unknown[]
+  queryData?: { data?: { items?: NotionalTransferRow[] } }
+  getRowId?: (params: { data: NotionalTransferRow }) => string
+  suppressPagination?: boolean
+  gridOptions?: unknown
+  paginationOptions?: unknown
+  onPaginationChange?: (pagination: BCPaginationOptions) => void
+}
+type FixtureRender = (
+  ui: ReactNode,
+  options?: Omit<RenderOptions, 'wrapper'>
+) => RenderResult
+type ContainerProps = PropsWithChildren<HTMLAttributes<HTMLDivElement>>
+
+const hookMocks = vi.hoisted(() => ({
+  useComplianceReportWithCache: vi.fn<() => HookResult>(),
+  useGetChangeLog: vi.fn<() => HookResult>()
+}))
+const { useComplianceReportWithCache, useGetChangeLog } = hookMocks
+
+let render: FixtureRender
+const it = (name: string, fn: () => unknown) =>
   test(name, ({ render: fixtureRender }) => {
     render = (ui, options) => fixtureRender(ui, [], options)
     return fn()
@@ -15,7 +45,7 @@ const it = (name, fn) =>
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => key
+    t: (key: string) => key
   })
 }))
 
@@ -29,13 +59,9 @@ vi.mock('react-router-dom', () => ({
 
 // Mock compliance report hooks
 vi.mock('@/hooks/useComplianceReports', () => ({
-  useComplianceReportWithCache: vi.fn(),
-  useGetChangeLog: vi.fn()
+  useComplianceReportWithCache: hookMocks.useComplianceReportWithCache,
+  useGetChangeLog: hookMocks.useGetChangeLog
 }))
-
-const { useComplianceReportWithCache, useGetChangeLog } = vi.mocked(
-  await import('@/hooks/useComplianceReports')
-)
 
 // Mock BCGridViewer
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
@@ -48,34 +74,68 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
     gridOptions,
     paginationOptions,
     onPaginationChange
-  }) => (
-    <div data-test="bc-grid-viewer">
-      <div data-test="grid-key">{gridKey}</div>
-      <div data-test="row-count">{queryData?.data?.items?.length || 0}</div>
-      <div data-test="pagination-suppressed">
-        {suppressPagination?.toString()}
-      </div>
-      <div data-test="has-pagination-options">
-        {(!!paginationOptions).toString()}
-      </div>
-      <div data-test="has-pagination-change">
-        {(!!onPaginationChange).toString()}
-      </div>
-      <div data-test="column-count">{columnDefs?.length || 0}</div>
-      <div data-test="grid-options">{JSON.stringify(gridOptions || {})}</div>
-      {queryData?.data?.items?.map((item, index) => (
-        <div key={index} data-test="grid-item">
-          ID: {getRowId ? getRowId({ data: item }) : 'no-id'} -{' '}
-          {item.actionType}
+  }: ChangelogViewerProps) => {
+    const items = queryData?.data?.items ?? []
+    return (
+      <div data-test="bc-grid-viewer">
+        <div data-test="grid-key">{gridKey}</div>
+        <div data-test="row-count">{items.length}</div>
+        <div data-test="row-values">
+          {items.map((item) => String(item.isCanadaProduced)).join(',')}
         </div>
-      ))}
-    </div>
-  )
+        <div data-test="pagination-suppressed">
+          {suppressPagination?.toString()}
+        </div>
+        <div data-test="has-pagination-options">
+          {(!!paginationOptions).toString()}
+        </div>
+        <div data-test="has-pagination-change">
+          {(!!onPaginationChange).toString()}
+        </div>
+        <div data-test="column-count">{columnDefs?.length || 0}</div>
+        <div data-test="grid-options">{JSON.stringify(gridOptions || {})}</div>
+        <button
+          data-test="sort-booleans-button"
+          onClick={() =>
+            onPaginationChange?.({
+              page: 1,
+              size: 10,
+              sortOrders: [{ field: 'isCanadaProduced', direction: 'asc' }]
+            })
+          }
+        >
+          Sort Booleans
+        </button>
+        <button
+          data-test="next-page-button"
+          onClick={() => onPaginationChange?.({ page: 2, size: 10 })}
+        >
+          Next Page
+        </button>
+        {items.map((item, index) => (
+          <div key={index} data-test="grid-item">
+            ID: {getRowId ? getRowId({ data: item }) : 'no-id'} -{' '}
+            {item.actionType}
+          </div>
+        ))}
+      </div>
+    )
+  }
 }))
 
 // Mock BCTypography
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, variant, color, component, ...props }) => {
+  default: ({
+    children,
+    variant,
+    color,
+    component,
+    ...props
+  }: ContainerProps & {
+    variant?: string
+    color?: string
+    component?: React.ElementType
+  }) => {
     const Component = component || 'div'
     return (
       <Component
@@ -97,7 +157,11 @@ vi.mock('@/components/Loading', () => ({
 
 // Mock Material-UI components
 vi.mock('@mui/material/Box', () => ({
-  default: ({ children, mb, ...props }) => (
+  default: ({
+    children,
+    mb,
+    ...props
+  }: ContainerProps & { mb?: number | string }) => (
     <div data-test="mui-box" data-mb={mb} {...props}>
       {children}
     </div>
@@ -105,7 +169,7 @@ vi.mock('@mui/material/Box', () => ({
 }))
 
 vi.mock('@mui/material/TextField', () => ({
-  default: ({ children, ...props }) => (
+  default: ({ children, ...props }: ContainerProps) => (
     <div data-test="text-field" {...props}>
       {children}
     </div>
@@ -113,7 +177,7 @@ vi.mock('@mui/material/TextField', () => ({
 }))
 
 vi.mock('@mui/material/Button', () => ({
-  default: ({ children, ...props }) => (
+  default: ({ children, ...props }: ContainerProps) => (
     <div data-test="button" {...props}>
       {children}
     </div>
@@ -121,7 +185,7 @@ vi.mock('@mui/material/Button', () => ({
 }))
 
 vi.mock('@mui/material/Typography', () => ({
-  default: ({ children, ...props }) => (
+  default: ({ children, ...props }: ContainerProps) => (
     <div data-test="typography" {...props}>
       {children}
     </div>
@@ -129,7 +193,7 @@ vi.mock('@mui/material/Typography', () => ({
 }))
 
 vi.mock('@mui/material/Paper', () => ({
-  default: ({ children, ...props }) => (
+  default: ({ children, ...props }: ContainerProps) => (
     <div data-test="paper" {...props}>
       {children}
     </div>
@@ -139,7 +203,7 @@ vi.mock('@mui/material/Paper', () => ({
 // Mock Material-UI styles
 vi.mock('@mui/material/styles', () => ({
   styled: () => () =>
-    function StyledMock({ children, ...props }) {
+    function StyledMock({ children, ...props }: ContainerProps) {
       return (
         <div data-test="styled-component" {...props}>
           {children}
@@ -147,7 +211,7 @@ vi.mock('@mui/material/styles', () => ({
       )
     },
   useTheme: () => ({
-    spacing: (val) => val * 8,
+    spacing: (val: number) => val * 8,
     palette: {
       primary: { main: '#1976d2' },
       secondary: { main: '#dc004e' }
@@ -210,6 +274,30 @@ describe('NotionalTransferChangelog', () => {
     })
   })
 
+  describe('boolean sorting', () => {
+    it('sorts boolean fields consistently across pages', () => {
+      const notionalTransfers = Array.from({ length: 12 }, (_, index) => ({
+        notionalTransferId: index + 1,
+        isCanadaProduced: index < 6
+      }))
+
+      useGetChangeLog.mockReturnValue({
+        data: [{ version: 0, nickname: 'Current', notionalTransfers }],
+        isLoading: false
+      })
+
+      render(<NotionalTransferChangelog />)
+
+      fireEvent.click(screen.getByTestId('sort-booleans-button'))
+      expect(screen.getByTestId('row-values')).toHaveTextContent(
+        'false,false,false,false,false,false,true,true,true,true'
+      )
+
+      fireEvent.click(screen.getByTestId('next-page-button'))
+      expect(screen.getByTestId('row-values')).toHaveTextContent('true,true')
+    })
+  })
+
   describe('Loading states', () => {
     it('shows loading when changelogDataLoading is true', () => {
       useGetChangeLog.mockReturnValue({
@@ -217,7 +305,7 @@ describe('NotionalTransferChangelog', () => {
         isLoading: true
       })
 
-      render(<NotionalTransferChangelog />, { fixtureOptions })
+      render(<NotionalTransferChangelog />)
       expect(screen.getByTestId('loading')).toBeInTheDocument()
     })
 
@@ -227,7 +315,7 @@ describe('NotionalTransferChangelog', () => {
         isLoading: true
       })
 
-      render(<NotionalTransferChangelog />, { fixtureOptions })
+      render(<NotionalTransferChangelog />)
       expect(screen.getByTestId('loading')).toBeInTheDocument()
     })
   })
@@ -253,7 +341,7 @@ describe('NotionalTransferChangelog', () => {
         isLoading: false
       })
 
-      render(<NotionalTransferChangelog />, { fixtureOptions })
+      render(<NotionalTransferChangelog />)
 
       expect(screen.getByTestId('grid-item')).toHaveTextContent(
         'ID: 123 - CREATE'
@@ -282,7 +370,7 @@ describe('NotionalTransferChangelog', () => {
         isLoading: false
       })
 
-      render(<NotionalTransferChangelog />, { fixtureOptions })
+      render(<NotionalTransferChangelog />)
 
       const gridOptions = JSON.parse(
         screen.getByTestId('grid-options').textContent
@@ -315,7 +403,7 @@ describe('NotionalTransferChangelog', () => {
         isLoading: false
       })
 
-      render(<NotionalTransferChangelog />, { fixtureOptions })
+      render(<NotionalTransferChangelog />)
       expect(screen.getByTestId('grid-item')).toHaveTextContent(
         'ID: 1 - CREATE'
       )
@@ -341,7 +429,7 @@ describe('NotionalTransferChangelog', () => {
         isLoading: false
       })
 
-      render(<NotionalTransferChangelog />, { fixtureOptions })
+      render(<NotionalTransferChangelog />)
       expect(screen.getByTestId('grid-item')).toHaveTextContent(
         'ID: 1 - UPDATE'
       )
@@ -367,7 +455,7 @@ describe('NotionalTransferChangelog', () => {
         isLoading: false
       })
 
-      render(<NotionalTransferChangelog />, { fixtureOptions })
+      render(<NotionalTransferChangelog />)
 
       expect(screen.getByTestId('row-count')).toHaveTextContent('5')
       expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
@@ -393,7 +481,7 @@ describe('NotionalTransferChangelog', () => {
         isLoading: false
       })
 
-      render(<NotionalTransferChangelog />, { fixtureOptions })
+      render(<NotionalTransferChangelog />)
 
       expect(screen.getByTestId('row-count')).toHaveTextContent('10')
       expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
@@ -425,7 +513,7 @@ describe('NotionalTransferChangelog', () => {
         isLoading: false
       })
 
-      render(<NotionalTransferChangelog />, { fixtureOptions })
+      render(<NotionalTransferChangelog />)
 
       expect(screen.getByTestId('row-count')).toHaveTextContent('3')
       expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
@@ -454,7 +542,7 @@ describe('NotionalTransferChangelog', () => {
         isLoading: false
       })
 
-      render(<NotionalTransferChangelog />, { fixtureOptions })
+      render(<NotionalTransferChangelog />)
 
       expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
         'true'
@@ -484,7 +572,7 @@ describe('NotionalTransferChangelog', () => {
         isLoading: false
       })
 
-      render(<NotionalTransferChangelog />, { fixtureOptions })
+      render(<NotionalTransferChangelog />)
 
       expect(screen.getByTestId('has-pagination-change')).toHaveTextContent(
         'true'
@@ -509,7 +597,7 @@ describe('NotionalTransferChangelog', () => {
         isLoading: false
       })
 
-      render(<NotionalTransferChangelog />, { fixtureOptions })
+      render(<NotionalTransferChangelog />)
 
       expect(screen.getByTestId('has-pagination-change')).toHaveTextContent(
         'false'
@@ -524,7 +612,7 @@ describe('NotionalTransferChangelog', () => {
         isLoading: false
       })
 
-      render(<NotionalTransferChangelog />, { fixtureOptions })
+      render(<NotionalTransferChangelog />)
 
       const grids = screen.queryAllByTestId('bc-grid-viewer')
       expect(grids).toHaveLength(0)
@@ -550,7 +638,7 @@ describe('NotionalTransferChangelog', () => {
         isLoading: false
       })
 
-      render(<NotionalTransferChangelog />, { fixtureOptions })
+      render(<NotionalTransferChangelog />)
 
       expect(screen.getByText('Test Version')).toBeInTheDocument()
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
@@ -580,7 +668,7 @@ describe('NotionalTransferChangelog', () => {
         isLoading: false
       })
 
-      render(<NotionalTransferChangelog />, { fixtureOptions })
+      render(<NotionalTransferChangelog />)
 
       expect(screen.getByText('Current Version')).toBeInTheDocument()
       expect(screen.getByText('Original Version')).toBeInTheDocument()
@@ -612,7 +700,7 @@ describe('NotionalTransferChangelog', () => {
         isLoading: false
       })
 
-      render(<NotionalTransferChangelog />, { fixtureOptions })
+      render(<NotionalTransferChangelog />)
 
       // Verify that both grids have column definitions
       const grids = screen.getAllByTestId('bc-grid-viewer')
@@ -648,7 +736,7 @@ describe('NotionalTransferChangelog', () => {
         isLoading: false
       })
 
-      render(<NotionalTransferChangelog />, { fixtureOptions })
+      render(<NotionalTransferChangelog />)
 
       const gridKeys = screen.getAllByTestId('grid-key')
       expect(gridKeys[0]).toHaveTextContent('notional-transfers-changelog-0')
@@ -669,7 +757,7 @@ describe('NotionalTransferChangelog', () => {
         isLoading: false
       })
 
-      render(<NotionalTransferChangelog />, { fixtureOptions })
+      render(<NotionalTransferChangelog />)
 
       expect(screen.getByText('Empty Version')).toBeInTheDocument()
       expect(screen.getByTestId('row-count')).toHaveTextContent('0')
@@ -678,7 +766,7 @@ describe('NotionalTransferChangelog', () => {
 
   describe('Hook integration', () => {
     it('calls hooks with correct parameters', () => {
-      render(<NotionalTransferChangelog />, { fixtureOptions })
+      render(<NotionalTransferChangelog />)
 
       expect(useComplianceReportWithCache).toHaveBeenCalledWith(
         'test-report-id'
@@ -695,7 +783,7 @@ describe('NotionalTransferChangelog', () => {
         isLoading: false
       })
 
-      render(<NotionalTransferChangelog />, { fixtureOptions })
+      render(<NotionalTransferChangelog />)
 
       expect(useGetChangeLog).toHaveBeenCalledWith({
         complianceReportGroupUuid: undefined,
@@ -725,7 +813,7 @@ describe('NotionalTransferChangelog', () => {
         isLoading: false
       })
 
-      render(<NotionalTransferChangelog />, { fixtureOptions })
+      render(<NotionalTransferChangelog />)
 
       const boxes = screen.getAllByTestId('mui-box')
       expect(boxes.length).toBeGreaterThan(0)
@@ -755,7 +843,7 @@ describe('NotionalTransferChangelog', () => {
         isLoading: false
       })
 
-      render(<NotionalTransferChangelog />, { fixtureOptions })
+      render(<NotionalTransferChangelog />)
 
       const typography = screen.getByTestId('bc-typography')
       expect(typography).toHaveAttribute('data-variant', 'h6')

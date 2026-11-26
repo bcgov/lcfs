@@ -41,7 +41,7 @@ import { FuelExportChangelog } from '@/views/FuelExports/FuelExportChangelog.jsx
 import { FuelExportSummary } from '@/views/FuelExports/FuelExportSummary'
 import { FuelSupplyChangelog } from '@/views/FuelSupplies/FuelSupplyChangelog'
 import { FuelSupplySummary } from '@/views/FuelSupplies/FuelSupplySummary'
-import { NotionalTransferChangelog } from '@/views/NotionalTransfers/NotionalTransferChangelog.jsx'
+import { NotionalTransferChangelog } from '@/views/NotionalTransfers/NotionalTransferChangelog.tsx'
 import { NotionalTransferSummary } from '@/views/NotionalTransfers/NotionalTransferSummary'
 import { OtherUsesChangelog } from '@/views/OtherUses/OtherUsesChangelog.jsx'
 import { OtherUsesSummary } from '@/views/OtherUses/OtherUsesSummary'

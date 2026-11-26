@@ -4,7 +4,7 @@ import type {
   RowClassParams,
   ColDef
 } from 'ag-grid-community'
-import type { GridErrors, GridWarnings, OptionsData } from '@/types/schema'
+import type { GridErrors, GridWarnings } from '@/types/schema'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { AsyncSuggestionEditor } from '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor'
 import type { AsyncSuggestionEditorProps } from '@/components/BCDataGrid/components/Editors/AsyncSuggestionEditor'
@@ -29,8 +29,13 @@ const numberCellFormatter = valueFormatter as NonNullable<
   ColDef['valueFormatter']
 >
 
+export interface NotionalTransferOptionsData {
+  fuelCategories: Array<{ category: string; fuelCategoryId?: number }>
+  receivedOrTransferred: string[]
+}
+
 export const notionalTransferColDefs = (
-  optionsData: OptionsData,
+  optionsData: NotionalTransferOptionsData,
   orgName: string,
   errors: GridErrors,
   warnings: GridWarnings,

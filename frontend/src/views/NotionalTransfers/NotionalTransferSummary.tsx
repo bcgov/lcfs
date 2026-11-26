@@ -6,19 +6,69 @@ import { notionalTransferSummaryColDefs } from '@/views/NotionalTransfers/_schem
 import Grid2 from '@mui/material/Grid2'
 import { useMemo, useRef, useState } from 'react'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
-import { defaultInitialPagination } from '@/constants/schedules'
+import {
+  defaultInitialPagination,
+  type PaginationOptions
+} from '@/constants/schedules'
 import { REPORT_SCHEDULES } from '@/constants/common'
 import useComplianceReportStore from '@/stores/useComplianceReportStore'
+import type {
+  BCGridQueryData,
+  BCGridRow,
+  BCPaginationFilter,
+  BCPaginationOptions,
+  BCSortOrder
+} from '@/components/BCDataGrid/types'
+import type { GetRowIdParams } from 'ag-grid-community'
 
-export const NotionalTransferSummary = ({ data, status }) => {
-  const [paginationOptions, setPaginationOptions] = useState(
-    defaultInitialPagination
-  )
-  const gridRef = useRef()
+interface NotionalTransfer extends BCGridRow {
+  notionalTransferId: number | string
+  actionType?: string | null
+}
+
+interface NotionalTransferSummaryProps {
+  data?: { notionalTransfers?: NotionalTransfer[] } | null
+  status?: string
+}
+
+interface NotionalTransferPagination extends BCPaginationOptions {
+  page: number
+  size: number
+  filters: Array<
+    BCPaginationFilter & { field: string; type: string; filter?: string }
+  >
+  sortOrders: Array<BCSortOrder & { field: string; direction: string }>
+}
+
+const normalizePagination = (
+  options: BCPaginationOptions | PaginationOptions
+): NotionalTransferPagination => ({
+  page: options.page ?? 1,
+  size: options.size ?? 10,
+  filters: (options.filters ?? []).map((filter) => ({
+    field: typeof filter.field === 'string' ? filter.field : '',
+    type: typeof filter.type === 'string' ? filter.type : '',
+    filter: typeof filter.filter === 'string' ? filter.filter : undefined
+  })),
+  sortOrders: (options.sortOrders ?? []).map((sort) => ({
+    field: typeof sort.field === 'string' ? sort.field : '',
+    direction: typeof sort.direction === 'string' ? sort.direction : 'asc'
+  }))
+})
+
+export const NotionalTransferSummary = ({
+  data,
+  status
+}: NotionalTransferSummaryProps) => {
+  const [paginationOptions, setPaginationOptions] =
+    useState<NotionalTransferPagination>(
+      normalizePagination(defaultInitialPagination)
+    )
+  const gridRef = useRef(null)
   const { compliancePeriod } = useParams()
 
   // Client-side pagination logic
-  const paginatedData = useMemo(() => {
+  const paginatedData = useMemo<BCGridQueryData<NotionalTransfer>>(() => {
     if (!data?.notionalTransfers) {
       return {
         data: {
@@ -35,14 +85,19 @@ export const NotionalTransferSummary = ({ data, status }) => {
       }
     }
 
-    let filteredData = [
+    let filteredData: NotionalTransfer[] = [
       ...data.notionalTransfers.filter((item) => item.actionType !== 'DELETE')
     ]
 
     // Apply filters if any
     if (paginationOptions.filters && paginationOptions.filters.length > 0) {
       paginationOptions.filters.forEach((filter) => {
-        if (filter.type === 'contains' && filter.filter) {
+        const filterText = filter.filter
+        if (
+          filter.type === 'contains' &&
+          typeof filterText === 'string' &&
+          filterText
+        ) {
           filteredData = filteredData.filter((item) => {
             const fieldValue = item[filter.field]
             return (
@@ -50,7 +105,7 @@ export const NotionalTransferSummary = ({ data, status }) => {
               fieldValue
                 .toString()
                 .toLowerCase()
-                .includes(filter.filter.toLowerCase())
+                .includes(filterText.toLowerCase())
             )
           })
         }
@@ -64,12 +119,32 @@ export const NotionalTransferSummary = ({ data, status }) => {
     ) {
       paginationOptions.sortOrders.forEach((sort) => {
         filteredData.sort((a, b) => {
-          const aVal = a[sort.field]
-          const bVal = b[sort.field]
+          const aValue = a[sort.field]
+          const bValue = b[sort.field]
+          const aVal =
+            typeof aValue === 'string' ||
+            typeof aValue === 'number' ||
+            typeof aValue === 'boolean'
+              ? aValue
+              : undefined
+          const bVal =
+            typeof bValue === 'string' ||
+            typeof bValue === 'number' ||
+            typeof bValue === 'boolean'
+              ? bValue
+              : undefined
 
           let comparison = 0
-          if (aVal > bVal) comparison = 1
-          if (aVal < bVal) comparison = -1
+          if (typeof aVal === 'boolean' && typeof bVal === 'boolean') {
+            if (aVal > bVal) comparison = 1
+            if (aVal < bVal) comparison = -1
+          } else if (
+            (typeof aVal === 'string' || typeof aVal === 'number') &&
+            (typeof bVal === 'string' || typeof bVal === 'number')
+          ) {
+            if (aVal > bVal) comparison = 1
+            if (aVal < bVal) comparison = -1
+          }
 
           return sort.direction === 'desc' ? -comparison : comparison
         })
@@ -96,7 +171,13 @@ export const NotionalTransferSummary = ({ data, status }) => {
     }
   }, [data?.notionalTransfers, paginationOptions])
 
-  const getRowId = (params) => params.data.notionalTransferId.toString()
+  const getRowId = (params: GetRowIdParams<BCGridRow>) => {
+    const id = params.data?.notionalTransferId
+    if (typeof id !== 'string' && typeof id !== 'number') {
+      throw new Error('Notional transfer row is missing its ID')
+    }
+    return id.toString()
+  }
   const { currentReport } = useComplianceReportStore()
   const isEarlyIssuance =
     currentReport?.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
@@ -105,7 +186,7 @@ export const NotionalTransferSummary = ({ data, status }) => {
     () =>
       notionalTransferSummaryColDefs(
         isEarlyIssuance,
-        parseInt(compliancePeriod)
+        parseInt(compliancePeriod ?? '')
       ),
     [isEarlyIssuance, compliancePeriod]
   )
@@ -134,7 +215,7 @@ export const NotionalTransferSummary = ({ data, status }) => {
           defaultColDef={defaultColDef}
           queryData={paginatedData}
           dataKey="notionalTransfers"
-          suppressPagination={data?.notionalTransfers?.length <= 10}
+          suppressPagination={(data?.notionalTransfers?.length ?? 0) <= 10}
           autoSizeStrategy={{
             type: 'fitCellContents',
             defaultMinWidth: 80,
@@ -142,11 +223,10 @@ export const NotionalTransferSummary = ({ data, status }) => {
           }}
           enableCellTextSelection
           paginationOptions={paginationOptions}
-          onPaginationChange={(newPagination) =>
-            setPaginationOptions((prev) => ({
-              ...prev,
-              ...newPagination
-            }))
+          onPaginationChange={(newPagination: BCPaginationOptions) =>
+            setPaginationOptions((prev) =>
+              normalizePagination({ ...prev, ...newPagination })
+            )
           }
           enablePageCaching={false}
         />

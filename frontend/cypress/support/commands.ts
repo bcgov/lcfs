@@ -72,26 +72,16 @@ Cypress.Commands.add('loginWith', (userType, username, password) => {
   cy.clearAllLocalStorage()
   cy.clearAllSessionStorage()
   cy.visit('/', { timeout: 60000 })
-  // Determine which login link to click based on user type
-  cy.intercept(
-    'POST',
-    'https://dev.loginproxy.gov.bc.ca/auth/realms/standard/protocol/openid-connect/token'
-  ).as('loginRequest')
-  const loginSelector =
-    userType === 'idir'
-      ? '[data-test=public-login-idir], [data-test=link-idir]'
-      : '[data-test=public-login-bceid], [data-test=link-bceid]'
-  cy.get(loginSelector, { timeout: 30000 }).first().click()
-  const loginProcess = (args: [username: string, password: string]) => {
-    const [username, password] = args
+  const externalLoginProcess = (args: [username: string, password: string]) => {
+    const [externalUsername, externalPassword] = args
 
     cy.on('uncaught:exception', () => {
       // Return false to ignore exceptions in case wrong credentials or account lock issues.
       return false
     })
 
-    cy.get('input[name=user]').type(username, { log: false })
-    cy.get('input[name=password]').type(password, { log: false })
+    cy.get('input[name=user]').type(externalUsername, { log: false })
+    cy.get('input[name=password]').type(externalPassword, { log: false })
     cy.get('form').submit()
     cy.wait('@loginRequest', { timeout: 30000 }).then(({ response }) => {
       const token = response?.body?.access_token
@@ -102,12 +92,50 @@ Cypress.Commands.add('loginWith', (userType, username, password) => {
     })
   }
 
-  // Perform login on the appropriate page
-  cy.origin(
-    'https://logontest7.gov.bc.ca',
-    { args: [username, password] },
-    loginProcess
-  )
+  cy.get('body', { timeout: 30000 }).then(() => {
+    const localKeycloakEnabled = Cypress.env('LOCAL_KEYCLOAK')
+    const isLocalKeycloak =
+      localKeycloakEnabled === true || localKeycloakEnabled === 'true'
+
+    if (isLocalKeycloak) {
+      cy.intercept(
+        'POST',
+        '**/realms/lcfs-local/protocol/openid-connect/token'
+      ).as('loginRequest')
+      cy.get('[data-test=link-local-keycloak]').click()
+      cy.origin(
+        'http://keycloak:8080',
+        { args: [username, password] },
+        ([localUsername, localPassword]: [string, string]) => {
+          cy.get('input[name=username]').type(localUsername, { log: false })
+          cy.get('input[name=password]').type(localPassword, { log: false })
+          cy.get('form').submit()
+          cy.wait('@loginRequest', { timeout: 30000 }).then(({ response }) => {
+            const token = response?.body?.access_token
+            if (typeof token !== 'string') {
+              throw new Error('Login response did not include an access token')
+            }
+            cy.wrap(token).as('authToken')
+          })
+        }
+      )
+    } else {
+      cy.intercept(
+        'POST',
+        'https://dev.loginproxy.gov.bc.ca/auth/realms/standard/protocol/openid-connect/token'
+      ).as('loginRequest')
+      const loginSelector =
+        userType === 'idir'
+          ? '[data-test=public-login-idir], [data-test=link-idir]'
+          : '[data-test=public-login-bceid], [data-test=link-bceid]'
+      cy.get(loginSelector, { timeout: 30000 }).first().click()
+      cy.origin(
+        'https://logontest7.gov.bc.ca',
+        { args: [username, password] },
+        externalLoginProcess
+      )
+    }
+  })
   cy.wait(5000)
 })
 

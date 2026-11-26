@@ -160,7 +160,7 @@ vi.mock('@/views/NotionalTransfers/NotionalTransferSummary', () => ({
   NotionalTransferSummary: () => <div>Notional Transfer Summary</div>
 }))
 
-vi.mock('@/views/NotionalTransfers/NotionalTransferChangelog.jsx', () => ({
+vi.mock('@/views/NotionalTransfers/NotionalTransferChangelog.tsx', () => ({
   NotionalTransferChangelog: () => <div>Notional Transfer Changelog</div>
 }))
 

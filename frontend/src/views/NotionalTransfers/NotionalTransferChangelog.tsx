@@ -5,7 +5,10 @@ import {
   useComplianceReportWithCache,
   useGetChangeLog
 } from '@/hooks/useComplianceReports'
-import { defaultInitialPagination } from '@/constants/schedules'
+import {
+  defaultInitialPagination,
+  type PaginationOptions
+} from '@/constants/schedules'
 import colors from '@/themes/base/colors'
 import Box from '@mui/material/Box'
 import { useMemo, useState } from 'react'
@@ -13,41 +16,91 @@ import { useTranslation } from 'react-i18next'
 import { changelogColDefs, changelogCommonColDefs } from './_schema'
 import { useParams } from 'react-router-dom'
 import { REPORT_SCHEDULES } from '@/constants/common'
+import type {
+  BCGridRow,
+  BCPaginationFilter,
+  BCPaginationOptions,
+  BCSortOrder
+} from '@/components/BCDataGrid/types'
+import type { GridOptions, GetRowIdParams } from 'ag-grid-community'
+
+interface NotionalTransfer extends BCGridRow {
+  notionalTransferId: number | string
+  actionType?: string
+}
+
+interface NotionalTransferVersion {
+  version: number
+  nickname: string
+  notionalTransfers: NotionalTransfer[]
+}
+
+interface ChangelogPagination extends BCPaginationOptions {
+  page: number
+  size: number
+  filters: Array<
+    BCPaginationFilter & { field: string; type: string; filter?: string }
+  >
+  sortOrders: Array<BCSortOrder & { field: string; direction: string }>
+}
+
+const normalizePagination = (
+  options: BCPaginationOptions | PaginationOptions
+): ChangelogPagination => ({
+  page: options.page ?? 1,
+  size: options.size ?? 10,
+  filters: (options.filters ?? []).map((filter) => ({
+    field: typeof filter.field === 'string' ? filter.field : '',
+    type: typeof filter.type === 'string' ? filter.type : '',
+    filter: typeof filter.filter === 'string' ? filter.filter : undefined
+  })),
+  sortOrders: (options.sortOrders ?? []).map((sort) => ({
+    field: typeof sort.field === 'string' ? sort.field : '',
+    direction: typeof sort.direction === 'string' ? sort.direction : 'asc'
+  }))
+})
 
 export const NotionalTransferChangelog = () => {
   const { t } = useTranslation(['common', 'notionalTransfer', 'report'])
   const { complianceReportId, compliancePeriod } = useParams()
   const { data: currentReport, isLoading: currentReportLoading } =
-    useComplianceReportWithCache(complianceReportId)
+    useComplianceReportWithCache(complianceReportId!)
   const isEarlyIssuance =
     currentReport?.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
 
   // State for pagination - one per changelog item
-  const [paginationStates, setPaginationStates] = useState({})
+  const [paginationStates, setPaginationStates] = useState<
+    Record<number, ChangelogPagination>
+  >({})
 
   const { data: changelogData, isLoading: changelogDataLoading } =
-    useGetChangeLog({
+    useGetChangeLog<NotionalTransferVersion[]>({
       complianceReportGroupUuid:
         currentReport?.report.complianceReportGroupUuid,
       dataType: 'notional-transfers'
     })
 
-  const getRowId = (params) => {
-    return params.data.notionalTransferId.toString()
+  const getRowId = (params: GetRowIdParams<BCGridRow>) => {
+    const id = params.data?.notionalTransferId
+    if (typeof id !== 'string' && typeof id !== 'number') {
+      throw new Error('Notional transfer row is missing its ID')
+    }
+    return id.toString()
   }
 
   const currentOrOriginalColumnDefs = useMemo(
     () =>
       changelogCommonColDefs(
         false,
-        parseInt(compliancePeriod),
+        parseInt(compliancePeriod ?? ''),
         isEarlyIssuance
       ),
     [compliancePeriod, isEarlyIssuance]
   )
 
   const changedColumnDefs = useMemo(
-    () => changelogColDefs(true, parseInt(compliancePeriod), isEarlyIssuance),
+    () =>
+      changelogColDefs(true, parseInt(compliancePeriod ?? ''), isEarlyIssuance),
     [compliancePeriod, isEarlyIssuance]
   )
 
@@ -60,7 +113,7 @@ export const NotionalTransferChangelog = () => {
     []
   )
 
-  const gridOptions = (highlight = true) => ({
+  const gridOptions = (highlight = true): GridOptions<BCGridRow> => ({
     overlayNoRowsTemplate: t('notionalTransfer:noNotionalTransfersFound'),
     autoSizeStrategy: {
       type: 'fitGridWidth',
@@ -71,12 +124,12 @@ export const NotionalTransferChangelog = () => {
     ensureDomOrder: true,
     getRowStyle: (params) => {
       if (!highlight) return
-      if (params.data.actionType === 'DELETE') {
+      if (params.data?.actionType === 'DELETE') {
         return {
           backgroundColor: colors.alerts.error.background
         }
       }
-      if (params.data.actionType === 'CREATE') {
+      if (params.data?.actionType === 'CREATE') {
         return {
           backgroundColor: colors.alerts.success.background
         }
@@ -86,9 +139,9 @@ export const NotionalTransferChangelog = () => {
 
   // Client-side pagination function
   const getPaginatedData = (
-    notionalTransfers,
-    index,
-    isCurrentOrOriginalVersion
+    notionalTransfers: NotionalTransfer[],
+    index: number,
+    isCurrentOrOriginalVersion: boolean
   ) => {
     const shouldPaginate =
       isCurrentOrOriginalVersion || notionalTransfers.length >= 10
@@ -99,13 +152,18 @@ export const NotionalTransferChangelog = () => {
     }
 
     const paginationOptions =
-      paginationStates[index] || defaultInitialPagination
+      paginationStates[index] || normalizePagination(defaultInitialPagination)
     let filteredData = [...notionalTransfers]
 
     // Apply filters if any
     if (paginationOptions.filters && paginationOptions.filters.length > 0) {
       paginationOptions.filters.forEach((filter) => {
-        if (filter.type === 'contains' && filter.filter) {
+        const filterText = filter.filter
+        if (
+          filter.type === 'contains' &&
+          typeof filterText === 'string' &&
+          filterText
+        ) {
           filteredData = filteredData.filter((item) => {
             const fieldValue = item[filter.field]
             return (
@@ -113,7 +171,7 @@ export const NotionalTransferChangelog = () => {
               fieldValue
                 .toString()
                 .toLowerCase()
-                .includes(filter.filter.toLowerCase())
+                .includes(filterText.toLowerCase())
             )
           })
         }
@@ -127,12 +185,32 @@ export const NotionalTransferChangelog = () => {
     ) {
       paginationOptions.sortOrders.forEach((sort) => {
         filteredData.sort((a, b) => {
-          const aVal = a[sort.field]
-          const bVal = b[sort.field]
+          const aValue = a[sort.field]
+          const bValue = b[sort.field]
+          const aVal =
+            typeof aValue === 'string' ||
+            typeof aValue === 'number' ||
+            typeof aValue === 'boolean'
+              ? aValue
+              : undefined
+          const bVal =
+            typeof bValue === 'string' ||
+            typeof bValue === 'number' ||
+            typeof bValue === 'boolean'
+              ? bValue
+              : undefined
 
           let comparison = 0
-          if (aVal > bVal) comparison = 1
-          if (aVal < bVal) comparison = -1
+          if (typeof aVal === 'boolean' && typeof bVal === 'boolean') {
+            if (aVal > bVal) comparison = 1
+            if (aVal < bVal) comparison = -1
+          } else if (
+            (typeof aVal === 'string' || typeof aVal === 'number') &&
+            (typeof bVal === 'string' || typeof bVal === 'number')
+          ) {
+            if (aVal > bVal) comparison = 1
+            if (aVal < bVal) comparison = -1
+          }
 
           return sort.direction === 'desc' ? -comparison : comparison
         })
@@ -159,15 +237,16 @@ export const NotionalTransferChangelog = () => {
     }
   }
 
-  const handlePaginationChange = (index) => (newPagination) => {
-    setPaginationStates((prev) => ({
-      ...prev,
-      [index]: {
-        ...(prev[index] || defaultInitialPagination),
-        ...newPagination
-      }
-    }))
-  }
+  const handlePaginationChange =
+    (index: number) => (newPagination: BCPaginationOptions) => {
+      setPaginationStates((prev) => ({
+        ...prev,
+        [index]: normalizePagination({
+          ...(prev[index] || normalizePagination(defaultInitialPagination)),
+          ...newPagination
+        })
+      }))
+    }
 
   if (changelogDataLoading || currentReportLoading) {
     return <Loading />
@@ -179,7 +258,7 @@ export const NotionalTransferChangelog = () => {
         const isCurrentOrOriginalVersion = i === 0 || item.version === 0
         const shouldPaginate = item.notionalTransfers.length >= 10
         const paginationOptions =
-          paginationStates[i] || defaultInitialPagination
+          paginationStates[i] || normalizePagination(defaultInitialPagination)
         const queryData = getPaginatedData(
           item.notionalTransfers,
           i,
