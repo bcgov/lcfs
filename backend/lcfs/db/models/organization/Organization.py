@@ -144,6 +144,17 @@ class Organization(BaseModel, Auditable, EffectiveDates):
         server_default=text("false"),
         comment="Whether the organization should be displayed in the credit trading market",
     )
+    has_representative_agreement = Column(
+        Boolean,
+        nullable=False,
+        server_default=text("false"),
+        comment="Whether the organization has authorized a third party to report on its behalf",
+    )
+    representative_organization_name = Column(
+        String(500),
+        nullable=True,
+        comment="Name of the third-party organization that reports on behalf of this organization",
+    )
 
     org_type = relationship(
         "OrganizationType", back_populates="organizations", lazy="joined"

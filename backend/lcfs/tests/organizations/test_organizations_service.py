@@ -1,3 +1,4 @@
+from fastapi import HTTPException
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 import unittest
@@ -594,10 +595,10 @@ async def test_delete_penalty_log(penalty_service, mock_repo):
 
 
 @pytest.mark.anyio
-async def test_create_organization_with_early_issuance(
+async def test_create_organization_ignores_early_issuance(
     organizations_service, mock_repo
 ):
-    """Test creating an organization with the early issuance flag."""
+    """Early issuance is no longer set through the generic create endpoint."""
     create_data = OrganizationCreateSchema(
         name="Test Org",
         operating_name="Test Op Org",
@@ -630,23 +631,18 @@ async def test_create_organization_with_early_issuance(
     mock_association_repo_methods(mock_repo)
 
     with patch(
-        "lcfs.utils.constants.LCFS_Constants.get_current_compliance_year",
-        return_value="2023",
-    ), patch(
         "lcfs.web.api.organizations.services.FastAPICache.clear", new_callable=AsyncMock
     ):
         await organizations_service.create_organization(create_data, user=MagicMock())
 
-    mock_repo.update_early_issuance_by_year.assert_called_once_with(
-        1, "2023", True, unittest.mock.ANY
-    )
+    mock_repo.update_early_issuance_by_year.assert_not_called()
 
 
 @pytest.mark.anyio
-async def test_update_organization_with_early_issuance_change(
+async def test_update_organization_ignores_early_issuance(
     organizations_service, mock_repo
 ):
-    """Test updating an organization's early issuance flag."""
+    """A generic update cannot change early issuance, whoever sends it."""
     update_data = OrganizationUpdateSchema(
         has_early_issuance=True,
         organization_type_ids=[1],
@@ -667,7 +663,6 @@ async def test_update_organization_with_early_issuance_change(
             "country": "Canada",
         },
     )
-    organization_id = 1
 
     mock_repo.get_organization = AsyncMock(
         return_value=MagicMock(
@@ -682,18 +677,167 @@ async def test_update_organization_with_early_issuance_change(
     mock_association_repo_methods(mock_repo)
 
     with patch(
-        "lcfs.utils.constants.LCFS_Constants.get_current_compliance_year",
-        return_value="2023",
-    ), patch(
         "lcfs.web.api.organizations.services.FastAPICache.clear", new_callable=AsyncMock
     ):
         await organizations_service.update_organization(
-            organization_id, update_data, user=MagicMock()
+            1, update_data, user=MagicMock()
         )
 
-    mock_repo.update_early_issuance_by_year.assert_called_once_with(
-        organization_id, "2023", True, unittest.mock.ANY
+    mock_repo.update_early_issuance_by_year.assert_not_called()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("role", [RoleEnum.COMPLIANCE_MANAGER, RoleEnum.DIRECTOR])
+async def test_update_early_issuance_allowed_roles(
+    organizations_service, mock_repo, role
+):
+    mock_repo.get_organization = AsyncMock(return_value=MagicMock())
+    mock_repo.get_current_year_early_issuance = AsyncMock(return_value=False)
+    mock_repo.update_early_issuance_by_year = AsyncMock()
+    mock_repo.get_organization_response = AsyncMock(return_value="response")
+    user = MagicMock(role_names=[RoleEnum.GOVERNMENT, role])
+
+    with patch(
+        "lcfs.utils.constants.LCFS_Constants.get_current_compliance_year",
+        return_value="2026",
+    ), patch(
+        "lcfs.web.api.organizations.services.FastAPICache.clear", new_callable=AsyncMock
+    ):
+        result = await organizations_service.update_early_issuance(1, True, user)
+
+    assert result == "response"
+    mock_repo.update_early_issuance_by_year.assert_awaited_once_with(
+        1, "2026", True, user
     )
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "roles",
+    [
+        [RoleEnum.GOVERNMENT, RoleEnum.ANALYST],
+        [RoleEnum.GOVERNMENT, RoleEnum.ADMINISTRATOR],
+        [RoleEnum.SUPPLIER],
+        [],
+    ],
+)
+async def test_update_early_issuance_denied_for_other_roles(
+    organizations_service, mock_repo, roles
+):
+    mock_repo.update_early_issuance_by_year = AsyncMock()
+    user = MagicMock(role_names=roles)
+
+    with pytest.raises(HTTPException) as exc:
+        await organizations_service.update_early_issuance(1, True, user)
+
+    assert exc.value.status_code == 403
+    mock_repo.update_early_issuance_by_year.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_update_early_issuance_unchanged_value_is_a_noop(
+    organizations_service, mock_repo
+):
+    mock_repo.get_organization = AsyncMock(return_value=MagicMock())
+    mock_repo.get_current_year_early_issuance = AsyncMock(return_value=True)
+    mock_repo.update_early_issuance_by_year = AsyncMock()
+    mock_repo.get_organization_response = AsyncMock(return_value="response")
+    user = MagicMock(role_names=[RoleEnum.DIRECTOR])
+
+    await organizations_service.update_early_issuance(1, True, user)
+
+    mock_repo.update_early_issuance_by_year.assert_not_called()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "role", [RoleEnum.ANALYST, RoleEnum.COMPLIANCE_MANAGER, RoleEnum.DIRECTOR]
+)
+async def test_update_representative_agreement_allowed_roles(
+    organizations_service, mock_repo, role
+):
+    organization = MagicMock()
+    mock_repo.get_organization = AsyncMock(return_value=organization)
+    mock_repo.update_organization = AsyncMock()
+    mock_repo.get_organization_response = AsyncMock(return_value="response")
+    user = MagicMock(role_names=[RoleEnum.GOVERNMENT, role], keycloak_username="u")
+
+    with patch(
+        "lcfs.web.api.organizations.services.FastAPICache.clear", new_callable=AsyncMock
+    ):
+        result = await organizations_service.update_representative_agreement(
+            1, True, "  ABC Environmental Services Ltd.  ", user
+        )
+
+    assert result == "response"
+    assert organization.has_representative_agreement is True
+    assert (
+        organization.representative_organization_name
+        == "ABC Environmental Services Ltd."
+    )
+    mock_repo.update_organization.assert_awaited_once_with(organization)
+
+
+@pytest.mark.anyio
+async def test_update_representative_agreement_clears_name_when_no_agreement(
+    organizations_service, mock_repo
+):
+    organization = MagicMock(representative_organization_name="Old Name")
+    mock_repo.get_organization = AsyncMock(return_value=organization)
+    mock_repo.update_organization = AsyncMock()
+    mock_repo.get_organization_response = AsyncMock(return_value="response")
+    user = MagicMock(role_names=[RoleEnum.ANALYST])
+
+    with patch(
+        "lcfs.web.api.organizations.services.FastAPICache.clear", new_callable=AsyncMock
+    ):
+        await organizations_service.update_representative_agreement(
+            1, False, "Old Name", user
+        )
+
+    assert organization.has_representative_agreement is False
+    assert organization.representative_organization_name is None
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("name", [None, "", "   ", "x" * 501])
+async def test_update_representative_agreement_validates_name(
+    organizations_service, mock_repo, name
+):
+    mock_repo.get_organization = AsyncMock(return_value=MagicMock())
+    mock_repo.update_organization = AsyncMock()
+    user = MagicMock(role_names=[RoleEnum.ANALYST])
+
+    with pytest.raises(ValueError):
+        await organizations_service.update_representative_agreement(
+            1, True, name, user
+        )
+
+    mock_repo.update_organization.assert_not_called()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "roles",
+    [
+        [RoleEnum.GOVERNMENT, RoleEnum.ADMINISTRATOR],
+        [RoleEnum.SUPPLIER],
+        [],
+    ],
+)
+async def test_update_representative_agreement_denied_for_other_roles(
+    organizations_service, mock_repo, roles
+):
+    mock_repo.update_organization = AsyncMock()
+    user = MagicMock(role_names=roles)
+
+    with pytest.raises(HTTPException) as exc:
+        await organizations_service.update_representative_agreement(
+            1, True, "ABC", user
+        )
+
+    assert exc.value.status_code == 403
+    mock_repo.update_organization.assert_not_called()
 
 
 @pytest.mark.anyio

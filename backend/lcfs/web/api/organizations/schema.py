@@ -218,7 +218,9 @@ class OrganizationCreateSchema(OrganizationTypesAndRolesMixin):
     phone: Optional[str] = None
     contact_name: Optional[str] = None
     edrms_record: Optional[str] = None
-    has_early_issuance: bool
+    # Deprecated and ignored: early issuance is changed only through
+    # PUT /organizations/{id}/early-issuance (Compliance Manager / Director).
+    has_early_issuance: Optional[bool] = None
     organization_status_id: int
     records_address: Optional[str] = None
     credit_market_contact_name: Optional[str] = None
@@ -240,7 +242,9 @@ class NonBCeIDOrganizationCreateSchema(OrganizationTypesAndRolesMixin):
     phone: Optional[str] = None
     contact_name: Optional[str] = None
     edrms_record: Optional[str] = None
-    has_early_issuance: bool
+    # Deprecated and ignored: early issuance is changed only through
+    # PUT /organizations/{id}/early-issuance (Compliance Manager / Director).
+    has_early_issuance: Optional[bool] = None
     organization_status_id: int
     records_address: Optional[str] = None
     credit_market_contact_name: Optional[str] = None
@@ -266,7 +270,9 @@ class OrganizationUpdateSchema(OrganizationTypesAndRolesMixin):
     phone: Optional[str] = None
     contact_name: Optional[str] = None
     edrms_record: Optional[str] = None
-    has_early_issuance: bool
+    # Deprecated and ignored: early issuance is changed only through
+    # PUT /organizations/{id}/early-issuance (Compliance Manager / Director).
+    has_early_issuance: Optional[bool] = None
     organization_status_id: Optional[int] = None
     records_address: Optional[str] = None
     credit_market_contact_name: Optional[str] = None
@@ -289,7 +295,9 @@ class NonBCeIDOrganizationUpdateSchema(OrganizationTypesAndRolesMixin):
     phone: Optional[str] = None
     contact_name: Optional[str] = None
     edrms_record: Optional[str] = None
-    has_early_issuance: bool
+    # Deprecated and ignored: early issuance is changed only through
+    # PUT /organizations/{id}/early-issuance (Compliance Manager / Director).
+    has_early_issuance: Optional[bool] = None
     organization_status_id: Optional[int] = None
     records_address: Optional[str] = None
     credit_market_contact_name: Optional[str] = None
@@ -307,6 +315,15 @@ class NonBCeIDOrganizationUpdateSchema(OrganizationTypesAndRolesMixin):
     )
 
 
+class OrganizationEarlyIssuanceUpdateSchema(BaseSchema):
+    has_early_issuance: bool
+
+
+class OrganizationRepresentativeAgreementUpdateSchema(BaseSchema):
+    has_representative_agreement: bool
+    representative_organization_name: Optional[str] = None
+
+
 class OrganizationResponseSchema(BaseSchema):
     organization_id: int
     name: str
@@ -316,6 +333,8 @@ class OrganizationResponseSchema(BaseSchema):
     contact_name: Optional[str] = None
     edrms_record: Optional[str] = None
     has_early_issuance: bool
+    has_representative_agreement: bool = False
+    representative_organization_name: Optional[str] = None
     total_balance: Optional[int] = None
     reserved_balance: Optional[int] = None
     credit_market_contact_name: Optional[str] = None
@@ -333,6 +352,12 @@ class OrganizationResponseSchema(BaseSchema):
     records_address: Optional[str] = None
     org_address: Optional[OrganizationAddressSchema] = None
     org_attorney_address: Optional[OrganizationAttorneyAddressSchema] = None
+
+    @field_validator("has_representative_agreement", mode="before")
+    @classmethod
+    def _default_representative_agreement(cls, value):
+        """Unflushed ORM rows carry None until the server default applies."""
+        return bool(value)
 
     @field_validator("available_roles", mode="before")
     @classmethod

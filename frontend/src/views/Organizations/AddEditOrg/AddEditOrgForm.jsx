@@ -40,7 +40,6 @@ import {
   suggestedRolesForTypes
 } from '@/constants/organizationRoles'
 import colors from '@/themes/base/colors'
-import { getCurrentEarlyIssuanceYear } from '@/constants/common'
 import ReferenceCompareBox from './ReferenceCompareBox'
 
 // Component for adding a new organization
@@ -104,8 +103,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
       orgHeadOfficeCountry: '',
       orgHeadOfficePostalCodeZipCode: '',
       orgEDRMSRecord: '',
-      recordsAddress: '',
-      hasEarlyIssuance: ''
+      recordsAddress: ''
     }
   })
 
@@ -212,7 +210,6 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
         orgContactName: data.contactName || '',
         orgEDRMSRecord: data.edrmsRecord,
         recordsAddress: data.recordsAddress || '',
-        hasEarlyIssuance: data.hasEarlyIssuance ? 'yes' : 'no',
         orgTypeIds: hydratedOrgTypeIds,
         availableRoles: data.availableRoles || [],
         orgRegForTransfers:
@@ -326,7 +323,6 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
       contactName: data.orgContactName?.trim() || null,
       edrmsRecord: data.orgEDRMSRecord,
       recordsAddress: data.recordsAddress || '',
-      hasEarlyIssuance: data.hasEarlyIssuance === 'yes',
       organizationStatusId: parseInt(data.orgRegForTransfers),
       organizationTypeIds: (data.orgTypeIds || []).map((id) => parseInt(id)),
       availableRoles: data.availableRoles || [],
@@ -743,65 +739,6 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
                           /
                         </Controller>
                         {renderError('orgRegForTransfers')}
-                      </Grid>
-                    </Grid>
-                  </FormControl>
-                </Box>
-                <Box mb={2}>
-                  <FormControl fullWidth>
-                    <Grid container>
-                      <Grid item xs={6} mt={0.5}>
-                        <FormLabel id="orgRegForTransfers" sx={{ pb: 1 }}>
-                          <BCTypography variant="body4">
-                            {t('org:earlyIssuanceLabel', {
-                              year: getCurrentEarlyIssuanceYear()
-                            })}
-                            :
-                          </BCTypography>
-                        </FormLabel>
-                      </Grid>
-                      <Grid item xs={6}>
-                        <Controller
-                          control={control}
-                          name="hasEarlyIssuance"
-                          defaultValue=""
-                          render={({ field }) => (
-                            <RadioGroup
-                              row
-                              id="hasEarlyIssuance"
-                              name="hasEarlyIssuance"
-                              sx={{ pt: 1 }}
-                              {...field}
-                            >
-                              <FormControlLabel
-                                value="yes"
-                                control={
-                                  <Radio data-test="hasEarlyIssuanceYes" />
-                                }
-                                label={
-                                  <BCTypography variant="body4">
-                                    {t('yes')}
-                                  </BCTypography>
-                                }
-                              />
-                              <FormControlLabel
-                                value="no"
-                                sx={{ ml: 2 }}
-                                control={
-                                  <Radio data-test="hasEarlyIssuanceNo" />
-                                }
-                                label={
-                                  <BCTypography variant="body4">
-                                    {t('no')}
-                                  </BCTypography>
-                                }
-                              />
-                            </RadioGroup>
-                          )}
-                        >
-                          /
-                        </Controller>
-                        {renderError('hasEarlyIssuance')}
                       </Grid>
                     </Grid>
                   </FormControl>

@@ -27,6 +27,7 @@ import {
   useRegenerateLinkKey
 } from '@/hooks/useOrganization'
 import { copyToClipboard } from '@/utils/clipboard'
+import { ROW_LABEL_WIDTH, fieldLabelSx } from './fieldLayout'
 import {
   normalizeFormId,
   normalizeKeyData,
@@ -342,8 +343,8 @@ export const LinkKeyManagement = ({ orgID }) => {
   // Render helpers
   const renderLoadingState = () => (
     <BCBox>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-        <BCTypography variant="body4">
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <BCTypography variant="body4" sx={fieldLabelSx(ROW_LABEL_WIDTH)}>
           <strong>{t('org:linkKeyManagement.externalFormLinks')}</strong>
         </BCTypography>
         <Skeleton variant="rectangular" width={200} height={40} />
@@ -384,8 +385,8 @@ export const LinkKeyManagement = ({ orgID }) => {
 
   return (
     <BCBox>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-        <BCTypography variant="body4">
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <BCTypography variant="body4" sx={fieldLabelSx(ROW_LABEL_WIDTH)}>
           <strong>{t('org:linkKeyManagement.externalFormLinks')}</strong>
         </BCTypography>
 

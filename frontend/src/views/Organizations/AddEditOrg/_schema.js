@@ -79,10 +79,7 @@ export const createValidationSchema = (
     orgHeadOfficeCity: Yup.string().nullable(),
     orgHeadOfficeProvince: Yup.string().nullable(),
     orgHeadOfficeCountry: Yup.string().nullable(),
-    orgHeadOfficePostalCodeZipCode: Yup.string().nullable(),
-    hasEarlyIssuance: Yup.string().required(
-      'Early issuance setting is required'
-    )
+    orgHeadOfficePostalCodeZipCode: Yup.string().nullable()
   })
 }
 
