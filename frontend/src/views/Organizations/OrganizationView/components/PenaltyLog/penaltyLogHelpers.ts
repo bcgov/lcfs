@@ -1,11 +1,11 @@
 import { normalizeYear } from '@/utils/helper'
 
-type YearValue = string | number
-type PenaltyLog = {
+export type YearValue = string | number
+export type PenaltyLog = {
   complianceYear?: YearValue | null
   penaltyAmount?: number | string | null
 }
-type YearlyPenalty = {
+export type YearlyPenalty = {
   compliancePeriodId: string | number
   complianceYear: YearValue
   totalAutomatic: number
@@ -13,20 +13,23 @@ type YearlyPenalty = {
   autoLowCarbon?: number | string | null
   reportStatus?: string | null
   assessedDate?: string | null
-  renewableInvoiceSent?: string | null
-  renewablePaymentReceived?: string | null
-  lowCarbonInvoiceSent?: string | null
-  lowCarbonPaymentReceived?: string | null
+  renewableInvoiceSent?: boolean | null
+  renewablePaymentReceived?: boolean | null
+  lowCarbonInvoiceSent?: boolean | null
+  lowCarbonPaymentReceived?: boolean | null
 }
-type AutomaticPenaltyRow = {
+
+type AutomaticYearlyPenalty = Omit<YearlyPenalty, 'totalAutomatic'>
+export type AutomaticPenaltyRow = {
+  [key: string]: unknown
   id: string
   penaltyLogId: string
   complianceYear: YearValue
   description: string
   penaltyAmount: number
   dueDate: string
-  invoiceSent: string | null
-  paymentReceived: string | null
+  invoiceSent: boolean | null
+  paymentReceived: boolean | null
   source: 'automatic'
 }
 
@@ -49,7 +52,7 @@ const defaultTranslate = (key: string) => key
 export const processSparklineData = (
   rawPenaltyLogs: PenaltyLog[],
   yearLabels: string[],
-  yearlyPenalties: YearlyPenalty[]
+  yearlyPenalties: Array<Pick<YearlyPenalty, 'totalAutomatic'>>
 ) => {
   const discretionary = processDiscretionaryData(rawPenaltyLogs, yearLabels)
   const automatic = yearlyPenalties.map((item) => item.totalAutomatic)
@@ -61,7 +64,7 @@ export const processSparklineData = (
 }
 
 export const buildAutomaticPenaltyRows = (
-  yearlyPenalties: YearlyPenalty[],
+  yearlyPenalties: AutomaticYearlyPenalty[],
   t: (key: string) => string = defaultTranslate
 ): AutomaticPenaltyRow[] =>
   yearlyPenalties.flatMap((item) => {

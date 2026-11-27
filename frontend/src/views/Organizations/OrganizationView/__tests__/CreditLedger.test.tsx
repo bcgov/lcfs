@@ -1,13 +1,20 @@
 import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 
-import { CreditLedger } from '../CreditLedger'
-import { roles } from '@/constants/roles'
+import { CreditLedger, type CreditLedgerProps } from '../CreditLedger'
+import { roles, type RoleName } from '@/constants/roles'
 
-import { useCurrentUser } from '@/hooks/useCurrentUser'
+const mockCurrentUser = vi.hoisted(() =>
+  vi.fn<
+    () => {
+      isLoading: boolean
+      hasRoles: (...names: RoleName[]) => boolean
+    }
+  >()
+)
 
 vi.mock('@/hooks/useCurrentUser', () => ({
-  useCurrentUser: vi.fn()
+  useCurrentUser: mockCurrentUser
 }))
 
 vi.mock('@/components/Loading', () => ({
@@ -15,20 +22,21 @@ vi.mock('@/components/Loading', () => ({
 }))
 
 vi.mock('../CreditLedgerLegacy', () => ({
-  CreditLedgerLegacy: ({ organizationId }) => (
+  CreditLedgerLegacy: ({ organizationId }: CreditLedgerProps) => (
     <div data-test="legacy-ledger">{organizationId}</div>
   )
 }))
 
 vi.mock('../CreditLedgerPeriod', () => ({
-  CreditLedgerPeriod: ({ organizationId }) => (
+  CreditLedgerPeriod: ({ organizationId }: CreditLedgerProps) => (
     <div data-test="period-ledger">{organizationId}</div>
   )
 }))
 
-const mockCurrentUser = vi.mocked(useCurrentUser)
-
-const setUser = ({ userRoles = [], isLoading = false } = {}) => {
+const setUser = ({
+  userRoles = [],
+  isLoading = false
+}: { userRoles?: RoleName[]; isLoading?: boolean } = {}) => {
   mockCurrentUser.mockReturnValue({
     isLoading,
     hasRoles: (...names) => names.every((name) => userRoles.includes(name))

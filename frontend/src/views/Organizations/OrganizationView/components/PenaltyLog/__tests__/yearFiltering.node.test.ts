@@ -6,8 +6,16 @@ import { describe, it, expect } from 'vite-plus/test'
  */
 
 describe('Year Filtering - PenaltyLogManage', () => {
+  type CompliancePeriodFixture = {
+    compliancePeriodId?: number
+    compliance_period_id?: number
+    description?: string
+  }
   // This is the exact logic from PenaltyLogManage.jsx lines 88-109
-  const filterCompliancePeriods = (compliancePeriods, currentYear) => {
+  const filterCompliancePeriods = (
+    compliancePeriods: CompliancePeriodFixture[] | null | undefined,
+    currentYear: number
+  ) => {
     if (!compliancePeriods) return []
 
     return compliancePeriods
@@ -16,7 +24,7 @@ describe('Year Filtering - PenaltyLogManage', () => {
         // Extract year from description (e.g., "2024" from "2024 Compliance Period")
         const yearMatch = description.match(/(\d{4})/)
         if (yearMatch) {
-          const year = parseInt(yearMatch[1], 10)
+          const year = parseInt(yearMatch?.[1] ?? '', 10)
           return year <= currentYear
         }
         // If we can't extract a year, include it to be safe
@@ -143,7 +151,7 @@ describe('Year Filtering - PenaltyLogManage', () => {
     expect(result).toHaveLength(5) // 2020-2024
     expect(
       result.every((r) => {
-        const year = parseInt(r.label.match(/(\d{4})/)[1], 10)
+        const year = parseInt(r.label?.match(/(\d{4})/)?.[1] ?? '', 10)
         return year <= 2024
       })
     ).toBe(true)

@@ -1,4 +1,7 @@
 import { useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
+import type { EChartsOption } from 'echarts'
+import type { TFunction } from 'i18next'
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import Chip from '@mui/material/Chip'
@@ -30,14 +33,40 @@ import { useOrganizationAllocationAgreementAnalytics } from '@/hooks/useOrganiza
 import { formatNumberWithCommas } from '@/utils/formatters'
 import { useTranslation } from 'react-i18next'
 
-const formatNumber = (value, decimals = 0) => {
+type NumericValue = number | string | null | undefined
+type AllocationYear = {
+  complianceYear: string | number
+  allocatedOrganizationCount: number
+  allocatedOrganizations: string[]
+  addedOrganizations: string[]
+  removedOrganizations: string[]
+  totalFse: number
+  fseChange: number | null
+  fsePctChange: number | null
+}
+type AllocationAnalytics = {
+  allocatorOrganizationName: string
+  years: AllocationYear[]
+}
+type ChangeColor = 'text' | 'success' | 'error'
+type PivotStatus = 'added' | 'removed' | 'present' | 'none'
+type MetricPivotRow = {
+  key: string
+  label: ReactNode
+  value: (year: AllocationYear) => string | number
+  color?: (year: AllocationYear) => ChangeColor
+}
+
+const formatNumber = (value: NumericValue, decimals = 0) => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) {
     return '-'
   }
-  return formatNumberWithCommas({ value: Number(value).toFixed(decimals) })
+  return formatNumberWithCommas({
+    value: Number(value).toFixed(decimals)
+  }) as string
 }
 
-const formatCompactNumber = (value) => {
+const formatCompactNumber = (value: NumericValue) => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) {
     return '-'
   }
@@ -62,7 +91,7 @@ const formatCompactNumber = (value) => {
   return `${Number(scaledValue.toFixed(precision))}${threshold.suffix}`
 }
 
-const formatSignedNumber = (value, decimals = 0) => {
+const formatSignedNumber = (value: NumericValue, decimals = 0) => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) {
     return '-'
   }
@@ -71,7 +100,7 @@ const formatSignedNumber = (value, decimals = 0) => {
   return `${sign}${formatNumber(numericValue, decimals)}`
 }
 
-const formatSignedPercent = (value) => {
+const formatSignedPercent = (value: NumericValue) => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) {
     return '-'
   }
@@ -82,7 +111,7 @@ const formatSignedPercent = (value) => {
 
 const chartValueLabel = (overrides = {}) => ({
   show: true,
-  formatter: ({ value }) =>
+  formatter: ({ value }: { value: NumericValue }) =>
     Number(value) === 0 ? '' : formatCompactNumber(value),
   color: CHART_COLORS.neutralText,
   fontSize: 11,
@@ -92,14 +121,14 @@ const chartValueLabel = (overrides = {}) => ({
 
 const absoluteChartValueLabel = (overrides = {}) => ({
   ...chartValueLabel(),
-  formatter: ({ value }) => {
+  formatter: ({ value }: { value: NumericValue }) => {
     const numericValue = Math.abs(Number(value))
     return numericValue === 0 ? '' : formatCompactNumber(numericValue)
   },
   ...overrides
 })
 
-const getChangeColor = (value) => {
+const getChangeColor = (value: NumericValue): ChangeColor => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) {
     return 'text'
   }
@@ -119,7 +148,19 @@ const CHART_GRID = BC_CHART_GRID
 const CHART_AXIS_LABEL = BC_CHART_AXIS_LABEL
 const CHART_CATEGORY_AXIS_LABEL = BC_CHART_CATEGORY_AXIS_LABEL
 
-const MetricCard = ({ title, value, period, comparison, comparisonColor }) => (
+const MetricCard = ({
+  title,
+  value,
+  period,
+  comparison,
+  comparisonColor
+}: {
+  title: ReactNode
+  value: ReactNode
+  period: ReactNode
+  comparison: ReactNode
+  comparisonColor: ChangeColor
+}) => (
   <Card
     elevation={1}
     sx={{
@@ -151,7 +192,7 @@ const MetricCard = ({ title, value, period, comparison, comparisonColor }) => (
         <BCTypography
           variant="caption"
           color={comparisonColor}
-          fontWeight={comparisonColor === 'text' ? 'normal' : 'bold'}
+          fontWeight={comparisonColor === 'text' ? false : 'bold'}
           sx={{ display: 'block', mt: 1 }}
         >
           {comparison}
@@ -161,7 +202,13 @@ const MetricCard = ({ title, value, period, comparison, comparisonColor }) => (
   </Card>
 )
 
-const LabelWithTooltip = ({ label, tooltip }) => {
+const LabelWithTooltip = ({
+  label,
+  tooltip
+}: {
+  label: string
+  tooltip?: string
+}) => {
   if (!tooltip) {
     return label
   }
@@ -186,7 +233,15 @@ const LabelWithTooltip = ({ label, tooltip }) => {
   )
 }
 
-const ChartPanel = ({ title, option, height = 320 }) => (
+const ChartPanel = ({
+  title,
+  option,
+  height = 320
+}: {
+  title: ReactNode
+  option: EChartsOption
+  height?: number
+}) => (
   <Card elevation={1} sx={{ height: '100%', overflow: 'hidden', minWidth: 0 }}>
     <CardContent sx={{ minWidth: 0, overflow: 'hidden' }}>
       <BCTypography variant="h6" color="primary" sx={{ mb: 2 }}>
@@ -204,7 +259,13 @@ const ChartPanel = ({ title, option, height = 320 }) => (
   </Card>
 )
 
-const PivotStatusChip = ({ status, t }) => {
+const PivotStatusChip = ({
+  status,
+  t
+}: {
+  status: PivotStatus
+  t: TFunction
+}) => {
   if (status === 'added') {
     return (
       <Chip
@@ -239,14 +300,22 @@ const PivotStatusChip = ({ status, t }) => {
   )
 }
 
-export const AllocationAgreementHistory = ({ organizationId }) => {
+export const AllocationAgreementHistory = ({
+  organizationId
+}: {
+  organizationId: string | number | null | undefined
+}) => {
   const { t } = useTranslation(['org'])
   const [selectedYear, setSelectedYear] = useState('all')
-  const { data, isLoading, isError } =
-    useOrganizationAllocationAgreementAnalytics(organizationId, {
-      enabled: !!organizationId
-    })
+  const {
+    data: rawData,
+    isLoading,
+    isError
+  } = useOrganizationAllocationAgreementAnalytics(organizationId, {
+    enabled: !!organizationId
+  })
 
+  const data = rawData as AllocationAnalytics | undefined
   const years = useMemo(() => data?.years || [], [data?.years])
   const filteredYears = useMemo(() => {
     if (selectedYear === 'all') {
@@ -268,7 +337,7 @@ export const AllocationAgreementHistory = ({ organizationId }) => {
     )
     return latestIndex > 0 ? years[latestIndex - 1] : null
   }, [latestYear, years])
-  const metricPivotRows = useMemo(
+  const metricPivotRows = useMemo<MetricPivotRow[]>(
     () => [
       {
         key: 'allocatedOrganizations',
@@ -311,7 +380,7 @@ export const AllocationAgreementHistory = ({ organizationId }) => {
     [t]
   )
   const allocateePivotRows = useMemo(() => {
-    const organizationNames = new Set()
+    const organizationNames = new Set<string>()
     filteredYears.forEach((year) => {
       ;[
         ...(year.allocatedOrganizations || []),
@@ -324,122 +393,129 @@ export const AllocationAgreementHistory = ({ organizationId }) => {
       .sort((a, b) => a.localeCompare(b))
       .map((name) => ({
         name,
-        statuses: filteredYears.reduce((acc, year) => {
-          const added = year.addedOrganizations || []
-          const removed = year.removedOrganizations || []
-          const allocated = year.allocatedOrganizations || []
+        statuses: filteredYears.reduce<Record<string, PivotStatus>>(
+          (acc, year) => {
+            const added = year.addedOrganizations || []
+            const removed = year.removedOrganizations || []
+            const allocated = year.allocatedOrganizations || []
 
-          if (added.includes(name)) {
-            acc[year.complianceYear] = 'added'
-          } else if (removed.includes(name)) {
-            acc[year.complianceYear] = 'removed'
-          } else if (allocated.includes(name)) {
-            acc[year.complianceYear] = 'present'
-          } else {
-            acc[year.complianceYear] = 'none'
-          }
-          return acc
-        }, {})
+            if (added.includes(name)) {
+              acc[year.complianceYear] = 'added'
+            } else if (removed.includes(name)) {
+              acc[year.complianceYear] = 'removed'
+            } else if (allocated.includes(name)) {
+              acc[year.complianceYear] = 'present'
+            } else {
+              acc[year.complianceYear] = 'none'
+            }
+            return acc
+          },
+          {}
+        )
       }))
   }, [filteredYears])
   const showCharts = filteredYears.length > 1
   const fseTrendChartOption = useMemo(
-    () => ({
-      tooltip: {
-        trigger: 'axis',
-        valueFormatter: (value) => formatCompactNumber(value)
-      },
-      grid: {
-        ...CHART_GRID,
-        left: 96,
-        top: 24
-      },
-      xAxis: {
-        type: 'category',
-        data: filteredYears.map((year) => year.complianceYear),
-        axisLabel: CHART_CATEGORY_AXIS_LABEL
-      },
-      yAxis: {
-        type: 'value',
-        name: t('org:allocationAgreementHistory.fseReported'),
-        nameLocation: 'middle',
-        nameGap: 72,
-        nameRotate: 90,
-        nameTextStyle: {
-          color: CHART_COLORS.neutralText,
-          align: 'center'
+    () =>
+      ({
+        tooltip: {
+          trigger: 'axis',
+          valueFormatter: (value: NumericValue) => formatCompactNumber(value)
         },
-        axisLabel: {
-          ...CHART_AXIS_LABEL,
-          formatter: (value) => formatCompactNumber(value)
-        }
-      },
-      series: [
-        {
+        grid: {
+          ...CHART_GRID,
+          left: 96,
+          top: 24
+        },
+        xAxis: {
+          type: 'category',
+          data: filteredYears.map((year) => year.complianceYear),
+          axisLabel: CHART_CATEGORY_AXIS_LABEL
+        },
+        yAxis: {
+          type: 'value',
           name: t('org:allocationAgreementHistory.fseReported'),
-          type: 'line',
-          smooth: true,
-          symbol: 'circle',
-          symbolSize: 7,
-          data: filteredYears.map((year) => year.totalFse),
-          itemStyle: { color: CHART_COLORS.green },
-          lineStyle: { color: CHART_COLORS.green, width: 2 },
-          label: chartValueLabel({ position: 'top' }),
-          labelLayout: { hideOverlap: true },
-          areaStyle: { color: 'rgba(0, 158, 115, 0.18)' }
-        }
-      ]
-    }),
+          nameLocation: 'middle',
+          nameGap: 72,
+          nameRotate: 90,
+          nameTextStyle: {
+            color: CHART_COLORS.neutralText,
+            align: 'center'
+          },
+          axisLabel: {
+            ...CHART_AXIS_LABEL,
+            formatter: (value: NumericValue) => formatCompactNumber(value)
+          }
+        },
+        series: [
+          {
+            name: t('org:allocationAgreementHistory.fseReported'),
+            type: 'line',
+            smooth: true,
+            symbol: 'circle',
+            symbolSize: 7,
+            data: filteredYears.map((year) => year.totalFse),
+            itemStyle: { color: CHART_COLORS.green },
+            lineStyle: { color: CHART_COLORS.green, width: 2 },
+            label: chartValueLabel({ position: 'top' }),
+            labelLayout: { hideOverlap: true },
+            areaStyle: { color: 'rgba(0, 158, 115, 0.18)' }
+          }
+        ]
+      }) as EChartsOption,
     [filteredYears, t]
   )
   const allocateeMovementChartOption = useMemo(
-    () => ({
-      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-      legend: { bottom: 0, left: 8, right: 8 },
-      grid: {
-        ...CHART_GRID,
-        left: 96,
-        top: 24,
-        bottom: 96
-      },
-      xAxis: {
-        type: 'category',
-        data: filteredYears.map((year) => year.complianceYear),
-        axisLabel: CHART_CATEGORY_AXIS_LABEL
-      },
-      yAxis: {
-        type: 'value',
-        name: t('org:allocationAgreementHistory.organizationsShort'),
-        nameLocation: 'middle',
-        nameGap: 72,
-        nameRotate: 90,
-        nameTextStyle: {
-          color: CHART_COLORS.neutralText,
-          align: 'center'
+    () =>
+      ({
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        legend: { bottom: 0, left: 8, right: 8 },
+        grid: {
+          ...CHART_GRID,
+          left: 96,
+          top: 24,
+          bottom: 96
         },
-        axisLabel: CHART_AXIS_LABEL
-      },
-      series: [
-        {
-          name: t('org:allocationAgreementHistory.addedOrganizations'),
-          type: 'bar',
-          stack: 'movement',
-          data: filteredYears.map((year) => year.addedOrganizations.length),
-          label: chartValueLabel({ position: 'top' }),
-          labelLayout: { hideOverlap: true },
-          itemStyle: { color: CHART_COLORS.green }
+        xAxis: {
+          type: 'category',
+          data: filteredYears.map((year) => year.complianceYear),
+          axisLabel: CHART_CATEGORY_AXIS_LABEL
         },
-        {
-          name: t('org:allocationAgreementHistory.removedOrganizations'),
-          type: 'bar',
-          stack: 'movement',
-          data: filteredYears.map((year) => -year.removedOrganizations.length),
-          label: absoluteChartValueLabel({ position: 'bottom' }),
-          labelLayout: { hideOverlap: true },
-          itemStyle: { color: CHART_COLORS.orange }
-        }
-      ]
-    }),
+        yAxis: {
+          type: 'value',
+          name: t('org:allocationAgreementHistory.organizationsShort'),
+          nameLocation: 'middle',
+          nameGap: 72,
+          nameRotate: 90,
+          nameTextStyle: {
+            color: CHART_COLORS.neutralText,
+            align: 'center'
+          },
+          axisLabel: CHART_AXIS_LABEL
+        },
+        series: [
+          {
+            name: t('org:allocationAgreementHistory.addedOrganizations'),
+            type: 'bar',
+            stack: 'movement',
+            data: filteredYears.map((year) => year.addedOrganizations.length),
+            label: chartValueLabel({ position: 'top' }),
+            labelLayout: { hideOverlap: true },
+            itemStyle: { color: CHART_COLORS.green }
+          },
+          {
+            name: t('org:allocationAgreementHistory.removedOrganizations'),
+            type: 'bar',
+            stack: 'movement',
+            data: filteredYears.map(
+              (year) => -year.removedOrganizations.length
+            ),
+            label: absoluteChartValueLabel({ position: 'bottom' }),
+            labelLayout: { hideOverlap: true },
+            itemStyle: { color: CHART_COLORS.orange }
+          }
+        ]
+      }) as EChartsOption,
     [filteredYears, t]
   )
 

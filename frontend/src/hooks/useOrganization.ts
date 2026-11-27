@@ -21,6 +21,77 @@ export interface OrganizationData {
   [key: string]: unknown
 }
 
+export interface OrganizationBalance {
+  totalBalance?: number
+  [key: string]: unknown
+}
+
+export interface OrganizationPenaltyLog {
+  penaltyLogId?: number | string | null
+  compliancePeriodId?: number | null
+  complianceYear?: number | string | null
+  contraventionType?: string | null
+  offenceHistory?: boolean | null
+  deliberate?: boolean | null
+  effortsToCorrect?: boolean | null
+  economicBenefitDerived?: boolean | null
+  effortsToPreventRecurrence?: boolean | null
+  notes?: string | null
+  penaltyAmount?: number | string | null
+  description?: string | null
+  dueDate?: string | null
+  invoiceSent?: boolean | string | null
+  paymentReceived?: boolean | string | null
+  [key: string]: unknown
+}
+
+export interface OrganizationPenaltyLogsResponse {
+  penaltyLogs: OrganizationPenaltyLog[]
+  pagination?: {
+    page?: number
+    size?: number
+    total?: number
+    totalPages?: number
+    [key: string]: unknown
+  }
+}
+
+export type OrganizationPenaltyLogPagination = Omit<
+  PaginationParams,
+  'filters' | 'sortOrders' | 'sort_orders'
+> & {
+  filters?: Record<string, unknown>[]
+  sortOrders?: Record<string, unknown>[]
+  sort_orders?: Record<string, unknown>[]
+}
+
+export interface OrganizationPenaltyAnalyticsResponse {
+  yearlyPenalties?: OrganizationPenaltyAnalyticsYearlyPenalty[]
+  penaltyLogs?: OrganizationPenaltyLog[]
+  totals?: {
+    autoRenewable?: number | string | null
+    autoLowCarbon?: number | string | null
+    discretionary?: number | string | null
+    totalAutomatic?: number | string | null
+    total?: number | string | null
+  }
+}
+
+export interface OrganizationPenaltyAnalyticsYearlyPenalty {
+  compliancePeriodId: number | string
+  complianceYear: number | string
+  totalAutomatic: number | string
+  autoRenewable?: number | string | null
+  autoLowCarbon?: number | string | null
+  reportStatus?: string | null
+  assessedDate?: string | null
+  renewableInvoiceSent?: boolean | null
+  renewablePaymentReceived?: boolean | null
+  lowCarbonInvoiceSent?: boolean | null
+  lowCarbonPaymentReceived?: boolean | null
+  [key: string]: unknown
+}
+
 type OrganizationQueryOptions = QueryOptions<OrganizationData> & {
   cacheTime?: number
 }
@@ -104,7 +175,7 @@ export const useOrganization = (
 
 export const useOrganizationPenaltyAnalytics = (
   orgID: number | string | undefined | null,
-  options: QueryOptions<unknown> = {}
+  options: QueryOptions<OrganizationPenaltyAnalyticsResponse> = {}
 ) => {
   const client = useApiService()
   const { data: currentUser } = useCurrentUser()
@@ -117,7 +188,7 @@ export const useOrganizationPenaltyAnalytics = (
     ...restOptions
   } = options
 
-  return useQuery({
+  return useQuery<OrganizationPenaltyAnalyticsResponse>({
     queryKey: ['organization-penalty-analytics', id],
     queryFn: async () => {
       if (!id) {
@@ -176,8 +247,8 @@ export const useOrganizationAllocationAgreementAnalytics = (
 
 export const useOrganizationPenaltyLogs = (
   orgID: number | string | undefined | null,
-  paginationOptions: PaginationParams,
-  options: QueryOptions<unknown> = {}
+  paginationOptions: OrganizationPenaltyLogPagination,
+  options: QueryOptions<OrganizationPenaltyLogsResponse> = {}
 ) => {
   const client = useApiService()
   const { data: currentUser } = useCurrentUser()
@@ -185,7 +256,7 @@ export const useOrganizationPenaltyLogs = (
 
   const { enabled = true, ...restOptions } = options
 
-  return useQuery({
+  return useQuery<OrganizationPenaltyLogsResponse>({
     queryKey: ['organization-penalty-logs', id, paginationOptions],
     queryFn: async () => {
       if (!id) {
@@ -210,7 +281,7 @@ export const useSaveOrganizationPenaltyLog = (
     unknown,
     Record<string, unknown> & {
       deleted?: boolean
-      penaltyLogId?: number | string
+      penaltyLogId?: number | string | null
     }
   > = {}
 ) => {
@@ -222,7 +293,7 @@ export const useSaveOrganizationPenaltyLog = (
     mutationFn: async (
       data: Record<string, unknown> & {
         deleted?: boolean
-        penaltyLogId?: number | string
+        penaltyLogId?: number | string | null
       }
     ) => {
       if (!orgID) {
@@ -363,7 +434,9 @@ export const useOrganizationBalance = <T = unknown>(
   })
 }
 
-export const useCurrentOrgBalance = (options: QueryOptions<unknown> = {}) => {
+export const useCurrentOrgBalance = (
+  options: QueryOptions<OrganizationBalance> = {}
+) => {
   const client = useApiService()
 
   const {
@@ -373,7 +446,7 @@ export const useCurrentOrgBalance = (options: QueryOptions<unknown> = {}) => {
     ...restOptions
   } = options
 
-  return useQuery({
+  return useQuery<OrganizationBalance>({
     queryKey: ['current-org-balance'],
     queryFn: async () => {
       const response = await client.get(`/organizations/current/balances`)

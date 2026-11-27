@@ -5,6 +5,9 @@ import { beforeEach, describe, expect, vi } from 'vite-plus/test'
 import { useDownloadDocument } from '@/hooks/useDocuments'
 
 import { CommentRow } from '../CommentRow'
+import type { OrganizationCommentRecord } from '@/hooks/useOrganizationComments'
+import type { TestRender, ProviderValue } from '@/tests/utils/fixtures'
+import type { CommentRowProps } from '../CommentRow'
 
 vi.unmock('@/components/BCBox')
 
@@ -14,7 +17,17 @@ vi.mock('@/hooks/useDocuments', () => ({
 }))
 
 vi.mock('@/components/Documents/DocumentPreviewDialog', () => ({
-  default: ({ parentType, parentID, document, onClose }) => (
+  default: ({
+    parentType,
+    parentID,
+    document,
+    onClose
+  }: {
+    parentType: string
+    parentID: number | string
+    document: { documentId: number }
+    onClose: () => void
+  }) => (
     <div
       role="dialog"
       aria-label="Document preview"
@@ -28,19 +41,31 @@ vi.mock('@/components/Documents/DocumentPreviewDialog', () => ({
 }))
 
 vi.mock('@/components/Comments/CommentForm', () => ({
-  default: ({ enableMentions }) => (
+  default: ({ enableMentions }: { enableMentions?: boolean }) => (
     <div data-test="comment-form" data-mentions={String(!!enableMentions)} />
   )
 }))
 
-const comment = (id, html) => ({
+const comment = (id: number, html: string): OrganizationCommentRecord => ({
   internalCommentId: id,
   comment: html,
+  plainTextComment: null,
+  entityType: null,
+  entityId: null,
+  category: null,
+  complianceYear: null,
+  organizationId: null,
+  organizationName: null,
   visibility: 'Internal',
+  audienceScope: null,
+  createUser: null,
   createDate: '2026-08-20T12:00:00Z',
   updateDate: '2026-08-20T12:00:00Z',
+  updateUser: null,
+  updateFullName: null,
   fullName: 'Test User',
-  canEdit: false
+  canEdit: false,
+  documents: []
 })
 
 describe('CommentRow search highlighting', () => {
@@ -75,7 +100,11 @@ describe('CommentRow search highlighting', () => {
 })
 
 describe('CommentRow @mentions while editing', () => {
-  const renderEditing = (render, app, props) => {
+  const renderEditing = (
+    render: TestRender,
+    app: readonly ProviderValue[],
+    props: Partial<CommentRowProps>
+  ) => {
     render(
       <CommentRow
         comment={{ ...comment(1, '<p>Hello</p>'), canEdit: true }}
@@ -122,20 +151,24 @@ describe('CommentRow @mentions while editing', () => {
 })
 
 describe('CommentRow attachments', () => {
-  const attachedComment = {
+  const attachedComment: OrganizationCommentRecord = {
     ...comment(42, '<p>Payment verified</p>'),
     documents: [
       {
         documentId: 81,
         fileName: 'confirmation.pdf',
+        fileSize: 10,
+        createDate: '2026-10-22T12:01:00Z',
         createUser: 'penalty-author',
-        createDate: '2026-10-22T12:01:00Z'
+        displayName: null
       },
       {
         documentId: 82,
         fileName: 'evidence.csv',
+        fileSize: 10,
+        createDate: '2026-10-22T12:02:00Z',
         createUser: 'another-author',
-        createDate: '2026-10-22T12:02:00Z'
+        displayName: null
       }
     ]
   }

@@ -208,8 +208,8 @@ export const handleScheduleDelete = async <Row extends ScheduleRow>(
   idField: string,
   saveRow: (row: Row) => Promise<unknown>,
   alertRef: ScheduleAlertRef,
-  setRowData: (rows: ScheduleRow[]) => void,
-  defaultRowData: ScheduleRow,
+  setRowData: (rows: Row[]) => void,
+  defaultRowData: Partial<Row>,
   firstEditableColumn: string | null = null
 ): Promise<boolean> => {
   const updatedRow = { ...params.node.data, deleted: true }
@@ -265,7 +265,7 @@ export const handleScheduleDelete = async <Row extends ScheduleRow>(
 
   if (params.api.isRowDataEmpty?.()) {
     setTimeout(() => {
-      setRowData([{ ...defaultRowData, id: uuid() }])
+      setRowData([{ ...defaultRowData, id: uuid() } as Row])
     }, 100)
   }
   return true

@@ -14,6 +14,7 @@ import type { RenewableFuelSummaryRow } from '@/types/schema'
 
 export interface CompliancePeriod {
   compliancePeriodId: number
+  compliance_period_id?: number
   description?: string | null
   effectiveDate?: string | null
 }

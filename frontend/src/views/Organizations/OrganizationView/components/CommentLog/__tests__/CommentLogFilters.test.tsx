@@ -3,11 +3,16 @@ import { useCallback, useState } from 'react'
 import { describe, expect, vi, beforeEach, afterEach } from 'vite-plus/test'
 import { test } from '@/tests/utils/fixtures'
 import { CommentLogFilters } from '../CommentLogFilters'
+import type { CommentLogFilters as CommentLogFilterValues } from '@/hooks/useOrganizationComments'
+
+interface HarnessProps {
+  onApply: (key: keyof CommentLogFilterValues, value: unknown) => void
+}
 
 // Predictable translations; keys are fine for querying.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => key,
+    t: (key: string) => key,
     i18n: { language: 'en', changeLanguage: vi.fn() }
   })
 }))
@@ -18,21 +23,39 @@ vi.mock('react-i18next', () => ({
  * change is exactly what used to re-fire the debounced-commit effect with a
  * stale value after "Clear all filters".
  */
-const Harness = ({ onApply }) => {
-  const [filters, setFilters] = useState({
+const Harness = ({ onApply }: HarnessProps) => {
+  const [filters, setFilters] = useState<CommentLogFilterValues>({
     category: null,
     complianceYear: null,
-    search: ''
+    dateFrom: null,
+    dateTo: null,
+    visibility: null,
+    search: '',
+    sortBy: 'create_date',
+    sortOrder: 'desc',
+    page: 1,
+    size: 25
   })
   const setFilter = useCallback(
-    (key, value) => {
+    (key: keyof CommentLogFilterValues, value: unknown) => {
       onApply(key, value)
       setFilters((f) => ({ ...f, [key]: value }))
     },
     [onApply]
   )
   const clearFilters = useCallback(() => {
-    setFilters({ category: null, complianceYear: null, search: '' })
+    setFilters({
+      category: null,
+      complianceYear: null,
+      dateFrom: null,
+      dateTo: null,
+      visibility: null,
+      search: '',
+      sortBy: 'create_date',
+      sortOrder: 'desc',
+      page: 1,
+      size: 25
+    })
   }, [])
   return (
     <CommentLogFilters
@@ -45,8 +68,10 @@ const Harness = ({ onApply }) => {
   )
 }
 
-const searchInput = (container) =>
-  container.querySelector('[data-test="comment-log-search"] input')
+const searchInput = (container: HTMLElement): HTMLInputElement =>
+  container.querySelector<HTMLInputElement>(
+    '[data-test="comment-log-search"] input'
+  )!
 
 describe('CommentLogFilters — Clear all filters', () => {
   beforeEach(() => vi.useFakeTimers())

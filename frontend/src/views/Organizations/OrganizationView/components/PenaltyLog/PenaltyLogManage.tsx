@@ -3,6 +3,14 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import Grid2 from '@mui/material/Grid2'
 import { v4 as uuid } from 'uuid'
+import type { AgGridReact } from 'ag-grid-react'
+import type { GridOptions } from 'ag-grid-community'
+import type {
+  BCGridEditContext,
+  BCGridRef,
+  BCGridRow
+} from '@/components/BCDataGrid/types'
+import type { FloatingAlertHandle } from '@/components/BCAlert/FloatingAlert'
 
 import BCBox from '@/components/BCBox'
 import '@/components/BCButton'
@@ -14,15 +22,51 @@ import '@/components/BCDataGrid/components/Renderers/RequiredHeader'
 
 import {
   useOrganizationPenaltyLogs,
-  useSaveOrganizationPenaltyLog
+  useSaveOrganizationPenaltyLog,
+  type OrganizationPenaltyLog,
+  type OrganizationPenaltyLogPagination
 } from '@/hooks/useOrganization'
 import { useCompliancePeriod } from '@/hooks/useComplianceReports'
 import { defaultInitialPagination } from '@/constants/schedules'
 import { ROUTES, buildPath } from '@/routes/routes'
 import { handleScheduleDelete } from '@/utils/schedules'
 import { penaltyLogEditorColDefs, PENALTY_TYPES } from './_schema'
+import type { ScheduleGridParams, ScheduleRow } from '@/utils/schedules'
 
-const mapApiPenaltyToRow = (penalty, existingId) => ({
+interface PenaltyLogEditorRow extends ScheduleRow {
+  id: string | number
+  penaltyLogId?: number | string | null
+  compliancePeriodId?: number | null
+  complianceYear?: number | string | null
+  contraventionType?: string | null
+  offenceHistory: boolean
+  deliberate: boolean
+  effortsToCorrect: boolean
+  economicBenefitDerived: boolean
+  effortsToPreventRecurrence: boolean
+  notes?: string
+  penaltyAmount: number | null
+  modified: boolean
+  deleted?: boolean
+}
+
+interface PenaltyLogPayload extends Record<string, unknown> {
+  penaltyLogId?: number | string | null
+  compliancePeriodId?: number | null
+  contraventionType?: string | null
+  offenceHistory: boolean
+  deliberate: boolean
+  effortsToCorrect: boolean
+  economicBenefitDerived: boolean
+  effortsToPreventRecurrence: boolean
+  notes?: string
+  penaltyAmount: number | null
+}
+
+const mapApiPenaltyToRow = (
+  penalty: OrganizationPenaltyLog,
+  existingId?: string | number
+): PenaltyLogEditorRow => ({
   id: existingId ?? penalty.penaltyLogId ?? uuid(),
   penaltyLogId: penalty.penaltyLogId,
   compliancePeriodId: penalty.compliancePeriodId,
@@ -42,7 +86,7 @@ const mapApiPenaltyToRow = (penalty, existingId) => ({
   validationStatus: 'success'
 })
 
-const buildPayloadFromRow = (data) => ({
+const buildPayloadFromRow = (data: PenaltyLogEditorRow): PenaltyLogPayload => ({
   penaltyLogId: data.penaltyLogId,
   compliancePeriodId: data.compliancePeriodId,
   contraventionType: data.contraventionType,
@@ -62,12 +106,12 @@ export const PenaltyLogManage = () => {
   const { t } = useTranslation(['org', 'common'])
   const navigate = useNavigate()
   const { orgID } = useParams()
-  const alertRef = useRef(null)
-  const gridRef = useRef(null)
+  const alertRef = useRef<FloatingAlertHandle | null>(null)
+  const gridRef = useRef<AgGridReact<BCGridRow> | null>(null) as BCGridRef
 
-  const [rowData, setRowData] = useState([])
+  const [rowData, setRowData] = useState<PenaltyLogEditorRow[]>([])
 
-  const listPagination = useMemo(
+  const listPagination = useMemo<OrganizationPenaltyLogPagination>(
     () => ({ ...defaultInitialPagination, size: 500 }),
     []
   )
@@ -87,10 +131,13 @@ export const PenaltyLogManage = () => {
 
   const compliancePeriodOptions = useMemo(() => {
     if (!compliancePeriods) return []
+    const periods = Array.isArray(compliancePeriods)
+      ? compliancePeriods
+      : compliancePeriods.data
     const currentYear = new Date().getFullYear()
 
     // Filter out future years and map to options
-    return compliancePeriods
+    return periods
       .filter((period) => {
         const description = period.description || ''
         // Extract year from description (e.g., "2024" from "2024 Compliance Period")
@@ -104,7 +151,7 @@ export const PenaltyLogManage = () => {
       })
       .map((period) => ({
         value: period.compliancePeriodId ?? period.compliance_period_id,
-        label: period.description
+        label: period.description ?? ''
       }))
   }, [compliancePeriods])
 
@@ -126,7 +173,7 @@ export const PenaltyLogManage = () => {
     []
   )
 
-  const gridOptions = useMemo(
+  const gridOptions = useMemo<GridOptions<BCGridRow>>(
     () => ({
       autoSizeStrategy: {
         type: 'fitCellContents',
@@ -182,7 +229,7 @@ export const PenaltyLogManage = () => {
   }, [penaltyLogsData, onAddRows])
 
   const onAction = useCallback(
-    async (action, params) => {
+    async (action: string, params?: unknown) => {
       if (action !== 'delete') return
 
       const defaultRow = {
@@ -191,8 +238,8 @@ export const PenaltyLogManage = () => {
         contraventionType: PENALTY_TYPES[0]
       }
 
-      const success = await handleScheduleDelete(
-        params,
+      const success = await handleScheduleDelete<PenaltyLogEditorRow>(
+        params as ScheduleGridParams<PenaltyLogEditorRow>,
         'penaltyLogId',
         savePenaltyLog,
         alertRef,
@@ -209,10 +256,13 @@ export const PenaltyLogManage = () => {
   )
 
   const onCellEditingStopped = useCallback(
-    async (params) => {
-      if (!params.data.modified || params.data.deleted) return
+    async (params: BCGridEditContext<BCGridRow>) => {
+      if (!params.data || !params.node.data) return
+      const row = params.data as PenaltyLogEditorRow
+      const nodeRow = params.node.data as PenaltyLogEditorRow
+      if (!row.modified || row.deleted) return
 
-      const payload = buildPayloadFromRow(params.node.data)
+      const payload = buildPayloadFromRow(nodeRow)
 
       if (payload.penaltyAmount === null || payload.penaltyAmount <= 0) {
         alertRef.current?.triggerAlert({
@@ -222,7 +272,7 @@ export const PenaltyLogManage = () => {
           })
         })
         params.node.updateData({
-          ...params.node.data,
+          ...nodeRow,
           validationStatus: 'error',
           modified: true
         })
@@ -238,8 +288,9 @@ export const PenaltyLogManage = () => {
         })
 
         const response = await savePenaltyLog(payload)
-        const savedPenalty = response.data ?? response
-        const updatedRow = mapApiPenaltyToRow(savedPenalty, params.node.data.id)
+        const savedPenalty = (response.data ??
+          response) as OrganizationPenaltyLog
+        const updatedRow = mapApiPenaltyToRow(savedPenalty, nodeRow.id)
         params.node.updateData(updatedRow)
         setRowData((prevRows) =>
           prevRows.map((row) =>
@@ -254,14 +305,18 @@ export const PenaltyLogManage = () => {
         })
         await refetchPenaltyLogs()
       } catch (error) {
+        const failure = error as {
+          response?: { data?: { detail?: string } }
+          message?: string
+        }
         const message =
-          error?.response?.data?.detail || error.message || 'Save failed.'
+          failure?.response?.data?.detail || failure?.message || 'Save failed.'
         alertRef.current?.triggerAlert({
           severity: 'error',
           message
         })
         params.node.updateData({
-          ...params.node.data,
+          ...nodeRow,
           validationStatus: 'error',
           modified: true
         })
@@ -272,9 +327,7 @@ export const PenaltyLogManage = () => {
 
   useCallback(() => {
     navigate(
-      buildPath(ROUTES.ORGANIZATIONS.PENALTY_LOG, {
-        orgID
-      })
+      buildPath(ROUTES.ORGANIZATIONS.PENALTY_LOG, { orgID: String(orgID) })
     )
   }, [navigate, orgID])
 
@@ -305,7 +358,6 @@ export const PenaltyLogManage = () => {
           rowData={rowData}
           onCellEditingStopped={onCellEditingStopped}
           onAction={onAction}
-          onAddRows={onAddRows}
           gridOptions={gridOptions}
           loading={penaltyLogsLoading}
           stopEditingWhenCellsLoseFocus
@@ -314,7 +366,10 @@ export const PenaltyLogManage = () => {
             text: t('org:penaltyLog.saveReturn'),
             onSave: () =>
               navigate(
-                ROUTES.ORGANIZATIONS.PENALTY_LOG.replace(':orgID', orgID)
+                ROUTES.ORGANIZATIONS.PENALTY_LOG.replace(
+                  ':orgID',
+                  String(orgID)
+                )
               )
           }}
         />

@@ -5,6 +5,10 @@ import { roles } from '@/constants/roles'
 import { CreditLedgerLegacy } from './CreditLedgerLegacy'
 import { CreditLedgerPeriod } from './CreditLedgerPeriod'
 
+export interface CreditLedgerProps {
+  organizationId?: number | string | null
+}
+
 /**
  * Credit ledger entry point.
  *
@@ -12,7 +16,7 @@ import { CreditLedgerPeriod } from './CreditLedgerPeriod'
  * can be exercised internally in production; BCeID suppliers stay on the
  * previous all-time grid until it is released to them.
  */
-export const CreditLedger = ({ organizationId }) => {
+export const CreditLedger = ({ organizationId }: CreditLedgerProps) => {
   const { hasRoles, isLoading } = useCurrentUser()
 
   // Wait for the user before choosing, otherwise suppliers would briefly see

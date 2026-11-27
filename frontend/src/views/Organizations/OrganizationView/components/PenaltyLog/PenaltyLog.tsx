@@ -25,6 +25,10 @@ import {
 import { CanvasRenderer } from 'echarts/renderers'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useOrganizationPenaltyAnalytics } from '@/hooks/useOrganization'
+import type {
+  OrganizationPenaltyAnalyticsResponse,
+  OrganizationPenaltyAnalyticsYearlyPenalty
+} from '@/hooks/useOrganization'
 
 import { compareYears, normalizeYear } from '@/utils/helper'
 import {
@@ -57,7 +61,16 @@ echarts.use([
 ])
 
 // Helper function to process yearly penalties
-const processYearlyPenalties = (rawYearlyPenalties, allYears) => {
+const processYearlyPenalties = (
+  rawYearlyPenalties: OrganizationPenaltyAnalyticsYearlyPenalty[],
+  allYears: string[]
+): Array<{
+  year: string
+  complianceYear: string | number
+  autoRenewable: number
+  autoLowCarbon: number
+  totalAutomatic: number
+}> => {
   const dataByYear = new Map()
   rawYearlyPenalties.forEach((item) => {
     dataByYear.set(normalizeYear(item?.complianceYear), item)
@@ -86,7 +99,9 @@ const processYearlyPenalties = (rawYearlyPenalties, allYears) => {
 }
 
 // Helper function to process penalty totals
-const processPenaltyTotals = (rawTotals) => {
+const processPenaltyTotals = (
+  rawTotals: OrganizationPenaltyAnalyticsResponse['totals']
+) => {
   const autoRenewable = Number(rawTotals?.autoRenewable ?? 0)
   const autoLowCarbon = Number(rawTotals?.autoLowCarbon ?? 0)
   const discretionary = Number(rawTotals?.discretionary ?? 0)
@@ -138,9 +153,9 @@ export const PenaltyLog = () => {
   const rawTotals = penaltyAnalytics?.totals
 
   const allYears = useMemo(() => {
-    const yearSet = new Set()
+    const yearSet = new Set<string>()
 
-    const addYear = (value) => {
+    const addYear = (value: string | number | null | undefined) => {
       yearSet.add(normalizeYear(value))
     }
 
@@ -214,7 +229,10 @@ export const PenaltyLog = () => {
   }
 
   const analyticsErrorMessage =
-    analyticsError?.response?.data?.detail ?? analyticsError?.message ?? ''
+    (analyticsError as Error & { response?: { data?: { detail?: string } } })
+      ?.response?.data?.detail ??
+    analyticsError?.message ??
+    ''
 
   return (
     <BCBox p={0} sx={{ width: '100%' }}>

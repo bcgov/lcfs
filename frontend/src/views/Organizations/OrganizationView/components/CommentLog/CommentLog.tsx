@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 import Alert from '@mui/material/Alert'
@@ -23,9 +24,10 @@ import { useMentionableUsers } from '@/hooks/useMentionableUsers'
 
 import { CommentRow } from './CommentRow'
 import { CommentLogFilters } from './CommentLogFilters'
+import type { OrganizationCommentRecord } from '@/hooks/useOrganizationComments'
 
 // 10 years rolling window — matches what supply history uses.
-const buildYearOptions = () => {
+const buildYearOptions = (): number[] => {
   const currentYear = new Date().getFullYear()
   const out = []
   for (let y = currentYear; y >= currentYear - 10; y -= 1) out.push(y)
@@ -34,15 +36,24 @@ const buildYearOptions = () => {
 
 const PAGE_SIZE_OPTIONS = [10, 20, 25, 50, 100]
 
-const getCommentEntityKey = (comment) => {
+interface CommentThreadGroup {
+  entityKey: string | null
+  comments: OrganizationCommentRecord[]
+}
+
+const getCommentEntityKey = (
+  comment: OrganizationCommentRecord
+): string | null => {
   if (!comment?.entityType || !comment?.entityId) return null
   return `${comment.entityType}:${comment.entityId}`
 }
 
 // Groups consecutive comments that share the same entity key into threads.
 // No reordering — the backend already clusters same-entity comments together.
-const groupConsecutiveByEntity = (comments) => {
-  const groups = []
+const groupConsecutiveByEntity = (
+  comments: OrganizationCommentRecord[]
+): CommentThreadGroup[] => {
+  const groups: CommentThreadGroup[] = []
   comments.forEach((comment) => {
     const key = getCommentEntityKey(comment)
     const last = groups[groups.length - 1]
@@ -55,7 +66,7 @@ const groupConsecutiveByEntity = (comments) => {
   return groups
 }
 
-const LoadingSkeleton = () => (
+const LoadingSkeleton = (): ReactElement => (
   <Stack spacing={1.5} aria-busy="true" data-test="comment-log-loading">
     {[0, 1, 2].map((i) => (
       <Box key={i} sx={{ p: 2, border: '1px solid', borderColor: 'divider' }}>
@@ -67,8 +78,18 @@ const LoadingSkeleton = () => (
   </Stack>
 )
 
+export interface CommentLogProps {
+  organizationId?: number | string | null
+}
+
+type CommentLogComponent = ((props: CommentLogProps) => ReactElement) & {
+  PAGE_SIZE_OPTIONS: number[]
+}
+
 /** Comment Log for an organization — server-paginated, filter-capable. */
-export const CommentLog = ({ organizationId }) => {
+export const CommentLog: CommentLogComponent = ({
+  organizationId
+}: CommentLogProps) => {
   const { t } = useTranslation(['internalComment'])
   const { orgID } = useParams()
   const { hasRoles, data: currentUser } = useCurrentUser()
@@ -104,7 +125,7 @@ export const CommentLog = ({ organizationId }) => {
 
   // One lookup is shared by whichever row is being edited. `null` means no
   // lookup is in progress.
-  const [mentionQuery, setMentionQuery] = useState(null)
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null)
   const mentionResults = useMentionableUsers(
     mentionQuery ?? '',
     isGovernment && mentionQuery !== null

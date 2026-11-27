@@ -20,6 +20,34 @@ import {
   faScaleBalanced
 } from '@fortawesome/free-solid-svg-icons'
 import i18n from '@/i18n'
+import type { EChartsOption } from 'echarts'
+import type { YearValue } from './penaltyLogHelpers'
+
+interface PenaltyTotals {
+  total?: number
+  totalAutomatic: number
+  discretionary: number
+}
+
+interface PenaltySummaryTotals {
+  totalAutomatic: number
+  discretionary: number
+  autoRenewable: number
+  autoLowCarbon: number
+}
+
+interface SparklineOptions {
+  total: EChartsOption
+  automatic: EChartsOption
+  discretionary: EChartsOption
+}
+
+interface PenaltyYearRow {
+  year: YearValue
+  autoRenewable: number
+  autoLowCarbon: number
+  totalAutomatic: number
+}
 
 const cardBorderSx = {
   border: '1px solid',
@@ -27,11 +55,17 @@ const cardBorderSx = {
 }
 
 // Component for metric cards section
-export const MetricCardsSection = ({ penaltyTotals, sparklineOptions }) => (
+export const MetricCardsSection = ({
+  penaltyTotals,
+  sparklineOptions
+}: {
+  penaltyTotals: PenaltyTotals
+  sparklineOptions: SparklineOptions
+}) => (
   <Stack spacing={1} sx={{ width: '100%' }}>
     <BCMetricCard
       title={i18n.t('org:penaltyLog.metrics.totalPenalties')}
-      value={currencyFormatter(penaltyTotals.total)}
+      value={String(currencyFormatter(penaltyTotals.total))}
       subtitle={i18n.t('org:penaltyLog.metrics.yearToDate')}
       option={sparklineOptions.total}
       ariaLabel={i18n.t('org:penaltyLog.metrics.totalPenaltiesTrend')}
@@ -39,7 +73,7 @@ export const MetricCardsSection = ({ penaltyTotals, sparklineOptions }) => (
     />
     <BCMetricCard
       title={i18n.t('org:penaltyLog.metrics.totalAuto')}
-      value={currencyFormatter(penaltyTotals.totalAutomatic)}
+      value={String(currencyFormatter(penaltyTotals.totalAutomatic))}
       subtitle={i18n.t('org:penaltyLog.metrics.totalSubtitle')}
       option={sparklineOptions.automatic}
       ariaLabel={i18n.t('org:penaltyLog.metrics.automaticPenaltiesTrend')}
@@ -47,7 +81,7 @@ export const MetricCardsSection = ({ penaltyTotals, sparklineOptions }) => (
     />
     <BCMetricCard
       title={i18n.t('org:penaltyLog.metrics.discretionary')}
-      value={currencyFormatter(penaltyTotals.discretionary)}
+      value={String(currencyFormatter(penaltyTotals.discretionary))}
       subtitle={i18n.t('org:penaltyLog.metrics.discretionarySubtitle')}
       option={sparklineOptions.discretionary}
       ariaLabel={i18n.t('org:penaltyLog.metrics.discretionaryPenaltiesTrend')}
@@ -57,7 +91,11 @@ export const MetricCardsSection = ({ penaltyTotals, sparklineOptions }) => (
 )
 
 // Component for stacked bar chart
-export const StackedBarChart = ({ stackedBarOption }) => (
+export const StackedBarChart = ({
+  stackedBarOption
+}: {
+  stackedBarOption: EChartsOption
+}) => (
   <Card sx={{ height: '100%', width: '100%', ...cardBorderSx }}>
     <CardContent>
       <Stack spacing={2}>
@@ -83,7 +121,11 @@ export const StackedBarChart = ({ stackedBarOption }) => (
   </Card>
 )
 
-const PenaltyMixCard = ({ penaltyMixOption }) => {
+const PenaltyMixCard = ({
+  penaltyMixOption
+}: {
+  penaltyMixOption: EChartsOption
+}) => {
   const idPrefix = useId()
   const penaltyMixDescriptionId = `${idPrefix}-penalty-mix-description`
   const penaltyMixTableCaptionId = `${idPrefix}-penalty-mix-table-caption`
@@ -107,7 +149,7 @@ const PenaltyMixCard = ({ penaltyMixOption }) => {
     return {
       key: `${item?.name ?? 'category'}-${index}`,
       name: item?.name ?? '',
-      amount: currencyFormatter(item?.value),
+      amount: String(currencyFormatter(item?.value)),
       share: `${share.toFixed(1)}%`
     }
   })
@@ -214,6 +256,10 @@ export const PenaltySummaryTable = ({
   yearlyPenalties,
   penaltyTotals,
   penaltyMixOption
+}: {
+  yearlyPenalties: PenaltyYearRow[]
+  penaltyTotals: PenaltySummaryTotals
+  penaltyMixOption: EChartsOption
 }) => (
   <Card sx={{ height: '100%', width: '100%', ...cardBorderSx }}>
     <CardContent>
@@ -237,9 +283,15 @@ export const PenaltySummaryTable = ({
             {yearlyPenalties.map((row) => (
               <TableRow key={row.year} hover>
                 <TableCell>{row.year}</TableCell>
-                <TableCell>{currencyFormatter(row.autoRenewable)}</TableCell>
-                <TableCell>{currencyFormatter(row.autoLowCarbon)}</TableCell>
-                <TableCell>{currencyFormatter(row.totalAutomatic)}</TableCell>
+                <TableCell>
+                  {String(currencyFormatter(row.autoRenewable))}
+                </TableCell>
+                <TableCell>
+                  {String(currencyFormatter(row.autoLowCarbon))}
+                </TableCell>
+                <TableCell>
+                  {String(currencyFormatter(row.totalAutomatic))}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -259,7 +311,7 @@ export const PenaltySummaryTable = ({
                     )}
                   </BCTypography>
                   <BCTypography variant="subtitle1" fontWeight="medium">
-                    {currencyFormatter(penaltyTotals.autoRenewable)}
+                    {String(currencyFormatter(penaltyTotals.autoRenewable))}
                   </BCTypography>
                 </Stack>
               </Grid>
@@ -271,7 +323,7 @@ export const PenaltySummaryTable = ({
                     )}
                   </BCTypography>
                   <BCTypography variant="subtitle1" fontWeight="medium">
-                    {currencyFormatter(penaltyTotals.autoLowCarbon)}
+                    {String(currencyFormatter(penaltyTotals.autoLowCarbon))}
                   </BCTypography>
                 </Stack>
               </Grid>
@@ -281,7 +333,7 @@ export const PenaltySummaryTable = ({
                     {i18n.t('org:penaltyLog.metrics.discretionary')}
                   </BCTypography>
                   <BCTypography variant="subtitle1" fontWeight="medium">
-                    {currencyFormatter(penaltyTotals.discretionary)}
+                    {String(currencyFormatter(penaltyTotals.discretionary))}
                   </BCTypography>
                 </Stack>
               </Grid>
@@ -291,7 +343,7 @@ export const PenaltySummaryTable = ({
                     {i18n.t('org:penaltyLog.metrics.totalAuto')}
                   </BCTypography>
                   <BCTypography variant="subtitle1" fontWeight="medium">
-                    {currencyFormatter(penaltyTotals.totalAutomatic)}
+                    {String(currencyFormatter(penaltyTotals.totalAutomatic))}
                   </BCTypography>
                 </Stack>
               </Grid>

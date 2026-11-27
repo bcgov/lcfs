@@ -7,7 +7,6 @@ import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
-import { defaultInitialPagination } from '@/constants/schedules'
 
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { Role } from '@/components/Role'
@@ -19,17 +18,56 @@ import {
   discretionaryPenaltyLogColumnDefs,
   penaltyLogColumnDefs
 } from './_schema'
+import type {
+  BCPaginationFilter,
+  BCPaginationOptions,
+  BCSortOrder,
+  BCGridRow
+} from '@/components/BCDataGrid/types'
+import type { AgGridReact } from 'ag-grid-react'
+import type { GetRowIdParams } from 'ag-grid-community'
+import type { AutomaticPenaltyRow } from './penaltyLogHelpers'
+import type { OrganizationPenaltyLog } from '@/hooks/useOrganization'
 
-const initialPaginationOptions = {
-  ...defaultInitialPagination
+const initialPaginationOptions: BCPaginationOptions = {
+  page: 1,
+  size: 10,
+  sortOrders: [],
+  filters: []
 }
 
-const normalizeSortDirection = (sort) => sort.direction ?? sort.sort
+type LocalFilter = BCPaginationFilter & {
+  colId?: string
+  value?: unknown
+}
 
-const getFilterValue = (filter) => filter.filter ?? filter.value
+type LocalSortOrder = BCSortOrder & {
+  colId?: string
+  sort?: string
+}
 
-const applyLocalFilters = (rows, filters = []) =>
-  filters.reduce((filteredRows, filter) => {
+type PenaltyGridRow = BCGridRow & {
+  id?: number | string
+  penaltyLogId?: number | string | null
+  penalty_log_id?: number | string | null
+  invoiceSent?: boolean | string | null
+}
+
+type AutomaticPenaltyGridRow = Pick<
+  PenaltyGridRow,
+  'id' | 'penaltyLogId' | 'penaltyAmount' | 'invoiceSent'
+>
+
+const normalizeSortDirection = (sort: LocalSortOrder) =>
+  sort.direction ?? sort.sort
+
+const getFilterValue = (filter: LocalFilter) => filter.filter ?? filter.value
+
+const applyLocalFilters = (
+  rows: PenaltyGridRow[],
+  filters: LocalFilter[] = []
+) =>
+  filters.reduce<PenaltyGridRow[]>((filteredRows, filter) => {
     const field = filter.field ?? filter.colId
     const filterValue = getFilterValue(filter)
 
@@ -58,7 +96,10 @@ const applyLocalFilters = (rows, filters = []) =>
     )
   }, rows)
 
-const applyLocalSortOrders = (rows, sortOrders = []) =>
+const applyLocalSortOrders = (
+  rows: PenaltyGridRow[],
+  sortOrders: LocalSortOrder[] = []
+) =>
   [...rows].sort((a, b) => {
     for (const sort of sortOrders) {
       const field = sort.field ?? sort.colId
@@ -88,7 +129,10 @@ const applyLocalSortOrders = (rows, sortOrders = []) =>
     return 0
   })
 
-const buildLocalPenaltyQuery = (rows, paginationOptions) => {
+const buildLocalPenaltyQuery = (
+  rows: PenaltyGridRow[],
+  paginationOptions: BCPaginationOptions
+) => {
   const page = paginationOptions.page || 1
   const size = paginationOptions.size || rows.length
   const filteredRows = applyLocalFilters(rows, paginationOptions.filters)
@@ -118,12 +162,14 @@ const buildLocalPenaltyQuery = (rows, paginationOptions) => {
 export const AutomaticPenaltyLogGrid = ({
   automaticPenaltyRows = [],
   loading = false
+}: {
+  automaticPenaltyRows?: Array<AutomaticPenaltyRow | AutomaticPenaltyGridRow>
+  loading?: boolean
 }) => {
   const { t } = useTranslation(['org'])
-  const automaticPenaltyGridRef = useRef(null)
-  const [paginationOptions, setPaginationOptions] = useState(
-    defaultInitialPagination
-  )
+  const automaticPenaltyGridRef = useRef<AgGridReact<BCGridRow> | null>(null)
+  const [paginationOptions, setPaginationOptions] =
+    useState<BCPaginationOptions>(initialPaginationOptions)
 
   const automaticPenaltyQuery = useMemo(
     () => ({
@@ -148,7 +194,7 @@ export const AutomaticPenaltyLogGrid = ({
     [automaticPenaltyRows]
   )
 
-  const getPenaltyRowId = useCallback((params) => {
+  const getPenaltyRowId = useCallback((params: GetRowIdParams<BCGridRow>) => {
     const identifier = params.data?.penaltyLogId ?? params.data?.id
     return identifier !== undefined && identifier !== null
       ? String(identifier)
@@ -164,9 +210,12 @@ export const AutomaticPenaltyLogGrid = ({
   )
   const columnState = useMemo(() => [], [])
 
-  const handlePaginationChange = useCallback((newPagination) => {
-    setPaginationOptions((prev) => ({ ...prev, ...newPagination }))
-  }, [])
+  const handlePaginationChange = useCallback(
+    (newPagination: BCPaginationOptions) => {
+      setPaginationOptions((prev) => ({ ...prev, ...newPagination }))
+    },
+    []
+  )
 
   return (
     <BCWidgetCard
@@ -219,13 +268,16 @@ export const AutomaticPenaltyLogGrid = ({
 }
 
 // Separate component for discretionary penalty grid
-export const DiscretionaryPenaltyLogGrid = ({ organizationId }) => {
+export const DiscretionaryPenaltyLogGrid = ({
+  organizationId
+}: {
+  organizationId: number | string | null | undefined
+}) => {
   const { t } = useTranslation(['org'])
   const navigate = useNavigate()
-  const penaltyLogGridRef = useRef(null)
-  const [paginationOptions, setPaginationOptions] = useState(
-    initialPaginationOptions
-  )
+  const penaltyLogGridRef = useRef<AgGridReact<BCGridRow> | null>(null)
+  const [paginationOptions, setPaginationOptions] =
+    useState<BCPaginationOptions>(initialPaginationOptions)
 
   const penaltyLogsQuery = useOrganizationPenaltyLogs(
     organizationId,
@@ -237,15 +289,17 @@ export const DiscretionaryPenaltyLogGrid = ({ organizationId }) => {
 
   const discretionaryPenaltyLogsQuery = useMemo(() => {
     const manualRows =
-      penaltyLogsQuery.data?.penaltyLogs?.map((row) => ({
-        ...row,
-        id: row.penaltyLogId,
-        description: row.description ?? row.contraventionType,
-        dueDate: row.dueDate ?? '',
-        invoiceSent: row.invoiceSent,
-        paymentReceived: row.paymentReceived,
-        source: row.source ?? 'manual'
-      })) ?? []
+      penaltyLogsQuery.data?.penaltyLogs?.map(
+        (row: OrganizationPenaltyLog) => ({
+          ...row,
+          id: row.penaltyLogId,
+          description: row.description ?? row.contraventionType,
+          dueDate: row.dueDate ?? '',
+          invoiceSent: row.invoiceSent,
+          paymentReceived: row.paymentReceived,
+          source: row.source ?? 'manual'
+        })
+      ) ?? []
 
     return {
       ...penaltyLogsQuery,
@@ -256,7 +310,7 @@ export const DiscretionaryPenaltyLogGrid = ({ organizationId }) => {
     }
   }, [penaltyLogsQuery])
 
-  const getPenaltyRowId = useCallback((params) => {
+  const getPenaltyRowId = useCallback((params: GetRowIdParams<BCGridRow>) => {
     const identifier =
       params.data?.penaltyLogId ??
       params.data?.penalty_log_id ??
@@ -277,16 +331,20 @@ export const DiscretionaryPenaltyLogGrid = ({ organizationId }) => {
 
   const handleClearFilters = useCallback(() => {
     try {
-      penaltyLogGridRef.current?.clearFilters?.()
+      penaltyLogGridRef.current?.api?.setFilterModel(null)
+      penaltyLogGridRef.current?.api?.onFilterChanged()
     } catch {
       // no-op
     }
     setPaginationOptions({ ...initialPaginationOptions })
   }, [])
 
-  const handlePaginationChange = useCallback((newPagination) => {
-    setPaginationOptions(newPagination)
-  }, [])
+  const handlePaginationChange = useCallback(
+    (newPagination: BCPaginationOptions) => {
+      setPaginationOptions(newPagination)
+    },
+    []
+  )
 
   return (
     <Stack spacing={2} mt={4} sx={{ width: '100%' }}>

@@ -1,5 +1,8 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
+import type { ColDef, ValueFormatterParams } from 'ag-grid-community'
+import type { EChartsOption, TooltipComponentOption } from 'echarts'
+import type { ComponentProps } from 'react'
 
 import { MetricCardsSection, PenaltySummaryTable } from '../PenaltyComponents'
 import {
@@ -14,11 +17,21 @@ import {
 } from '../../_charts'
 
 vi.mock('@/components/charts/BCMetricCard', () => ({
-  BCMetricCard: ({ value }) => <div>{value}</div>
+  BCMetricCard: ({
+    value
+  }: ComponentProps<
+    typeof import('@/components/charts/BCMetricCard').BCMetricCard
+  >) => <div>{value}</div>
 }))
 
 vi.mock('@/components/charts/BCResponsiveEchart', () => ({
-  BCResponsiveEChart: ({ ariaLabel, ariaDescription, ariaDescribedBy }) => (
+  BCResponsiveEChart: ({
+    ariaLabel,
+    ariaDescription,
+    ariaDescribedBy
+  }: ComponentProps<
+    typeof import('@/components/charts/BCResponsiveEchart').BCResponsiveEChart
+  >) => (
     <div
       data-testid="penalty-chart"
       role="img"
@@ -69,7 +82,7 @@ vi.mock('@/hooks/useOrganization', () => ({
 }))
 
 vi.mock('@/i18n', () => ({
-  default: { t: (key) => key }
+  default: { t: (key: string) => key }
 }))
 
 const theme = {
@@ -81,13 +94,63 @@ const theme = {
   }
 }
 
-const t = (key) =>
-  ({
-    'org:penaltyLog.automaticDescriptions.renewable':
-      'Renewable fuel target non-compliance penalty total (Line 11, Gasoline + Diesel + Jet fuel)',
-    'org:penaltyLog.automaticDescriptions.lowCarbon':
-      'Low carbon fuel target non-compliance penalty total (Line 21)'
-  })[key] ?? key
+const translations: Partial<Record<string, string>> = {
+  'org:penaltyLog.automaticDescriptions.renewable':
+    'Renewable fuel target non-compliance penalty total (Line 11, Gasoline + Diesel + Jet fuel)',
+  'org:penaltyLog.automaticDescriptions.lowCarbon':
+    'Low carbon fuel target non-compliance penalty total (Line 21)'
+}
+const t = (key: string) => translations[key] ?? key
+
+const getPenaltyAmountFormatter = (columns: ColDef[]) => {
+  const formatter = columns.find(
+    ({ field }) => field === 'penaltyAmount'
+  )?.valueFormatter
+  if (typeof formatter !== 'function') {
+    throw new Error('Expected a penalty amount formatter')
+  }
+  // These formatters only read the value from the grid callback parameters.
+  return (value: number) =>
+    formatter({ value } as ValueFormatterParams<unknown, number, unknown>)
+}
+
+const getAxisFormatter = ({ yAxis }: EChartsOption) => {
+  const formatter =
+    !Array.isArray(yAxis) &&
+    yAxis?.type === 'value' &&
+    yAxis.axisLabel?.formatter
+  if (typeof formatter !== 'function') {
+    throw new Error('Expected a penalty chart axis formatter')
+  }
+  return (value: number) => formatter(value, 0, undefined)
+}
+
+type TooltipFormatter = Exclude<
+  TooltipComponentOption['formatter'],
+  string | undefined
+>
+type TooltipParams = Parameters<TooltipFormatter>[0]
+type TooltipPoint = Exclude<TooltipParams, unknown[]> & { axisValue?: string }
+
+const getTooltipFormatter = ({ tooltip }: EChartsOption) => {
+  const formatter = !Array.isArray(tooltip) && tooltip?.formatter
+  if (typeof formatter !== 'function') {
+    throw new Error('Expected a penalty chart tooltip formatter')
+  }
+  return (params: TooltipPoint | TooltipPoint[]) => formatter(params, '')
+}
+
+const tooltipPoint = (point: Partial<TooltipPoint>): TooltipPoint => ({
+  componentType: 'series',
+  componentSubType: '',
+  componentIndex: 0,
+  name: '',
+  dataIndex: 0,
+  data: 0,
+  value: 0,
+  $vars: [],
+  ...point
+})
 
 describe('organization dashboard penalty formatting', () => {
   it('formats every metric card value with two decimal places', () => {
@@ -166,7 +229,11 @@ describe('organization dashboard penalty formatting', () => {
     const chart = screen.getByRole('img', {
       name: /Penalty mix donut chart by penalty type/
     })
-    const describedByIds = chart.getAttribute('aria-describedby').split(' ')
+    const describedBy = chart.getAttribute('aria-describedby')
+    if (describedBy === null) {
+      throw new Error('Expected the chart to reference its description')
+    }
+    const describedByIds = describedBy.split(' ')
     const describedElements = describedByIds.map((id) =>
       document.getElementById(id)
     )
@@ -213,25 +280,17 @@ describe('organization dashboard penalty formatting', () => {
   })
 
   it('formats history and editor penalty amounts with two decimal places', () => {
-    const historyAmountColumn = penaltyLogColumnDefs.find(
-      ({ field }) => field === 'penaltyAmount'
+    const formatHistoryAmount = getPenaltyAmountFormatter(penaltyLogColumnDefs)
+    const formatEditorAmount = getPenaltyAmountFormatter(
+      penaltyLogEditorColDefs(new Map(), [], (key, options) =>
+        typeof options?.defaultValue === 'string' ? options.defaultValue : key
+      )
     )
-    const editorAmountColumn = penaltyLogEditorColDefs(
-      new Map(),
-      [],
-      (_key, options) => options?.defaultValue ?? _key
-    ).find(({ field }) => field === 'penaltyAmount')
 
-    expect(historyAmountColumn.valueFormatter({ value: 1250 })).toBe(
-      '$1,250.00'
-    )
-    expect(historyAmountColumn.valueFormatter({ value: 1250.75 })).toBe(
-      '$1,250.75'
-    )
-    expect(editorAmountColumn.valueFormatter({ value: 1250 })).toBe('$1,250.00')
-    expect(editorAmountColumn.valueFormatter({ value: 1250.75 })).toBe(
-      '$1,250.75'
-    )
+    expect(formatHistoryAmount(1250)).toBe('$1,250.00')
+    expect(formatHistoryAmount(1250.75)).toBe('$1,250.75')
+    expect(formatEditorAmount(1250)).toBe('$1,250.00')
+    expect(formatEditorAmount(1250.75)).toBe('$1,250.75')
   })
 
   it('formats monetary chart labels by magnitude and keeps exact tooltips', () => {
@@ -245,10 +304,11 @@ describe('organization dashboard penalty formatting', () => {
       formatCurrency: true
     })
 
-    const formatAxisLabel = stackedBarOption.yAxis.axisLabel.formatter
-    const formatGenericSparklineAxisLabel =
-      genericSparklineOption.yAxis.axisLabel.formatter
-    const formatSparklineAxisLabel = sparklineOption.yAxis.axisLabel.formatter
+    const formatAxisLabel = getAxisFormatter(stackedBarOption)
+    const formatGenericSparklineAxisLabel = getAxisFormatter(
+      genericSparklineOption
+    )
+    const formatSparklineAxisLabel = getAxisFormatter(sparklineOption)
 
     expect(formatAxisLabel(999.5)).toBe('$999.50')
     expect(formatAxisLabel(1000)).toBe('$1.00K')
@@ -258,34 +318,36 @@ describe('organization dashboard penalty formatting', () => {
     expect(formatSparklineAxisLabel(999.5)).toBe('$999.50')
     expect(formatSparklineAxisLabel(1000)).toBe('$1.00K')
     expect(
-      stackedBarOption.tooltip.formatter([
-        {
+      getTooltipFormatter(stackedBarOption)([
+        tooltipPoint({
           axisValue: '2025',
           marker: '',
           seriesName: 'Renewable fuel target penalty',
           value: 123.45
-        },
-        {
+        }),
+        tooltipPoint({
           axisValue: '2025',
           marker: '',
           seriesName: 'Low carbon fuel target penalty',
           value: 200
-        }
+        })
       ])
     ).toBe(
       '2025<br/>Renewable fuel target penalty: $123.45<br/>Low carbon fuel target penalty: $200.00'
     )
     expect(
-      penaltyMixOption.tooltip.formatter({
-        marker: '',
-        name: 'Renewable fuel target penalty',
-        value: 123.45,
-        percent: 33.3
-      })
+      getTooltipFormatter(penaltyMixOption)(
+        tooltipPoint({
+          marker: '',
+          name: 'Renewable fuel target penalty',
+          value: 123.45,
+          percent: 33.3
+        })
+      )
     ).toBe('Renewable fuel target penalty: $123.45 (33.3%)')
     expect(
-      sparklineOption.tooltip.formatter([
-        { marker: '', axisValue: '2025', data: 50.1 }
+      getTooltipFormatter(sparklineOption)([
+        tooltipPoint({ marker: '', axisValue: '2025', data: 50.1 })
       ])
     ).toBe('2025: $50.10')
   })

@@ -7,10 +7,16 @@ import i18n from '@/i18n'
 import theme from '@/themes'
 import { FuelCategoryBreakdown } from '../FuelCategoryBreakdown'
 
-const mockEChart = vi.fn()
+type ChartOption = {
+  xAxis: { data: string[] }
+  yAxis: { name: string }
+  series: { name: string; data: number[]; stack: string }[]
+  aria: { enabled: boolean; label: { description: string } }
+}
+const mockEChart = vi.fn<(props: { option: ChartOption }) => void>()
 
 vi.mock('echarts-for-react', () => ({
-  default: (props) => {
+  default: (props: { option: ChartOption }) => {
     mockEChart(props)
     return <div data-test="echarts" />
   }
@@ -63,7 +69,8 @@ const renderBreakdown = () =>
     </I18nextProvider>
   )
 
-const lastOption = () => mockEChart.mock.calls.at(-1)[0].option
+const lastOption = () =>
+  mockEChart.mock.calls[mockEChart.mock.calls.length - 1][0].option
 const seriesData = () =>
   Object.fromEntries(lastOption().series.map((s) => [s.name, s.data]))
 
