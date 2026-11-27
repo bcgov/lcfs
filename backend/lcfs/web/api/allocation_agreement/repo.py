@@ -288,6 +288,7 @@ class AllocationAgreementRepository:
         self,
         pagination: PaginationRequestSchema,
         organization_id: Optional[int] = None,
+        export_all: bool = False,
     ) -> Tuple[list, int]:
         """
         Allocation agreements across every non-Draft compliance report version,
@@ -436,11 +437,10 @@ class AllocationAgreementRepository:
         )
 
         offset, limit = builder.offset_limit(pagination)
-        result = await self.db.execute(
-            query.add_columns(func.count().over().label("total_count"))
-            .offset(offset)
-            .limit(limit)
-        )
+        result_query = query.add_columns(func.count().over().label("total_count"))
+        if not export_all:
+            result_query = result_query.offset(offset).limit(limit)
+        result = await self.db.execute(result_query)
         rows = result.all()
         if rows:
             return rows, rows[0].total_count

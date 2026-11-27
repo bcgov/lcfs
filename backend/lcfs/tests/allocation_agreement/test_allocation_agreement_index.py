@@ -99,6 +99,22 @@ async def test_service_passes_no_organization_when_filter_cleared(index_service)
     assert repo.get_allocation_agreements_index.call_args.args[1] is None
 
 
+@pytest.mark.anyio
+async def test_service_requests_all_matching_rows_for_export(index_service):
+    service, repo = index_service
+
+    result = await service.get_allocation_agreements_index(
+        AllocationAgreementIndexRequestSchema(page=1, size=500), export_all=True
+    )
+
+    assert repo.get_allocation_agreements_index.call_args.kwargs == {
+        "export_all": True
+    }
+    assert result.pagination.total == 61
+    assert result.pagination.size == 61
+    assert result.pagination.total_pages == 1
+
+
 def test_request_schema_accepts_grid_payload():
     request = AllocationAgreementIndexRequestSchema.model_validate(
         {
@@ -178,6 +194,47 @@ async def test_index_view_is_idir_only(
 
     url = fastapi_app.url_path_for("get_allocation_agreements_index")
     response = await client.post(url, json={"page": 1, "size": 25})
+
+    assert response.status_code == 403
+    service.get_allocation_agreements_index.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_index_export_view_returns_all_matching_rows(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
+    service = MagicMock(spec=AllocationAgreementServices)
+    service.get_allocation_agreements_index = AsyncMock(
+        return_value=AllocationAgreementIndexResponseSchema(
+            allocation_agreements=[],
+            pagination=PaginationResponseSchema(
+                total=0, page=1, size=500, total_pages=0
+            ),
+        )
+    )
+    fastapi_app.dependency_overrides[AllocationAgreementServices] = lambda: service
+
+    url = fastapi_app.url_path_for("export_allocation_agreements_index")
+    response = await client.post(url, json={"page": 1, "size": 500})
+
+    assert response.status_code == 200
+    args, kwargs = service.get_allocation_agreements_index.call_args
+    assert args[0].size == 500
+    assert kwargs == {"export_all": True}
+
+
+@pytest.mark.anyio
+async def test_index_export_view_is_idir_only(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING])
+    service = MagicMock(spec=AllocationAgreementServices)
+    service.get_allocation_agreements_index = AsyncMock()
+    fastapi_app.dependency_overrides[AllocationAgreementServices] = lambda: service
+
+    url = fastapi_app.url_path_for("export_allocation_agreements_index")
+    response = await client.post(url, json={"page": 1, "size": 500})
 
     assert response.status_code == 403
     service.get_allocation_agreements_index.assert_not_called()

@@ -1,11 +1,16 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useSnackbar } from 'notistack'
+import * as XLSX from 'xlsx'
 import BCBox from '@/components/BCBox'
+import { DownloadButton } from '@/components/DownloadButton'
 import BCTypography from '@/components/BCTypography'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import OrganizationList from '@/views/Transactions/components/OrganizationList'
 import { useGetAllocationAgreementsIndex } from '@/hooks/useAllocationAgreement'
+import { useApiService } from '@/services/useApiService'
+import { apiRoutes } from '@/constants/routes'
 import { ROUTES, buildPath } from '@/routes/routes'
 import {
   allocationAgreementsIndexColDefs,
@@ -39,7 +44,10 @@ const readSavedOrg = () => {
 export const AllocationAgreementsIndex = () => {
   const { t } = useTranslation(['allocationAgreement', 'common'])
   const navigate = useNavigate()
+  const { enqueueSnackbar } = useSnackbar()
+  const apiService = useApiService()
   const gridRef = useRef()
+  const [isExporting, setIsExporting] = useState(false)
 
   const [paginationOptions, setPaginationOptions] = useState(
     initialPaginationOptions
@@ -52,6 +60,58 @@ export const AllocationAgreementsIndex = () => {
   )
 
   const columnDefs = useMemo(() => allocationAgreementsIndexColDefs(), [])
+
+  const downloadExcel = useCallback(async () => {
+    setIsExporting(true)
+    try {
+      const request = {
+        page: 1,
+        size: 500,
+        sortOrders: paginationOptions.sortOrders,
+        filters: paginationOptions.filters,
+        organizationId: selectedOrg?.id ?? null
+      }
+      const firstResponse = await apiService.post(
+        apiRoutes.exportAllocationAgreementsIndex,
+        request
+      )
+      const rows = firstResponse.data.allocationAgreements
+
+      const exportColumns = columnDefs.filter((column) => column.field)
+      const headers = exportColumns.map((column) => column.headerName)
+      const exportRows = rows.map((row) =>
+        exportColumns.map((column) => {
+          const value = row[column.field]
+          const formattedValue = column.valueFormatter
+            ? column.valueFormatter({ value, data: row })
+            : value
+          return formattedValue ?? ''
+        })
+      )
+      const worksheet = XLSX.utils.aoa_to_sheet([headers, ...exportRows])
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Allocation agreements')
+      const date = new Date().toISOString().slice(0, 10)
+      XLSX.writeFile(workbook, `allocation_agreements_${date}.xlsx`, {
+        bookType: 'xlsx'
+      })
+    } catch (error) {
+      enqueueSnackbar(
+        error?.message ||
+          t('allocationAgreement:allocationAgreementIndex.downloadError'),
+        { variant: 'error' }
+      )
+    } finally {
+      setIsExporting(false)
+    }
+  }, [
+    apiService,
+    columnDefs,
+    enqueueSnackbar,
+    paginationOptions,
+    selectedOrg?.id,
+    t
+  ])
 
   const updateOrgFilter = useCallback((org) => {
     setSelectedOrg(org)
@@ -117,17 +177,39 @@ export const AllocationAgreementsIndex = () => {
       <BCTypography variant="body2" color="text.secondary" my={2}>
         {t('allocationAgreement:allocationAgreementIndex.description')}
       </BCTypography>
-      <OrganizationList
-        selectedOrg={selectedOrg}
-        onOrgChange={updateOrgFilter}
-        onlyRegistered={false}
-        orgFilter="all"
-        showSelectedLabel={false}
-        label={`${t('allocationAgreement:allocationAgreementIndex.showAgreementsInvolve')}:`}
-        placeholder={t(
-          'allocationAgreement:allocationAgreementIndex.selectOrganization'
-        )}
-      />
+      <BCBox
+        sx={{
+          display: 'flex',
+          alignItems: 'end',
+          justifyContent: 'space-between',
+          gap: 2,
+          flexWrap: 'wrap',
+          mb: 2
+        }}
+      >
+        <OrganizationList
+          selectedOrg={selectedOrg}
+          onOrgChange={updateOrgFilter}
+          onlyRegistered={false}
+          orgFilter="all"
+          showSelectedLabel={false}
+          label={`${t('allocationAgreement:allocationAgreementIndex.showAgreementsInvolve')}:`}
+          placeholder={t(
+            'allocationAgreement:allocationAgreementIndex.selectOrganization'
+          )}
+        />
+        <DownloadButton
+          label={t(
+            'allocationAgreement:allocationAgreementIndex.downloadExcel'
+          )}
+          downloadLabel={t(
+            'allocationAgreement:allocationAgreementIndex.downloadingExcel'
+          )}
+          isDownloading={isExporting}
+          onDownload={downloadExcel}
+          dataTest="allocation-agreements-index-download"
+        />
+      </BCBox>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer
           gridRef={gridRef}

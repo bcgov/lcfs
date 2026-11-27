@@ -232,7 +232,9 @@ class AllocationAgreementServices:
 
     @service_handler
     async def get_allocation_agreements_index(
-        self, request: AllocationAgreementIndexRequestSchema
+        self,
+        request: AllocationAgreementIndexRequestSchema,
+        export_all: bool = False,
     ) -> AllocationAgreementIndexResponseSchema:
         """
         Allocation agreements from all non-Draft compliance report versions,
@@ -244,9 +246,14 @@ class AllocationAgreementServices:
             sort_orders=request.sort_orders,
             filters=request.filters,
         )
-        rows, total_count = await self.repo.get_allocation_agreements_index(
-            pagination, request.organization_id
-        )
+        if export_all:
+            rows, total_count = await self.repo.get_allocation_agreements_index(
+                pagination, request.organization_id, export_all=True
+            )
+        else:
+            rows, total_count = await self.repo.get_allocation_agreements_index(
+                pagination, request.organization_id
+            )
         items = []
         for row in rows:
             item = {
@@ -257,13 +264,14 @@ class AllocationAgreementServices:
             item["status"] = item["status"].value
             items.append(AllocationAgreementIndexItemSchema.model_validate(item))
 
+        response_size = max(total_count, 1) if export_all else pagination.size
         return AllocationAgreementIndexResponseSchema(
             allocation_agreements=items,
             pagination=PaginationResponseSchema(
                 total=total_count,
                 page=pagination.page,
-                size=pagination.size,
-                total_pages=calculate_total_pages(total_count, pagination.size),
+                size=response_size,
+                total_pages=calculate_total_pages(total_count, response_size),
             ),
         )
 
