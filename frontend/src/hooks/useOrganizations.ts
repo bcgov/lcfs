@@ -172,16 +172,30 @@ export const useRegExtOrgs = <
   })
 }
 
+export interface OrganizationsListData {
+  organizations: Array<Record<string, unknown>>
+  pagination?: {
+    page?: number
+    size?: number
+    total?: number
+    totalPages?: number
+  }
+  [key: string]: unknown
+}
+
 export const useOrganizationsList = (
   paginationOptions: PaginationParams,
-  options: QueryOptions<unknown>
+  options: QueryOptions<OrganizationsListData> = {}
 ) => {
   const client = useApiService()
 
   return useQuery({
     queryKey: ['organizations-list', paginationOptions],
     queryFn: async () => {
-      const response = await client.post('/organizations/', paginationOptions)
+      const response = await client.post<OrganizationsListData>(
+        '/organizations/',
+        paginationOptions
+      )
       return response.data
     },
     ...options

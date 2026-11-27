@@ -25,7 +25,7 @@ type OrganizationProfileData = OrganizationData & {
   orgAddress?: Parameters<typeof constructAddress>[0]
   orgAttorneyAddress?: Parameters<typeof constructAddress>[0]
   recordsAddress?: string | null
-  orgStatus?: { status: string }
+  orgStatus?: { status?: string; organizationStatusId?: number }
   edrmsRecord?: string | null
   hasEarlyIssuance?: boolean
 }

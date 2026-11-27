@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import type { ReactNode, SyntheticEvent } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'
@@ -14,8 +15,17 @@ import { useOrganizationPageStore } from '@/stores/useOrganizationPageStore'
 import { AppBar, Tab, Tabs } from '@mui/material'
 import { useTranslation } from 'react-i18next'
 import OrganizationList from '@/views/Transactions/components/OrganizationList'
+import type { AlertSeverity } from '@/components/BCAlert/BCAlertRoot'
 
-function TabPanel({ children, value, index }) {
+function TabPanel({
+  children,
+  value,
+  index
+}: {
+  children: ReactNode
+  value: number
+  index: number
+}) {
   return (
     <BCBox
       role="tabpanel"
@@ -29,19 +39,24 @@ function TabPanel({ children, value, index }) {
   )
 }
 
-function a11yProps(index) {
+function a11yProps(index: number) {
   return {
     id: `organization-tab-${index}`,
     'aria-controls': `organization-tabpanel-${index}`
   }
 }
 
-export const OrganizationView = ({ addMode = false }) => {
+type OrganizationViewProps = { addMode?: boolean }
+type OrganizationViewAlert = { message: string; severity: AlertSeverity }
+
+export const OrganizationView = ({
+  addMode = false
+}: OrganizationViewProps) => {
   const location = useLocation()
   const navigate = useNavigate()
   const { t } = useTranslation(['org'])
   const { orgID } = useParams()
-  const [alert, setAlert] = useState(null)
+  const [alert, setAlert] = useState<OrganizationViewAlert | null>(null)
 
   const { data: currentUser, hasRoles } = useCurrentUser()
   const setOrganizationContext = useOrganizationPageStore(
@@ -97,7 +112,7 @@ export const OrganizationView = ({ addMode = false }) => {
     return matchIndex >= 0 ? matchIndex : 0
   }, [location.pathname, tabConfig])
 
-  const handleTabChange = (event, newValue) => {
+  const handleTabChange = (_event: SyntheticEvent, newValue: number) => {
     const targetPath = tabConfig[newValue]?.path
     if (targetPath) {
       navigate(targetPath)
@@ -105,7 +120,13 @@ export const OrganizationView = ({ addMode = false }) => {
   }
 
   const handleOrganizationChange = useCallback(
-    ({ id }) => {
+    ({
+      id
+    }: {
+      id: string | number | null
+      label: string | null
+      name: string | null
+    }) => {
       if (!id) {
         return
       }
@@ -230,7 +251,11 @@ export const OrganizationView = ({ addMode = false }) => {
             )}
             {showOrganizationHeader && (
               <OrganizationList
-                selectedOrg={{ id: organizationId }}
+                selectedOrg={{
+                  id: organizationId ?? null,
+                  label: organizationData?.name ?? null,
+                  name: organizationData?.name ?? null
+                }}
                 onOrgChange={handleOrganizationChange}
                 onlyRegistered={false}
                 includeAllOption={false}

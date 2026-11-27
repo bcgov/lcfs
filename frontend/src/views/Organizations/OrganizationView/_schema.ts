@@ -1,5 +1,6 @@
 import type { TFunction } from 'i18next'
 import type { ColDef } from 'ag-grid-community'
+import type { BCGridRow } from '@/components/BCDataGrid/types'
 import { numberFormatter } from '@/utils/formatters'
 import {
   LinkRenderer,
@@ -16,17 +17,8 @@ import {
 } from '@/utils/organizationTypes'
 import { usersColumnDefs } from '@/views/Admin/AdminMenu/components/_schema'
 
-type OrganizationTypeOption = {
-  organizationTypeId: number
-  orgType?: string | null
-  org_type?: string | null
-  name?: string
-  description?: string | null
-  shortLabel: string
-}
-
 type OrganizationTypeData = {
-  organizationTypeId: number
+  organizationTypeId?: number
   orgType?: string | null
   org_type?: string | null
   name?: string
@@ -38,8 +30,8 @@ const isOrganizationTypeOption = (
 ): value is OrganizationTypeData =>
   typeof value === 'object' &&
   value !== null &&
-  'organizationTypeId' in value &&
-  typeof value.organizationTypeId === 'number' &&
+  (!('organizationTypeId' in value) ||
+    typeof value.organizationTypeId === 'number') &&
   (!('orgType' in value) ||
     typeof value.orgType === 'string' ||
     value.orgType === null) &&
@@ -69,26 +61,24 @@ const useOrganizationTypeFilterOptions = () => {
   }
 }
 
-type OrganizationRow = {
-  status?: string
-  orgStatus: { status: string }
-  orgType: { orgType?: string }
-  orgTypes?: OrganizationTypeOption[]
-  name?: string
-  hasEarlyIssuance?: boolean
-  totalBalance?: number
-  reservedBalance?: number
-}
+const asRecord = (value: unknown): Record<string, unknown> | undefined =>
+  typeof value === 'object' && value !== null
+    ? (value as Record<string, unknown>)
+    : undefined
 
-export const organizationsColDefs = (
-  t: TFunction
-): ColDef<OrganizationRow>[] => [
+const getOrganizationTypeOptions = (value: unknown): OrganizationTypeData[] =>
+  Array.isArray(value) ? value.filter(isOrganizationTypeOption) : []
+
+export const organizationsColDefs = (t: TFunction): ColDef<BCGridRow>[] => [
   {
     colId: 'status',
     field: 'status',
     headerName: t('org:orgColLabels.registrationStatus'),
     minWidth: 140,
-    valueGetter: (params) => params.data?.orgStatus.status,
+    valueGetter: (params) => {
+      const status = asRecord(params.data?.orgStatus)?.status
+      return typeof status === 'string' ? status : undefined
+    },
     cellRenderer: OrgStatusRenderer,
     cellClass: 'vertical-middle',
     filter: true,
@@ -105,16 +95,27 @@ export const organizationsColDefs = (
     field: 'orgType',
     headerName: t('org:orgColLabels.orgType'),
     minWidth: 220,
-    valueGetter: (params) =>
-      params.data?.orgTypes?.length
-        ? getOrgTypesDisplayLabel(params.data.orgTypes)
-        : getOrgTypeDisplayLabel(params.data?.orgType),
+    valueGetter: (params) => {
+      const data = params.data
+      const types = getOrganizationTypeOptions(data?.orgTypes)
+      const primaryType = isOrganizationTypeOption(data?.orgType)
+        ? data.orgType
+        : undefined
+      return types.length
+        ? getOrgTypesDisplayLabel(types)
+        : primaryType
+          ? getOrgTypeDisplayLabel(primaryType)
+          : ''
+    },
     // Filtering is applied server-side (BCGridViewer forwards the filter
     // model to /organizations/, which matches any of an organization's
     // types), so this only feeds the grid's local row value: use the
     // primary type rather than a comma-joined list an equals filter would
     // never match.
-    filterValueGetter: (params) => params.data?.orgType?.orgType ?? '',
+    filterValueGetter: (params) => {
+      const orgType = asRecord(params.data?.orgType)?.orgType
+      return typeof orgType === 'string' ? orgType : ''
+    },
     cellRenderer: OrgTypeRenderer,
     cellClass: 'vertical-middle',
     filter: true,
@@ -140,7 +141,10 @@ export const organizationsColDefs = (
     field: 'hasEarlyIssuance',
     headerName: t('org:orgColLabels.earlyIssuance'),
     minWidth: 200,
-    valueGetter: (params) => params.data?.hasEarlyIssuance,
+    valueGetter: (params) =>
+      typeof params.data?.hasEarlyIssuance === 'boolean'
+        ? params.data.hasEarlyIssuance
+        : undefined,
     cellRenderer: YesNoTextRenderer,
     cellClass: 'vertical-middle',
     filter: true,
@@ -178,10 +182,12 @@ export const organizationsColDefs = (
     colId: 'reserve',
     headerName: t('org:orgColLabels.inReserve'),
     valueFormatter: numberFormatter,
-    valueGetter: (params) =>
-      params.data?.reservedBalance == null
-        ? undefined
-        : Math.abs(params.data.reservedBalance),
+    valueGetter: (params) => {
+      const balance = params.data?.reservedBalance
+      if (balance === null || balance === undefined) return undefined
+      if (typeof balance === 'number') return Math.abs(balance)
+      return typeof balance === 'string' ? Math.abs(Number(balance)) : undefined
+    },
     minWidth: 300,
     cellRenderer: LinkRenderer,
     filter: false,

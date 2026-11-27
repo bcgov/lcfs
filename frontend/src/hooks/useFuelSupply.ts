@@ -51,6 +51,7 @@ export interface OrganizationFuelSupplySelectedYearSummary {
 }
 
 export interface OrganizationFuelSupplyData {
+  [key: string]: unknown
   fuelSupplies: Array<{
     compliancePeriod?: string
     reportSubmissionDate?: string | null

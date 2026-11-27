@@ -18,22 +18,30 @@ import { useOrganizationsList } from '@/hooks/useOrganizations'
 import { roles } from '@/constants/roles'
 import { Role } from '@/components/Role'
 import { LinkRenderer } from '@/utils/grid/cellRenderers'
+import type {
+  BCGridRef,
+  BCPaginationOptions
+} from '@/components/BCDataGrid/types'
+import type { GetRowIdParams, GridOptions } from 'ag-grid-community'
+import type { AlertSeverity } from '@/components/BCAlert/BCAlertRoot'
+import type { BCGridRow } from '@/components/BCDataGrid/types'
 
 export const Organizations = () => {
   const { t } = useTranslation(['common', 'org'])
-  const gridRef = useRef()
+  const gridRef = useRef<BCGridRef['current']>(null)
   const downloadButtonRef = useRef(null)
   const [gridKey] = useState('organizations-grid')
 
   // Pagination state
-  const [paginationOptions, setPaginationOptions] = useState({
-    page: 1,
-    size: 10,
-    sortOrders: [{ field: 'name', direction: 'asc' }],
-    filters: []
-  })
+  const [paginationOptions, setPaginationOptions] =
+    useState<BCPaginationOptions>({
+      page: 1,
+      size: 10,
+      sortOrders: [{ field: 'name', direction: 'asc' }],
+      filters: []
+    })
 
-  const gridOptions = useMemo(
+  const gridOptions = useMemo<GridOptions<BCGridRow>>(
     () => ({
       overlayNoRowsTemplate: t('org:noOrgsFound')
     }),
@@ -43,7 +51,17 @@ export const Organizations = () => {
     () => ({
       cellRenderer: LinkRenderer,
       cellRendererParams: {
-        url: (data) => data.data.organizationId
+        url: ({ data }: { data: unknown }) => {
+          if (
+            typeof data === 'object' &&
+            data !== null &&
+            'organizationId' in data
+          ) {
+            const { organizationId } = data
+            return String(organizationId ?? '')
+          }
+          return ''
+        }
       }
     }),
     []
@@ -53,7 +71,7 @@ export const Organizations = () => {
 
   // For alert messages
   const [alertMessage, setAlertMessage] = useState('')
-  const [alertSeverity, setAlertSeverity] = useState('info')
+  const [alertSeverity, setAlertSeverity] = useState<AlertSeverity>('info')
 
   // For downloads
   const apiService = useApiService()
@@ -61,7 +79,13 @@ export const Organizations = () => {
   const [isDownloadingUsers, setIsDownloadingUsers] = useState(false)
 
   // Use the organizations list hook
-  const queryData = useOrganizationsList(paginationOptions)
+  const queryData = useOrganizationsList(paginationOptions, {})
+  const gridQueryData = {
+    data: queryData.data,
+    isError: queryData.isError,
+    isLoading: queryData.isLoading,
+    error: queryData.error
+  }
 
   // Clear filters using gridRef exposed API and reset pagination filters
   const handleClearFilters = useCallback(() => {
@@ -108,7 +132,7 @@ export const Organizations = () => {
 
   // Row ID
   const getRowId = useCallback(
-    (params) => String(params.data.organizationId),
+    (params: GetRowIdParams<BCGridRow>) => String(params.data?.organizationId),
     []
   )
 
@@ -165,7 +189,7 @@ export const Organizations = () => {
           gridRef={gridRef}
           gridKey={gridKey}
           columnDefs={columnDefs}
-          queryData={queryData}
+          queryData={gridQueryData}
           dataKey="organizations"
           autoSizeStrategy={{
             type: 'fitGridWidth',

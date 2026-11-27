@@ -37,7 +37,7 @@ describe('Organization Test Suite', () => {
 
       // Wait for the file download request to complete
       cy.wait('@fileDownload').then((interception) => {
-        expect(interception.response.statusCode).to.eq(200)
+        expect(interception.response?.statusCode).to.eq(200)
       })
     })
 
@@ -52,7 +52,7 @@ describe('Organization Test Suite', () => {
 
       // Wait for the failed file download request
       cy.wait('@fileDownloadFail', { timeout: 30000 }).then((interception) => {
-        expect(interception.response.statusCode).to.eq(500)
+        expect(interception.response?.statusCode).to.eq(500)
       })
 
       // Check for the presence of the error message
@@ -81,7 +81,7 @@ describe('Organization Test Suite', () => {
 
       // Wait for the file download request to complete
       cy.wait('@fileDownload', { timeout: 30000 }).then((interception) => {
-        expect(interception.response.statusCode).to.eq(200)
+        expect(interception.response?.statusCode).to.eq(200)
       })
     })
 
@@ -98,7 +98,7 @@ describe('Organization Test Suite', () => {
 
       // Wait for the failed file download request
       cy.wait('@fileDownloadFail', { timeout: 30000 }).then((interception) => {
-        expect(interception.response.statusCode).to.eq(500)
+        expect(interception.response?.statusCode).to.eq(500)
       })
 
       // Check for the presence of the error message

@@ -8,8 +8,9 @@ import CopyIcon from '@mui/icons-material/ContentCopy'
 import '@mui/icons-material/Visibility'
 import BCTypography from '@/components/BCTypography'
 
-type ReferenceItem = { label?: string; value: string }
+type ReferenceItem = { label?: string; value?: string }
 type ReferenceCompareBoxProps = {
+  title?: string
   data: ReferenceItem[]
   onDismiss: () => void
   isDismissed?: boolean
@@ -79,7 +80,7 @@ const ReferenceCompareBox = ({
                 component="button"
                 type="button"
                 aria-label={`${item.label ? `${item.label}: ` : ''}${item.value ?? ''}`}
-                onClick={() => copyToClipboard(item.value, index)}
+                onClick={() => copyToClipboard(item.value ?? '', index)}
                 sx={{
                   display: 'flex',
                   flex: 1,
@@ -144,7 +145,7 @@ const ReferenceCompareBox = ({
                   >
                     <IconButton
                       size="small"
-                      onClick={() => copyToClipboard(item.value, index)}
+                      onClick={() => copyToClipboard(item.value ?? '', index)}
                       sx={{
                         color: copiedItem === index ? '#fcba19' : '#999',
                         bgcolor:

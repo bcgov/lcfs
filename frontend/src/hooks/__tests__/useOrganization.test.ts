@@ -2,7 +2,8 @@ import { waitFor } from '@testing-library/react'
 import { describe, beforeEach, afterEach, expect, vi } from 'vite-plus/test'
 import { test } from '@/tests/utils/fixtures'
 import { useApiService } from '@/services/useApiService'
-
+import axios from 'axios'
+import type { ApiServiceInstance } from '@/services/useApiService'
 import {
   useOrganization,
   useOrganizationUser,
@@ -21,10 +22,12 @@ import {
   useUpdateCurrentOrgCreditMarket,
   useUpdateOrganizationCreditMarket
 } from '../useOrganization'
+
+const mockHasRoles = vi.hoisted(() => vi.fn(() => true))
 vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: vi.fn(() => ({
     data: { organization: { organizationId: 1 } },
-    hasRoles: () => true
+    hasRoles: mockHasRoles
   }))
 }))
 
@@ -48,14 +51,21 @@ describe('useOrganization hooks', () => {
   const mockGet = vi.fn()
   const mockPost = vi.fn()
   const mockPut = vi.fn()
+  const apiService = (
+    methods: Partial<ApiServiceInstance>
+  ): ApiServiceInstance =>
+    Object.assign(axios.create(), { download: vi.fn() }, methods)
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(useApiService).mockReturnValue({
-      get: mockGet,
-      post: mockPost,
-      put: mockPut
-    })
+    mockHasRoles.mockReturnValue(true)
+    vi.mocked(useApiService).mockReturnValue(
+      apiService({
+        get: mockGet,
+        post: mockPost,
+        put: mockPut
+      })
+    )
     // reset query client spies
     qcMock.invalidateQueries.mockReset()
     qcMock.removeQueries.mockReset()
@@ -86,7 +96,10 @@ describe('useOrganization hooks', () => {
     renderHook,
     query
   }) => {
-    const { result } = renderHook(() => useOrganizationBalance(), [query])
+    const { result } = renderHook(
+      () => useOrganizationBalance(undefined),
+      [query]
+    )
     expect(result.current.fetchStatus).toBe('idle')
   })
 
@@ -283,13 +296,12 @@ describe('useOrganization hooks', () => {
     })
   })
 
-  test('useOrganizationBalance disabled when user not government', async ({
+  test('useOrganizationBalance disabled when user not government', ({
     renderHook,
     query
   }) => {
     // Override hasRoles to return false
-    const { useCurrentUser } = await import('@/hooks/useCurrentUser')
-    useCurrentUser.mockReturnValue({ hasRoles: () => false })
+    mockHasRoles.mockReturnValue(false)
     const { result } = renderHook(() => useOrganizationBalance(1), [query])
     expect(result.current.fetchStatus).toBe('idle')
   })

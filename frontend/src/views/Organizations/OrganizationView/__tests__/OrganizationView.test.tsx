@@ -1,3 +1,5 @@
+import type * as React from 'react'
+
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { OrganizationView } from '../OrganizationView'
@@ -9,11 +11,12 @@ import { useOrganizationPageStore } from '@/stores/useOrganizationPageStore'
 
 // Mock react-router-dom hooks - SINGLE DEFINITION
 const mockNavigate = vi.fn()
-const mockUseLocation = vi.fn(() => ({
+type MockLocation = { pathname: string; state: Record<string, unknown> }
+const mockUseLocation = vi.fn<() => MockLocation>(() => ({
   pathname: '/organizations/123',
   state: {}
 }))
-const mockUseParams = vi.fn(() => ({ orgID: '123' }))
+const mockUseParams = vi.fn<() => { orgID?: string }>(() => ({ orgID: '123' }))
 
 vi.mock('react-router-dom', () => ({
   ...vi.importActual('react-router-dom'),
@@ -23,7 +26,15 @@ vi.mock('react-router-dom', () => ({
 }))
 
 // Mock useCurrentUser hook - SINGLE DEFINITION
-const mockCurrentUser = vi.fn(() => ({
+type MockCurrentUser = {
+  data: {
+    organization: { organizationId: string }
+    roles?: Array<{ name: string }>
+  }
+  hasRoles: (role: string) => boolean
+  hasAnyRole?: (...roles: string[]) => boolean
+}
+const mockCurrentUser = vi.fn<() => MockCurrentUser>(() => ({
   data: {
     organization: { organizationId: '456' },
     roles: [{ name: roles.analyst }]
@@ -37,13 +48,21 @@ vi.mock('@/hooks/useCurrentUser', () => ({
 }))
 
 // Mock useTranslation
-const mockT = vi.fn((key, defaultValue) => defaultValue || key)
+const mockT = vi.fn((key: string, defaultValue?: string) => defaultValue || key)
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: mockT })
 }))
 
 vi.mock('@/views/Transactions/components/OrganizationList', () => ({
-  default: ({ onOrgChange }) => (
+  default: ({
+    onOrgChange
+  }: {
+    onOrgChange: (selection: {
+      id: string
+      name: string
+      label: string
+    }) => void
+  }) => (
     <button
       data-test="select-organization"
       onClick={() =>
@@ -70,7 +89,7 @@ vi.mock('../OrganizationUsers', () => ({
 
 // Mock CreditLedger - SINGLE DEFINITION
 vi.mock('../CreditLedger', () => ({
-  CreditLedger: ({ organizationId }) => (
+  CreditLedger: ({ organizationId }: { organizationId?: string | number }) => (
     <div data-test="credit-ledger" data-organization-id={organizationId}>
       Credit Ledger - Org: {organizationId}
     </div>
@@ -108,7 +127,10 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 }))
 
 vi.mock('@/components/ClearFiltersButton', () => ({
-  ClearFiltersButton: ({ onClick, ...props }) => (
+  ClearFiltersButton: ({
+    onClick,
+    ...props
+  }: React.ComponentProps<'button'>) => (
     <button data-test="clear-filters-button" onClick={onClick} {...props}>
       Clear filters
     </button>
@@ -117,7 +139,7 @@ vi.mock('@/components/ClearFiltersButton', () => ({
 
 // Mock useOrganization hooks
 vi.mock('@/hooks/useOrganization', () => ({
-  useOrganization: vi.fn((orgId) => ({
+  useOrganization: vi.fn((orgId?: string) => ({
     data: {
       organizationId: orgId,
       orgStatus: { status: 'Registered' },
@@ -165,7 +187,10 @@ vi.mock('@/hooks/useOrganization', () => ({
 
 // Mock BCAlert
 vi.mock('@/components/BCAlert', () => ({
-  default: ({ children, severity }) => (
+  default: ({
+    children,
+    severity
+  }: React.PropsWithChildren<{ severity?: string }>) => (
     <div data-test="alert-box" role="alert" data-severity={severity}>
       {children}
     </div>
@@ -174,7 +199,10 @@ vi.mock('@/components/BCAlert', () => ({
 
 // Mock BCBox
 vi.mock('@/components/BCBox', () => ({
-  default: ({ children, ...props }) => (
+  default: ({
+    children,
+    ...props
+  }: React.PropsWithChildren<Record<string, unknown>>) => (
     <div data-test="bc-box" {...props}>
       {children}
     </div>
@@ -182,7 +210,7 @@ vi.mock('@/components/BCBox', () => ({
 }))
 
 // SINGLE renderComponent function definition
-const renderComponent = (props = {}) => {
+const renderComponent = (props: { addMode?: boolean } = {}) => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } }
   })
@@ -433,7 +461,9 @@ describe('OrganizationView', () => {
 
       tabs.forEach((tab) => {
         expect(tab).toHaveAccessibleName()
-        const panel = document.getElementById(tab.getAttribute('aria-controls'))
+        const panelId = tab.getAttribute('aria-controls')
+        expect(panelId).not.toBeNull()
+        const panel = document.getElementById(panelId ?? '')
         expect(panel).toHaveAttribute('role', 'tabpanel')
         expect(panel).toHaveAttribute('aria-labelledby', tab.id)
       })

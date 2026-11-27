@@ -18,7 +18,39 @@ const USER_DATA_STALE_TIME = 10 * 60 * 1000 // 10 minutes (user data changes les
 export interface OrganizationData {
   organizationId?: number | string
   name?: string
+  operatingName?: string | null
+  email?: string
+  phone?: string
+  contactName?: string | null
+  edrmsRecord?: string
+  recordsAddress?: string | null
+  hasEarlyIssuance?: boolean
+  orgStatus?: { organizationStatusId?: number; status?: string }
+  orgAddress?: OrganizationAddressData
+  orgAttorneyAddress?: OrganizationAddressData
+  orgTypes?: OrganizationTypeData[]
+  organizationTypeId?: number
+  orgType?: OrganizationTypeData
+  availableRoles?: string[]
   [key: string]: unknown
+}
+
+export interface OrganizationAddressData {
+  streetAddress?: string
+  addressOther?: string
+  city?: string
+  postalcodeZipcode?: string
+  provinceState?: string
+  country?: string
+}
+
+export interface OrganizationTypeData {
+  organizationTypeId?: number
+  orgType?: string
+  org_type?: string
+  name?: string
+  description?: string | null
+  isBceidUser?: boolean
 }
 
 export interface OrganizationBalance {
@@ -339,7 +371,9 @@ export const useSaveOrganizationPenaltyLog = (
   })
 }
 
-export const useOrganizationTypes = (options: QueryOptions<unknown> = {}) => {
+export const useOrganizationTypes = (
+  options: QueryOptions<OrganizationTypeData[]> = {}
+) => {
   const client = useApiService()
 
   const {

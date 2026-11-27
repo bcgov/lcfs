@@ -4,7 +4,7 @@ import FormControlLabel from '@mui/material/FormControlLabel'
 import FormLabel from '@mui/material/FormLabel'
 import BCTypography from '@/components/BCTypography'
 import { Controller } from 'react-hook-form'
-import type { Control, FieldValues } from 'react-hook-form'
+import type { Control, FieldPathByValue, FieldValues } from 'react-hook-form'
 import { CustomLabel } from './CustomLabel'
 import PropTypes from 'prop-types'
 import type { ReactNode } from 'react'
@@ -16,22 +16,24 @@ export interface BCFormCheckboxOption {
   text?: ReactNode
 }
 
-export interface BCFormCheckboxProps {
-  name: string
-  form: { control: Control<FieldValues> }
+export interface BCFormCheckboxProps<
+  TValues extends FieldValues = FieldValues
+> {
+  name: FieldPathByValue<TValues, string[]>
+  form: { control: Control<TValues> }
   label?: ReactNode
   options: BCFormCheckboxOption[]
   disabled?: boolean
   initialItems?: string[]
 }
 
-export const BCFormCheckbox = ({
+export const BCFormCheckbox = <TValues extends FieldValues>({
   name,
   form,
   label,
   options,
   disabled = false
-}: BCFormCheckboxProps) => {
+}: BCFormCheckboxProps<TValues>) => {
   if (!form) {
     throw new Error('BCFormCheckbox requires a form prop')
   }
