@@ -18,7 +18,7 @@ import {
 import { usersColumnDefs } from '@/views/Admin/AdminMenu/components/_schema'
 
 type OrganizationTypeData = {
-  organizationTypeId: number
+  organizationTypeId?: number
   orgType?: string | null
   org_type?: string | null
   name?: string
@@ -30,8 +30,8 @@ const isOrganizationTypeOption = (
 ): value is OrganizationTypeData =>
   typeof value === 'object' &&
   value !== null &&
-  'organizationTypeId' in value &&
-  typeof value.organizationTypeId === 'number' &&
+  (!('organizationTypeId' in value) ||
+    typeof value.organizationTypeId === 'number') &&
   (!('orgType' in value) ||
     typeof value.orgType === 'string' ||
     value.orgType === null) &&
