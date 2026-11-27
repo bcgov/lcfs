@@ -1,5 +1,7 @@
 import React, { useMemo, useEffect, useState, useRef } from 'react'
 import { useForm, FormProvider, Controller } from 'react-hook-form'
+import type { FieldPath } from 'react-hook-form'
+import type { CalculatorResult } from '@/hooks/useCalculator'
 import { useTranslation } from 'react-i18next'
 import Grid from '@mui/material/Grid2'
 import Stack from '@mui/material/Stack'
@@ -35,6 +37,27 @@ import { copyToClipboard } from '@/utils/clipboard'
 const CUSTOM_CI_OPTION_VALUE = 'customCi'
 const CARBON_INTENSITY_UNIT = 'gCO₂e/MJ'
 
+interface CalculatorFormValues {
+  complianceYear: string
+  fuelType: string
+  fuelCode: string
+  provisionOfTheAct: string
+  quantity: number
+  fuelCategory: string
+  endUseType: string
+  complianceUnits: string | number
+  customCi: string | number
+}
+
+type CalculatorMode = 'quantity' | 'complianceUnits'
+type CalculatorSyncField = 'quantity' | 'complianceUnits'
+
+interface CalculatorDisplayData {
+  credits: number
+  formulaValues: Record<string, string | number>
+  formulaDisplay: string
+}
+
 export const CreditCalculator = () => {
   const { t } = useTranslation(['report'])
   const ciParameterLabels = useMemo(
@@ -46,7 +69,7 @@ export const CreditCalculator = () => {
 
   // Fetch compliance periods from API
   const { data: compliancePeriods, isLoading: isLoadingPeriods } =
-    useGetCompliancePeriodList()
+    useGetCompliancePeriodList({})
 
   // Transform compliance periods data for select input
   const formattedCompliancePeriods = useMemo(() => {
@@ -85,7 +108,7 @@ export const CreditCalculator = () => {
   }, [formattedCompliancePeriods])
 
   // Setup React Hook Form
-  const methods = useForm({
+  const methods = useForm<CalculatorFormValues>({
     defaultValues: {
       complianceYear: String(defaultCompliancePeriod),
       fuelType: '',
@@ -125,22 +148,25 @@ export const CreditCalculator = () => {
     isCustomCiSelected && customCi !== '' ? customCi : undefined
 
   // State for selected items from lists
-  const [calculatedResults, setCalculatedResults] = useState(null)
-  const [activeCalculatorMode, setActiveCalculatorMode] = useState('quantity')
-  const [syncingField, setSyncingField] = useState(null)
-  const syncingFieldRef = useRef(null)
-  const calculationDebounceRef = useRef(null)
+  const [calculatedResults, setCalculatedResults] =
+    useState<CalculatorResult | null>(null)
+  const [activeCalculatorMode, setActiveCalculatorMode] =
+    useState<CalculatorMode>('quantity')
+  const [syncingField, setSyncingField] = useState<CalculatorSyncField | null>(
+    null
+  )
+  const syncingFieldRef = useRef<CalculatorSyncField | null>(null)
+  const calculationDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  )
   const [copySuccess, setCopySuccess] = useState(false)
 
   const { data: fuelTypeListData, isLoading: isFuelTypeListLoading } =
-    useGetFuelTypeList(
-      {
-        complianceYear,
-        fuelCategory,
-        lcfsOnly: false
-      },
-      { enabled: Boolean(fuelCategory) }
-    )
+    useGetFuelTypeList({
+      complianceYear,
+      fuelCategory,
+      lcfsOnly: false
+    })
 
   // Get the selected fuel based on user selection
   // Memoized selector options to prevent unnecessary re-renders
@@ -159,22 +185,20 @@ export const CreditCalculator = () => {
 
   // Fetch fuel supply options based on compliance period
   const { data: fuelTypeOptions, isLoading: isLoadingFuelOptions } =
-    useGetFuelTypeOptions(
-      {
-        complianceYear,
-        fuelCategoryId: selectedFuelObj?.fuelCategoryId,
-        fuelTypeId: selectedFuelObj?.fuelTypeId,
-        lcfsOnly: false
-      },
-      {
-        enabled: Boolean(selectedFuelObj && fuelType && fuelCategory)
-      }
-    )
+    useGetFuelTypeOptions({
+      complianceYear,
+      fuelCategoryId: selectedFuelObj?.fuelCategoryId,
+      fuelTypeId: selectedFuelObj?.fuelTypeId,
+      lcfsOnly: false
+    })
 
   const endUses = useMemo(() => {
     if (!fuelTypeOptions?.data?.eerRatios) return []
 
-    const uniqueEndUses = new Map()
+    const uniqueEndUses = new Map<
+      string,
+      { value: string; sortLabel: string; label: JSX.Element }
+    >()
     fuelTypeOptions.data.eerRatios.forEach((eer) => {
       const endUse = eer.endUseType
       if (endUse) {
@@ -498,7 +522,7 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
   }
 
   // Helper function for rendering field errors
-  const renderError = (fieldName) => {
+  const renderError = (fieldName: FieldPath<CalculatorFormValues>) => {
     return errors[fieldName] ? (
       <BCTypography
         color="error"
@@ -529,7 +553,7 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
   }
 
   // Extracted result data for display (would come from API response)
-  const resultData = useMemo(() => {
+  const resultData = useMemo<CalculatorDisplayData>(() => {
     const fallback = {
       credits: 0,
       formulaValues: {
@@ -613,7 +637,6 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
               >
                 <Stack
                   direction={'column'}
-                  size={{ xs: 12, md: 3 }}
                   flex={{ xs: '1 1 100%', md: 0.55 }}
                   gap={4}
                 >
@@ -654,7 +677,7 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
                     {renderError('complianceYear')}
                   </FormControl>
                   {/* Fuel Category */}
-                  <BCFormRadio
+                  <BCFormRadio<CalculatorFormValues>
                     label={t('report:fuelCategory')}
                     name="fuelCategory"
                     control={control}
@@ -675,7 +698,7 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
                 {/* <Grid container flexDirection={'row'} rowSpacing={1} mt={4}> */}
                 <Grid size={{ xs: 12, md: 3 }} flex={1}>
                   {isFuelTypeListLoading && <Loading />}
-                  <BCFormRadio
+                  <BCFormRadio<CalculatorFormValues>
                     label={t('report:selectFuelType')}
                     name="fuelType"
                     control={control}
@@ -727,7 +750,7 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
                   }}
                 >
                   {isLoadingFuelOptions && <Loading />}
-                  <BCFormRadio
+                  <BCFormRadio<CalculatorFormValues>
                     label={t('report:endUse')}
                     name="endUseType"
                     control={control}
@@ -742,10 +765,9 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
                 <Stack
                   direction="column"
                   spacing={2}
-                  size={{ xs: 12, md: 3 }}
                   flex={{ xs: '1 1 100%', md: 1.1 }}
                 >
-                  <BCFormRadio
+                  <BCFormRadio<CalculatorFormValues>
                     label={t('report:ciLabel')}
                     name="provisionOfTheAct"
                     control={control}
@@ -865,7 +887,6 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
               {/* Bottom Section */}
               <Grid container flexDirection={{ xs: 'column', md: 'row' }}>
                 <Stack
-                  size={{ xs: 12, md: 6 }}
                   flex={1}
                   px={{ xs: 2, md: 4 }}
                   py={{ xs: 3, md: 4 }}
@@ -880,7 +901,7 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
                 >
                   {/* Quantity supplied section */}
                   <Stack gap={1}>
-                    <BCTypography variant="span" fontWeight="bold">
+                    <BCTypography component="span" fontWeight="bold">
                       {t('report:qtySuppliedLabel')}
                     </BCTypography>
                     <Controller
@@ -957,7 +978,7 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
                   {/* compliance units section */}
 
                   <Stack gap={1}>
-                    <BCTypography variant="span" fontWeight="bold">
+                    <BCTypography component="span" fontWeight="bold">
                       {t('report:quantitySuppliedcu')}
                     </BCTypography>
                     <Controller
@@ -1027,7 +1048,6 @@ ${t('report:generatedLabel')}: ${resultData.credits.toLocaleString()}`
                 {/* Formula values table */}
 
                 <Stack
-                  size={{ xs: 12, md: 6 }}
                   flex={1}
                   px={{ xs: 2, md: 4 }}
                   py={{ xs: 3, md: 4 }}

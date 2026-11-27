@@ -36,6 +36,7 @@ import type {
   ComplianceReportSummaryRow
 } from '@/hooks/useComplianceReports'
 import type { ConfiguredButton } from '../buttonConfigs'
+import type { FloatingAlertHandle } from '@/components/BCAlert/FloatingAlert'
 
 interface SummaryFormData extends Record<string, unknown> {
   isNonAssessment?: boolean
@@ -50,9 +51,7 @@ interface SummaryMethods {
 }
 
 interface AlertRef {
-  current?: {
-    triggerAlert: (alert: { message: string; severity: string }) => void
-  } | null
+  current: FloatingAlertHandle | null
 }
 
 interface ComplianceReportSummaryProps {

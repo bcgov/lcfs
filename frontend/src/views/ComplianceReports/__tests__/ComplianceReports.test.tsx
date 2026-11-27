@@ -8,12 +8,13 @@ import { test } from '@/tests/utils/fixtures'
 // Mock hooks
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => key
+    t: (key: string) => key
   })
 }))
 
 const mockNavigate = vi.fn()
-const mockLocation = { state: null }
+const mockLocation: { state: { message?: string; severity?: string } | null } =
+  { state: null }
 const mockRefetch = vi.fn()
 const mockCreateMutate = vi.fn()
 
@@ -47,7 +48,13 @@ const mockAlertRef = { current: { triggerAlert: vi.fn() } }
 
 vi.mock('../components/NewComplianceReportButton', () => ({
   NewComplianceReportButton: React.forwardRef(
-    function NewComplianceReportButtonMock(props, ref) {
+    function NewComplianceReportButtonMock(
+      props: {
+        handleNewReport: (period: { description: string }) => void
+        isButtonLoading?: boolean
+      },
+      ref: React.ForwardedRef<{ test: string }>
+    ) {
       // Expose the ref for testing
       React.useEffect(() => {
         if (ref && typeof ref === 'object') {
@@ -74,18 +81,34 @@ vi.mock('../components/NewComplianceReportButton', () => ({
 }))
 
 vi.mock('../components/_schema', () => ({
-  reportsColDefs: vi.fn((t, hasSupplierRole, handleRefresh) => {
-    // Call handleRefresh to test it
-    if (handleRefresh) {
-      handleRefresh()
+  reportsColDefs: vi.fn(
+    (
+      _t: (key: string) => string,
+      _hasSupplierRole: boolean,
+      handleRefresh?: () => void
+    ) => {
+      // Call handleRefresh to test it
+      if (handleRefresh) {
+        handleRefresh()
+      }
+      return []
     }
-    return []
-  }),
+  ),
   defaultSortModel: []
 }))
 
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  BCGridViewer: React.forwardRef(function BCGridViewerMock(props, ref) {
+  BCGridViewer: React.forwardRef(function BCGridViewerMock(
+    props: {
+      onPaginationChange?: (pagination: {
+        page: number
+        size: number
+        sortOrders: never[]
+        filters: never[]
+      }) => void
+    },
+    ref: React.ForwardedRef<{ clearFilters: () => void }>
+  ) {
     React.useEffect(() => {
       if (ref && typeof ref === 'object') {
         ref.current = mockGridRef.current
@@ -114,7 +137,10 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 
 vi.mock('@/components/BCAlert', () => ({
   __esModule: true,
-  default: React.forwardRef(function DefaultMock(props, ref) {
+  default: React.forwardRef(function DefaultMock(
+    props: { children?: React.ReactNode; severity?: string },
+    ref: React.ForwardedRef<{ triggerAlert: () => void }>
+  ) {
     React.useEffect(() => {
       if (ref && typeof ref === 'object') {
         ref.current = mockAlertRef.current
@@ -129,10 +155,16 @@ vi.mock('@/components/BCAlert', () => ({
 }))
 
 // Store the current mock roles for testing
-let mockUserRoles = ['Compliance Reporting']
+let mockUserRoles: string[] = ['Compliance Reporting']
 
 vi.mock('@/components/Role', () => ({
-  Role: ({ children, roles }) => {
+  Role: ({
+    children,
+    roles
+  }: {
+    children?: React.ReactNode
+    roles?: string[]
+  }) => {
     // Check if any of the required roles match the mock user roles
     const hasRole = roles?.some((role) => mockUserRoles.includes(role))
     return hasRole ? <div data-test="role-wrapper">{children}</div> : null

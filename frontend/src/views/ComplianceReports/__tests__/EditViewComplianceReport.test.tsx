@@ -1,53 +1,96 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vite-plus/test'
 import { render, screen, act, waitFor } from '@testing-library/react'
-import { forwardRef } from 'react'
+import {
+  forwardRef,
+  type ReactNode,
+  type MouseEventHandler,
+  type ForwardedRef
+} from 'react'
 import userEvent from '@testing-library/user-event'
 import { EditViewComplianceReport } from '../EditViewComplianceReport'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useOrganization } from '@/hooks/useOrganization'
-import useComplianceReportStore from '@/stores/useComplianceReportStore'
-import {
+import type { FieldValues, SubmitHandler } from 'react-hook-form'
+import { CONFIG } from '@/constants/config'
+
+type TestMock = (...args: unknown[]) => unknown
+type StoreSelector = (state: { getCachedReport: () => unknown }) => unknown
+type UpdateOptions = {
+  onSuccess?: (response: { config: { data: string } }) => void
+  onError?: (error: {
+    message: string
+    response?: { status: number; data: { detail?: unknown } }
+  }) => void
+}
+
+const {
+  mockTriggerAlert,
+  useLocation,
+  useNavigate,
+  useParams,
+  useCurrentUser,
+  useOrganization,
+  useComplianceReportStore,
   useUpdateComplianceReport,
   useDeleteComplianceReport,
   useCreateSupplementalReport,
   useCreateAnalystAdjustment,
-  useCreateIdirSupplementalReport
-} from '@/hooks/useComplianceReports'
-import { useForm } from 'react-hook-form'
-import { useTranslation } from 'react-i18next'
-import { useQueryClient } from '@tanstack/react-query'
-import { CONFIG } from '@/constants/config'
-import { buttonClusterConfigFn } from '../buttonConfigs'
+  useCreateIdirSupplementalReport,
+  useForm,
+  useTranslation,
+  useQueryClient,
+  buttonClusterConfigFn
+} = vi.hoisted(() => ({
+  mockTriggerAlert: vi.fn(),
+  useLocation: vi.fn<TestMock>(),
+  useNavigate: vi.fn<TestMock>(),
+  useParams: vi.fn<TestMock>(),
+  useCurrentUser: vi.fn<TestMock>(),
+  useOrganization: vi.fn<TestMock>(),
+  useComplianceReportStore: vi.fn<(selector: StoreSelector) => unknown>(),
+  useUpdateComplianceReport:
+    vi.fn<(reportId: unknown, options?: UpdateOptions) => unknown>(),
+  useDeleteComplianceReport: vi.fn<TestMock>(),
+  useCreateSupplementalReport: vi.fn<TestMock>(),
+  useCreateAnalystAdjustment: vi.fn<TestMock>(),
+  useCreateIdirSupplementalReport: vi.fn<TestMock>(),
+  useForm: vi.fn<TestMock>(),
+  useTranslation: vi.fn<TestMock>(),
+  useQueryClient: vi.fn<TestMock>(),
+  buttonClusterConfigFn: vi.fn<TestMock>()
+}))
 
-const { mockTriggerAlert } = vi.hoisted(() => ({ mockTriggerAlert: vi.fn() }))
+const latestUpdateOptions = (): UpdateOptions => {
+  const calls = useUpdateComplianceReport.mock.calls
+  const options = calls[calls.length - 1]?.[1]
+  if (!options) throw new Error('Expected an update mutation call')
+  return options
+}
 
 // Mock all external dependencies
 vi.mock('react-router-dom', () => ({
-  useLocation: vi.fn(),
-  useNavigate: vi.fn(),
-  useParams: vi.fn()
+  useLocation,
+  useNavigate,
+  useParams
 }))
 
 vi.mock('@/hooks/useCurrentUser', () => ({
-  useCurrentUser: vi.fn()
+  useCurrentUser
 }))
 
 vi.mock('@/hooks/useOrganization', () => ({
-  useOrganization: vi.fn()
+  useOrganization
 }))
 
 vi.mock('@/stores/useComplianceReportStore', () => ({
   __esModule: true,
-  default: vi.fn()
+  default: useComplianceReportStore
 }))
 
 vi.mock('@/hooks/useComplianceReports', () => ({
-  useUpdateComplianceReport: vi.fn(),
-  useDeleteComplianceReport: vi.fn(),
-  useCreateSupplementalReport: vi.fn(),
-  useCreateAnalystAdjustment: vi.fn(),
-  useCreateIdirSupplementalReport: vi.fn(),
+  useUpdateComplianceReport,
+  useDeleteComplianceReport,
+  useCreateSupplementalReport,
+  useCreateAnalystAdjustment,
+  useCreateIdirSupplementalReport,
   useComplianceReportYearNavigation: vi.fn(() => ({
     data: undefined,
     isLoading: false
@@ -55,22 +98,27 @@ vi.mock('@/hooks/useComplianceReports', () => ({
 }))
 
 vi.mock('react-hook-form', () => ({
-  useForm: vi.fn()
+  useForm
 }))
 
 vi.mock('react-i18next', () => ({
-  useTranslation: vi.fn()
+  useTranslation
 }))
 
 vi.mock('@tanstack/react-query', () => ({
-  useQueryClient: vi.fn()
+  useQueryClient
 }))
 
 // Mock all UI components
 vi.mock('@/components/BCAlert', () => ({
   __esModule: true,
-  default: ({ children }) => <div data-test="bc-alert">{children}</div>,
-  FloatingAlert: forwardRef(function FloatingAlertMock(props, ref) {
+  default: ({ children }: { children?: ReactNode }) => (
+    <div data-test="bc-alert">{children}</div>
+  ),
+  FloatingAlert: forwardRef(function FloatingAlertMock(
+    props: { 'data-test'?: string },
+    ref: ForwardedRef<{ triggerAlert: typeof mockTriggerAlert }>
+  ) {
     // Shared so tests can assert on the alerts the page raises
     const triggerAlert = mockTriggerAlert
 
@@ -89,12 +137,22 @@ vi.mock('@/components/BCAlert', () => ({
 
 vi.mock('@/components/BCBox', () => ({
   __esModule: true,
-  default: ({ children }) => <div data-test="bc-box">{children}</div>
+  default: ({ children }: { children?: ReactNode }) => (
+    <div data-test="bc-box">{children}</div>
+  )
 }))
 
 vi.mock('@/components/BCButton', () => ({
   __esModule: true,
-  default: ({ children, onClick, disabled }) => (
+  default: ({
+    children,
+    onClick,
+    disabled
+  }: {
+    children?: ReactNode
+    onClick?: MouseEventHandler<HTMLButtonElement>
+    disabled?: boolean
+  }) => (
     <button data-test="bc-button" onClick={onClick} disabled={disabled}>
       {children}
     </button>
@@ -103,15 +161,19 @@ vi.mock('@/components/BCButton', () => ({
 
 vi.mock('@/components/BCModal', () => ({
   __esModule: true,
-  default: ({ children, open }) =>
+  default: ({ children, open }: { children?: ReactNode; open?: boolean }) =>
     open ? <div data-test="bc-modal">{children}</div> : null
 }))
 
 vi.mock('@/components/BCTypography', () => ({
   __esModule: true,
-  default: ({ children, 'data-test': dataTest }) => (
-    <div data-test={dataTest || 'bc-typography'}>{children}</div>
-  )
+  default: ({
+    children,
+    'data-test': dataTest
+  }: {
+    children?: ReactNode
+    'data-test'?: string
+  }) => <div data-test={dataTest || 'bc-typography'}>{children}</div>
 }))
 
 vi.mock('@/components/Comments', () => ({
@@ -125,7 +187,9 @@ vi.mock('@/components/Loading', () => ({
 }))
 
 vi.mock('@/components/Role', () => ({
-  Role: ({ children }) => <div data-test="role">{children}</div>
+  Role: ({ children }: { children?: ReactNode }) => (
+    <div data-test="role">{children}</div>
+  )
 }))
 
 // Mock complex child components
@@ -185,12 +249,18 @@ vi.mock(
 )
 
 vi.mock('../buttonConfigs', () => ({
-  buttonClusterConfigFn: vi.fn(() => ({}))
+  buttonClusterConfigFn
 }))
 
 // Mock Material-UI components
 vi.mock('@mui/material/Fab', () => ({
-  default: ({ children, onClick }) => (
+  default: ({
+    children,
+    onClick
+  }: {
+    children?: ReactNode
+    onClick?: MouseEventHandler<HTMLButtonElement>
+  }) => (
     <button data-test="fab" onClick={onClick}>
       {children}
     </button>
@@ -198,11 +268,13 @@ vi.mock('@mui/material/Fab', () => ({
 }))
 
 vi.mock('@mui/material/Stack', () => ({
-  default: ({ children }) => <div data-test="stack">{children}</div>
+  default: ({ children }: { children?: ReactNode }) => (
+    <div data-test="stack">{children}</div>
+  )
 }))
 
 vi.mock('@mui/material/Tooltip', () => ({
-  default: ({ children, title }) => (
+  default: ({ children, title }: { children?: ReactNode; title?: string }) => (
     <div data-test="tooltip" title={title}>
       {children}
     </div>
@@ -210,7 +282,13 @@ vi.mock('@mui/material/Tooltip', () => ({
 }))
 
 vi.mock('@mui/material/Alert', () => ({
-  default: ({ children, severity }) => (
+  default: ({
+    children,
+    severity
+  }: {
+    children?: ReactNode
+    severity?: string
+  }) => (
     <div data-test="alert" data-severity={severity}>
       {children}
     </div>
@@ -218,7 +296,9 @@ vi.mock('@mui/material/Alert', () => ({
 }))
 
 vi.mock('@mui/material/AlertTitle', () => ({
-  default: ({ children }) => <div data-test="alert-title">{children}</div>
+  default: ({ children }: { children?: ReactNode }) => (
+    <div data-test="alert-title">{children}</div>
+  )
 }))
 
 vi.mock('@mui/icons-material/AutoAwesome', () => ({
@@ -295,7 +375,7 @@ describe('EditViewComplianceReport', () => {
   const mockNavigate = vi.fn()
   const mockMutate = vi.fn()
   const mockSetValue = vi.fn()
-  const mockHandleSubmit = vi.fn((fn) => fn)
+  const mockHandleSubmit = vi.fn((fn: SubmitHandler<FieldValues>) => fn)
   const originalDeterministicReportSummaryFlag =
     CONFIG.feature_flags.deterministicReportSummary
 
@@ -344,7 +424,8 @@ describe('EditViewComplianceReport', () => {
     Object.defineProperty(window, 'innerHeight', { value: 800, writable: true })
     Object.defineProperty(document.documentElement, 'scrollHeight', {
       value: 2000,
-      writable: true
+      writable: true,
+      configurable: true
     })
     Object.defineProperty(document.documentElement, 'scrollTop', {
       value: 0,
@@ -392,7 +473,7 @@ describe('EditViewComplianceReport', () => {
     })
 
     useTranslation.mockReturnValue({
-      t: vi.fn((key) => key)
+      t: vi.fn((key: string) => key)
     })
 
     useQueryClient.mockReturnValue({
@@ -545,7 +626,8 @@ describe('EditViewComplianceReport', () => {
 
       // Mock to show early issuance summary (normally this would be false)
       vi.doMock('../EditViewComplianceReport', async (importOriginal) => {
-        const mod = await importOriginal()
+        const mod =
+          await importOriginal<typeof import('../EditViewComplianceReport')>()
         return {
           ...mod,
           EditViewComplianceReport: () => {
@@ -669,7 +751,13 @@ describe('EditViewComplianceReport', () => {
     // `status: 'Draft'` matches the COMPLIANCE_REPORT_STATUSES enum value (the
     // other fixtures use 'DRAFT', which never satisfies the real comparison,
     // so their alerts silently never render).
-    const supplierDraftSupplemental = (overrides = {}) => ({
+    const supplierDraftSupplemental = (
+      overrides: {
+        supplementalInitiator?: string
+        currentStatus?: { status: string }
+        history?: typeof draftHistory
+      } = {}
+    ) => ({
       ...defaultReportData,
       report: {
         ...defaultReportData.report,
@@ -685,7 +773,7 @@ describe('EditViewComplianceReport', () => {
     // (`state.getCachedReport(id)`), so the store must be mocked at the
     // selector level for `reportData` to resolve to the object rather than a
     // function (the default `mockReturnValue(() => data)` leaves it a function).
-    const mockReport = (report) =>
+    const mockReport = (report: ReturnType<typeof supplierDraftSupplemental>) =>
       useComplianceReportStore.mockImplementation((selector) =>
         selector({ getCachedReport: () => report })
       )
@@ -945,7 +1033,8 @@ describe('EditViewComplianceReport', () => {
         hasAnyRole: vi.fn(() => true)
       })
       render(<EditViewComplianceReport />)
-      const { onSuccess } = useUpdateComplianceReport.mock.calls.at(-1)[1]
+      const onSuccess = latestUpdateOptions().onSuccess
+      if (!onSuccess) throw new Error('Expected the update success callback')
       act(() =>
         onSuccess({
           config: { data: JSON.stringify({ status: 'Return to supplier' }) }
@@ -959,7 +1048,8 @@ describe('EditViewComplianceReport', () => {
 
     it('shows the backend reason when a status update is refused', () => {
       render(<EditViewComplianceReport />)
-      const { onError } = useUpdateComplianceReport.mock.calls.at(-1)[1]
+      const onError = latestUpdateOptions().onError
+      if (!onError) throw new Error('Expected the update error callback')
 
       act(() =>
         onError({
@@ -979,7 +1069,8 @@ describe('EditViewComplianceReport', () => {
 
     it('falls back to the request error when the backend reason is not text', () => {
       render(<EditViewComplianceReport />)
-      const { onError } = useUpdateComplianceReport.mock.calls.at(-1)[1]
+      const onError = latestUpdateOptions().onError
+      if (!onError) throw new Error('Expected the update error callback')
 
       act(() =>
         onError({
@@ -1017,10 +1108,12 @@ describe('EditViewComplianceReport', () => {
     it('handles isDeleted state during deletion', () => {
       // Mock the deletion mutation to simulate deletion state
       const mockDeleteMutation = {
-        mutate: vi.fn((_, { onMutate }) => {
-          // Simulate the onMutate callback that sets isDeleting and isDeleted
-          if (onMutate) onMutate()
-        })
+        mutate: vi.fn(
+          (_variables: unknown, { onMutate }: { onMutate?: () => void }) => {
+            // Simulate the onMutate callback that sets isDeleting and isDeleted
+            if (onMutate) onMutate()
+          }
+        )
       }
 
       useDeleteComplianceReport.mockReturnValue(mockDeleteMutation)
@@ -1154,7 +1247,10 @@ describe('EditViewComplianceReport', () => {
       await act(async () => {
         window.scrollY = 1200
         window.innerHeight = 800
-        document.documentElement.scrollHeight = 2000
+        Object.defineProperty(document.documentElement, 'scrollHeight', {
+          value: 2000,
+          configurable: true
+        })
         window.dispatchEvent(new Event('scroll'))
 
         await new Promise((resolve) => setTimeout(resolve, 0))
@@ -1247,7 +1343,7 @@ describe('EditViewComplianceReport', () => {
         data: defaultUser,
         isLoading: false,
         hasRoles: vi.fn(() => false),
-        hasAnyRole: vi.fn((role1) => role1 === 'compliance_reporting')
+        hasAnyRole: vi.fn((role1: string) => role1 === 'compliance_reporting')
       })
 
       render(<EditViewComplianceReport />)
@@ -1269,7 +1365,7 @@ describe('EditViewComplianceReport', () => {
       useCurrentUser.mockReturnValue({
         data: defaultUser,
         isLoading: false,
-        hasRoles: vi.fn((role) => role === 'analyst'),
+        hasRoles: vi.fn((role: string) => role === 'analyst'),
         hasAnyRole: vi.fn(() => {
           // For analyst adjustment, hasRoles needs to return true for analyst
           return false // This will make canEdit false, so activity card won't show
@@ -1434,11 +1530,10 @@ describe('EditViewComplianceReport', () => {
       const reportWithoutFlag = {
         ...defaultReportData,
         report: {
-          ...defaultReportData.report
-          // isNonAssessment property is undefined
+          ...defaultReportData.report,
+          isNonAssessment: undefined
         }
       }
-      delete reportWithoutFlag.report.isNonAssessment
       useComplianceReportStore.mockReturnValue(() => reportWithoutFlag)
 
       render(<EditViewComplianceReport />)
@@ -1994,7 +2089,7 @@ describe('EditViewComplianceReport', () => {
         useCurrentUser.mockReturnValue({
           data: { ...defaultUser, isGovernmentUser: true },
           isLoading: false,
-          hasRoles: vi.fn((role) => role === 'analyst'),
+          hasRoles: vi.fn((role: string) => role === 'analyst'),
           hasAnyRole: vi.fn(() => true)
         })
 
@@ -2258,10 +2353,12 @@ describe('EditViewComplianceReport', () => {
     describe('Deletion State Handling', () => {
       it('shows loading when isDeleting is true', () => {
         useDeleteComplianceReport.mockReturnValue({
-          mutate: vi.fn((_, { onMutate }) => {
-            // Simulate onMutate being called
-            onMutate?.()
-          })
+          mutate: vi.fn(
+            (_variables: unknown, { onMutate }: { onMutate?: () => void }) => {
+              // Simulate onMutate being called
+              onMutate?.()
+            }
+          )
         })
 
         render(<EditViewComplianceReport />)
@@ -2273,9 +2370,14 @@ describe('EditViewComplianceReport', () => {
 
       it('handles deletion error and resets state', () => {
         useDeleteComplianceReport.mockReturnValue({
-          mutate: vi.fn((_, { onError }) => {
-            onError?.({ message: 'Deletion failed' })
-          })
+          mutate: vi.fn(
+            (
+              _variables: unknown,
+              { onError }: { onError?: (error: { message: string }) => void }
+            ) => {
+              onError?.({ message: 'Deletion failed' })
+            }
+          )
         })
 
         render(<EditViewComplianceReport />)

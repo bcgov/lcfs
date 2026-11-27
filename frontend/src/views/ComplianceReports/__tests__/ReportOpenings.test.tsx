@@ -1,30 +1,43 @@
-import { forwardRef } from 'react'
+import { forwardRef, type HTMLAttributes, type ForwardedRef } from 'react'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, vi } from 'vite-plus/test'
 import { ReportOpenings } from '../ReportOpenings/ReportOpenings'
 import { test } from '@/tests/utils/fixtures'
-import {
-  useReportOpenings,
-  useUpdateReportOpenings
-} from '@/hooks/useReportOpenings'
+type MockQueryResult = { data?: unknown; isLoading?: boolean }
+type MockMutationResult = {
+  isPending: boolean
+  mutate: (...args: unknown[]) => unknown
+}
+const { useReportOpeningsMock, useUpdateReportOpeningsMock } = vi.hoisted(
+  () => ({
+    useReportOpeningsMock: vi.fn<(...args: unknown[]) => MockQueryResult>(),
+    useUpdateReportOpeningsMock:
+      vi.fn<(...args: unknown[]) => MockMutationResult>()
+  })
+)
 
 vi.mock('@/hooks/useReportOpenings', () => ({
-  useReportOpenings: vi.fn(),
-  useUpdateReportOpenings: vi.fn()
+  useReportOpenings: useReportOpeningsMock,
+  useUpdateReportOpenings: useUpdateReportOpeningsMock
 }))
 
 vi.mock('@/components/BCAlert', () => ({
-  FloatingAlert: forwardRef(function FloatingAlertMock(props, ref) {
+  FloatingAlert: forwardRef(function FloatingAlertMock(
+    props: HTMLAttributes<HTMLDivElement>,
+    ref: ForwardedRef<HTMLDivElement>
+  ) {
     return <div ref={ref} data-test="floating-alert" {...props} />
   })
 }))
 
-const useReportOpeningsMock = useReportOpenings
-const useUpdateReportOpeningsMock = useUpdateReportOpenings
-
 describe('ReportOpenings', () => {
-  const mockData = [
+  const mockData: {
+    complianceYear: number
+    complianceReportingEnabled: boolean
+    earlyIssuanceEnabled: boolean
+    createSupplementalEnabled: boolean
+  }[] = [
     {
       complianceYear: 2019,
       complianceReportingEnabled: false,

@@ -1,7 +1,14 @@
 services:
+  backend:
+    environment:
+      LCFS_LOCAL_KEYCLOAK_ENABLED: "false"
+      LCFS_WELL_KNOWN_ENDPOINT: https://dev.loginproxy.gov.bc.ca/auth/realms/standard/.well-known/openid-configuration
+      LCFS_KEYCLOAK_ISSUER: null
   frontend:
     environment:
       VITE_API_BASE_URL: http://backend:8000/api
+      VITE_HMR_CLIENT_PORT: "3000"
+      VITE_LOCAL_KEYCLOAK: "false"
       DB_CYPRESS_HOST: db
       DB_CYPRESS_NAME: lcfs
       DB_CYPRESS_USER: lcfs

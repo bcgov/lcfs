@@ -2,6 +2,16 @@ import Stack from '@mui/material/Stack'
 import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { isAxiosError } from 'axios'
+import type { AlertSeverity } from '@/components/BCAlert/BCAlertRoot'
+import type { BCAlertHandle } from '@/components/BCAlert/BCAlert'
+import type { GetRowIdParams } from 'ag-grid-community'
+import type {
+  BCGridRef,
+  BCGridQueryData,
+  BCGridRow,
+  BCPaginationOptions
+} from '@/components/BCDataGrid/types'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Role } from '@/components/Role'
@@ -21,41 +31,76 @@ import '@/constants/schedules'
 import BCButton from '@/components/BCButton'
 import CalculateOutlined from '@mui/icons-material/CalculateOutlined'
 
-const initialPaginationOptions = {
+const initialPaginationOptions: BCPaginationOptions = {
   page: 1,
   size: 10,
   sortOrders: defaultSortModel,
   filters: []
 }
 
+interface ComplianceReportGridRow extends BCGridRow {
+  complianceReportGroupUuid: string
+  compliancePeriod: string
+  complianceReportId: string | number
+  reportStatus?: string
+}
+
+const isComplianceReportGridRow = (
+  value: unknown
+): value is ComplianceReportGridRow =>
+  typeof value === 'object' &&
+  value !== null &&
+  'complianceReportGroupUuid' in value &&
+  typeof value.complianceReportGroupUuid === 'string' &&
+  'compliancePeriod' in value &&
+  typeof value.compliancePeriod === 'string' &&
+  'complianceReportId' in value &&
+  (typeof value.complianceReportId === 'string' ||
+    typeof value.complianceReportId === 'number')
+
+const getErrorMessage = (error: unknown): string => {
+  if (isAxiosError<{ detail?: unknown }>(error)) {
+    const detail = error.response?.data?.detail
+    if (typeof detail === 'string') return detail
+  }
+  return error instanceof Error ? error.message : ''
+}
+
 export const ComplianceReports = () => {
   const { t } = useTranslation(['common', 'report'])
   const [alertMessage, setAlertMessage] = useState('')
   const [isButtonLoading, setIsButtonLoading] = useState(false)
-  const [alertSeverity, setAlertSeverity] = useState('info')
+  const [alertSeverity, setAlertSeverity] = useState<AlertSeverity>('info')
 
   const [paginationOptions, setPaginationOptions] = useState(
     initialPaginationOptions
   )
 
-  const gridRef = useRef()
-  const alertRef = useRef()
+  const gridRef = useRef<BCGridRef['current']>(null)
+  const alertRef = useRef<BCAlertHandle | null>(null)
   const navigate = useNavigate()
   const location = useLocation()
   const newButtonRef = useRef(null)
   const { hasRoles, data: currentUser } = useCurrentUser()
 
   const queryData = useGetComplianceReportList(paginationOptions, {
-    cacheTime: 0,
+    gcTime: 0,
     staleTime: 0
   })
+  const gridQueryData: BCGridQueryData<BCGridRow> = {
+    data: queryData.data,
+    error: queryData.error,
+    isError: queryData.isError,
+    isLoading: queryData.isLoading
+  }
 
   const handleRefresh = () => {
     queryData.refetch()
   }
 
   const getRowId = useCallback(
-    (params) => params.data.complianceReportGroupUuid,
+    (params: GetRowIdParams<BCGridRow>) =>
+      params.data!.complianceReportGroupUuid as string,
     []
   )
 
@@ -66,7 +111,7 @@ export const ComplianceReports = () => {
     }
   }, [location.state])
 
-  const { mutate: createComplianceReport, isLoading: isCreating } =
+  const { mutate: createComplianceReport, isPending: isCreating } =
     useCreateComplianceReport(currentUser?.organization?.organizationId, {
       onSuccess: (response) => {
         setAlertMessage(
@@ -83,14 +128,13 @@ export const ComplianceReports = () => {
           }),
           { state: { data: response.data, newReport: true } }
         )
-        alertRef.current.triggerAlert()
+        alertRef.current?.triggerAlert()
       },
-      onError: (_error) => {
+      onError: (error) => {
         setIsButtonLoading(false)
-        const errorMsg = _error.response.data?.detail
-        setAlertMessage(errorMsg)
+        setAlertMessage(getErrorMessage(error))
         setAlertSeverity('error')
-        alertRef.current.triggerAlert()
+        alertRef.current?.triggerAlert()
       }
     })
 
@@ -104,9 +148,15 @@ export const ComplianceReports = () => {
     () => ({
       cellRenderer: LinkRenderer,
       cellRendererParams: {
-        url: (data) =>
-          `${data.data.compliancePeriod}/${data.data.complianceReportId}`,
-        state: (data) => ({ reportStatus: data?.reportStatus })
+        url: ({ data }: { data: unknown }) =>
+          isComplianceReportGridRow(data)
+            ? `${data.compliancePeriod}/${data.complianceReportId}`
+            : '',
+        state: (data: unknown) => ({
+          reportStatus: isComplianceReportGridRow(data)
+            ? data.reportStatus
+            : undefined
+        })
       }
     }),
     []
@@ -130,7 +180,7 @@ export const ComplianceReports = () => {
         {t('report:title')}
       </BCTypography>
       <Stack
-        direction={{ md: 'coloumn', lg: 'row' }}
+        direction={{ md: 'column', lg: 'row' }}
         spacing={{ xs: 2, sm: 2, md: 3 }}
         useFlexGap
         flexWrap="wrap"
@@ -170,7 +220,7 @@ export const ComplianceReports = () => {
               hasRoles(roles.supplier),
               handleRefresh
             )}
-            queryData={queryData}
+            queryData={gridQueryData}
             dataKey="reports"
             getRowId={getRowId}
             overlayNoRowsTemplate={t('report:noReportsFound')}

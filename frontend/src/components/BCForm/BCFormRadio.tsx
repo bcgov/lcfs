@@ -4,7 +4,7 @@ import Radio from '@mui/material/Radio'
 import RadioGroup from '@mui/material/RadioGroup'
 import BCTypography from '@/components/BCTypography'
 import { Controller } from 'react-hook-form'
-import type { Control, FieldValues } from 'react-hook-form'
+import type { Control, FieldPath, FieldValues } from 'react-hook-form'
 import PropTypes from 'prop-types'
 import { CustomLabel } from './CustomLabel'
 import type { SxProps, Theme } from '@mui/material/styles'
@@ -17,9 +17,11 @@ export interface BCFormRadioOption {
   text?: ReactNode
 }
 
-export interface BCFormRadioProps {
-  name: string
-  control: Control<FieldValues>
+export interface BCFormRadioProps<
+  TFieldValues extends FieldValues = FieldValues
+> {
+  name: FieldPath<TFieldValues>
+  control: Control<TFieldValues>
   label?: ReactNode
   options?: BCFormRadioOption[]
   disabled?: boolean
@@ -27,7 +29,7 @@ export interface BCFormRadioProps {
   sx?: SxProps<Theme>
 }
 
-export const BCFormRadio = ({
+export const BCFormRadio = <TFieldValues extends FieldValues>({
   name,
   control,
   label,
@@ -35,7 +37,7 @@ export const BCFormRadio = ({
   disabled,
   orientation = 'vertical',
   sx = {}
-}: BCFormRadioProps) => {
+}: BCFormRadioProps<TFieldValues>) => {
   const generateRadioOptions = () => {
     return options.map((singleOption, index) => (
       <FormControlLabel

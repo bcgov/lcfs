@@ -23,6 +23,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import type { ComplianceReport } from '@/stores/useComplianceReportStore'
+import type { FloatingAlertHandle } from '@/components/BCAlert/FloatingAlert'
 
 interface AssessmentModalData {
   primaryButtonAction: () => void
@@ -41,11 +42,7 @@ interface AssessmentCardProps {
   isGovernmentUser: boolean
   currentStatus: string
   complianceReportId: number | string
-  alertRef?: {
-    current?: {
-      triggerAlert: (alert: { message: string; severity: string }) => void
-    } | null
-  } | null
+  alertRef?: { current: FloatingAlertHandle | null } | null
   chain?: ComplianceReport['chain']
   setModalData: (data: AssessmentModalData | null) => void
   hasGovernmentReassessmentInProgress?: boolean

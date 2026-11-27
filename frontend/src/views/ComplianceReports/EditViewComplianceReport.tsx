@@ -2,6 +2,8 @@ import BCAlert, { FloatingAlert } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCModal from '@/components/BCModal'
+import type { ModalData } from '@/components/BCModal'
+import type { FloatingAlertHandle } from '@/components/BCAlert/FloatingAlert'
 import BCTypography from '@/components/BCTypography'
 import Comments from '@/components/Comments'
 import Loading from '@/components/Loading'
@@ -51,6 +53,7 @@ import ComplianceReportEarlyIssuanceSummary from '@/views/ComplianceReports/comp
 import { DateTime } from 'luxon'
 import useComplianceReportStore from '@/stores/useComplianceReportStore'
 import { useQueryClient } from '@tanstack/react-query'
+import type { ButtonContext } from './buttonConfigs'
 
 const iconStyle = {
   width: '2rem',
@@ -58,25 +61,52 @@ const iconStyle = {
   color: colors.white.main
 }
 
-// The backend explains a refused action in response.data.detail. Validation
-// errors (422) put a list there instead, so fall back to the axios message.
-const getErrorMessage = (error) => {
-  const detail = error?.response?.data?.detail
-  return typeof detail === 'string' && detail ? detail : error?.message
+interface EditViewComplianceReportProps {
+  isError?: boolean
+  error?: unknown
 }
 
-export const EditViewComplianceReport = ({ isError, error }) => {
+interface ApiError {
+  message?: unknown
+  response?: {
+    status?: number
+    data?: { detail?: unknown }
+  }
+}
+
+const isApiError = (error: unknown): error is Error & ApiError =>
+  typeof error === 'object' && error !== null && 'response' in error
+
+// The backend explains a refused action in response.data.detail. Validation
+// errors (422) put a list there instead, so fall back to the axios message.
+const getErrorMessage = (error: unknown) => {
+  const detail = isApiError(error) ? error.response?.data?.detail : undefined
+  if (typeof detail === 'string' && detail) return detail
+  if (error instanceof Error) return error.message
+  return isApiError(error) && typeof error.message === 'string'
+    ? error.message
+    : ''
+}
+
+const getApiErrorDetail = (error: unknown) => {
+  const detail = isApiError(error) ? error.response?.data?.detail : undefined
+  return typeof detail === 'string' ? detail : ''
+}
+
+export const EditViewComplianceReport = ({
+  isError = false,
+  error
+}: EditViewComplianceReportProps) => {
   const { t } = useTranslation(['common', 'report'])
   const location = useLocation()
-  const [modalData, setModalData] = useState(null)
+  const [modalData, setModalData] = useState<ModalData | null>(null)
   const [isDeleted, setIsDeleted] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [hasEligibleRenewableFuel, setHasEligibleRenewableFuel] =
-    useState(false)
+  const [, setHasEligibleRenewableFuel] = useState(false)
 
   const [isSigningAuthorityDeclared, setIsSigningAuthorityDeclared] =
     useState(false)
-  const alertRef = useRef()
+  const alertRef = useRef<FloatingAlertHandle | null>(null)
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const isDeterministicReportSummaryEnabled = isFeatureEnabled(
@@ -96,13 +126,13 @@ export const EditViewComplianceReport = ({ isError, error }) => {
 
   // Get report data from store
   const reportData = useComplianceReportStore((state) =>
-    state.getCachedReport(complianceReportId)
-  )
+    state.getCachedReport(complianceReportId ?? '')
+  )!
 
   // Use the actual compliance period from the report data, not the URL parameter
   // This prevents URL manipulation from showing incorrect year in the UI
   const reportCompliancePeriod =
-    reportData?.report?.compliancePeriod?.description || compliancePeriod
+    reportData?.report?.compliancePeriod?.description || compliancePeriod || ''
 
   const [isScrollingUp, setIsScrollingUp] = useState(false)
   const [lastScrollTop, setLastScrollTop] = useState(0)
@@ -152,7 +182,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
   const isIdirUser =
     isGovernmentUser && !currentUser?.organization?.organizationId
   const isAdminRole = hasRoles(roles.administrator)
-  const currentStatus = reportData?.report?.currentStatus?.status
+  const currentStatus = reportData?.report?.currentStatus?.status ?? ''
   const canEdit =
     (currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT &&
       hasAnyRole(roles.compliance_reporting, roles.signing_authority)) ||
@@ -178,10 +208,12 @@ export const EditViewComplianceReport = ({ isError, error }) => {
     // ("Government Initiated", created by the ministry for the supplier to
     // edit). "Government Reassessment" (analyst adjustment) is excluded — the
     // government does that work, not the supplier.
-    const isSupplierSubmittableSupplemental = [
-      'Supplier Supplemental',
-      'Government Initiated'
-    ].includes(reportData?.report?.supplementalInitiator)
+    const supplementalInitiator = reportData?.report?.supplementalInitiator
+    const isSupplierSubmittableSupplemental =
+      typeof supplementalInitiator === 'string' &&
+      ['Supplier Supplemental', 'Government Initiated'].includes(
+        supplementalInitiator
+      )
     const isDraftStatus = currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT
     if (
       isGovernmentUser ||
@@ -205,10 +237,11 @@ export const EditViewComplianceReport = ({ isError, error }) => {
     // earliest history entry's createDate is its creation date.
     const creationDate = (reportData?.report?.history ?? [])
       .map((h) => h.createDate)
-      .filter(Boolean)
-      .reduce(
+      .filter((date): date is string => Boolean(date))
+      .reduce<string | null>(
         (earliest, d) =>
-          !earliest || DateTime.fromISO(d) < DateTime.fromISO(earliest)
+          !earliest ||
+          DateTime.fromISO(d).valueOf() < DateTime.fromISO(earliest).valueOf()
             ? d
             : earliest,
         null
@@ -277,8 +310,8 @@ export const EditViewComplianceReport = ({ isError, error }) => {
       const submittedYear = submittedDate.getFullYear()
       const currentYear = now.getFullYear()
       if (
-        (isDraft && currentYear > parseInt(reportCompliancePeriod)) ||
-        submittedYear > parseInt(reportCompliancePeriod)
+        (isDraft && currentYear > parseInt(String(reportCompliancePeriod))) ||
+        submittedYear > parseInt(String(reportCompliancePeriod))
       ) {
         // If we're past the compliance period year, it's always Q4 (year-end)
         quarter = 4
@@ -326,15 +359,13 @@ export const EditViewComplianceReport = ({ isError, error }) => {
           // Invalidate queries to refresh the report data. Cache key is
           // kebab-case (`compliance-report`); the previous camelCase key
           // here was a silent no-op, leaving stale data on the page.
-          queryClient.invalidateQueries(['compliance-reports'])
-          queryClient.invalidateQueries([
-            'compliance-report',
-            complianceReportId
-          ])
-          queryClient.invalidateQueries([
-            'compliance-report-summary',
-            complianceReportId
-          ])
+          queryClient.invalidateQueries({ queryKey: ['compliance-reports'] })
+          queryClient.invalidateQueries({
+            queryKey: ['compliance-report', complianceReportId]
+          })
+          queryClient.invalidateQueries({
+            queryKey: ['compliance-report-summary', complianceReportId]
+          })
 
           // Show success alert on the current page
           alertRef.current?.triggerAlert({
@@ -368,24 +399,21 @@ export const EditViewComplianceReport = ({ isError, error }) => {
         // it as a success-ish state: refresh caches and navigate the user
         // to the list so they see the actual current state instead of a
         // confusing "error" toast that pushes them to retry.
-        if (error?.response?.status === 409) {
-          queryClient.invalidateQueries(['compliance-reports'])
-          queryClient.invalidateQueries([
-            'compliance-report',
-            complianceReportId
-          ])
-          queryClient.invalidateQueries([
-            'compliance-report-summary',
-            complianceReportId
-          ])
+        if (isApiError(error) && error.response?.status === 409) {
+          queryClient.invalidateQueries({ queryKey: ['compliance-reports'] })
+          queryClient.invalidateQueries({
+            queryKey: ['compliance-report', complianceReportId]
+          })
+          queryClient.invalidateQueries({
+            queryKey: ['compliance-report-summary', complianceReportId]
+          })
 
           if (!hasRoles(roles.director)) {
             sessionStorage.setItem(FILTER_KEYS.COMPLIANCE_REPORT_GRID, '{}')
             navigate(ROUTES.REPORTS.LIST, {
               state: {
                 message:
-                  error?.response?.data?.detail ??
-                  t('report:alreadyAdvancedText'),
+                  getApiErrorDetail(error) || t('report:alreadyAdvancedText'),
                 severity: 'info'
               }
             })
@@ -394,7 +422,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
 
           alertRef.current?.triggerAlert({
             message:
-              error?.response?.data?.detail ?? t('report:alreadyAdvancedText'),
+              getApiErrorDetail(error) || t('report:alreadyAdvancedText'),
             severity: 'info'
           })
           return
@@ -530,11 +558,14 @@ export const EditViewComplianceReport = ({ isError, error }) => {
     if (reportData?.report?.assessmentStatement !== undefined) {
       methods.setValue(
         'assessmentStatement',
-        reportData.report.assessmentStatement
+        reportData.report.assessmentStatement ?? ''
       )
     }
     if (reportData?.report?.supplementalNote !== undefined) {
-      methods.setValue('supplementalNote', reportData.report.supplementalNote)
+      methods.setValue(
+        'supplementalNote',
+        reportData.report.supplementalNote ?? ''
+      )
     }
     if (reportData?.report?.isNonAssessment !== undefined) {
       methods.setValue('isNonAssessment', reportData.report.isNonAssessment)
@@ -630,7 +661,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
       return {}
     }
 
-    const context = {
+    const context: ButtonContext = {
       // Required fields
       currentStatus,
       hasRoles,
@@ -663,12 +694,12 @@ export const EditViewComplianceReport = ({ isError, error }) => {
 
       // Action functions
       updateComplianceReport,
-      deleteComplianceReport,
-      createSupplementalReport,
-      createIdirSupplementalReport,
+      deleteComplianceReport: (_data) => deleteComplianceReport(),
+      createSupplementalReport: (_data) => createSupplementalReport(),
+      createIdirSupplementalReport: (data) =>
+        createIdirSupplementalReport(data),
       createAnalystAdjustment,
-      amendPenalties: () => {},
-      hasEligibleRenewableFuel
+      amendPenalties: () => {}
     }
     return buttonClusterConfigFn(context)
   }, [
@@ -688,8 +719,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
     isDeleted,
     isDeleting,
     currentStatus,
-    isEarlyIssuance,
-    hasEligibleRenewableFuel
+    isEarlyIssuance
   ])
 
   const pageNavItems = useMemo(
@@ -798,7 +828,9 @@ export const EditViewComplianceReport = ({ isError, error }) => {
           <BCAlert
             data-test="supplier-supplemental-alert"
             severity={
-              supplierSupplementalInfo?.daysRemaining < 0 ? 'error' : 'warning'
+              (supplierSupplementalInfo?.daysRemaining ?? 0) < 0
+                ? 'error'
+                : 'warning'
             }
             noFade={true}
             dismissible={true}
@@ -852,7 +884,9 @@ export const EditViewComplianceReport = ({ isError, error }) => {
                 id="report-section-analyst-review"
                 sx={{ scrollMarginTop: 96, marginBottom: '2rem' }}
               >
-                <AnalystReviewSummary complianceReportId={complianceReportId} />
+                <AnalystReviewSummary
+                  complianceReportId={complianceReportId ?? ''}
+                />
               </BCBox>
             )}
           <Stack
@@ -875,9 +909,9 @@ export const EditViewComplianceReport = ({ isError, error }) => {
             <AssessmentCard
               reportData={reportData}
               orgData={orgData}
-              isGovernmentUser={isGovernmentUser}
+              isGovernmentUser={isGovernmentUser ?? false}
               currentStatus={currentStatus}
-              complianceReportId={complianceReportId}
+              complianceReportId={complianceReportId ?? ''}
               alertRef={alertRef}
               hasSupplemental={reportData?.report?.hasSupplemental}
               chain={reportData?.chain}
@@ -894,7 +928,6 @@ export const EditViewComplianceReport = ({ isError, error }) => {
                 canEdit={canEdit}
                 currentStatus={currentStatus}
                 hasRoles={hasRoles}
-                complianceReportData={reportData}
               />
               {!showEarlyIssuanceSummary &&
                 !reportData?.report?.isNonAssessment && (
@@ -903,8 +936,8 @@ export const EditViewComplianceReport = ({ isError, error }) => {
                     sx={{ scrollMarginTop: 96 }}
                   >
                     <ComplianceReportSummary
-                      reportID={complianceReportId}
-                      enableCompareMode={reportData?.chain?.length > 1}
+                      reportID={complianceReportId ?? ''}
+                      enableCompareMode={(reportData?.chain?.length ?? 0) > 1}
                       canEdit={canEdit}
                       currentStatus={currentStatus}
                       compliancePeriodYear={reportCompliancePeriod}
@@ -912,7 +945,6 @@ export const EditViewComplianceReport = ({ isError, error }) => {
                       setIsSigningAuthorityDeclared={
                         setIsSigningAuthorityDeclared
                       }
-                      hasEligibleRenewableFuel={hasEligibleRenewableFuel}
                       setHasEligibleRenewableFuel={setHasEligibleRenewableFuel}
                       buttonClusterConfig={buttonClusterConfig}
                       methods={methods}
@@ -973,7 +1005,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
               {shouldShowAssessmentRecommendation && (
                 <AssessmentRecommendation
                   reportData={reportData}
-                  complianceReportId={complianceReportId}
+                  complianceReportId={complianceReportId ?? ''}
                   currentStatus={currentStatus}
                   methods={methods}
                 />
@@ -988,7 +1020,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
                     <Role roles={govRoles}>
                       <Comments
                         entityType="complianceReport"
-                        entityId={parseInt(complianceReportId)}
+                        entityId={parseInt(complianceReportId ?? '')}
                       />
                     </Role>
                   </BCBox>

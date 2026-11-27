@@ -5,10 +5,10 @@ import { ReportsMenu } from '../ReportsMenu'
 import { test } from '@/tests/utils/fixtures'
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key) => key })
+  useTranslation: () => ({ t: (key: string) => key })
 }))
 
-const mockLocation = { pathname: '/compliance-reporting' }
+const mockLocation: { pathname: string } = { pathname: '/compliance-reporting' }
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom')
   return {
@@ -19,21 +19,23 @@ vi.mock('react-router-dom', async () => {
   }
 })
 
-let mockUserRoles = []
+let mockUserRoles: string[] = []
 vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: () => ({
     data: { roles: mockUserRoles.map((name) => ({ name })) },
-    hasRoles: (...needed) => needed.every((r) => mockUserRoles.includes(r)),
-    hasAnyRole: (...needed) => needed.some((r) => mockUserRoles.includes(r))
+    hasRoles: (...needed: string[]) =>
+      needed.every((r) => mockUserRoles.includes(r)),
+    hasAnyRole: (...needed: string[]) =>
+      needed.some((r) => mockUserRoles.includes(r))
   })
 }))
 
-let mockFeatureFlags = {}
+let mockFeatureFlags: Record<string, boolean> = {}
 vi.mock('@/constants/config', async () => {
   const actual = await vi.importActual('@/constants/config')
   return {
     ...actual,
-    isFeatureEnabled: (flag) => !!mockFeatureFlags[flag]
+    isFeatureEnabled: (flag: string) => !!mockFeatureFlags[flag]
   }
 })
 

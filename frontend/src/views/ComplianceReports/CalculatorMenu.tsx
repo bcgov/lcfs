@@ -4,14 +4,22 @@ import { ROUTES } from '@/routes/routes'
 import AppBar from '@mui/material/AppBar'
 import Tab from '@mui/material/Tab'
 import Tabs from '@mui/material/Tabs'
-import { PropTypes } from 'prop-types'
+import PropTypes from 'prop-types'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
+import type { SyntheticEvent, ReactNode } from 'react'
 import { CreditCalculator } from './CreditCalculator'
 import { LookupTableView } from '@/views/LookupTable/LookupTableView'
 
-function TabPanel({ children, description, value, index }) {
+interface TabPanelProps {
+  children: ReactNode
+  description: string[]
+  value: number
+  index: number
+}
+
+function TabPanel({ children, description, value, index }: TabPanelProps) {
   return (
     <BCBox
       role="tabpanel"
@@ -57,14 +65,14 @@ TabPanel.propTypes = {
   index: PropTypes.number.isRequired
 }
 
-function a11yProps(index) {
+function a11yProps(index: number) {
   return {
     id: `calculator-tab-${index}`,
     'aria-controls': `calculator-tabpanel-${index}`
   }
 }
 
-export function CalculatorMenu({ tabIndex }) {
+export function CalculatorMenu({ tabIndex }: { tabIndex: number }) {
   const { t } = useTranslation(['common'])
   const navigate = useNavigate()
 
@@ -95,7 +103,7 @@ export function CalculatorMenu({ tabIndex }) {
     [t]
   )
 
-  const handleSetTabValue = (event, newValue) => {
+  const handleSetTabValue = (_event: SyntheticEvent, newValue: number) => {
     navigate(paths[newValue])
   }
 

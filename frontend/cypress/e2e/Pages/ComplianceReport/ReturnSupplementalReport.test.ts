@@ -14,7 +14,7 @@ const SELECTORS = {
 // skipped features. The shared steps this feature uses ("the user is on the
 // login page", "the supplier logs in with valid credentials", "they navigate to
 // the compliance reports page", "they click the report to view it") are defined
-// once in ComplianceReport.test.js; defining them here as well makes every
+// once in ComplianceReport.test.ts; defining them here as well makes every
 // feature that uses them fail with "Multiple matching step definitions".
 
 Given(
