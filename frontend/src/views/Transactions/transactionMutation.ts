@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import type { QueryClient } from '@tanstack/react-query'
 import type { RefObject } from 'react'
+import { isAxiosError, type AxiosResponse } from 'axios'
 import { ROUTES, buildPath } from '@/routes/routes'
 import { TRANSACTION_STATUSES } from '@/constants/statuses'
 import {
@@ -8,30 +9,14 @@ import {
   INITIATIVE_AGREEMENT,
   type TransactionKind
 } from '@/views/Transactions/constants'
+import type { TransactionMutationData } from '@/hooks/types'
 
 type TransactionId = string | number
-type MutationData = {
-  currentStatus: { status: string }
-  returned?: boolean
-}
-type AdminAdjustmentResponse = {
-  data: MutationData & { adminAdjustmentId: TransactionId }
-}
-type InitiativeAgreementResponse = {
-  data: MutationData & { initiativeAgreementId: TransactionId }
-}
-type SuccessArguments =
-  | [
-      AdminAdjustmentResponse,
-      TransactionId | null | undefined,
-      typeof ADMIN_ADJUSTMENT
-    ]
-  | [
-      InitiativeAgreementResponse,
-      TransactionId | null | undefined,
-      typeof INITIATIVE_AGREEMENT
-    ]
-type MutationError = { response?: { data?: { detail?: string } } }
+type SuccessArguments = [
+  Pick<AxiosResponse<TransactionMutationData>, 'data'>,
+  TransactionId | null | undefined,
+  TransactionKind
+]
 type Translate = (key: string, options?: { status: string }) => string
 type AlertHandle = { triggerAlert: () => void }
 
@@ -86,6 +71,7 @@ export const useTransactionMutation = (
       transactionType === ADMIN_ADJUSTMENT
         ? response.data.adminAdjustmentId
         : response.data.initiativeAgreementId
+    if (txnId === undefined) return
     const { editRoute } = getTransactionRoutes(transactionType, txnId)
 
     // Check if returned flag is true
@@ -155,13 +141,16 @@ export const useTransactionMutation = (
   }
 
   const handleError = (
-    _error: MutationError,
+    _error: Error,
     transactionId: TransactionId | null | undefined,
     transactionType: TransactionKind
   ) => {
     setModalData(null)
+    const errorDetail = isAxiosError<{ detail?: string }>(_error)
+      ? _error.response?.data?.detail
+      : undefined
     const errorMsg =
-      _error.response?.data?.detail ||
+      errorDetail ||
       t(
         `${transactionType}:actionMsgs.error${
           transactionId ? 'Update' : 'Create'

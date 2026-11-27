@@ -2,38 +2,53 @@ import React from 'react'
 import { screen, fireEvent } from '@testing-library/react'
 import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import { CreditTradingMarket } from '../CreditTradingMarket'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
+import type {
+  CreditMarketSelection,
+  CreditMarketTableHandle
+} from '../CreditMarketTable'
+import type { TestFixtures } from '@/tests/utils/fixtures'
 import { test } from '@/tests/utils/fixtures'
 
-vi.mock('@/hooks/useCurrentUser')
+const mockUseCurrentUser = vi.hoisted(() =>
+  vi.fn<
+    () => {
+      data: { organization: { organizationId: number; name: string } }
+      hasAnyRole: () => boolean
+    }
+  >()
+)
+vi.mock('@/hooks/useCurrentUser', () => ({
+  useCurrentUser: mockUseCurrentUser
+}))
 
 // Mock child components
 vi.mock('../CreditMarketTable', () => ({
-  CreditMarketTable: React.forwardRef(
-    function CreditMarketTableMock(props, ref) {
-      React.useImperativeHandle(ref, () => ({
-        refreshListings: vi.fn()
-      }))
+  CreditMarketTable: React.forwardRef<
+    CreditMarketTableHandle,
+    { onRowSelect?: (row: CreditMarketSelection | null) => void }
+  >(function CreditMarketTableMock(props, ref) {
+    React.useImperativeHandle(ref, () => ({
+      refreshListings: vi.fn()
+    }))
 
-      return (
-        <div data-test="credit-market-table" ref={ref}>
-          Credit Market Table
-          {props.onRowSelect && (
-            <button
-              onClick={() =>
-                props.onRowSelect({
-                  organizationId: 1,
-                  organizationName: 'Org'
-                })
-              }
-            >
-              Select Row
-            </button>
-          )}
-        </div>
-      )
-    }
-  )
+    return (
+      <div data-test="credit-market-table">
+        Credit Market Table
+        {props.onRowSelect && (
+          <button
+            onClick={() =>
+              props.onRowSelect?.({
+                organizationId: 1,
+                organizationName: 'Org'
+              })
+            }
+          >
+            Select Row
+          </button>
+        )}
+      </div>
+    )
+  })
 }))
 
 vi.mock('../CreditMarketAccordion', () => ({
@@ -43,7 +58,11 @@ vi.mock('../CreditMarketAccordion', () => ({
 }))
 
 vi.mock('../CreditMarketDetailsCard', () => ({
-  CreditMarketDetailsCard: ({ organizationId }) => (
+  CreditMarketDetailsCard: ({
+    organizationId
+  }: {
+    organizationId?: number | string
+  }) => (
     <div data-test="credit-market-details-card">
       Details Card {organizationId}
     </div>
@@ -52,7 +71,19 @@ vi.mock('../CreditMarketDetailsCard', () => ({
 
 // Mock BCTypography component
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, variant, mb, color, sx }) => (
+  default: ({
+    children,
+    variant,
+    mb,
+    color,
+    sx
+  }: {
+    children?: React.ReactNode
+    variant?: string
+    mb?: number
+    color?: string
+    sx?: object
+  }) => (
     <div
       data-test="bc-typography"
       data-variant={variant}
@@ -84,14 +115,16 @@ describe('CreditTradingMarket', () => {
 
   beforeEach(() => {
     mockHasAnyRole.mockReset()
-    vi.mocked(useCurrentUser).mockReturnValue({
+    mockUseCurrentUser.mockReturnValue({
       data: mockUser,
       hasAnyRole: mockHasAnyRole
     })
   })
 
-  const renderComponent = (render, theme) =>
-    render(<CreditTradingMarket />, [theme])
+  const renderComponent = (
+    render: TestFixtures['render'],
+    theme: TestFixtures['theme']
+  ) => render(<CreditTradingMarket />, [theme])
 
   test('renders without crashing', ({ render, theme }) => {
     renderComponent(render, theme)

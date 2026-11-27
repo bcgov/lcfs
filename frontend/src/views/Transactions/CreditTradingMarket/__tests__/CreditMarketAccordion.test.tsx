@@ -7,7 +7,7 @@ import { test } from '@/tests/utils/fixtures'
 // Mock translation hook
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key, fallback) => {
+    t: (key: string, fallback?: string) => {
       const translations = {
         'creditMarket:informationBulletin':
           'Information Bulletin RLCF-013 (Credit trading market)',
@@ -42,7 +42,7 @@ vi.mock('react-i18next', () => ({
         'creditMarket:legalDisclaimer':
           'This information is for your convenience and guidance only...'
       }
-      return translations[key] || fallback || key
+      return translations[key as keyof typeof translations] || fallback || key
     }
   })
 }))

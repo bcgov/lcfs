@@ -24,11 +24,27 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faFloppyDisk, faTimes } from '@fortawesome/free-solid-svg-icons'
 import { phoneNumberFormatter } from '@/utils/formatters'
 
+interface CreditMarketFormValues {
+  contactName: string
+  phone: string
+  email: string
+  isSeller: boolean
+  isBuyer: boolean
+  creditsToSell: number | string
+  displayInMarket: boolean
+}
+
+interface CreditMarketDetailsCardProps {
+  organizationId?: number | string
+  variant?: 'self' | 'admin'
+  onSaveSuccess?: () => void
+}
+
 export const CreditMarketDetailsCard = ({
   organizationId,
   variant = 'self',
   onSaveSuccess
-}) => {
+}: CreditMarketDetailsCardProps) => {
   const { t } = useTranslation(['common', 'creditMarket', 'org'])
   const { data: currentUser, hasAnyRole } = useCurrentUser()
   const queryClient = useQueryClient()
@@ -38,11 +54,15 @@ export const CreditMarketDetailsCard = ({
     organizationId ?? currentUser?.organization?.organizationId
 
   // Get full organization data
-  const { data: organizationData, isLoading } = useOrganization(targetOrgId, {
+  const organizationQueryOptions = {
     enabled: !!targetOrgId,
     staleTime: 0,
     cacheTime: 0
-  })
+  }
+  const { data: organizationData, isLoading } = useOrganization(
+    targetOrgId,
+    organizationQueryOptions
+  )
 
   // Shared mutation options for both BCeID and IDIR flows
   const mutationOptions = useMemo(
@@ -51,12 +71,14 @@ export const CreditMarketDetailsCard = ({
       invalidateRelatedQueries: true,
       onSuccess: async () => {
         if (targetOrgId) {
-          await queryClient.refetchQueries(['organization', targetOrgId])
+          await queryClient.refetchQueries({
+            queryKey: ['organization', targetOrgId]
+          })
         }
         setIsEditMode(false)
         onSaveSuccess?.()
       },
-      onError: (error) => {
+      onError: (error: Error) => {
         console.error('Failed to update credit market details:', error)
       }
     }),
@@ -94,12 +116,12 @@ export const CreditMarketDetailsCard = ({
     reset,
     formState: { isDirty },
     watch
-  } = useForm({
+  } = useForm<CreditMarketFormValues>({
     defaultValues: initialFormValues
   })
 
   const getOrgValue = useCallback(
-    (...keys) => {
+    (...keys: string[]): unknown => {
       if (!organizationData) return undefined
       for (const key of keys) {
         if (
@@ -114,6 +136,40 @@ export const CreditMarketDetailsCard = ({
     [organizationData]
   )
 
+  const getOrgStringValue = useCallback(
+    (...keys: string[]): string | undefined => {
+      const value = getOrgValue(...keys)
+      return typeof value === 'string' ? value : undefined
+    },
+    [getOrgValue]
+  )
+
+  const getOrgNumberOrStringValue = useCallback(
+    (...keys: string[]): number | string | undefined => {
+      const value = getOrgValue(...keys)
+      return typeof value === 'number' || typeof value === 'string'
+        ? value
+        : undefined
+    },
+    [getOrgValue]
+  )
+
+  const getOrgBooleanValue = useCallback(
+    (...keys: string[]): boolean => Boolean(getOrgValue(...keys)),
+    [getOrgValue]
+  )
+
+  const getOrgStatusValue = useCallback(
+    (...keys: string[]): string | undefined => {
+      const value = getOrgValue(...keys)
+      if (value && typeof value === 'object' && 'status' in value) {
+        return typeof value.status === 'string' ? value.status : undefined
+      }
+      return undefined
+    },
+    [getOrgValue]
+  )
+
   const buildFormValues = useCallback(() => {
     const defaultName =
       variant === 'self'
@@ -123,32 +179,44 @@ export const CreditMarketDetailsCard = ({
         : ''
     return {
       contactName:
-        getOrgValue('creditMarketContactName', 'credit_market_contact_name') ||
-        defaultName,
+        getOrgStringValue(
+          'creditMarketContactName',
+          'credit_market_contact_name'
+        ) || defaultName,
       phone:
-        getOrgValue(
+        getOrgStringValue(
           'creditMarketContactPhone',
           'credit_market_contact_phone',
           'phone'
         ) || '',
       email:
-        getOrgValue(
+        getOrgStringValue(
           'creditMarketContactEmail',
           'credit_market_contact_email',
           'email'
         ) || '',
-      isSeller: Boolean(
-        getOrgValue('creditMarketIsSeller', 'credit_market_is_seller')
+      isSeller: getOrgBooleanValue(
+        'creditMarketIsSeller',
+        'credit_market_is_seller'
       ),
-      isBuyer: Boolean(
-        getOrgValue('creditMarketIsBuyer', 'credit_market_is_buyer')
+      isBuyer: getOrgBooleanValue(
+        'creditMarketIsBuyer',
+        'credit_market_is_buyer'
       ),
-      creditsToSell: getOrgValue('creditsToSell', 'credits_to_sell') ?? 0,
-      displayInMarket: Boolean(
-        getOrgValue('displayInCreditMarket', 'display_in_credit_market')
+      creditsToSell:
+        getOrgNumberOrStringValue('creditsToSell', 'credits_to_sell') ?? 0,
+      displayInMarket: getOrgBooleanValue(
+        'displayInCreditMarket',
+        'display_in_credit_market'
       )
     }
-  }, [currentUser, getOrgValue, variant])
+  }, [
+    currentUser,
+    getOrgBooleanValue,
+    getOrgNumberOrStringValue,
+    getOrgStringValue,
+    variant
+  ])
 
   // Update form when organization data or user context changes
   useEffect(() => {
@@ -162,10 +230,16 @@ export const CreditMarketDetailsCard = ({
   const isSeller = watch('isSeller')
 
   // Get the available balance for validation
-  const availableBalance = getOrgValue('totalBalance', 'total_balance') ?? 0
+  const availableBalanceValue = getOrgValue('totalBalance', 'total_balance')
+  const availableBalance =
+    typeof availableBalanceValue === 'number'
+      ? availableBalanceValue
+      : typeof availableBalanceValue === 'string'
+        ? Number(availableBalanceValue)
+        : 0
 
   const organizationDisplayName =
-    getOrgValue('organizationName', 'organization_name', 'name') || ''
+    getOrgStringValue('organizationName', 'organization_name', 'name') || ''
 
   const baseCardTitle = t(
     'creditMarket:marketDetails',
@@ -186,7 +260,7 @@ export const CreditMarketDetailsCard = ({
   }
 
   const orgStatusValue =
-    organizationData?.orgStatus?.status || organizationData?.org_status?.status
+    getOrgStatusValue('orgStatus') || getOrgStatusValue('org_status')
 
   const isRegistered = orgStatusValue === ORGANIZATION_STATUSES.REGISTERED
 
@@ -206,7 +280,7 @@ export const CreditMarketDetailsCard = ({
     reset() // Reset form to original values
   }
 
-  const handleSave = (data) => {
+  const handleSave = (data: CreditMarketFormValues) => {
     // Prepare the update payload with only credit market fields
     const updatePayload = {
       credit_market_contact_name: data.contactName,
@@ -216,7 +290,7 @@ export const CreditMarketDetailsCard = ({
       credit_market_is_buyer: data.isBuyer,
       // Set credits to sell to 0 if not a seller, otherwise use the entered value (ensure it's a number)
       credits_to_sell: data.isSeller
-        ? parseInt(data.creditsToSell, 10) || 0
+        ? parseInt(String(data.creditsToSell), 10) || 0
         : 0,
       display_in_credit_market: data.displayInMarket
     }
@@ -516,7 +590,7 @@ export const CreditMarketDetailsCard = ({
                         {(() => {
                           const displayRoles = []
                           if (
-                            getOrgValue(
+                            getOrgBooleanValue(
                               'creditMarketIsSeller',
                               'credit_market_is_seller'
                             )
@@ -526,7 +600,7 @@ export const CreditMarketDetailsCard = ({
                             )
                           }
                           if (
-                            getOrgValue(
+                            getOrgBooleanValue(
                               'creditMarketIsBuyer',
                               'credit_market_is_buyer'
                             )
@@ -547,7 +621,7 @@ export const CreditMarketDetailsCard = ({
                           )}
                           :
                         </strong>{' '}
-                        {getOrgValue(
+                        {getOrgBooleanValue(
                           'displayInCreditMarket',
                           'display_in_credit_market'
                         )
@@ -559,7 +633,10 @@ export const CreditMarketDetailsCard = ({
                         <strong>
                           {t('creditMarket:creditsToSell', 'Credits to sell')}:
                         </strong>{' '}
-                        {getOrgValue('creditsToSell', 'credits_to_sell') ?? 0}
+                        {getOrgNumberOrStringValue(
+                          'creditsToSell',
+                          'credits_to_sell'
+                        ) ?? 0}
                       </BCTypography>
                     </BCBox>
                   </BCBox>

@@ -6,13 +6,13 @@ import { CreditMarketForm } from '../CreditMarketForm'
 // Mock dependencies
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key, fallback) => {
+    t: (key: string, fallback?: string) => {
       const translations = {
         'creditMarket:manageListing': 'Manage your credit market listing',
         'creditMarket:addListing': 'Add listing',
         'creditMarket:creditsAvailable': 'Credits available'
       }
-      return translations[key] || fallback || key
+      return translations[key as keyof typeof translations] || fallback || key
     }
   })
 }))
@@ -22,7 +22,10 @@ vi.mock('@/hooks/useCurrentUser', () => ({
 }))
 
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, ...props }) => (
+  default: ({
+    children,
+    ...props
+  }: React.PropsWithChildren<Record<string, unknown>>) => (
     <div data-test="bc-typography" {...props}>
       {children}
     </div>
@@ -30,7 +33,17 @@ vi.mock('@/components/BCTypography', () => ({
 }))
 
 vi.mock('@/components/BCButton', () => ({
-  default: ({ children, onClick, startIcon, ...props }) => (
+  default: ({
+    children,
+    onClick,
+    startIcon,
+    ...props
+  }: React.PropsWithChildren<
+    {
+      onClick?: React.MouseEventHandler<HTMLButtonElement>
+      startIcon?: React.ReactNode
+    } & Record<string, unknown>
+  >) => (
     <button data-test="bc-button" onClick={onClick} {...props}>
       {startIcon && <span data-test="start-icon">{startIcon}</span>}
       {children}
@@ -81,10 +94,18 @@ describe('CreditMarketForm', () => {
         fireEvent.click(addButton)
       })
 
-      expect(screen.getByLabelText(/contact person/i)).toBeInTheDocument()
-      expect(screen.getByLabelText(/email/i)).toBeInTheDocument()
-      expect(screen.getByLabelText(/phone/i)).toBeInTheDocument()
-      expect(screen.getByLabelText(/credits available/i)).toBeInTheDocument()
+      expect(
+        screen.getByLabelText<HTMLInputElement>(/contact person/i)
+      ).toBeInTheDocument()
+      expect(
+        screen.getByLabelText<HTMLInputElement>(/email/i)
+      ).toBeInTheDocument()
+      expect(
+        screen.getByLabelText<HTMLInputElement>(/phone/i)
+      ).toBeInTheDocument()
+      expect(
+        screen.getByLabelText<HTMLInputElement>(/credits available/i)
+      ).toBeInTheDocument()
     })
 
     it('should enable editing mode when add listing is clicked', async () => {
@@ -114,7 +135,8 @@ describe('CreditMarketForm', () => {
         fireEvent.click(addButton)
       })
 
-      const contactInput = screen.getByLabelText(/contact person/i)
+      const contactInput =
+        screen.getByLabelText<HTMLInputElement>(/contact person/i)
 
       await act(async () => {
         fireEvent.change(contactInput, { target: { value: 'John Doe' } })
@@ -132,7 +154,8 @@ describe('CreditMarketForm', () => {
         fireEvent.click(addButton)
       })
 
-      const creditsCheckbox = screen.getByLabelText(/credits available/i)
+      const creditsCheckbox =
+        screen.getByLabelText<HTMLInputElement>(/credits available/i)
 
       await act(async () => {
         fireEvent.click(creditsCheckbox)
@@ -150,7 +173,7 @@ describe('CreditMarketForm', () => {
         fireEvent.click(addButton)
       })
 
-      const emailInput = screen.getByLabelText(/email/i)
+      const emailInput = screen.getByLabelText<HTMLInputElement>(/email/i)
 
       await act(async () => {
         fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
@@ -168,7 +191,7 @@ describe('CreditMarketForm', () => {
         fireEvent.click(addButton)
       })
 
-      const phoneInput = screen.getByLabelText(/phone/i)
+      const phoneInput = screen.getByLabelText<HTMLInputElement>(/phone/i)
 
       await act(async () => {
         fireEvent.change(phoneInput, { target: { value: '123-456-7890' } })
@@ -211,7 +234,8 @@ describe('CreditMarketForm', () => {
         fireEvent.click(addButton)
       })
 
-      const creditsCheckbox = screen.getByLabelText(/credits available/i)
+      const creditsCheckbox =
+        screen.getByLabelText<HTMLInputElement>(/credits available/i)
 
       // Test checking the box
       await act(async () => {
@@ -237,9 +261,10 @@ describe('CreditMarketForm', () => {
         fireEvent.click(addButton)
       })
 
-      const contactInput = screen.getByLabelText(/contact person/i)
-      const emailInput = screen.getByLabelText(/email/i)
-      const phoneInput = screen.getByLabelText(/phone/i)
+      const contactInput =
+        screen.getByLabelText<HTMLInputElement>(/contact person/i)
+      const emailInput = screen.getByLabelText<HTMLInputElement>(/email/i)
+      const phoneInput = screen.getByLabelText<HTMLInputElement>(/phone/i)
 
       // Fill all fields
       await act(async () => {
@@ -262,10 +287,12 @@ describe('CreditMarketForm', () => {
         fireEvent.click(addButton)
       })
 
-      const contactInput = screen.getByLabelText(/contact person/i)
-      const emailInput = screen.getByLabelText(/email/i)
-      const phoneInput = screen.getByLabelText(/phone/i)
-      const creditsCheckbox = screen.getByLabelText(/credits available/i)
+      const contactInput =
+        screen.getByLabelText<HTMLInputElement>(/contact person/i)
+      const emailInput = screen.getByLabelText<HTMLInputElement>(/email/i)
+      const phoneInput = screen.getByLabelText<HTMLInputElement>(/phone/i)
+      const creditsCheckbox =
+        screen.getByLabelText<HTMLInputElement>(/credits available/i)
 
       expect(contactInput.type).toBe('text')
       expect(emailInput.type).toBe('email')
@@ -286,7 +313,8 @@ describe('CreditMarketForm', () => {
         fireEvent.click(addButton)
       })
 
-      const contactInput = screen.getByLabelText(/contact person/i)
+      const contactInput =
+        screen.getByLabelText<HTMLInputElement>(/contact person/i)
 
       // Set value then clear it
       await act(async () => {
@@ -387,10 +415,12 @@ describe('CreditMarketForm', () => {
         fireEvent.click(addButton)
       })
 
-      const contactInput = screen.getByLabelText(/contact person/i)
-      const emailInput = screen.getByLabelText(/email/i)
-      const phoneInput = screen.getByLabelText(/phone/i)
-      const creditsCheckbox = screen.getByLabelText(/credits available/i)
+      const contactInput =
+        screen.getByLabelText<HTMLInputElement>(/contact person/i)
+      const emailInput = screen.getByLabelText<HTMLInputElement>(/email/i)
+      const phoneInput = screen.getByLabelText<HTMLInputElement>(/phone/i)
+      const creditsCheckbox =
+        screen.getByLabelText<HTMLInputElement>(/credits available/i)
 
       expect(contactInput).not.toBeDisabled()
       expect(emailInput).not.toBeDisabled()
@@ -409,10 +439,18 @@ describe('CreditMarketForm', () => {
         fireEvent.click(addButton)
       })
 
-      expect(screen.getByLabelText(/contact person/i)).toBeInTheDocument()
-      expect(screen.getByLabelText(/email/i)).toBeInTheDocument()
-      expect(screen.getByLabelText(/phone/i)).toBeInTheDocument()
-      expect(screen.getByLabelText(/credits available/i)).toBeInTheDocument()
+      expect(
+        screen.getByLabelText<HTMLInputElement>(/contact person/i)
+      ).toBeInTheDocument()
+      expect(
+        screen.getByLabelText<HTMLInputElement>(/email/i)
+      ).toBeInTheDocument()
+      expect(
+        screen.getByLabelText<HTMLInputElement>(/phone/i)
+      ).toBeInTheDocument()
+      expect(
+        screen.getByLabelText<HTMLInputElement>(/credits available/i)
+      ).toBeInTheDocument()
     })
   })
 })

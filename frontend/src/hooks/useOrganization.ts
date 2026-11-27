@@ -21,9 +21,57 @@ export interface OrganizationData {
   [key: string]: unknown
 }
 
+type OrganizationQueryOptions = QueryOptions<OrganizationData> & {
+  cacheTime?: number
+}
+
+export interface CreditMarketListingData {
+  organizationId: number | string
+  organizationName: string
+  creditsToSell: number | null
+  displayInCreditMarket: boolean
+  creditMarketIsSeller: boolean
+  creditMarketIsBuyer: boolean
+  creditMarketContactName: string | null
+  creditMarketContactEmail: string | null
+  creditMarketContactPhone: string | null
+}
+
+export interface CreditMarketAuditChange {
+  field: string
+  oldValue?: unknown
+  newValue?: unknown
+}
+
+export interface CreditMarketAuditLogData {
+  creditMarketAuditLogId: number
+  organizationName: string
+  action?: string | null
+  changes?: CreditMarketAuditChange[] | null
+  creditsToSell?: number | null
+  roleInMarket?: string | null
+  contactPerson?: string | null
+  phone?: string | null
+  email?: string | null
+  changedBy?: string | null
+  uploadedDate?: string | null
+}
+
+export interface CreditMarketAuditLogsResponse {
+  creditMarketAuditLogs: CreditMarketAuditLogData[]
+  pagination?: {
+    page?: number
+    size?: number
+    total?: number
+    total_pages?: number
+    [key: string]: unknown
+  }
+  [key: string]: unknown
+}
+
 export const useOrganization = (
   orgID: number | string | undefined | null,
-  options: QueryOptions<OrganizationData> = {}
+  options: OrganizationQueryOptions = {}
 ) => {
   const client = useApiService()
   const { data: currentUser } = useCurrentUser()
@@ -625,7 +673,7 @@ export const useUpdateOrganizationCreditMarket = (
 }
 
 export const useCreditMarketListings = (
-  options: QueryOptions<unknown> = {}
+  options: QueryOptions<CreditMarketListingData[]> = {}
 ) => {
   const client = useApiService()
 
@@ -636,7 +684,7 @@ export const useCreditMarketListings = (
     ...restOptions
   } = options
 
-  return useQuery({
+  return useQuery<CreditMarketListingData[]>({
     queryKey: ['credit-market-listings'],
     queryFn: async () => {
       const response = await client.get('/organizations/credit-market-listings')
@@ -657,12 +705,24 @@ export const useCreditMarketAuditLogs = (
     size = 10,
     sortOrders = [],
     filters = []
-  }: Record<string, unknown> = {},
-  options: QueryOptions<unknown> = {}
+  }: {
+    page?: number
+    size?: number
+    sortOrders?: Array<{
+      field?: string
+      direction?: string
+      colId?: string
+      sort?: string
+    }>
+    filters?: Array<Record<string, unknown>>
+  } = {},
+  options: QueryOptions<CreditMarketAuditLogsResponse> & {
+    cacheTime?: number
+  } = {}
 ) => {
   const client = useApiService()
 
-  return useQuery({
+  return useQuery<CreditMarketAuditLogsResponse>({
     queryKey: ['credit-market-audit-logs', page, size, sortOrders, filters],
     queryFn: async () =>
       (

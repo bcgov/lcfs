@@ -3,9 +3,19 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vite-plus/test'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import ThemeProvider from '@mui/material/styles/ThemeProvider'
-import { forwardRef } from 'react'
+import {
+  forwardRef,
+  type ReactNode,
+  type HTMLAttributes,
+  type ForwardedRef
+} from 'react'
 import theme from '@/themes'
 import { Transactions } from '../Transactions'
+
+const setMockReturnValue = <T,>(
+  mock: { mockReturnValue: (value: T) => unknown },
+  value: unknown
+) => mock.mockReturnValue(value as T)
 
 // Mock all hooks and dependencies
 vi.mock('@/hooks/useCurrentUser')
@@ -15,19 +25,26 @@ vi.mock('@/services/useApiService')
 const mockNavigate = vi.fn()
 const mockSetSearchParams = vi.fn()
 vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual('react-router-dom')
+  const actual =
+    await vi.importActual<typeof import('react-router-dom')>('react-router-dom')
   return {
     ...actual,
     useNavigate: () => mockNavigate,
     useSearchParams: () => [new URLSearchParams(), mockSetSearchParams],
-    useLocation: () => ({ pathname: '/transactions', state: null })
+    useLocation: () => ({
+      pathname: '/transactions',
+      state: null,
+      key: 'test',
+      search: '',
+      hash: ''
+    })
   }
 })
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key, defaultValue) => {
-      const translations = {
+    t: (key: string, defaultValue?: string) => {
+      const translations: Record<string, string> = {
         'txn:title': 'Transactions',
         'txn:transactionsTab': 'Transactions',
         'txn:creditTradingMarketTab': 'Credit trading market',
@@ -47,8 +64,20 @@ vi.mock('react-i18next', () => ({
 // Mock components
 vi.mock('@/components/DownloadButton', () => ({
   DownloadButton: forwardRef(function MockDownloadButton(
-    { onDownload, dataTest, isDownloading, label, downloadLabel },
-    ref
+    {
+      onDownload,
+      dataTest,
+      isDownloading,
+      label,
+      downloadLabel
+    }: {
+      onDownload?: () => void
+      dataTest?: string
+      isDownloading?: boolean
+      label?: string
+      downloadLabel?: string
+    },
+    ref: ForwardedRef<HTMLButtonElement>
   ) {
     return (
       <button
@@ -64,12 +93,41 @@ vi.mock('@/components/DownloadButton', () => ({
 }))
 
 vi.mock('@/components/ClearFiltersButton', () => ({
-  ClearFiltersButton: ({ onClick }) => (
+  ClearFiltersButton: ({ onClick }: { onClick?: () => void }) => (
     <button data-test="clear-filters-button" onClick={onClick}>
       Clear Filters
     </button>
   )
 }))
+
+type TransactionRow = {
+  transactionId: string
+  transactionType: string
+  fromOrganization?: string
+  status?: string
+  compliancePeriod?: string
+}
+type GridMockProps = {
+  onPaginationChange?: (pagination: { page: number; size: number }) => void
+  queryData?: { data?: { transactions?: TransactionRow[] } }
+  gridRef?: {
+    current: {
+      clearFilters: () => void
+      api: {
+        getFilterModel: () => Record<string, never>
+        deselectAll: () => void
+      }
+    } | null
+  }
+  getRowId?: (params: { data: TransactionRow }) => string
+  defaultColDef?: {
+    cellRenderer?: (props: { data: { data: TransactionRow } }) => ReactNode
+  }
+  onRowClicked?: (params: {
+    data: { transactionId: string; transactionType: string }
+  }) => void
+  highlightedRowId?: string
+}
 
 // SINGLE BCGridViewer mock - no duplicates
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
@@ -81,7 +139,7 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
     defaultColDef,
     onRowClicked,
     highlightedRowId
-  }) => {
+  }: GridMockProps) => {
     // Set up grid ref mock
     if (gridRef) {
       gridRef.current = {
@@ -148,7 +206,13 @@ vi.mock('@/components/Loading', () => ({
 
 // FIXED: Complete OrganizationList mock
 vi.mock('../components/OrganizationList', () => ({
-  default: ({ onOrgChange, selectedOrg }) => (
+  default: ({
+    onOrgChange,
+    selectedOrg
+  }: {
+    onOrgChange?: (org: { id: string; label: string }) => void
+    selectedOrg?: { label?: string } | null
+  }) => (
     <div data-test="organization-list">
       <button
         onClick={() => onOrgChange?.({ id: 'org-123', label: 'Test Org' })}
@@ -178,7 +242,7 @@ vi.mock('../CreditTradingMarket/CreditMarketDetailsCard', () => ({
 }))
 
 vi.mock('@/components/Role', () => ({
-  Role: ({ children, roles }) => (
+  Role: ({ children, roles }: { children?: ReactNode; roles?: string[] }) => (
     <div data-test="role-component" data-roles={roles?.join(',')}>
       {children}
     </div>
@@ -186,7 +250,13 @@ vi.mock('@/components/Role', () => ({
 }))
 
 vi.mock('@/components/BCAlert', () => ({
-  default: ({ children, severity }) => (
+  default: ({
+    children,
+    severity
+  }: {
+    children?: ReactNode
+    severity?: string
+  }) => (
     <div data-test="alert-box" data-severity={severity}>
       {children}
     </div>
@@ -194,7 +264,10 @@ vi.mock('@/components/BCAlert', () => ({
 }))
 
 vi.mock('@/components/BCBox', () => ({
-  default: ({ children, ...props }) => (
+  default: ({
+    children,
+    ...props
+  }: HTMLAttributes<HTMLDivElement> & { 'data-test'?: string }) => (
     <div data-test="bc-box" {...props}>
       {children}
     </div>
@@ -202,7 +275,19 @@ vi.mock('@/components/BCBox', () => ({
 }))
 
 vi.mock('@/components/BCButton', () => ({
-  default: ({ children, onClick, startIcon, id, disabled }) => (
+  default: ({
+    children,
+    onClick,
+    startIcon,
+    id,
+    disabled
+  }: {
+    children?: ReactNode
+    onClick?: () => void
+    startIcon?: ReactNode
+    id?: string
+    disabled?: boolean
+  }) => (
     <button data-test="bc-button" id={id} onClick={onClick} disabled={disabled}>
       {startIcon && <span data-test="start-icon">{startIcon}</span>}
       {children}
@@ -211,7 +296,14 @@ vi.mock('@/components/BCButton', () => ({
 }))
 
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, variant, ...props }) => (
+  default: ({
+    children,
+    variant,
+    ...props
+  }: HTMLAttributes<HTMLSpanElement> & {
+    children?: ReactNode
+    variant?: string
+  }) => (
     <span data-test="bc-typography" data-variant={variant} {...props}>
       {children}
     </span>
@@ -219,7 +311,7 @@ vi.mock('@/components/BCTypography', () => ({
 }))
 
 vi.mock('@fortawesome/react-fontawesome', () => ({
-  FontAwesomeIcon: ({ icon }) => (
+  FontAwesomeIcon: ({ icon }: { icon?: { iconName?: string } }) => (
     <span data-test="font-awesome-icon" data-icon={icon?.iconName}>
       Icon
     </span>
@@ -293,8 +385,10 @@ vi.mock('@/routes/routes', () => ({
 }))
 
 vi.mock('@/utils/grid/cellRenderers', () => ({
-  ConditionalLinkRenderer: (shouldRenderLink) =>
-    function ConditionalLinkMock(props) {
+  ConditionalLinkRenderer: (
+    shouldRenderLink: (props: { data?: { data?: TransactionRow } }) => boolean
+  ) =>
+    function ConditionalLinkMock(props: { data?: { data?: TransactionRow } }) {
       const canRender = shouldRenderLink(props)
       return (
         <div data-test="conditional-link-renderer" data-can-render={canRender}>
@@ -338,7 +432,13 @@ Object.defineProperty(window, 'removeEventListener', {
 })
 
 // Test wrapper
-const TestWrapper = ({ children, initialEntries = ['/transactions'] }) => {
+const TestWrapper = ({
+  children,
+  initialEntries = ['/transactions']
+}: {
+  children: ReactNode
+  initialEntries?: string[]
+}) => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } }
   })
@@ -353,7 +453,25 @@ const TestWrapper = ({ children, initialEntries = ['/transactions'] }) => {
 }
 
 describe('Transactions Component', () => {
-  let mockUseCurrentUser, mockUseTransactions, mockDownloadTransactions
+  type UserMock = {
+    data: {
+      organization: { name: string; orgStatus: { status: string } }
+      roles: { name: string }[]
+      isGovernmentUser: boolean
+    } | null
+    hasRoles: ReturnType<typeof vi.fn>
+    hasAnyRole: ReturnType<typeof vi.fn>
+  }
+  type TransactionsMock =
+    | {
+        data: { transactions: TransactionRow[] }
+        isLoading: boolean
+        error: Error | null
+      }
+    | { data: null; isLoading: boolean; error: Error | null }
+  let mockUseCurrentUser: UserMock
+  let mockUseTransactions: TransactionsMock
+  let mockDownloadTransactions = vi.fn<() => Promise<void>>()
 
   beforeEach(async () => {
     vi.clearAllMocks()
@@ -377,7 +495,9 @@ describe('Transactions Component', () => {
       hasAnyRole: vi.fn(() => false)
     }
 
-    mockDownloadTransactions = vi.fn().mockResolvedValue()
+    mockDownloadTransactions = vi
+      .fn<() => Promise<void>>()
+      .mockResolvedValue(undefined)
 
     mockUseTransactions = {
       data: {
@@ -401,12 +521,12 @@ describe('Transactions Component', () => {
       await import('@/hooks/useTransactions')
     const { useApiService } = await import('@/services/useApiService')
 
-    vi.mocked(useCurrentUser).mockReturnValue(mockUseCurrentUser)
-    vi.mocked(useGetTransactionList).mockReturnValue(mockUseTransactions)
-    vi.mocked(useDownloadTransactions).mockReturnValue({
+    setMockReturnValue(vi.mocked(useCurrentUser), mockUseCurrentUser)
+    setMockReturnValue(vi.mocked(useGetTransactionList), mockUseTransactions)
+    setMockReturnValue(vi.mocked(useDownloadTransactions), {
       mutateAsync: mockDownloadTransactions
     })
-    vi.mocked(useApiService).mockReturnValue({
+    setMockReturnValue(vi.mocked(useApiService), {
       get: vi.fn(),
       post: vi.fn(),
       download: vi.fn()
@@ -531,7 +651,7 @@ describe('Transactions Component', () => {
   describe('Role-based Rendering', () => {
     it('should render different content based on user roles', () => {
       mockUseCurrentUser.hasRoles.mockImplementation(
-        (role) => role === 'transfers'
+        (role: string) => role === 'transfers'
       )
 
       render(
@@ -545,7 +665,7 @@ describe('Transactions Component', () => {
     })
 
     it('should show organization list for government users', () => {
-      mockUseCurrentUser.hasRoles.mockImplementation((role) =>
+      mockUseCurrentUser.hasRoles.mockImplementation((role: string) =>
         ['government', 'analyst'].includes(role)
       )
 
@@ -562,7 +682,7 @@ describe('Transactions Component', () => {
   describe('Tab Functionality', () => {
     it('should render single tab view when credit trading not available', () => {
       mockUseCurrentUser.hasRoles.mockReturnValue(false)
-      mockUseCurrentUser.data.organization.orgStatus.status = 'Unregistered'
+      mockUseCurrentUser.data!.organization.orgStatus.status = 'Unregistered'
 
       render(
         <TestWrapper>
@@ -578,7 +698,7 @@ describe('Transactions Component', () => {
 
     it('should render multiple tabs when credit trading available for government users', () => {
       mockUseCurrentUser.hasRoles.mockImplementation(
-        (role) => role === 'government'
+        (role: string) => role === 'government'
       )
 
       render(
@@ -593,7 +713,7 @@ describe('Transactions Component', () => {
 
     it('should handle tab switching', () => {
       mockUseCurrentUser.hasRoles.mockImplementation(
-        (role) => role === 'government'
+        (role: string) => role === 'government'
       )
 
       render(
@@ -623,7 +743,7 @@ describe('Transactions Component', () => {
     })
 
     it('should handle empty transaction data', () => {
-      mockUseTransactions.data.transactions = []
+      mockUseTransactions.data!.transactions = []
 
       render(
         <TestWrapper>
@@ -647,7 +767,7 @@ describe('Transactions Component', () => {
 
   describe('Organization Selection', () => {
     it('should handle organization selection', async () => {
-      mockUseCurrentUser.hasRoles.mockImplementation((role) =>
+      mockUseCurrentUser.hasRoles.mockImplementation((role: string) =>
         ['government', 'analyst'].includes(role)
       )
 
@@ -696,7 +816,7 @@ describe('Transactions Component', () => {
   describe('Organization Filter Session Storage Persistence', () => {
     beforeEach(() => {
       // Enable government user role for organization list visibility
-      mockUseCurrentUser.hasRoles.mockImplementation((role) =>
+      mockUseCurrentUser.hasRoles.mockImplementation((role: string) =>
         ['government', 'analyst'].includes(role)
       )
     })

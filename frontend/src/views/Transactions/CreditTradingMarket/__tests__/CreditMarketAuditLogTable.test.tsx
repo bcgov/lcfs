@@ -3,6 +3,7 @@ import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 
 import { CreditMarketAuditLogTable } from '../CreditMarketAuditLogTable'
 import { test } from '@/tests/utils/fixtures'
+import type { BCPaginationOptions } from '@/components/BCDataGrid/types'
 
 const mockUseCreditMarketAuditLogs = vi.fn()
 const mockCreditMarketAuditLogColDefs = vi.fn(() => [
@@ -11,24 +12,33 @@ const mockCreditMarketAuditLogColDefs = vi.fn(() => [
 ])
 
 vi.mock('@/hooks/useOrganization', () => ({
-  useCreditMarketAuditLogs: (...args) => mockUseCreditMarketAuditLogs(...args)
+  useCreditMarketAuditLogs: (
+    ...args: [BCPaginationOptions, Record<string, unknown>]
+  ) => mockUseCreditMarketAuditLogs(...args)
 }))
 
 vi.mock('../_schema', () => ({
-  creditMarketAuditLogColDefs: (...args) =>
-    mockCreditMarketAuditLogColDefs(...args),
+  creditMarketAuditLogColDefs: (
+    ...args: Parameters<typeof mockCreditMarketAuditLogColDefs>
+  ) => mockCreditMarketAuditLogColDefs(...args),
   defaultAuditSortModel: [{ field: 'uploadedDate', direction: 'desc' }]
 }))
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key, defaultValue) => defaultValue || key
+    t: (key: string, defaultValue?: string) => defaultValue || key
   })
 }))
 
 const mockGridViewer = vi.fn()
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  BCGridViewer: (props) => {
+  BCGridViewer: (props: {
+    dataKey: string
+    gridKey: string
+    enableExportButton: boolean
+    enableCopyButton: boolean
+    defaultSortModel: unknown[]
+  }) => {
     mockGridViewer(props)
     return <div data-test="audit-grid-viewer">Audit Grid</div>
   }

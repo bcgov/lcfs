@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type SyntheticEvent } from 'react'
 import Accordion from '@mui/material/Accordion'
 import AccordionSummary from '@mui/material/AccordionSummary'
 import AccordionDetails from '@mui/material/AccordionDetails'
@@ -11,7 +11,7 @@ export const CreditMarketAccordion = () => {
   const { t } = useTranslation(['common', 'creditMarket'])
   const [expanded, setExpanded] = useState(true)
 
-  const handleChange = (event, isExpanded) => {
+  const handleChange = (_event: SyntheticEvent, isExpanded: boolean) => {
     setExpanded(isExpanded)
   }
 

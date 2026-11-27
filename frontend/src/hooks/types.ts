@@ -34,6 +34,59 @@ export interface PaginatedResponse<T = unknown> {
   data?: T[]
 }
 
+export interface TransactionStatusRecord {
+  status: string
+}
+
+export interface TransactionHistoryRecord {
+  createDate: string
+  adminAdjustmentStatus?: TransactionStatusRecord | null
+  initiativeAgreementStatus?: TransactionStatusRecord | null
+  displayName?: string | null
+  userProfile: { firstName: string; lastName: string }
+}
+
+export interface TransactionRecord {
+  createDate: string
+  adminAdjustmentId?: number | null
+  initiativeAgreementId?: number | null
+  toOrganizationId?: number | string | null
+  toOrganization: { name: string }
+  complianceUnits: string | number
+  transactionEffectiveDate?: string | null
+  govComment?: string | null
+  currentStatus?: TransactionStatusRecord | null
+  history?: TransactionHistoryRecord[] | null
+}
+
+export type TransactionQueryOptions = QueryOptions<TransactionRecord> & {
+  cacheTime?: number
+  keepPreviousData?: boolean
+}
+
+export interface TransactionListResponse {
+  transactions: Array<{
+    transactionId: string | number
+    transactionType: string
+    [field: string]: unknown
+  }>
+  pagination?: {
+    page: number
+    size: number
+    total: number
+    total_pages: number
+    [field: string]: unknown
+  }
+  [key: string]: unknown
+}
+
+export interface TransactionMutationData {
+  currentStatus: TransactionStatusRecord
+  adminAdjustmentId?: ID
+  initiativeAgreementId?: ID
+  returned?: boolean
+}
+
 // ─── Common option helpers ────────────────────────────────────────────────────
 
 // Query options without 'queryKey' and 'queryFn', TData is 'unknown' by default

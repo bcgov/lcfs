@@ -14,6 +14,32 @@ import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useCreditMarketListings } from '@/hooks/useOrganization'
 import { creditMarketColDefs, defaultSortModel } from './_schema'
+import type { CreditMarketListingData } from '@/hooks/useOrganization'
+import type {
+  BCGridRef,
+  BCGridRow,
+  BCPaginationOptions
+} from '@/components/BCDataGrid/types'
+import type {
+  GetRowIdParams,
+  RowClickedEvent,
+  GridOptions
+} from 'ag-grid-community'
+
+export interface CreditMarketSelection {
+  organizationId: number | string
+  organizationName: string
+}
+
+export interface CreditMarketTableHandle {
+  refreshListings: () => Promise<unknown>
+}
+
+interface CreditMarketTableProps {
+  onRowSelect?: (row: CreditMarketSelection | null) => void
+  selectedOrgId?: number | string | null
+  gridRef?: BCGridRef
+}
 
 const initialPaginationOptions = {
   page: 1,
@@ -22,19 +48,22 @@ const initialPaginationOptions = {
   filters: []
 }
 
-export const CreditMarketTable = forwardRef(
+export const CreditMarketTable = forwardRef<
+  CreditMarketTableHandle,
+  CreditMarketTableProps
+>(
   (
     { onRowSelect, selectedOrgId = null, gridRef: externalGridRef } = {},
     ref
   ) => {
     const { t } = useTranslation(['common', 'creditMarket'])
     const { data: currentUser } = useCurrentUser()
-    const internalGridRef = useRef()
+    const internalGridRef: BCGridRef = useRef(null)
     const gridRef = externalGridRef ?? internalGridRef
 
-    const [paginationOptions, setPaginationOptions] = useState(
-      initialPaginationOptions
-    )
+    const [paginationOptions, setPaginationOptions] = useState<
+      BCPaginationOptions & { page: number; size: number }
+    >(initialPaginationOptions)
 
     // Fetch real credit market listings
     const {
@@ -52,17 +81,19 @@ export const CreditMarketTable = forwardRef(
       const userOrgId = currentUser?.organization?.organizationId
 
       // Transform API data to match frontend schema (no longer exclude current user's org)
-      const transformedData = creditMarketData.map((org) => ({
-        id: org.organizationId,
-        organizationName: org.organizationName,
-        creditsToSell: org.creditsToSell,
-        displayInCreditMarket: org.displayInCreditMarket,
-        isSeller: org.creditMarketIsSeller,
-        isBuyer: org.creditMarketIsBuyer,
-        contactPerson: org.creditMarketContactName,
-        email: org.creditMarketContactEmail,
-        phone: org.creditMarketContactPhone
-      }))
+      const transformedData = creditMarketData.map(
+        (org: CreditMarketListingData) => ({
+          id: org.organizationId,
+          organizationName: org.organizationName,
+          creditsToSell: org.creditsToSell,
+          displayInCreditMarket: org.displayInCreditMarket,
+          isSeller: org.creditMarketIsSeller,
+          isBuyer: org.creditMarketIsBuyer,
+          contactPerson: org.creditMarketContactName,
+          email: org.creditMarketContactEmail,
+          phone: org.creditMarketContactPhone
+        })
+      )
 
       // Sort with current user's organization at top, then alphabetically
       transformedData.sort((a, b) => {
@@ -83,11 +114,11 @@ export const CreditMarketTable = forwardRef(
       return sortedData.slice(start, start + paginationOptions.size)
     }, [paginationOptions.page, paginationOptions.size, sortedData])
 
-    const getRowId = useCallback((params) => {
-      return `credit-market-${params.data.id}`
+    const getRowId = useCallback((params: GetRowIdParams<BCGridRow>) => {
+      return `credit-market-${String(params.data.id)}`
     }, [])
 
-    const selectionGridOptions = useMemo(
+    const selectionGridOptions = useMemo<GridOptions<BCGridRow> | undefined>(
       () =>
         onRowSelect
           ? {
@@ -100,10 +131,17 @@ export const CreditMarketTable = forwardRef(
     )
 
     const handleRowClick = useCallback(
-      (params) => {
+      (params: RowClickedEvent<BCGridRow>) => {
         if (!onRowSelect) return
-        const clickedId = params?.data?.id
-        if (!clickedId) return
+        const data = params.data
+        const clickedId = data?.id
+        const organizationName = data?.organizationName
+        if (
+          (typeof clickedId !== 'string' && typeof clickedId !== 'number') ||
+          typeof organizationName !== 'string' ||
+          !clickedId
+        )
+          return
 
         if (selectedOrgId === clickedId) {
           if (params.api?.deselectAll) {
@@ -121,7 +159,7 @@ export const CreditMarketTable = forwardRef(
         }
         onRowSelect({
           organizationId: clickedId,
-          organizationName: params.data.organizationName
+          organizationName
         })
       },
       [onRowSelect, selectedOrgId]
@@ -172,7 +210,9 @@ export const CreditMarketTable = forwardRef(
             gridRef={gridRef}
             gridKey="credit-market-grid"
             gridOptions={selectionGridOptions}
-            columnDefs={creditMarketColDefs(t)}
+            columnDefs={creditMarketColDefs((key, fallback) =>
+              fallback === undefined ? t(key) : t(key, fallback)
+            )}
             getRowId={getRowId}
             overlayNoRowsTemplate={t(
               'creditMarket:noListingsFound',

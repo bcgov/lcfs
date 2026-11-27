@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ChangeEvent } from 'react'
 import Box from '@mui/material/Box'
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
@@ -35,16 +35,18 @@ export const CreditMarketForm = () => {
   // Mock data to simulate existing listing
   const [hasExistingListing] = useState(false)
 
-  const handleInputChange = (field) => (event) => {
-    const value =
-      event.target.type === 'checkbox'
-        ? event.target.checked
-        : event.target.value
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value
-    }))
-  }
+  const handleInputChange =
+    (field: keyof typeof formData) =>
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const value =
+        event.target.type === 'checkbox'
+          ? event.target.checked
+          : event.target.value
+      setFormData((prev) => ({
+        ...prev,
+        [field]: value
+      }))
+    }
 
   const handleSave = () => {
     // TODO: Implement API call to save listing

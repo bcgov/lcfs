@@ -1,6 +1,7 @@
 import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { vi } from 'vite-plus/test'
+
 import { useParams, useLocation } from 'react-router-dom'
 import { ViewOrgTransaction } from '@/views/Transactions/ViewOrgTransaction'
 
@@ -9,6 +10,11 @@ import { useInitiativeAgreement } from '@/hooks/useInitiativeAgreement'
 import { OrgTransactionDetails } from '@/views/Transactions/components'
 import Loading from '@/components/Loading'
 import '@/components/BCTypography'
+
+const setMockReturnValue = <T extends (...args: never[]) => unknown>(
+  mock: { mockReturnValue: (value: ReturnType<T>) => unknown },
+  value: unknown
+) => mock.mockReturnValue(value as ReturnType<T>)
 
 // Mock all external dependencies
 vi.mock('react-router-dom', async () => {
@@ -22,8 +28,8 @@ vi.mock('react-router-dom', async () => {
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => {
-      const translations = {
+    t: (key: string) => {
+      const translations: Record<string, string> = {
         'txn:loadingText': 'Loading transaction...',
         'adminadjustment:actionMsgs.errorRetrieval':
           'Error retrieving admin adjustment',
@@ -90,19 +96,25 @@ describe('ViewOrgTransaction', () => {
     vi.spyOn(React, 'useRef').mockReturnValue(mockAlertRef)
 
     // Default mock implementations
-    vi.mocked(useAdminAdjustment).mockReturnValue({
-      data: null,
-      isLoading: false,
-      isError: false,
-      error: null
-    })
+    setMockReturnValue<typeof useAdminAdjustment>(
+      vi.mocked(useAdminAdjustment),
+      {
+        data: null,
+        isLoading: false,
+        isError: false,
+        error: null
+      }
+    )
 
-    vi.mocked(useInitiativeAgreement).mockReturnValue({
-      data: null,
-      isLoading: false,
-      isError: false,
-      error: null
-    })
+    setMockReturnValue<typeof useInitiativeAgreement>(
+      vi.mocked(useInitiativeAgreement),
+      {
+        data: null,
+        isLoading: false,
+        isError: false,
+        error: null
+      }
+    )
 
     // Mock window.location.pathname
     Object.defineProperty(window, 'location', {
@@ -117,8 +129,16 @@ describe('ViewOrgTransaction', () => {
     transactionId = '123',
     pathname = '/org-admin-adjustment/123'
   ) => {
-    vi.mocked(useParams).mockReturnValue({ transactionId })
-    vi.mocked(useLocation).mockReturnValue({ pathname })
+    setMockReturnValue<typeof useParams>(vi.mocked(useParams), {
+      transactionId
+    })
+    setMockReturnValue<typeof useLocation>(vi.mocked(useLocation), {
+      pathname,
+      state: null,
+      key: 'test',
+      search: '',
+      hash: ''
+    })
 
     // Update window.location.pathname for the component's useEffect
     window.location.pathname = pathname
@@ -140,12 +160,15 @@ describe('ViewOrgTransaction', () => {
 
   describe('Loading States', () => {
     it('shows loading when admin adjustment is loading', () => {
-      vi.mocked(useAdminAdjustment).mockReturnValue({
-        data: null,
-        isLoading: true,
-        isError: false,
-        error: null
-      })
+      setMockReturnValue<typeof useAdminAdjustment>(
+        vi.mocked(useAdminAdjustment),
+        {
+          data: null,
+          isLoading: true,
+          isError: false,
+          error: null
+        }
+      )
 
       renderComponent('123', '/org-admin-adjustment/123')
 
@@ -157,12 +180,15 @@ describe('ViewOrgTransaction', () => {
     })
 
     it('shows loading when initiative agreement is loading', () => {
-      vi.mocked(useInitiativeAgreement).mockReturnValue({
-        data: null,
-        isLoading: true,
-        isError: false,
-        error: null
-      })
+      setMockReturnValue<typeof useInitiativeAgreement>(
+        vi.mocked(useInitiativeAgreement),
+        {
+          data: null,
+          isLoading: true,
+          isError: false,
+          error: null
+        }
+      )
 
       renderComponent('456', '/org-initiative-agreement/456')
 
@@ -176,13 +202,21 @@ describe('ViewOrgTransaction', () => {
 
   describe('Success States', () => {
     it('renders transaction details for admin adjustment', () => {
-      const mockData = { id: 123, description: 'Test adjustment' }
-      vi.mocked(useAdminAdjustment).mockReturnValue({
-        data: mockData,
-        isLoading: false,
-        isError: false,
-        error: null
-      })
+      const mockData = {
+        adminAdjustmentId: 123,
+        createDate: '2024-01-01',
+        toOrganization: { name: 'Test Org' },
+        complianceUnits: 1
+      }
+      setMockReturnValue<typeof useAdminAdjustment>(
+        vi.mocked(useAdminAdjustment),
+        {
+          data: mockData,
+          isLoading: false,
+          isError: false,
+          error: null
+        }
+      )
 
       renderComponent('123', '/org-admin-adjustment/123')
 
@@ -197,13 +231,21 @@ describe('ViewOrgTransaction', () => {
     })
 
     it('renders transaction details for initiative agreement', () => {
-      const mockData = { id: 456, description: 'Test agreement' }
-      vi.mocked(useInitiativeAgreement).mockReturnValue({
-        data: mockData,
-        isLoading: false,
-        isError: false,
-        error: null
-      })
+      const mockData = {
+        initiativeAgreementId: 456,
+        createDate: '2024-01-01',
+        toOrganization: { name: 'Test Org' },
+        complianceUnits: 1
+      }
+      setMockReturnValue<typeof useInitiativeAgreement>(
+        vi.mocked(useInitiativeAgreement),
+        {
+          data: mockData,
+          isLoading: false,
+          isError: false,
+          error: null
+        }
+      )
 
       renderComponent('456', '/org-initiative-agreement/456')
 
@@ -220,14 +262,17 @@ describe('ViewOrgTransaction', () => {
 
   describe('Error Handling', () => {
     it('shows error UI elements when error occurs', () => {
-      const mockError = { message: 'Network error' }
+      const mockError = new Error('Network error')
 
-      vi.mocked(useAdminAdjustment).mockReturnValue({
-        data: null,
-        isLoading: false,
-        isError: true,
-        error: mockError
-      })
+      setMockReturnValue<typeof useAdminAdjustment>(
+        vi.mocked(useAdminAdjustment),
+        {
+          data: null,
+          isLoading: false,
+          isError: true,
+          error: mockError
+        }
+      )
 
       renderComponent('123', '/org-admin-adjustment/123')
 
@@ -238,14 +283,17 @@ describe('ViewOrgTransaction', () => {
     it('handles null alertRef gracefully', () => {
       vi.spyOn(React, 'useRef').mockReturnValue({ current: null })
 
-      const mockError = { message: 'Test error' }
+      const mockError = new Error('Test error')
 
-      vi.mocked(useAdminAdjustment).mockReturnValue({
-        data: null,
-        isLoading: false,
-        isError: true,
-        error: mockError
-      })
+      setMockReturnValue<typeof useAdminAdjustment>(
+        vi.mocked(useAdminAdjustment),
+        {
+          data: null,
+          isLoading: false,
+          isError: true,
+          error: mockError
+        }
+      )
 
       expect(() => {
         renderComponent('123', '/org-admin-adjustment/123')
@@ -279,8 +327,10 @@ describe('ViewOrgTransaction', () => {
     })
 
     it('handles undefined transactionId', () => {
-      vi.mocked(useParams).mockReturnValue({ transactionId: undefined })
-      vi.mocked(useLocation).mockReturnValue({
+      setMockReturnValue<typeof useParams>(vi.mocked(useParams), {
+        transactionId: undefined
+      })
+      setMockReturnValue<typeof useLocation>(vi.mocked(useLocation), {
         pathname: '/org-admin-adjustment/'
       })
       window.location.pathname = '/org-admin-adjustment/'
@@ -299,12 +349,15 @@ describe('ViewOrgTransaction', () => {
 
   describe('Edge Cases', () => {
     it('returns empty content when no transaction data and not loading/error', () => {
-      vi.mocked(useAdminAdjustment).mockReturnValue({
-        data: null,
-        isLoading: false,
-        isError: false,
-        error: null
-      })
+      setMockReturnValue<typeof useAdminAdjustment>(
+        vi.mocked(useAdminAdjustment),
+        {
+          data: null,
+          isLoading: false,
+          isError: false,
+          error: null
+        }
+      )
 
       const { container } = renderComponent('123', '/org-admin-adjustment/123')
 
@@ -313,12 +366,15 @@ describe('ViewOrgTransaction', () => {
     })
 
     it('handles empty transaction data object', () => {
-      vi.mocked(useAdminAdjustment).mockReturnValue({
-        data: {},
-        isLoading: false,
-        isError: false,
-        error: null
-      })
+      setMockReturnValue<typeof useAdminAdjustment>(
+        vi.mocked(useAdminAdjustment),
+        {
+          data: {},
+          isLoading: false,
+          isError: false,
+          error: null
+        }
+      )
 
       renderComponent('123', '/org-admin-adjustment/123')
 
@@ -359,8 +415,10 @@ describe('ViewOrgTransaction', () => {
     })
 
     it('passes enabled false when transactionId is missing', () => {
-      vi.mocked(useParams).mockReturnValue({ transactionId: undefined })
-      vi.mocked(useLocation).mockReturnValue({
+      setMockReturnValue<typeof useParams>(vi.mocked(useParams), {
+        transactionId: undefined
+      })
+      setMockReturnValue<typeof useLocation>(vi.mocked(useLocation), {
         pathname: '/org-admin-adjustment/'
       })
       window.location.pathname = '/org-admin-adjustment/'

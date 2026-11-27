@@ -2,11 +2,13 @@ import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { INITIATIVE_AGREEMENT } from '@/views/Transactions/constants'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { QueryOptions, ExtMutationOptions } from './types'
+import type { ExtMutationOptions, TransactionQueryOptions } from './types'
+import type { AxiosResponse } from 'axios'
+import type { TransactionMutationData } from './types'
 
 export const useInitiativeAgreement = (
   initiativeAgreementID: number | string | undefined | null,
-  options: QueryOptions<unknown>
+  options: TransactionQueryOptions
 ) => {
   const client = useApiService()
 
@@ -24,7 +26,7 @@ export const useInitiativeAgreement = (
 
 export const useCreateUpdateInitiativeAgreement = (
   initiativeAgreementId: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, unknown>
+  options: ExtMutationOptions<AxiosResponse<TransactionMutationData>, unknown>
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()

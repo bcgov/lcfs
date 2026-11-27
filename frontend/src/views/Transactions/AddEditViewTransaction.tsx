@@ -6,6 +6,10 @@ import {
   useLocation
 } from 'react-router-dom'
 import { FormProvider, useForm } from 'react-hook-form'
+import type { ModalData } from '@/components/BCModal'
+import type { BCAlertHandle } from '@/components/BCAlert/BCAlert'
+import type { AlertSeverity } from '@/components/BCAlert/BCAlertRoot'
+import type { StepLabelProps } from '@mui/material/StepLabel'
 import { useTranslation } from 'react-i18next'
 import { yupResolver } from '@hookform/resolvers/yup'
 import { govRoles, roles } from '@/constants/roles'
@@ -69,15 +73,26 @@ export const AddEditViewTransaction = () => {
   const matches = useMatches()
   const navigate = useNavigate()
   const location = useLocation()
-  const [modalData, setModalData] = useState(null)
-  const mode = matches[matches.length - 1]?.handle?.mode
+  const [modalData, setModalData] = useState<ModalData | null>(null)
+  const routeHandle = matches[matches.length - 1]?.handle
+  const mode =
+    routeHandle &&
+    typeof routeHandle === 'object' &&
+    'mode' in routeHandle &&
+    typeof routeHandle.mode === 'string'
+      ? routeHandle.mode
+      : undefined
   const { transactionId } = useParams()
   const { hasRoles, hasAnyRole } = useCurrentUser()
-  const [steps, setSteps] = useState(['Draft', 'Recommended', 'Approved'])
-  const alertRef = useRef()
+  const [steps, setSteps] = useState<string[]>([
+    'Draft',
+    'Recommended',
+    'Approved'
+  ])
+  const alertRef = useRef<BCAlertHandle | null>(null)
   const [alertMessage, setAlertMessage] = useState('')
-  const [alertSeverity, setAlertSeverity] = useState('info')
-  const [internalComment, setInternalComment] = useState('')
+  const [alertSeverity, setAlertSeverity] = useState<AlertSeverity>('info')
+  const [internalComment] = useState('')
 
   const [isFileDialogOpen, setFileDialogOpen] = useState(false)
 
@@ -92,7 +107,7 @@ export const AddEditViewTransaction = () => {
 
   const {
     mutate: createUpdateAdminAdjustment,
-    isLoading: isUpdatingAdminAdjustment
+    isPending: isUpdatingAdminAdjustment
   } = useCreateUpdateAdminAdjustment(transactionId, {
     onSuccess: (response) =>
       handleSuccess(response, transactionId, ADMIN_ADJUSTMENT),
@@ -101,7 +116,7 @@ export const AddEditViewTransaction = () => {
 
   const {
     mutate: createUpdateInitiativeAgreement,
-    isLoading: isUpdatingInitiativeAgreement
+    isPending: isUpdatingInitiativeAgreement
   } = useCreateUpdateInitiativeAgreement(transactionId, {
     onSuccess: (response) =>
       handleSuccess(response, transactionId, INITIATIVE_AGREEMENT),
@@ -124,10 +139,6 @@ export const AddEditViewTransaction = () => {
 
   let txnType = watch('txnType')
 
-  const handleCommentChange = (newComment) => {
-    setInternalComment(newComment)
-  }
-
   useEffect(() => {
     const path = window.location.pathname
 
@@ -142,7 +153,16 @@ export const AddEditViewTransaction = () => {
 
     if (location.state?.message) {
       setAlertMessage(location.state.message)
-      setAlertSeverity(location.state.severity || 'info')
+      const severity = location.state.severity
+      setAlertSeverity(
+        severity === 'info' ||
+          severity === 'success' ||
+          severity === 'warning' ||
+          severity === 'error' ||
+          severity === 'pending'
+          ? severity
+          : 'info'
+      )
     }
   }, [location.state, mode, setValue])
 
@@ -184,13 +204,15 @@ export const AddEditViewTransaction = () => {
           : INITIATIVE_AGREEMENT,
         govComment: transactionData.govComment,
         toOrganizationId: transactionData.toOrganizationId || '',
-        complianceUnits: transactionData.complianceUnits || '',
+        complianceUnits: transactionData.complianceUnits
+          ? Number(transactionData.complianceUnits)
+          : null,
         transactionEffectiveDate: transactionData.transactionEffectiveDate
           ? dateFormatter(transactionData.transactionEffectiveDate)
           : null
       })
     } else {
-      queryClient.invalidateQueries([txnType, transactionId]) // Invalidate and refetch if data is not fetched
+      queryClient.invalidateQueries({ queryKey: [txnType, transactionId] }) // Invalidate and refetch if data is not fetched
     }
     if (isLoadingError || queryState?.status === 'error') {
       setAlertMessage(
@@ -210,13 +232,19 @@ export const AddEditViewTransaction = () => {
     queryClient
   ])
 
-  const formatTransactionId = (transactionId, txnType) => {
+  const formatTransactionId = (
+    transactionId: string | undefined,
+    txnType: string
+  ) => {
     const prefixMap = {
       administrativeAdjustment: 'AA',
       initiativeAgreement: 'IA'
     }
 
-    const prefix = prefixMap[txnType] || ''
+    const prefix =
+      txnType === ADMIN_ADJUSTMENT || txnType === INITIATIVE_AGREEMENT
+        ? prefixMap[txnType]
+        : ''
     return `${prefix}${transactionId}`
   }
 
@@ -257,8 +285,8 @@ export const AddEditViewTransaction = () => {
       transactionData?.history?.forEach((item) => {
         const status =
           txnType === ADMIN_ADJUSTMENT
-            ? item.adminAdjustmentStatus.status
-            : item.initiativeAgreementStatus.status
+            ? (item.adminAdjustmentStatus?.status ?? '')
+            : (item.initiativeAgreementStatus?.status ?? '')
         statusArray.push(status)
       })
 
@@ -284,8 +312,10 @@ export const AddEditViewTransaction = () => {
     () =>
       buttonClusterConfigFn({
         transactionId,
-        transactionType: txnType,
-        methods,
+        transactionType:
+          txnType === ADMIN_ADJUSTMENT || txnType === INITIATIVE_AGREEMENT
+            ? txnType
+            : '',
         hasRoles,
         t,
         setModalData,
@@ -296,7 +326,6 @@ export const AddEditViewTransaction = () => {
     [
       transactionId,
       txnType,
-      methods,
       t,
       setModalData,
       createUpdateAdminAdjustment,
@@ -365,19 +394,19 @@ export const AddEditViewTransaction = () => {
           }}
         >
           <Stepper
-            activeStep={steps.indexOf(currentStatus)}
+            activeStep={steps.indexOf(currentStatus ?? '')}
             alternativeLabel={!isMobileSize}
             orientation={isMobileSize ? 'vertical' : 'horizontal'}
           >
             {steps.map((label, index) => {
-              const labelProps = {}
+              const labelProps: Partial<StepLabelProps> = {}
               if (['Refused', 'Deleted'].includes(label)) {
                 labelProps.error = true
               }
               return (
                 <Step
                   key={label}
-                  completed={index <= steps.indexOf(currentStatus)}
+                  completed={index <= steps.indexOf(currentStatus ?? '')}
                 >
                   <StepLabel {...labelProps}>{label}</StepLabel>
                 </Step>
@@ -392,7 +421,7 @@ export const AddEditViewTransaction = () => {
             transactionId={transactionId}
           />
         ) : (
-          <TransactionView transaction={transactionData} />
+          <TransactionView transaction={transactionData!} />
         )}
         {/* Comments */}
         {!(isApproved || (isRecommended && hasAnyRole(roles.analyst))) && (
@@ -416,7 +445,6 @@ export const AddEditViewTransaction = () => {
                 <EntityComments
                   entityType={txnType}
                   entityId={transactionId ?? null}
-                  onCommentChange={handleCommentChange}
                 />
               </Role>
             </BCBox>
@@ -446,37 +474,43 @@ export const AddEditViewTransaction = () => {
               {t('backBtn')}
             </BCTypography>
           </BCButton>
-          {buttonClusterConfig[
-            transactionId ? currentStatus : TRANSACTION_STATUSES.NEW
-          ]?.map(
-            (config) =>
-              config && (
-                <Role key={config.label}>
-                  <BCButton
-                    id={config.id}
-                    size="small"
-                    variant={config.variant}
-                    color={config.color}
-                    onClick={handleSubmit(config.handler)}
-                    startIcon={
-                      config.startIcon && (
-                        <FontAwesomeIcon
-                          icon={config.startIcon}
-                          className="small-icon"
-                        />
-                      )
-                    }
-                    disabled={config.disabled}
-                  >
-                    {config.label}
-                  </BCButton>
-                </Role>
-              )
-          )}
+          {Object.entries(buttonClusterConfig)
+            .find(
+              ([status]) =>
+                status ===
+                (transactionId ? currentStatus : TRANSACTION_STATUSES.NEW)
+            )?.[1]
+            ?.map(
+              (config) =>
+                config && (
+                  <Role key={config.label}>
+                    <BCButton
+                      id={config.id}
+                      size="small"
+                      variant={config.variant}
+                      color={config.color}
+                      onClick={handleSubmit(config.handler)}
+                      startIcon={
+                        config.startIcon && (
+                          <FontAwesomeIcon
+                            icon={config.startIcon}
+                            className="small-icon"
+                          />
+                        )
+                      }
+                      disabled={
+                        'disabled' in config ? config.disabled : undefined
+                      }
+                    >
+                      {config.label}
+                    </BCButton>
+                  </Role>
+                )
+            )}
         </Stack>
       </BCBox>
       <DocumentUploadDialog
-        parentID={transactionId}
+        parentID={transactionId ?? ''}
         parentType={txnType}
         open={isFileDialogOpen}
         close={() => {

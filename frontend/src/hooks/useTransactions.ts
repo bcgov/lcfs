@@ -4,7 +4,15 @@ import { useCurrentUser } from './useCurrentUser'
 import { roles } from '@/constants/roles'
 import { TRANSFER_STATUSES } from '@/constants/statuses'
 import { apiRoutes } from '@/constants/routes'
-import type { QueryOptions, ExtMutationOptions } from './types'
+import type {
+  QueryOptions,
+  ExtMutationOptions,
+  TransactionListResponse
+} from './types'
+import type {
+  BCPaginationFilter,
+  BCSortOrder
+} from '@/components/BCDataGrid/types'
 
 export const useTransaction = (
   transactionID: number | string | undefined | null,
@@ -55,8 +63,14 @@ export const useGetTransactionList = (
     sortOrders = [],
     filters = [],
     selectedOrgId
-  }: Record<string, unknown> = {},
-  options: QueryOptions<unknown>
+  }: {
+    page?: number
+    size?: number
+    sortOrders?: BCSortOrder[]
+    filters?: BCPaginationFilter[]
+    selectedOrgId?: string | number | null
+  } = {},
+  options: QueryOptions<TransactionListResponse>
 ) => {
   const client = useApiService()
   const { hasRoles, isLoading } = useCurrentUser()
@@ -78,7 +92,7 @@ export const useGetTransactionList = (
         } else if (selectedOrgId) {
           return apiRoutes.filteredTransactionsByOrg.replace(
             ':orgID',
-            selectedOrgId as string
+            String(selectedOrgId)
           )
         }
         return apiRoutes.transactions
