@@ -5,9 +5,31 @@ import type { QueryOptions } from './types'
 
 export type MarketInterval = 'month' | 'quarter' | 'year'
 
+export interface CreditMarketOverview {
+  priceIndex: Array<{
+    period: string
+    vwap: number | null
+    volume: number | null
+    minPrice: number | null
+    maxPrice: number | null
+    medianPrice: number | null
+  }>
+  marketBalance: Array<{
+    period: string
+    cumulativeBalance: number
+    periodNetUnits: number
+  }>
+  concentration: {
+    hhi?: number | null
+    top5Share?: number | null
+    totalHolders?: number | null
+    topHolders?: Array<{ rank: number; name: string; share: number }>
+  }
+}
+
 export const useCreditMarketOverview = (
   interval: MarketInterval = 'quarter',
-  options: QueryOptions<unknown> = {}
+  options: QueryOptions<CreditMarketOverview> = {}
 ) => {
   const client = useApiService()
   const path = apiRoutes.creditMarketOverview

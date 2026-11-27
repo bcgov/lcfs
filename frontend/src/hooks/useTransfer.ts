@@ -1,4 +1,6 @@
 import { useApiService } from '@/services/useApiService'
+import type { AxiosResponse } from 'axios'
+import type { TransferRecord as TransferViewRecord } from '@/views/Transfers/buttonConfigs'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { QueryOptions, ExtMutationOptions } from './types'
 
@@ -7,11 +9,20 @@ export interface TransferCategoryUpdate {
   isA1Category: boolean
 }
 
+export type TransferRecord = TransferViewRecord & {
+  transferId?: number | string
+}
+
+export type TransferMutationResponse = AxiosResponse<{
+  transferId: number | string
+  currentStatus: { status: string }
+}>
+
 type TransferCategoryInput = string | TransferCategoryUpdate
 
 export const useTransfer = (
   transferID: number | string | undefined | null,
-  options: QueryOptions<unknown>
+  options: QueryOptions<TransferRecord> = {}
 ) => {
   const client = useApiService()
 
@@ -24,28 +35,27 @@ export const useTransfer = (
 
 export const useCreateUpdateTransfer = (
   orgId: number | string | undefined | null,
-  transferId: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, unknown>
+  transferId: number | string | undefined | null = undefined,
+  options: ExtMutationOptions<
+    TransferMutationResponse,
+    Record<string, unknown>
+  > = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
     ...options,
     mutationFn: async ({ data }: Record<string, unknown>) => {
-      if (orgId && transferId) {
-        return await client.put(
-          `organization/${orgId}/transfers/${transferId}`,
-          data
-        )
-      }
-
-      if (orgId && !transferId) {
+      if (orgId) {
+        if (transferId) {
+          return await client.put(
+            `organization/${orgId}/transfers/${transferId}`,
+            data
+          )
+        }
         return await client.post(`organization/${orgId}/transfers`, data)
       }
-
-      if (!orgId) {
-        return await client.put(`transfers/${transferId}`, data)
-      }
+      return await client.put(`transfers/${transferId}`, data)
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['transfer', transferId] })

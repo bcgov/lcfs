@@ -13,18 +13,41 @@ import { TransferSummary } from './components/TransferSummary'
 import type { ReactNode } from 'react'
 import type { UseFormReturn } from 'react-hook-form'
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
-import type { AddEditTransferFormData } from './_schema'
+import type {
+  AddEditTransferFormData,
+  AddEditTransferFormState
+} from './_schema'
 
-interface TransferOrganization {
+export interface TransferOrganization {
   organizationId: number | string
   name: string
 }
 
-interface TransferRecord extends Record<string, unknown> {
-  agreementDate?: Date | string
-  currentStatus?: { status: string }
+export interface TransferRecord {
+  agreementDate?: Date | string | null
+  currentStatus?: { status?: string }
   fromOrganization?: TransferOrganization
   toOrganization?: TransferOrganization
+  quantity?: number
+  pricePerUnit?: number
+  recommendation?: string | null
+  transferHistory?: Array<{
+    transferStatus?: { status?: string }
+    createDate: string
+    displayName?: string
+    userProfile?: {
+      firstName?: string
+      lastName?: string
+      organization?: { name?: string }
+    }
+  }>
+  comments?: Array<{
+    commentSource?: string
+    createDate: string
+    comment?: string | null
+    createdBy?: string | null
+    createdByOrg?: string | null
+  }>
 }
 
 interface TransferButtonConfig {
@@ -40,7 +63,7 @@ interface TransferButtonConfig {
   handler: (formData: AddEditTransferFormData) => void
 }
 
-interface TransferModalData {
+export interface TransferModalData {
   primaryButtonAction: () => unknown
   primaryButtonText: string
   primaryButtonColor?: 'primary' | 'error'
@@ -58,7 +81,7 @@ interface ButtonClusterConfigParams {
     organization: TransferOrganization
     isGovernmentUser?: boolean
   }
-  methods: Pick<UseFormReturn<AddEditTransferFormData>, 'getValues'>
+  methods: Pick<UseFormReturn<AddEditTransferFormState>, 'getValues'>
   t: (key: string) => string
   setModalData: (data: TransferModalData) => void
   createUpdateTransfer: (input: { data: Record<string, unknown> }) => unknown

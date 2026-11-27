@@ -6,7 +6,7 @@ import { roles } from '@/constants/roles'
 import { useOrganizationBalance } from '@/hooks/useOrganization'
 
 interface OrganizationBadgeProps {
-  organizationId: number
+  organizationId: number | string
   organizationName: string
   transferStatus: string
   isGovernmentUser: boolean

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import Grid from '@mui/material/Grid'
@@ -11,7 +12,12 @@ import BCTypography from '@/components/BCTypography'
 import withRole from '@/utils/withRole'
 import { roles } from '@/constants/roles'
 import { ROUTES } from '@/routes/routes'
-import { useCreditMarketOverview } from '@/hooks/useCreditMarket'
+import {
+  useCreditMarketOverview,
+  type CreditMarketOverview,
+  type MarketInterval
+} from '@/hooks/useCreditMarket'
+import type { CallbackDataParams } from 'echarts/types/dist/shared'
 
 const COLORS = {
   price: '#1976d2',
@@ -22,8 +28,9 @@ const COLORS = {
   net: 'rgba(33, 150, 243, 0.55)'
 }
 
-const EMPTY_ARRAY = []
-const EMPTY_OBJECT = {}
+const EMPTY_PRICE_INDEX: CreditMarketOverview['priceIndex'] = []
+const EMPTY_MARKET_BALANCE: CreditMarketOverview['marketBalance'] = []
+const EMPTY_OBJECT: CreditMarketOverview['concentration'] = {}
 
 const numberFmt = new Intl.NumberFormat('en-CA')
 const currencyFmt = new Intl.NumberFormat('en-CA', {
@@ -32,11 +39,22 @@ const currencyFmt = new Intl.NumberFormat('en-CA', {
   maximumFractionDigits: 2
 })
 
-const formatCredits = (value) =>
+const formatCredits = (value: number | null) =>
   value == null ? '—' : `${numberFmt.format(Math.round(value))}`
-const formatPrice = (value) => (value == null ? '—' : currencyFmt.format(value))
+const formatPrice = (value: number | null) =>
+  value == null ? '—' : currencyFmt.format(value)
 
-const StatCard = ({ label, value, sublabel, dataTest }) => (
+const StatCard = ({
+  label,
+  value,
+  sublabel,
+  dataTest
+}: {
+  label: string
+  value: string
+  sublabel?: string
+  dataTest: string
+}) => (
   <Card elevation={2} sx={{ height: '100%' }} data-test={dataTest}>
     <CardContent>
       <BCTypography variant="body2" color="text.secondary">
@@ -54,7 +72,17 @@ const StatCard = ({ label, value, sublabel, dataTest }) => (
   </Card>
 )
 
-const ChartCard = ({ title, subtitle, hasData, children }) => (
+const ChartCard = ({
+  title,
+  subtitle,
+  hasData,
+  children
+}: {
+  title: string
+  subtitle?: string
+  hasData: boolean
+  children: ReactNode
+}) => (
   <Card elevation={2} sx={{ height: '100%' }}>
     <CardContent>
       <BCTypography variant="subtitle1" sx={{ fontWeight: 600 }}>
@@ -79,11 +107,11 @@ const ChartCard = ({ title, subtitle, hasData, children }) => (
 )
 
 const CreditMarketBase = () => {
-  const [interval, setInterval] = useState('quarter')
+  const [interval, setInterval] = useState<MarketInterval>('quarter')
   const { data, isLoading, isError } = useCreditMarketOverview(interval)
 
-  const priceIndex = data?.priceIndex ?? EMPTY_ARRAY
-  const marketBalance = data?.marketBalance ?? EMPTY_ARRAY
+  const priceIndex = data?.priceIndex ?? EMPTY_PRICE_INDEX
+  const marketBalance = data?.marketBalance ?? EMPTY_MARKET_BALANCE
   const concentration = data?.concentration ?? EMPTY_OBJECT
 
   const periods = useMemo(() => priceIndex.map((p) => p.period), [priceIndex])
@@ -119,7 +147,7 @@ const CreditMarketBase = () => {
           type: 'value',
           name: 'Volume',
           splitLine: { show: false },
-          axisLabel: { formatter: (v) => numberFmt.format(v) }
+          axisLabel: { formatter: (v: number) => numberFmt.format(v) }
         }
       ],
       series: [
@@ -191,7 +219,7 @@ const CreditMarketBase = () => {
       yAxis: {
         type: 'value',
         name: 'Credits',
-        axisLabel: { formatter: (v) => numberFmt.format(v) }
+        axisLabel: { formatter: (v: number) => numberFmt.format(v) }
       },
       series: [
         {
@@ -239,7 +267,7 @@ const CreditMarketBase = () => {
             valueAnimation: true,
             fontSize: 28,
             offsetCenter: [0, '70%'],
-            formatter: (v) => numberFmt.format(Math.round(v))
+            formatter: (v: number) => numberFmt.format(Math.round(v))
           },
           title: { offsetCenter: [0, '95%'], fontSize: 12 },
           data: [{ value: concentration.hhi || 0, name: 'HHI' }]
@@ -255,8 +283,8 @@ const CreditMarketBase = () => {
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'shadow' },
-        formatter: (params) =>
-          `${params[0].name}: ${(params[0].value * 100).toFixed(1)}%`
+        formatter: (params: CallbackDataParams[]) =>
+          `${params[0]!.name}: ${((params[0]!.value as number) * 100).toFixed(1)}%`
       },
       grid: {
         left: '3%',
@@ -268,12 +296,12 @@ const CreditMarketBase = () => {
       xAxis: {
         type: 'value',
         max: 1,
-        axisLabel: { formatter: (v) => `${Math.round(v * 100)}%` }
+        axisLabel: { formatter: (v: number) => `${Math.round(v * 100)}%` }
       },
       yAxis: {
         type: 'category',
         inverse: true,
-        data: holders.map((h) => `Holder ${h.rank}`)
+        data: holders.map((holder) => `Holder ${holder.rank}`)
       },
       series: [
         {

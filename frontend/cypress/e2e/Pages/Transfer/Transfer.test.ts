@@ -5,9 +5,13 @@ import {
   Then
 } from '@badeball/cypress-cucumber-preprocessor'
 
+interface CucumberRoleTable {
+  raw(): string[][]
+}
+
 Given(
   'I am on home page logged in as {string} user having roles',
-  (userType, roles) => {
+  (userType: string, roles: CucumberRoleTable) => {
     if (userType.includes('bceid')) {
       cy.setBCeIDRoles(userType, roles)
     }
@@ -25,7 +29,7 @@ Given(
 
 When(
   'I transfer {string} units to organization {string} of value {string} with agreement date {string}',
-  (qty, orgId, pricePerUnit, agreementDate) => {
+  (qty: string, orgId: string, pricePerUnit: string, agreementDate: string) => {
     cy.get('a[href="/transactions"]').click()
     cy.get('#new-transfer-button').click()
     cy.get("[data-test='quantity']").type(qty)
@@ -49,7 +53,7 @@ When(
   }
 )
 
-When('add the {string} and save as draft', (comment) => {
+When('add the {string} and save as draft', (comment: string) => {
   cy.get('#external-comments').type(comment)
   cy.get('#save-draft-btn').click()
   cy.get('[data-test="alert-box"] .MuiBox-root').should(
@@ -252,13 +256,13 @@ When('I login as director and refuse transfer', () => {
 
 Then(
   'I should be redirected to transactions page and transfer should have status {string}.',
-  (status) => {
+  (status: string) => {
     cy.url()
       .should('match', /transactions\/\?hid=transfer-\d+$/)
-      .then(async (url) => {
+      .then((url) => {
         const params = url.split('/?')[1].split('&')
-        await cy.log(params)
-        const paramObj = {}
+        cy.log(params.join('&'))
+        const paramObj: Record<string, string> = {}
         params.forEach((param) => {
           const [key, value] = param.split('=')
           paramObj[key] = value
@@ -266,8 +270,8 @@ Then(
 
         return paramObj.hid
       })
-      .then(async (transferID) => {
-        await cy.get(`div[row-id=${transferID}]`).should('contain', status)
+      .then((transferID) => {
+        cy.get(`div[row-id=${transferID}]`).should('contain', status)
       })
   }
 )
