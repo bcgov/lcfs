@@ -1,3 +1,5 @@
+import type { TFunction } from 'i18next'
+import type { ColDef } from 'ag-grid-community'
 import { numberFormatter } from '@/utils/formatters'
 import {
   LinkRenderer,
@@ -14,12 +16,52 @@ import {
 } from '@/utils/organizationTypes'
 import { usersColumnDefs } from '@/views/Admin/AdminMenu/components/_schema'
 
+type OrganizationTypeOption = {
+  organizationTypeId: number
+  orgType?: string | null
+  org_type?: string | null
+  name?: string
+  description?: string | null
+  shortLabel: string
+}
+
+type OrganizationTypeData = {
+  organizationTypeId: number
+  orgType?: string | null
+  org_type?: string | null
+  name?: string
+  description?: string | null
+}
+
+const isOrganizationTypeOption = (
+  value: unknown
+): value is OrganizationTypeData =>
+  typeof value === 'object' &&
+  value !== null &&
+  'organizationTypeId' in value &&
+  typeof value.organizationTypeId === 'number' &&
+  (!('orgType' in value) ||
+    typeof value.orgType === 'string' ||
+    value.orgType === null) &&
+  (!('org_type' in value) ||
+    typeof value.org_type === 'string' ||
+    value.org_type === null) &&
+  (!('name' in value) || typeof value.name === 'string') &&
+  (!('description' in value) ||
+    typeof value.description === 'string' ||
+    value.description === null)
+
 const useOrganizationTypeFilterOptions = () => {
   const result = useOrganizationTypes()
-  const labeledData = result.data?.map((type) => ({
-    ...type,
-    shortLabel: getOrgTypeDisplayLabel(type)
-  }))
+  const labeledData = Array.isArray(result.data)
+    ? result.data.filter(isOrganizationTypeOption).map((type) => ({
+        ...type,
+        shortLabel: getOrgTypeDisplayLabel({
+          orgType: type.orgType ?? type.org_type ?? type.name,
+          description: type.description
+        })
+      }))
+    : undefined
 
   return {
     ...result,
@@ -27,13 +69,26 @@ const useOrganizationTypeFilterOptions = () => {
   }
 }
 
-export const organizationsColDefs = (t) => [
+type OrganizationRow = {
+  status?: string
+  orgStatus: { status: string }
+  orgType: { orgType?: string }
+  orgTypes?: OrganizationTypeOption[]
+  name?: string
+  hasEarlyIssuance?: boolean
+  totalBalance?: number
+  reservedBalance?: number
+}
+
+export const organizationsColDefs = (
+  t: TFunction
+): ColDef<OrganizationRow>[] => [
   {
     colId: 'status',
     field: 'status',
     headerName: t('org:orgColLabels.registrationStatus'),
     minWidth: 140,
-    valueGetter: (params) => params.data.orgStatus.status,
+    valueGetter: (params) => params.data?.orgStatus.status,
     cellRenderer: OrgStatusRenderer,
     cellClass: 'vertical-middle',
     filter: true,
@@ -51,9 +106,9 @@ export const organizationsColDefs = (t) => [
     headerName: t('org:orgColLabels.orgType'),
     minWidth: 220,
     valueGetter: (params) =>
-      params.data.orgTypes?.length
+      params.data?.orgTypes?.length
         ? getOrgTypesDisplayLabel(params.data.orgTypes)
-        : getOrgTypeDisplayLabel(params.data.orgType),
+        : getOrgTypeDisplayLabel(params.data?.orgType),
     // Filtering is applied server-side (BCGridViewer forwards the filter
     // model to /organizations/, which matches any of an organization's
     // types), so this only feeds the grid's local row value: use the
@@ -85,7 +140,7 @@ export const organizationsColDefs = (t) => [
     field: 'hasEarlyIssuance',
     headerName: t('org:orgColLabels.earlyIssuance'),
     minWidth: 200,
-    valueGetter: (params) => params.data.hasEarlyIssuance,
+    valueGetter: (params) => params.data?.hasEarlyIssuance,
     cellRenderer: YesNoTextRenderer,
     cellClass: 'vertical-middle',
     filter: true,
@@ -111,21 +166,22 @@ export const organizationsColDefs = (t) => [
   },
   {
     colId: 'complianceUnits',
-    field: 'complianceUnits',
     headerName: t('org:orgColLabels.complianceUnits'),
     valueFormatter: numberFormatter,
     cellRenderer: LinkRenderer,
     minWidth: 300,
-    valueGetter: (params) => params.data.totalBalance,
+    valueGetter: (params) => params.data?.totalBalance,
     filter: false,
     sortable: false
   },
   {
     colId: 'reserve',
-    field: 'reserve',
     headerName: t('org:orgColLabels.inReserve'),
     valueFormatter: numberFormatter,
-    valueGetter: (params) => Math.abs(params.data.reservedBalance),
+    valueGetter: (params) =>
+      params.data?.reservedBalance == null
+        ? undefined
+        : Math.abs(params.data.reservedBalance),
     minWidth: 300,
     cellRenderer: LinkRenderer,
     filter: false,
@@ -133,7 +189,7 @@ export const organizationsColDefs = (t) => [
   }
 ]
 
-export const getUserColumnDefs = (t) => {
+export const getUserColumnDefs = (t: TFunction) => {
   return usersColumnDefs(t).map((colDef) => {
     if (colDef.field === 'isActive') {
       return {
@@ -142,12 +198,20 @@ export const getUserColumnDefs = (t) => {
       }
     } else if (colDef.field === 'role') {
       // pick only supplier roles
-      colDef.floatingFilterComponentParams.params =
-        'government_roles_only=false'
-      colDef.floatingFilterComponentParams.key = 'organization-users'
+      return {
+        ...colDef,
+        floatingFilterComponentParams: {
+          ...colDef.floatingFilterComponentParams,
+          params: 'government_roles_only=false',
+          key: 'organization-users'
+        }
+      }
     }
     return colDef
   })
 }
 
-export const defaultSortModel = [{ field: 'firstName', direction: 'asc' }]
+export const defaultSortModel: Array<{
+  field: string
+  direction: 'asc' | 'desc'
+}> = [{ field: 'firstName', direction: 'asc' }]

@@ -37,6 +37,59 @@ import {
   removeCacheEntry,
   buildCacheFromLinkKeys
 } from './linkKeyUtils'
+import type { OrganizationData } from '@/hooks/useOrganization'
+import type { LinkKeyApiData, LinkKeyCache, LinkKeyData } from './linkKeyUtils'
+import type { AlertSeverity } from '@/components/BCAlert/BCAlertRoot'
+
+type AvailableFormsResponse = {
+  forms?: Record<string, { name: string; slug: string }>
+}
+type LinkKeysResponse = {
+  linkKeys?: LinkKeyApiData[]
+  link_keys?: LinkKeyApiData[]
+}
+type LinkKeyResponse = { data?: LinkKeyApiData } & LinkKeyApiData
+type LinkKeyAlert = {
+  show: boolean
+  message: string
+  severity: AlertSeverity
+  key: number
+}
+type LinkKeyFormId = string | number | null | undefined
+
+const getErrorMessage = (error: unknown): string => {
+  if (typeof error === 'object' && error !== null && 'response' in error) {
+    const response = error.response
+    if (
+      typeof response === 'object' &&
+      response !== null &&
+      'data' in response
+    ) {
+      const data = response.data
+      if (
+        typeof data === 'object' &&
+        data !== null &&
+        'detail' in data &&
+        typeof data.detail === 'string'
+      ) {
+        return data.detail
+      }
+    }
+  }
+  if (error instanceof Error) return error.message
+  return 'Unknown error'
+}
+
+const hasForms = (value: unknown): value is AvailableFormsResponse =>
+  typeof value === 'object' && value !== null && 'forms' in value
+
+const hasLinkKeys = (value: unknown): value is LinkKeysResponse =>
+  typeof value === 'object' &&
+  value !== null &&
+  ('linkKeys' in value || 'link_keys' in value)
+
+const isLinkKeyResponse = (value: unknown): value is LinkKeyResponse =>
+  typeof value === 'object' && value !== null
 
 // Constants
 const ALERT_DISPLAY_DURATION = 5000
@@ -46,25 +99,30 @@ const ALERT_TYPES = {
   SUCCESS: 'success',
   ERROR: 'error',
   INFO: 'info'
+} as const
+
+type LinkKeyManagementProps = {
+  orgID?: string | number
+  orgData?: OrganizationData
 }
 
-export const LinkKeyManagement = ({ orgID }) => {
+export const LinkKeyManagement = ({ orgID }: LinkKeyManagementProps) => {
   const { t } = useTranslation(['common', 'org'])
 
   // State management
   const [selectedFormId, setSelectedFormId] = useState('')
   const [showRegenerateDialog, setShowRegenerateDialog] = useState(false)
-  const [alert, setAlert] = useState({
+  const [alert, setAlert] = useState<LinkKeyAlert>({
     show: false,
     message: '',
     severity: ALERT_TYPES.SUCCESS,
     key: 0
   })
   const [isRegenerating, setIsRegenerating] = useState(false)
-  const [linkKeyCache, setLinkKeyCache] = useState({})
+  const [linkKeyCache, setLinkKeyCache] = useState<LinkKeyCache>({})
 
   // Ref to track current alert timeout
-  const alertTimeoutRef = useRef(null)
+  const alertTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // API hooks
   const {
@@ -82,16 +140,18 @@ export const LinkKeyManagement = ({ orgID }) => {
 
   // Computed values
   const availableForms = useMemo(() => {
-    if (!formTypes?.forms) return []
+    if (!hasForms(formTypes) || !formTypes.forms) return []
     return Object.entries(formTypes.forms).map(([id, form]) => ({
       id,
       name: form.name,
       slug: form.slug
     }))
-  }, [formTypes?.forms])
+  }, [formTypes])
 
   const normalizedLinkKeys = useMemo(() => {
-    const keys = linkKeysData?.linkKeys ?? linkKeysData?.link_keys ?? []
+    const keys = hasLinkKeys(linkKeysData)
+      ? (linkKeysData.linkKeys ?? linkKeysData.link_keys ?? [])
+      : []
     return keys.map(normalizeKeyData)
   }, [linkKeysData])
 
@@ -100,38 +160,32 @@ export const LinkKeyManagement = ({ orgID }) => {
   }, [availableForms, selectedFormId])
 
   // Alert management
-  const showAlert = useCallback((message, severity = ALERT_TYPES.SUCCESS) => {
-    // Clear any existing timeout to ignore previous alert
-    if (alertTimeoutRef.current) {
-      clearTimeout(alertTimeoutRef.current)
-      alertTimeoutRef.current = null
-    }
-
-    // Show new alert immediately
-    setAlert((prev) => ({
-      show: true,
-      message,
-      severity,
-      key: prev.key + 1
-    }))
-
-    // Set timeout for success alerts only
-    if (severity === ALERT_TYPES.SUCCESS) {
-      alertTimeoutRef.current = setTimeout(() => {
-        setAlert((prev) => ({ ...prev, show: false }))
+  const showAlert = useCallback(
+    (message: string, severity: AlertSeverity = ALERT_TYPES.SUCCESS) => {
+      // Clear any existing timeout to ignore previous alert
+      if (alertTimeoutRef.current) {
+        clearTimeout(alertTimeoutRef.current)
         alertTimeoutRef.current = null
-      }, ALERT_DISPLAY_DURATION)
-    }
-  }, [])
+      }
 
-  const hideAlert = useCallback(() => {
-    // Clear timeout when manually hiding alert
-    if (alertTimeoutRef.current) {
-      clearTimeout(alertTimeoutRef.current)
-      alertTimeoutRef.current = null
-    }
-    setAlert((prev) => ({ ...prev, show: false }))
-  }, [])
+      // Show new alert immediately
+      setAlert((prev) => ({
+        show: true,
+        message,
+        severity,
+        key: prev.key + 1
+      }))
+
+      // Set timeout for success alerts only
+      if (severity === ALERT_TYPES.SUCCESS) {
+        alertTimeoutRef.current = setTimeout(() => {
+          setAlert((prev) => ({ ...prev, show: false }))
+          alertTimeoutRef.current = null
+        }, ALERT_DISPLAY_DURATION)
+      }
+    },
+    []
+  )
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -144,27 +198,32 @@ export const LinkKeyManagement = ({ orgID }) => {
 
   // Key management utilities
   const hasExistingKey = useCallback(
-    (formId) => hasExistingKeyService(normalizedLinkKeys, linkKeyCache, formId),
+    (formId: LinkKeyFormId) =>
+      hasExistingKeyService(normalizedLinkKeys, linkKeyCache, formId),
     [linkKeyCache, normalizedLinkKeys]
   )
 
   const getExistingKey = useCallback(
-    (formId) => getExistingKeyService(normalizedLinkKeys, linkKeyCache, formId),
+    (formId: LinkKeyFormId) =>
+      getExistingKeyService(normalizedLinkKeys, linkKeyCache, formId),
     [linkKeyCache, normalizedLinkKeys]
   )
 
   // Cache management
-  const updateCache = useCallback((formId, keyData) => {
-    setLinkKeyCache((prev) => updateCacheEntry(prev, formId, keyData))
-  }, [])
+  const updateCache = useCallback(
+    (formId: LinkKeyFormId, keyData: LinkKeyData) => {
+      setLinkKeyCache((prev) => updateCacheEntry(prev, formId, keyData))
+    },
+    []
+  )
 
-  const clearCacheEntry = useCallback((formId) => {
+  const clearCacheEntry = useCallback((formId: LinkKeyFormId) => {
     setLinkKeyCache((prev) => removeCacheEntry(prev, formId))
   }, [])
 
   // Clipboard operations
   const handleCopyToClipboard = useCallback(
-    async (link, formName) => {
+    async (link: string, formName?: string) => {
       try {
         const success = await copyToClipboard(link)
 
@@ -194,8 +253,8 @@ export const LinkKeyManagement = ({ orgID }) => {
 
   // Mutation success handlers
   const handleGenerateSuccess = useCallback(
-    async (data) => {
-      const responseData = data.data ?? data
+    async (data: unknown) => {
+      const responseData = isLinkKeyResponse(data) ? (data.data ?? data) : {}
       const normalizedData = normalizeKeyData(responseData)
       const formName = selectedForm?.name ?? 'Unknown Form'
 
@@ -229,9 +288,8 @@ export const LinkKeyManagement = ({ orgID }) => {
   )
 
   const handleGenerateError = useCallback(
-    (error) => {
-      const errorMessage =
-        error.response?.data?.detail ?? error.message ?? 'Unknown error'
+    (error: unknown) => {
+      const errorMessage = getErrorMessage(error)
 
       if (errorMessage.includes('already exists')) {
         setTimeout(async () => {
@@ -282,9 +340,8 @@ export const LinkKeyManagement = ({ orgID }) => {
   }, [selectedForm, selectedFormId, clearCacheEntry, refetch, showAlert, t])
 
   const handleRegenerateError = useCallback(
-    (error) => {
-      const errorMessage =
-        error.response?.data?.detail ?? error.message ?? 'Unknown error'
+    (error: unknown) => {
+      const errorMessage = getErrorMessage(error)
 
       showAlert(
         t('org:linkKeyManagement.errorRegeneratingLinkKey', { errorMessage }),
@@ -414,7 +471,7 @@ export const LinkKeyManagement = ({ orgID }) => {
 
         <IconButton
           onClick={handleCopyLink}
-          disabled={!selectedFormId || generateMutation.isLoading}
+          disabled={!selectedFormId || generateMutation.isPending}
           color="primary"
           size="medium"
           aria-label={
@@ -441,7 +498,7 @@ export const LinkKeyManagement = ({ orgID }) => {
           disabled={
             !selectedFormId ||
             !hasExistingKey(selectedFormId) ||
-            regenerateMutation.isLoading ||
+            regenerateMutation.isPending ||
             isRegenerating
           }
           color="warning"
@@ -518,8 +575,8 @@ export const LinkKeyManagement = ({ orgID }) => {
         <BCAlert
           key={alert.key}
           severity={alert.severity}
+          dismissible={alert.severity === ALERT_TYPES.ERROR}
           sx={{ mt: 2 }}
-          onClose={alert.severity === ALERT_TYPES.ERROR ? hideAlert : undefined}
         >
           {alert.message}
         </BCAlert>

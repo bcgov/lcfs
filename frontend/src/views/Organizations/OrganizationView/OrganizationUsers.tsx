@@ -15,6 +15,22 @@ import { roles } from '@/constants/roles'
 import '@/constants/routes'
 import { Role } from '@/components/Role'
 import { useOrganizationUsers } from '@/hooks/useOrganizations'
+import { toOrganizationUsersPaginationParams } from './userPagination'
+import type {
+  BCGridRef,
+  BCPaginationOptions,
+  BCGridQueryData
+} from '@/components/BCDataGrid/types'
+import type { GetRowIdParams } from 'ag-grid-community'
+import type { BCGridRow } from '@/components/BCDataGrid/types'
+
+type UserGridRow = { userProfileId?: string | number }
+const isUserGridRow = (value: unknown): value is UserGridRow =>
+  typeof value === 'object' && value !== null && 'userProfileId' in value
+const isGridResponseData = (
+  value: unknown
+): value is NonNullable<BCGridQueryData['data']> =>
+  typeof value === 'object' && value !== null
 
 export const OrganizationUsers = () => {
   const { t } = useTranslation(['common', 'org'])
@@ -27,21 +43,18 @@ export const OrganizationUsers = () => {
     hasRoles
   } = useCurrentUser()
 
-  const [gridKey, setGridKey] = useState(`users-grid-${orgID}-active`)
+  const gridKey = `users-grid-${orgID}-active`
 
-  const gridRef = useRef()
+  const gridRef = useRef<BCGridRef['current'] | null>(null)
 
   // Pagination state
-  const [paginationOptions, setPaginationOptions] = useState({
-    page: 1,
-    size: 10,
-    sortOrders: defaultSortModel,
-    filters: []
-  })
-
-  const handleGridKey = useCallback(() => {
-    setGridKey(`users-grid-${orgID}`)
-  }, [orgID])
+  const [paginationOptions, setPaginationOptions] =
+    useState<BCPaginationOptions>({
+      page: 1,
+      size: 10,
+      sortOrders: defaultSortModel,
+      filters: []
+    })
 
   const gridOptions = useMemo(
     () => ({
@@ -56,31 +69,39 @@ export const OrganizationUsers = () => {
       cellRenderer: LinkRenderer,
       cellRendererParams: {
         isAbsolute: true,
-        url: (row) => {
+        url: (row: { data: unknown }) => {
+          const userID = isUserGridRow(row.data)
+            ? row.data.userProfileId
+            : undefined
+          if (userID == null) return ''
           // For IDIR: /organizations/:orgID/users/:userID
           // For BCeID (supplier role): /organization/users/:userID
           // But typically we do the organizations route with orgID if you have it:
           if (hasRoles(roles.supplier)) {
             return buildPath(ROUTES.ORGANIZATION.VIEW_USER, {
-              userID: row.data.userProfileId
+              userID
             })
           } else {
             return buildPath(ROUTES.ORGANIZATIONS.VIEW_USER, {
-              orgID,
-              userID: row.data.userProfileId
+              orgID: orgID ?? currentUser?.organization?.organizationId ?? '',
+              userID
             })
           }
         }
       }
     }),
-    [orgID, hasRoles]
+    [currentUser?.organization?.organizationId, orgID, hasRoles]
   )
 
-  const getRowId = useCallback((params) => params.data.userProfileId, [])
+  const getRowId = useCallback(
+    (params: GetRowIdParams<BCGridRow>) =>
+      String(params.data?.userProfileId ?? ''),
+    []
+  )
 
   useCallback(() => {
     try {
-      gridRef.current?.clearFilters?.()
+      gridRef.current?.api?.setFilterModel(null)
     } catch {
       // no-op
     }
@@ -91,17 +112,28 @@ export const OrganizationUsers = () => {
     // If you are IDIR: navigate to /organizations/:orgID/add-user
     // If you're BCeID: navigate to /organization/add-user
     if (!isCurrentUserLoading && hasRoles(roles.government)) {
-      navigate(buildPath(ROUTES.ORGANIZATIONS.ADD_USER, { orgID }))
+      if (orgID) {
+        navigate(buildPath(ROUTES.ORGANIZATIONS.ADD_USER, { orgID }))
+      }
     } else {
       navigate(buildPath(ROUTES.ORGANIZATION.ADD_USER))
     }
   }
 
   // Use the organization users hook
-  const queryData = useOrganizationUsers(
+  const queryPaginationOptions =
+    toOrganizationUsersPaginationParams(paginationOptions)
+  const usersQuery = useOrganizationUsers(
     orgID ?? currentUser?.organization?.organizationId,
-    paginationOptions
+    queryPaginationOptions,
+    {}
   )
+  const queryData: BCGridQueryData = {
+    data: isGridResponseData(usersQuery.data) ? usersQuery.data : null,
+    error: usersQuery.error,
+    isError: usersQuery.isError,
+    isLoading: usersQuery.isLoading
+  }
 
   return (
     <BCBox mt={1} px={0}>
@@ -144,7 +176,6 @@ export const OrganizationUsers = () => {
           onPaginationChange={setPaginationOptions}
           getRowId={getRowId}
           gridOptions={gridOptions}
-          handleGridKey={handleGridKey}
           defaultColDef={defaultColDef}
           enableCopyButton={false}
           enableResetButton={false}

@@ -16,8 +16,13 @@ import {
   useCreateOrganizationComment,
   useEditOrganizationComment
 } from '@/hooks/useOrganizationComments'
+import type { OrganizationCommentRecord } from '@/hooks/useOrganizationComments'
 
 const VISIBILITY = 'Internal'
+type CompanyOverviewCommentsProps = {
+  organizationId: number | string
+  isGovernmentUser?: boolean
+}
 
 /**
  * Company Overview thread on the Organization dashboard (#4608).
@@ -36,7 +41,7 @@ const VISIBILITY = 'Internal'
 export const CompanyOverviewComments = ({
   organizationId,
   isGovernmentUser = true
-}) => {
+}: CompanyOverviewCommentsProps) => {
   const { t } = useTranslation(['org', 'internalComment'])
   const [commentText, setCommentText] = useState('')
 
@@ -46,21 +51,24 @@ export const CompanyOverviewComments = ({
   const editMutation = useEditOrganizationComment(organizationId)
 
   const comments = data?.comments ?? []
-  const overviewComment = comments.reduce((latest, comment) => {
-    if (!latest) return comment
-    const latestDate = latest.updateDate ?? latest.createDate ?? ''
-    const commentDate = comment.updateDate ?? comment.createDate ?? ''
-    return commentDate > latestDate ? comment : latest
-  }, null)
+  const overviewComment = comments.reduce<OrganizationCommentRecord | null>(
+    (latest, comment) => {
+      if (!latest) return comment
+      const latestDate = latest.updateDate ?? latest.createDate ?? ''
+      const commentDate = comment.updateDate ?? comment.createDate ?? ''
+      return commentDate > latestDate ? comment : latest
+    },
+    null
+  )
 
-  const handleCreate = async (text) => {
+  const handleCreate = async (text: string) => {
     const body = (text ?? '').trim()
     if (!body) return
     await createMutation.mutateAsync({ comment: body, visibility: VISIBILITY })
     setCommentText('')
   }
 
-  const handleEdit = (commentId, comment) => {
+  const handleEdit = (commentId: number, comment: string) => {
     editMutation.mutate({ commentId, comment, visibility: VISIBILITY })
   }
 

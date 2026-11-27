@@ -11,6 +11,7 @@ import {
   YesNoTextRenderer
 } from '@/utils/grid/cellRenderers'
 import { numberFormatter } from '@/utils/formatters'
+import i18n from '@/i18n'
 
 // Mock dependencies
 vi.mock('@/hooks/useOrganizations', () => ({
@@ -31,6 +32,11 @@ vi.mock('@/hooks/useOrganization', () => ({
         orgType: 'aggregator',
         description: 'Aggregator',
         isBceidUser: true
+      },
+      {
+        organizationTypeId: 3,
+        orgType: 'custom_type',
+        description: 'Custom type description'
       }
     ],
     isLoading: false
@@ -63,8 +69,37 @@ vi.mock('@/views/Admin/AdminMenu/components/_schema', () => ({
 describe('ViewOrganization Schema', () => {
   // Test organizations column definitions
   describe('organizationsColDefs', () => {
-    const t = vi.fn((key) => key)
+    const t = i18n.t
     const colDefs = organizationsColDefs(t)
+    const getColumn = (colId: string) => {
+      const column = colDefs.find((candidate) => candidate.colId === colId)
+      if (!column) throw new Error(`Missing organization column: ${colId}`)
+      return column
+    }
+    const getFilterParams = (column: (typeof colDefs)[number]) => {
+      const params = column.floatingFilterComponentParams
+      if (!params)
+        throw new Error(`Missing filter parameters for ${column.colId}`)
+      return params
+    }
+    const callValueGetter = (
+      column: (typeof colDefs)[number],
+      data: Record<string, unknown>
+    ) => {
+      const getter = column.valueGetter
+      if (typeof getter !== 'function')
+        throw new Error(`Missing value getter for ${column.colId}`)
+      return getter({ data } as Parameters<typeof getter>[0])
+    }
+    const callFilterValueGetter = (
+      column: (typeof colDefs)[number],
+      data: Record<string, unknown>
+    ) => {
+      const getter = column.filterValueGetter
+      if (typeof getter !== 'function')
+        throw new Error(`Missing filter getter for ${column.colId}`)
+      return getter({ data } as Parameters<typeof getter>[0])
+    }
 
     it('defines the correct number of columns', () => {
       expect(colDefs).toHaveLength(6)
@@ -74,51 +109,88 @@ describe('ViewOrganization Schema', () => {
       const statusCol = colDefs[0]
       expect(statusCol.colId).toBe('status')
       expect(statusCol.field).toBe('status')
-      expect(statusCol.headerName).toBe('org:orgColLabels.registrationStatus')
+      expect(statusCol.headerName).toBe('Registration status')
       expect(statusCol.cellRenderer).toBe(OrgStatusRenderer)
       expect(statusCol.filter).toBe(true)
       expect(statusCol.suppressFloatingFilterButton).toBe(true)
     })
 
     it('defines the organization name column correctly', () => {
-      const nameCol = colDefs.find((col) => col.colId === 'name')
+      const nameCol = getColumn('name')
       expect(nameCol).toBeDefined()
       expect(nameCol.field).toBe('name')
-      expect(nameCol.headerName).toBe('org:orgColLabels.orgName')
+      expect(nameCol.headerName).toBe('Organization name')
       expect(nameCol.cellRenderer).toBe(LinkRenderer)
     })
 
     it('defines the organization type column correctly', () => {
-      const orgTypeCol = colDefs.find((col) => col.colId === 'orgType')
+      const orgTypeCol = getColumn('orgType')
       expect(orgTypeCol).toBeDefined()
-      expect(orgTypeCol.headerName).toBe('org:orgColLabels.orgType')
+      expect(orgTypeCol.headerName).toBe('Organization type')
       expect(orgTypeCol.cellRenderer).toBe(OrgTypeRenderer)
       expect(orgTypeCol.filter).toBe(true)
       expect(orgTypeCol.sortable).toBe(true)
-      expect(orgTypeCol.floatingFilterComponentParams.valueKey).toBe('orgType')
-      expect(orgTypeCol.floatingFilterComponentParams.labelKey).toBe(
-        'shortLabel'
-      )
+      const filterParams = getFilterParams(orgTypeCol)
+      expect(filterParams.valueKey).toBe('orgType')
+      expect(filterParams.labelKey).toBe('shortLabel')
     })
 
     it('formats organization type values to shorter labels', () => {
-      const orgTypeCol = colDefs.find((col) => col.colId === 'orgType')
+      const orgTypeCol = getColumn('orgType')
       const mockParams = {
         data: {
           orgType: { orgType: 'fuel_supplier', description: 'Fuel supplier' }
         }
       }
-      expect(orgTypeCol.valueGetter(mockParams)).toBe('Supplier')
-      expect(orgTypeCol.filterValueGetter(mockParams)).toBe('fuel_supplier')
+      expect(callValueGetter(orgTypeCol, mockParams.data)).toBe('Supplier')
+      expect(callFilterValueGetter(orgTypeCol, mockParams.data)).toBe(
+        'fuel_supplier'
+      )
+    })
+
+    it('preserves descriptions for unrecognized organization types', () => {
+      const orgTypeCol = getColumn('orgType')
+      const mockParams = {
+        data: {
+          orgTypes: [
+            {
+              orgType: 'custom_type',
+              description: 'Custom type description'
+            }
+          ]
+        }
+      }
+      expect(callValueGetter(orgTypeCol, mockParams.data)).toBe(
+        'Custom type description'
+      )
+
+      const optionsQuery = getFilterParams(orgTypeCol).optionsQuery
+      if (typeof optionsQuery !== 'function') {
+        throw new Error('Missing organization type options query')
+      }
+      const optionsData: unknown = optionsQuery().data
+      if (!Array.isArray(optionsData)) {
+        throw new Error('Missing organization type options')
+      }
+      const option = optionsData.find(
+        (
+          item: unknown
+        ): item is { organizationTypeId: number; shortLabel: string } =>
+          typeof item === 'object' &&
+          item !== null &&
+          'organizationTypeId' in item &&
+          item.organizationTypeId === 3 &&
+          'shortLabel' in item &&
+          typeof item.shortLabel === 'string'
+      )
+      expect(option?.shortLabel).toBe('Custom type description')
     })
 
     it('defines the early issuance column correctly', () => {
-      const earlyIssuanceCol = colDefs.find(
-        (col) => col.colId === 'hasEarlyIssuance'
-      )
+      const earlyIssuanceCol = getColumn('hasEarlyIssuance')
       expect(earlyIssuanceCol).toBeDefined()
       expect(earlyIssuanceCol.field).toBe('hasEarlyIssuance')
-      expect(earlyIssuanceCol.headerName).toBe('org:orgColLabels.earlyIssuance')
+      expect(earlyIssuanceCol.headerName).toBe('Early issuance')
       expect(earlyIssuanceCol.cellRenderer).toBe(YesNoTextRenderer)
       expect(earlyIssuanceCol.filter).toBe(true)
       expect(earlyIssuanceCol.sortable).toBe(true)
@@ -126,22 +198,21 @@ describe('ViewOrganization Schema', () => {
     })
 
     it('calculates early issuance value correctly in valueGetter', () => {
-      const earlyIssuanceCol = colDefs.find(
-        (col) => col.colId === 'hasEarlyIssuance'
-      )
+      const earlyIssuanceCol = getColumn('hasEarlyIssuance')
       const mockParams = { data: { hasEarlyIssuance: true } }
-      expect(earlyIssuanceCol.valueGetter(mockParams)).toBe(true)
+      expect(callValueGetter(earlyIssuanceCol, mockParams.data)).toBe(true)
     })
 
     it('defines early issuance filter options correctly', () => {
-      const earlyIssuanceCol = colDefs.find(
-        (col) => col.colId === 'hasEarlyIssuance'
-      )
-      const filterParams = earlyIssuanceCol.floatingFilterComponentParams
+      const earlyIssuanceCol = getColumn('hasEarlyIssuance')
+      const filterParams = getFilterParams(earlyIssuanceCol)
       expect(filterParams.valueKey).toBe('value')
       expect(filterParams.labelKey).toBe('label')
 
-      const options = filterParams.optionsQuery()
+      const optionsQuery = filterParams.optionsQuery
+      if (typeof optionsQuery !== 'function')
+        throw new Error('Missing organization type options')
+      const options = optionsQuery()
       expect(options.data).toHaveLength(2)
       expect(options.data[0]).toEqual({ value: true, label: 'Yes' })
       expect(options.data[1]).toEqual({ value: false, label: 'No' })
@@ -149,26 +220,26 @@ describe('ViewOrganization Schema', () => {
     })
 
     it('defines the compliance units column correctly', () => {
-      const cuCol = colDefs.find((col) => col.colId === 'complianceUnits')
+      const cuCol = getColumn('complianceUnits')
       expect(cuCol).toBeDefined()
       expect(cuCol.valueFormatter).toBe(numberFormatter)
       expect(cuCol.filter).toBe(false)
     })
 
     it('calculates total balance correctly in valueGetter', () => {
-      const cuCol = colDefs.find((col) => col.colId === 'complianceUnits')
-      const mockParams = { data: { totalBalance: 150 } }
-      expect(cuCol.valueGetter(mockParams)).toBe(150)
+      const cuCol = getColumn('complianceUnits')
+      const mockParams = { totalBalance: 150 }
+      expect(callValueGetter(cuCol, mockParams)).toBe(150)
     })
 
     it('calculates reserve balance correctly in valueGetter', () => {
-      const reserveCol = colDefs.find((col) => col.colId === 'reserve')
-      const mockParams = { data: { reservedBalance: -75 } }
-      expect(reserveCol.valueGetter(mockParams)).toBe(75) // Should return absolute value
+      const reserveCol = getColumn('reserve')
+      const mockParams = { reservedBalance: -75 }
+      expect(callValueGetter(reserveCol, mockParams)).toBe(75) // Should return absolute value
     })
 
     it('defines the status column with correct renderer and filter', () => {
-      const statusCol = colDefs.find((col) => col.colId === 'status')
+      const statusCol = getColumn('status')
       expect(statusCol).toBeDefined()
       expect(statusCol.cellRenderer).toBe(OrgStatusRenderer)
       expect(statusCol.filter).toBe(true)
@@ -176,8 +247,8 @@ describe('ViewOrganization Schema', () => {
     })
 
     it('uses useOrganizationListStatuses hook for status filter options', () => {
-      const statusCol = colDefs.find((col) => col.colId === 'status')
-      const filterParams = statusCol.floatingFilterComponentParams
+      const statusCol = getColumn('status')
+      const filterParams = getFilterParams(statusCol)
 
       expect(filterParams.valueKey).toBe('status')
       expect(filterParams.labelKey).toBe('status')
@@ -188,28 +259,33 @@ describe('ViewOrganization Schema', () => {
 
   // Test user column definitions
   describe('getUserColumnDefs', () => {
-    const t = vi.fn((key) => key)
+    const t = i18n.t
     const userColDefs = getUserColumnDefs(t)
+    const getUserColumn = (field: string) => {
+      const column = userColDefs.find((candidate) => candidate.field === field)
+      if (!column) throw new Error(`Missing user column: ${field}`)
+      return column
+    }
 
     it('modifies isActive column to be non-sortable', () => {
-      const isActiveCol = userColDefs.find((col) => col.field === 'isActive')
+      const isActiveCol = getUserColumn('isActive')
       expect(isActiveCol).toBeDefined()
       expect(isActiveCol.sortable).toBe(false)
     })
 
     it('configures role column with correct filter parameters', () => {
-      const roleCol = userColDefs.find((col) => col.field === 'role')
+      const roleCol = getUserColumn('role')
       expect(roleCol).toBeDefined()
-      expect(roleCol.floatingFilterComponentParams.params).toBe(
-        'government_roles_only=false'
-      )
-      expect(roleCol.floatingFilterComponentParams.key).toBe(
-        'organization-users'
-      )
+      const filterParams = roleCol.floatingFilterComponentParams
+      if (!filterParams || !('key' in filterParams)) {
+        throw new Error('Missing organization user filter parameters')
+      }
+      expect(filterParams.params).toBe('government_roles_only=false')
+      expect(filterParams.key).toBe('organization-users')
     })
 
     it('preserves other columns without modification', () => {
-      const otherCol = userColDefs.find((col) => col.field === 'someOtherField')
+      const otherCol = getUserColumn('someOtherField')
       expect(otherCol).toBeDefined()
       // Verify the column is unchanged from original definition
     })

@@ -11,6 +11,31 @@ import { constructAddress } from '@/utils/constructAddress'
 import { getCurrentEarlyIssuanceYear } from '@/constants/common'
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
 import { LinkKeyManagement } from './components/LinkKeyManagement'
+import type { OrganizationData } from '@/hooks/useOrganization'
+import type { RoleName } from '@/constants/roles'
+
+type OrganizationProfileData = OrganizationData & {
+  operatingName?: string | null
+  orgTypes?: Array<{ description?: string | null; orgType?: string | null }>
+  orgType?: { description?: string | null; orgType?: string | null } | null
+  availableRoles?: string[] | null
+  contactName?: string | null
+  phone?: string | null
+  email?: string | null
+  orgAddress?: Parameters<typeof constructAddress>[0]
+  orgAttorneyAddress?: Parameters<typeof constructAddress>[0]
+  recordsAddress?: string | null
+  orgStatus?: { status: string }
+  edrmsRecord?: string | null
+  hasEarlyIssuance?: boolean
+}
+type OrganizationProfileProps = {
+  hasRoles: (role: RoleName) => boolean
+  isCurrentUserLoading: boolean
+  orgID?: string | number
+  orgData?: OrganizationProfileData
+  orgBalanceInfo?: { totalBalance?: number; reservedBalance?: number } | null
+}
 
 export const OrganizationProfile = ({
   hasRoles,
@@ -18,7 +43,7 @@ export const OrganizationProfile = ({
   orgID,
   orgData,
   orgBalanceInfo
-}) => {
+}: OrganizationProfileProps) => {
   const { t } = useTranslation()
 
   return (
@@ -101,7 +126,7 @@ export const OrganizationProfile = ({
 
           <BCTypography variant="body4">
             <strong>{t('org:regTrnLabel')}:</strong>{' '}
-            {orgData?.orgStatus.status === ORGANIZATION_STATUSES.REGISTERED
+            {orgData?.orgStatus?.status === ORGANIZATION_STATUSES.REGISTERED
               ? t('org:registeredTransferYes')
               : t('org:registeredTransferNo')}
           </BCTypography>

@@ -1,10 +1,24 @@
 import i18n from '@/i18n'
 import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
 import { formatNumberWithCommas } from '@/utils/formatters'
+import type { ColDef } from 'ag-grid-community'
+
+type SupplyHistoryRow = {
+  compliancePeriod?: string | number
+  reportSubmissionDate?: string | Date | null
+  fuelType?: string
+  fuelCategory?: string
+  provisionOfTheAct?: string
+  fuelCode?: string | null
+  fuelQuantity?: number | null
+  units?: string
+}
 
 const VANCOUVER_TIME_ZONE = 'America/Vancouver'
 
-const parseDateOnly = (value) => {
+const parseDateOnly = (
+  value: string | Date | null | undefined
+): Date | null => {
   if (!value) return null
   if (value instanceof Date) return value
 
@@ -18,7 +32,7 @@ const parseDateOnly = (value) => {
   return Number.isNaN(parsed.getTime()) ? null : parsed
 }
 
-const formatDateOnly = (value) => {
+const formatDateOnly = (value: string | Date | null | undefined): string => {
   if (!value) return ''
   const dateOnly = String(value).match(/^(\d{4}-\d{2}-\d{2})/)
   if (dateOnly && !/[T ]\d{2}:\d{2}/.test(String(value))) return dateOnly[1]
@@ -29,7 +43,10 @@ const formatDateOnly = (value) => {
     : String(value)
 }
 
-const dateFilterComparator = (filterLocalDateAtMidnight, cellValue) => {
+const dateFilterComparator = (
+  filterLocalDateAtMidnight: Date,
+  cellValue: string | Date | null | undefined
+): number => {
   const cellDate = parseDateOnly(formatDateOnly(cellValue))
   if (!cellDate) return -1
   const normalizedCellDate = new Date(
@@ -42,7 +59,7 @@ const dateFilterComparator = (filterLocalDateAtMidnight, cellValue) => {
   return 0
 }
 
-export const supplyHistoryColDefs = () => [
+export const supplyHistoryColDefs = (): ColDef<SupplyHistoryRow>[] => [
   {
     field: 'compliancePeriod',
     headerName: i18n.t('org:supplyHistory.columns.year'),
@@ -107,7 +124,7 @@ export const supplyHistoryColDefs = () => [
     flex: 0.9,
     sortable: true,
     filter: 'agNumberColumnFilter',
-    valueFormatter: formatNumberWithCommas
+    valueFormatter: ({ value }) => String(formatNumberWithCommas({ value }))
   },
   {
     field: 'units',
@@ -119,7 +136,7 @@ export const supplyHistoryColDefs = () => [
   }
 ]
 
-export const defaultColDef = {
+export const defaultColDef: ColDef<SupplyHistoryRow> = {
   editable: false,
   resizable: true,
   filter: true,

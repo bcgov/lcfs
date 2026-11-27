@@ -1,7 +1,18 @@
-export const normalizeFuelTypeVolumeTrendRows = (rows = []) =>
+type FuelVolumeTrendRow = {
+  fuelType: string
+  reportingYear: string | number
+  fuelCategory?: string | null
+  totalVolume: number
+  fossilDerived?: boolean
+  [key: string]: unknown
+}
+
+export const normalizeFuelTypeVolumeTrendRows = (
+  rows: FuelVolumeTrendRow[] = []
+): FuelVolumeTrendRow[] =>
   Array.from(
     rows
-      .reduce((acc, row) => {
+      .reduce<Map<string, FuelVolumeTrendRow>>((acc, row) => {
         const fuelType = row.fuelType
         const key = `${row.reportingYear}|${fuelType}|${row.fuelCategory || ''}`
         const existing = acc.get(key) || {

@@ -7,10 +7,28 @@ import { roles } from '@/constants/roles'
 import { MemoryRouter } from 'react-router-dom'
 import { I18nextProvider } from 'react-i18next'
 import i18n from '@/i18n'
+import type { ReactNode } from 'react'
 
 import { OrganizationDetailsCard } from '../OrganizationDetailsCard'
-import * as CurrentUserHook from '@/hooks/useCurrentUser'
-import { useOrganization } from '@/hooks/useOrganization'
+import type { OrganizationData } from '@/hooks/useOrganization'
+
+type TestUser = {
+  roles: Array<{ name: string }>
+  organization: { organizationId: string }
+}
+type TestUserHook = {
+  data: TestUser
+  isLoading: boolean
+  hasRoles: (role: string) => boolean
+}
+type OrganizationHookResult = {
+  data: OrganizationData | null
+  isLoading: boolean
+}
+const testMocks = vi.hoisted(() => ({
+  currentUser: vi.fn<() => TestUserHook>(),
+  organization: vi.fn<() => OrganizationHookResult>()
+}))
 
 vi.mock('@react-keycloak/web', () => ({
   useKeycloak: () => ({
@@ -18,15 +36,20 @@ vi.mock('@react-keycloak/web', () => ({
   })
 }))
 
-vi.mock('react-router-dom', async (importOriginal) => {
-  const actual = await importOriginal()
-  return {
-    ...actual,
-    useParams: () => ({ orgID: '123' }),
-    useLocation: () => ({ state: {} }),
-    useNavigate: () => vi.fn()
+vi.mock(
+  'react-router-dom',
+  async (
+    importOriginal: <T = typeof import('react-router-dom')>() => Promise<T>
+  ) => {
+    const actual = await importOriginal()
+    return {
+      ...actual,
+      useParams: () => ({ orgID: '123' }),
+      useLocation: () => ({ state: {} }),
+      useNavigate: () => vi.fn()
+    }
   }
-})
+)
 
 const baseOrg = {
   organizationId: '123',
@@ -48,7 +71,7 @@ vi.mock('../components/CompanyOverviewComments', () => ({
 }))
 
 vi.mock('@/hooks/useOrganization', () => ({
-  useOrganization: vi.fn(() => ({ data: baseOrg, isLoading: false })),
+  useOrganization: testMocks.organization,
   useOrganizationBalance: () => ({
     data: { totalBalance: 200, reservedBalance: 25 }
   }),
@@ -60,7 +83,7 @@ vi.mock('@/hooks/useOrganization', () => ({
 
 // Mock Role component to always render children for government role
 vi.mock('@/components/Role', () => ({
-  Role: ({ children }) => {
+  Role: ({ children }: { children: ReactNode }) => {
     // Always show children for this test (we're mocking appropriate user roles)
     return <div data-test="role-component">{children}</div>
   }
@@ -79,15 +102,23 @@ const nonGovUser = {
   organization: { organizationId: '123' }
 }
 
-const makeUserHook = (user) => ({
+const makeUserHook = (user: TestUser): TestUserHook => ({
   data: user,
   isLoading: false,
-  hasRoles: (role) => user.roles.some((r) => r.name === role)
+  hasRoles: (role: string) => user.roles.some((r) => r.name === role)
 })
 
 vi.mock('@/hooks/useCurrentUser', () => ({
-  useCurrentUser: vi.fn(() => makeUserHook(govUser))
+  useCurrentUser: testMocks.currentUser
 }))
+
+testMocks.currentUser.mockImplementation(() => makeUserHook(govUser))
+testMocks.organization.mockImplementation(() => ({
+  data: baseOrg,
+  isLoading: false
+}))
+const { currentUser: mockCurrentUser, organization: mockUseOrganization } =
+  testMocks
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -96,7 +127,7 @@ const queryClient = new QueryClient({
   }
 })
 
-const Wrapper = ({ children }) => (
+const Wrapper = ({ children }: { children: ReactNode }) => (
   <QueryClientProvider client={queryClient}>
     <I18nextProvider i18n={i18n}>
       <MemoryRouter>{children}</MemoryRouter>
@@ -107,10 +138,8 @@ const Wrapper = ({ children }) => (
 describe('OrganizationDetailsCard Comprehensive Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    CurrentUserHook.useCurrentUser.mockImplementation(() =>
-      makeUserHook(govUser)
-    )
-    useOrganization.mockReturnValue({ data: baseOrg, isLoading: false })
+    mockCurrentUser.mockImplementation(() => makeUserHook(govUser))
+    mockUseOrganization.mockReturnValue({ data: baseOrg, isLoading: false })
   })
 
   afterEach(() => {
@@ -134,7 +163,7 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
 
   // Loading State Tests (Line 52-53)
   it('renders loading state when data is loading', () => {
-    useOrganization.mockReturnValue({
+    mockUseOrganization.mockReturnValue({
       data: null,
       isLoading: true
     })
@@ -161,9 +190,7 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
 
   // Role-based Access Control Tests
   it('shows edit button for administrator users', () => {
-    CurrentUserHook.useCurrentUser.mockImplementation(() =>
-      makeUserHook(adminUser)
-    )
+    mockCurrentUser.mockImplementation(() => makeUserHook(adminUser))
     render(
       <Wrapper>
         <ThemeProvider theme={theme}>
@@ -175,9 +202,7 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
   })
 
   it('hides edit button for non-administrator users', () => {
-    CurrentUserHook.useCurrentUser.mockImplementation(() =>
-      makeUserHook(nonGovUser)
-    )
+    mockCurrentUser.mockImplementation(() => makeUserHook(nonGovUser))
     render(
       <Wrapper>
         <ThemeProvider theme={theme}>
@@ -192,7 +217,7 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
 
   // Records Address Conditional Tests (Lines 130-133)
   it('renders records address when present', () => {
-    useOrganization.mockReturnValue({
+    mockUseOrganization.mockReturnValue({
       data: { ...baseOrg, recordsAddress: '456 Records Street' },
       isLoading: false
     })
@@ -207,7 +232,7 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
   })
 
   it('does not render records address when absent', () => {
-    useOrganization.mockReturnValue({
+    mockUseOrganization.mockReturnValue({
       data: { ...baseOrg, recordsAddress: null },
       isLoading: false
     })
@@ -223,7 +248,7 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
 
   // Credit Trading Tests (Line 149)
   it('shows credit trading enabled for registered organization', () => {
-    useOrganization.mockReturnValue({
+    mockUseOrganization.mockReturnValue({
       data: {
         ...baseOrg,
         orgStatus: { status: 'Registered' },
@@ -242,7 +267,7 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
   })
 
   it('shows credit trading disabled for registered organization', () => {
-    useOrganization.mockReturnValue({
+    mockUseOrganization.mockReturnValue({
       data: {
         ...baseOrg,
         orgStatus: { status: 'Registered' },
@@ -262,7 +287,7 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
   })
 
   it('does not show credit trading for non-registered organization', () => {
-    useOrganization.mockReturnValue({
+    mockUseOrganization.mockReturnValue({
       data: {
         ...baseOrg,
         orgStatus: { status: 'Unregistered' },
@@ -284,10 +309,8 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
 
   // Early Issuance Tests
   it('shows early issuance for government user when false', () => {
-    CurrentUserHook.useCurrentUser.mockImplementation(() =>
-      makeUserHook(govUser)
-    )
-    useOrganization.mockReturnValue({
+    mockCurrentUser.mockImplementation(() => makeUserHook(govUser))
+    mockUseOrganization.mockReturnValue({
       data: { ...baseOrg, hasEarlyIssuance: false },
       isLoading: false
     })
@@ -305,10 +328,8 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
   })
 
   it('shows early issuance for government user when true', () => {
-    CurrentUserHook.useCurrentUser.mockImplementation(() =>
-      makeUserHook(govUser)
-    )
-    useOrganization.mockReturnValue({
+    mockCurrentUser.mockImplementation(() => makeUserHook(govUser))
+    mockUseOrganization.mockReturnValue({
       data: { ...baseOrg, hasEarlyIssuance: true },
       isLoading: false
     })
@@ -326,10 +347,8 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
   })
 
   it('shows early issuance for non-government user only when true', () => {
-    CurrentUserHook.useCurrentUser.mockImplementation(() =>
-      makeUserHook(nonGovUser)
-    )
-    useOrganization.mockReturnValue({
+    mockCurrentUser.mockImplementation(() => makeUserHook(nonGovUser))
+    mockUseOrganization.mockReturnValue({
       data: { ...baseOrg, hasEarlyIssuance: true },
       isLoading: false
     })
@@ -347,10 +366,8 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
   })
 
   it('does not show early issuance for non-government user when false', () => {
-    CurrentUserHook.useCurrentUser.mockImplementation(() =>
-      makeUserHook(nonGovUser)
-    )
-    useOrganization.mockReturnValue({
+    mockCurrentUser.mockImplementation(() => makeUserHook(nonGovUser))
+    mockUseOrganization.mockReturnValue({
       data: { ...baseOrg, hasEarlyIssuance: false },
       isLoading: false
     })
@@ -368,7 +385,7 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
 
   // User-specific Message Tests
   it('shows update message for non-government users', () => {
-    CurrentUserHook.useCurrentUser.mockImplementation(() => ({
+    mockCurrentUser.mockImplementation(() => ({
       ...makeUserHook(nonGovUser),
       isLoading: false
     }))
@@ -383,7 +400,7 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
   })
 
   it('does not show update message for government users', () => {
-    CurrentUserHook.useCurrentUser.mockImplementation(() => ({
+    mockCurrentUser.mockImplementation(() => ({
       ...makeUserHook(govUser),
       isLoading: false
     }))
@@ -410,7 +427,7 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
   })
 
   it('renders operating name fallback to legal name when operating name is missing', () => {
-    useOrganization.mockReturnValue({
+    mockUseOrganization.mockReturnValue({
       data: { ...baseOrg, operatingName: null },
       isLoading: false
     })
@@ -426,9 +443,7 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
 
   // Balance Information Tests
   it('shows compliance unit balance for government users', () => {
-    CurrentUserHook.useCurrentUser.mockImplementation(() =>
-      makeUserHook(govUser)
-    )
+    mockCurrentUser.mockImplementation(() => makeUserHook(govUser))
     render(
       <Wrapper>
         <ThemeProvider theme={theme}>
@@ -456,7 +471,7 @@ describe('OrganizationDetailsCard Comprehensive Tests', () => {
   })
 
   it('shows unregistered transfer status for unregistered organization', () => {
-    useOrganization.mockReturnValue({
+    mockUseOrganization.mockReturnValue({
       data: {
         ...baseOrg,
         orgStatus: { status: 'Unregistered' }

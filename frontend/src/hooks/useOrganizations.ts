@@ -3,6 +3,22 @@ import { useQuery } from '@tanstack/react-query'
 import { ORGANIZATION_STATUSES } from '@/constants/statuses'
 import type { QueryOptions, PaginationParams } from './types'
 
+export interface OrganizationUsersPaginationFilter {
+  field: string
+  type?: string
+  filterType?: string
+  filter?: unknown
+  values?: unknown[]
+  [key: string]: unknown
+}
+
+export type OrganizationUsersPaginationParams = Omit<
+  PaginationParams,
+  'filters'
+> & {
+  filters?: OrganizationUsersPaginationFilter[]
+}
+
 export const useOrganizationStatuses = (options: QueryOptions<unknown>) => {
   const client = useApiService()
 
@@ -174,7 +190,7 @@ export const useOrganizationsList = (
 
 export const useOrganizationUsers = (
   orgID: number | string | undefined | null,
-  paginationOptions: PaginationParams,
+  paginationOptions: OrganizationUsersPaginationParams,
   options: QueryOptions<unknown>
 ) => {
   const client = useApiService()

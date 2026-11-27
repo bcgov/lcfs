@@ -19,9 +19,16 @@ import { AddEditOrgForm } from '../AddEditOrg/AddEditOrgForm'
 import { OrganizationProfile } from './OrganizationProfile'
 import { CompanyOverviewComments } from './components/CompanyOverviewComments'
 import { FloatingAlert } from '@/components/BCAlert'
+import type { FloatingAlertHandle } from '@/components/BCAlert/FloatingAlert'
 
-export const OrganizationDetailsCard = ({ addMode = false }) => {
-  const alertRef = useRef(null)
+type OrganizationBalance = { totalBalance?: number; reservedBalance?: number }
+
+type OrganizationDetailsCardProps = { addMode?: boolean }
+
+export const OrganizationDetailsCard = ({
+  addMode = false
+}: OrganizationDetailsCardProps) => {
+  const alertRef = useRef<FloatingAlertHandle>(null)
   const { t } = useTranslation(['common', 'org'])
   const location = useLocation()
   const [isEditMode, setIsEditMode] = useState(
@@ -44,9 +51,10 @@ export const OrganizationDetailsCard = ({ addMode = false }) => {
     staleTime: 0,
     cacheTime: 0
   })
-  const { data: orgBalanceInfo } = useOrganizationBalance(
-    orgID ?? currentUser?.organization?.organizationId
-  )
+  const { data: orgBalanceInfo } =
+    useOrganizationBalance<OrganizationBalance | null>(
+      orgID ?? currentUser?.organization?.organizationId
+    )
 
   const canEdit = hasRoles(roles.administrator)
   const isGovernment = hasRoles(roles.government)
@@ -65,7 +73,7 @@ export const OrganizationDetailsCard = ({ addMode = false }) => {
   }, [addMode, navigate])
 
   const handleSaveSuccess = useCallback(
-    (organizationId) => {
+    (organizationId?: string | number) => {
       if (addMode) {
         const successMessage = {
           state: {
@@ -76,7 +84,7 @@ export const OrganizationDetailsCard = ({ addMode = false }) => {
         setIsEditMode(false)
         if (organizationId) {
           navigate(
-            ROUTES.ORGANIZATIONS.VIEW.replace(':orgID', organizationId),
+            ROUTES.ORGANIZATIONS.VIEW.replace(':orgID', String(organizationId)),
             successMessage
           )
         } else {

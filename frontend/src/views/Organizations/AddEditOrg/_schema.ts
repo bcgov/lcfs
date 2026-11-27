@@ -1,12 +1,18 @@
 import * as Yup from 'yup'
 
+type OrganizationType = {
+  organizationTypeId: number
+  isBceidUser?: boolean | null
+}
+type OrganizationTypeId = string | number
+
 // Dynamic schema function based on the selected organization types
 export const createValidationSchema = (
-  orgTypes = [],
-  selectedOrgTypeIds = []
+  orgTypes: OrganizationType[] = [],
+  selectedOrgTypeIds: OrganizationTypeId[] = []
 ) => {
   // Find the selected organization types
-  const selectedIds = (selectedOrgTypeIds || []).map((id) => parseInt(id))
+  const selectedIds = selectedOrgTypeIds.map((id) => parseInt(String(id), 10))
   const selectedOrgTypes = orgTypes.filter((type) =>
     selectedIds.includes(type.organizationTypeId)
   )
