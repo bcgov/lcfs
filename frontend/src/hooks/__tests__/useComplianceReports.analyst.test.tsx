@@ -1,11 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import axios from 'axios'
+import type { ReactNode } from 'react'
 import {
   useGetAvailableAnalysts,
   useAssignAnalyst
 } from '../useComplianceReports'
 import * as useApiService from '@/services/useApiService'
+import type { AvailableAnalyst } from '../useComplianceReports'
 
 // Mock the API service
 vi.mock('@/services/useApiService')
@@ -16,7 +19,7 @@ const createWrapper = () => {
     defaultOptions: {
       queries: {
         retry: false,
-        cacheTime: 0,
+        gcTime: 0,
         staleTime: 0
       },
       mutations: {
@@ -25,7 +28,7 @@ const createWrapper = () => {
     }
   })
 
-  return function QueryWrapper({ children }) {
+  return function QueryWrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     )
@@ -33,15 +36,26 @@ const createWrapper = () => {
 }
 
 describe('Analyst Assignment Hooks', () => {
-  let mockApiClient
+  const mockApiClient = Object.assign(axios.create(), {
+    get: vi.fn(
+      (
+        _url: string,
+        _config?: unknown
+      ): Promise<{ data: AvailableAnalyst[] }> => Promise.resolve({ data: [] })
+    ),
+    put: vi.fn(
+      (
+        _url: string,
+        _data?: unknown
+      ): Promise<{ data: { success: boolean } }> =>
+        Promise.resolve({ data: { success: true } })
+    ),
+    download: async () => undefined
+  })
 
   beforeEach(() => {
     vi.clearAllMocks()
-    mockApiClient = {
-      get: vi.fn(),
-      put: vi.fn()
-    }
-    useApiService.useApiService.mockReturnValue(mockApiClient)
+    vi.mocked(useApiService.useApiService).mockReturnValue(mockApiClient)
   })
 
   describe('useGetAvailableAnalysts', () => {
@@ -106,7 +120,7 @@ describe('Analyst Assignment Hooks', () => {
         () =>
           useGetAvailableAnalysts({
             staleTime: 300000,
-            cacheTime: 600000
+            gcTime: 600000
           }),
         {
           wrapper: createWrapper()

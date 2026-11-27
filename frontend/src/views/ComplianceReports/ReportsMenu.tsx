@@ -13,15 +13,23 @@ import { roles, govRoles } from '@/constants/roles'
 import { ComplianceReports } from './ComplianceReports'
 import { FloatingAlert } from '@/components/BCAlert'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import type { SyntheticEvent } from 'react'
+import type { TabsProps } from '@mui/material/Tabs'
 
-function a11yProps(index) {
+interface ReportTab {
+  key: string
+  label: string
+  path: string
+}
+
+function a11yProps(index: number) {
   return {
     id: `full-width-tab-${index}`,
     'aria-controls': `full-width-admin-tabs-${index}`
   }
 }
 
-function getActiveTabIndex(pathname, tabs) {
+function getActiveTabIndex(pathname: string, tabs: ReportTab[]) {
   const exactIndex = tabs.findIndex(
     (tab) => pathname === tab.path || pathname === `${tab.path}/`
   )
@@ -41,8 +49,9 @@ function getActiveTabIndex(pathname, tabs) {
 
 export function ReportsMenu() {
   const { t } = useTranslation(['report'])
-  const alertRef = useRef()
-  const [tabsOrientation, setTabsOrientation] = useState('horizontal')
+  const alertRef = useRef(null)
+  const [tabsOrientation, setTabsOrientation] =
+    useState<TabsProps['orientation']>('horizontal')
   const navigate = useNavigate()
   const location = useLocation()
   const { hasAnyRole, hasRoles } = useCurrentUser()
@@ -58,7 +67,7 @@ export function ReportsMenu() {
   const isSystemAdmin = hasRoles(roles.system_admin)
 
   const tabs = useMemo(() => {
-    const baseTabs = [
+    const baseTabs: ReportTab[] = [
       {
         key: 'complianceReports',
         label: t('tabs.complianceReporting'),
@@ -122,8 +131,9 @@ export function ReportsMenu() {
     return () => window.removeEventListener('resize', handleTabsOrientation)
   }, [])
 
-  const handleSetTabValue = (event, newValue) => {
-    navigate(tabs[newValue].path)
+  const handleSetTabValue = (_event: SyntheticEvent, newValue: number) => {
+    const tab = tabs[newValue]
+    if (tab) navigate(tab.path)
   }
 
   // Determine what content to render based on current route

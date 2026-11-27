@@ -4,7 +4,7 @@ export type ReportId = number | string
 
 export interface ComplianceReportHistoryEntry {
   complianceReportId?: ReportId
-  createDate: string | Date
+  createDate: string
   displayName?: string
   userProfile: { firstName: string; lastName: string }
   status: { status: string }
@@ -16,13 +16,19 @@ export interface ComplianceReport {
     complianceReportId?: ReportId
     version?: number
     nickname?: string
+    history?: ComplianceReportHistoryEntry[] | null
     supplementalInitiator?: string | null
     reportingFrequency?: string
     compliancePeriod?: { description?: string }
     organizationId?: number | string
     currentStatus?: { status?: string }
+    assessmentStatement?: string | null
+    supplementalNote?: string | null
+    updateDate?: string | Date | null
     isNonAssessment?: boolean
     hasSupplemental?: boolean
+    isRenewableFuelExempted?: boolean
+    isLowCarbonFuelExempted?: boolean
     [key: string]: unknown
   }
   metadata?: Record<string, unknown>
@@ -46,6 +52,8 @@ export interface ComplianceReport {
     [key: string]: unknown
   }>
   hasGovernmentReassessmentInProgress?: boolean
+  isNewest?: boolean
+  hadBeenAssessed?: boolean
   isNonAssessment?: boolean
   isRenewableFuelExempted?: boolean
   isLowCarbonFuelExempted?: boolean

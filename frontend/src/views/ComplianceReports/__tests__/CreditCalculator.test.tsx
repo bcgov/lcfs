@@ -1,4 +1,5 @@
 import 'react'
+import type { ReactNode, KeyboardEvent } from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { afterEach, vi } from 'vite-plus/test'
 import {
@@ -11,18 +12,41 @@ import { BrowserRouter } from 'react-router-dom'
 import { ThemeProvider } from '@mui/material/styles'
 import theme from '@/themes'
 import { CreditCalculator } from '../CreditCalculator'
-import {
+import { copyToClipboard } from '@/utils/clipboard'
+
+type MockQueryResult = {
+  data?: unknown | null
+  isLoading?: boolean
+  refetch?: () => unknown
+}
+type FuelTypeParams = {
+  fuelTypeId?: number
+  complianceYear?: string
+  [key: string]: unknown
+}
+type CalculateParams = { fuelTypeId?: number; [key: string]: unknown }
+const {
   useCalculateComplianceUnits,
   useGetCompliancePeriodList,
   useGetFuelTypeList,
   useGetFuelTypeOptions,
   useCalculateQuantityFromComplianceUnits
-} from '@/hooks/useCalculator'
-import { copyToClipboard } from '@/utils/clipboard'
+} = vi.hoisted(() => ({
+  useCalculateComplianceUnits:
+    vi.fn<(params: CalculateParams) => MockQueryResult>(),
+  useGetCompliancePeriodList: vi.fn<() => MockQueryResult>(),
+  useGetFuelTypeList: vi.fn<(params: FuelTypeParams) => MockQueryResult>(),
+  useGetFuelTypeOptions: vi.fn<(params: FuelTypeParams) => MockQueryResult>(),
+  useCalculateQuantityFromComplianceUnits:
+    vi.fn<(...args: unknown[]) => MockQueryResult>()
+}))
 
 // Mock translations
-const mockT = vi.fn((key, options) => {
-  const translations = {
+const mockT = vi.fn((key: string, options?: { returnObjects?: boolean }) => {
+  const translations: Record<
+    string,
+    string | string[] | Record<string, string>
+  > = {
     'report:ciParameters': {
       tci: 'Target carbon intensity',
       eer: 'Energy effectiveness ratio',
@@ -58,6 +82,11 @@ const mockT = vi.fn((key, options) => {
   return options?.returnObjects ? translations[key] : translations[key] || key
 })
 
+const translationText = (key: string): string => {
+  const translation = mockT(key)
+  return typeof translation === 'string' ? translation : key
+}
+
 const DEFAULT_QUANTITY = 100000
 
 vi.mock('react-i18next', () => ({
@@ -65,27 +94,57 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('@/hooks/useCalculator', () => ({
-  useCalculateComplianceUnits: vi.fn(),
-  useGetCompliancePeriodList: vi.fn(),
-  useGetFuelTypeList: vi.fn(),
-  useGetFuelTypeOptions: vi.fn(),
-  useCalculateQuantityFromComplianceUnits: vi.fn()
+  useCalculateComplianceUnits,
+  useGetCompliancePeriodList,
+  useGetFuelTypeList,
+  useGetFuelTypeOptions,
+  useCalculateQuantityFromComplianceUnits
 }))
 
 vi.mock('@/components/BCForm/BCFormRadio', async () => {
   const actual = await vi.importActual('@/components/BCForm/BCFormRadio')
-  const MockRadio = ({ name, label, options = [] }) => {
+  const MockRadio = ({
+    name,
+    label,
+    options = []
+  }: {
+    name:
+      | 'complianceYear'
+      | 'fuelRequirement'
+      | 'fuelType'
+      | 'fuelCode'
+      | 'provisionOfTheAct'
+      | 'fuelCategory'
+      | 'endUseType'
+    label?: ReactNode
+    options?: (
+      | string
+      | { value: string; label?: ReactNode; dataTestId?: string }
+    )[]
+  }) => {
     const { control, getValues } = useFormContext()
 
-    const getTestId = (option, index) => {
-      const baseValue = option.value || option
+    const getTestId = (
+      option: string | { value: string; dataTestId?: string },
+      index: number
+    ) => {
+      const baseValue = typeof option === 'string' ? option : option.value
       if (name === 'fuelType' || name === 'endUseType') {
-        return option.dataTestId || baseValue
+        return (
+          (typeof option === 'string' ? undefined : option.dataTestId) ||
+          baseValue
+        )
       }
-      return option.dataTestId || `${name}${index + 1}`
+      return (
+        (typeof option === 'string' ? undefined : option.dataTestId) ||
+        `${name}${index + 1}`
+      )
     }
 
-    const handleSelect = (optionValue, onChange) => {
+    const handleSelect = (
+      optionValue: string,
+      onChange: (value: string) => void
+    ) => {
       onChange(optionValue)
     }
 
@@ -102,7 +161,8 @@ vi.mock('@/components/BCForm/BCFormRadio', async () => {
               </span>
             )}
             {options.map((option, index) => {
-              const optionValue = option.value || option
+              const optionValue =
+                typeof option === 'string' ? option : option.value
               const testId = getTestId(option, index)
               const isSelected = value === optionValue
               return (
@@ -117,14 +177,16 @@ vi.mock('@/components/BCForm/BCFormRadio', async () => {
                   role="radio"
                   aria-checked={isSelected}
                   onClick={() => handleSelect(optionValue, onChange)}
-                  onKeyDown={(event) => {
+                  onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => {
                     if (event.key === 'Enter' || event.key === ' ') {
                       event.preventDefault()
                       handleSelect(optionValue, onChange)
                     }
                   }}
                 >
-                  {option.label || optionValue}
+                  {typeof option === 'string'
+                    ? option
+                    : option.label || optionValue}
                 </div>
               )
             })}
@@ -145,16 +207,21 @@ vi.mock('@/utils/clipboard', () => ({
 }))
 
 vi.mock('@/utils/formatters', () => ({
-  numberFormatter: vi.fn((value) => value?.toLocaleString() || '0'),
-  formatEnergyContentWithCommas: vi.fn(({ value, fuelType }) => {
-    const numericValue = Number(value)
-    const displayValue =
-      fuelType === 'CNG' && Number.isFinite(numericValue)
-        ? Math.round(numericValue)
-        : value
+  numberFormatter: vi.fn(
+    (value: number | string | null | undefined) =>
+      value?.toLocaleString() || '0'
+  ),
+  formatEnergyContentWithCommas: vi.fn(
+    ({ value, fuelType }: { value: number | string; fuelType: string }) => {
+      const numericValue = Number(value)
+      const displayValue =
+        fuelType === 'CNG' && Number.isFinite(numericValue)
+          ? Math.round(numericValue)
+          : value
 
-    return displayValue?.toLocaleString() || '0'
-  })
+      return displayValue?.toLocaleString() || '0'
+    }
+  )
 }))
 
 vi.mock('@/components/Loading', () => ({
@@ -162,7 +229,15 @@ vi.mock('@/components/Loading', () => ({
 }))
 
 vi.mock('@/components/BCWidgetCard/BCWidgetCard', () => ({
-  default: ({ title, content, children }) => (
+  default: ({
+    title,
+    content,
+    children
+  }: {
+    title?: ReactNode
+    content?: ReactNode
+    children?: ReactNode
+  }) => (
     <div data-test="bc-widget-card">
       <div data-test="widget-title">{title}</div>
       <div data-test="widget-content">{content || children}</div>
@@ -177,7 +252,13 @@ vi.mock('@/constants/common', () => ({
 }))
 
 // Test wrapper component
-const TestWrapper = ({ children, formProps = {} }) => {
+const TestWrapper = ({
+  children,
+  formProps
+}: {
+  children: ReactNode
+  formProps?: Parameters<typeof useForm>[0]
+}) => {
   const methods = useForm({
     defaultValues: {
       complianceYear: '2023',
@@ -294,7 +375,9 @@ describe('CreditCalculator', () => {
         </TestWrapper>
       )
 
-      expect(screen.getByText(mockT('report:calcTitle'))).toBeInTheDocument()
+      expect(
+        screen.getByText(translationText('report:calcTitle'))
+      ).toBeInTheDocument()
     })
 
     it('displays loading state when compliance periods are loading', () => {
@@ -320,14 +403,16 @@ describe('CreditCalculator', () => {
       )
 
       expect(
-        screen.getByText(mockT('report:complianceYear'))
+        screen.getByText(translationText('report:complianceYear'))
       ).toBeInTheDocument()
       expect(
-        screen.getByText(mockT('report:selectFuelType'))
+        screen.getByText(translationText('report:selectFuelType'))
       ).toBeInTheDocument()
-      expect(screen.getByText(mockT('report:endUse'))).toBeInTheDocument()
       expect(
-        screen.getByText(mockT('report:qtySuppliedLabel'))
+        screen.getByText(translationText('report:endUse'))
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(translationText('report:qtySuppliedLabel'))
       ).toBeInTheDocument()
     })
 
@@ -341,7 +426,9 @@ describe('CreditCalculator', () => {
       const endUseGroup = container.querySelector(
         '[data-test="endUseType-radio-group"]'
       )
+      if (!endUseGroup) throw new Error('Expected the End Use radio group')
       const endUseOption = endUseGroup.querySelector('[role="radio"]')
+      if (!endUseOption) throw new Error('Expected an End Use radio option')
 
       expect(getComputedStyle(endUseGroup).overflowX).toBe('hidden')
       expect(getComputedStyle(endUseOption).maxWidth).toBe('100%')
@@ -390,7 +477,7 @@ describe('CreditCalculator', () => {
           })
         )
 
-        const getEndUseOrder = (complianceYear) => {
+        const getEndUseOrder = (complianceYear: string) => {
           const { container, unmount } = render(
             <TestWrapper
               formProps={{
@@ -429,14 +516,16 @@ describe('CreditCalculator', () => {
 
       // Test that key form elements are present (tests renderError indirectly)
       expect(
-        screen.getByText(mockT('report:complianceYear'))
+        screen.getByText(translationText('report:complianceYear'))
       ).toBeInTheDocument()
       expect(
-        screen.getByText(mockT('report:selectFuelType'))
+        screen.getByText(translationText('report:selectFuelType'))
       ).toBeInTheDocument()
-      expect(screen.getByText(mockT('report:endUse'))).toBeInTheDocument()
       expect(
-        screen.getByText(mockT('report:qtySuppliedLabel'))
+        screen.getByText(translationText('report:endUse'))
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(translationText('report:qtySuppliedLabel'))
       ).toBeInTheDocument()
     })
   })
@@ -449,7 +538,9 @@ describe('CreditCalculator', () => {
         </TestWrapper>
       )
 
-      const clearButton = screen.getByText(mockT('report:clearCalculator'))
+      const clearButton = screen.getByText(
+        translationText('report:clearCalculator')
+      )
       fireEvent.click(clearButton)
 
       // Form should be reset - test by checking default state
@@ -465,13 +556,15 @@ describe('CreditCalculator', () => {
         </TestWrapper>
       )
 
-      const copyButton = screen.getByText(mockT('report:copyCalculation'))
+      const copyButton = screen.getByText(
+        translationText('report:copyCalculation')
+      )
       fireEvent.click(copyButton)
 
       await waitFor(() => {
         expect(vi.mocked(copyToClipboard)).toHaveBeenCalled()
         expect(
-          screen.getByText(mockT('report:copiedCalculation'))
+          screen.getByText(translationText('report:copiedCalculation'))
         ).toBeInTheDocument()
       })
     })
@@ -485,14 +578,16 @@ describe('CreditCalculator', () => {
         </TestWrapper>
       )
 
-      const copyButton = screen.getByText(mockT('report:copyCalculation'))
+      const copyButton = screen.getByText(
+        translationText('report:copyCalculation')
+      )
       fireEvent.click(copyButton)
 
       await waitFor(() => {
         expect(vi.mocked(copyToClipboard)).toHaveBeenCalled()
         // Should still show Copy text on failure
         expect(
-          screen.getByText(mockT('report:copyCalculation'))
+          screen.getByText(translationText('report:copyCalculation'))
         ).toBeInTheDocument()
       })
     })
@@ -507,7 +602,9 @@ describe('CreditCalculator', () => {
         </TestWrapper>
       )
 
-      const copyButton = screen.getByText(mockT('report:copyCalculation'))
+      const copyButton = screen.getByText(
+        translationText('report:copyCalculation')
+      )
       fireEvent.click(copyButton)
 
       await waitFor(() => {
@@ -535,7 +632,9 @@ describe('CreditCalculator', () => {
       )
 
       // Test that component renders without crashing when no data
-      expect(screen.getByText(mockT('report:calcTitle'))).toBeInTheDocument()
+      expect(
+        screen.getByText(translationText('report:calcTitle'))
+      ).toBeInTheDocument()
     })
 
     it('handles compliance periods data correctly', () => {
@@ -559,7 +658,9 @@ describe('CreditCalculator', () => {
       )
 
       // Test that periods data is handled
-      expect(screen.getByText(mockT('report:calcTitle'))).toBeInTheDocument()
+      expect(
+        screen.getByText(translationText('report:calcTitle'))
+      ).toBeInTheDocument()
     })
 
     it('handles fallback values when no calculated data', () => {
@@ -572,7 +673,9 @@ describe('CreditCalculator', () => {
       )
 
       // Test that component renders without crashing when no calculated data
-      expect(screen.getByText(mockT('report:calcTitle'))).toBeInTheDocument()
+      expect(
+        screen.getByText(translationText('report:calcTitle'))
+      ).toBeInTheDocument()
     })
 
     it('formats calculated data correctly', async () => {
@@ -711,7 +814,7 @@ describe('CreditCalculator', () => {
   describe('Conditional Rendering', () => {
     it('clears EC and credits until the new fuel has a valid end use', async () => {
       const refetch = vi.fn()
-      const dieselResults = { current: undefined }
+      const dieselResults: { current: unknown } = { current: undefined }
       const gasolineOptions = {
         data: {
           ...mockFuelOptions.data,
@@ -847,7 +950,9 @@ describe('CreditCalculator', () => {
       render(<TestWrapperWithYear />)
 
       // Should render the component
-      expect(screen.getByText(mockT('report:calcTitle'))).toBeInTheDocument()
+      expect(
+        screen.getByText(translationText('report:calcTitle'))
+      ).toBeInTheDocument()
     })
 
     it('disables fuel code dropdown based on provision selection', () => {
@@ -871,7 +976,9 @@ describe('CreditCalculator', () => {
 
       render(<TestWrapperWithProvision />)
 
-      expect(screen.getByText(mockT('report:calcTitle'))).toBeInTheDocument()
+      expect(
+        screen.getByText(translationText('report:calcTitle'))
+      ).toBeInTheDocument()
     })
 
     it('enables fuel code dropdown for fuel code provisions', () => {
@@ -895,7 +1002,9 @@ describe('CreditCalculator', () => {
 
       render(<TestWrapperWithFuelCode />)
 
-      expect(screen.getByText(mockT('report:calcTitle'))).toBeInTheDocument()
+      expect(
+        screen.getByText(translationText('report:calcTitle'))
+      ).toBeInTheDocument()
     })
   })
 
@@ -937,7 +1046,7 @@ describe('CreditCalculator', () => {
         </TestWrapper>
       )
 
-      const clickAndVerify = async (element) => {
+      const clickAndVerify = async (element: HTMLElement) => {
         fireEvent.click(element)
         await waitFor(() =>
           expect(element).toHaveAttribute('aria-checked', 'true')
@@ -954,10 +1063,12 @@ describe('CreditCalculator', () => {
       await clickAndVerify(endUseOption)
 
       const customOptionRadio = (
-        await screen.findAllByText(mockT('report:customCiOption'))
+        await screen.findAllByText(translationText('report:customCiOption'))
       ).find((element) => element.getAttribute('role') === 'radio')
 
       expect(customOptionRadio).toBeDefined()
+      if (!customOptionRadio)
+        throw new Error('Expected the custom CI radio option')
       await clickAndVerify(customOptionRadio)
 
       const customCiInput = await screen.findByPlaceholderText('0.00')
@@ -1201,7 +1312,9 @@ describe('CreditCalculator', () => {
 
       render(<TestWrapper2024 />)
 
-      expect(screen.getByText(mockT('report:calcTitle'))).toBeInTheDocument()
+      expect(
+        screen.getByText(translationText('report:calcTitle'))
+      ).toBeInTheDocument()
     })
 
     it('displays the post-2024 formula when applicable', () => {
@@ -1237,9 +1350,11 @@ describe('CreditCalculator', () => {
         </TestWrapper>
       )
 
-      expect(screen.getByText(mockT('report:calcTitle'))).toBeInTheDocument()
       expect(
-        screen.getByText(mockT('report:complianceYear'))
+        screen.getByText(translationText('report:calcTitle'))
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(translationText('report:complianceYear'))
       ).toBeInTheDocument()
     })
   })
@@ -1258,7 +1373,9 @@ describe('CreditCalculator', () => {
         </TestWrapper>
       )
 
-      expect(screen.getByText(mockT('report:calcTitle'))).toBeInTheDocument()
+      expect(
+        screen.getByText(translationText('report:calcTitle'))
+      ).toBeInTheDocument()
 
       vi.restoreAllMocks()
     })
@@ -1272,7 +1389,9 @@ describe('CreditCalculator', () => {
         </TestWrapper>
       )
 
-      expect(screen.getByText(mockT('report:calcTitle'))).toBeInTheDocument()
+      expect(
+        screen.getByText(translationText('report:calcTitle'))
+      ).toBeInTheDocument()
     })
 
     it('handles different data states', () => {
@@ -1283,7 +1402,9 @@ describe('CreditCalculator', () => {
         </TestWrapper>
       )
 
-      expect(screen.getByText(mockT('report:calcTitle'))).toBeInTheDocument()
+      expect(
+        screen.getByText(translationText('report:calcTitle'))
+      ).toBeInTheDocument()
     })
 
     it('displays copy success state temporarily', async () => {
@@ -1295,12 +1416,14 @@ describe('CreditCalculator', () => {
         </TestWrapper>
       )
 
-      const copyButton = screen.getByText(mockT('report:copyCalculation'))
+      const copyButton = screen.getByText(
+        translationText('report:copyCalculation')
+      )
       fireEvent.click(copyButton)
 
       await waitFor(() => {
         expect(
-          screen.getByText(mockT('report:copiedCalculation'))
+          screen.getByText(translationText('report:copiedCalculation'))
         ).toBeInTheDocument()
       })
     })

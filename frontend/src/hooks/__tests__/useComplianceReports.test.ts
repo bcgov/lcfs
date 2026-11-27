@@ -1,7 +1,7 @@
 import { waitFor } from '@testing-library/react'
+import axios from 'axios'
 import { describe, expect, vi, beforeEach, afterEach } from 'vite-plus/test'
 import { useApiService } from '@/services/useApiService'
-import { roles } from '@/constants/roles'
 import { test } from '@/tests/utils/fixtures'
 import {
   useCompliancePeriod,
@@ -14,31 +14,62 @@ import {
   useGetComplianceReportStatuses,
   useComplianceReportWithCache
 } from '../useComplianceReports'
+import { roles } from '@/constants/roles'
 import useComplianceReportStore from '@/stores/useComplianceReportStore'
 
 vi.mock('@/services/useApiService')
-vi.mock('../useCurrentUser')
+
+const mockedCurrentUser = vi.hoisted(() => ({
+  ready: true,
+  organizationId: 1,
+  roles: ['']
+}))
+
+vi.mock('../useCurrentUser', () => ({
+  useCurrentUser: () => ({
+    hasRoles: (...requestedRoles: string[]) =>
+      requestedRoles.every((role) => mockedCurrentUser.roles.includes(role)),
+    hasAnyRole: (...requestedRoles: string[]) =>
+      requestedRoles.some((role) => mockedCurrentUser.roles.includes(role)),
+    data: mockedCurrentUser.ready
+      ? {
+          organization:
+            mockedCurrentUser.organizationId === 0
+              ? null
+              : { organizationId: mockedCurrentUser.organizationId }
+        }
+      : undefined,
+    isLoading: !mockedCurrentUser.ready
+  })
+}))
 
 describe('useComplianceReports', () => {
-  const mockGet = vi.fn()
-  const mockPost = vi.fn()
-  const mockDelete = vi.fn()
+  const mockGet = vi.fn(
+    (_url: string, _config?: unknown): Promise<{ data: unknown }> =>
+      Promise.resolve({ data: undefined })
+  )
+  const mockPost = vi.fn(
+    (_url: string, _data?: unknown): Promise<{ data: unknown }> =>
+      Promise.resolve({ data: undefined })
+  )
+  const mockDelete = vi.fn(
+    (_url: string, _config?: unknown): Promise<{ data: unknown }> =>
+      Promise.resolve({ data: undefined })
+  )
+  const mockApiClient = Object.assign(axios.create(), {
+    get: mockGet,
+    post: mockPost,
+    delete: mockDelete,
+    download: async () => undefined
+  })
 
   beforeEach(async () => {
     vi.clearAllMocks()
-    vi.mocked(useApiService).mockReturnValue({
-      get: mockGet,
-      post: mockPost,
-      delete: mockDelete
-    })
+    vi.mocked(useApiService).mockReturnValue(mockApiClient)
 
-    // Mock useCurrentUser for hooks that depend on it
-    const { useCurrentUser } = await import('../useCurrentUser')
-    vi.mocked(useCurrentUser).mockReturnValue({
-      hasRoles: vi.fn(() => false),
-      data: { organization: { organizationId: 1 } },
-      isLoading: false
-    })
+    mockedCurrentUser.ready = true
+    mockedCurrentUser.organizationId = 1
+    mockedCurrentUser.roles = []
   })
 
   afterEach(() => {
@@ -103,7 +134,10 @@ describe('useComplianceReports', () => {
       renderHook,
       query
     }) => {
-      const { result } = renderHook(() => useListComplianceReports(), [query])
+      const { result } = renderHook(
+        () => useListComplianceReports(undefined),
+        [query]
+      )
 
       expect(result.current.isLoading).toBe(false)
       expect(mockPost).not.toHaveBeenCalled()
@@ -187,13 +221,11 @@ describe('useComplianceReports', () => {
   describe('useComplianceReportWithCache', () => {
     const report = { report: { complianceReportId: 1 } }
 
-    const mockCurrentUser = async (data) => {
-      const { useCurrentUser } = await import('../useCurrentUser')
-      vi.mocked(useCurrentUser).mockReturnValue({
-        hasRoles: vi.fn(() => false),
-        data,
-        isLoading: !data
-      })
+    const mockCurrentUser = async (
+      organizationId: number | null | undefined
+    ) => {
+      mockedCurrentUser.ready = organizationId !== undefined
+      mockedCurrentUser.organizationId = organizationId ?? 0
     }
 
     beforeEach(() => {
@@ -208,7 +240,7 @@ describe('useComplianceReports', () => {
       renderHook,
       query
     }) => {
-      await mockCurrentUser({ organization: null })
+      await mockCurrentUser(null)
       mockGet.mockResolvedValue({ data: report })
 
       const { result } = renderHook(
@@ -227,7 +259,7 @@ describe('useComplianceReports', () => {
       renderHook,
       query
     }) => {
-      await mockCurrentUser({ organization: { organizationId: 7 } })
+      await mockCurrentUser(7)
       mockGet.mockResolvedValue({ data: report })
 
       const { result } = renderHook(
@@ -261,7 +293,7 @@ describe('useComplianceReports', () => {
       renderHook,
       query
     }) => {
-      await mockCurrentUser({ organization: null })
+      await mockCurrentUser(null)
       useComplianceReportStore.setState({ reportCache: new Map([[1, report]]) })
 
       const { result } = renderHook(
@@ -338,15 +370,7 @@ describe('useComplianceReports', () => {
       }
       mockPost.mockResolvedValue({ data: mockData })
 
-      const { useCurrentUser } = await import('../useCurrentUser')
-      vi.mocked(useCurrentUser).mockReturnValue({
-        hasRoles: vi.fn((...requestedRoles) =>
-          requestedRoles.includes(roles.government)
-        ),
-        hasAnyRole: vi.fn(() => false),
-        data: { organization: { organizationId: 1 } },
-        isLoading: false
-      })
+      mockedCurrentUser.roles = [roles.government]
 
       const { result } = renderHook(() => useGetComplianceReportList(), [query])
 
@@ -373,15 +397,7 @@ describe('useComplianceReports', () => {
       }
       mockPost.mockResolvedValue({ data: mockData })
 
-      const { useCurrentUser } = await import('../useCurrentUser')
-      vi.mocked(useCurrentUser).mockReturnValue({
-        hasRoles: vi.fn(() => false),
-        hasAnyRole: vi.fn((...requestedRoles) =>
-          requestedRoles.includes(roles.compliance_reporting)
-        ),
-        data: { organization: { organizationId: 1 } },
-        isLoading: false
-      })
+      mockedCurrentUser.roles = [roles.compliance_reporting]
 
       const { result } = renderHook(() => useGetComplianceReportList(), [query])
 
@@ -408,15 +424,7 @@ describe('useComplianceReports', () => {
       }
       mockPost.mockResolvedValue({ data: mockData })
 
-      const { useCurrentUser } = await import('../useCurrentUser')
-      vi.mocked(useCurrentUser).mockReturnValue({
-        hasRoles: vi.fn(() => false),
-        hasAnyRole: vi.fn((...requestedRoles) =>
-          requestedRoles.includes(roles.signing_authority)
-        ),
-        data: { organization: { organizationId: 1 } },
-        isLoading: false
-      })
+      mockedCurrentUser.roles = [roles.signing_authority]
 
       const { result } = renderHook(() => useGetComplianceReportList(), [query])
 

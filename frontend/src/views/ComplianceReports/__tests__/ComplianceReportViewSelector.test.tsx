@@ -1,17 +1,18 @@
 import 'react'
 import { screen, waitFor } from '@testing-library/react'
 import { describe, expect, beforeEach, vi } from 'vite-plus/test'
-import { ComplianceReportViewSelector } from '../ComplianceReportViewSelector.jsx'
+import { ComplianceReportViewSelector } from '../ComplianceReportViewSelector'
 import '@/hooks/useComplianceReports'
 import '@/hooks/useCurrentUser'
 import { test } from '@/tests/utils/fixtures'
 
 // Create mock functions at the top level
-const mockUseParams = vi.fn()
-const mockUseLocation = vi.fn()
-const mockUseQueryClient = vi.fn()
-const mockUseGetComplianceReport = vi.fn()
-const mockUseCurrentUser = vi.fn()
+const mockUseParams = vi.fn<() => { complianceReportId?: string }>()
+const mockUseLocation = vi.fn<() => { state: unknown }>()
+const mockUseQueryClient =
+  vi.fn<() => { invalidateQueries: ReturnType<typeof vi.fn> }>()
+const mockUseGetComplianceReport = vi.fn<(...args: unknown[]) => unknown>()
+const mockUseCurrentUser = vi.fn<() => unknown>()
 
 // Mock all external dependencies
 vi.mock('react-router-dom', () => ({
@@ -30,7 +31,8 @@ vi.mock('@tanstack/react-query', () => ({
 }))
 
 vi.mock('@/hooks/useComplianceReports.js', () => ({
-  useGetComplianceReport: (...args) => mockUseGetComplianceReport(...args)
+  useGetComplianceReport: (...args: unknown[]) =>
+    mockUseGetComplianceReport(...args)
 }))
 
 vi.mock('@/hooks/useCurrentUser.js', () => ({
@@ -43,8 +45,16 @@ vi.mock('@/components/Loading', () => ({
 
 // Legacy view mock removed - all reports now use EditViewComplianceReport
 
-vi.mock('@/views/ComplianceReports/EditViewComplianceReport.jsx', () => ({
-  EditViewComplianceReport: ({ reportData, error, isError }) => (
+vi.mock('@/views/ComplianceReports/EditViewComplianceReport', () => ({
+  EditViewComplianceReport: ({
+    reportData,
+    error,
+    isError
+  }: {
+    reportData: unknown
+    error: unknown
+    isError: boolean
+  }) => (
     <div data-test="edit-report">
       EditViewComplianceReport -{' '}
       {JSON.stringify({ reportData, error, isError })}
@@ -81,7 +91,7 @@ describe('ComplianceReportViewSelector', () => {
     },
     isLoading: false,
     isError: false,
-    error: null,
+    error: null as { message: string } | null,
     refetch: mockRefetch
   }
 
@@ -103,6 +113,13 @@ describe('ComplianceReportViewSelector', () => {
     locationState = null,
     isError = false,
     error = null
+  }: {
+    currentUser?: typeof defaultCurrentUser | { data: null; isLoading: boolean }
+    reportData?: Partial<typeof defaultReportData>
+    complianceReportId?: string
+    locationState?: unknown
+    isError?: boolean
+    error?: { message: string } | null
   } = {}) => {
     mockUseCurrentUser.mockReturnValue(currentUser)
     mockUseGetComplianceReport.mockReturnValue({
@@ -319,6 +336,7 @@ describe('ComplianceReportViewSelector', () => {
         reportData: {
           data: {
             report: {
+              id: 'report-123',
               compliancePeriod: { description: '2024' },
               currentStatus: { status: 'DRAFT' }
             }
@@ -428,10 +446,9 @@ describe('ComplianceReportViewSelector', () => {
 
       render(<ComplianceReportViewSelector />, [theme, localization, router])
 
-      expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith([
-        'compliance-report',
-        'test-report-id'
-      ])
+      expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith({
+        queryKey: ['compliance-report', 'test-report-id']
+      })
       expect(mockRefetch).toHaveBeenCalled()
     })
 
@@ -563,6 +580,7 @@ describe('ComplianceReportViewSelector', () => {
         reportData: {
           data: {
             report: {
+              id: 'report-123',
               compliancePeriod: { description: '2024' },
               currentStatus: { status: 'DRAFT' }
             }

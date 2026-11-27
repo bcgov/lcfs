@@ -1,4 +1,5 @@
 import { waitFor } from '@testing-library/react'
+import axios from 'axios'
 import { beforeEach, describe, expect, vi } from 'vite-plus/test'
 import {
   useGetCompliancePeriodList,
@@ -9,17 +10,28 @@ import {
 import { useApiService } from '@/services/useApiService'
 import { test } from '@/tests/utils/fixtures'
 
+interface MockFuelType {
+  id: number
+  name: string
+  category: string
+}
+
 vi.mock('@/services/useApiService')
 vi.mock('@/constants/common', () => ({
   LEGISLATION_TRANSITION_YEAR: 2023
 }))
 
 describe('useGetCompliancePeriodList', () => {
-  const mockGet = vi.fn()
+  const mockGet =
+    vi.fn<(url: string, config?: unknown) => Promise<{ data: unknown }>>()
+  const mockApiClient = Object.assign(axios.create(), {
+    get: mockGet,
+    download: async () => undefined
+  })
 
   beforeEach(() => {
     vi.resetAllMocks()
-    vi.mocked(useApiService).mockReturnValue({ get: mockGet })
+    vi.mocked(useApiService).mockReturnValue(mockApiClient)
   })
 
   test('should fetch compliance period list successfully', async ({
@@ -36,7 +48,7 @@ describe('useGetCompliancePeriodList', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
-    expect(result.current.data.data).toEqual(mockData)
+    expect(result.current.data?.data).toEqual(mockData)
     expect(mockGet).toHaveBeenCalledWith(expect.any(String))
   })
 
@@ -58,7 +70,7 @@ describe('useGetCompliancePeriodList', () => {
   })
 
   test('should pass through custom options', async ({ renderHook, query }) => {
-    const mockData = []
+    const mockData: Array<{ year: number; description: string }> = []
     mockGet.mockResolvedValueOnce({ data: mockData })
 
     const customOptions = {
@@ -78,11 +90,16 @@ describe('useGetCompliancePeriodList', () => {
 })
 
 describe('useGetFuelTypeList', () => {
-  const mockGet = vi.fn()
+  const mockGet =
+    vi.fn<(url: string, config?: unknown) => Promise<{ data: unknown }>>()
+  const mockApiClient = Object.assign(axios.create(), {
+    get: mockGet,
+    download: async () => undefined
+  })
 
   beforeEach(() => {
     vi.resetAllMocks()
-    vi.mocked(useApiService).mockReturnValue({ get: mockGet })
+    vi.mocked(useApiService).mockReturnValue(mockApiClient)
   })
 
   test('should fetch fuel type list successfully', async ({
@@ -105,7 +122,7 @@ describe('useGetFuelTypeList', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
-    expect(result.current.data.data).toEqual(mockData)
+    expect(result.current.data?.data).toEqual(mockData)
     expect(mockGet).toHaveBeenCalledWith(expect.stringContaining('2024'), {
       params: {
         fuel_category: 'gasoline',
@@ -166,7 +183,7 @@ describe('useGetFuelTypeList', () => {
     renderHook,
     query
   }) => {
-    const mockData = []
+    const mockData: MockFuelType[] = []
     mockGet.mockResolvedValueOnce({ data: mockData })
 
     const params = {
@@ -189,7 +206,7 @@ describe('useGetFuelTypeList', () => {
     renderHook,
     query
   }) => {
-    const mockData = []
+    const mockData: MockFuelType[] = []
     mockGet.mockResolvedValueOnce({ data: mockData })
 
     const params = {
@@ -212,11 +229,16 @@ describe('useGetFuelTypeList', () => {
 })
 
 describe('useGetFuelTypeOptions', () => {
-  const mockGet = vi.fn()
+  const mockGet =
+    vi.fn<(url: string, config?: unknown) => Promise<{ data: unknown }>>()
+  const mockApiClient = Object.assign(axios.create(), {
+    get: mockGet,
+    download: async () => undefined
+  })
 
   beforeEach(() => {
     vi.resetAllMocks()
-    vi.mocked(useApiService).mockReturnValue({ get: mockGet })
+    vi.mocked(useApiService).mockReturnValue(mockApiClient)
   })
 
   test('should fetch fuel type options successfully', async ({
@@ -242,7 +264,7 @@ describe('useGetFuelTypeOptions', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
-    expect(result.current.data.data).toEqual(mockData)
+    expect(result.current.data?.data).toEqual(mockData)
     expect(mockGet).toHaveBeenCalledWith(expect.stringContaining('2024'), {
       params: {
         fuel_type_id: '1',
@@ -305,11 +327,16 @@ describe('useGetFuelTypeOptions', () => {
 })
 
 describe('useCalculateComplianceUnits', () => {
-  const mockGet = vi.fn()
+  const mockGet =
+    vi.fn<(url: string, config?: unknown) => Promise<{ data: unknown }>>()
+  const mockApiClient = Object.assign(axios.create(), {
+    get: mockGet,
+    download: async () => undefined
+  })
 
   beforeEach(() => {
     vi.resetAllMocks()
-    vi.mocked(useApiService).mockReturnValue({ get: mockGet })
+    vi.mocked(useApiService).mockReturnValue(mockApiClient)
   })
 
   test('should calculate compliance units successfully', async ({
@@ -340,7 +367,7 @@ describe('useCalculateComplianceUnits', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
-    expect(result.current.data.data).toEqual(mockData)
+    expect(result.current.data?.data).toEqual(mockData)
     expect(mockGet).toHaveBeenCalledWith(expect.stringContaining('2024'), {
       params: expect.objectContaining({
         fuelCategoryId: '1',
@@ -377,7 +404,7 @@ describe('useCalculateComplianceUnits', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
-    expect(result.current.data.data).toEqual(mockData)
+    expect(result.current.data?.data).toEqual(mockData)
   })
 
   test('should not fetch when required parameters are missing', ({
@@ -580,7 +607,7 @@ describe('useCalculateComplianceUnits', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
-    expect(result.current.data.data).toEqual(mockData)
+    expect(result.current.data?.data).toEqual(mockData)
     expect(mockGet).toHaveBeenCalledWith(
       expect.any(String),
       expect.objectContaining({

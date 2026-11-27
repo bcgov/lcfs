@@ -15,9 +15,15 @@ const DEFAULT_CACHE_TIME = 10 * 60 * 1000 // 10 minutes
 const BALANCE_STALE_TIME = 2 * 60 * 1000 // 2 minutes (more frequent updates for financial data)
 const USER_DATA_STALE_TIME = 10 * 60 * 1000 // 10 minutes (user data changes less frequently)
 
+export interface OrganizationData {
+  organizationId?: number | string
+  name?: string
+  [key: string]: unknown
+}
+
 export const useOrganization = (
   orgID: number | string | undefined | null,
-  options: QueryOptions<unknown> = {}
+  options: QueryOptions<OrganizationData> = {}
 ) => {
   const client = useApiService()
   const { data: currentUser } = useCurrentUser()
@@ -30,7 +36,7 @@ export const useOrganization = (
     ...restOptions
   } = options
 
-  return useQuery({
+  return useQuery<OrganizationData>({
     queryKey: ['organization', id],
     queryFn: async () => {
       if (!id) {

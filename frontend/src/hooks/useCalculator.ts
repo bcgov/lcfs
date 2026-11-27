@@ -3,12 +3,48 @@ import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { useQuery } from '@tanstack/react-query'
 import type { QueryOptions } from './types'
+import type { AxiosResponse } from 'axios'
 
-export const useGetCompliancePeriodList = (options: QueryOptions<unknown>) => {
+interface CalculatorPeriod {
+  compliancePeriodId: number
+  description: string
+}
+
+interface CalculatorFuelType {
+  fuelTypeId: number
+  fuelType: string
+  fuelCategoryId?: number
+}
+
+interface CalculatorFuelTypeOptions {
+  unit?: string
+  energyDensity?: { unit?: { name?: string } }
+  provisions?: Array<{ name: string }>
+  eerRatios?: Array<{
+    endUseType?: { type: string; endUseTypeId: number } | null
+  }>
+  fuelCodes?: Array<{ fuelCode: string; fuelCodeId: number }>
+}
+
+export interface CalculatorResult {
+  complianceUnits?: number
+  quantity?: number
+  energyContent?: number
+  tci?: number | null
+  eer?: number | null
+  rci?: number | null
+  uci?: number | null
+  energyDensity?: number | null
+}
+
+export const useGetCompliancePeriodList = (
+  options: QueryOptions<AxiosResponse<CalculatorPeriod[]>> = {}
+) => {
   const client = useApiService()
   return useQuery({
     queryKey: ['calculator-compliance-periods'],
-    queryFn: () => client.get(apiRoutes.getCalculatorCompliancePeriods),
+    queryFn: () =>
+      client.get<CalculatorPeriod[]>(apiRoutes.getCalculatorCompliancePeriods),
     staleTime: 60 * 60 * 1000,
     gcTime: 60 * 60 * 1000, // 1 hour
     refetchInterval: 10 * 60 * 1000,
@@ -21,7 +57,7 @@ export const useGetFuelTypeList = (params: Record<string, unknown>) => {
   return useQuery({
     queryKey: ['calculator-fuel-types', params],
     queryFn: () =>
-      client.get(
+      client.get<CalculatorFuelType[]>(
         apiRoutes.getCalculatorFuelTypes.replace(
           ':complianceYear',
           params.complianceYear as string
@@ -43,7 +79,7 @@ export const useGetFuelTypeOptions = (params: Record<string, unknown>) => {
   return useQuery({
     queryKey: ['calculator-fuel-type-options', params],
     queryFn: () =>
-      client.get(
+      client.get<CalculatorFuelTypeOptions>(
         apiRoutes.getCalculatorFuelTypeOptions.replace(
           ':complianceYear',
           params.complianceYear as string
@@ -73,13 +109,13 @@ export const useCalculateComplianceUnits = ({
   enabled = true
 }: {
   compliancePeriod: string | number
-  fuelCategoryId: string | number
-  fuelTypeId: string | number
+  fuelCategoryId?: string | number
+  fuelTypeId?: string | number
   endUseId?: string | number | null
-  quantity: number
+  quantity: number | null
   fuelCodeId?: string | number | null
   useCustomCi?: boolean
-  customCiValue?: number | null
+  customCiValue?: string | number | null
   enabled?: boolean
 }) => {
   const client = useApiService()
@@ -96,7 +132,7 @@ export const useCalculateComplianceUnits = ({
       customCiValue
     ],
     queryFn: () =>
-      client.get(
+      client.get<CalculatorResult>(
         apiRoutes.getCalculatedComplianceUnits.replace(
           ':complianceYear',
           compliancePeriod as string
@@ -139,13 +175,13 @@ export const useCalculateQuantityFromComplianceUnits = ({
   enabled = true
 }: {
   compliancePeriod: string | number
-  fuelCategoryId: string | number
-  fuelTypeId: string | number
+  fuelCategoryId?: string | number
+  fuelTypeId?: string | number
   endUseId?: string | number | null
   complianceUnits: number
   fuelCodeId?: string | number | null
   useCustomCi?: boolean
-  customCiValue?: number | null
+  customCiValue?: string | number | null
   enabled?: boolean
 }) => {
   const client = useApiService()
@@ -162,7 +198,7 @@ export const useCalculateQuantityFromComplianceUnits = ({
       customCiValue
     ],
     queryFn: () =>
-      client.get(
+      client.get<CalculatorResult>(
         apiRoutes.getCalculatorQuantityFromComplianceUnits.replace(
           ':complianceYear',
           compliancePeriod as string

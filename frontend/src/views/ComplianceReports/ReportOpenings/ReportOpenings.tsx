@@ -14,10 +14,18 @@ import {
   useReportOpenings,
   useUpdateReportOpenings
 } from '@/hooks/useReportOpenings'
+import type { ReportOpening } from '@/hooks/useReportOpenings'
 import { FloatingAlert } from '@/components/BCAlert'
 import BCModal from '@/components/BCModal'
+import type { TableCellProps } from '@mui/material/TableCell'
+import type { FloatingAlertHandle } from '@/components/BCAlert/FloatingAlert'
 
-const buildRowState = (records = []) => ({
+interface RowState {
+  rows: ReportOpening[]
+  lookup: Record<number, ReportOpening>
+}
+
+const buildRowState = (records: ReportOpening[] = []): RowState => ({
   rows: records
     .slice()
     .sort((a, b) => a.complianceYear - b.complianceYear)
@@ -27,13 +35,13 @@ const buildRowState = (records = []) => ({
       earlyIssuanceEnabled: record.earlyIssuanceEnabled,
       createSupplementalEnabled: record.createSupplementalEnabled
     })),
-  lookup: records.reduce((acc, record) => {
+  lookup: records.reduce<Record<number, ReportOpening>>((acc, record) => {
     acc[record.complianceYear] = record
     return acc
   }, {})
 })
 
-const CustomTableCell = ({ children, ...props }) => {
+const CustomTableCell = ({ children, ...props }: TableCellProps) => {
   return (
     <TableCell
       align="center"
@@ -52,10 +60,10 @@ const CustomTableCell = ({ children, ...props }) => {
 
 export const ReportOpenings = () => {
   const { t } = useTranslation(['reports'])
-  const alertRef = useRef(null)
+  const alertRef = useRef<FloatingAlertHandle>(null)
   const { data, isLoading } = useReportOpenings()
   const updateMutation = useUpdateReportOpenings()
-  const [rowState, setRowState] = useState({ rows: [], lookup: {} })
+  const [rowState, setRowState] = useState<RowState>({ rows: [], lookup: {} })
   const [confirmSaveOpen, setConfirmSaveOpen] = useState(false)
   const currentYear = new Date().getFullYear()
 
@@ -87,7 +95,7 @@ export const ReportOpenings = () => {
   const hasChanges = dirtyRows.length > 0
   const saving = updateMutation.isPending
 
-  const handleComplianceToggle = (year) => {
+  const handleComplianceToggle = (year: number) => {
     setRowState((prev) => ({
       ...prev,
       rows: prev.rows.map((row) =>
@@ -101,7 +109,7 @@ export const ReportOpenings = () => {
     }))
   }
 
-  const handleEarlyIssuanceToggle = (year) => {
+  const handleEarlyIssuanceToggle = (year: number) => {
     if (year !== currentYear) {
       return
     }
@@ -119,7 +127,7 @@ export const ReportOpenings = () => {
     }))
   }
 
-  const handleSupplementalToggle = (year) => {
+  const handleSupplementalToggle = (year: number) => {
     setRowState((prev) => ({
       ...prev,
       rows: prev.rows.map((row) =>

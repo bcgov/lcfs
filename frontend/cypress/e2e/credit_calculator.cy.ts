@@ -105,7 +105,10 @@ const calculationDataDescription = [
   'The example calculations generated from these inputs are for illustrative purposes only and do not represent an official compliance assessment or compliance unit balance. Official compliance outcomes are determined through reporting and assessment processes under the Low Carbon Fuels Act and associated regulations.'
 ]
 
-const assertDescription = (paragraphs, nextContentSelector) => {
+const assertDescription = (
+  paragraphs: readonly string[],
+  nextContentSelector: string
+) => {
   cy.getByDataTest('public-calculator-description')
     .should('be.visible')
     .within(() => {
@@ -116,6 +119,9 @@ const assertDescription = (paragraphs, nextContentSelector) => {
   cy.getByDataTest('public-calculator-description').then(($description) => {
     const nextContent =
       $description[0].ownerDocument.querySelector(nextContentSelector)
+    if (!nextContent) {
+      throw new Error(`Expected following content: ${nextContentSelector}`)
+    }
     expect(
       $description[0].compareDocumentPosition(nextContent) &
         Node.DOCUMENT_POSITION_FOLLOWING
@@ -123,7 +129,7 @@ const assertDescription = (paragraphs, nextContentSelector) => {
   })
 }
 
-const checkDescriptionAccessibility = () => {
+const checkDescriptionAccessibility = (): void => {
   cy.injectAxe()
   cy.checkA11y('[data-test="public-calculator-description"]', {
     runOnly: {
@@ -137,7 +143,7 @@ const checkDescriptionAccessibility = () => {
 
 // `pathname` regexes match the request path only (ignoring the `/api` base
 // prefix and any query string), so they are robust to CONFIG.API_BASE.
-const stubCalculatorApi = () => {
+const stubCalculatorApi = (): void => {
   cy.intercept(
     { method: 'GET', pathname: /\/calculator\/compliance-periods$/ },
     { body: compliancePeriodsFixture }
@@ -173,7 +179,7 @@ const stubCalculatorApi = () => {
 
 // Drive the cascading selections up to the point where end use + provision
 // auto-select and the calculator is ready to compute.
-const selectDieselBiodiesel = () => {
+const selectDieselBiodiesel = (): void => {
   cy.get('input[type="radio"][value="Diesel"]').check({ force: true })
   cy.wait('@fuelTypes')
   cy.get('input[type="radio"][value="Biodiesel"]', { timeout: 15000 })

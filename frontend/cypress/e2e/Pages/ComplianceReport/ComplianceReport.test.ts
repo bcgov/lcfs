@@ -1,6 +1,93 @@
 /* oxlint-disable cypress/unsafe-to-chain-command */
 import { Given, When, Then } from '@badeball/cypress-cucumber-preprocessor'
 
+interface StepDataTable {
+  hashes<T = Record<string, string>>(): T[]
+}
+
+interface ScheduleStep {
+  scheduleLabel: string
+  dataFilePath: string
+}
+
+interface FuelSupplyRow {
+  fuelType: string
+  fuelTypeOther?: string
+  fuelCategory?: string
+  inputFuelCategory?: string
+  endUseType?: string
+  provisionOfTheAct: string
+  fuelCode?: string
+  inputEnergyDensity?: number
+  quantity: number
+  units: string
+  complianceUnits: number
+  targetCi: number
+  ciOfFuel: number
+  energyDensity: number
+  eer: number
+  energy: number
+}
+
+interface FinalSupplyEquipmentRow {
+  organizationName: string
+  supplyFromDate: string
+  supplyToDate: string
+  kwhUsage: number
+  serialNbr: string
+  manufacturer: string
+  model: string
+  levelOfEquipment: string
+  ports: string
+  intendedUseTypes: Array<{ type: string }>
+  intendedUserTypes: Array<{ typeName: string }>
+  streetAddress: string
+  city: string
+  postalCode: string
+  latitude: number
+  longitude: number
+}
+
+interface AllocationAgreementRow {
+  allocationTransactionType: string
+  transactionPartner: string
+  postalAddress: string
+  transactionPartnerEmail: string
+  transactionPartnerPhone: string
+  fuelType: string
+  ciOfFuel: number
+  provisionOfTheAct: string
+  quantity: number
+  units: string
+  fuelCategory: string
+}
+
+interface NotionalTransferRow {
+  legalName: string
+  addressForService: string
+  fuelCategory: string
+  receivedOrTransferred: string
+  quantity: number
+}
+
+interface OtherUseRow {
+  fuelType: string
+  fuelCategory: string
+  provisionOfTheAct: string
+  quantitySupplied: number
+  units: string
+  expectedUse: string
+  ciOfFuel: number
+}
+
+interface ScheduleFixture {
+  fuelSupplies?: FuelSupplyRow[]
+  finalSupplyEquipments?: FinalSupplyEquipmentRow[]
+  allocationAgreements?: AllocationAgreementRow[]
+  notionalTransfers?: NotionalTransferRow[]
+  otherUses?: OtherUseRow[]
+}
+
 const currentComplianceYear = (new Date().getFullYear() - 1).toString()
 
 // Consolidated selectors for better maintainability
@@ -36,22 +123,32 @@ const SELECTORS = {
 }
 
 // Enhanced custom commands
-Cypress.Commands.add('waitAndClick', (selector, options = {}) => {
-  return cy
-    .get(selector, { timeout: 10000, ...options })
-    .should('be.visible')
-    .click(options)
-})
+Cypress.Commands.add(
+  'waitAndClick',
+  (selector: string, options: Partial<Cypress.ClickOptions> = {}) => {
+    return cy
+      .get(selector, { timeout: 10000, ...options })
+      .should('be.visible')
+      .click(options)
+  }
+)
 
-Cypress.Commands.add('waitAndType', (selector, text, options = {}) => {
-  return cy
-    .get(selector, { timeout: 10000 })
-    .should('be.visible')
-    .type(text, options)
-})
+Cypress.Commands.add(
+  'waitAndType',
+  (
+    selector: string,
+    text: string,
+    options: Partial<Cypress.TypeOptions> = {}
+  ) => {
+    return cy
+      .get(selector, { timeout: 10000 })
+      .should('be.visible')
+      .type(text, options)
+  }
+)
 
 // Added page refresh function with waiting after schedule data entry
-Cypress.Commands.add('refreshPageAndWait', (waitTime = 5000) => {
+Cypress.Commands.add('refreshPageAndWait', (waitTime: number = 5000) => {
   cy.reload()
   cy.wait(waitTime)
   cy.log('Page refreshed and waited for ' + waitTime + 'ms')
@@ -99,26 +196,29 @@ When('the supplier creates a new compliance report', () => {
   cy.get('[data-test="compliance-report-intro"]').should('be.visible')
 })
 
-When('the supplier navigates to the fuel supply page', (dataTable) => {
-  cy.waitAndClick(SELECTORS.supplyOfFuelButton)
-  cy.contains('.MuiTypography-h5', 'Supply of fuel').should('be.visible')
+When(
+  'the supplier navigates to the fuel supply page',
+  (dataTable?: StepDataTable) => {
+    cy.waitAndClick(SELECTORS.supplyOfFuelButton)
+    cy.contains('.MuiTypography-h5', 'Supply of fuel').should('be.visible')
 
-  // Store data from table if provided
-  if (dataTable) {
-    cy.wrap(dataTable.hashes()).as('fuelSupplyData')
+    // Store data from table if provided
+    if (dataTable) {
+      cy.wrap(dataTable.hashes()).as('fuelSupplyData')
+    }
+
+    cy.contains('.MuiTypography-h5', 'Supply of fuel').should('be.visible')
   }
-
-  cy.contains('.MuiTypography-h5', 'Supply of fuel').should('be.visible')
-})
+)
 
 When(
   'the supplier navigates to the fuel supply page with data from file {string}',
-  (filePath) => {
+  (filePath: string) => {
     cy.waitAndClick(SELECTORS.supplyOfFuelButton)
     cy.wait(2000)
 
     // Read and store data from JSON file
-    cy.readFile(filePath).then((jsonData) => {
+    cy.readFile<ScheduleFixture>(filePath).then((jsonData) => {
       cy.wrap(jsonData).as('fuelSupplyData')
     })
 
@@ -160,147 +260,159 @@ When('the supplier enters a valid fuel supply row', () => {
 
 When(
   'the supplier starts entering data into each schedules',
-  (dataTable, asTestCase = false) => {
-    const schedules = dataTable.hashes()
+  (dataTable: StepDataTable, asTestCase: boolean = false) => {
+    const schedules = dataTable.hashes<ScheduleStep>()
 
     // Process each schedule one by one
-    cy.wrap(schedules).each((schedule) => {
-      const { scheduleLabel, dataFilePath } = schedule
+    cy.wrap<ScheduleStep[]>(schedules).each(
+      (schedule: ScheduleStep, _index: number) => {
+        const { scheduleLabel, dataFilePath } = schedule
 
-      // Navigate to the specific schedule
-      cy.waitAndClick(`[data-test="${scheduleLabel}"]`)
-      cy.wait(2000)
+        // Navigate to the specific schedule
+        cy.waitAndClick(`[data-test="${scheduleLabel}"]`)
+        cy.wait(2000)
 
-      // Load data from the corresponding file
-      if (dataFilePath) {
-        cy.log(`Loading fixture from: ${dataFilePath}`)
-        cy.fixture(dataFilePath).then((jsonData) => {
-          cy.wrap(jsonData).as('scheduleData')
+        // Load data from the corresponding file
+        if (dataFilePath) {
+          cy.log(`Loading fixture from: ${dataFilePath}`)
+          cy.fixture<ScheduleFixture>(dataFilePath).then((jsonData) => {
+            cy.wrap(jsonData).as('scheduleData')
 
-          // Process the grid based on the schedule type
-          cy.get(SELECTORS.agGridRoot).should('be.visible')
-          cy.wait(500)
+            // Process the grid based on the schedule type
+            cy.get(SELECTORS.agGridRoot).should('be.visible')
+            cy.wait(500)
 
-          // Call the appropriate data entry function based on schedule type
-          switch (scheduleLabel) {
-            case 'Supply of fuel':
-              enterFuelSupplyData(jsonData, asTestCase)
-              break
-            case 'FSE':
-              enterFSEData(jsonData)
-              break
-            case 'Allocation agreements':
-              enterAllocationData(jsonData)
-              break
-            case 'Notional transfers':
-              enterNotionalTransferData(jsonData)
-              break
-            case 'Fuels for other use':
-              enterFuelsForOtherUseData(jsonData)
-              cy.realPress('Enter')
-              break
-            default:
-              cy.log(`No specific handler for ${scheduleLabel}`)
-          }
-          // Save and return to report view page
-          cy.waitAndClick(SELECTORS.saveButton)
-        })
+            // Call the appropriate data entry function based on schedule type
+            switch (scheduleLabel) {
+              case 'Supply of fuel':
+                enterFuelSupplyData(jsonData, asTestCase)
+                break
+              case 'FSE':
+                enterFSEData(jsonData)
+                break
+              case 'Allocation agreements':
+                enterAllocationData(jsonData)
+                break
+              case 'Notional transfers':
+                enterNotionalTransferData(jsonData)
+                break
+              case 'Fuels for other use':
+                enterFuelsForOtherUseData(jsonData)
+                cy.realPress('Enter')
+                break
+              default:
+                cy.log(`No specific handler for ${scheduleLabel}`)
+            }
+            // Save and return to report view page
+            cy.waitAndClick(SELECTORS.saveButton)
+          })
+        }
       }
-    })
+    )
   }
 )
 
 // Optimized helper function for fuel supply data entry
-function enterFuelSupplyData(data, asTestCase = false) {
-  const { fuelSupplies } = data
+function enterFuelSupplyData(data: ScheduleFixture, asTestCase = false) {
+  const fuelSupplies = data.fuelSupplies!
 
   // For each fuel supply entry in the JSON
-  cy.wrap(fuelSupplies).each((row, index) => {
-    // Set fuel type using optimized selector
+  cy.wrap<FuelSupplyRow[]>(fuelSupplies).each(
+    (row: FuelSupplyRow, index: number) => {
+      // Set fuel type using optimized selector
 
-    cy.inputTextWithRetry('div.ag-cell[col-id="fuelType"]', row.fuelType, index)
-
-    if (row.fuelTypeOther) {
       cy.inputTextWithRetry(
-        'div.ag-cell[col-id="fuelTypeOther"]',
-        row.fuelTypeOther,
+        'div.ag-cell[col-id="fuelType"]',
+        row.fuelType,
         index
       )
-      cy.wait(1000)
-    }
 
-    if (row.inputFuelCategory) {
+      if (row.fuelTypeOther) {
+        cy.inputTextWithRetry(
+          'div.ag-cell[col-id="fuelTypeOther"]',
+          row.fuelTypeOther,
+          index
+        )
+        cy.wait(1000)
+      }
+
+      if (row.inputFuelCategory) {
+        cy.inputTextWithRetry(
+          'div.ag-cell[col-id="fuelCategory"]',
+          row.inputFuelCategory,
+          index
+        )
+      }
+
+      // Set end use type if it's a field that can be edited
+      if (row.endUseType && row.endUseType !== 'Any') {
+        cy.inputTextWithRetry(
+          'div.ag-cell[col-id="endUseType"]',
+          row.endUseType,
+          index
+        )
+      }
+
+      // Set provision of the act using the retry command
       cy.inputTextWithRetry(
-        'div.ag-cell[col-id="fuelCategory"]',
-        row.inputFuelCategory,
+        'div.ag-cell[col-id="provisionOfTheAct"]',
+        row.provisionOfTheAct,
         index
       )
-    }
 
-    // Set end use type if it's a field that can be edited
-    if (row.endUseType && row.endUseType !== 'Any') {
+      if (row.fuelCode) {
+        cy.inputTextWithRetry(
+          'div.ag-cell[col-id="fuelCode"]',
+          row.fuelCode,
+          index
+        )
+      }
+
+      if (row.inputEnergyDensity) {
+        cy.wait(1000)
+        cy.inputTextWithRetry(
+          'div.ag-cell[col-id="energyDensity"]',
+          row.inputEnergyDensity,
+          index
+        )
+        cy.wait(1000)
+      }
+
+      // Set quantity
       cy.inputTextWithRetry(
-        'div.ag-cell[col-id="endUseType"]',
-        row.endUseType,
+        'div.ag-cell[col-id="quantity"]',
+        row.quantity,
         index
       )
-    }
 
-    // Set provision of the act using the retry command
-    cy.inputTextWithRetry(
-      'div.ag-cell[col-id="provisionOfTheAct"]',
-      row.provisionOfTheAct,
-      index
-    )
+      // Verify success message after each row is entered
+      cy.contains('Row updated successfully.').should('be.visible')
 
-    if (row.fuelCode) {
-      cy.inputTextWithRetry(
-        'div.ag-cell[col-id="fuelCode"]',
-        row.fuelCode,
-        index
-      )
-    }
-
-    if (row.inputEnergyDensity) {
-      cy.wait(1000)
-      cy.inputTextWithRetry(
-        'div.ag-cell[col-id="energyDensity"]',
-        row.inputEnergyDensity,
-        index
-      )
-      cy.wait(1000)
-    }
-
-    // Set quantity
-    cy.inputTextWithRetry('div.ag-cell[col-id="quantity"]', row.quantity, index)
-
-    // Verify success message after each row is entered
-    cy.contains('Row updated successfully.').should('be.visible')
-
-    if (asTestCase) {
-      // Validate read-only fields after data entry
-      cy.wait(1000)
-      it(`Validates row ${index + 1}: ${row.fuelType}`, () => {
+      if (asTestCase) {
+        // Validate read-only fields after data entry
+        cy.wait(1000)
+        it(`Validates row ${index + 1}: ${row.fuelType}`, () => {
+          validateFuelSupplyReadOnlyFields(row, index)
+        })
+      } else {
+        // Validate read-only fields after data entry
         validateFuelSupplyReadOnlyFields(row, index)
-      })
-    } else {
-      // Validate read-only fields after data entry
-      validateFuelSupplyReadOnlyFields(row, index)
+      }
+      // refresh page after entering 4 records, so that token won't expire.
+      if ((index + 1) % 4 === 0) {
+        cy.refreshPageAndWait()
+      } else {
+        cy.wait(5000)
+        // Add new row
+        cy.get(SELECTORS.addRowButton).click()
+      }
     }
-    // refresh page after entering 4 records, so that token won't expire.
-    if ((index + 1) % 4 === 0) {
-      cy.refreshPageAndWait()
-    } else {
-      cy.wait(5000)
-      // Add new row
-      cy.get(SELECTORS.addRowButton).click()
-    }
-  })
+  )
 }
 
 // Separated validation into a reusable function
-function validateFuelSupplyReadOnlyFields(row, index) {
-  const cellSelector = (col) => `div.ag-cell[col-id="${col}"]`
+function validateFuelSupplyReadOnlyFields(row: FuelSupplyRow, index: number) {
+  const cellSelector = (col: string) => `div.ag-cell[col-id="${col}"]`
 
   // Fuel category
   if (row.fuelCategory) {
@@ -374,9 +486,21 @@ function validateFuelSupplyReadOnlyFields(row, index) {
     })
 }
 
+function getRequiredCell(
+  document: Document,
+  selector: string,
+  index: number
+): HTMLElement {
+  const cell = document.querySelectorAll<HTMLElement>(selector).item(index)
+  if (!cell) {
+    throw new Error(`Expected cell ${selector} at index ${index}`)
+  }
+  return cell
+}
+
 // Optimized FSE data entry
-function enterFSEData(data) {
-  const { finalSupplyEquipments } = data
+function enterFSEData(data: ScheduleFixture) {
+  const finalSupplyEquipments = data.finalSupplyEquipments!
 
   // Process rows one at a time
   const processRows = (startIndex = 0) => {
@@ -399,7 +523,7 @@ function enterFSEData(data) {
       usedApiFallback = true
 
       // Use API fallback
-      cy.get('@authToken').then((token) => {
+      cy.get<string>('@authToken').then((token) => {
         cy.request({
           method: 'POST',
           url: '/api/final-supply-equipments/save',
@@ -432,9 +556,11 @@ function enterFSEData(data) {
 
       // supplyFromDate
       cy.window().then((win) => {
-        const cell = win.document
-          .querySelectorAll('div.ag-cell[col-id="supplyFromDate"]')
-          .item(startIndex)
+        const cell = getRequiredCell(
+          win.document,
+          'div.ag-cell[col-id="supplyFromDate"]',
+          startIndex
+        )
         cy.wrap(cell).scrollIntoView().click({ force: true })
         cy.get('div.date-picker-container')
           .should('be.visible')
@@ -443,9 +569,11 @@ function enterFSEData(data) {
       })
       // supplyToDate
       cy.window().then((win) => {
-        const cell = win.document
-          .querySelectorAll('div.ag-cell[col-id="supplyToDate"]')
-          .item(startIndex)
+        const cell = getRequiredCell(
+          win.document,
+          'div.ag-cell[col-id="supplyToDate"]',
+          startIndex
+        )
         cy.wrap(cell).scrollIntoView().click({ force: true })
         cy.get('div.date-picker-container')
           .should('be.visible')
@@ -544,14 +672,14 @@ function enterFSEData(data) {
           processRows(startIndex + 1)
         }
       })
-    }).catch((err) => {
+    }).catch((err: unknown) => {
       // Only use catch API fallback if we haven't already used the uncaught exception handler
       if (!usedApiFallback) {
         cy.log(
           `⚠️ FSE grid data entry failed at row ${startIndex}, falling back to API.`,
           err
         )
-        cy.get('@authToken').then((token) => {
+        cy.get<string>('@authToken').then((token) => {
           cy.request({
             method: 'POST',
             url: '/api/final-supply-equipments/save',
@@ -576,8 +704,8 @@ function enterFSEData(data) {
 }
 
 // Optimized allocation data entry
-function enterAllocationData(data) {
-  const { allocationAgreements } = data
+function enterAllocationData(data: ScheduleFixture) {
+  const allocationAgreements = data.allocationAgreements!
 
   // Process rows one at a time with recursion
   const processRows = (startIndex = 0) => {
@@ -600,7 +728,7 @@ function enterAllocationData(data) {
       usedApiFallback = true
 
       // Use API fallback
-      cy.get('@authToken').then((token) => {
+      cy.get<string>('@authToken').then((token) => {
         cy.request({
           method: 'POST',
           url: '/api/allocation-agreements/save',
@@ -705,14 +833,14 @@ function enterAllocationData(data) {
           processRows(startIndex + 1)
         }
       })
-    }).catch((err) => {
+    }).catch((err: unknown) => {
       // Only use catch API fallback if we haven't already used the uncaught exception handler
       if (!usedApiFallback) {
         cy.log(
           `⚠️ Allocation data entry failed at row ${startIndex}, falling back to API.`,
           err
         )
-        cy.get('@authToken').then((token) => {
+        cy.get<string>('@authToken').then((token) => {
           cy.request({
             method: 'POST',
             url: '/api/allocation-agreements/save',
@@ -738,59 +866,61 @@ function enterAllocationData(data) {
 }
 
 // Optimized notional transfer data entry
-function enterNotionalTransferData(data) {
-  const { notionalTransfers } = data
+function enterNotionalTransferData(data: ScheduleFixture) {
+  const notionalTransfers = data.notionalTransfers!
 
-  cy.wrap(notionalTransfers).each((row, index) => {
-    cy.wait(200)
+  cy.wrap<NotionalTransferRow[]>(notionalTransfers).each(
+    (row: NotionalTransferRow, index: number) => {
+      cy.wait(200)
 
-    // Using retry methods for better reliability
-    cy.inputTextWithRetry(
-      'div.ag-cell[col-id="legalName"]',
-      row.legalName,
-      index
-    )
-    cy.inputTextWithRetry(
-      'div.ag-cell[col-id="addressForService"]',
-      row.addressForService,
-      index
-    )
+      // Using retry methods for better reliability
+      cy.inputTextWithRetry(
+        'div.ag-cell[col-id="legalName"]',
+        row.legalName,
+        index
+      )
+      cy.inputTextWithRetry(
+        'div.ag-cell[col-id="addressForService"]',
+        row.addressForService,
+        index
+      )
 
-    // Selections with retry
-    cy.selectWithRetry(
-      'div.ag-cell[col-id="fuelCategory"]',
-      `[data-testid="select-${row.fuelCategory}"]`,
-      index
-    )
+      // Selections with retry
+      cy.selectWithRetry(
+        'div.ag-cell[col-id="fuelCategory"]',
+        `[data-testid="select-${row.fuelCategory}"]`,
+        index
+      )
 
-    cy.selectWithRetry(
-      'div.ag-cell[col-id="receivedOrTransferred"]',
-      `[data-testid="select-${row.receivedOrTransferred}"]`,
-      index
-    )
+      cy.selectWithRetry(
+        'div.ag-cell[col-id="receivedOrTransferred"]',
+        `[data-testid="select-${row.receivedOrTransferred}"]`,
+        index
+      )
 
-    // Quantity - more resilient approach
-    cy.get('div.ag-cell[col-id="quantity"]')
-      .eq(index)
-      .click()
-      .find('input')
-      .clear()
-      .type(`${row.quantity}{enter}`)
+      // Quantity - more resilient approach
+      cy.get('div.ag-cell[col-id="quantity"]')
+        .eq(index)
+        .click()
+        .find('input')
+        .clear()
+        .type(`${row.quantity}{enter}`)
 
-    // Verify success message
-    cy.contains('Row updated successfully.').should('be.visible')
+      // Verify success message
+      cy.contains('Row updated successfully.').should('be.visible')
 
-    // Add new row
-    cy.wait(300)
-    cy.get(SELECTORS.addRowButton).click()
-  })
+      // Add new row
+      cy.wait(300)
+      cy.get(SELECTORS.addRowButton).click()
+    }
+  )
 }
 
 // Optimized fuels for other use data entry
-function enterFuelsForOtherUseData(data) {
-  const { otherUses } = data
+function enterFuelsForOtherUseData(data: ScheduleFixture) {
+  const otherUses = data.otherUses!
 
-  cy.wrap(otherUses).each((row, index) => {
+  cy.wrap<OtherUseRow[]>(otherUses).each((row: OtherUseRow, index: number) => {
     cy.wait(200)
 
     // Using retry methods for selections
@@ -874,7 +1004,7 @@ Then('the compliance report summary includes the quantity', () => {
   cy.wait(1000)
 
   // Reusable function for checking summary rows
-  const checkSummaryRow = (rowIndex, expectedValue) => {
+  const checkSummaryRow = (rowIndex: number, expectedValue: string) => {
     cy.get(
       `${SELECTORS.renewableSummaryTable} > :nth-child(${rowIndex}) > :nth-child(3) > span`
     )
@@ -1012,7 +1142,7 @@ Then('the assessed by director banner shows success', () => {
   )
 })
 
-Then('the compliance report status is {string}', (status) => {
+Then('the compliance report status is {string}', (status: string) => {
   cy.get(SELECTORS.complianceReportStatus, { timeout: 15000 })
     .should('be.visible')
     .and('contain.text', `Status: ${status}`)

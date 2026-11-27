@@ -31,6 +31,12 @@ interface ComplianceReportCreationResult {
   compliancePeriod: { description: string }
 }
 
+export interface ComplianceReportListData extends Record<string, unknown> {
+  reports: Array<Record<string, unknown>>
+  pagination?: { page?: number; size?: number; total?: number }
+  total_count?: number
+}
+
 interface PenaltySummaryRow {
   line?: number | string | null
   invoiceSent?: boolean | null
@@ -151,7 +157,10 @@ export const useListComplianceReports = (
 
 export const useCreateComplianceReport = (
   orgID: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, unknown> = {}
+  options: ExtMutationOptions<
+    AxiosResponse<ComplianceReportCreationResult>,
+    Record<string, unknown>
+  > = {}
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -163,7 +172,11 @@ export const useCreateComplianceReport = (
     ...restOptions
   } = options
 
-  return useMutation({
+  return useMutation<
+    AxiosResponse<ComplianceReportCreationResult>,
+    Error,
+    Record<string, unknown>
+  >({
     mutationFn: async (data: Record<string, unknown>) => {
       if (!orgID) {
         throw new Error('Organization ID is required')
@@ -172,7 +185,7 @@ export const useCreateComplianceReport = (
         ':orgID',
         String(orgID ?? '')
       )
-      return await client.post(path, data)
+      return await client.post<ComplianceReportCreationResult>(path, data)
     },
     onSuccess: (data, variables, context) => {
       if (invalidateRelatedQueries) {
@@ -483,7 +496,7 @@ export const useUpdateComplianceReportPenaltyStatus = (
 
 export const useUpdateComplianceReport = (
   reportID: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, unknown> = {}
+  options: ExtMutationOptions<AxiosResponse<ComplianceReport>, unknown> = {}
 ) => {
   const client = useApiService()
   const { removeReport, cacheReport, setCurrentReport } =
@@ -498,7 +511,7 @@ export const useUpdateComplianceReport = (
     ...restOptions
   } = options
 
-  return useMutation({
+  return useMutation<AxiosResponse<ComplianceReport>, Error, unknown>({
     // Compliance report updates (including submission) are NOT idempotent
     // from the client's perspective: the backend serialises concurrent
     // submits with a row lock and rejects the second attempt with a 409
@@ -515,7 +528,7 @@ export const useUpdateComplianceReport = (
         ':reportID',
         String(reportID ?? '')
       )
-      return await client.put(path, data)
+      return await client.put<ComplianceReport>(path, data)
     },
     onSuccess: (data, variables, context) => {
       // Update cache and store
@@ -551,7 +564,7 @@ export const useUpdateComplianceReport = (
 export const useDeleteComplianceReport = (
   orgID: number | string | undefined | null,
   reportID: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, unknown> = {}
+  options: ExtMutationOptions<AxiosResponse<unknown>, void> = {}
 ) => {
   const client = useApiService()
   const { hasRoles } = useCurrentUser()
@@ -560,7 +573,7 @@ export const useDeleteComplianceReport = (
 
   const { onSuccess, onError, ...restOptions } = options
 
-  return useMutation({
+  return useMutation<AxiosResponse<unknown>, Error, void>({
     mutationFn: async () => {
       if (!reportID) {
         throw new Error('Report ID is required')
@@ -644,7 +657,7 @@ export const useCreateSupplementalReport = (
   reportID: number | string | undefined | null,
   options: ExtMutationOptions<
     AxiosResponse<ComplianceReportCreationResult>,
-    void
+    unknown
   > = {}
 ) => {
   const client = useApiService()
@@ -657,8 +670,12 @@ export const useCreateSupplementalReport = (
     ...restOptions
   } = options
 
-  return useMutation({
-    mutationFn: async () => {
+  return useMutation<
+    AxiosResponse<ComplianceReportCreationResult>,
+    Error,
+    unknown
+  >({
+    mutationFn: async (_variables: unknown) => {
       if (!reportID) {
         throw new Error('Report ID is required')
       }
@@ -765,9 +782,21 @@ export const useCreateIdirSupplementalReport = (
   })
 }
 
+export interface ComplianceReportYearNavigation {
+  currentCompliancePeriod?: string | number
+  previous?: {
+    complianceReportId?: string | number | null
+    compliancePeriod?: string | number | null
+  } | null
+  next?: {
+    complianceReportId?: string | number | null
+    compliancePeriod?: string | number | null
+  } | null
+}
+
 export const useComplianceReportYearNavigation = (
   reportID: number | string | undefined | null,
-  options: QueryOptions<unknown> = {}
+  options: QueryOptions<ComplianceReportYearNavigation> = {}
 ) => {
   const client = useApiService()
 
@@ -778,7 +807,7 @@ export const useComplianceReportYearNavigation = (
     ...restOptions
   } = options
 
-  return useQuery({
+  return useQuery<ComplianceReportYearNavigation>({
     queryKey: ['compliance-report-navigation', reportID],
     queryFn: async () => {
       if (!reportID) {
@@ -807,7 +836,7 @@ export const useGetComplianceReportList = (
     sortOrders = [],
     filters = []
   }: Record<string, unknown> = {},
-  options: QueryOptions<unknown> = {}
+  options: QueryOptions<ComplianceReportListData> = {}
 ) => {
   const client = useApiService()
   const {
@@ -824,7 +853,7 @@ export const useGetComplianceReportList = (
     ...restOptions
   } = options
 
-  return useQuery({
+  return useQuery<ComplianceReportListData>({
     queryKey: ['compliance-reports-list', page, size, sortOrders, filters],
     queryFn: async () => {
       if (hasAnyRole(roles.compliance_reporting, roles.signing_authority)) {

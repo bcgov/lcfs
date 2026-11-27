@@ -16,12 +16,23 @@ const isWritableInput = (
 declare global {
   namespace Cypress {
     interface Chainable {
+      waitAndClick(
+        selector: string,
+        options?: Partial<Cypress.ClickOptions>
+      ): Chainable<JQuery<HTMLElement>>
+      waitAndType(
+        selector: string,
+        text: string,
+        options?: Partial<Cypress.TypeOptions>
+      ): Chainable<JQuery<HTMLElement>>
+      refreshPageAndWait(waitTime?: number): Chainable<Window>
+      realPress(key: string): Chainable<JQuery<HTMLElement>>
       getByDataTest(
         selector: string,
         options?: ElementQueryOptions
       ): Chainable<JQuery<HTMLElement>>
       loginWith(
-        userType: 'idir' | 'bceid',
+        userType: 'idir' | 'bceid' | 'becid',
         username: string,
         password: string
       ): Chainable<unknown>
