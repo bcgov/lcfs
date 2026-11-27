@@ -19,7 +19,6 @@ import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
 import Comments from '@/components/Comments'
 import { SupportingDocumentSummary } from '@/views/SupportingDocuments/SupportingDocumentSummary'
 import { roles } from '@/constants/roles'
-import { INITIATIVE_AGREEMENT_OPEN_TO_NEW_ACTIONS } from '@/constants/statuses'
 import { useDocuments } from '@/hooks/useDocuments'
 import { ROUTES } from '@/routes/routes'
 import { constructAddress } from '@/utils/constructAddress'
@@ -38,7 +37,16 @@ import { AgreementEditForm } from './components/AgreementEditForm'
 import { DeletedItems } from './components/DeletedItems'
 import { NotesAccordion } from './components/NotesAccordion'
 import { DocumentTree } from './components/DocumentTree'
+import { PackageLockNotice } from './components/PackageLockNotice'
 import { SetUnderwayButton } from './components/SetUnderwayButton'
+import {
+  ChangeOrderPanel,
+  StartChangeOrderButton
+} from './components/ChangeOrderPanel'
+import { ChangeOrderHistory } from './components/ChangeOrderHistory'
+import { ChangeOrderStateChip } from './components/ChangeOrderStateChip'
+import { VersionHistoryButton } from './components/RecordVersions'
+import { packageEditorRoles } from './components/packageEditors'
 
 // The shared document machinery keys on this string for initiative agreements.
 const PARENT_TYPE = 'initiativeAgreement'
@@ -146,6 +154,14 @@ const InitiativeAgreementDetailBase = () => {
     : null
   // The wireframe's reference number is the agreement's own identifier.
   const referenceNumber = `IA${agreement.initiativeAgreementId}`
+  // Once Underway the package is read-only (#5554): every control that
+  // would change it goes. The API says so, and enforces it too. A change
+  // order draft opens it again (#5555), and the Director may edit too.
+  const packageEditable = agreement.packageEditable === true
+  // IDIR only: the API leaves an organization the accepted package (#5555).
+  const inChangeOrder = Boolean(agreement.changeOrder)
+  const notify = (severity, message) =>
+    alertRef.current?.triggerAlert({ severity, message })
 
   return (
     <BCBox>
@@ -161,13 +177,34 @@ const InitiativeAgreementDetailBase = () => {
       </BCTypography>
       <Divider sx={{ mt: 2, mb: 3 }} />
 
+      {!packageEditable && (
+        <Role roles={DOCUMENT_MANAGER_ROLES}>
+          <PackageLockNotice
+            status={agreement.lifecycleStatus?.status}
+            // The IDIR roles that may start a change order get its button
+            // here (#5555). A BCeID-initiated change order can add its own
+            // action here later.
+            action={
+              agreement.changeOrderActions?.includes('start') ? (
+                <StartChangeOrderButton
+                  agreement={agreement}
+                  onNotify={notify}
+                />
+              ) : null
+            }
+          />
+        </Role>
+      )}
+      <ChangeOrderPanel agreement={agreement} onNotify={notify} />
+
       <BCWidgetCard
         title={t('initiativeAgreement:detail.agreementHeader')}
         color="nav"
         data-test="initiative-agreement-header-section"
         headerAction={
-          !isEditing && (
-            <Role roles={[roles.ia_analyst, roles.ia_manager]}>
+          !isEditing &&
+          packageEditable && (
+            <Role roles={packageEditorRoles(inChangeOrder)}>
               <WidgetEditButton
                 type="button"
                 data-test="edit-agreement"
@@ -214,14 +251,21 @@ const InitiativeAgreementDetailBase = () => {
                               // success.contrastText is computed against
                               // success.main, so pairing it with the lighter
                               // shade gives 3.27:1 and fails AA.
-                              bgcolor: 'success.main',
-                              color: 'success.contrastText',
+                              bgcolor: inChangeOrder
+                                ? 'warning.main'
+                                : 'success.main',
+                              color: inChangeOrder
+                                ? 'warning.contrastText'
+                                : 'success.contrastText',
                               fontSize: '0.8rem'
                             }}
                           >
                             {agreement.lifecycleStatus.status}
                           </BCBox>
                         )}
+                        <ChangeOrderStateChip
+                          state={agreement.changeOrderState}
+                        />
                       </BCBox>
                       {address && (
                         <BCTypography variant="body4">{address}</BCTypography>
@@ -267,6 +311,20 @@ const InitiativeAgreementDetailBase = () => {
                         label={t('initiativeAgreement:detail.projectLocation')}
                         value={agreement.projectLocation}
                       />
+                      <Role
+                        roles={[
+                          roles.ia_analyst,
+                          roles.ia_manager,
+                          roles.director
+                        ]}
+                      >
+                        <BCBox>
+                          <VersionHistoryButton
+                            recordType="agreement"
+                            recordId={agreement.initiativeAgreementId}
+                          />
+                        </BCBox>
+                      </Role>
                     </Stack>
                   </Grid2>
                 </Grid2>
@@ -301,25 +359,28 @@ const InitiativeAgreementDetailBase = () => {
                   parentID={initiativeAgreementId}
                   enablePreview
                   allowSubfolders
+                  readOnly={!packageEditable}
                   title={t('initiativeAgreement:detail.documents')}
                   headerAction={
                     // Upload stays IDIR-side; the shared upload endpoint's
                     // role list is broader than this module.
-                    <BCTypography
-                      component="button"
-                      variant="body4"
-                      color="link"
-                      data-test="upload-documents-button"
-                      onClick={() => setUploadOpen(true)}
-                      sx={{
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        textDecoration: 'underline'
-                      }}
-                    >
-                      {t('initiativeAgreement:detail.manageDocuments')}
-                    </BCTypography>
+                    packageEditable && (
+                      <BCTypography
+                        component="button"
+                        variant="body4"
+                        color="link"
+                        data-test="upload-documents-button"
+                        onClick={() => setUploadOpen(true)}
+                        sx={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          textDecoration: 'underline'
+                        }}
+                      >
+                        {t('initiativeAgreement:detail.manageDocuments')}
+                      </BCTypography>
+                    )
                   }
                 />
               </BCBox>
@@ -350,7 +411,7 @@ const InitiativeAgreementDetailBase = () => {
         }
       />
 
-      {managesDocuments && (
+      {managesDocuments && packageEditable && (
         <DocumentUploadDialog
           open={uploadOpen}
           close={() => {
@@ -372,7 +433,11 @@ const InitiativeAgreementDetailBase = () => {
       {/* Notes are IDIR-only: the API refuses proponents. Directors read;
           only the two review roles can change them. */}
       <Role roles={[roles.ia_analyst, roles.ia_manager, roles.director]}>
-        <NotesAccordion initiativeAgreementId={initiativeAgreementId} />
+        <NotesAccordion
+          initiativeAgreementId={initiativeAgreementId}
+          readOnly={!packageEditable}
+          inChangeOrder={inChangeOrder}
+        />
       </Role>
 
       {/* The designated-action grid is the IDIR story (#4896); the
@@ -398,15 +463,18 @@ const InitiativeAgreementDetailBase = () => {
             </BCTypography>
             <AddDesignatedAction
               initiativeAgreementId={initiativeAgreementId}
-              canAdd={INITIATIVE_AGREEMENT_OPEN_TO_NEW_ACTIONS.includes(
-                agreement.lifecycleStatus?.status
-              )}
+              inChangeOrder={inChangeOrder}
+              canAdd={packageEditable}
             />
           </BCBox>
           <DesignatedActionsGrid
             initiativeAgreementId={initiativeAgreementId}
           />
         </Paper>
+      </Role>
+
+      <Role roles={[roles.ia_analyst, roles.ia_manager, roles.director]}>
+        <ChangeOrderHistory initiativeAgreementId={initiativeAgreementId} />
       </Role>
 
       {/* The thread is IDIR-only until the BCeID story opens Public

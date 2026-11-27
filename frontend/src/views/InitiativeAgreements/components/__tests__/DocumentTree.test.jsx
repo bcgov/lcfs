@@ -123,6 +123,41 @@ describe('DocumentTree', () => {
     expect(screen.getByText('Permits & Approvals')).toBeInTheDocument()
   })
 
+  test('offers only browsing, preview and download when read-only (#5554)', ({
+    render,
+    app
+  }) => {
+    render(
+      <DocumentTree
+        parentType="designatedAction"
+        parentID="9"
+        enablePreview
+        readOnly
+      />,
+      app
+    )
+
+    // Still browsable and downloadable.
+    expect(screen.getByText('permit.pdf')).toBeInTheDocument()
+    expect(screen.getByTestId('tree-file-download-88')).toBeInTheDocument()
+    // No control that would change the package.
+    for (const testId of [
+      'new-folder-button',
+      'folder-menu-12',
+      'tree-file-delete-88',
+      'tree-file-delete-90',
+      'tree-file-to-root-88',
+      'tree-file-handle-88',
+      'tree-file-rename-88'
+    ]) {
+      expect(screen.queryByTestId(testId)).not.toBeInTheDocument()
+    }
+    // The bin only restores or destroys, so it goes too.
+    expect(
+      screen.queryByTestId('deleted-items-section')
+    ).not.toBeInTheDocument()
+  })
+
   test('renders nested folders with counts and files', ({ render, app }) => {
     render(<DocumentTree parentType="designatedAction" parentID="9" />, app)
 

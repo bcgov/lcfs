@@ -446,9 +446,13 @@ async def test_concurrent_requests_issue_once_per_action(
     set_mock_user,
     dbsession_factory,
     monkeypatch,
+    underway_packages_editable,
     different_actions,
     edit_agreement,
 ):
+    # The package lock (#5554) would refuse the agreement edit before it took
+    # any row lock, so it is opened here: the race under test is between the
+    # two row locks, not the lock's rule.
     # Use separate transactions to exercise PostgreSQL row locks.
     async with dbsession_factory() as setup:
         async with setup.begin():

@@ -6,7 +6,10 @@ import {
   useGetInitiativeAgreements,
   useInitiativeAgreementStatuses,
   useUpdateAgreement,
-  useDesignatedActionWorkflow
+  useDesignatedActionWorkflow,
+  useAcceptChangeOrder,
+  useRecordVersions,
+  useStartChangeOrder
 } from '../useInitiativeAgreements'
 import { test } from '@/tests/utils/fixtures'
 
@@ -151,5 +154,64 @@ describe('useInitiativeAgreements hooks', () => {
     for (const key of keys) {
       expect(query.client.getQueryState(key).isInvalidated).toBe(true)
     }
+  })
+
+  test('starting a change order POSTs to the agreement', async ({
+    renderHook,
+    query
+  }) => {
+    mockPost.mockResolvedValue({
+      data: { changeOrder: { changeOrderNumber: 1 } }
+    })
+    const { result } = renderHook(() => useStartChangeOrder(5), [query])
+
+    await result.current.mutateAsync()
+
+    expect(mockPost).toHaveBeenCalledWith(
+      '/initiative-agreements/agreements/5/change-order'
+    )
+  })
+
+  test('acceptance PUTs the accepted date and refreshes the package', async ({
+    renderHook,
+    query
+  }) => {
+    const keys = [
+      ['initiative-agreements', 'detail', '5'],
+      ['designated-actions', '5', {}],
+      ['evidence-requirements', '8'],
+      ['initiative-agreement-notes', '5'],
+      ['record-versions', 'designated-action', '8'],
+      ['change-orders', '5']
+    ]
+    for (const key of keys) query.client.setQueryData(key, { previous: true })
+    mockPut.mockResolvedValue({ data: {} })
+    const { result } = renderHook(() => useAcceptChangeOrder(5), [query])
+
+    await result.current.mutateAsync({ acceptedDate: '2025-11-03' })
+
+    expect(mockPut).toHaveBeenCalledWith(
+      '/initiative-agreements/agreements/5/change-order/accept',
+      { acceptedDate: '2025-11-03' }
+    )
+    for (const key of keys) {
+      expect(query.client.getQueryState(key).isInvalidated).toBe(true)
+    }
+  })
+
+  test("version history GETs one record's versions", async ({
+    renderHook,
+    query
+  }) => {
+    mockGet.mockResolvedValue({ data: [] })
+    const { result } = renderHook(
+      () => useRecordVersions('evidence-requirement', 12),
+      [query]
+    )
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(mockGet).toHaveBeenCalledWith(
+      '/initiative-agreements/versions/evidence-requirement/12'
+    )
   })
 })

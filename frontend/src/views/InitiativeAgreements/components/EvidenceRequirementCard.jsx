@@ -21,6 +21,8 @@ import {
   OUTCOME_SATISFACTORY,
   OUTCOME_INFORMATION_REQUESTED
 } from './evidenceConstants'
+import { ChangeOrderStateChip } from './ChangeOrderStateChip'
+import { VersionHistoryButton } from './RecordVersions'
 
 const requirementHeading = (requirement) =>
   requirement.title || evidencePlainText(requirement.description)
@@ -64,6 +66,10 @@ export const EvidenceRequirementCard = ({
   onSave,
   onRemove,
   canEdit,
+  // Rewording or removing the requirement is a package edit (#5554): whether
+  // this caller may do it now (see EvidenceOfCompletion). The assessment
+  // canEdit covers is the review, which carries on.
+  canEditWording = canEdit,
   missingInformationReadOnly,
   actions,
   allRequestsComplete,
@@ -126,9 +132,11 @@ export const EvidenceRequirementCard = ({
       ? outcome
       : null
 
-  const fieldProps = (key, testKey, labelKey) => ({
+  // A requirement being removed in the change order can't be changed.
+  const removing = requirement.changeOrderState === 'removed'
+  const fieldProps = (key, testKey, labelKey, editable = canEdit) => ({
     designatedActionId,
-    canEdit,
+    canEdit: editable,
     locked,
     label: t(`initiativeAgreement:evidence.${labelKey}`),
     testId: `eoc-${testKey}-${requirement.evidenceRequirementId}`,
@@ -280,24 +288,40 @@ export const EvidenceRequirementCard = ({
               {saveError}
             </BCAlert>
           )}
-          {canEdit && (
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <Tooltip
-                title={t('initiativeAgreement:evidence.removeRequirement')}
-              >
-                <IconButton
-                  size="small"
-                  data-test={`eoc-remove-${requirement.evidenceRequirementId}`}
-                  aria-label={t(
-                    'initiativeAgreement:evidence.removeRequirement'
-                  )}
-                  onClick={() => setConfirmingRemove(true)}
-                >
-                  <CloseIcon fontSize="inherit" />
-                </IconButton>
-              </Tooltip>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 1
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <ChangeOrderStateChip state={requirement.changeOrderState} />
+              <VersionHistoryButton
+                recordType="evidence-requirement"
+                recordId={requirement.evidenceRequirementId}
+              />
             </Box>
-          )}
+            {canEditWording && !removing && (
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <Tooltip
+                  title={t('initiativeAgreement:evidence.removeRequirement')}
+                >
+                  <IconButton
+                    size="small"
+                    data-test={`eoc-remove-${requirement.evidenceRequirementId}`}
+                    aria-label={t(
+                      'initiativeAgreement:evidence.removeRequirement'
+                    )}
+                    onClick={() => setConfirmingRemove(true)}
+                  >
+                    <CloseIcon fontSize="inherit" />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            )}
+          </Box>
           {outcome === OUTCOME_INFORMATION_REQUESTED && (
             <>
               <EvidenceRichTextField
@@ -329,7 +353,12 @@ export const EvidenceRequirementCard = ({
             allowPencil={false}
           />
           <EvidenceRichTextField
-            {...fieldProps('description', 'description', 'evidenceSummary')}
+            {...fieldProps(
+              'description',
+              'description',
+              'evidenceSummary',
+              canEditWording && !removing
+            )}
             allowPencil={false}
             required
           />

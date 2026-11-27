@@ -214,7 +214,14 @@ export const designatedActionColDefs = (
     minWidth: 240,
     flex: 1,
     filter: 'agTextColumnFilter',
-    filterParams: TEXT_FILTER_PARAMS
+    filterParams: TEXT_FILTER_PARAMS,
+    // During a change order IDIR sees how each action stands in it (#5555).
+    valueGetter: ({ data }) =>
+      data?.changeOrderState
+        ? `${data?.name} (${t(
+            `initiativeAgreement:changeOrder.state.${data.changeOrderState}`
+          )})`
+        : data?.name
   },
   {
     // Same source as the detail page's status chip, so the two can never

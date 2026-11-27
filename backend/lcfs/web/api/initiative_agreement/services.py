@@ -8,8 +8,13 @@ from typing import List, Optional
 import nh3
 import structlog
 from fastapi import Depends, HTTPException, Request
+from pydantic.alias_generators import to_camel
 
 from lcfs.db.models.initiative_agreement.DesignatedAction import DesignatedAction
+from lcfs.db.models.initiative_agreement.InitiativeAgreementChangeOrder import (
+    CHANGE_ORDER_STATUS_ACCEPTED,
+    CHANGE_ORDER_STATUS_DRAFT,
+)
 from lcfs.db.models.initiative_agreement.DesignatedActionHistory import (
     EVENT_ANALYST_ASSIGNED,
     EVENT_ANALYST_REASSIGNED,
@@ -49,6 +54,17 @@ from lcfs.web.api.base import (
     SortOrder,
     validate_pagination,
 )
+from lcfs.web.api.initiative_agreement.change_order import (
+    AGREEMENT,
+    DESIGNATED_ACTION,
+    EVIDENCE_REQUIREMENT,
+    NOTE,
+    RECORD_TYPES,
+    ChangeOrderService,
+    ChangeOrderView,
+    check_issued_credits,
+    is_removed,
+)
 from lcfs.web.api.initiative_agreement.repo import InitiativeAgreementRepository
 from lcfs.web.api.initiative_agreement.schema import (
     AllDesignatedActionsListSchema,
@@ -57,6 +73,7 @@ from lcfs.web.api.initiative_agreement.schema import (
     AgreementCreateSchema,
     AgreementUpdateSchema,
     AnalystAssignmentSchema,
+    ChangeOrderSchema,
     CreateInitiativeAgreementHistorySchema,
     DesignatedActionCreateSchema,
     DesignatedActionHistorySchema,
@@ -79,20 +96,27 @@ from lcfs.web.api.initiative_agreement.schema import (
     InitiativeAgreementsListSchema,
     LastCommentSchema,
     OrganizationSchema,
+    RecordVersionSchema,
 )
 from lcfs.web.api.initiative_agreement.workflow import (
     ACTION_APPROVE,
     LIFECYCLE_STATUS_UNDERWAY,
-    LIFECYCLE_STATUSES_OPEN_TO_NEW_ACTIONS,
     LIFECYCLE_STATUSES_SETTABLE_UNDERWAY,
+    PACKAGE_EDITOR_ROLES,
     SET_UNDERWAY_ROLES,
     STATUS_APPROVED,
     STATUS_NOT_STARTED,
     TRANSITIONS,
     WORKFLOW_ACTIONS,
+    change_order_actions,
+    ensure_package_editable,
+    has_any_role,
     hidden_lifecycle_statuses,
     initial_lifecycle_status,
+    is_government,
     is_hidden_from,
+    is_package_editable,
+    lifecycle_status_aliases,
 )
 from lcfs.web.api.internal_comment.schema import (
     AudienceScopeEnum,
@@ -183,6 +207,46 @@ class InitiativeAgreementServices:
         self.notfn_service = notfn_service
         self.transaction_repo = transaction_repo
 
+    @property
+    def change_orders(self) -> ChangeOrderService:
+        """Change-order staging, acceptance and the IDIR view of an open
+        change order (#5555), on this request's session."""
+        service = getattr(self, "_change_orders", None)
+        if service is None:
+            service = self._change_orders = ChangeOrderService(self.repo.db)
+        return service
+
+    def _caller(self):
+        return self.request.user if self.request else None
+
+    async def _shown_lifecycle_status(self, lifecycle_status, user):
+        """The lifecycle status as this user sees it: an organization sees a
+        change order draft as Underway (#5555)."""
+        if lifecycle_status is None:
+            return None
+        alias = lifecycle_status_aliases(user).get(lifecycle_status.status)
+        if alias is None:
+            return lifecycle_status
+        cache = getattr(self, "_lifecycle_alias_cache", None)
+        if cache is None:
+            cache = self._lifecycle_alias_cache = {}
+        if alias not in cache:
+            cache[alias] = await self.repo.get_lifecycle_status_by_name(alias)
+        return cache[alias] or lifecycle_status
+
+    @staticmethod
+    def _require_not_pending(action) -> None:
+        """An action a change order added is not part of the agreement until
+        the Director accepts it, so it can't be worked yet."""
+        if action.pending_change_order_id is not None:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "This designated action was added in a change order and "
+                    "can't be worked until the Director accepts it."
+                ),
+            )
+
     @service_handler
     async def get_initiative_agreement(
         self, initiative_agreement_id: int
@@ -250,6 +314,7 @@ class InitiativeAgreementServices:
             pagination,
             organization_id,
             hidden_statuses=hidden_lifecycle_statuses(user),
+            status_aliases=lifecycle_status_aliases(user),
         )
         # Non-government callers never receive internal comment text.
         latest_comments = await self.repo.get_latest_comments_by_agreement_ids(
@@ -267,7 +332,12 @@ class InitiativeAgreementServices:
             ),
             initiative_agreements=[
                 InitiativeAgreementListItemSchema(
-                    **self._list_item_kwargs(agreement),
+                    **{
+                        **self._list_item_kwargs(agreement),
+                        "lifecycle_status": await self._shown_lifecycle_status(
+                            agreement.lifecycle_status, user
+                        ),
+                    },
                     total_credits=total_credits,
                     awarded_credits=awarded_credits,
                     last_comment=self._last_comment_payload(
@@ -281,8 +351,11 @@ class InitiativeAgreementServices:
     @service_handler
     async def get_lifecycle_statuses(self):
         """Lifecycle statuses for the agreement grid's status filter, less
-        any the caller does not see."""
-        hidden = hidden_lifecycle_statuses(self.request.user if self.request else None)
+        any the caller does not see, or sees under another name (#5555)."""
+        user = self._caller()
+        hidden = set(hidden_lifecycle_statuses(user)) | set(
+            lifecycle_status_aliases(user)
+        )
         return [
             lifecycle_status
             for lifecycle_status in await self.repo.get_lifecycle_statuses()
@@ -293,7 +366,11 @@ class InitiativeAgreementServices:
     async def get_initiative_agreement_profile(
         self, initiative_agreement_id: int
     ) -> InitiativeAgreementProfileSchema:
-        """Agreement profile with its designated actions for the detail page."""
+        """Agreement profile with its designated actions for the detail page.
+
+        An organization reads the accepted package. IDIR staff reading an
+        agreement in a change order draft see it as the change order would
+        leave it, each record marked with how it changed (#5555)."""
         agreement = await self.repo.get_initiative_agreement_profile(
             initiative_agreement_id
         )
@@ -301,21 +378,47 @@ class InitiativeAgreementServices:
             raise DataNotFoundException(
                 f"Initiative Agreement with id {initiative_agreement_id} not found"
             )
-        # Current version of each action only: a change order appends a row
-        # sharing group_uuid, so the raw relationship shows amended actions
-        # once per version.
+        user = self._caller()
+        view = await self.change_orders.view_for(agreement, user)
         designated_actions = await self.repo.get_current_designated_actions(
-            initiative_agreement_id
+            initiative_agreement_id, include_change_order_id=view.change_order_id
         )
-        return InitiativeAgreementProfileSchema(
-            **self._list_item_kwargs(agreement),
+        profile = InitiativeAgreementProfileSchema(
+            **{
+                **self._list_item_kwargs(agreement),
+                "lifecycle_status": await self._shown_lifecycle_status(
+                    agreement.lifecycle_status, user
+                ),
+            },
             project_description=agreement.project_description,
             project_location=agreement.project_location,
             contact_email=agreement.contact_email,
             contact_phone=agreement.contact_phone,
             create_date=agreement.create_date,
-            designated_actions=designated_actions,
+            designated_actions=[
+                view.apply(
+                    DESIGNATED_ACTION,
+                    action,
+                    DesignatedActionSchema.model_validate(action),
+                )
+                for action in designated_actions
+            ],
+            change_order=(
+                ChangeOrderSchema.model_validate(view.change_order)
+                if view.change_order is not None
+                else None
+            ),
+            change_order_actions=change_order_actions(
+                (
+                    agreement.lifecycle_status.status
+                    if agreement.lifecycle_status
+                    else None
+                ),
+                user,
+            ),
+            package_editable=is_package_editable(agreement),
         )
+        return view.apply(AGREEMENT, agreement, profile)
 
     @service_handler
     async def create_agreement(
@@ -510,9 +613,13 @@ class InitiativeAgreementServices:
         data: AgreementUpdateSchema,
         user,
     ) -> InitiativeAgreementProfileSchema:
-        """Edit an agreement's details, in any lifecycle status the caller
-        can see. A draft is hidden from anyone outside government (#5553),
-        so it reads as missing to them here too."""
+        """Edit an agreement's details while its package is open to edits
+        (#5554). A draft is hidden from anyone outside government (#5553),
+        so it reads as missing to them here too.
+
+        In a change order draft the edit is staged as the change order's
+        version of the details; the organization keeps the accepted ones
+        until the Director accepts (#5555)."""
         agreement = await self.repo.get_initiative_agreement_by_id(
             initiative_agreement_id
         )
@@ -524,12 +631,17 @@ class InitiativeAgreementServices:
             raise DataNotFoundException(
                 f"Initiative Agreement with id {initiative_agreement_id} not found"
             )
+        agreement = await self._lock_editable_package(
+            agreement.initiative_agreement_id, user
+        )
+        change_order = await self.change_orders.open_change_order_for(agreement)
 
         provided = data.model_fields_set
 
         # An agreement may be saved before its organization is known (#5186).
         # The organization can be filled in later, but once set it stays:
-        # credits the agreement issues go to that organization.
+        # credits the agreement issues go to that organization. It is not
+        # versioned: filling in a blank is not an amendment.
         if (
             "organization_id" in provided
             and data.organization_id != agreement.to_organization_id
@@ -543,6 +655,13 @@ class InitiativeAgreementServices:
                 data.organization_id
             )
 
+        values = (
+            await self.change_orders.working_values(change_order, AGREEMENT, agreement)
+            if change_order is not None
+            else AGREEMENT.live_values(agreement)
+        )
+        changes = {}
+
         if "ia_code" in provided:
             ia_code = (data.ia_code or "").strip()
             if not ia_code:
@@ -550,7 +669,7 @@ class InitiativeAgreementServices:
                     status_code=400,
                     detail="An initiative agreement code is required.",
                 )
-            if ia_code.lower() != (agreement.ia_code or "").lower():
+            if ia_code.lower() != (values["ia_code"] or "").lower():
                 existing = await self.repo.get_agreement_by_ia_code(ia_code)
                 if existing and (
                     existing.initiative_agreement_id
@@ -560,7 +679,7 @@ class InitiativeAgreementServices:
                         status_code=400,
                         detail=f"Agreement code '{ia_code}' is already in use.",
                     )
-            agreement.ia_code = ia_code
+            changes["ia_code"] = ia_code
 
         if "agreement_type" in provided and data.agreement_type is not None:
             if data.agreement_type not in AGREEMENT_TYPES:
@@ -568,7 +687,7 @@ class InitiativeAgreementServices:
                     status_code=400,
                     detail=f"'{data.agreement_type}' is not a valid agreement type.",
                 )
-            agreement.agreement_type = data.agreement_type
+            changes["agreement_type"] = data.agreement_type
 
         for field in (
             "title",
@@ -580,24 +699,29 @@ class InitiativeAgreementServices:
         ):
             if field in provided:
                 value = getattr(data, field)
-                setattr(agreement, field, (value or "").strip() or None)
+                changes[field] = (value or "").strip() or None
 
         if "agreement_start_date" in provided:
-            agreement.agreement_start_date = data.agreement_start_date
+            changes["agreement_start_date"] = data.agreement_start_date
         if "agreement_end_date" in provided:
-            agreement.agreement_end_date = data.agreement_end_date
+            changes["agreement_end_date"] = data.agreement_end_date
 
-        if (
-            agreement.agreement_start_date
-            and agreement.agreement_end_date
-            and agreement.agreement_end_date < agreement.agreement_start_date
-        ):
+        start_date = changes.get("agreement_start_date", values["agreement_start_date"])
+        end_date = changes.get("agreement_end_date", values["agreement_end_date"])
+        if start_date and end_date and end_date < start_date:
             raise HTTPException(
                 status_code=400,
                 detail="The agreement end date cannot precede its start date.",
             )
 
-        agreement.update_user = getattr(user, "keycloak_username", None)
+        if change_order is not None:
+            await self.change_orders.stage_update(
+                change_order, AGREEMENT, agreement, changes, user
+            )
+        else:
+            for field, value in changes.items():
+                setattr(agreement, field, value)
+            agreement.update_user = getattr(user, "keycloak_username", None)
         await self.repo.db.flush()
         return await self.get_initiative_agreement_profile(initiative_agreement_id)
 
@@ -608,11 +732,13 @@ class InitiativeAgreementServices:
         data: DesignatedActionCreateSchema,
         user,
     ) -> DesignatedActionSchema:
-        """Add a designated action to an agreement that is still open.
+        """Add a designated action while the agreement's package is open to
+        edits (#5554).
 
         An analyst sets out the schedule while government prepares the
-        agreement as a Draft (#5553). A completed or terminated agreement
-        takes no new actions.
+        agreement as a Draft (#5553). Once it is Underway, a new action
+        comes through a change order, and waits for the Director's
+        acceptance before the organization sees it (#5555).
         """
         agreement = await self.repo.get_initiative_agreement_by_id(
             initiative_agreement_id
@@ -622,17 +748,8 @@ class InitiativeAgreementServices:
                 f"Initiative Agreement with id {initiative_agreement_id} not found"
             )
 
-        lifecycle = (
-            agreement.lifecycle_status.status if agreement.lifecycle_status else None
-        )
-        if lifecycle not in LIFECYCLE_STATUSES_OPEN_TO_NEW_ACTIONS:
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    "Designated actions can only be added while the agreement "
-                    f"is a draft or underway; this one is '{lifecycle or 'not set'}'."
-                ),
-            )
+        agreement = await self._lock_editable_package(initiative_agreement_id, user)
+        change_order = await self.change_orders.open_change_order_for(agreement)
 
         name = (data.name or "").strip()
         if not name:
@@ -668,6 +785,11 @@ class InitiativeAgreementServices:
                 credit_allocation=credits if credits is not None else 0,
                 specified_date=data.specified_date,
                 current_status_id=not_started.designated_action_status_id,
+                pending_change_order_id=(
+                    change_order.initiative_agreement_change_order_id
+                    if change_order is not None
+                    else None
+                ),
                 create_user=username,
                 update_user=username,
             )
@@ -675,7 +797,7 @@ class InitiativeAgreementServices:
         refreshed = await self.repo.get_designated_action_by_id(
             action.designated_action_id
         )
-        return DesignatedActionSchema.model_validate(refreshed)
+        return await self._action_schema(refreshed, user)
 
     @service_handler
     async def update_designated_action(
@@ -686,13 +808,24 @@ class InitiativeAgreementServices:
     ) -> DesignatedActionSchema:
         """Correct a designated action's details.
 
-        Editable at any point in the agreement's life: an analyst who
-        spots a wrong figure or a mistyped name should be able to fix it
-        rather than work around it. Every change is recorded with its
-        before and after, so the record shows what was altered and by
-        whom.
+        Editable while the agreement's package is open to edits (#5554). In
+        a Draft the edit applies at once and every change is recorded with
+        its before and after. In a change order draft it is staged as the
+        action's next version, and the history records it when the Director
+        accepts (#5555).
         """
         action = await self._get_action_or_404(designated_action_id, user)
+        agreement = await self._lock_editable_package(
+            action.initiative_agreement_id, user
+        )
+        change_order = await self.change_orders.open_change_order_for(agreement)
+        current = (
+            await self.change_orders.working_values(
+                change_order, DESIGNATED_ACTION, action
+            )
+            if change_order is not None
+            else DESIGNATED_ACTION.live_values(action)
+        )
 
         changes = {}
 
@@ -703,16 +836,14 @@ class InitiativeAgreementServices:
                     status_code=400,
                     detail="A designated action name is required.",
                 )
-            if name != action.name:
-                changes["name"] = {"from": action.name, "to": name}
-                action.name = name
+            if name != current["name"]:
+                changes["name"] = {"from": current["name"], "to": name}
 
-        if data.description is not None and data.description != action.description:
+        if data.description is not None and data.description != current["description"]:
             changes["description"] = {
-                "from": action.description,
+                "from": current["description"],
                 "to": data.description,
             }
-            action.description = data.description
 
         if data.credit_allocation is not None:
             if data.credit_allocation < 0:
@@ -720,49 +851,105 @@ class InitiativeAgreementServices:
                     status_code=400,
                     detail="Compliance units to be issued cannot be negative.",
                 )
-            if data.credit_allocation != action.credit_allocation:
+            if data.credit_allocation != current["credit_allocation"]:
                 changes["credit_allocation"] = {
-                    "from": action.credit_allocation,
+                    "from": current["credit_allocation"],
                     "to": data.credit_allocation,
                 }
-                action.credit_allocation = data.credit_allocation
 
         new_date = None if data.clear_specified_date else data.specified_date
         if (data.clear_specified_date or data.specified_date is not None) and (
-            new_date != action.specified_date
+            new_date != current["specified_date"]
         ):
             changes["specified_date"] = {
-                "from": (
-                    action.specified_date.isoformat() if action.specified_date else None
-                ),
-                "to": new_date.isoformat() if new_date else None,
+                "from": current["specified_date"],
+                "to": new_date,
             }
-            action.specified_date = new_date
 
         if not changes:
-            return DesignatedActionSchema.model_validate(action)
+            return await self._action_schema(action, user)
 
-        display_name = " ".join(
+        new_values = {name: change["to"] for name, change in changes.items()}
+        if change_order is not None:
+            if action.pending_change_order_id is None:
+                check_issued_credits(
+                    action,
+                    credit_allocation=new_values.get(
+                        "credit_allocation", current["credit_allocation"]
+                    ),
+                )
+            await self.change_orders.stage_update(
+                change_order, DESIGNATED_ACTION, action, new_values, user
+            )
+        else:
+            for name, value in new_values.items():
+                setattr(action, name, value)
+            if "specified_date" in changes:
+                changes["specified_date"] = {
+                    key: value.isoformat() if value else None
+                    for key, value in changes["specified_date"].items()
+                }
+            await self.repo.add_designated_action_history(
+                DesignatedActionHistory(
+                    designated_action_id=action.designated_action_id,
+                    designated_action_group_uuid=action.group_uuid,
+                    event=EVENT_DETAILS_EDITED,
+                    status_id=action.current_status_id,
+                    user_profile_id=getattr(user, "user_profile_id", None),
+                    display_name=self._display_name(user),
+                    snapshot={"changed": changes},
+                )
+            )
+            action.update_user = getattr(user, "keycloak_username", None)
+        await self.repo.db.flush()
+
+        refreshed = await self.repo.get_designated_action_by_id(designated_action_id)
+        return await self._action_schema(refreshed, user)
+
+    @service_handler
+    async def remove_designated_action(self, designated_action_id: int, user) -> None:
+        """Remove a designated action in a change order (#5555). It stays in
+        the package, marked for removal, until the Director accepts; an
+        action the change order itself added goes at once. Credits already
+        issued for an action keep it in the package."""
+        action = await self._get_action_or_404(designated_action_id, user)
+        agreement = await self._lock_editable_package(
+            action.initiative_agreement_id, user
+        )
+        change_order = await self.change_orders.open_change_order_for(agreement)
+        if change_order is None:
+            raise HTTPException(
+                status_code=400,
+                detail=("A designated action can only be removed in a change order."),
+            )
+        if action.transaction_id is not None:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Credits have been issued for this designated action, so it "
+                    "cannot be removed."
+                ),
+            )
+        await self.change_orders.stage_removal(
+            change_order, DESIGNATED_ACTION, action, user
+        )
+
+    @staticmethod
+    def _display_name(user) -> Optional[str]:
+        name = " ".join(
             p
             for p in (getattr(user, "first_name", ""), getattr(user, "last_name", ""))
             if p
         ).strip()
-        await self.repo.add_designated_action_history(
-            DesignatedActionHistory(
-                designated_action_id=action.designated_action_id,
-                designated_action_group_uuid=action.group_uuid,
-                event=EVENT_DETAILS_EDITED,
-                status_id=action.current_status_id,
-                user_profile_id=getattr(user, "user_profile_id", None),
-                display_name=display_name or None,
-                snapshot={"changed": changes},
-            )
-        )
-        action.update_user = getattr(user, "keycloak_username", None)
-        await self.repo.db.flush()
+        return name or None
 
-        refreshed = await self.repo.get_designated_action_by_id(designated_action_id)
-        return DesignatedActionSchema.model_validate(refreshed)
+    async def _action_view(self, action, user) -> ChangeOrderView:
+        return await self.change_orders.view_for(action.initiative_agreement, user)
+
+    async def _action_schema(self, action, user, schema=DesignatedActionSchema):
+        """The action as this user sees it (see ChangeOrderView)."""
+        view = await self._action_view(action, user)
+        return view.apply(DESIGNATED_ACTION, action, schema.model_validate(action))
 
     @service_handler
     async def get_designated_actions_paginated(
@@ -780,10 +967,21 @@ class InitiativeAgreementServices:
             )
         pagination = validate_pagination(pagination)
         pagination.size = min(pagination.size, MAX_PAGE_SIZE)
+        # During a change order IDIR sees the actions as it would leave them;
+        # sorting and filtering still run on the accepted values (#5555).
+        view = await self.change_orders.view_for(agreement, self._caller())
         actions, total_count = await self.repo.get_designated_actions_paginated(
-            initiative_agreement_id, pagination
+            initiative_agreement_id,
+            pagination,
+            include_change_order_id=view.change_order_id,
         )
-        rows = await self._designated_action_rows(actions, DesignatedActionSchema)
+        rows = [
+            view.apply(DESIGNATED_ACTION, action, row)
+            for action, row in zip(
+                actions,
+                await self._designated_action_rows(actions, DesignatedActionSchema),
+            )
+        ]
         return DesignatedActionsListSchema(
             pagination=self._pagination_response(pagination, total_count),
             designated_actions=rows,
@@ -880,19 +1078,34 @@ class InitiativeAgreementServices:
     async def get_designated_action_profile(
         self, designated_action_id: int
     ) -> DesignatedActionProfileSchema:
-        """The action detail page's record (#4840)."""
+        """The action detail page's record (#4840), as the caller sees it
+        during a change order (#5555)."""
         action = await self._get_action_or_404(designated_action_id)
+        user = self._caller()
+        view = await self._action_view(action, user)
         siblings = await self.repo.get_current_designated_actions(
-            action.initiative_agreement_id
+            action.initiative_agreement_id,
+            include_change_order_id=view.change_order_id,
         )
-        base = DesignatedActionSchema.model_validate(action)
+        base = view.apply(
+            DESIGNATED_ACTION, action, DesignatedActionSchema.model_validate(action)
+        )
         return DesignatedActionProfileSchema(
             **base.model_dump(),
             initiative_agreement_id=action.initiative_agreement_id,
             ia_code=action.initiative_agreement.ia_code,
             sibling_action_ids=[s.designated_action_id for s in siblings],
-            available_actions=self._available_actions(
-                action, self.request.user if self.request else None
+            available_actions=self._available_actions(action, user),
+            change_order_number=(
+                view.change_order.change_order_number
+                if view.change_order is not None
+                else None
+            ),
+            package_editable=is_package_editable(action.initiative_agreement),
+            agreement_lifecycle_status=(
+                action.initiative_agreement.lifecycle_status.status
+                if action.initiative_agreement.lifecycle_status
+                else None
             ),
         )
 
@@ -908,15 +1121,28 @@ class InitiativeAgreementServices:
         action = await self.repo.get_designated_action_by_id(
             designated_action_id, for_update=for_update
         )
-        if not action or is_hidden_from(action.initiative_agreement, user):
+        if (
+            not action
+            or is_hidden_from(action.initiative_agreement, user)
+            or (not is_government(user) and not self._in_accepted_package(action))
+        ):
             raise DataNotFoundException(
                 f"Designated action with id {designated_action_id} not found"
             )
         return action
 
+    @staticmethod
+    def _in_accepted_package(action) -> bool:
+        """An organization sees only actions in the accepted package: not
+        one a change order has added and not had accepted, nor a removed
+        one (#5555)."""
+        return action.pending_change_order_id is None and not is_removed(
+            DESIGNATED_ACTION, action
+        )
+
     async def _get_requirement_or_404(self, evidence_requirement_id: int, user):
-        """The evidence requirement, unless it is missing or its action is
-        hidden from the caller (see _get_action_or_404)."""
+        """The evidence requirement and its action, unless it is missing or
+        its action is hidden from the caller (see _get_action_or_404)."""
         requirement = await self.repo.get_evidence_requirement(evidence_requirement_id)
         action = (
             await self.repo.get_designated_action_by_id(
@@ -925,18 +1151,29 @@ class InitiativeAgreementServices:
             if requirement
             else None
         )
-        if not action or is_hidden_from(action.initiative_agreement, user):
+        if (
+            not action
+            or is_hidden_from(action.initiative_agreement, user)
+            or (
+                not is_government(user)
+                and (
+                    not self._in_accepted_package(action)
+                    or requirement.pending_change_order_id is not None
+                )
+            )
+        ):
             raise DataNotFoundException(
                 f"Evidence requirement with id {evidence_requirement_id} not found"
             )
-        return requirement
+        return requirement, action
 
     def _user_may(self, transition, user) -> bool:
         return any(user_has_roles(user, [role]) for role in transition.roles)
 
     def _available_actions(self, action, user) -> List[str]:
-        """Actions this caller may take on this action right now."""
-        if user is None:
+        """Actions this caller may take on this action right now. An action
+        a change order added has none until it is accepted."""
+        if user is None or action.pending_change_order_id is not None:
             return []
         current = action.current_status.status if action.current_status else None
         return [
@@ -992,6 +1229,7 @@ class InitiativeAgreementServices:
         action = await self._get_action_or_404(
             designated_action_id, user, for_update=True
         )
+        self._require_not_pending(action)
         if action.transaction_id is not None or (
             action.current_status and action.current_status.status == STATUS_APPROVED
         ):
@@ -1031,6 +1269,7 @@ class InitiativeAgreementServices:
         action = await self._get_action_or_404(
             designated_action_id, user, for_update=True
         )
+        self._require_not_pending(action)
 
         transition = TRANSITIONS.get(data.action)
         if transition is None:
@@ -1283,10 +1522,21 @@ class InitiativeAgreementServices:
     async def get_evidence_requirements(
         self, designated_action_id: int
     ) -> List[EvidenceRequirementSchema]:
-        """The evidence of completion list for one designated action."""
-        await self._get_action_or_404(designated_action_id)
-        requirements = await self.repo.get_evidence_requirements(designated_action_id)
-        return [EvidenceRequirementSchema.model_validate(r) for r in requirements]
+        """The evidence of completion list for one designated action, as the
+        caller sees it during a change order (#5555)."""
+        action = await self._get_action_or_404(designated_action_id)
+        view = await self._action_view(action, self._caller())
+        requirements = await self.repo.get_evidence_requirements(
+            designated_action_id, include_change_order_id=view.change_order_id
+        )
+        return [
+            view.apply(
+                EVIDENCE_REQUIREMENT,
+                requirement,
+                EvidenceRequirementSchema.model_validate(requirement),
+            )
+            for requirement in requirements
+        ]
 
     @service_handler
     async def create_evidence_requirement(
@@ -1295,8 +1545,14 @@ class InitiativeAgreementServices:
         data: EvidenceRequirementCreateSchema,
         user,
     ) -> EvidenceRequirementSchema:
-        """Add an evidence requirement to an action (the wireframe's Add EOC)."""
-        await self._get_action_or_404(designated_action_id, user)
+        """Add an evidence requirement to an action (the wireframe's Add EOC).
+        One added in a change order waits for the Director's acceptance
+        (#5555)."""
+        action = await self._get_action_or_404(designated_action_id, user)
+        agreement = await self._lock_editable_package(
+            action.initiative_agreement_id, user
+        )
+        change_order = await self.change_orders.open_change_order_for(agreement)
         title = (data.title or "").strip()
         if not title:
             raise HTTPException(
@@ -1318,11 +1574,16 @@ class InitiativeAgreementServices:
                 title=title,
                 description=description,
                 evidence_type=data.evidence_type,
+                pending_change_order_id=(
+                    change_order.initiative_agreement_change_order_id
+                    if change_order is not None
+                    else None
+                ),
                 create_user=username,
                 update_user=username,
             )
         )
-        return EvidenceRequirementSchema.model_validate(requirement)
+        return await self._requirement_schema(action, requirement)
 
     @service_handler
     async def update_evidence_requirement(
@@ -1336,8 +1597,59 @@ class InitiativeAgreementServices:
         Recording an assessment stamps who decided and when. The previous
         round's finding is not lost when information is requested: the round
         is captured with its full payload in designated_action_history.
+
+        The wording (title, description, type and number) is part of the
+        package and changes only while it is open to edits (#5554). In a
+        change order draft an edit to it is staged as the requirement's next
+        version (#5555). The assessment is the analyst review, which is what
+        an Underway package is for, so it stays open and is never versioned.
         """
-        requirement = await self._get_requirement_or_404(evidence_requirement_id, user)
+        requirement, action = await self._get_requirement_or_404(
+            evidence_requirement_id, user
+        )
+        definition_fields = {
+            "title",
+            "description",
+            "evidence_type",
+            "requirement_number",
+        }
+        review_fields = {
+            "analyst_review",
+            "review_notes",
+            "missing_information",
+            "review_outcome",
+            "clear_review_outcome",
+        }
+        provided = set()
+        for name in data.model_fields_set:
+            value = getattr(data, name)
+            if name == "clear_review_outcome":
+                if value:
+                    provided.add(name)
+            elif value is not None or name == "missing_information":
+                provided.add(name)
+        if provided & review_fields and not has_any_role(user, PACKAGE_EDITOR_ROLES):
+            raise HTTPException(
+                status_code=403,
+                detail="Only an IA analyst or manager can record an assessment.",
+            )
+        if provided & definition_fields:
+            # The wording is package content: read the lifecycle under the
+            # agreement's row lock (#5554) before deciding. Wording sent
+            # unchanged with an assessment is no edit, so an Underway
+            # package still takes the review.
+            agreement = await self._lock_package(action.initiative_agreement_id)
+            change_order = await self.change_orders.open_change_order_for(agreement)
+            if change_order is not None:
+                ensure_package_editable(agreement, user)
+                await self._stage_requirement_definition(
+                    change_order, requirement, data, user
+                )
+                data = data.model_copy(
+                    update={name: None for name in definition_fields}
+                )
+            elif self._changes_requirement_wording(requirement, data):
+                ensure_package_editable(agreement, user)
 
         # The text an analyst saves deliberately — title, description and
         # evaluation — is recorded with its before and after, the way a
@@ -1437,15 +1749,92 @@ class InitiativeAgreementServices:
         await self.repo.db.flush()
 
         refreshed = await self.repo.get_evidence_requirement(evidence_requirement_id)
-        return EvidenceRequirementSchema.model_validate(refreshed)
+        return await self._requirement_schema(action, refreshed)
+
+    async def _stage_requirement_definition(
+        self, change_order, requirement, data, user
+    ) -> None:
+        """Stage a change order's edit to a requirement's wording (#5555)."""
+        current = await self.change_orders.working_values(
+            change_order, EVIDENCE_REQUIREMENT, requirement
+        )
+        changes = {}
+        if data.title is not None:
+            title = data.title.strip()
+            if not title:
+                raise HTTPException(
+                    status_code=400, detail="A requirement title is required."
+                )
+            changes["title"] = title
+        if data.description is not None:
+            description = data.description.strip()
+            if not description:
+                raise HTTPException(
+                    status_code=400, detail="A requirement description is required."
+                )
+            changes["description"] = description
+        if data.evidence_type is not None:
+            changes["evidence_type"] = data.evidence_type
+        if data.requirement_number is not None:
+            changes["requirement_number"] = data.requirement_number
+        changes = {
+            name: value for name, value in changes.items() if value != current[name]
+        }
+        if changes:
+            await self.change_orders.stage_update(
+                change_order, EVIDENCE_REQUIREMENT, requirement, changes, user
+            )
+
+    async def _requirement_schema(self, action, requirement):
+        view = await self._action_view(action, self._caller())
+        return view.apply(
+            EVIDENCE_REQUIREMENT,
+            requirement,
+            EvidenceRequirementSchema.model_validate(requirement),
+        )
+
+    @staticmethod
+    def _changes_requirement_wording(
+        requirement: EvidenceRequirement, data: EvidenceRequirementUpdateSchema
+    ) -> bool:
+        """Whether this update would change the requirement's wording. A
+        value sent unchanged is not a change, so a client that saves the
+        whole card does not trip the package lock with an assessment."""
+        sent = {
+            "title": (data.title or "").strip() if data.title is not None else None,
+            "description": (
+                (data.description or "").strip()
+                if data.description is not None
+                else None
+            ),
+            "evidence_type": data.evidence_type,
+            "requirement_number": data.requirement_number,
+        }
+        return any(
+            value is not None and value != getattr(requirement, field)
+            for field, value in sent.items()
+        )
 
     @service_handler
     async def deactivate_evidence_requirement(
         self, evidence_requirement_id: int, user
     ) -> None:
         """Remove a requirement from the list without erasing it — a
-        requirement that was once reviewed is part of the record."""
-        requirement = await self._get_requirement_or_404(evidence_requirement_id, user)
+        requirement that was once reviewed is part of the record. In a
+        change order draft the removal waits for the Director's acceptance
+        (#5555)."""
+        requirement, action = await self._get_requirement_or_404(
+            evidence_requirement_id, user
+        )
+        agreement = await self._lock_editable_package(
+            action.initiative_agreement_id, user
+        )
+        change_order = await self.change_orders.open_change_order_for(agreement)
+        if change_order is not None:
+            await self.change_orders.stage_removal(
+                change_order, EVIDENCE_REQUIREMENT, requirement, user
+            )
+            return
         requirement.is_active = False
         requirement.update_user = getattr(user, "keycloak_username", None)
         await self.repo.db.flush()
@@ -1707,6 +2096,35 @@ class InitiativeAgreementServices:
                 )
             )
 
+    async def _lock_editable_package(self, initiative_agreement_id: int, user=None):
+        """Refuse an edit unless the agreement's package is open to one
+        (#5554) and, with a user, open to that user (the Director only inside
+        a change order, #5555), holding the agreement's row until the edit is
+        saved.
+
+        The status is read under the lock, so a concurrent Set to Underway,
+        or a change order being started, accepted or discarded, cannot slip
+        between this check and the edit's save: it either waits for the
+        edit, or the edit waits for it and is then checked against the new
+        status. Every package write calls this before it changes anything,
+        and reads the open change order from the agreement it returns.
+        """
+        agreement = await self._lock_package(initiative_agreement_id)
+        ensure_package_editable(agreement, user)
+        return agreement
+
+    async def _lock_package(self, initiative_agreement_id: int):
+        """The agreement, its row held FOR KEY SHARE until the transaction
+        ends and its lifecycle re-read (see lock_agreement_for_package_edit)."""
+        agreement = await self.repo.lock_agreement_for_package_edit(
+            initiative_agreement_id
+        )
+        if agreement is None:
+            raise DataNotFoundException(
+                f"Initiative Agreement with id {initiative_agreement_id} not found"
+            )
+        return agreement
+
     async def _agreement_or_404(self, initiative_agreement_id: int, user):
         """The agreement, unless it is missing or hidden from the caller."""
         agreement = await self.repo.get_initiative_agreement_by_id(
@@ -1747,27 +2165,50 @@ class InitiativeAgreementServices:
         )
 
     async def _get_note_schema(
-        self, initiative_agreement_id: int, note_id: int
+        self, agreement, note_id: int, user
     ) -> InitiativeAgreementNoteSchema:
-        rows = await self.repo.get_notes_with_editors(initiative_agreement_id, note_id)
+        view = await self.change_orders.view_for(agreement, user)
+        rows = await self.repo.get_notes_with_editors(
+            agreement.initiative_agreement_id,
+            note_id,
+            include_change_order_id=view.change_order_id,
+        )
         if not rows:
             raise DataNotFoundException(f"Note with id {note_id} not found")
-        return self._note_schema(*rows[0])
+        note, editor = rows[0]
+        return view.apply(NOTE, note, self._note_schema(note, editor))
 
     @service_handler
     async def get_notes(
         self, initiative_agreement_id: int, user
     ) -> List[InitiativeAgreementNoteSchema]:
-        """An agreement's notes, in note-number order."""
-        await self._agreement_or_404(initiative_agreement_id, user)
-        rows = await self.repo.get_notes_with_editors(initiative_agreement_id)
-        return [self._note_schema(note, editor) for note, editor in rows]
+        """An agreement's notes, in note-number order, as the caller sees
+        them during a change order (#5555)."""
+        agreement = await self._agreement_or_404(initiative_agreement_id, user)
+        view = await self.change_orders.view_for(agreement, user)
+        rows = await self.repo.get_notes_with_editors(
+            initiative_agreement_id, include_change_order_id=view.change_order_id
+        )
+        notes = [
+            view.apply(NOTE, note, self._note_schema(note, editor))
+            for note, editor in rows
+        ]
+        # A renumbering in the change order moves the note in the list.
+        return sorted(notes, key=lambda note: Decimal(note.note_number))
 
     @service_handler
     async def get_next_note_number(self, initiative_agreement_id: int, user) -> Decimal:
         """The number the add-note form starts from."""
-        await self._agreement_or_404(initiative_agreement_id, user)
-        return await self.repo.next_note_number(initiative_agreement_id)
+        agreement = await self._agreement_or_404(initiative_agreement_id, user)
+        number = await self.repo.next_note_number(initiative_agreement_id)
+        change_order = await self.change_orders.open_change_order_for(agreement)
+        if change_order is not None:
+            taken = await self.change_orders.note_numbers_in_use(
+                initiative_agreement_id, change_order, include_live=True
+            )
+            if taken:
+                number = max(number, max(taken) + Decimal(1))
+        return number
 
     @service_handler
     async def create_note(
@@ -1777,17 +2218,32 @@ class InitiativeAgreementServices:
         user,
     ) -> InitiativeAgreementNoteSchema:
         await self._agreement_or_404(initiative_agreement_id, user)
+        agreement = await self._lock_editable_package(initiative_agreement_id, user)
+        change_order = await self.change_orders.open_change_order_for(agreement)
+        taken = (
+            await self.change_orders.note_numbers_in_use(
+                initiative_agreement_id, change_order, include_live=True
+            )
+            if change_order is not None
+            else None
+        )
         try:
             note = await self.repo.add_initiative_agreement_note(
                 initiative_agreement_id=initiative_agreement_id,
                 note_text=self._require_note_text(data.note_text),
                 note_number=data.note_number,
                 username=getattr(user, "keycloak_username", None),
+                pending_change_order_id=(
+                    change_order.initiative_agreement_change_order_id
+                    if change_order is not None
+                    else None
+                ),
+                taken_numbers=taken,
             )
         except ValueError as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
         return await self._get_note_schema(
-            initiative_agreement_id, note.initiative_agreement_note_id
+            agreement, note.initiative_agreement_note_id, user
         )
 
     @service_handler
@@ -1799,24 +2255,199 @@ class InitiativeAgreementServices:
         user,
     ) -> InitiativeAgreementNoteSchema:
         await self._agreement_or_404(initiative_agreement_id, user)
+        agreement = await self._lock_editable_package(initiative_agreement_id, user)
+        change_order = await self.change_orders.open_change_order_for(agreement)
         note_text = self._require_note_text(data.note_text)
-        try:
-            await self.repo.update_initiative_agreement_note(
-                initiative_agreement_id,
-                note_id,
-                note_text,
-                data.note_number,
-                username=getattr(user, "keycloak_username", None),
+        if change_order is not None:
+            await self._stage_note_update(
+                agreement, change_order, note_id, data.note_number, note_text, user
             )
-        except ValueError as error:
-            raise HTTPException(status_code=400, detail=str(error)) from error
-        return await self._get_note_schema(initiative_agreement_id, note_id)
+        else:
+            try:
+                await self.repo.update_initiative_agreement_note(
+                    initiative_agreement_id,
+                    note_id,
+                    note_text,
+                    data.note_number,
+                    username=getattr(user, "keycloak_username", None),
+                )
+            except ValueError as error:
+                raise HTTPException(status_code=400, detail=str(error)) from error
+        return await self._get_note_schema(agreement, note_id, user)
+
+    async def _change_order_note(self, agreement, change_order, note_id: int):
+        """A note the change order can act on: an accepted one, or one it
+        added itself."""
+        note = await self.change_orders.get_live_record(NOTE, note_id)
+        if (
+            note is None
+            or note.initiative_agreement_id != agreement.initiative_agreement_id
+            or not note.is_active
+            or note.pending_change_order_id
+            not in (None, change_order.initiative_agreement_change_order_id)
+        ):
+            raise DataNotFoundException(f"Note with id {note_id} not found")
+        return note
+
+    async def _stage_note_update(
+        self, agreement, change_order, note_id, note_number, note_text, user
+    ) -> None:
+        note = await self._change_order_note(agreement, change_order, note_id)
+        added_here = note.pending_change_order_id is not None
+        taken = await self.change_orders.note_numbers_in_use(
+            agreement.initiative_agreement_id,
+            change_order,
+            exclude_note_id=note_id,
+            include_live=added_here,
+        )
+        if Decimal(note_number) in taken:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Note number {note_number} is already in use for this "
+                    "initiative agreement."
+                ),
+            )
+        await self.change_orders.stage_update(
+            change_order,
+            NOTE,
+            note,
+            {"note_number": Decimal(note_number), "note_text": note_text},
+            user,
+        )
 
     @service_handler
     async def delete_note(
         self, initiative_agreement_id: int, note_id: int, user
     ) -> None:
         await self._agreement_or_404(initiative_agreement_id, user)
+        agreement = await self._lock_editable_package(initiative_agreement_id, user)
+        change_order = await self.change_orders.open_change_order_for(agreement)
+        if change_order is not None:
+            note = await self._change_order_note(agreement, change_order, note_id)
+            await self.change_orders.stage_removal(change_order, NOTE, note, user)
+            return
         await self.repo.delete_initiative_agreement_note(
             initiative_agreement_id, note_id
         )
+
+    # --- Change orders (#5555) ----------------------------------------------
+
+    @service_handler
+    async def start_change_order(
+        self, initiative_agreement_id: int, user
+    ) -> InitiativeAgreementProfileSchema:
+        """Put an underway agreement into a change order draft."""
+        await self._agreement_or_404(initiative_agreement_id, user)
+        await self.change_orders.start(initiative_agreement_id, user)
+        return await self.get_initiative_agreement_profile(initiative_agreement_id)
+
+    @service_handler
+    async def accept_change_order(
+        self, initiative_agreement_id: int, accepted_date, user
+    ) -> InitiativeAgreementProfileSchema:
+        """The Director accepts the open change order, effective
+        accepted_date; its versions become the accepted package."""
+        await self._agreement_or_404(initiative_agreement_id, user)
+        await self.change_orders.accept(initiative_agreement_id, accepted_date, user)
+        return await self.get_initiative_agreement_profile(initiative_agreement_id)
+
+    @service_handler
+    async def discard_change_order(
+        self, initiative_agreement_id: int, user
+    ) -> InitiativeAgreementProfileSchema:
+        """Drop the open change order's edits and return to Underway."""
+        await self._agreement_or_404(initiative_agreement_id, user)
+        await self.change_orders.discard(initiative_agreement_id, user)
+        return await self.get_initiative_agreement_profile(initiative_agreement_id)
+
+    @service_handler
+    async def get_change_orders(
+        self, initiative_agreement_id: int, user
+    ) -> List[ChangeOrderSchema]:
+        """Every change order against the agreement, newest first."""
+        await self._agreement_or_404(initiative_agreement_id, user)
+        return [
+            ChangeOrderSchema.model_validate(change_order)
+            for change_order in await self.change_orders.list_change_orders(
+                initiative_agreement_id
+            )
+        ]
+
+    async def _agreement_of_record(self, record_type, row):
+        if record_type is AGREEMENT:
+            return row.initiative_agreement_id
+        if record_type is EVIDENCE_REQUIREMENT:
+            action = await self.repo.get_designated_action_by_id(
+                row.designated_action_id
+            )
+            return action.initiative_agreement_id if action else None
+        return row.initiative_agreement_id
+
+    @service_handler
+    async def get_record_versions(
+        self, record_type_key: str, record_id: int, user
+    ) -> List[RecordVersionSchema]:
+        """Every version of one agreement, note, designated action or
+        evidence requirement, oldest first, for IDIR (#5555). A record no
+        change order has touched has none."""
+        record_type = RECORD_TYPES.get(record_type_key)
+        row = (
+            await self.change_orders.get_live_record(record_type, record_id)
+            if record_type is not None
+            else None
+        )
+        agreement_id = (
+            await self._agreement_of_record(record_type, row) if row else None
+        )
+        if agreement_id is None:
+            raise DataNotFoundException(
+                f"No {record_type_key} with id {record_id} was found"
+            )
+        await self._agreement_or_404(agreement_id, user)
+
+        versions = await self.change_orders.record_versions(record_type, record_id)
+        in_effect = [
+            version.version
+            for version in versions
+            if version.change_order is None
+            or version.change_order.status == CHANGE_ORDER_STATUS_ACCEPTED
+        ]
+        current = max(in_effect) if in_effect else None
+        result = []
+        for version in versions:
+            change_order = version.change_order
+            result.append(
+                RecordVersionSchema(
+                    version=version.version,
+                    action_type=version.action_type.value,
+                    change_order_number=(
+                        change_order.change_order_number if change_order else None
+                    ),
+                    change_order_status=change_order.status if change_order else None,
+                    accepted_date=change_order.accepted_date if change_order else None,
+                    accepted_at=change_order.accepted_at if change_order else None,
+                    accepted_by_display_name=(
+                        change_order.accepted_by_display_name if change_order else None
+                    ),
+                    create_date=version.create_date,
+                    values={
+                        to_camel(name): _version_value(value)
+                        for name, value in version.values().items()
+                    },
+                    is_current=version.version == current,
+                    is_pending=(
+                        change_order is not None
+                        and change_order.status == CHANGE_ORDER_STATUS_DRAFT
+                    ),
+                )
+            )
+        return result
+
+
+def _version_value(value):
+    if isinstance(value, Decimal):
+        return float(value)
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return value

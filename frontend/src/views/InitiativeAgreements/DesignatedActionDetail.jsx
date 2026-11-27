@@ -44,6 +44,10 @@ import {
 } from './components/DesignatedActionWorkflow'
 import { EditDesignatedAction } from './components/EditDesignatedAction'
 import { DesignatedActionHistoryPanel } from './components/DesignatedActionHistoryPanel'
+import { PackageLockNotice } from './components/PackageLockNotice'
+import { ChangeOrderStateChip } from './components/ChangeOrderStateChip'
+import { RemoveDesignatedAction } from './components/RemoveDesignatedAction'
+import { VersionHistoryButton } from './components/RecordVersions'
 
 // The shared document machinery keys on this string for designated actions.
 const PARENT_TYPE = 'designatedAction'
@@ -190,6 +194,17 @@ const DesignatedActionDetailBase = () => {
     )
   }
 
+  // Once the agreement is Underway its package is read-only (#5554): the
+  // action's details, its evidence requirements and its documents. The
+  // review on this page carries on.
+  const packageEditable = action.packageEditable === true
+  // The open change order's number while the agreement is in a change
+  // order draft (#5555); edits made here wait for the Director, who may
+  // make them too.
+  const inChangeOrder = action.changeOrderNumber != null
+  const canEditWording =
+    packageEditable &&
+    (canRecommend || (inChangeOrder && Boolean(hasRoles?.(roles.director))))
   const displayOrder = action.currentStatus?.displayOrder ?? 0
   const actionLabel = `DA${action.actionNumber}-IA${action.initiativeAgreementId}`
   const siblings = action.siblingActionIds || []
@@ -244,6 +259,23 @@ const DesignatedActionDetailBase = () => {
       </BCTypography>
       <Divider sx={{ mt: 2, mb: 3 }} />
 
+      {!packageEditable && (
+        <PackageLockNotice status={action.agreementLifecycleStatus} />
+      )}
+      {inChangeOrder && (
+        <BCAlert
+          severity="warning"
+          dismissible={false}
+          noFade
+          data-test="action-change-order-banner"
+          sx={{ mb: 3 }}
+        >
+          {t('initiativeAgreement:changeOrder.actionBanner', {
+            number: action.changeOrderNumber
+          })}
+        </BCAlert>
+      )}
+
       {/* Centred on the page, per the design review (#5118). */}
       <Stepper
         alternativeLabel
@@ -262,7 +294,16 @@ const DesignatedActionDetailBase = () => {
         color="nav"
         data-test="designated-action-card"
         headerAction={
-          <EditDesignatedAction action={action} onChanged={refreshAction} />
+          packageEditable && (
+            <BCBox sx={{ display: 'flex', gap: 1 }}>
+              <RemoveDesignatedAction action={action} />
+              <EditDesignatedAction
+                action={action}
+                inChangeOrder={inChangeOrder}
+                onChanged={refreshAction}
+              />
+            </BCBox>
+          )
         }
         content={
           <BCBox p={1}>
@@ -298,6 +339,11 @@ const DesignatedActionDetailBase = () => {
                     {action.currentStatus.status}
                   </BCBox>
                 )}
+                <ChangeOrderStateChip state={action.changeOrderState} />
+                <VersionHistoryButton
+                  recordType="designated-action"
+                  recordId={action.designatedActionId}
+                />
               </BCBox>
               <BCBox sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <BCButton
@@ -419,28 +465,35 @@ const DesignatedActionDetailBase = () => {
                 // Subfolders turned on at the business area's request
                 // (2026-09-01), superseding the earlier one-level cap.
                 allowSubfolders
+                readOnly={!packageEditable}
                 title={t('initiativeAgreement:actionDetail.documents')}
                 headerAction={
                   // Upload stays IDIR-side, like the API.
-                  <Role
-                    roles={[roles.ia_analyst, roles.ia_manager, roles.director]}
-                  >
-                    <BCTypography
-                      component="button"
-                      variant="body4"
-                      color="link"
-                      data-test="upload-documents-button"
-                      onClick={() => setUploadOpen(true)}
-                      sx={{
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        textDecoration: 'underline'
-                      }}
+                  packageEditable && (
+                    <Role
+                      roles={[
+                        roles.ia_analyst,
+                        roles.ia_manager,
+                        roles.director
+                      ]}
                     >
-                      {t('initiativeAgreement:actionDetail.manageDocuments')}
-                    </BCTypography>
-                  </Role>
+                      <BCTypography
+                        component="button"
+                        variant="body4"
+                        color="link"
+                        data-test="upload-documents-button"
+                        onClick={() => setUploadOpen(true)}
+                        sx={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          textDecoration: 'underline'
+                        }}
+                      >
+                        {t('initiativeAgreement:actionDetail.manageDocuments')}
+                      </BCTypography>
+                    </Role>
+                  )
                 }
               />
             </BCBox>
@@ -452,6 +505,8 @@ const DesignatedActionDetailBase = () => {
                 // only; directors see the review without controls that
                 // would be refused.
                 canEdit={canRecommend}
+                canEditWording={canEditWording}
+                inChangeOrder={inChangeOrder}
                 missingInformationReadOnly={!canRecommend}
                 renderRequestAction={renderRequestAction}
               />
@@ -469,15 +524,17 @@ const DesignatedActionDetailBase = () => {
         }
       />
 
-      <DocumentUploadDialog
-        open={uploadOpen}
-        close={() => {
-          setUploadOpen(false)
-          refreshTree()
-        }}
-        parentType={PARENT_TYPE}
-        parentID={designatedActionId}
-      />
+      {packageEditable && (
+        <DocumentUploadDialog
+          open={uploadOpen}
+          close={() => {
+            setUploadOpen(false)
+            refreshTree()
+          }}
+          parentType={PARENT_TYPE}
+          parentID={designatedActionId}
+        />
+      )}
 
       {/* The audit trail behind every workflow step (#4898). */}
       <Role roles={[roles.ia_analyst, roles.ia_manager, roles.director]}>

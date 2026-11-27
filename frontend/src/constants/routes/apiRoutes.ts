@@ -112,6 +112,16 @@ export const apiRoutes = {
     '/initiative-agreements/designated-actions/:designatedActionId/recommended-credits',
   designatedActionHistory:
     '/initiative-agreements/designated-actions/:designatedActionId/history',
+  // Change orders on an underway agreement (#5555).
+  startChangeOrder:
+    '/initiative-agreements/agreements/:initiativeAgreementId/change-order',
+  acceptChangeOrder:
+    '/initiative-agreements/agreements/:initiativeAgreementId/change-order/accept',
+  discardChangeOrder:
+    '/initiative-agreements/agreements/:initiativeAgreementId/change-order/discard',
+  changeOrders:
+    '/initiative-agreements/agreements/:initiativeAgreementId/change-orders',
+  recordVersions: '/initiative-agreements/versions/:recordType/:recordId',
   documentFolderTree: '/document-folders/:parentType/:parentID',
   documentFolderUpdate: '/document-folders/:parentType/:parentID/:folderId',
   documentFolderItems: '/document-folders/:parentType/:parentID/items',

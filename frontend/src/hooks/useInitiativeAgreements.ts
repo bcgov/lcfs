@@ -674,3 +674,174 @@ export const useDeleteNote = (initiativeAgreementId: number | string) =>
         ).replace(':noteId', String(noteId))
       )
   )
+
+// --- Change orders (#5555) ---------------------------------------------------
+
+/** How a record stands in an open change order, for IDIR readers. */
+export type ChangeOrderState = 'added' | 'edited' | 'removed' | null
+
+export interface ChangeOrder {
+  initiativeAgreementChangeOrderId: number
+  initiativeAgreementId: number
+  changeOrderNumber: number
+  status: 'Draft' | 'Accepted' | 'Discarded'
+  origin: string
+  startedByDisplayName?: string | null
+  createDate?: string | null
+  acceptedDate?: string | null
+  acceptedAt?: string | null
+  acceptedByDisplayName?: string | null
+  discardedAt?: string | null
+  discardedByDisplayName?: string | null
+}
+
+export interface RecordVersion {
+  version: number
+  actionType: 'CREATE' | 'UPDATE' | 'DELETE'
+  changeOrderNumber?: number | null
+  changeOrderStatus?: string | null
+  acceptedDate?: string | null
+  acceptedAt?: string | null
+  acceptedByDisplayName?: string | null
+  createDate?: string | null
+  values: Record<string, unknown>
+  isCurrent: boolean
+  isPending: boolean
+}
+
+/** The record types the version history covers. */
+export type VersionedRecordType =
+  | 'agreement'
+  | 'note'
+  | 'designated-action'
+  | 'evidence-requirement'
+
+const agreementPath = (
+  template: string,
+  initiativeAgreementId: number | string
+) => template.replace(':initiativeAgreementId', String(initiativeAgreementId))
+
+/** Everything a change order touches is re-read once it changes state. */
+const invalidatePackage = (
+  queryClient: ReturnType<typeof useQueryClient>,
+  initiativeAgreementId: number | string
+) => {
+  queryClient.invalidateQueries({ queryKey: ['initiative-agreements'] })
+  queryClient.invalidateQueries({ queryKey: ['designated-actions'] })
+  queryClient.invalidateQueries({ queryKey: ['evidence-requirements'] })
+  queryClient.invalidateQueries({ queryKey: ['designated-action-history'] })
+  queryClient.invalidateQueries({ queryKey: ['record-versions'] })
+  queryClient.invalidateQueries({
+    queryKey: notesKey(initiativeAgreementId)
+  })
+  queryClient.invalidateQueries({
+    queryKey: ['change-orders', String(initiativeAgreementId)]
+  })
+}
+
+const useChangeOrderMutation = <TVariables = void>(
+  initiativeAgreementId: number | string,
+  request: (
+    client: ApiServiceInstance,
+    variables: TVariables
+  ) => Promise<unknown>
+) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (variables: TVariables) => request(client, variables),
+    onSuccess: () => invalidatePackage(queryClient, initiativeAgreementId)
+  })
+}
+
+/** Put an underway agreement into a change order draft. */
+export const useStartChangeOrder = (initiativeAgreementId: number | string) =>
+  useChangeOrderMutation(
+    initiativeAgreementId,
+    async (client) =>
+      (
+        await client.post(
+          agreementPath(apiRoutes.startChangeOrder, initiativeAgreementId)
+        )
+      ).data
+  )
+
+/** The Director accepts the open change order with its effective date. */
+export const useAcceptChangeOrder = (initiativeAgreementId: number | string) =>
+  useChangeOrderMutation(
+    initiativeAgreementId,
+    async (client, payload: { acceptedDate: string }) =>
+      (
+        await client.put(
+          agreementPath(apiRoutes.acceptChangeOrder, initiativeAgreementId),
+          payload
+        )
+      ).data
+  )
+
+/** Discard the open change order; the agreement returns to Underway. */
+export const useDiscardChangeOrder = (initiativeAgreementId: number | string) =>
+  useChangeOrderMutation(
+    initiativeAgreementId,
+    async (client) =>
+      (
+        await client.put(
+          agreementPath(apiRoutes.discardChangeOrder, initiativeAgreementId)
+        )
+      ).data
+  )
+
+/** The agreement's change orders, newest first (IDIR). */
+export const useChangeOrders = (
+  initiativeAgreementId: number | string,
+  options: QueryOptions<ChangeOrder[]> = {}
+) => {
+  const client = useApiService()
+  return useQuery<ChangeOrder[]>({
+    enabled: !!initiativeAgreementId,
+    queryKey: ['change-orders', String(initiativeAgreementId)],
+    queryFn: async () =>
+      (
+        await client.get(
+          agreementPath(apiRoutes.changeOrders, initiativeAgreementId)
+        )
+      ).data,
+    ...options
+  })
+}
+
+/** Every version of one record, oldest first (IDIR). */
+export const useRecordVersions = (
+  recordType: VersionedRecordType,
+  recordId: number | string,
+  options: QueryOptions<RecordVersion[]> = {}
+) => {
+  const client = useApiService()
+  return useQuery<RecordVersion[]>({
+    enabled: !!recordId,
+    queryKey: ['record-versions', recordType, String(recordId)],
+    queryFn: async () =>
+      (
+        await client.get(
+          apiRoutes.recordVersions
+            .replace(':recordType', recordType)
+            .replace(':recordId', String(recordId))
+        )
+      ).data,
+    ...options
+  })
+}
+
+/** Remove a designated action in a change order. */
+export const useRemoveDesignatedAction = (
+  initiativeAgreementId: number | string,
+  designatedActionId: number | string
+) =>
+  useChangeOrderMutation(initiativeAgreementId, async (client) =>
+    client.delete(
+      apiRoutes.updateDesignatedAction.replace(
+        ':designatedActionId',
+        String(designatedActionId)
+      )
+    )
+  )

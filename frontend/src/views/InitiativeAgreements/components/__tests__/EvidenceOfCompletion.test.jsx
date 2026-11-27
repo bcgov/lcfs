@@ -850,6 +850,28 @@ describe('EvidenceOfCompletion', () => {
     )
   })
 
+  test('keeps the review open but not the wording once the package is read-only (#5554)', ({
+    render,
+    app
+  }) => {
+    render(
+      <EvidenceOfCompletion designatedActionId="9" canEditWording={false} />,
+      app
+    )
+    openEoc()
+
+    // Adding, rewording and removing requirements are package edits.
+    expect(screen.queryByTestId('eoc-add-button')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('eoc-remove-1')).not.toBeInTheDocument()
+    expect(screen.getByTestId('eoc-description-1')).toHaveAttribute('readonly')
+    // The assessment is the review, which carries on.
+    expect(screen.getByTestId('eoc-review-1')).not.toHaveAttribute('readonly')
+    expect(screen.getByTestId('eoc-notes-1')).not.toHaveAttribute('readonly')
+    expect(
+      screen.getByTestId('eoc-satisfactory-1').querySelector('input')
+    ).not.toBeDisabled()
+  })
+
   test('does not offer editing without field permissions', ({
     render,
     app

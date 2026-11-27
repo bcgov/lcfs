@@ -1,6 +1,6 @@
 import 'react'
 import { describe, expect, vi, beforeEach } from 'vite-plus/test'
-import { fireEvent, screen } from '@testing-library/react'
+import { fireEvent, screen, within } from '@testing-library/react'
 import { roles } from '@/constants/roles'
 import { InitiativeAgreementDetail } from '../InitiativeAgreementDetail'
 import { useInitiativeAgreementPageStore } from '@/stores/useInitiativeAgreementPageStore'
@@ -43,6 +43,11 @@ vi.mock('@/hooks/useInitiativeAgreements', () => ({
     isError: false
   }),
   useUpdateAgreement: () => ({ mutate: vi.fn(), isPending: false }),
+  useChangeOrders: () => ({ data: [] }),
+  useRecordVersions: () => ({ data: [], isLoading: false }),
+  useStartChangeOrder: () => ({ mutate: vi.fn(), isPending: false }),
+  useAcceptChangeOrder: () => ({ mutate: vi.fn(), isPending: false }),
+  useDiscardChangeOrder: () => ({ mutate: vi.fn(), isPending: false }),
   useSetAgreementUnderway: () => ({ mutateAsync: vi.fn() })
 }))
 
@@ -80,10 +85,11 @@ vi.mock('../components/DeletedItems', () => ({
 }))
 
 vi.mock('../components/NotesAccordion', () => ({
-  NotesAccordion: ({ initiativeAgreementId }) => (
+  NotesAccordion: ({ initiativeAgreementId, readOnly }) => (
     <div
       data-test="notes-accordion"
       data-agreement-id={initiativeAgreementId}
+      data-read-only={String(!!readOnly)}
     />
   )
 }))
@@ -128,7 +134,10 @@ const agreement = {
   projectDescription: 'A description of the project.',
   agreementStartDate: '2026-06-19',
   agreementEndDate: '2027-05-03',
-  lifecycleStatus: { status: 'Underway' },
+  // A package still open to edits (#5554); lockedAgreement below is the
+  // same agreement once it is Underway.
+  lifecycleStatus: { status: 'Draft' },
+  packageEditable: true,
   organization: {
     organizationId: 1,
     name: 'Test Organization',
@@ -142,6 +151,12 @@ const agreement = {
       postalcodeZipcode: 'V6G 2P3'
     }
   }
+}
+
+const lockedAgreement = {
+  ...agreement,
+  lifecycleStatus: { status: 'Underway' },
+  packageEditable: false
 }
 
 describe('InitiativeAgreementDetail', () => {
@@ -167,7 +182,7 @@ describe('InitiativeAgreementDetail', () => {
     ).toHaveTextContent('IA-26ORG1')
     expect(screen.getByText('Test Organization')).toBeInTheDocument()
     expect(screen.getByTestId('agreement-status-chip')).toHaveTextContent(
-      'Underway'
+      'Draft'
     )
     expect(screen.getByText(/697 Burrard Street/)).toBeInTheDocument()
     expect(screen.getByText('604-555-0100')).toBeInTheDocument()
@@ -389,7 +404,7 @@ describe('InitiativeAgreementDetail', () => {
     )
   })
 
-  test('offers to add an action while the agreement is underway', ({
+  test('offers to add an action while the package is editable (#5554)', ({
     render,
     app
   }) => {
@@ -421,7 +436,10 @@ describe('InitiativeAgreementDetail', () => {
     ([, role, status], { render, app }) => {
       mockRoles = [{ name: role }]
       mockAgreement.mockReturnValue({
-        data: { ...agreement, lifecycleStatus: { status } },
+        data: {
+          ...(status === 'Underway' ? lockedAgreement : agreement),
+          lifecycleStatus: { status }
+        },
         isLoading: false,
         isError: false,
         error: null
@@ -433,11 +451,11 @@ describe('InitiativeAgreementDetail', () => {
     }
   )
 
-  test.for(['Completed', 'Terminated'])(
+  test.for(['Underway', 'Completed', 'Terminated'])(
     'does not offer to add an action to a %s agreement',
     (status, { render, app }) => {
       mockAgreement.mockReturnValue({
-        data: { ...agreement, lifecycleStatus: { status } },
+        data: { ...lockedAgreement, lifecycleStatus: { status } },
         isLoading: false,
         isError: false,
         error: null
@@ -531,7 +549,7 @@ describe('InitiativeAgreementDetail', () => {
       screen.getByText('initiativeAgreement:detail.noOrganization')
     ).toBeInTheDocument()
     expect(screen.getByTestId('agreement-status-chip')).toHaveTextContent(
-      'Underway'
+      'Draft'
     )
   })
 
@@ -547,5 +565,196 @@ describe('InitiativeAgreementDetail', () => {
     })
     render(<InitiativeAgreementDetail />, app)
     expect(screen.getByText('Test Organization')).toBeInTheDocument()
+  })
+
+  describe('once the package is read-only (#5554)', () => {
+    beforeEach(() => {
+      mockAgreement.mockReturnValue({
+        data: lockedAgreement,
+        isLoading: false,
+        isError: false,
+        error: null
+      })
+    })
+
+    test('says why, naming the status, with no action the API did not offer', ({
+      render,
+      app
+    }) => {
+      render(<InitiativeAgreementDetail />, app)
+      const notice = screen.getByTestId('package-lock-notice')
+      expect(notice).toHaveTextContent(
+        'initiativeAgreement:detail.packageLockedTitle'
+      )
+      expect(
+        screen.queryByTestId('package-lock-notice-action')
+      ).not.toBeInTheDocument()
+    })
+
+    test('offers Start change order in the notice when the API does (#5555)', ({
+      render,
+      app
+    }) => {
+      mockAgreement.mockReturnValue({
+        data: { ...lockedAgreement, changeOrderActions: ['start'] },
+        isLoading: false,
+        isError: false,
+        error: null
+      })
+      render(<InitiativeAgreementDetail />, app)
+      expect(
+        within(screen.getByTestId('package-lock-notice-action')).getByTestId(
+          'start-change-order'
+        )
+      ).toBeInTheDocument()
+    })
+
+    test('shows no notice while the package is editable', ({ render, app }) => {
+      mockAgreement.mockReturnValue({
+        data: agreement,
+        isLoading: false,
+        isError: false,
+        error: null
+      })
+      render(<InitiativeAgreementDetail />, app)
+      expect(
+        screen.queryByTestId('package-lock-notice')
+      ).not.toBeInTheDocument()
+    })
+
+    test.for([roles.ia_analyst, roles.ia_manager])(
+      'gives a %s no Edit, upload or add-action control',
+      (role, { render, app }) => {
+        mockRoles = [{ name: role }]
+        render(<InitiativeAgreementDetail />, app)
+        expect(screen.queryByTestId('edit-agreement')).not.toBeInTheDocument()
+        expect(
+          screen.queryByTestId('upload-documents-button')
+        ).not.toBeInTheDocument()
+        expect(
+          screen.queryByTestId('add-designated-action')
+        ).not.toBeInTheDocument()
+      }
+    )
+
+    test('makes the document tree and the notes read-only', ({
+      render,
+      app
+    }) => {
+      render(<InitiativeAgreementDetail />, app)
+      expect(treeProps).toHaveBeenLastCalledWith(
+        expect.objectContaining({ readOnly: true })
+      )
+      expect(screen.getByTestId('notes-accordion')).toHaveAttribute(
+        'data-read-only',
+        'true'
+      )
+    })
+
+    test('keeps the comment thread and the actions grid', ({ render, app }) => {
+      render(<InitiativeAgreementDetail />, app)
+      expect(screen.getByTestId('comments-component')).toBeInTheDocument()
+      expect(screen.getByTestId('designated-actions-grid')).toBeInTheDocument()
+    })
+
+    test('gives a BCeID proponent the read-only list and no notice', ({
+      render,
+      app
+    }) => {
+      mockRoles = [{ name: roles.ia_proponent }]
+      render(<InitiativeAgreementDetail />, app)
+      expect(screen.queryByTestId('edit-agreement')).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId('upload-documents-button')
+      ).not.toBeInTheDocument()
+      expect(screen.queryByTestId('document-tree')).not.toBeInTheDocument()
+      // The notice speaks to the staff who would otherwise edit.
+      expect(
+        screen.queryByTestId('package-lock-notice')
+      ).not.toBeInTheDocument()
+    })
+  })
+})
+
+describe('InitiativeAgreementDetail in a change order (#5555)', () => {
+  const inChangeOrder = {
+    ...agreement,
+    lifecycleStatus: { status: 'Change order draft' },
+    changeOrderState: 'edited',
+    changeOrder: {
+      initiativeAgreementChangeOrderId: 3,
+      changeOrderNumber: 2,
+      status: 'Draft',
+      startedByDisplayName: 'Ana Analyst',
+      createDate: '2026-11-24T18:00:00Z'
+    },
+    changeOrderActions: ['accept', 'discard']
+  }
+
+  beforeEach(() => {
+    mockRoles = [{ name: roles.director }]
+    mockDocuments.mockReturnValue({ data: [], refetch: vi.fn() })
+  })
+
+  test('shows the draft banner and marks the edited details', ({
+    render,
+    app
+  }) => {
+    mockAgreement.mockReturnValue({
+      data: inChangeOrder,
+      isLoading: false,
+      isError: false,
+      error: null
+    })
+    render(<InitiativeAgreementDetail />, app)
+
+    expect(screen.getByTestId('change-order-banner')).toBeInTheDocument()
+    expect(screen.getByTestId('accept-change-order')).toBeInTheDocument()
+    expect(screen.getByTestId('agreement-status-chip')).toHaveTextContent(
+      'Change order draft'
+    )
+    expect(screen.getByTestId('change-order-state')).toHaveAttribute(
+      'data-state',
+      'edited'
+    )
+  })
+
+  test('lets the Director edit the details only inside a change order', ({
+    render,
+    app
+  }) => {
+    mockAgreement.mockReturnValue({
+      data: inChangeOrder,
+      isLoading: false,
+      isError: false,
+      error: null
+    })
+    const { unmount } = render(<InitiativeAgreementDetail />, app)
+    expect(screen.getByTestId('edit-agreement')).toBeInTheDocument()
+    unmount()
+
+    mockAgreement.mockReturnValue({
+      data: agreement,
+      isLoading: false,
+      isError: false,
+      error: null
+    })
+    render(<InitiativeAgreementDetail />, app)
+    expect(screen.queryByTestId('edit-agreement')).toBeNull()
+  })
+
+  test('shows an organization no change order controls', ({ render, app }) => {
+    mockRoles = [{ name: roles.ia_proponent }]
+    mockAgreement.mockReturnValue({
+      // What the API sends an organization while IDIR drafts a change.
+      data: agreement,
+      isLoading: false,
+      isError: false,
+      error: null
+    })
+    render(<InitiativeAgreementDetail />, app)
+
+    expect(screen.queryByTestId('change-order-panel')).toBeNull()
+    expect(screen.queryByTestId('change-order-history')).toBeNull()
   })
 })

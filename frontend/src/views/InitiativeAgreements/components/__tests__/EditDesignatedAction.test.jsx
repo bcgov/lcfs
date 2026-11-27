@@ -150,3 +150,33 @@ describe('EditDesignatedAction', () => {
     ).not.toBeInTheDocument()
   })
 })
+
+describe('EditDesignatedAction in a change order (#5555)', () => {
+  test('the Director may edit only inside a change order', ({
+    render,
+    app
+  }) => {
+    mockRoles = [roles.director]
+    const { unmount } = render(
+      <EditDesignatedAction action={action} inChangeOrder />,
+      app
+    )
+    expect(screen.getByTestId('edit-designated-action')).toBeInTheDocument()
+    unmount()
+
+    render(<EditDesignatedAction action={action} />, app)
+    expect(screen.queryByTestId('edit-designated-action')).toBeNull()
+  })
+
+  test('is not offered for an action being removed', ({ render, app }) => {
+    mockRoles = [roles.ia_analyst]
+    render(
+      <EditDesignatedAction
+        action={{ ...action, changeOrderState: 'removed' }}
+        inChangeOrder
+      />,
+      app
+    )
+    expect(screen.queryByTestId('edit-designated-action')).toBeNull()
+  })
+})

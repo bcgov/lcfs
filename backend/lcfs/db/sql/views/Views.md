@@ -130,9 +130,9 @@ Both views exclude Draft applications and leave out contact details. Timestamps 
 statuses. Join submission `designated_action_id` to `designated_action`, then
 `initiative_agreement_id` to `initiative_agreement`: one IA has many concrete
 DA version rows, and one DA row has many submissions. The IA is deliberately
-derived through the DA, so mismatched IA/DA pairs cannot be stored. DA change
-orders create new rows sharing `group_uuid`; group by that value when reporting
-across versions, and do not assume a submission belongs to the latest row.
+derived through the DA, so mismatched IA/DA pairs cannot be stored. Change
+orders do not copy DA rows (see below), so a submission's DA row is the action's
+current row; `group_uuid` still groups any version rows written before #5555.
 Join `organization_id` to `organization`. Audit usernames `create_user` and
 `update_user` can be joined to `user_profile.keycloak_username`; history actors
 join by `user_profile_id` (nullable for system events).
@@ -160,3 +160,42 @@ Existing default privileges may grant the reporting role SELECT on new base
 tables; verify effective privileges in each deployment. Some existing related
 tables may not be accessible to that role, so verify the documented joins with
 the actual reporting account. No Metabase configuration is changed here.
+
+### Initiative agreement change orders (#5555)
+
+A change order amends an Underway IA package without copying it. The live rows
+of `initiative_agreement`, `initiative_agreement_note`, `designated_action` and
+`evidence_requirement` keep their ids and always hold the **current accepted**
+values, so the IA → DA → EOC joins report one row per record and never count
+history as separate packages. No SQL view or materialized view reads these
+tables today; the transaction views read legacy award rows only (agreement rows
+have a NULL `current_status_id` and drop out of their inner join).
+
+Filters for the current accepted package:
+
+-   `designated_action`: `action_type <> 'DELETE' AND pending_change_order_id IS NULL`
+-   `evidence_requirement`: `is_active AND pending_change_order_id IS NULL`
+-   `initiative_agreement_note`: `is_active AND pending_change_order_id IS NULL`
+
+`pending_change_order_id` marks a record an unaccepted change order added; it is
+NULL for every accepted record. Lifecycle status `Change order draft` means the
+package is in effect with changes being prepared: count it with `Underway`.
+
+History lives in `initiative_agreement_version`, `initiative_agreement_note_version`,
+`designated_action_version` and `evidence_requirement_version`, one row per
+version of a record a change order touched (unchanged records have none). Join
+each on its record id (`initiative_agreement_id`, `initiative_agreement_note_id`,
+`designated_action_id`, `evidence_requirement_id`). Version 0 with a NULL
+`change_order_id` is the record before its first change order; other rows join
+`change_order_id` to `initiative_agreement_change_order`. A version is in effect
+when its change order is NULL or `Accepted`; the highest such version is
+current, a `Draft` change order's row is pending, and a `Discarded` change
+order leaves no rows. Pick one version per record before joining a version
+table to anything else, or rows multiply.
+
+`initiative_agreement_change_order` holds one row per change order: `status`
+(`Draft`, `Accepted`, `Discarded`), `accepted_date` (the effective date the
+Director entered), `accepted_at` (when it was recorded) and the accepting user
+(`accepted_by_user_id`, `accepted_by_display_name`). Report on `accepted_date`
+for when a change took effect. All five tables carry the audit trigger.
+

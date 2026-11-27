@@ -123,6 +123,7 @@ async def test_agreement_lifecycle_statuses_seeded(dbsession):
     assert {row.status for row in rows} == {
         "Draft",
         "Underway",
+        "Change order draft",
         "Completed",
         "Terminated",
     }

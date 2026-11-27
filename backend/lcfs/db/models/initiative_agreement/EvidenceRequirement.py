@@ -31,12 +31,11 @@ class EvidenceRequirement(BaseModel, Auditable):
     One designated action carries many requirements; agreement notes
     (e.g. "Note 1", "Note 2") are stored here too where applicable.
 
-    Amendments append a new row and deactivate the old one via ``is_active``
-    rather than carrying the ``Versioning`` mixin: requirement-level versions
-    would add a third axis of cross-version resolution (designated action
-    versions, then requirement versions, then per-round reviews) that nothing
-    resolves, and would let two versions of one requirement each hold a
-    review for the same submission round.
+    The row is not copied per version: copies would let two versions of one
+    requirement each hold a review for the same submission round, and would
+    orphan EOC answers keyed by its id. A change order's edits to the
+    wording wait in evidence_requirement_version until the Director accepts
+    (#5555); the analyst's review is workflow and is not versioned.
     """
 
     __tablename__ = "evidence_requirement"
@@ -89,8 +88,9 @@ class EvidenceRequirement(BaseModel, Auditable):
         server_default=text("true"),
         comment=(
             "Soft-delete flag: inactive requirements are hidden but retained. "
-            "Also the amendment mechanism — a change order deactivates the "
-            "old requirement and inserts a replacement."
+            "A change order that removes a requirement deactivates it on "
+            "acceptance; its wording's versions are in "
+            "evidence_requirement_version (#5555)."
         ),
     )
 
@@ -132,6 +132,20 @@ class EvidenceRequirement(BaseModel, Auditable):
         TIMESTAMP(timezone=True),
         nullable=True,
         comment="When the current assessment was recorded",
+    )
+
+    pending_change_order_id = Column(
+        Integer,
+        ForeignKey(
+            "initiative_agreement_change_order.initiative_agreement_change_order_id"
+        ),
+        nullable=True,
+        index=True,
+        comment=(
+            "Change order that added this record, while it is not part of the "
+            "accepted package. NULL for every accepted record; acceptance "
+            "clears it (#5555)."
+        ),
     )
 
     designated_action = relationship(
