@@ -124,6 +124,7 @@ def mock_repo():
     # Add default mock for get_assessed_compliance_report_by_period
     repo.get_assessed_compliance_report_by_period = AsyncMock(return_value=None)
     repo.get_prior_assessed_compliance_report_in_group = AsyncMock(return_value=None)
+    repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
     return repo
 
 
@@ -170,7 +171,6 @@ def mock_org_snapshot_repo():
 @pytest.fixture
 def mock_trxn_repo():
     repo = AsyncMock(spec=TransactionRepository)
-    repo.delete_transaction = AsyncMock()
     repo.get_group_adjustments_excluded_from_line_17 = AsyncMock(return_value=0)
     repo.get_prior_group_adjustments_excluded_from_line_17 = AsyncMock(return_value=0)
     repo.get_reserved_transaction_by_id = AsyncMock(return_value=None)

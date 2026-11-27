@@ -1,7 +1,9 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
+from sqlalchemy import select
 
 from lcfs.db.models import ComplianceReport
+from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
 from lcfs.db.models.transfer.TransferStatus import TransferStatusEnum
 from lcfs.tests.transaction.transaction_payloads import *
 from lcfs.web.api.base import SortOrder
@@ -12,6 +14,30 @@ from lcfs.web.exception.exceptions import DatabaseException
 @pytest.fixture
 def transaction_repo(dbsession):
     return TransactionRepository(db=dbsession)
+
+
+@pytest.mark.anyio
+async def test_delete_reserved_transaction_rejects_non_reserved():
+    db = AsyncMock()
+    db.scalar.side_effect = [42, None]
+    repo = TransactionRepository(db=db)
+
+    assert await repo.delete_reserved_transaction(42, 7) is False
+    db.execute.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_delete_reserved_transaction_only_deletes_matching_reservation():
+    db = AsyncMock()
+    db.scalar.side_effect = [42, object()]
+    db.execute.return_value = MagicMock(rowcount=1)
+    repo = TransactionRepository(db=db)
+
+    assert await repo.delete_reserved_transaction(42, 7) is True
+    assert db.execute.await_count == 2
+    deletion = db.execute.await_args_list[1].args[0]
+    assert deletion.is_delete
+    assert "transaction_action" in str(deletion)
 
 
 @pytest.fixture
@@ -1239,7 +1265,24 @@ async def test_delete_reserved_transaction(
     )
     await dbsession.flush()
 
+    period = await dbsession.scalar(
+        select(CompliancePeriod).where(CompliancePeriod.description == "2024")
+    )
+    report = ComplianceReport(
+        compliance_report_id=999, compliance_period_id=period.compliance_period_id,
+        organization_id=test_org_id, transaction_id=9104,
+    )
+    dbsession.add(report)
+    await dbsession.flush()
+
+    assert not await transaction_repo.delete_reserved_transaction(9104, 998)
+    await dbsession.refresh(report)
+    assert report.transaction_id == 9104
+    assert await dbsession.get(Transaction, 9104) is not None
+
     assert await transaction_repo.delete_reserved_transaction(9104, 999)
+    await dbsession.refresh(report)
+    assert report.transaction_id is None
     assert await dbsession.get(Transaction, 9104) is None
 
 
@@ -1247,8 +1290,21 @@ async def test_delete_reserved_transaction(
 async def test_delete_reserved_transaction_keeps_a_confirmed_one(
     dbsession, transaction_repo, mock_transactions
 ):
+    period = await dbsession.scalar(
+        select(CompliancePeriod).where(CompliancePeriod.description == "2024")
+    )
+    report = ComplianceReport(
+        compliance_report_id=999, compliance_period_id=period.compliance_period_id,
+        organization_id=test_org_id, transaction_id=5,
+    )
+    dbsession.add(report)
+    await dbsession.flush()
+
     assert not await transaction_repo.delete_reserved_transaction(5, 999)
-    assert await dbsession.get(Transaction, 5) is not None
+    await dbsession.refresh(report)
+    transaction = await dbsession.get(Transaction, 5)
+    assert report.transaction_id == 5
+    assert transaction.transaction_action == TransactionActionEnum.Adjustment
 
 
 @pytest.mark.anyio
@@ -1393,36 +1449,6 @@ async def test_get_visible_statuses_for_government(dbsession, transaction_repo):
     assert set(visible_statuses) == set(
         expected_statuses
     ), "Unexpected statuses returned for government"
-
-
-@pytest.mark.anyio
-async def test_delete_transaction_success(dbsession, transaction_repo):
-    """
-    Verify that a transaction is deleted and its associated compliance report
-    has its transaction_id set to None.
-    """
-    # Create and add a Transaction and a ComplianceReport referencing that transaction.
-    transaction = Transaction(transaction_id=1000)
-    compliance_report = ComplianceReport(
-        compliance_report_id=2000,
-        transaction_id=1000,
-        compliance_period_id=15,
-        organization_id=1,
-    )
-    dbsession.add_all([transaction, compliance_report])
-    await dbsession.flush()
-
-    # Call the delete_transaction method.
-    await transaction_repo.delete_transaction(1000, 2000)
-    await dbsession.commit()
-
-    # Verify the Transaction is deleted.
-    deleted_transaction = await dbsession.get(Transaction, 1000)
-    assert deleted_transaction is None
-
-    # Verify the ComplianceReport has been updated.
-    updated_report = await dbsession.get(ComplianceReport, 2000)
-    assert updated_report.transaction_id is None
 
 
 @pytest.mark.anyio
