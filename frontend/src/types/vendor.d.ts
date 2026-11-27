@@ -75,3 +75,17 @@ declare module 'chroma-js' {
 
   export default function chroma(color: string): ChromaColor
 }
+
+declare module 'mammoth/mammoth.browser' {
+  interface MammothHtmlResult {
+    value: string
+  }
+
+  const mammoth: {
+    convertToHtml(input: {
+      arrayBuffer: ArrayBuffer
+    }): Promise<MammothHtmlResult>
+  }
+
+  export default mammoth
+}

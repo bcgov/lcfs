@@ -2,37 +2,39 @@ import { test } from '@/tests/utils/fixtures'
 import { screen, fireEvent, waitFor } from '@testing-library/react'
 import { vi, describe, expect, beforeEach } from 'vite-plus/test'
 import DocumentTable from '../DocumentTable'
-import { validateFile } from '@/utils/fileValidation'
 import {
   CI_APPLICATION_FILE_TYPES,
   COMPLIANCE_REPORT_FILE_TYPES,
   MAX_FILE_SIZE_BYTES
 } from '@/constants/common'
-import { isFeatureEnabled } from '@/constants/config'
-
-// Import mocked hooks for use in tests
-import {
-  useDocuments,
-  useUploadDocument,
-  useDeleteDocument,
-  useUpdateDocument,
-  useDownloadDocument
-} from '@/hooks/useDocuments'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
-
-// Mock external dependencies
-vi.mock('@/hooks/useDocuments', () => ({
+const mocks = vi.hoisted(() => ({
   useDocuments: vi.fn(),
   useUploadDocument: vi.fn(),
   useDeleteDocument: vi.fn(),
   useUpdateDocument: vi.fn(),
   useDownloadDocument: vi.fn(),
+  useCurrentUser: vi.fn(),
+  isFeatureEnabled: vi.fn(() => false),
+  validateFile: vi.fn(),
+  timezoneFormatter: vi.fn(
+    ({ value }: { value?: string }) => value || '2024-01-01T10:00:00Z'
+  ),
+  prettyBytes: vi.fn((bytes: number) => `${Math.round(bytes / 1024 / 1024)} MB`)
+}))
+
+// Mock external dependencies
+vi.mock('@/hooks/useDocuments', () => ({
+  useDocuments: mocks.useDocuments,
+  useUploadDocument: mocks.useUploadDocument,
+  useDeleteDocument: mocks.useDeleteDocument,
+  useUpdateDocument: mocks.useUpdateDocument,
+  useDownloadDocument: mocks.useDownloadDocument,
   useReviewDocumentScan: vi.fn(() => ({ mutateAsync: vi.fn() }))
 }))
 
 vi.mock('@/constants/config', async (importOriginal) => ({
   ...(await importOriginal()),
-  isFeatureEnabled: vi.fn(() => false)
+  isFeatureEnabled: mocks.isFeatureEnabled
 }))
 
 vi.mock('@/components/Documents/DocumentPreviewButton', () => ({
@@ -45,25 +47,25 @@ vi.mock('@/components/Documents/DocumentPreviewButton', () => ({
 }))
 
 vi.mock('@/hooks/useCurrentUser', () => ({
-  useCurrentUser: vi.fn()
+  useCurrentUser: mocks.useCurrentUser
 }))
 
 vi.mock('@/utils/fileValidation', () => ({
-  validateFile: vi.fn()
+  validateFile: mocks.validateFile
 }))
 
 vi.mock('@/utils/formatters', () => ({
-  timezoneFormatter: vi.fn(({ value }) => value || '2024-01-01T10:00:00Z')
+  timezoneFormatter: mocks.timezoneFormatter
 }))
 
 vi.mock('pretty-bytes', () => ({
-  default: vi.fn((bytes) => `${Math.round(bytes / 1024 / 1024)} MB`)
+  default: mocks.prettyBytes
 }))
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key, options = {}) => {
-      const translations = {
+    t: (key: string, options: Record<string, string | undefined> = {}) => {
+      const translations: Record<string, string> = {
         'report:clickDrag': 'Click or drag files here to upload',
         'report:deleteDocumentConfirmTitle': 'Delete document?',
         'report:deleteDocumentConfirmText': `Are you sure you want to delete ${options.fileName}?`,
@@ -80,18 +82,27 @@ vi.mock('react-i18next', () => ({
 }))
 
 describe('DocumentTable', () => {
-  let mockUploadMutate, mockDeleteMutate, mockUpdateMutate, mockDownloadDocument
+  let mockUploadMutate: ReturnType<typeof vi.fn>
+  let mockDeleteMutate: ReturnType<typeof vi.fn>
+  let mockUpdateMutate: ReturnType<typeof vi.fn>
+  let mockDownloadDocument: ReturnType<typeof vi.fn>
 
   const defaultProps = {
     parentType: 'compliance-report',
     parentID: '123'
   }
 
-  const createMockFile = (name, type = 'application/pdf', size = 1000) => {
-    return new File(['test content'], name, { type, size })
+  const createMockFile = (
+    name: string,
+    type = 'application/pdf',
+    size = 1000
+  ) => {
+    const file = new File(['test content'], name, { type })
+    Object.defineProperty(file, 'size', { value: size })
+    return file
   }
 
-  const createDragEvent = (type, files = []) => {
+  const createDragEvent = (type: string, files: File[] = []) => {
     const event = new Event(type, { bubbles: true, cancelable: true })
     Object.defineProperty(event, 'dataTransfer', {
       value: {
@@ -112,28 +123,28 @@ describe('DocumentTable', () => {
     mockDownloadDocument = vi.fn()
 
     // Set up default mock returns
-    useDocuments.mockReturnValue({
+    mocks.useDocuments.mockReturnValue({
       data: [],
       isLoading: false
     })
-    useUploadDocument.mockReturnValue({
+    mocks.useUploadDocument.mockReturnValue({
       mutate: mockUploadMutate,
       isPending: false
     })
-    useDeleteDocument.mockReturnValue({
+    mocks.useDeleteDocument.mockReturnValue({
       mutateAsync: mockDeleteMutate
     })
-    useUpdateDocument.mockReturnValue({
+    mocks.useUpdateDocument.mockReturnValue({
       mutateAsync: mockUpdateMutate
     })
-    useDownloadDocument.mockReturnValue(mockDownloadDocument)
-    useCurrentUser.mockReturnValue({
+    mocks.useDownloadDocument.mockReturnValue(mockDownloadDocument)
+    mocks.useCurrentUser.mockReturnValue({
       data: { keycloakUsername: 'testuser' },
       hasRoles: vi.fn(() => false)
     })
 
     // Default file validation to pass
-    validateFile.mockReturnValue({ isValid: true, errorMessage: null })
+    mocks.validateFile.mockReturnValue({ isValid: true, errorMessage: null })
   })
 
   // High Priority Tests - Component Rendering and Core Functionality
@@ -168,7 +179,7 @@ describe('DocumentTable', () => {
     fireEvent.change(fileInput, { target: { files: [validFile] } })
 
     await waitFor(() => {
-      expect(validateFile).toHaveBeenCalledWith(
+      expect(mocks.validateFile).toHaveBeenCalledWith(
         validFile,
         MAX_FILE_SIZE_BYTES,
         COMPLIANCE_REPORT_FILE_TYPES
@@ -201,7 +212,7 @@ describe('DocumentTable', () => {
     fireEvent.change(fileInput, { target: { files: [fileA, fileB, fileC] } })
 
     await waitFor(() => {
-      expect(validateFile).toHaveBeenCalledTimes(3)
+      expect(mocks.validateFile).toHaveBeenCalledTimes(3)
       expect(mockUploadMutate).toHaveBeenCalledTimes(3)
     })
   })
@@ -218,10 +229,10 @@ describe('DocumentTable', () => {
 
     const uploadCard = screen
       .getByText('Click or drag files here to upload')
-      .closest('div')
+      .closest('div')!
 
     const dropEvent = createDragEvent('drop', [fileA, fileB])
-    fireEvent(uploadCard.parentElement, dropEvent)
+    fireEvent(uploadCard.parentElement!, dropEvent)
 
     await waitFor(() => {
       expect(mockUploadMutate).toHaveBeenCalledTimes(2)
@@ -237,13 +248,13 @@ describe('DocumentTable', () => {
 
     const uploadCard = screen
       .getByText('Click or drag files here to upload')
-      .closest('div')
+      .closest('div')!
     const fileInput = screen.getByTestId('file-input')
 
     // Mock the click method
     const clickSpy = vi.spyOn(fileInput, 'click').mockImplementation(() => {})
 
-    fireEvent.click(uploadCard.parentElement)
+    fireEvent.click(uploadCard.parentElement!)
 
     expect(clickSpy).toHaveBeenCalled()
     clickSpy.mockRestore()
@@ -260,18 +271,18 @@ describe('DocumentTable', () => {
 
     const uploadCard = screen
       .getByText('Click or drag files here to upload')
-      .closest('div')
+      .closest('div')!
 
     // Simulate drag enter
     const dragEnterEvent = createDragEvent('dragenter', [validFile])
-    fireEvent(uploadCard.parentElement, dragEnterEvent)
+    fireEvent(uploadCard.parentElement!, dragEnterEvent)
 
     // Simulate drop
     const dropEvent = createDragEvent('drop', [validFile])
-    fireEvent(uploadCard.parentElement, dropEvent)
+    fireEvent(uploadCard.parentElement!, dropEvent)
 
     await waitFor(() => {
-      expect(validateFile).toHaveBeenCalledWith(
+      expect(mocks.validateFile).toHaveBeenCalledWith(
         validFile,
         MAX_FILE_SIZE_BYTES,
         COMPLIANCE_REPORT_FILE_TYPES
@@ -287,7 +298,7 @@ describe('DocumentTable', () => {
   }) => {
     const invalidFile = createMockFile('test.txt', 'text/plain', 1000)
 
-    validateFile.mockReturnValue({
+    mocks.validateFile.mockReturnValue({
       isValid: false,
       errorMessage: 'File type "text/plain" is not allowed'
     })
@@ -324,7 +335,7 @@ describe('DocumentTable', () => {
       }
     ]
 
-    useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
+    mocks.useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
 
     render(<DocumentTable {...defaultProps} />, [theme, router])
 
@@ -354,7 +365,7 @@ describe('DocumentTable', () => {
       }
     ]
 
-    useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
+    mocks.useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
 
     render(<DocumentTable {...defaultProps} />, [theme, router])
 
@@ -385,7 +396,7 @@ describe('DocumentTable', () => {
       }
     ]
 
-    useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
+    mocks.useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
 
     render(<DocumentTable {...defaultProps} />, [theme, router])
 
@@ -415,7 +426,7 @@ describe('DocumentTable', () => {
       }
     ]
 
-    useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
+    mocks.useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
 
     render(<DocumentTable {...defaultProps} />, [theme, router])
 
@@ -434,7 +445,7 @@ describe('DocumentTable', () => {
     theme,
     router
   }) => {
-    useDocuments.mockReturnValue({
+    mocks.useDocuments.mockReturnValue({
       data: [
         {
           documentId: 3,
@@ -464,7 +475,7 @@ describe('DocumentTable', () => {
     theme,
     router
   }) => {
-    isFeatureEnabled.mockReturnValue(true)
+    mocks.isFeatureEnabled.mockReturnValue(true)
     const file = createMockFile(
       'ghg-model.xlsm',
       'application/vnd.ms-excel.sheet.macroEnabled.12'
@@ -479,7 +490,7 @@ describe('DocumentTable', () => {
     })
 
     await waitFor(() =>
-      expect(validateFile).toHaveBeenCalledWith(
+      expect(mocks.validateFile).toHaveBeenCalledWith(
         file,
         MAX_FILE_SIZE_BYTES,
         CI_APPLICATION_FILE_TYPES
@@ -489,7 +500,7 @@ describe('DocumentTable', () => {
       'accept',
       CI_APPLICATION_FILE_TYPES.ACCEPT_STRING
     )
-    isFeatureEnabled.mockReturnValue(false)
+    mocks.isFeatureEnabled.mockReturnValue(false)
   })
 
   test('should download a renamed file using its display name', async ({
@@ -508,7 +519,7 @@ describe('DocumentTable', () => {
       }
     ]
 
-    useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
+    mocks.useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
 
     render(<DocumentTable {...defaultProps} />, [theme, router])
 
@@ -540,7 +551,7 @@ describe('DocumentTable', () => {
       }
     ]
 
-    useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
+    mocks.useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
 
     render(<DocumentTable {...defaultProps} />, [theme, router])
 
@@ -558,7 +569,7 @@ describe('DocumentTable', () => {
     const validFile = createMockFile('test.pdf', 'application/pdf', 1000)
 
     // Mock upload to trigger error callback
-    mockUploadMutate.mockImplementation((file, { onError }) => {
+    mockUploadMutate.mockImplementation((_file, { onError }) => {
       onError({ response: { status: 422 } })
     })
 
@@ -606,19 +617,19 @@ describe('DocumentTable', () => {
 
     const uploadCard = screen
       .getByText('Click or drag files here to upload')
-      .closest('div')
+      .closest('div')!
 
     // Test drag enter
     const dragEnterEvent = createDragEvent('dragenter', [file])
-    fireEvent(uploadCard.parentElement, dragEnterEvent)
+    fireEvent(uploadCard.parentElement!, dragEnterEvent)
 
     // Test drag leave
     const dragLeaveEvent = createDragEvent('dragleave')
-    fireEvent(uploadCard.parentElement, dragLeaveEvent)
+    fireEvent(uploadCard.parentElement!, dragLeaveEvent)
 
     // Test drag over
     const dragOverEvent = createDragEvent('dragover')
-    fireEvent(uploadCard.parentElement, dragOverEvent)
+    fireEvent(uploadCard.parentElement!, dragOverEvent)
 
     // Component should handle all drag events without errors
     expect(uploadCard).toBeInTheDocument()
@@ -639,7 +650,7 @@ describe('DocumentTable', () => {
       }
     ]
 
-    useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
+    mocks.useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
 
     render(<DocumentTable {...defaultProps} />, [theme, router])
 
@@ -657,7 +668,7 @@ describe('DocumentTable', () => {
   }) => {
     const file = createMockFile('infected.pdf', 'application/pdf', 1000)
 
-    mockUploadMutate.mockImplementation((file, { onError }) => {
+    mockUploadMutate.mockImplementation((_file, { onError }) => {
       onError({ response: { status: 422 } })
     })
 
@@ -686,8 +697,8 @@ describe('DocumentTable', () => {
       }
     ]
 
-    useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
-    useCurrentUser.mockReturnValue({
+    mocks.useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
+    mocks.useCurrentUser.mockReturnValue({
       data: { keycloakUsername: 'currentuser' },
       hasRoles: vi.fn((role) => role !== 'Supplier')
     })
@@ -706,7 +717,7 @@ describe('DocumentTable', () => {
     theme,
     router
   }) => {
-    useDocuments.mockReturnValue({ data: [], isLoading: false })
+    mocks.useDocuments.mockReturnValue({ data: [], isLoading: false })
 
     render(<DocumentTable {...defaultProps} />, [theme, router])
 
@@ -714,12 +725,12 @@ describe('DocumentTable', () => {
     expect(screen.queryByTestId('delete-button')).not.toBeInTheDocument()
   })
 
-  test('should handle null data from useDocuments', ({
+  test('should handle null data from mocks.useDocuments', ({
     render,
     theme,
     router
   }) => {
-    useDocuments.mockReturnValue({ data: null, isLoading: false })
+    mocks.useDocuments.mockReturnValue({ data: null, isLoading: false })
 
     render(<DocumentTable {...defaultProps} />, [theme, router])
 
@@ -734,7 +745,7 @@ describe('DocumentTable', () => {
   }) => {
     const invalidFile = createMockFile('test.bad', 'application/unknown', 1000)
 
-    validateFile.mockReturnValue({
+    mocks.validateFile.mockReturnValue({
       isValid: false,
       errorMessage: 'File type not allowed'
     })
@@ -777,7 +788,7 @@ describe('DocumentTable', () => {
   })
 
   test('should handle undefined current user', ({ render, theme, router }) => {
-    useCurrentUser.mockReturnValue({
+    mocks.useCurrentUser.mockReturnValue({
       data: null,
       hasRoles: vi.fn(() => false)
     })
@@ -807,7 +818,7 @@ describe('DocumentTable', () => {
       }
     ]
 
-    useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
+    mocks.useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
 
     mockDeleteMutate.mockRejectedValue(new Error('Deletion failed'))
 
@@ -840,7 +851,10 @@ describe('DocumentTable', () => {
       }
     ]
 
-    useDocuments.mockReturnValue({ data: incompleteFiles, isLoading: false })
+    mocks.useDocuments.mockReturnValue({
+      data: incompleteFiles,
+      isLoading: false
+    })
 
     render(<DocumentTable {...defaultProps} />, [theme, router])
 
@@ -859,10 +873,10 @@ describe('DocumentTable', () => {
       router
     ])
 
-    expect(useDocuments).toHaveBeenCalledWith('fuel-export', '456')
-    expect(useUploadDocument).toHaveBeenCalledWith('fuel-export', '456')
+    expect(mocks.useDocuments).toHaveBeenCalledWith('fuel-export', '456')
+    expect(mocks.useUploadDocument).toHaveBeenCalledWith('fuel-export', '456')
     // No deleteToBin prop: the hook picks the route from the parent type.
-    expect(useDeleteDocument).toHaveBeenCalledWith('fuel-export', '456', {
+    expect(mocks.useDeleteDocument).toHaveBeenCalledWith('fuel-export', '456', {
       deleteToBin: undefined
     })
   })
@@ -875,7 +889,7 @@ describe('DocumentTable', () => {
     const invalidFile = createMockFile('bad.xyz', 'application/unknown')
     const validFile = createMockFile('good.pdf', 'application/pdf')
 
-    validateFile
+    mocks.validateFile
       .mockReturnValueOnce({
         isValid: false,
         errorMessage: 'File type not allowed'
@@ -912,10 +926,10 @@ describe('DocumentTable', () => {
 
     const uploadCard = screen
       .getByText('Click or drag files here to upload')
-      .closest('div')
+      .closest('div')!
 
     const dropEvent = createDragEvent('drop', [])
-    fireEvent(uploadCard.parentElement, dropEvent)
+    fireEvent(uploadCard.parentElement!, dropEvent)
 
     expect(mockUploadMutate).not.toHaveBeenCalled()
   })
@@ -935,7 +949,7 @@ describe('DocumentTable', () => {
       }
     ]
 
-    useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
+    mocks.useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
 
     // Mock deletion to be pending
     mockDeleteMutate.mockImplementation(() => new Promise(() => {})) // Never resolves
@@ -987,7 +1001,7 @@ describe('DocumentTable', () => {
       }
     ]
 
-    useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
+    mocks.useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
 
     render(<DocumentTable {...defaultProps} />, [theme, router])
 
@@ -1011,7 +1025,7 @@ describe('DocumentTable', () => {
     const file = createMockFile('model.xlsx', 'application/vnd.ms-excel', 1000)
     vi.spyOn(console, 'error').mockImplementation(() => {})
 
-    mockUploadMutate.mockImplementation((file, { onError }) => {
+    mockUploadMutate.mockImplementation((_file, { onError }) => {
       onError({
         response: {
           status: 400,
@@ -1046,7 +1060,7 @@ describe('DocumentTable', () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     // Mock upload to trigger non-422 error
-    mockUploadMutate.mockImplementation((file, { onError }) => {
+    mockUploadMutate.mockImplementation((_file, { onError }) => {
       onError({ response: { status: 500 }, message: 'Server error' })
     })
 
@@ -1077,7 +1091,7 @@ describe('DocumentTable', () => {
     theme,
     router
   }) => {
-    useDocuments.mockReturnValue({
+    mocks.useDocuments.mockReturnValue({
       data: [{ documentId: 7, fileName: 'existing.pdf', fileSize: 100 }],
       isLoading: false
     })
@@ -1124,7 +1138,7 @@ describe('DocumentTable', () => {
     const drop = createDragEvent('drop', [createMockFile('second.pdf')])
     const card = screen
       .getByText('Click or drag one file here to upload')
-      .closest('.MuiCard-root')
+      .closest('.MuiCard-root')!
     fireEvent(card, drop)
 
     expect(drop.defaultPrevented).toBe(true)
@@ -1146,7 +1160,7 @@ describe('DocumentTable', () => {
       }
     ]
 
-    useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
+    mocks.useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
 
     render(<DocumentTable {...defaultProps} />, [theme, router])
 
@@ -1170,8 +1184,8 @@ describe('DocumentTable', () => {
       }
     ]
 
-    useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
-    useCurrentUser.mockReturnValue({
+    mocks.useDocuments.mockReturnValue({ data: mockFiles, isLoading: false })
+    mocks.useCurrentUser.mockReturnValue({
       data: { keycloakUsername: 'currentuser' },
       hasRoles: vi.fn((role) => role === 'Supplier')
     })
@@ -1240,7 +1254,10 @@ describe('DocumentTable', () => {
       theme,
       router
     }) => {
-      useDocuments.mockReturnValue({ data: [existingFile], isLoading: false })
+      mocks.useDocuments.mockReturnValue({
+        data: [existingFile],
+        isLoading: false
+      })
       render(<DocumentTable {...defaultProps} maxFiles={1} />, [theme, router])
       await screen.findByText('old-diagram.pdf')
 
@@ -1269,7 +1286,10 @@ describe('DocumentTable', () => {
       theme,
       router
     }) => {
-      useDocuments.mockReturnValue({ data: [existingFile], isLoading: false })
+      mocks.useDocuments.mockReturnValue({
+        data: [existingFile],
+        isLoading: false
+      })
       render(<DocumentTable {...defaultProps} maxFiles={1} />, [theme, router])
       await screen.findByText('old-diagram.pdf')
 
@@ -1294,7 +1314,10 @@ describe('DocumentTable', () => {
       router
     }) => {
       const newFile = createMockFile('new-diagram.pdf')
-      useDocuments.mockReturnValue({ data: [existingFile], isLoading: false })
+      mocks.useDocuments.mockReturnValue({
+        data: [existingFile],
+        isLoading: false
+      })
       render(
         <DocumentTable
           parentType="fuel_production_facility"
@@ -1326,7 +1349,10 @@ describe('DocumentTable', () => {
       router
     }) => {
       mockDeleteMutate.mockRejectedValueOnce(new Error('Delete failed'))
-      useDocuments.mockReturnValue({ data: [existingFile], isLoading: false })
+      mocks.useDocuments.mockReturnValue({
+        data: [existingFile],
+        isLoading: false
+      })
       render(<DocumentTable {...defaultProps} maxFiles={1} />, [theme, router])
       await screen.findByText('old-diagram.pdf')
 

@@ -14,7 +14,7 @@ vi.mock('react-i18next', () => ({
 }))
 
 // Mock only the DocumentTable component to avoid loading issues
-vi.mock('@/components/Documents/DocumentTable.jsx', () => ({
+vi.mock('@/components/Documents/DocumentTable', () => ({
   default: ({ parentID, parentType }) => (
     <div
       data-testid="document-table"

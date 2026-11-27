@@ -50,7 +50,7 @@ vi.mock('react-i18next', () => ({
   })
 }))
 
-vi.mock('@/components/Documents/DocumentUploadDialog.jsx', () => ({
+vi.mock('@/components/Documents/DocumentUploadDialog', () => ({
   default: ({ open, close, onUploadSuccess, parentID, parentType }) => (
     <div data-test="document-upload-dialog">
       {open && (

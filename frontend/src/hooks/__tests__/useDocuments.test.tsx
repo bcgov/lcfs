@@ -1,7 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from 'vite-plus/test'
 
-import { useQuery, useMutation } from '@tanstack/react-query'
-
 import {
   useDocuments,
   useUploadDocument,
@@ -39,19 +37,21 @@ vi.mock('@/constants/routes', () => ({
 // Mock TanStack Query
 const mockQueryClient = vi.hoisted(() => ({
   invalidateQueries: vi.fn(),
-  removeQueries: vi.fn()
+  removeQueries: vi.fn(),
+  useQuery: vi.fn(),
+  useMutation: vi.fn()
 }))
 const mockInvalidateQueries = mockQueryClient.invalidateQueries
 
 vi.mock('@tanstack/react-query', () => ({
-  useQuery: vi.fn(),
-  useMutation: vi.fn(),
+  useQuery: mockQueryClient.useQuery,
+  useMutation: mockQueryClient.useMutation,
   useQueryClient: () => mockQueryClient
 }))
 
 // Get the mocked functions
-const mockUseQuery = useQuery
-const mockUseMutation = useMutation
+const mockUseQuery = mockQueryClient.useQuery
+const mockUseMutation = mockQueryClient.useMutation
 
 // Mock DOM methods for download functionality
 const mockCreateObjectURL = vi.fn(() => 'mock-url')
@@ -89,6 +89,11 @@ Object.defineProperty(document.body, 'removeChild', {
 })
 
 describe('useDocuments', () => {
+  type CapturedMutation = {
+    mutationFn: (input: unknown) => Promise<{ data: unknown }>
+    onSuccess: (...args: unknown[]) => unknown
+  }
+
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -143,7 +148,7 @@ describe('useDocuments', () => {
         isError: false
       })
 
-      useDocuments(null, 123)
+      useDocuments(null as never, 123)
 
       expect(mockUseQuery).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -169,7 +174,7 @@ describe('useDocuments', () => {
     })
 
     it('should make API call with correct path', async () => {
-      let capturedQueryFn
+      let capturedQueryFn: () => Promise<unknown> = async () => undefined
       mockUseQuery.mockImplementation(({ queryFn }) => {
         capturedQueryFn = queryFn
         return { data: null, isLoading: false, isError: false }
@@ -212,7 +217,9 @@ describe('useDocuments', () => {
     })
 
     it('should make API call with FormData', async () => {
-      let capturedMutationFn
+      let capturedMutationFn: (
+        input: unknown
+      ) => Promise<{ data: unknown }> = async () => ({ data: undefined })
       mockUseMutation.mockImplementation(({ mutationFn }) => {
         capturedMutationFn = mutationFn
         return { mutate: vi.fn() }
@@ -233,11 +240,13 @@ describe('useDocuments', () => {
           headers: { 'Content-Type': 'multipart/form-data' }
         })
       )
-      expect(result.data.id).toBe(1)
+      expect((result.data as { id: number }).id).toBe(1)
     })
 
     it('passes the replacement document ID for a facility upload', async () => {
-      let capturedMutationFn
+      let capturedMutationFn: (
+        input: unknown
+      ) => Promise<{ data: unknown }> = async () => ({ data: undefined })
       mockUseMutation.mockImplementation(({ mutationFn }) => {
         capturedMutationFn = mutationFn
         return { mutate: vi.fn() }
@@ -282,7 +291,9 @@ describe('useDocuments', () => {
     })
 
     it('should make API call with correct path', async () => {
-      let capturedMutationFn
+      let capturedMutationFn: (
+        input: unknown
+      ) => Promise<{ data: unknown }> = async () => ({ data: undefined })
       mockUseMutation.mockImplementation(({ mutationFn }) => {
         capturedMutationFn = mutationFn
         return { mutate: vi.fn() }
@@ -300,7 +311,10 @@ describe('useDocuments', () => {
     })
 
     it('soft-deletes designated-action files and refreshes the list, tree and bin', async () => {
-      let mutation
+      let mutation: CapturedMutation = {
+        mutationFn: async () => ({ data: undefined }),
+        onSuccess: () => undefined
+      }
       mockUseMutation.mockImplementation((options) => {
         mutation = options
         return { mutate: vi.fn() }
@@ -327,7 +341,7 @@ describe('useDocuments', () => {
     it('keeps initiative-agreement deletes on the shared route unless asked for the bin', async () => {
       // Legacy credit awards share the parent type and have no bin, so the
       // transaction pages keep the shared route; the agreement page opts in.
-      const mutations = []
+      const mutations: CapturedMutation[] = []
       mockUseMutation.mockImplementation((options) => {
         mutations.push(options)
         return { mutate: vi.fn() }
@@ -359,7 +373,10 @@ describe('useDocuments', () => {
 
   describe('useReviewDocumentScan', () => {
     it('sends the decision and refreshes the CI application', async () => {
-      let options
+      let options: CapturedMutation = {
+        mutationFn: async () => ({ data: undefined }),
+        onSuccess: () => undefined
+      }
       mockUseMutation.mockImplementation((opts) => {
         options = opts
         return { mutateAsync: vi.fn() }
@@ -382,7 +399,10 @@ describe('useDocuments', () => {
       })
     })
     it('refreshes the CI application views after a facility file review', async () => {
-      let options
+      let options: CapturedMutation = {
+        mutationFn: async () => ({ data: undefined }),
+        onSuccess: () => undefined
+      }
       mockUseMutation.mockImplementation((opts) => {
         options = opts
         return { mutateAsync: vi.fn() }

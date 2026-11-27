@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import type { ChangeEvent, DragEvent } from 'react'
 import Box from '@mui/material/Box'
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
@@ -40,8 +41,42 @@ import {
 import RenameableFileName from '@/components/Documents/RenameableFileName'
 import DocumentPreviewButton from '@/components/Documents/DocumentPreviewButton'
 import DocumentScanStatus from '@/components/Documents/DocumentScanStatus'
+import type { DocumentMetadata } from '@/types/documents'
 
-const StyledCard = styled(Card)(({ theme, isDragActive = false }) => ({
+interface DocumentTableProps {
+  parentType: string
+  parentID: number | string
+  maxFiles?: number
+  deleteToBin?: boolean
+}
+
+interface UploadProgressCallbacks {
+  onSuccess: () => void
+  onError: (error: Error) => void
+}
+
+const getErrorMessage = (error: unknown): string | undefined => {
+  if (!error || typeof error !== 'object') return undefined
+  const message = 'message' in error ? error.message : undefined
+  const response = 'response' in error ? error.response : undefined
+  const detail =
+    response && typeof response === 'object' && 'data' in response
+      ? response.data
+      : undefined
+  const responseDetail =
+    detail && typeof detail === 'object' && 'detail' in detail
+      ? detail.detail
+      : undefined
+  return typeof responseDetail === 'string'
+    ? responseDetail
+    : typeof message === 'string'
+      ? message
+      : undefined
+}
+
+const StyledCard = styled(Card, {
+  shouldForwardProp: (prop) => prop !== 'isDragActive'
+})<{ isDragActive?: boolean }>(({ theme, isDragActive = false }) => ({
   width: '100%',
   textAlign: 'center',
   border: '1px dashed #ccc',
@@ -77,20 +112,30 @@ const TableCell = styled(Box)({
 // reached a new upload replaces the existing document after confirmation.
 // deleteToBin sends deletes to the parent's document bin (see
 // useDeleteDocument); left unset, the hook picks by parent type.
-function DocumentTable({ parentType, parentID, maxFiles, deleteToBin }) {
+function DocumentTable({
+  parentType,
+  parentID,
+  maxFiles,
+  deleteToBin
+}: DocumentTableProps) {
   const { t } = useTranslation(['report', 'common'])
   const [, setIsDragActive] = useState(false)
-  const fileInputRef = useRef(null)
-  const [files, setFiles] = useState([])
-  const [errorMessage, setErrorMessage] = useState(null)
-  const [documentPendingDelete, setDocumentPendingDelete] = useState(null)
-  const [pendingReplace, setPendingReplace] = useState(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [files, setFiles] = useState<DocumentMetadata[]>([])
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [documentPendingDelete, setDocumentPendingDelete] =
+    useState<DocumentMetadata | null>(null)
+  const [pendingReplace, setPendingReplace] = useState<{
+    file: File
+    existing: DocumentMetadata
+  } | null>(null)
   const [singleFileUploadPending, setSingleFileUploadPending] = useState(false)
   const singleFileUploadPendingRef = useRef(false)
   const singleFile = maxFiles === 1
   const { data: currentUser, hasRoles } = useCurrentUser()
 
-  const { data: loadedFiles } = useDocuments(parentType, parentID)
+  const { data: filesResponse } = useDocuments(parentType, parentID)
+  const loadedFiles = filesResponse as DocumentMetadata[] | undefined
   useEffect(() => {
     if (loadedFiles) {
       setFiles(loadedFiles)
@@ -121,12 +166,12 @@ function DocumentTable({ parentType, parentID, maxFiles, deleteToBin }) {
     dropPrompt = 'report:clickDragWithXlsm'
   }
 
-  const handleDrag = (e) => {
+  const handleDrag = (e: DragEvent<HTMLElement>) => {
     e.preventDefault()
     e.stopPropagation()
   }
 
-  const handleDragIn = (e) => {
+  const handleDragIn = (e: DragEvent<HTMLElement>) => {
     e.preventDefault()
     e.stopPropagation()
     if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
@@ -134,13 +179,13 @@ function DocumentTable({ parentType, parentID, maxFiles, deleteToBin }) {
     }
   }
 
-  const handleDragOut = (e) => {
+  const handleDragOut = (e: DragEvent<HTMLElement>) => {
     e.preventDefault()
     e.stopPropagation()
     setIsDragActive(false)
   }
 
-  const handleDrop = (e) => {
+  const handleDrop = (e: DragEvent<HTMLElement>) => {
     e.preventDefault()
     e.stopPropagation()
     setIsDragActive(false)
@@ -151,10 +196,10 @@ function DocumentTable({ parentType, parentID, maxFiles, deleteToBin }) {
   }
 
   const handleCardClick = () => {
-    fileInputRef.current.click()
+    fileInputRef.current?.click()
   }
 
-  const handleFileChange = (e) => {
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     handleFiles(e.target.files)
     // Reset the input so selecting the same file(s) again still fires onChange.
     e.target.value = ''
@@ -163,7 +208,7 @@ function DocumentTable({ parentType, parentID, maxFiles, deleteToBin }) {
   // Upload every selected/dropped file. Validation and upload progress are
   // applied to each file independently so a range/multi-select uploads them
   // all in a single action (#4739). Single-file selection is the N=1 case.
-  const handleFiles = (fileList) => {
+  const handleFiles = (fileList: FileList | null) => {
     let selected = Array.from(fileList || [])
     if (selected.length === 0) {
       return
@@ -222,16 +267,18 @@ function DocumentTable({ parentType, parentID, maxFiles, deleteToBin }) {
         )
       )
       setErrorMessage(
-        error?.response?.data?.detail ||
-          error?.message ||
-          t('common:errorPage.genericMessage')
+        getErrorMessage(error) || t('common:errorPage.genericMessage')
       )
       return
     }
     handleFileUpload(file)
   }
 
-  const handleFileUpload = async (file, index = 0, replaceDocumentId) => {
+  const handleFileUpload = async (
+    file: File | undefined,
+    index = 0,
+    replaceDocumentId?: number | string
+  ) => {
     if (!file) {
       return
     }
@@ -273,7 +320,7 @@ function DocumentTable({ parentType, parentID, maxFiles, deleteToBin }) {
         {
           ...baseDocument,
           error: true,
-          errorMessage: validation.errorMessage
+          errorMessage: validation.errorMessage ?? undefined
         }
       ])
       return
@@ -302,7 +349,7 @@ function DocumentTable({ parentType, parentID, maxFiles, deleteToBin }) {
       }
     ])
 
-    uploadFile(replaceDocumentId ? { file, replaceDocumentId } : file, {
+    const uploadCallbacks: UploadProgressCallbacks = {
       onSuccess: () => {
         if (singleFile) {
           singleFileUploadPendingRef.current = false
@@ -316,8 +363,19 @@ function DocumentTable({ parentType, parentID, maxFiles, deleteToBin }) {
         }
         // Show the server's reason (virus, too large to scan, macros, contents
         // not matching the type, a stale replacement) in the alert.
-        const status = error.response?.status
-        const detail = error.response?.data?.detail
+        const response =
+          'response' in error &&
+          error.response &&
+          typeof error.response === 'object'
+            ? error.response
+            : undefined
+        const status =
+          response && 'status' in response ? response.status : undefined
+        const data = response && 'data' in response ? response.data : undefined
+        const detail =
+          data && typeof data === 'object' && 'detail' in data
+            ? data.detail
+            : undefined
         const reason =
           typeof detail === 'string' ? detail : t('report:documentUploadFailed')
         setErrorMessage(`Upload failed for "${file.name}": ${reason}`)
@@ -338,10 +396,14 @@ function DocumentTable({ parentType, parentID, maxFiles, deleteToBin }) {
           setFiles((prev) => prev.filter((item) => item.documentId !== fileId))
         }
       }
-    })
+    }
+    uploadFile(
+      replaceDocumentId ? { file, replaceDocumentId } : file,
+      uploadCallbacks
+    )
   }
 
-  const handleDeleteFile = async (documentId) => {
+  const handleDeleteFile = async (documentId: number | string) => {
     setErrorMessage(null)
     try {
       setFiles((current) =>
@@ -358,21 +420,22 @@ function DocumentTable({ parentType, parentID, maxFiles, deleteToBin }) {
         )
       )
       setErrorMessage(
-        error?.response?.data?.detail ||
-          error?.message ||
-          t('common:errorPage.genericMessage')
+        getErrorMessage(error) || t('common:errorPage.genericMessage')
       )
     }
   }
 
-  const handleRenameFile = async (documentId, newDisplayName) => {
+  const handleRenameFile = async (
+    documentId: number | string,
+    newDisplayName: string
+  ) => {
     await updateDocument({
       documentID: documentId,
       data: { displayName: newDisplayName }
     })
   }
 
-  const handleDeleteClick = (file) => {
+  const handleDeleteClick = (file: DocumentMetadata) => {
     setDocumentPendingDelete(file)
   }
 
@@ -403,7 +466,6 @@ function DocumentTable({ parentType, parentID, maxFiles, deleteToBin }) {
           severity="error"
           dismissible={true}
           sx={{ mb: 2, width: '100%' }}
-          onClose={() => setErrorMessage(null)}
           data-test="file-upload-error-alert"
         >
           {errorMessage}
@@ -421,6 +483,7 @@ function DocumentTable({ parentType, parentID, maxFiles, deleteToBin }) {
         onChange={handleFileChange}
       />
       <StyledCard
+        isDragActive={false}
         onClick={singleFileUploadPending ? undefined : handleCardClick}
         onDragEnter={handleDragIn}
         onDragLeave={handleDragOut}
@@ -459,7 +522,7 @@ function DocumentTable({ parentType, parentID, maxFiles, deleteToBin }) {
         <TableCell></TableCell>
 
         {files.map((file) => {
-          const displayName = getDocumentDisplayName(file)
+          const displayName = getDocumentDisplayName(file) || file.fileName
           const canRename =
             renameEnabled &&
             !file.deleting &&

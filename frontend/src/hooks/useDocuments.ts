@@ -9,6 +9,7 @@ import {
 import type { AxiosRequestConfig, AxiosResponse } from 'axios'
 import { invalidateComplianceReportRelatedQueries } from './reportQueryInvalidation'
 import type { QueryOptions, ExtMutationOptions } from './types'
+import type { DocumentMetadata } from '@/types/documents'
 
 // Facility documents are embedded in the CI facility list and application
 // detail responses, so those caches must refresh alongside the documents.
@@ -24,7 +25,7 @@ const DOCUMENT_STALE_TIME = 10 * 60 * 1000 // 10 minutes (documents don't change
 export const useDocuments = (
   parentType: string,
   parentID: number | string | undefined | null,
-  options: QueryOptions<unknown> = {}
+  options: QueryOptions<DocumentMetadata[]> = {}
 ) => {
   const client = useApiService()
 
@@ -68,7 +69,7 @@ export const useUploadDocument = (
     | {
         file: File | Blob
         documentCategory?: string
-        replaceDocumentId?: number
+        replaceDocumentId?: number | string
       }
   > = {}
 ) => {
@@ -92,7 +93,7 @@ export const useUploadDocument = (
         | {
             file: File | Blob
             documentCategory?: string
-            replaceDocumentId?: number
+            replaceDocumentId?: number | string
           }
     ) => {
       // Backwards compatible: callers can either pass a File directly
@@ -314,7 +315,10 @@ export const useDownloadDocument = (
 
   const { onSuccess, onError, ...requestOptions } = options
 
-  return async (documentID: number | string, customFilename?: string) => {
+  return async (
+    documentID: number | string | null | undefined,
+    customFilename?: string
+  ) => {
     try {
       if (!documentID) {
         throw new Error('Document ID is required for download')
@@ -384,7 +388,7 @@ export const useFetchDocument = (
 
   const { onSuccess, onError, ...requestOptions } = options
 
-  return async (documentID: number | string) => {
+  return async (documentID: number | string | null | undefined) => {
     try {
       if (!documentID) {
         throw new Error('Document ID is required for preview')

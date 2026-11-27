@@ -1,11 +1,25 @@
 import { screen, fireEvent } from '@testing-library/react'
+import type { ReactNode, HTMLAttributes } from 'react'
 import { vi, describe, expect, beforeEach } from 'vite-plus/test'
 import DocumentUploadDialog from '../DocumentUploadDialog'
 import { test } from '@/tests/utils/fixtures'
 
 // Mock dependencies
 vi.mock('@/components/BCModal', () => ({
-  default: ({ open, onClose, data }) => {
+  default: ({
+    open,
+    onClose,
+    data
+  }: {
+    open: boolean
+    onClose: () => void
+    data?: {
+      title?: string
+      content?: ReactNode
+      secondaryButtonAction?: () => void
+      secondaryButtonText?: string
+    }
+  }) => {
     if (!open) return null
     return (
       <div data-test="bc-modal">
@@ -26,15 +40,21 @@ vi.mock('@/components/BCModal', () => ({
 }))
 
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, ...props }) => (
+  default: ({ children, ...props }: HTMLAttributes<HTMLDivElement>) => (
     <div data-test="bc-typography" {...props}>
       {children}
     </div>
   )
 }))
 
-vi.mock('@/components/Documents/DocumentTable.jsx', () => ({
-  default: ({ parentID, parentType }) => (
+vi.mock('@/components/Documents/DocumentTable', () => ({
+  default: ({
+    parentID,
+    parentType
+  }: {
+    parentID?: string | number
+    parentType?: string
+  }) => (
     <div
       data-test="document-table"
       data-parent-id={parentID}
@@ -47,8 +67,8 @@ vi.mock('@/components/Documents/DocumentTable.jsx', () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => {
-      const translations = {
+    t: (key: string) => {
+      const translations: Record<string, string> = {
         'report:documentLabel':
           'Add file attachments (maximum file size: 50 MB):',
         'report:documents.uploadTitle':
@@ -301,7 +321,7 @@ describe('DocumentUploadDialog', () => {
     vi.mocked(vi.doMock)
     vi.doMock('react-i18next', () => ({
       useTranslation: () => ({
-        t: (key) => key // Return key if translation missing
+        t: (key: string) => key // Return key if translation missing
       })
     }))
 
@@ -332,10 +352,13 @@ describe('DocumentUploadDialog', () => {
     theme,
     router
   }) => {
-    render(<DocumentUploadDialog {...defaultProps} parentType={undefined} />, [
-      theme,
-      router
-    ])
+    render(
+      <DocumentUploadDialog
+        {...defaultProps}
+        parentType={undefined as never}
+      />,
+      [theme, router]
+    )
 
     const documentTable = screen.getByTestId('document-table')
     expect(documentTable).toBeInTheDocument()
@@ -346,10 +369,10 @@ describe('DocumentUploadDialog', () => {
     theme,
     router
   }) => {
-    render(<DocumentUploadDialog {...defaultProps} parentID={undefined} />, [
-      theme,
-      router
-    ])
+    render(
+      <DocumentUploadDialog {...defaultProps} parentID={undefined as never} />,
+      [theme, router]
+    )
 
     const documentTable = screen.getByTestId('document-table')
     expect(documentTable).toBeInTheDocument()
@@ -394,10 +417,10 @@ describe('DocumentUploadDialog', () => {
   }) => {
     // This tests the edge case where close prop might be undefined
     expect(() => {
-      render(<DocumentUploadDialog {...defaultProps} close={undefined} />, [
-        theme,
-        router
-      ])
+      render(
+        <DocumentUploadDialog {...defaultProps} close={undefined as never} />,
+        [theme, router]
+      )
     }).not.toThrow()
   })
 })

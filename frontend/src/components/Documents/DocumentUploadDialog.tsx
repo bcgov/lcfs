@@ -1,8 +1,18 @@
 import BCModal from '@/components/BCModal'
 import Box from '@mui/material/Box'
 import { useTranslation } from 'react-i18next'
+import type { ReactNode } from 'react'
 import BCTypography from '@/components/BCTypography'
-import DocumentTable from '@/components/Documents/DocumentTable.jsx'
+import DocumentTable from '@/components/Documents/DocumentTable'
+
+interface DocumentUploadDialogProps {
+  open: boolean
+  close: () => void
+  parentType: string
+  parentID: number | string
+  maxFiles?: number
+  deleteToBin?: boolean
+}
 
 function DocumentUploadDialog({
   open,
@@ -11,7 +21,7 @@ function DocumentUploadDialog({
   parentID,
   maxFiles,
   deleteToBin
-}) {
+}: DocumentUploadDialogProps) {
   const { t } = useTranslation([
     'report',
     'chargingSite',
@@ -22,7 +32,11 @@ function DocumentUploadDialog({
     close()
   }
   // Get dynamic text based on parent type
-  const getModalTexts = () => {
+  const getModalTexts = (): {
+    title: string
+    documentLabel: string
+    returnButton: string
+  } => {
     switch (parentType) {
       case 'charging_site':
         return {
@@ -66,7 +80,7 @@ function DocumentUploadDialog({
 
   const modalTexts = getModalTexts()
 
-  const content = (
+  const content: ReactNode = (
     <Box
       sx={{
         display: 'flex',
