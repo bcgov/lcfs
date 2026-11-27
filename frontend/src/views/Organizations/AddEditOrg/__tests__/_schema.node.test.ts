@@ -3,7 +3,12 @@ import { schemaValidation, createValidationSchema } from '../_schema'
 
 describe('Organization Form Schema Validation', () => {
   // Mock organization types data
-  const mockOrgTypes = [
+  const mockOrgTypes: Array<{
+    organizationTypeId: number
+    orgType: string
+    description: string
+    isBceidUser: boolean
+  }> = [
     {
       organizationTypeId: 1,
       orgType: 'fuel_supplier',

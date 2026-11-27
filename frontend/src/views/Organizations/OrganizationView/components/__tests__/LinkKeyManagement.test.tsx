@@ -1,14 +1,29 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vite-plus/test'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-
+import type {
+  ButtonHTMLAttributes,
+  ChangeEvent,
+  ComponentProps,
+  CSSProperties,
+  KeyboardEvent,
+  ReactNode
+} from 'react'
 import { LinkKeyManagement } from '../LinkKeyManagement'
 import * as linkKeyUtils from '../linkKeyUtils'
 import { copyToClipboard } from '@/utils/clipboard'
 
+type SelectMockProps = Omit<ComponentProps<'select'>, 'onChange' | 'value'> & {
+  onChange?: (event: ChangeEvent<HTMLSelectElement>) => void
+  value?: string | number
+  displayEmpty?: boolean
+  variant?: string
+  sx?: CSSProperties
+}
+
 // Create comprehensive mocks
 vi.mock('@mui/material/FormControl', () => ({
-  default: ({ children }) => (
+  default: ({ children }: { children: ReactNode }) => (
     <div role="group" data-test="form-control">
       {children}
     </div>
@@ -22,7 +37,7 @@ vi.mock('@mui/material/Select', () => ({
     value,
     'aria-label': ariaLabel,
     ...props
-  }) => {
+  }: SelectMockProps) => {
     delete props.displayEmpty
     delete props.variant
     delete props.sx
@@ -30,7 +45,7 @@ vi.mock('@mui/material/Select', () => ({
       <select
         role="combobox"
         value={value}
-        onChange={(e) => onChange?.(e)}
+        onChange={(event) => onChange?.(event)}
         aria-label={ariaLabel}
         data-test="form-select"
         {...props}
@@ -42,7 +57,12 @@ vi.mock('@mui/material/Select', () => ({
 }))
 
 vi.mock('@mui/material/MenuItem', () => ({
-  default: ({ children, value, disabled, ...props }) => (
+  default: ({
+    children,
+    value,
+    disabled,
+    ...props
+  }: ComponentProps<'option'>) => (
     <option value={value} disabled={disabled} {...props}>
       {children}
     </option>
@@ -58,6 +78,9 @@ vi.mock('@mui/material/IconButton', () => ({
     size,
     'aria-label': ariaLabel,
     ...props
+  }: ButtonHTMLAttributes<HTMLButtonElement> & {
+    color?: string
+    size?: string
   }) => (
     <button
       onClick={onClick}
@@ -74,12 +97,22 @@ vi.mock('@mui/material/IconButton', () => ({
 }))
 
 vi.mock('@mui/material/Dialog', () => ({
-  default: ({ open, children, onClose }) =>
+  default: ({
+    open,
+    children,
+    onClose
+  }: {
+    open?: boolean
+    children?: ReactNode
+    onClose?: () => void
+  }) =>
     open ? (
       <div
         role="dialog"
         data-test="dialog"
-        onKeyDown={(e) => e.key === 'Escape' && onClose?.()}
+        onKeyDown={(event: KeyboardEvent<HTMLDivElement>) =>
+          event.key === 'Escape' && onClose?.()
+        }
       >
         {children}
       </div>
@@ -87,25 +120,31 @@ vi.mock('@mui/material/Dialog', () => ({
 }))
 
 vi.mock('@mui/material/DialogActions', () => ({
-  default: ({ children }) => <div data-test="dialog-actions">{children}</div>
+  default: ({ children }: { children: ReactNode }) => (
+    <div data-test="dialog-actions">{children}</div>
+  )
 }))
 
 vi.mock('@mui/material/DialogContent', () => ({
-  default: ({ children }) => <div data-test="dialog-content">{children}</div>
+  default: ({ children }: { children: ReactNode }) => (
+    <div data-test="dialog-content">{children}</div>
+  )
 }))
 
 vi.mock('@mui/material/DialogContentText', () => ({
-  default: ({ children }) => (
+  default: ({ children }: { children: ReactNode }) => (
     <div data-test="dialog-content-text">{children}</div>
   )
 }))
 
 vi.mock('@mui/material/DialogTitle', () => ({
-  default: ({ children }) => <div data-test="dialog-title">{children}</div>
+  default: ({ children }: { children: ReactNode }) => (
+    <div data-test="dialog-title">{children}</div>
+  )
 }))
 
 vi.mock('@mui/material/Box', () => ({
-  default: ({ children, sx }) => (
+  default: ({ children, sx }: { children: ReactNode; sx?: CSSProperties }) => (
     <div data-test="box" style={sx}>
       {children}
     </div>
@@ -113,7 +152,15 @@ vi.mock('@mui/material/Box', () => ({
 }))
 
 vi.mock('@mui/material/Skeleton', () => ({
-  default: ({ variant, width, height }) => (
+  default: ({
+    variant,
+    width,
+    height
+  }: {
+    variant?: string
+    width?: number | string
+    height?: number | string
+  }) => (
     <div data-test="skeleton" data-variant={variant} style={{ width, height }}>
       Loading...
     </div>
@@ -137,7 +184,9 @@ vi.mock('@mui/icons-material/Warning', () => ({
 }))
 
 vi.mock('@/components/BCBox', () => ({
-  default: ({ children }) => <div data-test="bc-box">{children}</div>
+  default: ({ children }: { children: ReactNode }) => (
+    <div data-test="bc-box">{children}</div>
+  )
 }))
 
 vi.mock('@/components/BCButton', () => ({
@@ -150,6 +199,10 @@ vi.mock('@/components/BCButton', () => ({
     isLoading,
     autoFocus,
     ...props
+  }: ButtonHTMLAttributes<HTMLButtonElement> & {
+    variant?: string
+    color?: string
+    isLoading?: boolean
   }) => (
     <button
       onClick={onClick}
@@ -167,7 +220,17 @@ vi.mock('@/components/BCButton', () => ({
 }))
 
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, variant, color, sx }) => (
+  default: ({
+    children,
+    variant,
+    color,
+    sx
+  }: {
+    children: ReactNode
+    variant?: string
+    color?: string
+    sx?: CSSProperties
+  }) => (
     <span
       data-test="bc-typography"
       data-variant={variant}
@@ -180,7 +243,17 @@ vi.mock('@/components/BCTypography', () => ({
 }))
 
 vi.mock('@/components/BCAlert', () => ({
-  default: ({ children, severity, onClose, sx }) => (
+  default: ({
+    children,
+    severity,
+    onClose,
+    sx
+  }: {
+    children: ReactNode
+    severity?: string
+    onClose?: () => void
+    sx?: CSSProperties
+  }) => (
     <div role="alert" data-test="bc-alert" data-severity={severity} style={sx}>
       {children}
       {onClose && (
@@ -193,8 +266,9 @@ vi.mock('@/components/BCAlert', () => ({
 }))
 
 // Mock translation
-const mockT = vi.fn((key, params) => {
-  const translations = {
+type TranslationParams = { formName?: string; errorMessage?: string }
+const mockT = vi.fn((key: string, params?: TranslationParams) => {
+  const translations: Record<string, string> = {
     'org:linkKeyManagement.externalFormLinks': 'External Form Links',
     'org:linkKeyManagement.selectFormAriaLabel': 'Select form to copy link',
     'org:linkKeyManagement.selectLinkToCopy': 'Select link to copy',
@@ -223,7 +297,8 @@ const mockT = vi.fn((key, params) => {
     'org:linkKeyManagement.failedToLoadData': 'Failed to load data',
     'org:linkKeyManagement.noFormsAvailable': 'No forms available'
   }
-  return translations[key] || translations[key.split(':').pop()] || key
+  const fallbackKey = key.split(':').pop() ?? key
+  return translations[key] || translations[fallbackKey] || key
 })
 
 vi.mock('react-i18next', () => ({
@@ -239,38 +314,60 @@ vi.mock('@/utils/clipboard', () => ({
 
 // Mock link key utilities
 vi.mock('../linkKeyUtils', () => ({
-  normalizeFormId: vi.fn((id) => id),
-  normalizeKeyData: vi.fn((data) => data),
+  normalizeFormId: vi.fn((id: string | number | null | undefined) => id),
+  normalizeKeyData: vi.fn((data?: Record<string, unknown>) => data),
   generateFormLink: vi.fn(
-    (slug, key) => `https://example.com/forms/${slug}?key=${key}`
+    (slug: string, key: string) =>
+      `https://example.com/forms/${slug}?key=${key}`
   ),
   hasExistingKey: vi.fn(),
   getExistingKey: vi.fn(),
-  updateCacheEntry: vi.fn((cache, formId, data) => ({
-    ...cache,
-    [formId]: data
-  })),
-  removeCacheEntry: vi.fn((cache, formId) => {
-    const newCache = { ...cache }
-    delete newCache[formId]
-    return newCache
-  }),
+  updateCacheEntry: vi.fn(
+    (
+      cache: Record<number, unknown>,
+      formId: string | number,
+      data: unknown
+    ) => ({
+      ...cache,
+      [formId]: data
+    })
+  ),
+  removeCacheEntry: vi.fn(
+    (cache: Record<number, unknown>, formId: string | number) => {
+      const newCache: Record<string | number, unknown> = { ...cache }
+      delete newCache[formId]
+      return newCache
+    }
+  ),
   buildCacheFromLinkKeys: vi.fn(() => ({}))
 }))
 
 // Test data and mocks
-let formTypesData = {
+let formTypesData: {
+  forms: Record<number, { name: string; slug: string }>
+} | null = {
   forms: {
     1: { name: 'Fuel Supply', slug: 'fuel-supply' },
     2: { name: 'Fuel Export', slug: 'fuel-export' }
   }
 }
-let linkKeysData = { linkKeys: [] }
+let linkKeysData: {
+  linkKeys?: Array<{
+    formId?: number | string
+    formSlug?: string
+    linkKey?: string
+  }>
+  link_keys?: Array<{
+    formId?: number | string
+    formSlug?: string
+    linkKey?: string
+  }>
+} = { linkKeys: [] }
 let refetchMock = vi.fn()
 let generateMutationMock = vi.fn()
 let regenerateMutationMock = vi.fn()
-let formTypesError = null
-let linkKeysError = null
+let formTypesError: Error | null = null
+let linkKeysError: Error | null = null
 let loadingFormTypes = false
 let loadingLinkKeys = false
 let generateMutationLoading = false
@@ -291,18 +388,18 @@ vi.mock('@/hooks/useOrganization', () => ({
   })),
   useGenerateLinkKey: vi.fn(() => ({
     mutate: generateMutationMock,
-    isLoading: generateMutationLoading
+    isPending: generateMutationLoading
   })),
   useRegenerateLinkKey: vi.fn(() => ({
     mutate: regenerateMutationMock,
-    isLoading: regenerateMutationLoading
+    isPending: regenerateMutationLoading
   }))
 }))
 
 const renderComponent = (props = {}) => {
   const client = new QueryClient({
     defaultOptions: {
-      queries: { retry: false, cacheTime: 0 },
+      queries: { retry: false, gcTime: 0 },
       mutations: { retry: false }
     }
   })
@@ -405,7 +502,7 @@ describe('LinkKeyManagement', () => {
     it('shows placeholder option when no form selected', () => {
       renderComponent()
 
-      const select = screen.getByRole('combobox')
+      const select = screen.getByRole('combobox') as HTMLSelectElement
       expect(select.value).toBe('')
       expect(screen.getByText('Select link to copy')).toBeInTheDocument()
     })
@@ -413,7 +510,7 @@ describe('LinkKeyManagement', () => {
     it('updates selected form when option is changed', () => {
       renderComponent()
 
-      const select = screen.getByRole('combobox')
+      const select = screen.getByRole('combobox') as HTMLSelectElement
       fireEvent.change(select, { target: { value: '1' } })
 
       expect(select.value).toBe('1')

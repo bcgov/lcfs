@@ -9,6 +9,7 @@ import {
   updateCacheEntry,
   removeCacheEntry
 } from '../linkKeyUtils'
+import type { LinkKeyCache, NormalizedLinkKey } from '../linkKeyUtils'
 
 describe('linkKeyUtils', () => {
   it('normalizeFormId handles numbers, strings and invalids', () => {
@@ -75,8 +76,7 @@ describe('linkKeyUtils', () => {
   })
 
   it('generateFormLink uses window.location.origin when available', () => {
-    const mockWindow = { location: { origin: 'https://test.com' } }
-    vi.stubGlobal('window', mockWindow)
+    vi.stubGlobal('window', { location: { origin: 'https://test.com' } })
 
     expect(generateFormLink('form-b', 'def')).toBe(
       'https://test.com/forms/form-b/def'
@@ -94,11 +94,11 @@ describe('linkKeyUtils', () => {
   })
 
   it('hasExistingKey checks cache first then list', () => {
-    const list = [
+    const list: NormalizedLinkKey[] = [
       { formId: 1, formSlug: 'a', linkKey: 'x' },
       { formId: 2, formSlug: 'b', linkKey: 'y' }
     ]
-    const cache = { 3: { linkKey: 'z' } }
+    const cache: LinkKeyCache = { 3: { linkKey: 'z' } }
 
     expect(hasExistingKey(list, cache, 3)).toBe(true) // from cache
     expect(hasExistingKey(list, cache, 2)).toBe(true) // from list
@@ -109,11 +109,11 @@ describe('linkKeyUtils', () => {
   })
 
   it('getExistingKey returns cached first then from list or null', () => {
-    const list = [
+    const list: NormalizedLinkKey[] = [
       { formId: 1, formSlug: 'a', linkKey: 'x' },
       { formId: 2, formSlug: 'b', linkKey: 'y' }
     ]
-    const cache = { 2: { linkKey: 'cached', formSlug: 'b' } }
+    const cache: LinkKeyCache = { 2: { linkKey: 'cached', formSlug: 'b' } }
 
     expect(getExistingKey(list, cache, 2)).toEqual({
       linkKey: 'cached',
@@ -151,7 +151,7 @@ describe('linkKeyUtils', () => {
   })
 
   it('updateCacheEntry and removeCacheEntry are pure and safe', () => {
-    const original = { 1: { linkKey: 'k1' } }
+    const original: LinkKeyCache = { 1: { linkKey: 'k1' } }
     const updated = updateCacheEntry(original, '2', { linkKey: 'k2' })
     expect(updated).toEqual({ 1: { linkKey: 'k1' }, 2: { linkKey: 'k2' } })
     expect(original).toEqual({ 1: { linkKey: 'k1' } }) // purity

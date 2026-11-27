@@ -7,6 +7,7 @@ import { roles } from '@/constants/roles'
 import { MemoryRouter } from 'react-router-dom'
 import { I18nextProvider } from 'react-i18next'
 import i18n from '@/i18n'
+import type { ReactNode } from 'react'
 
 import { OrganizationUsers } from '../OrganizationUsers'
 
@@ -19,15 +20,20 @@ vi.mock('@react-keycloak/web', () => ({
 
 // Mock react-router-dom
 const mockNavigate = vi.fn()
-vi.mock('react-router-dom', async (importOriginal) => {
-  const actual = await importOriginal()
-  return {
-    ...actual,
-    useParams: () => ({ orgID: '123' }),
-    useLocation: () => ({ state: {} }),
-    useNavigate: () => mockNavigate
+vi.mock(
+  'react-router-dom',
+  async (
+    importOriginal: <T = typeof import('react-router-dom')>() => Promise<T>
+  ) => {
+    const actual = await importOriginal()
+    return {
+      ...actual,
+      useParams: () => ({ orgID: '123' }),
+      useLocation: () => ({ state: {} }),
+      useNavigate: () => mockNavigate
+    }
   }
-})
+)
 
 // Mock current user hook
 const adminUser = {
@@ -35,10 +41,14 @@ const adminUser = {
   organization: { organizationId: '456' }
 }
 
-const makeUserHook = (user) => ({
+type TestUser = {
+  roles: Array<{ name: string }>
+  organization: { organizationId: string }
+}
+const makeUserHook = (user: TestUser) => ({
   data: user,
   isLoading: false,
-  hasRoles: (role) => user.roles.some((r) => r.name === role)
+  hasRoles: (role: string) => user.roles.some((r) => r.name === role)
 })
 
 vi.mock('@/hooks/useCurrentUser', () => ({
@@ -68,7 +78,9 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 }))
 
 vi.mock('@/components/Role', () => ({
-  Role: ({ children }) => <div data-testid="role-wrapper">{children}</div>
+  Role: ({ children }: { children: ReactNode }) => (
+    <div data-testid="role-wrapper">{children}</div>
+  )
 }))
 
 vi.mock('@fortawesome/react-fontawesome', () => ({
@@ -85,15 +97,17 @@ vi.mock('../_schema', () => ({
 
 // Mock routes
 vi.mock('@/routes/routes', () => ({
-  buildPath: vi.fn((route, params) => {
-    if (route === 'ORGANIZATIONS.VIEW_USER') {
-      return `/organizations/${params.orgID}/users/${params.userID}`
+  buildPath: vi.fn(
+    (route: string, params: { orgID?: string; userID?: string }) => {
+      if (route === 'ORGANIZATIONS.VIEW_USER') {
+        return `/organizations/${params.orgID}/users/${params.userID}`
+      }
+      if (route === 'ORGANIZATION.VIEW_USER') {
+        return `/organization/users/${params.userID}`
+      }
+      return `/mock-path/${route}`
     }
-    if (route === 'ORGANIZATION.VIEW_USER') {
-      return `/organization/users/${params.userID}`
-    }
-    return `/mock-path/${route}`
-  }),
+  ),
   ROUTES: {
     ORGANIZATIONS: {
       ADD_USER: 'org-add-user',
@@ -110,20 +124,25 @@ vi.mock('@/constants/routes', () => ({
 }))
 
 // Mock translation hook to return keys as values
-vi.mock('react-i18next', async (importOriginal) => {
-  const actual = await importOriginal()
-  return {
-    ...actual,
-    useTranslation: () => ({
-      t: (key) => {
-        // Return expected values for specific keys
-        if (key === 'org:newUsrBtn') return 'New user'
-        if (key === 'org:noUsersFound') return 'No users found'
-        return key
-      }
-    })
+vi.mock(
+  'react-i18next',
+  async (
+    importOriginal: <T = typeof import('react-i18next')>() => Promise<T>
+  ) => {
+    const actual = await importOriginal()
+    return {
+      ...actual,
+      useTranslation: () => ({
+        t: (key: string) => {
+          // Return expected values for specific keys
+          if (key === 'org:newUsrBtn') return 'New user'
+          if (key === 'org:noUsersFound') return 'No users found'
+          return key
+        }
+      })
+    }
   }
-})
+)
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -133,7 +152,7 @@ const queryClient = new QueryClient({
   }
 })
 
-const Wrapper = ({ children }) => (
+const Wrapper = ({ children }: { children: ReactNode }) => (
   <QueryClientProvider client={queryClient}>
     <I18nextProvider i18n={i18n}>
       <MemoryRouter>

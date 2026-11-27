@@ -1,4 +1,5 @@
 import 'react'
+import type { ChangeEvent, ReactElement } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import {
   cleanup,
@@ -12,10 +13,11 @@ import { MemoryRouter } from 'react-router-dom'
 import { CompanyOverviewComments } from '../CompanyOverviewComments'
 
 // BCWidgetCard calls useNavigate, so a Router context is required.
-const renderCard = (ui) => render(<MemoryRouter>{ui}</MemoryRouter>)
+const renderCard = (ui: ReactElement) =>
+  render(<MemoryRouter>{ui}</MemoryRouter>)
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key) => key })
+  useTranslation: () => ({ t: (key: string) => key })
 }))
 
 // Lightweight stubs so the test focuses on wiring, not the WYSIWYG editor.
@@ -27,12 +29,20 @@ vi.mock('@/components/Comments/CommentForm', () => ({
     onSubmit,
     visibility,
     showVisibilityToggle
+  }: {
+    commentText: string
+    onCommentChange: (value: string) => void
+    onSubmit: (comment: string, visibility: string) => void
+    visibility: string
+    showVisibilityToggle: boolean
   }) => (
     <div data-test="comment-form">
       <input
         data-test="comment-input"
         value={commentText}
-        onChange={(e) => onCommentChange(e.target.value)}
+        onChange={(event: ChangeEvent<HTMLInputElement>) =>
+          onCommentChange(event.target.value)
+        }
       />
       {showVisibilityToggle && <div data-test="visibility-toggle" />}
       <button
@@ -51,6 +61,11 @@ vi.mock('../CommentLog/CommentRow', () => ({
     onEdit,
     allowPublicVisibility,
     useLatestAttribution
+  }: {
+    comment: { internalCommentId: number; comment: string }
+    onEdit: (id: number, comment: string, visibility: string) => void
+    allowPublicVisibility: boolean
+    useLatestAttribution: boolean
   }) => (
     <div data-test="comment-row">
       <span data-test="comment-id">{comment.internalCommentId}</span>
@@ -72,9 +87,9 @@ const mockCreate = vi.fn()
 const mockEdit = vi.fn()
 
 vi.mock('@/hooks/useOrganizationComments', () => ({
-  useOrganizationCommentThread: (...args) => mockThread(...args),
-  useCreateOrganizationComment: (...args) => mockCreate(...args),
-  useEditOrganizationComment: (...args) => mockEdit(...args)
+  useOrganizationCommentThread: (...args: [number]) => mockThread(...args),
+  useCreateOrganizationComment: (...args: [number]) => mockCreate(...args),
+  useEditOrganizationComment: (...args: [number]) => mockEdit(...args)
 }))
 
 const createMutate = vi.fn().mockResolvedValue({})

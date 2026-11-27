@@ -147,6 +147,7 @@ export default defineConfig({
       reporter: ['text-summary', 'html'],
       include: ['src'],
       exclude: [
+        'src/**/*.d.ts',
         'src/*.{jsx,js,tsx,ts}',
         'src/assets',
         'src/constants',

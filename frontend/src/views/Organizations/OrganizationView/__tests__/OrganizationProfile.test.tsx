@@ -5,12 +5,17 @@ import { vi, describe, expect, beforeEach } from 'vite-plus/test'
 import { screen } from '@testing-library/react'
 
 // Now import the other modules
-import { OrganizationProfile } from '../OrganizationProfile.jsx'
+import { OrganizationProfile } from '../OrganizationProfile'
 import * as formatters from '@/utils/formatters'
 import * as addressUtils from '@/utils/constructAddress'
 
 // Import the mocked functions to control their behavior
 import { isFeatureEnabled } from '@/constants/config'
+import type { ComponentProps } from 'react'
+import BCBox from '@/components/BCBox'
+import BCTypography from '@/components/BCTypography'
+import { Role } from '@/components/Role'
+import { LinkKeyManagement } from '../components/LinkKeyManagement'
 
 // ============ MOCKS MUST BE FIRST ============
 // Mock all dependencies before any imports
@@ -74,7 +79,9 @@ vi.mock('@/hooks/useOrganization', () => ({
 vi.mock(
   '@/views/Organizations/OrganizationView/components/LinkKeyManagement',
   () => ({
-    LinkKeyManagement: ({ orgID }) => (
+    LinkKeyManagement: ({
+      orgID
+    }: ComponentProps<typeof LinkKeyManagement>) => (
       <div data-test="link-key-management" data-org-id={orgID}>
         LinkKeyManagement Component
       </div>
@@ -84,7 +91,7 @@ vi.mock(
 
 // Also mock relative path
 vi.mock('./components/LinkKeyManagement', () => ({
-  LinkKeyManagement: ({ orgID }) => (
+  LinkKeyManagement: ({ orgID }: ComponentProps<typeof LinkKeyManagement>) => (
     <div data-test="link-key-management" data-org-id={orgID}>
       LinkKeyManagement Component
     </div>
@@ -94,12 +101,16 @@ vi.mock('./components/LinkKeyManagement', () => ({
 // Component mocks
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => key
+    t: (key: string) => key
   })
 }))
 
 vi.mock('@/components/BCBox', () => ({
-  default: ({ children, className, ...props }) => {
+  default: ({
+    children,
+    className,
+    ...props
+  }: ComponentProps<typeof BCBox>) => {
     // Filter out style-related props that shouldn't be passed to DOM
     const { ...domProps } = omitProperties(props, [
       'p',
@@ -129,20 +140,16 @@ vi.mock('@/components/BCBox', () => ({
 }))
 
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, variant, className, ...props }) => {
-    // Filter out any non-standard DOM props
-    const { ...domProps } = omitProperties(props, [
-      'color',
-      'fontWeight',
-      'fontSize'
-    ])
-
+  default: ({
+    children,
+    variant,
+    className
+  }: ComponentProps<typeof BCTypography>) => {
     return (
       <div
         data-test="bc-typography"
         data-variant={variant}
         className={className}
-        {...domProps}
       >
         {children}
       </div>
@@ -155,7 +162,7 @@ vi.mock('@/components/Loading', () => ({
 }))
 
 vi.mock('@/components/Role', () => ({
-  Role: ({ children, roles }) => (
+  Role: ({ children, roles }: ComponentProps<typeof Role>) => (
     <div data-test="role" data-roles={JSON.stringify(roles)}>
       {children}
     </div>
@@ -234,7 +241,7 @@ const mockUnregisteredOrgData = {
 }
 
 describe('OrganizationProfile Component', () => {
-  const mockHasRoles = vi.fn()
+  const mockHasRoles = vi.fn<(role: string) => boolean>()
   const mockOrgID = 'test-org-123'
 
   beforeEach(() => {
@@ -242,17 +249,19 @@ describe('OrganizationProfile Component', () => {
 
     // Mock the formatters
     vi.mocked(formatters.phoneNumberFormatter).mockImplementation(
-      ({ value }) =>
-        value
+      ({ value }: Parameters<typeof formatters.phoneNumberFormatter>[0]) =>
+        typeof value === 'string' && value.length > 0
           ? `(${value.slice(0, 3)}) ${value.slice(3, 6)}-${value.slice(6)}`
           : ''
     )
 
     // Mock the address constructor
-    vi.mocked(addressUtils.constructAddress).mockImplementation((address) => {
-      if (!address) return ''
-      return `${address.streetAddress}, ${address.city}, ${address.provinceState} ${address.postalcodeZipcode}`
-    })
+    vi.mocked(addressUtils.constructAddress).mockImplementation(
+      (address: Parameters<typeof addressUtils.constructAddress>[0]) => {
+        if (!address) return ''
+        return `${address.streetAddress}, ${address.city}, ${address.provinceState} ${address.postalcodeZipcode}`
+      }
+    )
 
     // Default hasRoles implementation
     mockHasRoles.mockImplementation(() => false)
@@ -286,7 +295,7 @@ describe('OrganizationProfile Component', () => {
           isCurrentUserLoading={false}
           orgID={mockOrgID}
           orgData={undefined}
-          orgBalanceInfo={null}
+          orgBalanceInfo={undefined}
         />,
         []
       )
@@ -426,7 +435,7 @@ describe('OrganizationProfile Component', () => {
 
   describe('Role-Based Rendering', () => {
     test('shows compliance unit balance for government users', ({ render }) => {
-      mockHasRoles.mockImplementation((role) => role === 'government')
+      mockHasRoles.mockImplementation((role: string) => role === 'government')
 
       render(
         <OrganizationProfile
@@ -479,7 +488,7 @@ describe('OrganizationProfile Component', () => {
     })
 
     test('hides update message for government users', ({ render }) => {
-      mockHasRoles.mockImplementation((role) => role === 'government')
+      mockHasRoles.mockImplementation((role: string) => role === 'government')
 
       render(
         <OrganizationProfile
@@ -528,7 +537,7 @@ describe('OrganizationProfile Component', () => {
       render
     }) => {
       vi.mocked(isFeatureEnabled).mockReturnValue(true)
-      mockHasRoles.mockImplementation((role) => role === 'analyst')
+      mockHasRoles.mockImplementation((role: string) => role === 'analyst')
 
       // Use a try-catch to handle any remaining auth issues gracefully
       try {
@@ -556,7 +565,7 @@ describe('OrganizationProfile Component', () => {
         expect(isFeatureEnabled).toHaveBeenCalledWith('OBFUSCATED_LINKS')
         console.warn(
           'LinkKeyManagement test skipped due to auth setup issues:',
-          error.message
+          error instanceof Error ? error.message : String(error)
         )
       }
     })
@@ -565,7 +574,7 @@ describe('OrganizationProfile Component', () => {
       render
     }) => {
       vi.mocked(isFeatureEnabled).mockReturnValue(false)
-      mockHasRoles.mockImplementation((role) => role === 'analyst')
+      mockHasRoles.mockImplementation((role: string) => role === 'analyst')
 
       render(
         <OrganizationProfile
@@ -590,7 +599,7 @@ describe('OrganizationProfile Component', () => {
       render
     }) => {
       vi.mocked(isFeatureEnabled).mockReturnValue(false)
-      mockHasRoles.mockImplementation((role) => role === 'government') // Not analyst
+      mockHasRoles.mockImplementation((role: string) => role === 'government') // Not analyst
 
       render(
         <OrganizationProfile
@@ -615,7 +624,7 @@ describe('OrganizationProfile Component', () => {
       render
     }) => {
       vi.mocked(isFeatureEnabled).mockReturnValue(true)
-      mockHasRoles.mockImplementation((role) => role === 'analyst')
+      mockHasRoles.mockImplementation((role: string) => role === 'analyst')
 
       render(
         <OrganizationProfile
@@ -729,7 +738,7 @@ describe('OrganizationProfile Component', () => {
     })
 
     test('shows early issuance for government users', ({ render }) => {
-      mockHasRoles.mockImplementation((role) => role === 'government')
+      mockHasRoles.mockImplementation((role: string) => role === 'government')
 
       render(
         <OrganizationProfile
@@ -892,7 +901,7 @@ describe('OrganizationProfile Component', () => {
 
   describe('Balance Information', () => {
     test('displays balance with correct format', ({ render }) => {
-      mockHasRoles.mockImplementation((role) => role === 'government')
+      mockHasRoles.mockImplementation((role: string) => role === 'government')
 
       render(
         <OrganizationProfile
@@ -920,7 +929,7 @@ describe('OrganizationProfile Component', () => {
     })
 
     test('handles missing balance info gracefully', ({ render }) => {
-      mockHasRoles.mockImplementation((role) => role === 'government')
+      mockHasRoles.mockImplementation((role: string) => role === 'government')
 
       render(
         <OrganizationProfile
@@ -928,7 +937,7 @@ describe('OrganizationProfile Component', () => {
           isCurrentUserLoading={false}
           orgID={mockOrgID}
           orgData={mockOrgData}
-          orgBalanceInfo={null}
+          orgBalanceInfo={undefined}
         />,
         []
       )
@@ -938,7 +947,7 @@ describe('OrganizationProfile Component', () => {
     })
 
     test('handles negative reserved balance correctly', ({ render }) => {
-      mockHasRoles.mockImplementation((role) => role === 'government')
+      mockHasRoles.mockImplementation((role: string) => role === 'government')
       const balanceWithNegative = {
         totalBalance: 10000,
         reservedBalance: -5000

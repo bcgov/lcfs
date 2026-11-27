@@ -1,8 +1,10 @@
 import { formatNumberWithCommas } from '@/utils/formatters'
 
+type NumericInput = number | string | null | undefined
+
 export const abbreviateNumber = (
-  value,
-  { unitLabel = '', prefix = '' } = {}
+  value: number | null | undefined,
+  { unitLabel = '', prefix = '' }: { unitLabel?: string; prefix?: string } = {}
 ) => {
   if (value === null || value === undefined || Number.isNaN(value)) {
     return '—'
@@ -36,16 +38,16 @@ export const abbreviateNumber = (
   return `${prefix}${formattedValue}${suffix}${unitText}`.trim()
 }
 
-export const formatPlainNumber = (value, decimals = 0) => {
+export const formatPlainNumber = (value: NumericInput, decimals = 0) => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) {
     return '—'
   }
   return formatNumberWithCommas({ value: Number(value).toFixed(decimals) })
 }
 
-export const formatCompactAxisNumber = (value) => {
+export const formatCompactAxisNumber = (value: NumericInput) => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) {
     return ''
   }
-  return abbreviateNumber(value)
+  return abbreviateNumber(Number(value))
 }

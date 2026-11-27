@@ -1,7 +1,40 @@
 import { normalizeYear } from '@/utils/helper'
 
-const processDiscretionaryData = (rawPenaltyLogs, yearLabels) => {
-  const sums = new Map()
+type YearValue = string | number
+type PenaltyLog = {
+  complianceYear?: YearValue | null
+  penaltyAmount?: number | string | null
+}
+type YearlyPenalty = {
+  compliancePeriodId: string | number
+  complianceYear: YearValue
+  totalAutomatic: number
+  autoRenewable?: number | string | null
+  autoLowCarbon?: number | string | null
+  reportStatus?: string | null
+  assessedDate?: string | null
+  renewableInvoiceSent?: string | null
+  renewablePaymentReceived?: string | null
+  lowCarbonInvoiceSent?: string | null
+  lowCarbonPaymentReceived?: string | null
+}
+type AutomaticPenaltyRow = {
+  id: string
+  penaltyLogId: string
+  complianceYear: YearValue
+  description: string
+  penaltyAmount: number
+  dueDate: string
+  invoiceSent: string | null
+  paymentReceived: string | null
+  source: 'automatic'
+}
+
+const processDiscretionaryData = (
+  rawPenaltyLogs: PenaltyLog[],
+  yearLabels: string[]
+) => {
+  const sums = new Map<string, number>()
   rawPenaltyLogs.forEach((entry) => {
     const key = normalizeYear(entry?.complianceYear)
     const amount = Number(entry?.penaltyAmount ?? 0)
@@ -11,12 +44,12 @@ const processDiscretionaryData = (rawPenaltyLogs, yearLabels) => {
   return yearLabels.map((year) => sums.get(year) ?? 0)
 }
 
-const defaultTranslate = (key) => key
+const defaultTranslate = (key: string) => key
 
 export const processSparklineData = (
-  rawPenaltyLogs,
-  yearLabels,
-  yearlyPenalties
+  rawPenaltyLogs: PenaltyLog[],
+  yearLabels: string[],
+  yearlyPenalties: YearlyPenalty[]
 ) => {
   const discretionary = processDiscretionaryData(rawPenaltyLogs, yearLabels)
   const automatic = yearlyPenalties.map((item) => item.totalAutomatic)
@@ -28,15 +61,15 @@ export const processSparklineData = (
 }
 
 export const buildAutomaticPenaltyRows = (
-  yearlyPenalties,
-  t = defaultTranslate
-) =>
+  yearlyPenalties: YearlyPenalty[],
+  t: (key: string) => string = defaultTranslate
+): AutomaticPenaltyRow[] =>
   yearlyPenalties.flatMap((item) => {
     const dueDate =
       item.reportStatus === 'Assessed' && item.assessedDate
         ? String(item.assessedDate).split('T')[0]
         : ''
-    const rows = []
+    const rows: AutomaticPenaltyRow[] = []
     const autoRenewable = Number(item.autoRenewable ?? 0)
     const autoLowCarbon = Number(item.autoLowCarbon ?? 0)
 

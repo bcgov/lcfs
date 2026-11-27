@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import 'react'
 import { OrganizationUsers } from '../OrganizationUsers'
+import { toOrganizationUsersPaginationParams } from '../userPagination'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import { MemoryRouter } from 'react-router-dom'
@@ -9,18 +10,29 @@ import { I18nextProvider } from 'react-i18next'
 import i18n from '@/i18n'
 import theme from '@/themes'
 import { roles } from '@/constants/roles'
+import type {
+  ButtonHTMLAttributes,
+  HTMLAttributes,
+  MutableRefObject,
+  ReactNode
+} from 'react'
 
 // Mock react-router-dom
 const mockNavigate = vi.fn()
-vi.mock('react-router-dom', async (importOriginal) => {
-  const actual = await importOriginal()
-  return {
-    ...actual,
-    useNavigate: () => mockNavigate,
-    useLocation: () => ({ state: {} }),
-    useParams: () => ({ orgID: '123' })
+vi.mock(
+  'react-router-dom',
+  async (
+    importOriginal: <T = typeof import('react-router-dom')>() => Promise<T>
+  ) => {
+    const actual = await importOriginal()
+    return {
+      ...actual,
+      useNavigate: () => mockNavigate,
+      useLocation: () => ({ state: {} }),
+      useParams: () => ({ orgID: '123' })
+    }
   }
-})
+)
 
 // Mock Keycloak
 vi.mock('@react-keycloak/web', () => ({
@@ -68,7 +80,18 @@ vi.mock('@/hooks/useOrganizations', () => ({
 
 // ✅ FIXED: Mock BCGridViewer instead of BCDataGridServer
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  BCGridViewer: ({ gridRef, ...otherProps }) => {
+  BCGridViewer: ({
+    gridRef,
+    ...otherProps
+  }: HTMLAttributes<HTMLDivElement> & {
+    gridRef?: MutableRefObject<{ clearFilters?: () => void } | null>
+    onPaginationChange?: unknown
+    queryData?: unknown
+    getRowId?: unknown
+    gridOptions?: unknown
+    defaultColDef?: unknown
+    handleGridKey?: unknown
+  }) => {
     delete otherProps.onPaginationChange
     delete otherProps.queryData
     delete otherProps.getRowId
@@ -93,7 +116,10 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 
 // Mock UI components
 vi.mock('@/components/BCBox', () => ({
-  default: ({ children, ...props }) => (
+  default: ({
+    children,
+    ...props
+  }: HTMLAttributes<HTMLDivElement> & { children?: ReactNode }) => (
     <div data-test="bc-box" {...props}>
       {children}
     </div>
@@ -101,7 +127,14 @@ vi.mock('@/components/BCBox', () => ({
 }))
 
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, variant, ...props }) => (
+  default: ({
+    children,
+    variant,
+    ...props
+  }: HTMLAttributes<HTMLSpanElement> & {
+    children?: ReactNode
+    variant?: string
+  }) => (
     <span data-test="bc-typography" data-variant={variant} {...props}>
       {children}
     </span>
@@ -109,7 +142,12 @@ vi.mock('@/components/BCTypography', () => ({
 }))
 
 vi.mock('@/components/BCButton', () => ({
-  default: ({ children, onClick, startIcon, ...props }) => (
+  default: ({
+    children,
+    onClick,
+    startIcon,
+    ...props
+  }: ButtonHTMLAttributes<HTMLButtonElement> & { startIcon?: ReactNode }) => (
     <button data-test="bc-button" onClick={onClick} {...props}>
       {startIcon && <span data-test="start-icon">{startIcon}</span>}
       {children}
@@ -118,7 +156,7 @@ vi.mock('@/components/BCButton', () => ({
 }))
 
 vi.mock('@/components/Role', () => ({
-  Role: ({ children, roles }) => (
+  Role: ({ children, roles }: { children?: ReactNode; roles?: string[] }) => (
     <div data-test="role-wrapper" data-roles={JSON.stringify(roles)}>
       {children}
     </div>
@@ -127,21 +165,28 @@ vi.mock('@/components/Role', () => ({
 
 // Mock FontAwesome
 vi.mock('@fortawesome/react-fontawesome', () => ({
-  FontAwesomeIcon: ({ className }) => (
+  FontAwesomeIcon: ({ className }: { className?: string }) => (
     <i data-test="font-awesome-icon" className={className} />
   )
 }))
 
 // Mock cell renderers
-vi.mock('@/utils/grid/cellRenderers', async (importOriginal) => {
-  const actual = await importOriginal()
-  return {
-    ...actual,
-    // Override specific renderers if needed for testing
-    LinkRenderer: () => <div data-test="link-renderer">Link</div>,
-    RoleRenderer: () => <div data-test="role-renderer">Role</div>
+vi.mock(
+  '@/utils/grid/cellRenderers',
+  async (
+    importOriginal: <
+      T = typeof import('@/utils/grid/cellRenderers')
+    >() => Promise<T>
+  ) => {
+    const actual = await importOriginal()
+    return {
+      ...actual,
+      // Override specific renderers if needed for testing
+      LinkRenderer: () => <div data-test="link-renderer">Link</div>,
+      RoleRenderer: () => <div data-test="role-renderer">Role</div>
+    }
   }
-})
+)
 
 // Mock schema
 vi.mock('./_schema', () => ({
@@ -154,21 +199,23 @@ vi.mock('./_schema', () => ({
 
 // Mock routes
 vi.mock('@/routes/routes', () => ({
-  buildPath: vi.fn((route, params) => {
-    if (route === 'ORGANIZATIONS.ADD_USER') {
-      return `/organizations/${params.orgID}/add-user`
+  buildPath: vi.fn(
+    (route: string, params: { orgID?: string; userID?: string }) => {
+      if (route === 'ORGANIZATIONS.ADD_USER') {
+        return `/organizations/${params.orgID}/add-user`
+      }
+      if (route === 'ORGANIZATION.ADD_USER') {
+        return '/organization/add-user'
+      }
+      if (route === 'ORGANIZATIONS.VIEW_USER') {
+        return `/organizations/${params.orgID}/users/${params.userID}`
+      }
+      if (route === 'ORGANIZATION.VIEW_USER') {
+        return `/organization/users/${params.userID}`
+      }
+      return route
     }
-    if (route === 'ORGANIZATION.ADD_USER') {
-      return '/organization/add-user'
-    }
-    if (route === 'ORGANIZATIONS.VIEW_USER') {
-      return `/organizations/${params.orgID}/users/${params.userID}`
-    }
-    if (route === 'ORGANIZATION.VIEW_USER') {
-      return `/organization/users/${params.userID}`
-    }
-    return route
-  }),
+  ),
   ROUTES: {
     ORGANIZATIONS: {
       ADD_USER: 'ORGANIZATIONS.ADD_USER',
@@ -188,7 +235,7 @@ vi.mock('@/constants/routes', () => ({
   }
 }))
 
-const renderComponent = (props = {}) => {
+const renderComponent = () => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } }
   })
@@ -197,7 +244,7 @@ const renderComponent = (props = {}) => {
       <I18nextProvider i18n={i18n}>
         <MemoryRouter>
           <ThemeProvider theme={theme}>
-            <OrganizationUsers {...props} />
+            <OrganizationUsers />
           </ThemeProvider>
         </MemoryRouter>
       </I18nextProvider>
@@ -206,6 +253,46 @@ const renderComponent = (props = {}) => {
 }
 
 describe('OrganizationUsers Component Tests', () => {
+  it('preserves set and text filter models for the users query', () => {
+    const result = toOrganizationUsersPaginationParams({
+      page: 2,
+      size: 25,
+      sortOrders: [{ field: 'email', direction: 'desc' }],
+      filters: [
+        {
+          field: 'role',
+          filterType: 'set',
+          values: ['supplier', 'analyst']
+        },
+        {
+          field: 'email',
+          filterType: 'text',
+          type: 'contains',
+          filter: 'example'
+        }
+      ]
+    })
+
+    expect(result).toEqual({
+      page: 2,
+      size: 25,
+      sortOrders: [{ field: 'email', direction: 'desc' }],
+      filters: [
+        {
+          field: 'role',
+          filterType: 'set',
+          values: ['supplier', 'analyst']
+        },
+        {
+          field: 'email',
+          filterType: 'text',
+          type: 'contains',
+          filter: 'example'
+        }
+      ]
+    })
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     mockCurrentUserHook.data = {
@@ -231,7 +318,7 @@ describe('OrganizationUsers Component Tests', () => {
     it('renders with supplier user role', () => {
       mockCurrentUserHook.hasRoles = vi
         .fn()
-        .mockImplementation((role) => role === roles.supplier)
+        .mockImplementation((role: string) => role === roles.supplier)
 
       renderComponent()
 
@@ -277,7 +364,7 @@ describe('OrganizationUsers Component Tests', () => {
       mockCurrentUserHook.isLoading = false
       mockCurrentUserHook.hasRoles = vi
         .fn()
-        .mockImplementation((role) => role === roles.government)
+        .mockImplementation((role: string) => role === roles.government)
 
       renderComponent()
 
@@ -313,7 +400,7 @@ describe('OrganizationUsers Component Tests', () => {
     it('returns supplier route for supplier role', () => {
       mockCurrentUserHook.hasRoles = vi
         .fn()
-        .mockImplementation((role) => role === roles.supplier)
+        .mockImplementation((role: string) => role === roles.supplier)
 
       renderComponent()
 
@@ -354,7 +441,8 @@ describe('OrganizationUsers Component Tests', () => {
       mockCurrentUserHook.hasRoles = vi
         .fn()
         .mockImplementation(
-          (role) => role === roles.administrator || role === roles.manage_users
+          (role: string) =>
+            role === roles.administrator || role === roles.manage_users
         )
 
       renderComponent()
