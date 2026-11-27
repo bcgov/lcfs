@@ -36,7 +36,7 @@ export const AssessmentCard = ({
   hasGovernmentReassessmentInProgress,
   compliancePeriodYear
 }) => {
-  const { t } = useTranslation(['report', 'org'])
+  const { t } = useTranslation(['report', 'org', 'common'])
   const navigate = useNavigate()
   const apiService = useApiService()
   const { hasRoles } = useCurrentUser()
@@ -227,6 +227,22 @@ export const AssessmentCard = ({
                 orgID={orgData?.organizationId}
                 reportID={complianceReportId}
               />
+            )}
+            {!snapshotLoading && !isEditing && orgData && (
+              <Box data-test="report-representative-agreement" sx={{ pt: 1 }}>
+                <BCTypography variant="body4" component="div">
+                  <strong>{t('org:representativeAgreementLabel')}:</strong>{' '}
+                  {orgData.hasRepresentativeAgreement
+                    ? t('common:yes')
+                    : t('common:no')}
+                </BCTypography>
+                <BCTypography variant="body4" component="div">
+                  <strong>{t('org:reportingRepresentativeLabel')}:</strong>{' '}
+                  {(orgData.hasRepresentativeAgreement &&
+                    orgData.representativeOrganizationName) ||
+                    t('org:notApplicable')}
+                </BCTypography>
+              </Box>
             )}
             {filteredChain?.length > 0 &&
               currentStatus !== COMPLIANCE_REPORT_STATUSES.DRAFT && (

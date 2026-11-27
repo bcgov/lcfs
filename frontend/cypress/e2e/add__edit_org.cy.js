@@ -75,7 +75,6 @@ describe('Add Organization Test Suite', () => {
       cy.contains('label', 'Compliance reporting').click()
       cy.contains('label', 'Credit transfer').click()
       cy.getByDataTest('orgRegForTransfers2').click()
-      cy.getByDataTest('hasEarlyIssuanceNo').click()
       cy.get('#orgEDRMSRecord').type('12345')
       cy.get('.orgStreetAddress input').type('Street address')
       cy.get('#orgAddressOther').type('Address other')

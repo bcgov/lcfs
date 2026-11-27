@@ -46,6 +46,10 @@ vi.mock('@/services/useApiService', () => ({
 
 // Mock organization hooks
 vi.mock('@/hooks/useOrganization', () => ({
+  useUpdateOrganizationEarlyIssuance: () => ({ mutateAsync: vi.fn() }),
+  useUpdateOrganizationRepresentativeAgreement: () => ({
+    mutateAsync: vi.fn()
+  }),
   useAvailableFormTypes: () => ({
     data: [],
     isLoading: false,

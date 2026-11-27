@@ -1,9 +1,9 @@
 import io
 from datetime import datetime, timezone
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import structlog
-from fastapi import Depends, Request
+from fastapi import Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from fastapi_cache import FastAPICache
 
@@ -24,6 +24,7 @@ from lcfs.db.models.user.role_domains import (
     DEPENDENT_ORG_ROLES,
     ORG_CONTROLLABLE_ROLES,
 )
+from lcfs.utils.constants import LCFS_Constants
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder, SpreadsheetColumn
 from lcfs.web.api.base import (
     calculate_total_pages,
@@ -59,6 +60,17 @@ from .schema import (
 
 
 logger = structlog.get_logger(__name__)
+
+# Only these roles may change an organization's early issuance setting.
+EARLY_ISSUANCE_EDITOR_ROLES = (RoleEnum.COMPLIANCE_MANAGER, RoleEnum.DIRECTOR)
+
+# Only these roles may record a representative (third-party reporting) agreement.
+REPRESENTATIVE_AGREEMENT_EDITOR_ROLES = (
+    RoleEnum.ANALYST,
+    RoleEnum.COMPLIANCE_MANAGER,
+    RoleEnum.DIRECTOR,
+)
+REPRESENTATIVE_NAME_MAX_LENGTH = 500
 
 
 class OrganizationsService:
@@ -308,21 +320,6 @@ class OrganizationsService:
             created_organization.organization_id
         )
 
-        if (
-            hasattr(organization_data, "has_early_issuance")
-            and organization_data.has_early_issuance is not None
-        ):
-            from lcfs.utils.constants import LCFS_Constants
-
-            current_year = LCFS_Constants.get_current_compliance_year()
-
-            await self.repo.update_early_issuance_by_year(
-                created_organization.organization_id,
-                current_year,
-                organization_data.has_early_issuance,
-                user,
-            )
-
         await FastAPICache.clear()
 
         return created_organization
@@ -342,26 +339,6 @@ class OrganizationsService:
 
         org_types = await self._get_org_types(organization_data.organization_type_ids)
         requires_bceid = self._requires_bceid(org_types)
-
-        if (
-            hasattr(organization_data, "has_early_issuance")
-            and organization_data.has_early_issuance is not None
-        ):
-            from lcfs.utils.constants import LCFS_Constants
-
-            current_year = LCFS_Constants.get_current_compliance_year()
-
-            current_setting = await self.repo.get_current_year_early_issuance(
-                organization_id
-            )
-
-            if current_setting != organization_data.has_early_issuance:
-                await self.repo.update_early_issuance_by_year(
-                    organization_id,
-                    current_year,
-                    organization_data.has_early_issuance,
-                    user,
-                )
 
         # Credit market listing fields are owned by the credit market endpoints.
         # The generic organization edit form never sends them, so applying the
@@ -488,6 +465,86 @@ class OrganizationsService:
 
         await FastAPICache.clear()
         return updated_organization
+
+    @service_handler
+    async def update_early_issuance(
+        self, organization_id: int, has_early_issuance: bool, user
+    ):
+        """
+        Set the current compliance year's early issuance flag for an organization.
+        Restricted to Compliance Manager and Director users; this is enforced here
+        as well as on the route so no caller can bypass it.
+        """
+        user_roles = getattr(user, "role_names", None) or []
+        if not any(role in user_roles for role in EARLY_ISSUANCE_EDITOR_ROLES):
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+        organization = await self.repo.get_organization(organization_id)
+        if not organization:
+            raise DataNotFoundException("Organization not found")
+
+        current_setting = await self.repo.get_current_year_early_issuance(
+            organization_id
+        )
+        if current_setting != has_early_issuance:
+            await self.repo.update_early_issuance_by_year(
+                organization_id,
+                LCFS_Constants.get_current_compliance_year(),
+                has_early_issuance,
+                user,
+            )
+            await FastAPICache.clear()
+
+        return await self.repo.get_organization_response(organization_id)
+
+    @service_handler
+    async def update_representative_agreement(
+        self,
+        organization_id: int,
+        has_representative_agreement: bool,
+        representative_organization_name: Optional[str],
+        user,
+    ):
+        """
+        Record whether the organization has a representative agreement and, if so,
+        the name of the third party that reports on its behalf.
+
+        The name is required when an agreement exists and is cleared when it does
+        not, so a stale name can never be displayed. Role-checked here as well as
+        on the route.
+        """
+        user_roles = getattr(user, "role_names", None) or []
+        if not any(
+            role in user_roles for role in REPRESENTATIVE_AGREEMENT_EDITOR_ROLES
+        ):
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+        name = (representative_organization_name or "").strip()
+        if has_representative_agreement:
+            if not name:
+                raise ValueError(
+                    "Representative organization name is required when a "
+                    "representative agreement is in place"
+                )
+            if len(name) > REPRESENTATIVE_NAME_MAX_LENGTH:
+                raise ValueError(
+                    "Representative organization name must be "
+                    f"{REPRESENTATIVE_NAME_MAX_LENGTH} characters or fewer"
+                )
+        else:
+            name = None
+
+        organization = await self.repo.get_organization(organization_id)
+        if not organization:
+            raise DataNotFoundException("Organization not found")
+
+        organization.has_representative_agreement = has_representative_agreement
+        organization.representative_organization_name = name
+        organization.update_user = getattr(user, "keycloak_username", None)
+        await self.repo.update_organization(organization)
+        await FastAPICache.clear()
+
+        return await self.repo.get_organization_response(organization_id)
 
     @service_handler
     async def get_organization(self, organization_id: int):

@@ -31,6 +31,8 @@ from .schema import (
     OrganizationStatusSchema,
     OrganizationListSchema,
     OrganizationCreateSchema,
+    OrganizationEarlyIssuanceUpdateSchema,
+    OrganizationRepresentativeAgreementUpdateSchema,
     OrganizationResponseSchema,
     OrganizationSummaryResponseSchema,
     OrganizationBalanceResponseSchema,
@@ -316,6 +318,52 @@ async def update_organization(
     """Update an organizations data by id"""
     return await service.update_organization(
         organization_id, organization_data, request.user
+    )
+
+
+@router.put(
+    "/{organization_id}/early-issuance",
+    response_model=OrganizationResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.COMPLIANCE_MANAGER, RoleEnum.DIRECTOR])
+async def update_organization_early_issuance(
+    request: Request,
+    organization_id: int,
+    early_issuance_data: OrganizationEarlyIssuanceUpdateSchema,
+    service: OrganizationsService = Depends(),
+):
+    """
+    Enable or disable early issuance for the current compliance year.
+    Only Compliance Manager and Director users may change this setting.
+    """
+    return await service.update_early_issuance(
+        organization_id, early_issuance_data.has_early_issuance, request.user
+    )
+
+
+@router.put(
+    "/{organization_id}/representative-agreement",
+    response_model=OrganizationResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.ANALYST, RoleEnum.COMPLIANCE_MANAGER, RoleEnum.DIRECTOR])
+async def update_organization_representative_agreement(
+    request: Request,
+    organization_id: int,
+    agreement_data: OrganizationRepresentativeAgreementUpdateSchema,
+    service: OrganizationsService = Depends(),
+):
+    """
+    Record whether the organization has a representative agreement and the name
+    of the third party that reports on its behalf. Analysts, Compliance Managers
+    and Directors only.
+    """
+    return await service.update_representative_agreement(
+        organization_id,
+        agreement_data.has_representative_agreement,
+        agreement_data.representative_organization_name,
+        request.user,
     )
 
 

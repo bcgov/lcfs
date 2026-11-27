@@ -793,3 +793,115 @@ class TestPenaltyEndpointsOrgCheck:
                 response = await client.get("/api/organizations/5/penalties/analytics")
 
         assert response.status_code == status.HTTP_200_OK
+
+
+class TestUpdateOrganizationEarlyIssuance:
+    """Early issuance may only be changed by Compliance Managers and Directors."""
+
+    @pytest.mark.anyio
+    @pytest.mark.parametrize("role", [RoleEnum.COMPLIANCE_MANAGER, RoleEnum.DIRECTOR])
+    async def test_allowed_roles_can_update(
+        self, fastapi_app: FastAPI, set_mock_user, role
+    ):
+        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT, role])
+        mock_svc = AsyncMock()
+        mock_svc.update_early_issuance.return_value = _mock_org_schema()
+        fastapi_app.dependency_overrides[ServiceDependency] = lambda: mock_svc
+
+        async with AsyncClient(
+            transport=ASGITransport(app=fastapi_app), base_url="http://test"
+        ) as client:
+            response = await client.put(
+                "/api/organizations/1/early-issuance",
+                json={"hasEarlyIssuance": True},
+            )
+
+        assert response.status_code == status.HTTP_200_OK
+        args = mock_svc.update_early_issuance.call_args.args
+        assert args[0] == 1
+        assert args[1] is True
+
+    @pytest.mark.anyio
+    @pytest.mark.parametrize(
+        "roles",
+        [
+            [RoleEnum.GOVERNMENT, RoleEnum.ANALYST],
+            [RoleEnum.GOVERNMENT, RoleEnum.ADMINISTRATOR],
+            [RoleEnum.SUPPLIER],
+        ],
+    )
+    async def test_other_roles_are_forbidden(
+        self, fastapi_app: FastAPI, set_mock_user, roles
+    ):
+        set_mock_user(fastapi_app, roles)
+        mock_svc = AsyncMock()
+        fastapi_app.dependency_overrides[ServiceDependency] = lambda: mock_svc
+
+        async with AsyncClient(
+            transport=ASGITransport(app=fastapi_app), base_url="http://test"
+        ) as client:
+            response = await client.put(
+                "/api/organizations/1/early-issuance",
+                json={"hasEarlyIssuance": True},
+            )
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        mock_svc.update_early_issuance.assert_not_called()
+
+
+class TestUpdateOrganizationRepresentativeAgreement:
+    """Representative agreements may be recorded by Analysts, Compliance Managers
+    and Directors only."""
+
+    @pytest.mark.anyio
+    @pytest.mark.parametrize(
+        "role", [RoleEnum.ANALYST, RoleEnum.COMPLIANCE_MANAGER, RoleEnum.DIRECTOR]
+    )
+    async def test_allowed_roles_can_update(
+        self, fastapi_app: FastAPI, set_mock_user, role
+    ):
+        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT, role])
+        mock_svc = AsyncMock()
+        mock_svc.update_representative_agreement.return_value = _mock_org_schema()
+        fastapi_app.dependency_overrides[ServiceDependency] = lambda: mock_svc
+
+        async with AsyncClient(
+            transport=ASGITransport(app=fastapi_app), base_url="http://test"
+        ) as client:
+            response = await client.put(
+                "/api/organizations/1/representative-agreement",
+                json={
+                    "hasRepresentativeAgreement": True,
+                    "representativeOrganizationName": "ABC Environmental",
+                },
+            )
+
+        assert response.status_code == status.HTTP_200_OK
+        args = mock_svc.update_representative_agreement.call_args.args
+        assert args[:3] == (1, True, "ABC Environmental")
+
+    @pytest.mark.anyio
+    @pytest.mark.parametrize(
+        "roles",
+        [
+            [RoleEnum.GOVERNMENT, RoleEnum.ADMINISTRATOR],
+            [RoleEnum.SUPPLIER],
+        ],
+    )
+    async def test_other_roles_are_forbidden(
+        self, fastapi_app: FastAPI, set_mock_user, roles
+    ):
+        set_mock_user(fastapi_app, roles)
+        mock_svc = AsyncMock()
+        fastapi_app.dependency_overrides[ServiceDependency] = lambda: mock_svc
+
+        async with AsyncClient(
+            transport=ASGITransport(app=fastapi_app), base_url="http://test"
+        ) as client:
+            response = await client.put(
+                "/api/organizations/1/representative-agreement",
+                json={"hasRepresentativeAgreement": False},
+            )
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        mock_svc.update_representative_agreement.assert_not_called()

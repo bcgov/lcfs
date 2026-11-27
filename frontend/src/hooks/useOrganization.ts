@@ -461,6 +461,77 @@ export const useUpdateOrganization = (
   })
 }
 
+// Mutation hook for enabling/disabling early issuance (Compliance Manager and
+// Director only; the API rejects every other role).
+export const useUpdateOrganizationEarlyIssuance = (
+  orgID: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, boolean> = {}
+) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+
+  const { onSuccess, onError, ...restOptions } = options
+
+  return useMutation({
+    mutationFn: async (hasEarlyIssuance: boolean) => {
+      if (!orgID) {
+        throw new Error('Organization ID is required')
+      }
+      return await client.put(`/organizations/${orgID}/early-issuance`, {
+        hasEarlyIssuance
+      })
+    },
+    onSuccess: (data, variables, context) => {
+      queryClient.invalidateQueries({ queryKey: ['organization'] })
+      queryClient.invalidateQueries({ queryKey: ['org-early-issuance'] })
+      onSuccess?.(data, variables, context)
+    },
+    onError: (error, variables, context) => {
+      queryClient.invalidateQueries({ queryKey: ['organization', orgID] })
+      onError?.(error, variables, context)
+    },
+    ...restOptions
+  })
+}
+
+// Mutation hook for recording a representative (third-party reporting) agreement
+// (Analyst, Compliance Manager and Director only; enforced by the API).
+export interface RepresentativeAgreementPayload {
+  hasRepresentativeAgreement: boolean
+  representativeOrganizationName: string | null
+}
+
+export const useUpdateOrganizationRepresentativeAgreement = (
+  orgID: number | string | undefined | null,
+  options: ExtMutationOptions<unknown, RepresentativeAgreementPayload> = {}
+) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+
+  const { onSuccess, onError, ...restOptions } = options
+
+  return useMutation({
+    mutationFn: async (data: RepresentativeAgreementPayload) => {
+      if (!orgID) {
+        throw new Error('Organization ID is required')
+      }
+      return await client.put(
+        `/organizations/${orgID}/representative-agreement`,
+        data
+      )
+    },
+    onSuccess: (data, variables, context) => {
+      queryClient.invalidateQueries({ queryKey: ['organization'] })
+      onSuccess?.(data, variables, context)
+    },
+    onError: (error, variables, context) => {
+      queryClient.invalidateQueries({ queryKey: ['organization', orgID] })
+      onError?.(error, variables, context)
+    },
+    ...restOptions
+  })
+}
+
 export const useUpdateOrganizationUser = (
   orgID: number | string | undefined | null,
   userID: number | string | undefined | null,

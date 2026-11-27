@@ -485,8 +485,11 @@ describe('AddEditOrgForm Component', () => {
 
       expect(screen.getByTestId('orgRegForTransfers1')).toBeInTheDocument()
       expect(screen.getByTestId('orgRegForTransfers2')).toBeInTheDocument()
-      expect(screen.getByTestId('hasEarlyIssuanceYes')).toBeInTheDocument()
-      expect(screen.getByTestId('hasEarlyIssuanceNo')).toBeInTheDocument()
+      // Early issuance moved to the organization details card
+      expect(
+        screen.queryByTestId('hasEarlyIssuanceYes')
+      ).not.toBeInTheDocument()
+      expect(screen.queryByTestId('hasEarlyIssuanceNo')).not.toBeInTheDocument()
     })
 
     it('renders action buttons', () => {

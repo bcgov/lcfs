@@ -1242,6 +1242,54 @@ describe('AssessmentCard', () => {
     })
 
     describe('Organization Data Display', () => {
+      test('shows the representative agreement and representative name', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
+        render(
+          <AssessmentCard
+            {...defaultProps}
+            orgData={{
+              ...defaultProps.orgData,
+              hasRepresentativeAgreement: true,
+              representativeOrganizationName: 'ABC Environmental Services Ltd.'
+            }}
+          />,
+          [query, theme, localization, router]
+        )
+        const section = screen.getByTestId('report-representative-agreement')
+        expect(section).toHaveTextContent('org:representativeAgreementLabel')
+        expect(section).toHaveTextContent('common:yes')
+        expect(section).toHaveTextContent('ABC Environmental Services Ltd.')
+      })
+
+      test('shows N/A for the representative when there is no agreement', ({
+        render,
+        query,
+        theme,
+        localization,
+        router
+      }) => {
+        render(
+          <AssessmentCard
+            {...defaultProps}
+            orgData={{
+              ...defaultProps.orgData,
+              hasRepresentativeAgreement: false,
+              representativeOrganizationName: 'Stale Name'
+            }}
+          />,
+          [query, theme, localization, router]
+        )
+        const section = screen.getByTestId('report-representative-agreement')
+        expect(section).toHaveTextContent('common:no')
+        expect(section).toHaveTextContent('org:notApplicable')
+        expect(section).not.toHaveTextContent('Stale Name')
+      })
+
       test('displays organization name', ({
         render,
         query,

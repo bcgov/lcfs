@@ -49,6 +49,10 @@ vi.mock('../components/CompanyOverviewComments', () => ({
 }))
 
 vi.mock('@/hooks/useOrganization', () => ({
+  useUpdateOrganizationEarlyIssuance: () => ({ mutateAsync: vi.fn() }),
+  useUpdateOrganizationRepresentativeAgreement: () => ({
+    mutateAsync: vi.fn()
+  }),
   useOrganization: vi.fn(() => ({ data: baseOrg, isLoading: false })),
   useOrganizationBalance: () => ({
     data: { totalBalance: 200, reservedBalance: 25 }
@@ -160,7 +164,7 @@ describe('OrganizationDetailsCard', () => {
     expect(
       screen.getByText(/Early issuance reporting enabled for/)
     ).toBeInTheDocument()
-    expect(screen.getByText('No')).toBeInTheDocument()
+    expect(screen.getByTestId('early-issuance-value')).toHaveTextContent('No')
   })
 
   it('shows early issuance for non-government user only when true', () => {
@@ -180,7 +184,7 @@ describe('OrganizationDetailsCard', () => {
     expect(
       screen.getByText(/Early issuance reporting enabled for/)
     ).toBeInTheDocument()
-    expect(screen.getByText('Yes')).toBeInTheDocument()
+    expect(screen.getByTestId('early-issuance-value')).toHaveTextContent('Yes')
   })
 
   it('does not show early issuance for non-government user when false', () => {
