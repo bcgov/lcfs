@@ -2,6 +2,13 @@ import { useApiService } from '@/services/useApiService'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { QueryOptions, ExtMutationOptions } from './types'
 
+export interface TransferCategoryUpdate {
+  category: string
+  isA1Category: boolean
+}
+
+type TransferCategoryInput = string | TransferCategoryUpdate
+
 export const useTransfer = (
   transferID: number | string | undefined | null,
   options: QueryOptions<unknown>
@@ -49,14 +56,14 @@ export const useCreateUpdateTransfer = (
 
 export const useUpdateCategory = (
   transferId: number | string | undefined | null,
-  options: ExtMutationOptions<unknown, unknown>
+  options: ExtMutationOptions<unknown, TransferCategoryInput>
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
   return useMutation({
     ...options,
-    mutationFn: async (category: string) => {
+    mutationFn: async (category: TransferCategoryInput) => {
       return await client.put(`transfers/${transferId}/category`, category)
     },
     onSettled: () => {

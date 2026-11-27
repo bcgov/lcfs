@@ -3,6 +3,7 @@ import dayjs from 'dayjs'
 
 type ValueParam = { value?: unknown } | number | string | null | undefined
 type FormatterParam = ValueParam | Record<string, unknown>
+type DateFormatterParam = FormatterParam | Date
 
 const hasValue = (obj: unknown): obj is { value: unknown } =>
   typeof obj === 'object' &&
@@ -96,7 +97,7 @@ export const decimalFormatter = (params: FormatterParam): string | unknown => {
 /**
  * Formats a date to YYYY-MM-DD format.
  */
-export const dateFormatter = (params: FormatterParam): string => {
+export const dateFormatter = (params: DateFormatterParam): string => {
   const cellValue = hasValue(params) ? params.value : params
 
   if (cellValue != null) {
@@ -159,8 +160,8 @@ export function convertObjectKeys<T = unknown>(obj: T): T {
  * Calculates the total value by multiplying quantity and price per unit.
  */
 export const calculateTotalValue = (
-  quantity: number | string,
-  pricePerUnit: number | string
+  quantity: number | string | undefined,
+  pricePerUnit: number | string | undefined
 ): number => {
   const quantityNum = parseFloat(quantity as string)
   const priceNum = parseFloat(pricePerUnit as string)
