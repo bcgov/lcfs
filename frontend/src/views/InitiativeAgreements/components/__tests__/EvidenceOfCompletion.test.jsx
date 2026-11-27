@@ -14,7 +14,7 @@ import { evidencePlainText } from '../evidenceRichText'
 import { roles } from '@/constants/roles'
 import { test } from '@/tests/utils/fixtures'
 
-vi.mock('react-quill', async () => {
+vi.mock('react-quill-new', async () => {
   const React = await import('react')
   const MockQuill = React.forwardRef(function MockQuill(
     { value, onChange, readOnly, modules, formats },
@@ -765,16 +765,7 @@ describe('EvidenceOfCompletion', () => {
       JSON.parse(
         screen.getByTestId('eoc-description-1').getAttribute('data-formats')
       )
-    ).toEqual([
-      'size',
-      'bold',
-      'italic',
-      'align',
-      'list',
-      'bullet',
-      'indent',
-      'link'
-    ])
+    ).toEqual(['size', 'bold', 'italic', 'align', 'list', 'indent', 'link'])
     expect(
       JSON.parse(
         screen.getByTestId('eoc-description-1').getAttribute('data-toolbar')

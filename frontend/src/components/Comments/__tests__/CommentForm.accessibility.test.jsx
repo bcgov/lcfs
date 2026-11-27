@@ -1,5 +1,6 @@
 import { act, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import ReactQuill from 'react-quill-new'
 import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, vi } from 'vite-plus/test'
 import { test } from '@/tests/utils/fixtures'
@@ -14,7 +15,7 @@ const defaultProps = {
 
 const getToolbar = (container) => container.querySelector('.ql-toolbar')
 const getQuill = (container) =>
-  container.querySelector('.ql-container')?.__quill
+  ReactQuill.Quill.find(container.querySelector('.ql-container'))
 
 describe('CommentForm Quill toolbar accessibility', () => {
   beforeEach(() => {

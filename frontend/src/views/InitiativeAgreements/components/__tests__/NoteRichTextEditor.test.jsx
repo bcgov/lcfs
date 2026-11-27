@@ -6,7 +6,7 @@ import { NoteRichTextEditor } from '../NoteRichTextEditor'
 import { test } from '@/tests/utils/fixtures'
 
 const setAttribute = vi.fn()
-vi.mock('react-quill', async () => {
+vi.mock('react-quill-new', async () => {
   const React = await import('react')
   const MockQuill = React.forwardRef(function MockQuill(
     { value, onChange, readOnly, modules, formats },
@@ -45,7 +45,6 @@ describe('NoteRichTextEditor', () => {
       'bold',
       'italic',
       'list',
-      'bullet',
       'indent',
       'link'
     ])

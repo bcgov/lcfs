@@ -1,6 +1,6 @@
 import { test } from '@/tests/utils/fixtures'
 import { act, fireEvent, screen } from '@testing-library/react'
-import ReactQuill from 'react-quill'
+import ReactQuill from 'react-quill-new'
 import { beforeAll, expect, vi } from 'vite-plus/test'
 import { useState } from 'react'
 import CommentForm from '../CommentForm'

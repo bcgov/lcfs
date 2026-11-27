@@ -3,7 +3,7 @@ import { screen, waitFor } from '@testing-library/react'
 import { describe, vi, beforeEach, expect } from 'vite-plus/test'
 import Comments from '@/components/Comments'
 
-// Real react-quill (not the textarea stub used by CommentList.test.jsx) so the
+// Real react-quill-new (not the textarea stub used by CommentList.test.jsx) so the
 // actual toolbar — including the custom "mention" button — renders, proving
 // the feature is wired up for whichever entityType is passed in, including
 // CI applications.

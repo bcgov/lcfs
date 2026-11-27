@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next'
 import Box from '@mui/material/Box'
 import IconButton from '@mui/material/IconButton'
 import EditIcon from '@mui/icons-material/Edit'
-import ReactQuill from 'react-quill'
-import 'react-quill/dist/quill.snow.css'
+import ReactQuill from 'react-quill-new'
+import 'quill-next/dist/quill.snow.css'
 
 import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'
@@ -37,7 +37,6 @@ const EVIDENCE_FORMATS = [
   'italic',
   'align',
   'list',
-  'bullet',
   'indent',
   'link'
 ]

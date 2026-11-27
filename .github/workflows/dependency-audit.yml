@@ -1,0 +1,54 @@
+name: Dependency security audit
+
+on:
+  pull_request:
+    branches:
+      - "**"
+
+permissions:
+  contents: read
+
+jobs:
+  npm-audit:
+    name: Frontend dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6.3.0
+        with:
+          node-version-file: frontend/.nvmrc
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci --no-audit --no-fund
+
+      - name: Audit production dependencies
+        working-directory: frontend
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Check security dependency regressions
+        working-directory: frontend
+        run: npm run test:security
+
+  pip-audit:
+    name: Backend dependency audit
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - name: Set up Python
+        uses: actions/setup-python@v6.2.0
+        with:
+          python-version-file: backend/.python-version
+
+      - name: Install Poetry and pip-audit
+        run: pip install poetry==2.5.1 poetry-plugin-export pip-audit
+
+      - name: Export locked production dependencies
+        working-directory: backend
+        run: poetry export --only main --format requirements.txt --without-hashes --output /tmp/backend-requirements.txt
+
+      - name: Audit locked production dependencies
+        run: pip-audit --requirement /tmp/backend-requirements.txt

@@ -13,7 +13,7 @@ const mockUserState = vi.hoisted(() => ({
   username: 'idir-user'
 }))
 
-vi.mock('react-quill', () => {
+vi.mock('react-quill-new', () => {
   const ReactQuill = ({ value, onChange, placeholder }) => (
     <textarea
       aria-label="Comment editor"

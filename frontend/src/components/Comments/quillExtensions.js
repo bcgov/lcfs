@@ -1,4 +1,4 @@
-import ReactQuill from 'react-quill'
+import ReactQuill from 'react-quill-new'
 
 // Toolbar icons and the mention embed for Quill. Quill's registries are
 // global, so this module registers them once on import.
@@ -10,7 +10,7 @@ quillIcons.mention =
   '<svg viewBox="0 0 24 24" fill="none"><circle class="ql-stroke" cx="12" cy="12" r="4"/><path class="ql-stroke" d="M16 8v5a3 3 0 0 0 6 0v-1a10 9 0 1 0-4.75 8.47"/></svg>'
 
 // Inline embed for a mention: <span class="mention" data-mention-id="42">.
-// Some tests mock react-quill, where `blots/embed` isn't a class; in that case
+// Some tests mock react-quill-new, where `blots/embed` isn't a class; in that case
 // the blot is skipped and mentions fall back to plain "@Name" text.
 const MentionEmbedBase = Quill.import('blots/embed')
 export let mentionBlotRegistered = false
