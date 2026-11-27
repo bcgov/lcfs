@@ -6,6 +6,7 @@ import { test } from '@/tests/utils/fixtures'
 import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import * as formatters from '@/utils/formatters'
 import { useTranslation } from 'react-i18next'
+import transferTranslations from '@/assets/locales/en/transfer.json'
 
 // Mock the dateFormatter utility
 vi.mock('@/utils/formatters', () => ({
@@ -39,8 +40,7 @@ describe('AgreementDate Component', () => {
     mockT.mockImplementation((key) => {
       const translations = {
         'transfer:agrDateLabel': 'Agreement date (required)',
-        'transfer:agrDateDescText':
-          'Enter the date on which the consideration and credit transfer terms were agreed upon by the parties, as required for reporting under section 18(b)(ii) of the Low Carbon Fuels (General) Regulation.',
+        'transfer:agrDateDescText': transferTranslations.agrDateDescText,
         'transfer:agrDateHeader': 'Agreement date:'
       }
       return translations[key] || key
@@ -68,7 +68,7 @@ describe('AgreementDate Component', () => {
       expect(screen.getByText('Agreement date (required)')).toBeInTheDocument()
       expect(
         screen.getByText(
-          'Enter the date on which the consideration and credit transfer terms were agreed upon by the parties, as required for reporting under section 18(b)(ii) of the Low Carbon Fuels (General) Regulation.'
+          'Enter the date on which the fair market value of the consideration was agreed upon by the parties, as required for reporting under section 18(b)(ii) of the Low Carbon Fuels (General) Regulation.'
         )
       ).toBeInTheDocument()
     })
