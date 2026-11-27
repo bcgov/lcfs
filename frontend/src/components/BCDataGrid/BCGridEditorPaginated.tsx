@@ -384,23 +384,24 @@ export const BCGridEditorPaginated = ({
 
       const { centerViewport, horizontalViewport, headerViewport } = info
 
-      handleGridScroll = () => {
+      const onGridScroll = () => {
         if (syncingFromCustomRef.current) return
 
         const latestInfo = getGridScrollInfo()
         syncCustomScrollbarToGrid(latestInfo ?? info)
       }
+      handleGridScroll = onGridScroll
 
       listeners = [centerViewport, horizontalViewport, headerViewport]
         .filter(Boolean)
         .map((element) => {
           if (!element) return null
-          element.addEventListener('scroll', handleGridScroll, {
+          element.addEventListener('scroll', onGridScroll, {
             passive: true
           })
           return element
         })
-        .filter((element): element is Element => element !== null)
+        .filter((element): element is HTMLElement => element !== null)
 
       handleGridScroll()
       updateScrollMetrics()
@@ -666,14 +667,17 @@ export const BCGridEditorPaginated = ({
         newData.push(newRow)
       })
       const transactions = ref.current!.api.applyTransaction({ add: newData })
-      transactions!.add.forEach((node) => {
-        onCellEditingStopped!({
-          node,
-          oldValue: '',
-          newValue: node.data![findFirstEditableColumn() as unknown as string],
-          ...gridProps
-        } as import('./types').BCGridEditContext<BCGridRow>)
-      })
+      if (onCellEditingStopped) {
+        transactions!.add.forEach((node) => {
+          onCellEditingStopped({
+            node,
+            oldValue: '',
+            newValue:
+              node.data![findFirstEditableColumn() as unknown as string],
+            ...gridProps
+          } as import('./types').BCGridEditContext<BCGridRow>)
+        })
+      }
     },
     [findFirstEditableColumn, onCellEditingStopped, props, ref]
   )

@@ -34,7 +34,7 @@ export interface AutocompleteCellEditorOption {
 
 export interface AutocompleteCellEditorProps {
   value?: unknown
-  options?: AutocompleteCellEditorOption[]
+  options?: Array<AutocompleteCellEditorOption | string>
   limitTags?: number
   multiple?: boolean
   disableCloseOnSelect?: boolean
@@ -120,15 +120,18 @@ export const AutocompleteCellEditor = forwardRef<
 
   const findOptionByRaw = (
     raw: unknown
-  ): AutocompleteCellEditorOption | null => {
+  ): AutocompleteCellEditorOption | string | null => {
     if (raw == null) return null
-    return options.find((opt) =>
-      typeof opt === 'object' ? opt?.value === raw : opt === raw
-    ) as AutocompleteCellEditorOption | null
+    return (
+      options.find((opt) =>
+        typeof opt === 'object' ? opt?.value === raw : opt === raw
+      ) ?? null
+    )
   }
 
   const initSelected = ():
     | AutocompleteCellEditorOption
+    | string
     | (AutocompleteCellEditorOption | string)[]
     | null => {
     if (multiple) {
@@ -137,7 +140,8 @@ export const AutocompleteCellEditor = forwardRef<
         return value
           .map((v) => (typeof v === 'object' ? v : findOptionByRaw(v)))
           .filter(
-            (option): option is AutocompleteCellEditorOption => option != null
+            (option): option is AutocompleteCellEditorOption | string =>
+              option != null
           )
       }
       if (value == null || value === '') return []
@@ -147,7 +151,8 @@ export const AutocompleteCellEditor = forwardRef<
           .map((v) => v.trim())
           .map((rv) => findOptionByRaw(rv))
           .filter(
-            (option): option is AutocompleteCellEditorOption => option != null
+            (option): option is AutocompleteCellEditorOption | string =>
+              option != null
           )
       }
       // single primitive
@@ -343,7 +348,12 @@ export const AutocompleteCellEditor = forwardRef<
         }
       }}
     >
-      <Autocomplete<AutocompleteCellEditorOption, boolean, false, boolean>
+      <Autocomplete<
+        AutocompleteCellEditorOption | string,
+        boolean,
+        false,
+        boolean
+      >
         sx={{
           '.MuiOutlinedInput-root': {
             padding: '2px 0px 2px 0px'

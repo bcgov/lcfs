@@ -223,6 +223,17 @@ const Crumb = () => {
             return null
           }
 
+          // An LCJFIP application's URL is /jet-fuel/lcjfip/applications/:id.
+          // "Jet fuel" already links to the program page, so the structural
+          // segments are not shown: Home > Jet fuel > LCJFIP application.
+          if (
+            pathnames[0] === 'jet-fuel' &&
+            !isLast &&
+            (name === 'lcjfip' || name === 'applications')
+          ) {
+            return null
+          }
+
           // A designated action's URL is /initiative-agreements/{ia}/
           // designated-actions/{da}. The trail reads that hierarchy —
           // module, agreement, action — so the agreement's id becomes

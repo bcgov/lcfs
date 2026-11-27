@@ -79,7 +79,7 @@ class LCJFIPApplication(BaseModel, Auditable):
 
     Values that are derived and therefore not stored:
     - total estimated volume for support = SUM(purchase_details.estimated_volume)
-    - application number shown to users = 'LCJFIP-' || lcjfip_application_id
+    - application number shown to users = 'JF-' || lcjfip_application_id
     - submitted date = signed_date (submission is the signing act)
     - incentive unit = incentive_option.incentive_type (CAD or credits)
     - fuel supplier legal name, when linked = fuel_supplier_organization.name
@@ -116,7 +116,7 @@ class LCJFIPApplication(BaseModel, Auditable):
         Integer,
         primary_key=True,
         autoincrement=True,
-        comment="Unique identifier for the LCJFIP application. Displayed as LCJFIP-<id>.",
+        comment="Unique identifier for the LCJFIP application. Displayed as JF-<id>.",
     )
 
     # ---------- Applicant ----------

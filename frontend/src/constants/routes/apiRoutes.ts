@@ -77,6 +77,8 @@ export const apiRoutes = {
   getInitiativeAgreementsList: '/initiative-agreements/list',
   createAgreement: '/initiative-agreements/agreements',
   updateAgreement: '/initiative-agreements/agreements/:initiativeAgreementId',
+  setAgreementUnderway:
+    '/initiative-agreements/agreements/:initiativeAgreementId/underway',
   getInitiativeAgreementStatuses: '/initiative-agreements/statuses',
   getInitiativeAgreement:
     '/initiative-agreements/:initiativeAgreementId/profile',
@@ -141,6 +143,15 @@ export const apiRoutes = {
   governmentFuelCodeBulletins: '/fuel-codes/government/bulletins',
   exportFuelCodeBulletins: '/fuel-codes/bulletins/export',
   exportGovernmentFuelCodeBulletins: '/fuel-codes/government/bulletins/export',
+
+  // lcjfip (Low carbon jet fuel incentive program)
+  lcjfipReferenceData: '/lcjfip/reference-data',
+  lcjfipFuelCodes: '/lcjfip/fuel-codes',
+  lcjfipApplications: '/lcjfip/applications',
+  lcjfipApplicationsList: '/lcjfip/applications/list',
+  lcjfipStatuses: '/lcjfip/statuses',
+  lcjfipApplication: '/lcjfip/applications/:applicationId',
+  submitLcjfipApplication: '/lcjfip/applications/:applicationId/submit',
 
   // ci-applications (Carbon Intensity)
   ciApplicationOptions: '/ci-applications/table-options',

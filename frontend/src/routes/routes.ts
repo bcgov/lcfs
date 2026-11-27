@@ -166,7 +166,11 @@ export const ROUTES = {
   // Low carbon jet fuel incentive program. Nested under /jet-fuel so the
   // breadcrumb reads Home > Jet fuel > LCJFIP, as in the wireframe (#5488).
   LCJFIP: {
-    MAIN: '/jet-fuel/lcjfip'
+    MAIN: '/jet-fuel/lcjfip',
+    // The application form (#5532). The breadcrumb skips the structural
+    // segments: Home > Jet fuel > LCJFIP application.
+    NEW_APPLICATION: '/jet-fuel/lcjfip/applications/new',
+    APPLICATION: '/jet-fuel/lcjfip/applications/:applicationId'
   },
 
   FORMS: {

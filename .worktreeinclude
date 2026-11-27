@@ -1,6 +1,8 @@
 .env
+.private/
 .mcp.json
 AGENTS.md
+.agents/
 backend/.env
 frontend/.env
 frontend/cypress.env.json

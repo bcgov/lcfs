@@ -37,7 +37,7 @@ vi.mock('@/utils/formatters', () => ({
   formatNumberWithCommas: vi.fn((value) => value?.toString())
 }))
 
-vi.mock('@/utils/schedules.js', () => ({
+vi.mock('@/utils/schedules', () => ({
   handleScheduleDelete: vi.fn().mockResolvedValue(true),
   handleScheduleSave: vi.fn((params) =>
     Promise.resolve({ ...params.updatedData, saved: true })
@@ -610,7 +610,7 @@ describe('AddEditFuelSupplies', () => {
 
   describe('onAction', () => {
     it('handles delete action', async () => {
-      const { handleScheduleDelete } = await import('@/utils/schedules.js')
+      const { handleScheduleDelete } = await import('@/utils/schedules')
 
       render(<AddEditFuelSupplies />, { fixtureOptions })
 
@@ -631,7 +631,7 @@ describe('AddEditFuelSupplies', () => {
     })
 
     it('handles errors in actions gracefully', async () => {
-      const { handleScheduleDelete } = await import('@/utils/schedules.js')
+      const { handleScheduleDelete } = await import('@/utils/schedules')
       handleScheduleDelete.mockRejectedValue(new Error('Delete failed'))
 
       render(<AddEditFuelSupplies />, { fixtureOptions })

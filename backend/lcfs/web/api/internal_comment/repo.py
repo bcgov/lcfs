@@ -53,6 +53,14 @@ from lcfs.db.models.comment.ComplianceReportInternalComment import (
 from lcfs.db.models.comment.CIApplicationInternalComment import (
     CIApplicationInternalComment,
 )
+from lcfs.db.models.comment.LCJFIPApplicationInternalComment import (
+    LCJFIPApplicationInternalComment,
+)
+from lcfs.db.models.lcjfip import (
+    LCJFIPApplication,
+    LCJFIPApplicationStatus,
+    LCJFIPApplicationStatusEnum,
+)
 from lcfs.db.models.comment.OrganizationInternalComment import (
     OrganizationInternalComment,
 )
@@ -178,6 +186,11 @@ class InternalCommentRepository:
                 CIApplicationInternalComment,
             ),
             (
+                EntityTypeEnum.LCJFIP_APPLICATION,
+                LCJFIPApplicationInternalComment.lcjfip_application_id,
+                LCJFIPApplicationInternalComment,
+            ),
+            (
                 EntityTypeEnum.PENALTY_LOG,
                 PenaltyLogInternalComment.organization_id,
                 PenaltyLogInternalComment,
@@ -263,6 +276,11 @@ class InternalCommentRepository:
                 ci_application_id=entity_id,
                 internal_comment_id=internal_comment.internal_comment_id,
             )
+        elif entity_type == EntityTypeEnum.LCJFIP_APPLICATION:
+            association = LCJFIPApplicationInternalComment(
+                lcjfip_application_id=entity_id,
+                internal_comment_id=internal_comment.internal_comment_id,
+            )
         elif entity_type == EntityTypeEnum.PENALTY_LOG:
             association = PenaltyLogInternalComment(
                 organization_id=entity_id,
@@ -335,6 +353,10 @@ class InternalCommentRepository:
             EntityTypeEnum.CI_APPLICATION: (
                 CIApplicationInternalComment,
                 CIApplicationInternalComment.ci_application_id,
+            ),
+            EntityTypeEnum.LCJFIP_APPLICATION: (
+                LCJFIPApplicationInternalComment,
+                LCJFIPApplicationInternalComment.lcjfip_application_id,
             ),
             EntityTypeEnum.DESIGNATED_ACTION: (
                 DesignatedActionInternalComment,
@@ -635,6 +657,10 @@ class InternalCommentRepository:
                 CIApplicationInternalComment,
                 CIApplicationInternalComment.ci_application_id,
             ),
+            EntityTypeEnum.LCJFIP_APPLICATION: (
+                LCJFIPApplicationInternalComment,
+                LCJFIPApplicationInternalComment.lcjfip_application_id,
+            ),
             EntityTypeEnum.PENALTY_LOG: (
                 PenaltyLogInternalComment,
                 PenaltyLogInternalComment.organization_id,
@@ -861,11 +887,31 @@ class InternalCommentRepository:
             stmt = select(CIApplication.organization_id).where(
                 CIApplication.ci_application_id == entity_id
             )
+        elif entity_type == EntityTypeEnum.LCJFIP_APPLICATION:
+            stmt = select(LCJFIPApplication.organization_id).where(
+                LCJFIPApplication.lcjfip_application_id == entity_id
+            )
         else:
             return (None, None)
 
         org_id = (await self.db.execute(stmt)).scalar_one_or_none()
         return (org_id, None)
+
+    @repo_handler
+    async def is_draft_lcjfip_application(self, application_id: int) -> bool:
+        """True when the LCJFIP application exists and is still a Draft."""
+        status = (
+            await self.db.execute(
+                select(LCJFIPApplicationStatus.status)
+                .join(
+                    LCJFIPApplication,
+                    LCJFIPApplication.status_id
+                    == LCJFIPApplicationStatus.lcjfip_application_status_id,
+                )
+                .where(LCJFIPApplication.lcjfip_application_id == application_id)
+            )
+        ).scalar_one_or_none()
+        return status == LCJFIPApplicationStatusEnum.Draft.value
 
     @repo_handler
     async def get_initiative_agreement_id_for_action(
@@ -1101,8 +1147,8 @@ class InternalCommentRepository:
         it also matches the author's name / email.
 
         Comments on an initiative agreement whose lifecycle status is in
-        ``hidden_lifecycle_statuses`` are left out: a proponent's draft is
-        hidden from government (#5186), and so is what is said about it.
+        ``hidden_lifecycle_statuses`` are left out: a draft is hidden from
+        the organization (#5553), and so is what is said about it.
         """
         entity_meta = self._entity_meta_subquery(organization_id)
 
