@@ -34,6 +34,8 @@ export interface ComplianceReport {
   metadata?: Record<string, unknown>
   chain?: Array<{
     version: number
+    complianceReportId?: ReportId
+    timestamp?: string
     history?: ComplianceReportHistoryEntry[] | null
     assessmentStatement?: string | null
     currentStatus?: { status: string }

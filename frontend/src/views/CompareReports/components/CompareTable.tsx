@@ -13,6 +13,32 @@ import TableRow from '@mui/material/TableRow'
 import BCTypography from '@/components/BCTypography'
 import Box from '@mui/material/Box'
 import { useTranslation } from 'react-i18next'
+import type { CompareReportColumn } from '@/types/schema'
+
+type FuelType = 'gasoline' | 'diesel' | 'jetFuel'
+
+interface CompareTableRow {
+  [key: string]: string | number | boolean | null | undefined
+  line?: number | string | null
+  description?: string | number | boolean | null
+  format?: string
+  report1?: number | string | boolean | null
+  report2?: number | string | boolean | null
+  delta?: number | string | boolean | null
+  greyed?: boolean
+}
+
+interface CompareTableProps {
+  title: string
+  columns: CompareReportColumn[]
+  data?: CompareTableRow[] | null
+  useParenthesis?: boolean
+  enableFuelControls?: boolean
+  setFuelType?: (fuelType: FuelType) => void
+  fuelType?: FuelType
+  highlightedColumns?: string[]
+  fuelAvailability?: Partial<Record<FuelType, boolean>> | null
+}
 
 const CompareTable = ({
   title,
@@ -24,7 +50,7 @@ const CompareTable = ({
   fuelType,
   highlightedColumns = [],
   fuelAvailability = null
-}) => {
+}: CompareTableProps) => {
   const { t } = useTranslation(['common', 'report'])
   const rowFormatters = {
     number: numberFormatter,
@@ -58,19 +84,19 @@ const CompareTable = ({
     }
   }
 
-  const isColumnHighlighted = (columnId) =>
+  const isColumnHighlighted = (columnId: string) =>
     highlightedColumns?.includes(columnId)
 
-  const getHeaderCellStyles = (columnId) => ({
+  const getHeaderCellStyles = (columnId: string) => ({
     ...tableStyles.headerCell,
     ...(isColumnHighlighted(columnId) ? tableStyles.highlightedHeaderCell : {})
   })
 
-  const getBodyCellStyles = (columnId) => ({
+  const getBodyCellStyles = (columnId: string) => ({
     ...tableStyles.bodyCell,
     ...(isColumnHighlighted(columnId) ? tableStyles.highlightedBodyCell : {})
   })
-  const isFuelDisabled = (fuelKey) =>
+  const isFuelDisabled = (fuelKey: FuelType) =>
     fuelAvailability ? !fuelAvailability[fuelKey] : false
 
   const gasolineDisabled = isFuelDisabled('gasoline')
@@ -115,7 +141,14 @@ const CompareTable = ({
                     row
                     value={fuelType}
                     onChange={(event) => {
-                      setFuelType(event.target.value)
+                      const nextFuelType = event.target.value
+                      if (
+                        nextFuelType === 'gasoline' ||
+                        nextFuelType === 'diesel' ||
+                        nextFuelType === 'jetFuel'
+                      ) {
+                        setFuelType!(nextFuelType)
+                      }
                     }}
                     sx={{ justifyContent: 'space-evenly' }}
                     id="fuelType"
@@ -258,7 +291,7 @@ const CompareTable = ({
         )}
         <TableBody>
           {data?.map((row, rowIndex) => {
-            const isValueColumn = (columnId) =>
+            const isValueColumn = (columnId: string) =>
               columnId !== 'line' && columnId !== 'description'
             const isGreyed = !!row.greyed
             return (
@@ -281,15 +314,27 @@ const CompareTable = ({
                   const cellValue = (() => {
                     if (isGreyed && isValCol) return ''
                     if (
-                      row.format &&
+                      (row.format === 'number' || row.format === 'currency') &&
                       colIndex !== 0 &&
                       row[column.id] !== undefined &&
                       row[column.id] !== null
                     ) {
-                      return rowFormatters[row.format](
-                        row[column.id],
-                        useParenthesis
-                      )
+                      const value = row[column.id]
+                      if (
+                        typeof value === 'number' ||
+                        typeof value === 'string'
+                      ) {
+                        const formattedValue = rowFormatters[row.format](
+                          value,
+                          useParenthesis
+                        )
+                        return typeof formattedValue === 'string' ||
+                          typeof formattedValue === 'number' ||
+                          typeof formattedValue === 'boolean'
+                          ? formattedValue
+                          : ''
+                      }
+                      return ''
                     }
                     if (
                       row[column.id] === undefined ||
@@ -303,7 +348,14 @@ const CompareTable = ({
                   return (
                     <TableCell
                       key={column.id}
-                      align={column.align || 'left'}
+                      align={
+                        column.align === 'center' ||
+                        column.align === 'right' ||
+                        column.align === 'justify' ||
+                        column.align === 'inherit'
+                          ? column.align
+                          : 'left'
+                      }
                       title={
                         isGreyed && isValCol
                           ? 'Not applicable for this compliance period'

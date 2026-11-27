@@ -12,10 +12,26 @@ vi.mock('@/hooks/useCurrentUser')
 vi.mock('@/hooks/useComplianceReports')
 vi.mock('@/stores/useComplianceReportStore')
 
+const mockedUseCurrentUser = vi.mocked(useCurrentUser)
+const mockedUseComplianceReportStore = vi.mocked(useComplianceReportStore)
+const mockedUseGetComplianceReportSummary = vi.mocked(
+  useGetComplianceReportSummary
+)
+
+const mockSummaryResult = (data: unknown) =>
+  ({ data }) as ReturnType<typeof useGetComplianceReportSummary>
+
+const mockCurrentUser = () =>
+  ({
+    hasRoles: () => true,
+    data: { organization: { organizationId: 1 } },
+    isLoading: false
+  }) as ReturnType<typeof useCurrentUser>
+
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => key // Simple mock that returns the key
+    t: (key: string) => key // Simple mock that returns the key
   })
 }))
 
@@ -135,14 +151,10 @@ describe('CompareReports Component', () => {
   }
 
   beforeEach(() => {
-    useCurrentUser.mockReturnValue({
-      hasRoles: true,
-      data: { organization: { organizationId: 1 } },
-      isLoading: false
-    })
+    mockedUseCurrentUser.mockReturnValue(mockCurrentUser())
 
     // Mock the compliance report store with currentReport
-    useComplianceReportStore.mockReturnValue({
+    mockedUseComplianceReportStore.mockReturnValue({
       currentReport: {
         chain: mockReportChain,
         report: {
@@ -152,17 +164,17 @@ describe('CompareReports Component', () => {
       }
     })
 
-    useGetComplianceReportSummary.mockImplementation((id) => {
+    mockedUseGetComplianceReportSummary.mockImplementation((id) => {
       if (id === 1) {
-        return reportData1
+        return mockSummaryResult(reportData1.data)
       }
       if (id === 2) {
-        return reportData2
+        return mockSummaryResult(reportData2.data)
       }
       if (id === 3) {
-        return reportData3
+        return mockSummaryResult(reportData3.data)
       }
-      return { data: null }
+      return mockSummaryResult(null)
     })
   })
 
@@ -341,7 +353,7 @@ describe('CompareReports Component', () => {
 
   test('shows loading state when isLoading is true', ({ render, theme }) => {
     // Mock loading state
-    useComplianceReportStore.mockReturnValue({ currentReport: null })
+    mockedUseComplianceReportStore.mockReturnValue({ currentReport: null })
 
     render(<CompareReports />, [theme])
 
@@ -350,7 +362,7 @@ describe('CompareReports Component', () => {
   })
 
   test('handles no currentReport scenario', ({ render, theme }) => {
-    useComplianceReportStore.mockReturnValue({ currentReport: null })
+    mockedUseComplianceReportStore.mockReturnValue({ currentReport: null })
 
     render(<CompareReports />, [theme])
 
@@ -362,7 +374,7 @@ describe('CompareReports Component', () => {
     render,
     theme
   }) => {
-    useComplianceReportStore.mockReturnValue({
+    mockedUseComplianceReportStore.mockReturnValue({
       currentReport: {
         chain: [mockReportChain[0]], // Only one report
         report: { compliancePeriod: '2021', complianceReportId: 1 }
@@ -379,7 +391,7 @@ describe('CompareReports Component', () => {
   })
 
   test('handles empty report chain', async ({ render, theme }) => {
-    useComplianceReportStore.mockReturnValue({
+    mockedUseComplianceReportStore.mockReturnValue({
       currentReport: {
         chain: [], // Empty chain
         report: { compliancePeriod: '2021', complianceReportId: 1 }
@@ -409,11 +421,11 @@ describe('CompareReports Component', () => {
       }
     }
 
-    useGetComplianceReportSummary.mockImplementation((id) => {
-      if (id === 1) return { data: reportData1.data }
-      if (id === 2) return incompleteReportData2
-      if (id === 3) return { data: reportData3.data }
-      return { data: null }
+    mockedUseGetComplianceReportSummary.mockImplementation((id) => {
+      if (id === 1) return mockSummaryResult(reportData1.data)
+      if (id === 2) return mockSummaryResult(incompleteReportData2.data)
+      if (id === 3) return mockSummaryResult(reportData3.data)
+      return mockSummaryResult(null)
     })
 
     render(<CompareReports />, [theme])
@@ -429,7 +441,7 @@ describe('CompareReports Component', () => {
     theme
   }) => {
     // Test with only 2 reports to force edge case
-    useComplianceReportStore.mockReturnValue({
+    mockedUseComplianceReportStore.mockReturnValue({
       currentReport: {
         chain: mockReportChain.slice(0, 2), // Only 2 reports
         report: { compliancePeriod: '2021', complianceReportId: 2 }
@@ -461,7 +473,7 @@ describe('CompareReports Component', () => {
     render,
     theme
   }) => {
-    useComplianceReportStore.mockReturnValue({
+    mockedUseComplianceReportStore.mockReturnValue({
       currentReport: {
         chain: [
           {
@@ -497,7 +509,7 @@ describe('CompareReports Component', () => {
     render,
     theme
   }) => {
-    useComplianceReportStore.mockReturnValue({
+    mockedUseComplianceReportStore.mockReturnValue({
       currentReport: {
         chain: [
           {
@@ -566,7 +578,9 @@ describe('CompareReports Component', () => {
       }
     }
 
-    useGetComplianceReportSummary.mockImplementation(() => dieselOnlySummary)
+    mockedUseGetComplianceReportSummary.mockImplementation(() =>
+      mockSummaryResult(dieselOnlySummary.data)
+    )
 
     render(<CompareReports />, [theme])
 
@@ -608,7 +622,9 @@ describe('CompareReports Component', () => {
       }
     }
 
-    useGetComplianceReportSummary.mockImplementation(() => multiFuelSummary)
+    mockedUseGetComplianceReportSummary.mockImplementation(() =>
+      mockSummaryResult(multiFuelSummary.data)
+    )
 
     render(<CompareReports />, [theme])
 
@@ -656,10 +672,10 @@ describe('CompareReports Component', () => {
       }
     }
 
-    useGetComplianceReportSummary.mockImplementation((id) => {
-      if (id === 1) return nullValueReportData
-      if (id === 2) return { data: reportData2.data }
-      return { data: null }
+    mockedUseGetComplianceReportSummary.mockImplementation((id) => {
+      if (id === 1) return mockSummaryResult(nullValueReportData.data)
+      if (id === 2) return mockSummaryResult(reportData2.data)
+      return mockSummaryResult(null)
     })
 
     render(<CompareReports />, [theme])
@@ -720,10 +736,10 @@ describe('CompareReports Component', () => {
       }
     }
 
-    useGetComplianceReportSummary.mockImplementation((id) => {
-      if (id === 1) return diverseReportData
-      if (id === 2) return { data: reportData2.data }
-      return { data: null }
+    mockedUseGetComplianceReportSummary.mockImplementation((id) => {
+      if (id === 1) return mockSummaryResult(diverseReportData.data)
+      if (id === 2) return mockSummaryResult(reportData2.data)
+      return mockSummaryResult(null)
     })
 
     render(<CompareReports />, [theme])
@@ -739,7 +755,7 @@ describe('CompareReports Component', () => {
     theme
   }) => {
     // Test edge case where only one report is available for selection
-    useComplianceReportStore.mockReturnValue({
+    mockedUseComplianceReportStore.mockReturnValue({
       currentReport: {
         chain: [mockReportChain[0]], // Only one report
         report: { compliancePeriod: '2021', complianceReportId: 1 }
@@ -760,7 +776,7 @@ describe('CompareReports Component', () => {
     const greyedLines = [12, 13, 14, 16, 19]
     const greyedLinesPre2023 = [17, 22]
 
-    const makeLowCarbonSummary = (lines) =>
+    const makeLowCarbonSummary = (lines: number[]) =>
       lines.map((line) => ({
         line,
         description: `Line ${line}`,
@@ -782,7 +798,7 @@ describe('CompareReports Component', () => {
         }
       }
 
-      useComplianceReportStore.mockReturnValue({
+      mockedUseComplianceReportStore.mockReturnValue({
         currentReport: {
           chain: mockReportChain.slice(0, 2),
           report: {
@@ -791,7 +807,9 @@ describe('CompareReports Component', () => {
           }
         }
       })
-      useGetComplianceReportSummary.mockReturnValue(summary)
+      mockedUseGetComplianceReportSummary.mockReturnValue(
+        mockSummaryResult(summary.data)
+      )
 
       render(<CompareReports />, [theme])
 
@@ -815,7 +833,7 @@ describe('CompareReports Component', () => {
         }
       }
 
-      useComplianceReportStore.mockReturnValue({
+      mockedUseComplianceReportStore.mockReturnValue({
         currentReport: {
           chain: mockReportChain.slice(0, 2),
           report: {
@@ -824,7 +842,9 @@ describe('CompareReports Component', () => {
           }
         }
       })
-      useGetComplianceReportSummary.mockReturnValue(summary)
+      mockedUseGetComplianceReportSummary.mockReturnValue(
+        mockSummaryResult(summary.data)
+      )
 
       render(<CompareReports />, [theme])
 
@@ -848,7 +868,7 @@ describe('CompareReports Component', () => {
         }
       }
 
-      useComplianceReportStore.mockReturnValue({
+      mockedUseComplianceReportStore.mockReturnValue({
         currentReport: {
           chain: mockReportChain.slice(0, 2),
           report: {
@@ -857,7 +877,9 @@ describe('CompareReports Component', () => {
           }
         }
       })
-      useGetComplianceReportSummary.mockReturnValue(summary)
+      mockedUseGetComplianceReportSummary.mockReturnValue(
+        mockSummaryResult(summary.data)
+      )
 
       render(<CompareReports />, [theme])
 
@@ -881,7 +903,7 @@ describe('CompareReports Component', () => {
         }
       }
 
-      useComplianceReportStore.mockReturnValue({
+      mockedUseComplianceReportStore.mockReturnValue({
         currentReport: {
           chain: mockReportChain.slice(0, 2),
           report: {
@@ -890,7 +912,9 @@ describe('CompareReports Component', () => {
           }
         }
       })
-      useGetComplianceReportSummary.mockReturnValue(summary)
+      mockedUseGetComplianceReportSummary.mockReturnValue(
+        mockSummaryResult(summary.data)
+      )
 
       render(<CompareReports />, [theme])
 
@@ -917,7 +941,7 @@ describe('CompareReports Component', () => {
         }
       }
 
-      useComplianceReportStore.mockReturnValue({
+      mockedUseComplianceReportStore.mockReturnValue({
         currentReport: {
           chain: mockReportChain.slice(0, 2),
           report: {
@@ -926,7 +950,9 @@ describe('CompareReports Component', () => {
           }
         }
       })
-      useGetComplianceReportSummary.mockReturnValue(summary)
+      mockedUseGetComplianceReportSummary.mockReturnValue(
+        mockSummaryResult(summary.data)
+      )
 
       render(<CompareReports />, [theme])
 
@@ -941,13 +967,15 @@ describe('CompareReports Component', () => {
       render,
       theme
     }) => {
-      useComplianceReportStore.mockReturnValue({
+      mockedUseComplianceReportStore.mockReturnValue({
         currentReport: {
           chain: mockReportChain.slice(0, 2),
           report: {} // no compliancePeriod
         }
       })
-      useGetComplianceReportSummary.mockReturnValue(reportData1)
+      mockedUseGetComplianceReportSummary.mockReturnValue(
+        mockSummaryResult(reportData1.data)
+      )
 
       expect(() => render(<CompareReports />, [theme])).not.toThrow()
     })

@@ -22,8 +22,8 @@ vi.mock('@/utils/formatters', () => ({
 // Mock translation hook
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => {
-      const translations = {
+    t: (key: string) => {
+      const translations: Record<string, string> = {
         'report:fuelLabels.gasoline': 'Gasoline',
         'report:fuelLabels.diesel': 'Diesel',
         'report:fuelLabels.jetFuel': 'Jet Fuel'

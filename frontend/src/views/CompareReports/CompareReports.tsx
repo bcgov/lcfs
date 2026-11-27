@@ -15,22 +15,44 @@ import CompareTable from '@/views/CompareReports/components/CompareTable'
 import { styled } from '@mui/material/styles'
 import useComplianceReportStore from '@/stores/useComplianceReportStore'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
+import type { SelectChangeEvent } from '@mui/material/Select'
+import type {
+  ComplianceReport,
+  ReportId
+} from '@/stores/useComplianceReportStore'
+import type { ComplianceReportSummaryData } from '@/hooks/useComplianceReports'
+
+type FuelType = 'gasoline' | 'diesel' | 'jetFuel'
+interface ComparisonRow {
+  line?: number | string | null
+  description?: string | number | boolean | null
+  format?: string
+  report1?: number | string | boolean | null
+  report2?: number | string | boolean | null
+  delta?: number | string | boolean | null
+  greyed?: boolean
+  [key: string]: string | number | boolean | null | undefined
+}
+type ReportChainItem = NonNullable<ComplianceReport['chain']>[number]
 
 const Controls = styled(Box)({
   width: '66%'
 })
 
-const FUEL_TYPES = ['gasoline', 'diesel', 'jetFuel']
+const FUEL_TYPES: FuelType[] = ['gasoline', 'diesel', 'jetFuel']
 
 /**
  * Mirrors the grey-out rules from SummaryTable.isLineGreyedByYear exactly:
  * - Lines 12, 13, 14, 16, 19: grey for years before 2024
  * - Lines 17, 22: grey for 2022 and prior
  */
-const isLowCarbonLineGreyed = (lineNumber, compliancePeriodYear) => {
+const isLowCarbonLineGreyed = (
+  lineNumber: number | string | null | undefined,
+  compliancePeriodYear: string | null
+): boolean => {
   if (!compliancePeriodYear) return false
   const year = parseInt(compliancePeriodYear)
-  const line = parseInt(lineNumber)
+  const line = parseInt(String(lineNumber))
 
   if ([12, 13, 14, 16, 19].includes(line) && year < 2024) return true
   if ([17, 22].includes(line) && year <= 2022) return true
@@ -41,16 +63,16 @@ const isLowCarbonLineGreyed = (lineNumber, compliancePeriodYear) => {
 export const CompareReports = () => {
   const { t } = useTranslation(['common', 'report'])
   const [isLoading, setIsLoading] = useState(true)
-  const [reportChain, setReportChain] = useState([])
+  const [reportChain, setReportChain] = useState<ReportChainItem[]>([])
 
   const { currentReport } = useComplianceReportStore()
 
   const compliancePeriodYear =
     currentReport?.report?.compliancePeriod?.description ?? null
 
-  const [report1ID, setReport1ID] = useState(null)
-  const [report2ID, setReport2ID] = useState(null)
-  const [fuelType, setFuelType] = useState('gasoline')
+  const [report1ID, setReport1ID] = useState<ReportId | null | undefined>(null)
+  const [report2ID, setReport2ID] = useState<ReportId | null | undefined>(null)
+  const [fuelType, setFuelType] = useState<FuelType>('gasoline')
   const [hasUserSelectedFuel, setHasUserSelectedFuel] = useState(false)
 
   const hasAssessedReport = useMemo(() => {
@@ -61,7 +83,7 @@ export const CompareReports = () => {
     )
   }, [reportChain])
 
-  const isReportNotAssessed = (reportId) => {
+  const isReportNotAssessed = (reportId: ReportId | null | undefined) => {
     if (!hasAssessedReport) return false
     const report = reportChain.find((r) => r.complianceReportId === reportId)
     if (!report) return false
@@ -74,14 +96,16 @@ export const CompareReports = () => {
 
   useEffect(() => {
     if (currentReport) {
-      const { chain } = currentReport
+      const chain = currentReport.chain!
       setReportChain(chain)
 
       // Set default selections to the two most recent reports
       // with the oldest on the left (report1) and newest on the right (report2)
       if (chain.length >= 2) {
         const sortedChain = [...chain].sort(
-          (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+          (a, b) =>
+            new Date(b.timestamp ?? '').getTime() -
+            new Date(a.timestamp ?? '').getTime()
         )
         setReport1ID(sortedChain[1].complianceReportId)
         setReport2ID(sortedChain[0].complianceReportId)
@@ -98,23 +122,32 @@ export const CompareReports = () => {
     enabled: !!report2ID
   })
 
-  const [renewableSummary, setRenewableSummary] = useState([])
-  const [lowCarbonSummary, setLowCarbonSummary] = useState([])
+  const [renewableSummary, setRenewableSummary] = useState<ComparisonRow[]>([])
+  const [lowCarbonSummary, setLowCarbonSummary] = useState<ComparisonRow[]>([])
   const [nonCompliancePenaltySummary, setNonCompliancePenaltySummary] =
-    useState([])
+    useState<ComparisonRow[]>([])
 
   const fuelAvailability = useMemo(() => {
-    const summaries = [report1Summary, report2Summary].filter(Boolean)
+    const summaries = [report1Summary, report2Summary].filter(
+      (summary): summary is ComplianceReportSummaryData => summary !== undefined
+    )
     if (!summaries.length) return null
 
-    const getFuelValue = (summary, lineNumber, fuelKey) => {
+    const getFuelValue = (
+      summary: ComplianceReportSummaryData,
+      lineNumber: number,
+      fuelKey: FuelType
+    ) => {
       const line = summary?.renewableFuelTargetSummary?.find(
         (row) => Number(row.line) === lineNumber
       )
       return line?.[fuelKey]
     }
 
-    const hasFuelContent = (summary, fuelKey) => {
+    const hasFuelContent = (
+      summary: ComplianceReportSummaryData,
+      fuelKey: FuelType
+    ) => {
       const line3Value = getFuelValue(summary, 3, fuelKey)
       const line9Value = getFuelValue(summary, 9, fuelKey)
       const line3Number = Number(line3Value)
@@ -124,12 +157,15 @@ export const CompareReports = () => {
       return line3HasContent || line9HasContent
     }
 
-    return FUEL_TYPES.reduce((acc, fuelKey) => {
-      acc[fuelKey] = summaries.some((summary) =>
-        hasFuelContent(summary, fuelKey)
-      )
-      return acc
-    }, {})
+    return FUEL_TYPES.reduce(
+      (acc, fuelKey) => {
+        acc[fuelKey] = summaries.some((summary) =>
+          hasFuelContent(summary, fuelKey)
+        )
+        return acc
+      },
+      {} as Record<FuelType, boolean>
+    )
   }, [report1Summary, report2Summary])
 
   useEffect(() => {
@@ -153,19 +189,19 @@ export const CompareReports = () => {
   }, [fuelAvailability, fuelType, hasUserSelectedFuel])
 
   useEffect(() => {
-    const renewableSummary = []
-    const lowCarbonSummary = []
-    const nonCompliancePenaltySummary = []
+    const renewableSummary: ComparisonRow[] = []
+    const lowCarbonSummary: ComparisonRow[] = []
+    const nonCompliancePenaltySummary: ComparisonRow[] = []
     if (report1Summary) {
-      for (const row of report1Summary.renewableFuelTargetSummary) {
+      for (const row of report1Summary.renewableFuelTargetSummary!) {
         renewableSummary.push({
           line: row.line,
           description: row.description,
-          format: row.format,
+          format: typeof row.format === 'string' ? row.format : undefined,
           report1: row[fuelType]
         })
       }
-      for (const row of report1Summary.lowCarbonFuelTargetSummary) {
+      for (const row of report1Summary.lowCarbonFuelTargetSummary!) {
         const greyed = isLowCarbonLineGreyed(row.line, compliancePeriodYear)
         lowCarbonSummary.push({
           line: row.line,
@@ -175,7 +211,7 @@ export const CompareReports = () => {
           greyed
         })
       }
-      for (const row of report1Summary.nonCompliancePenaltySummary) {
+      for (const row of report1Summary.nonCompliancePenaltySummary!) {
         nonCompliancePenaltySummary.push({
           line: row.line,
           description: row.description,
@@ -187,11 +223,11 @@ export const CompareReports = () => {
     }
     if (report2Summary) {
       for (const row of renewableSummary) {
-        const matchingRow = report2Summary.renewableFuelTargetSummary.find(
+        const matchingRow = report2Summary.renewableFuelTargetSummary!.find(
           (row2) => row2.line === row.line
         )
-        row.report2 = matchingRow[fuelType]
-        row.delta = (row.report2 ?? 0) - row.report1
+        row.report2 = matchingRow![fuelType]
+        row.delta = Number(row.report2 ?? 0) - Number(row.report1)
       }
       for (const row of lowCarbonSummary) {
         if (row.greyed) {
@@ -199,20 +235,22 @@ export const CompareReports = () => {
           row.delta = null
           continue
         }
-        const matchingRow = report2Summary.lowCarbonFuelTargetSummary.find(
+        const matchingRow = report2Summary.lowCarbonFuelTargetSummary!.find(
           (row2) => row2.line === row.line
         )
         if (matchingRow) {
           row.report2 = matchingRow.value
           row.delta =
-            row.report2 !== null ? row.report2 - (row.report1 ?? 0) : null
+            row.report2 !== null
+              ? Number(row.report2) - Number(row.report1 ?? 0)
+              : null
         } else {
           row.report2 = null
           row.delta = null
         }
       }
       for (const row of nonCompliancePenaltySummary) {
-        const matchingRow = report2Summary.nonCompliancePenaltySummary.find(
+        const matchingRow = report2Summary.nonCompliancePenaltySummary!.find(
           (row2) => row2.line === row.line
         )
         if (matchingRow) {
@@ -222,7 +260,10 @@ export const CompareReports = () => {
             matchingRow.amount ||
             matchingRow[fuelType] ||
             0
-          row.delta = row.report2 !== null ? row.report2 - row.report1 : null
+          row.delta =
+            row.report2 !== null
+              ? Number(row.report2) - Number(row.report1 ?? 0)
+              : null
         } else {
           row.report2 = null
           row.delta = null
@@ -234,7 +275,7 @@ export const CompareReports = () => {
     setNonCompliancePenaltySummary(nonCompliancePenaltySummary)
   }, [report1Summary, report2Summary, fuelType, compliancePeriodYear])
 
-  function onSelectReport1(event) {
+  function onSelectReport1(event: SelectChangeEvent<string>) {
     const newReport1ID = event.target.value
     setReport1ID(newReport1ID)
     setHasUserSelectedFuel(false)
@@ -252,7 +293,7 @@ export const CompareReports = () => {
     }
   }
 
-  function onSelectReport2(event) {
+  function onSelectReport2(event: SelectChangeEvent<string>) {
     const newReport2ID = event.target.value
     setReport2ID(newReport2ID)
     setHasUserSelectedFuel(false)
@@ -320,7 +361,7 @@ export const CompareReports = () => {
                 padding: '8px',
                 borderRadius: 1
               }}
-              value={report1ID || ''}
+              value={report1ID?.toString() || ''}
               variant="outlined"
               onChange={onSelectReport1}
               displayEmpty
@@ -346,7 +387,7 @@ export const CompareReports = () => {
                 padding: '8px',
                 borderRadius: 1
               }}
-              value={report2ID || ''}
+              value={report2ID?.toString() || ''}
               variant="outlined"
               onChange={onSelectReport2}
               displayEmpty
