@@ -44,6 +44,14 @@ FSE_ADVISORY_LOCKS_HELD = sa.text("""
       AND classid = 0
       AND objid = :lock_id
     """)
+AUDIT_TRIGGERS = sa.text("""
+    SELECT c.relname AS table_name, t.tgname AS trigger_name
+    FROM pg_trigger t
+    JOIN pg_class c ON c.oid = t.tgrelid
+    WHERE c.relnamespace = 'public'::regnamespace
+      AND t.tgfoid = 'audit_trigger_func'::regproc
+      AND NOT t.tgisinternal
+    """)
 
 
 @pytest.fixture(params=["postgres", "pgbouncer"])
@@ -179,6 +187,30 @@ class TestFseReportingRefresh:
         assert await _fse_advisory_locks_held(_engine) == 0
 
 
+async def _audit_triggers(conn) -> set[tuple[str, str]]:
+    """(table, trigger) for every public table the audit trigger is attached to."""
+    return {tuple(row) for row in await conn.execute(AUDIT_TRIGGERS)}
+
+
+@pytest.fixture
+async def audit_triggers_ensured(_engine):
+    """
+    Run ensure_audit_triggers() the way a new migration does, then drop the
+    triggers it added so the rest of the session sees the migrated schema.
+    """
+    async with _engine.begin() as conn:
+        before = await _audit_triggers(conn)
+        await conn.execute(sa.text("SELECT ensure_audit_triggers()"))
+        added = await _audit_triggers(conn) - before
+    yield
+    async with _engine.begin() as conn:
+        quote = conn.dialect.identifier_preparer.quote
+        for table_name, trigger_name in added:
+            await conn.execute(
+                sa.text(f"DROP TRIGGER {quote(trigger_name)} ON {quote(table_name)}")
+            )
+
+
 @pytest.fixture
 async def no_reindex_lease(_engine, monkeypatch):
     """Reindex one small table, and start and finish with no lease row."""
@@ -206,8 +238,17 @@ async def _reindex_lease(engine):
         ).one_or_none()
 
 
-@pytest.mark.usefixtures("no_reindex_lease")
+@pytest.mark.usefixtures("audit_triggers_ensured", "no_reindex_lease")
 class TestComplianceReindexLease:
+    """Each test runs after ensure_audit_triggers(), as a later migration calls it."""
+
+    async def test_ensure_audit_triggers_leaves_the_lease_table_alone(self, _engine):
+        """The audit trigger cannot record a text key such as job_name."""
+        async with _engine.connect() as conn:
+            audited = {table_name for table_name, _ in await _audit_triggers(conn)}
+        assert "audit_log" not in audited
+        assert "scheduled_job_lease" not in audited
+
     async def test_exactly_one_pod_claims_the_lease(self, db_url):
         pods = _Pods(db_url, count=5)
         try:
