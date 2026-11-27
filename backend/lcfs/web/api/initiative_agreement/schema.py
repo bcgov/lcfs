@@ -479,6 +479,52 @@ class EOCRevisionRequestSchema(BaseSchema):
     message: str
 
 
+class EOCInformationRequestCreateSchema(BaseSchema):
+    """IDIR's request for more on one EOC (#5545). Absent text means the
+    EOC's saved Missing information field."""
+
+    missing_information: Optional[str] = Field(default=None, max_length=100_000)
+
+
+class EOCInformationRequestResponseSchema(BaseSchema):
+    """The proponent's answer to one request: the EOC's three fields."""
+
+    summary_of_work_completed: str = Field(default="", max_length=100_000)
+    how_evidence_meets_agreement_requirements: str = Field(
+        default="", max_length=100_000
+    )
+    exceptions_limitations_and_context: str = Field(default="", max_length=100_000)
+
+
+class EOCInformationRequestDocumentSchema(BaseSchema):
+    document_id: int
+    file_name: str
+    display_name: Optional[str] = None
+    file_size: Optional[int] = None
+    mime_type: Optional[str] = None
+    can_change: bool = False
+
+
+class EOCInformationRequestSchema(BaseSchema):
+    id: int
+    submission_id: int
+    evidence_requirement_id: int
+    requirement_number: Optional[int] = None
+    requirement_title: Optional[str] = None
+    status: str
+    missing_information: str
+    requested_at: Optional[datetime] = None
+    # IDIR names are shown to government users only.
+    requested_by: Optional[str] = None
+    # The proponent's working copy is not shown to government until submitted.
+    response: Optional[EOCRequirementResponseSchema] = None
+    submitted_at: Optional[datetime] = None
+    submitted_by: Optional[str] = None
+    documents: List[EOCInformationRequestDocumentSchema] = Field(default_factory=list)
+    can_edit: bool = False
+    can_submit: bool = False
+
+
 class EOCSchema(BaseSchema):
     submissions: List[dict] = Field(default_factory=list)
     can_edit: bool = False
@@ -500,6 +546,15 @@ class EOCSchema(BaseSchema):
     requirements: List[EOCRequirementSchema] = Field(default_factory=list)
     evidence_responses: dict[str, EOCRequirementResponseSchema] = Field(
         default_factory=dict
+    )
+    # Per-EOC requests for additional information (#5545): every cycle on
+    # the latest submission, and the cycles of each submission by its ID.
+    information_request_available: bool = False
+    information_requests: List[EOCInformationRequestSchema] = Field(
+        default_factory=list
+    )
+    submission_information_requests: dict[str, List[EOCInformationRequestSchema]] = (
+        Field(default_factory=dict)
     )
 
 

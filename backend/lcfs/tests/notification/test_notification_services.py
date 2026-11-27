@@ -575,3 +575,66 @@ async def test_send_mention_notification_without_email_only_creates_message(
 
     mock_repo.create_notification_messages.assert_awaited_once()
     mock_email_service.send_mention_notification_email.assert_not_awaited()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "notification_type",
+    [
+        NotificationTypeEnum.BCEID__INITIATIVE_AGREEMENT__EOC_INFORMATION_REQUESTED,
+        NotificationTypeEnum.IDIR_ANALYST__INITIATIVE_AGREEMENT__EOC_INFORMATION_SUBMITTED,
+    ],
+)
+async def test_send_direct_notification_reaches_one_user(
+    notification_service, notification_type
+):
+    """#5545: the EOC request notices go to one named user, by type."""
+    service, mock_repo, mock_email_service = notification_service
+    mock_email_service.send_direct_notification_email = AsyncMock()
+    mock_repo.get_notification_type_by_name = AsyncMock(return_value=77)
+    mock_repo.create_notification_messages = AsyncMock()
+    email_context = {"subject": "Additional information requested"}
+
+    await service.send_direct_notification(
+        notification_type,
+        5,
+        "proponent@example.com",
+        NotificationMessageSchema(
+            type="EOC additional information requested",
+            message="{}",
+            related_organization_id=3,
+        ),
+        email_context,
+    )
+
+    mock_repo.get_notification_type_by_name.assert_awaited_once_with(
+        notification_type.value
+    )
+    (message,) = mock_repo.create_notification_messages.await_args.args[0]
+    assert message.notification_type_id == 77
+    assert message.related_user_profile_id == 5
+    assert message.related_organization_id == 3
+    mock_email_service.send_direct_notification_email.assert_awaited_once_with(
+        notification_type, "proponent@example.com", email_context
+    )
+
+
+@pytest.mark.anyio
+async def test_send_direct_notification_without_email_only_creates_message(
+    notification_service,
+):
+    service, mock_repo, mock_email_service = notification_service
+    mock_email_service.send_direct_notification_email = AsyncMock()
+    mock_repo.get_notification_type_by_name = AsyncMock(return_value=77)
+    mock_repo.create_notification_messages = AsyncMock()
+
+    await service.send_direct_notification(
+        NotificationTypeEnum.IDIR_ANALYST__INITIATIVE_AGREEMENT__EOC_INFORMATION_SUBMITTED,
+        5,
+        None,
+        NotificationMessageSchema(type="x", message="{}"),
+        {},
+    )
+
+    mock_repo.create_notification_messages.assert_awaited_once()
+    mock_email_service.send_direct_notification_email.assert_not_awaited()

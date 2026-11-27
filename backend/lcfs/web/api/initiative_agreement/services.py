@@ -1994,6 +1994,13 @@ class InitiativeAgreementServices:
             )
             or None
         )
+        from lcfs.web.api.initiative_agreement.eoc_information_request import (
+            EocInformationRequestService,
+        )
+
+        information_requests = await EocInformationRequestService(
+            request=self.request, ia_service=self
+        ).information_request_view(action, rows)
         current_responses = self._eoc_response_map(latest, requirements)
         legacy_content = (
             {key: getattr(latest, key) or "" for key in self.EOC_FIELDS}
@@ -2048,6 +2055,7 @@ class InitiativeAgreementServices:
                 if editable
                 else None
             ),
+            **information_requests,
         )
 
     async def validate_eoc_write(self, designated_action_id: int):
@@ -2172,6 +2180,20 @@ class InitiativeAgreementServices:
                             },
                         )
                     )
+            # A whole resubmission answers everything, so per-EOC requests
+            # still open on older submissions are closed, not left dangling.
+            from lcfs.web.api.initiative_agreement.eoc_information_request import (
+                supersede_open_requests,
+            )
+
+            await supersede_open_requests(
+                self.repo.db,
+                [
+                    prior.da_eoc_submission_id
+                    for prior in rows
+                    if prior.status != "Draft"
+                ],
+            )
             current.status = "Submitted"
             latest_info_request_id = self._latest_da_history_id(
                 action_history, event=EVENT_INFORMATION_REQUESTED

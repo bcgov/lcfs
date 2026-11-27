@@ -24,6 +24,7 @@ import { dateFormatter } from '@/utils/formatters'
 import withRole from '@/utils/withRole'
 
 import {
+  useDesignatedActionEoc,
   useDesignatedActionProfile,
   useEvidenceRequirements,
   useSetRecommendedCredits
@@ -40,6 +41,7 @@ import {
   PLACEMENT_EVIDENCE
 } from './components/DesignatedActionWorkflow'
 import { EditDesignatedAction } from './components/EditDesignatedAction'
+import { EOCInformationRequestAction } from './components/EOCInformationRequestAction'
 import { ProponentEOC } from './components/ProponentEOC'
 import DesignatedActionNavigation from './components/DesignatedActionNavigation'
 import { DesignatedActionHistoryPanel } from './components/DesignatedActionHistoryPanel'
@@ -89,6 +91,16 @@ const DesignatedActionDetailIDIR = () => {
 
   const { data: requirements = [] } =
     useEvidenceRequirements(designatedActionId)
+  // The proponent's DA/EOC submission, shared with the read-only view below:
+  // it says whether an EOC can be asked about on its own (#5545).
+  const { data: eoc } = useDesignatedActionEoc(designatedActionId)
+  const eocRequests = eoc?.informationRequests ?? []
+  const openRequestIds = eocRequests
+    .filter((request) => request.status === 'Requested')
+    .map((request) => request.evidenceRequirementId)
+  const perEocRequests = Boolean(
+    eoc?.informationRequestAvailable || openRequestIds.length
+  )
 
   // The recommended amount is edited here, beside the allocation it is
   // measured against, rather than at the foot of the page (#5079).
@@ -176,6 +188,21 @@ const DesignatedActionDetailIDIR = () => {
   ) => {
     if (requirement.reviewOutcome !== OUTCOME_INFORMATION_REQUESTED) {
       return null
+    }
+    // While the DA/EOC submission is Submitted, information is requested
+    // for this EOC alone and the submission stays Submitted (#5545). The
+    // whole-action request remains for actions without a portal submission.
+    if (perEocRequests) {
+      return (
+        <EOCInformationRequestAction
+          key={`eoc-information-${requirement.evidenceRequirementId}`}
+          designatedActionId={designatedActionId}
+          requirement={requirement}
+          eoc={eoc}
+          canRequest={canRecommend}
+          beforeRequest={beforeRequest}
+        />
+      )
     }
     return (
       <DesignatedActionWorkflow
@@ -391,6 +418,8 @@ const DesignatedActionDetailIDIR = () => {
                 canEdit={canRecommend}
                 missingInformationReadOnly={!canRecommend}
                 renderRequestAction={renderRequestAction}
+                perEocRequests={perEocRequests}
+                lockedMissingInformationIds={openRequestIds}
               />
               <DesignatedActionWorkflow
                 designatedActionId={designatedActionId}

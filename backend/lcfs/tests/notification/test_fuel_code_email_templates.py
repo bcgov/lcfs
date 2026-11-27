@@ -135,6 +135,7 @@ class TestFuelCodeEmailTemplates:
         allowed_shared_templates = {
             "government_notification.html",  # Shared by all government notification types
             "ci_application_notification.html",  # Shared by all CI application notification types
+            "eoc_information_request.html",  # EOC additional information requested / submitted
         }
         
         # Filter out intentionally shared templates

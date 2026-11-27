@@ -8,13 +8,45 @@ import { useTranslation } from 'react-i18next'
 import BCTypography from '@/components/BCTypography'
 import BCBox from '@/components/BCBox'
 import EOCRequirementSection from './EOCRequirementSection'
+import EOCInformationRequestHistory from './EOCInformationRequestHistory'
 
-export const EOCSubmissionHistory = ({ submissions = [], onDownload }) => {
+const sectionKey = (submissionKey, requirementId) =>
+  `${submissionKey}:${requirementId}`
+
+export const EOCSubmissionHistory = ({
+  submissions = [],
+  onDownload,
+  designatedActionId,
+  // Requests for additional information by submission ID (#5545).
+  informationRequests = {}
+}) => {
   const { t } = useTranslation(['initiativeAgreement'])
   const [expanded, setExpanded] = useState(() =>
     submissions.length ? [String(submissions[0].id ?? 0)] : []
   )
+  // Each EOC of each submission opens on its own; the first EOC of the
+  // latest submission starts open.
+  const [expandedSections, setExpandedSections] = useState(() => {
+    const first = submissions[0]
+    const requirement = first?.requirements?.[0]
+    if (!first || !requirement) return []
+    return [
+      sectionKey(
+        String(first.id ?? 0),
+        String(requirement.id ?? requirement.evidenceRequirementId)
+      )
+    ]
+  })
   if (!submissions.length) return null
+
+  const toggleSection = (key, open) =>
+    setExpandedSections((previous) =>
+      open
+        ? previous.includes(key)
+          ? previous
+          : [...previous, key]
+        : previous.filter((item) => item !== key)
+    )
 
   return (
     <BCBox mt={3} data-test="eoc-submission-history">
@@ -25,6 +57,7 @@ export const EOCSubmissionHistory = ({ submissions = [], onDownload }) => {
         const submissionKey = String(submission.id ?? submissionIndex)
         const requirements = submission.requirements || []
         const evidenceResponses = submission.evidenceResponses || {}
+        const requests = informationRequests[String(submission.id)] || []
         return (
           <Accordion
             key={submissionKey}
@@ -63,6 +96,13 @@ export const EOCSubmissionHistory = ({ submissions = [], onDownload }) => {
                   const id = String(
                     requirement.id ?? requirement.evidenceRequirementId
                   )
+                  const key = sectionKey(submissionKey, id)
+                  const eocRequests = requests.filter(
+                    (request) => String(request.evidenceRequirementId) === id
+                  )
+                  const open = eocRequests.some(
+                    (request) => request.status === 'Requested'
+                  )
                   return (
                     <EOCRequirementSection
                       key={id}
@@ -70,9 +110,22 @@ export const EOCSubmissionHistory = ({ submissions = [], onDownload }) => {
                       index={index}
                       response={evidenceResponses[id] || {}}
                       readOnly
-                      expanded={submissionIndex === 0 && index === 0}
-                      setExpanded={() => {}}
-                    />
+                      expanded={expandedSections.includes(key)}
+                      setExpanded={(isOpen) => toggleSection(key, isOpen)}
+                      statusLabel={
+                        open
+                          ? t(
+                              'initiativeAgreement:informationRequest.requested'
+                            )
+                          : null
+                      }
+                    >
+                      <EOCInformationRequestHistory
+                        designatedActionId={designatedActionId}
+                        requests={eocRequests}
+                        requirementId={key}
+                      />
+                    </EOCRequirementSection>
                   )
                 })}
               </BCBox>

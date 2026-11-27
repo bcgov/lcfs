@@ -63,7 +63,8 @@ def service():
     repo.get_evidence_requirements = AsyncMock(return_value=[])
     repo.get_eoc_document_snapshot = AsyncMock(return_value=[])
     repo.db.flush = AsyncMock()
-    repo.db.execute = AsyncMock()
+    # A sync result: get_eoc also reads the EOC information requests (#5545).
+    repo.db.execute = AsyncMock(return_value=MagicMock())
 
     def add(value):
         if isinstance(value, DaEocSubmission):
@@ -360,9 +361,11 @@ async def test_documents_are_linked_and_metadata_survives_replacement(service):
     service.repo.get_eoc_document_snapshot.return_value = docs
     await service.save_eoc(3, EOCSaveSchema(declaration_accepted=True), submit=True)
     original = (await service.repo.get_portal_evidence_submissions(3))[0]
-    assert service.repo.db.execute.call_args.args[1] == [
-        {"da_eoc_submission_id": 1, "document_id": 9}
+    # The association insert, not get_eoc's later reads (#5545).
+    inserts = [
+        call for call in service.repo.db.execute.call_args_list if len(call.args) > 1
     ]
+    assert inserts[-1].args[1] == [{"da_eoc_submission_id": 1, "document_id": 9}]
     service.repo.db.add(
         DaEocSubmissionHistory(
             da_eoc_submission_id=1,

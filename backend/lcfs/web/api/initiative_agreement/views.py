@@ -1,11 +1,21 @@
 from typing import List
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
+from fastapi import (
+    APIRouter,
+    Body,
+    Depends,
+    HTTPException,
+    Request,
+    status,
+)
 
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.services.s3.dependency import get_s3_client
+from lcfs.services.s3.schema import DocumentRenameSchema, FileResponseSchema
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.initiative_agreement.schema import (
+    EOCInformationRequestCreateSchema,
+    EOCInformationRequestResponseSchema,
     EOCSaveSchema,
     EOCSchema,
     AllDesignatedActionsListSchema,
@@ -34,6 +44,9 @@ from lcfs.web.api.initiative_agreement.schema import (
     InitiativeAgreementsListSchema,
     InitiativeAgreementUpdateSchema,
     RecommendedCreditsSchema,
+)
+from lcfs.web.api.initiative_agreement.eoc_information_request import (
+    EocInformationRequestService,
 )
 from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
 from lcfs.web.api.initiative_agreement.validation import InitiativeAgreementValidation
@@ -609,3 +622,78 @@ async def download_eoc_submission_document(
             "Content-Security-Policy": "sandbox",
         },
     )
+
+
+# --- Requests for additional information on one EOC (#5545) -------------
+# Every route below is authorized again in EocInformationRequestService:
+# the decorator's roles are only the first gate. The file upload and remove
+# routes need the S3 service, which imports this package, so they live in
+# eoc_information_request_documents.py.
+
+
+@router.post(
+    "/designated-actions/{designated_action_id}/eoc/requirements/{evidence_requirement_id}/information-requests",
+    response_model=EOCSchema,
+    status_code=status.HTTP_201_CREATED,
+)
+@view_handler(IA_REVIEW_ROLES)
+async def request_eoc_information(
+    request: Request,
+    designated_action_id: int,
+    evidence_requirement_id: int,
+    data: EOCInformationRequestCreateSchema,
+    service: EocInformationRequestService = Depends(),
+):
+    """Ask the proponent for more on one EOC; opens only that EOC to them."""
+    return await service.request_information(
+        designated_action_id, evidence_requirement_id, data
+    )
+
+
+@router.put(
+    "/designated-actions/{designated_action_id}/eoc/information-requests/{request_id}",
+    response_model=EOCSchema,
+)
+@view_handler([RoleEnum.IA_PROPONENT, RoleEnum.IA_SIGNER])
+async def save_eoc_information_response(
+    request: Request,
+    designated_action_id: int,
+    request_id: int,
+    data: EOCInformationRequestResponseSchema,
+    service: EocInformationRequestService = Depends(),
+):
+    return await service.save_response(designated_action_id, request_id, data)
+
+
+@router.post(
+    "/designated-actions/{designated_action_id}/eoc/information-requests/{request_id}/submit",
+    response_model=EOCSchema,
+)
+@view_handler([RoleEnum.IA_SIGNER])
+async def submit_eoc_information_response(
+    request: Request,
+    designated_action_id: int,
+    request_id: int,
+    data: EOCInformationRequestResponseSchema,
+    service: EocInformationRequestService = Depends(),
+):
+    return await service.submit_response(designated_action_id, request_id, data)
+
+
+@router.put(
+    "/designated-actions/{designated_action_id}/eoc/information-requests/{request_id}/documents/{document_id}",
+    response_model=FileResponseSchema,
+)
+@view_handler([RoleEnum.IA_PROPONENT, RoleEnum.IA_SIGNER])
+async def rename_eoc_information_document(
+    request: Request,
+    designated_action_id: int,
+    request_id: int,
+    document_id: int,
+    data: DocumentRenameSchema,
+    service: EocInformationRequestService = Depends(),
+):
+    document = await service.rename_document(
+        designated_action_id, request_id, document_id, data.display_name
+    )
+    return FileResponseSchema.model_validate(document).for_viewer(request.user)

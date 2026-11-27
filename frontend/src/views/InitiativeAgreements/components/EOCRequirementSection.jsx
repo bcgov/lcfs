@@ -1,6 +1,7 @@
 import Accordion from '@mui/material/Accordion'
 import AccordionDetails from '@mui/material/AccordionDetails'
 import AccordionSummary from '@mui/material/AccordionSummary'
+import Chip from '@mui/material/Chip'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { useTranslation } from 'react-i18next'
 import BCButton from '@/components/BCButton'
@@ -17,7 +18,11 @@ export const EOCRequirementSection = ({
   readOnly = false,
   saving = false,
   onChange,
-  onSave
+  onSave,
+  showSave = true,
+  statusLabel = null,
+  intro = null,
+  children = null
 }) => {
   const { t } = useTranslation(['initiativeAgreement'])
   const title =
@@ -43,17 +48,31 @@ export const EOCRequirementSection = ({
         aria-controls={`eoc-response-details-${requirement.id}`}
         sx={{
           minHeight: 62,
-          '& .MuiAccordionSummary-content': { my: 1.5 },
+          '& .MuiAccordionSummary-content': {
+            my: 1.5,
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            rowGap: 0.5
+          },
           color: 'primary.main',
           fontWeight: 700
         }}
       >
-        {heading}
+        <span>{heading}</span>
+        {statusLabel && (
+          <Chip
+            size="small"
+            label={statusLabel}
+            data-test={`eoc-response-status-${requirement.id}`}
+            sx={{ ml: 1.5, bgcolor: '#fff8e7', border: '1px solid #fcba19' }}
+          />
+        )}
       </AccordionSummary>
       <AccordionDetails
         id={`eoc-response-details-${requirement.id}`}
         sx={{ px: 2.5, pb: 2.5 }}
       >
+        {intro}
         <EOCRequirementResponses
           requirement={requirement}
           response={response}
@@ -61,7 +80,8 @@ export const EOCRequirementSection = ({
           saving={saving}
           onChange={onChange}
         />
-        {!readOnly && (
+        {children}
+        {!readOnly && showSave && (
           <BCBox mt={2}>
             <BCButton
               variant="contained"

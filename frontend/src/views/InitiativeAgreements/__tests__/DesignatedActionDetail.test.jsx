@@ -38,7 +38,10 @@ vi.mock('react-router-dom', async (importOriginal) => {
 })
 
 const mockProfile = vi.fn()
+const mockEoc = vi.fn(() => ({ data: undefined }))
 vi.mock('@/hooks/useInitiativeAgreements', () => ({
+  useDesignatedActionEoc: () => mockEoc(),
+  useRequestEocInformation: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useDesignatedActionProfile: () => mockProfile(),
   useSetRecommendedCredits: () => ({ mutate: vi.fn() }),
   useEvidenceRequirements: () => ({
@@ -86,12 +89,18 @@ vi.mock('../components/EvidenceOfCompletion', () => ({
   EvidenceOfCompletion: ({
     canEdit,
     missingInformationReadOnly,
-    renderRequestAction
+    renderRequestAction,
+    perEocRequests,
+    lockedMissingInformationIds
   }) => (
     <div
       data-test="evidence-of-completion"
       data-can-edit={String(canEdit)}
       data-missing-information-read-only={String(missingInformationReadOnly)}
+      data-per-eoc-requests={String(perEocRequests)}
+      data-locked-missing-information={JSON.stringify(
+        lockedMissingInformationIds
+      )}
     >
       {renderRequestAction?.(
         {
@@ -156,6 +165,7 @@ describe('DesignatedActionDetail', () => {
       error: null
     })
     mockDocuments.mockReturnValue({ data: [], refetch: vi.fn() })
+    mockEoc.mockReturnValue({ data: undefined })
   })
 
   test('renders the card with name, status, credits and dates', ({
@@ -342,6 +352,55 @@ describe('DesignatedActionDetail', () => {
         canRequestInformation: true,
         missingInformation: 'The signed stage two permit.'
       })
+    )
+  })
+
+  test('asks about one EOC while the DA/EOC submission is Submitted (#5545)', ({
+    render,
+    app
+  }) => {
+    mockEoc.mockReturnValue({
+      data: { informationRequestAvailable: true, informationRequests: [] }
+    })
+    render(<DesignatedActionDetail />, app)
+
+    expect(
+      screen.getByTestId('eoc-information-request-button-1')
+    ).toBeInTheDocument()
+    // The whole-action request is not offered beside the EOC.
+    expect(workflowProps).not.toHaveBeenCalledWith(
+      expect.objectContaining({ onlyAction: 'request_information' })
+    )
+    expect(screen.getByTestId('evidence-of-completion')).toHaveAttribute(
+      'data-per-eoc-requests',
+      'true'
+    )
+  })
+
+  test('keeps the sent Missing information while that request is open', ({
+    render,
+    app
+  }) => {
+    mockEoc.mockReturnValue({
+      data: {
+        informationRequestAvailable: true,
+        informationRequests: [
+          {
+            id: 41,
+            evidenceRequirementId: 1,
+            status: 'Requested',
+            requestedAt: '2026-11-20T18:00:00Z'
+          },
+          { id: 40, evidenceRequirementId: 2, status: 'Submitted' }
+        ]
+      }
+    })
+    render(<DesignatedActionDetail />, app)
+
+    expect(screen.getByTestId('eoc-information-open-1')).toBeInTheDocument()
+    expect(screen.getByTestId('evidence-of-completion')).toHaveAttribute(
+      'data-locked-missing-information',
+      '[1]'
     )
   })
 

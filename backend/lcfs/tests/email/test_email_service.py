@@ -403,3 +403,68 @@ def test_mention_email_template_escapes_comment_text():
 
     assert "<script>" not in body
     assert "Gov User mentioned you in a comment on" in body
+
+
+EOC_INFORMATION_CONTEXT = {
+    "subject": "Additional information requested for DA1-IA2",
+    "action_label": "DA1-IA2",
+    "action_name": "Install <equipment>",
+    "requirement_number": 3,
+    "link_path": "/initiative-agreements/2/designated-actions/9",
+}
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "notification_type",
+    [
+        NotificationTypeEnum.BCEID__INITIATIVE_AGREEMENT__EOC_INFORMATION_REQUESTED,
+        NotificationTypeEnum.IDIR_ANALYST__INITIATIVE_AGREEMENT__EOC_INFORMATION_SUBMITTED,
+    ],
+)
+async def test_send_direct_notification_email_sends_to_recipient(
+    mock_email_repo, mock_environment_vars, notification_type
+):
+    """#5545: one recipient, no subscription lookup, link to the DA."""
+    service = CHESEmailService(repo=mock_email_repo)
+    service.send_email = AsyncMock(return_value=True)
+
+    result = await service.send_direct_notification_email(
+        notification_type, "proponent@example.com", dict(EOC_INFORMATION_CONTEXT)
+    )
+
+    assert result is True
+    payload = service.send_email.await_args.args[0]
+    assert payload["bcc"] == ["proponent@example.com"]
+    assert payload["subject"] == EOC_INFORMATION_CONTEXT["subject"]
+    assert "/initiative-agreements/2/designated-actions/9" in payload["body"]
+    assert "evidence of completion item 3" in payload["body"]
+    # Escaped, not rendered as markup.
+    assert "Install &lt;equipment&gt;" in payload["body"]
+    mock_email_repo.get_subscribed_user_emails.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_send_direct_notification_email_needs_an_address_and_ches(
+    mock_email_repo, mock_environment_vars
+):
+    service = CHESEmailService(repo=mock_email_repo)
+    service.send_email = AsyncMock(return_value=True)
+    notification_type = (
+        NotificationTypeEnum.BCEID__INITIATIVE_AGREEMENT__EOC_INFORMATION_REQUESTED
+    )
+
+    assert (
+        await service.send_direct_notification_email(
+            notification_type, "", dict(EOC_INFORMATION_CONTEXT)
+        )
+        is False
+    )
+    mock_environment_vars.ches_enabled = False
+    assert (
+        await service.send_direct_notification_email(
+            notification_type, "proponent@example.com", dict(EOC_INFORMATION_CONTEXT)
+        )
+        is False
+    )
+    service.send_email.assert_not_awaited()

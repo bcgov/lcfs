@@ -116,7 +116,12 @@ export const ProponentEOC = ({ designatedActionId, readOnly = false }) => {
     if (initializedAccordionForAction.current === String(designatedActionId))
       return
     initializedAccordionForAction.current = String(designatedActionId)
-    setExpanded([sections[0].id])
+    // An EOC government asked more about opens with the first one (#5545).
+    const requested = (data.informationRequests || [])
+      .filter((request) => request.status === 'Requested' && request.canEdit)
+      .map((request) => String(request.evidenceRequirementId))
+      .filter((id) => sections.some((section) => section.id === id))
+    setExpanded([...new Set([sections[0].id, ...requested])])
   }, [data, designatedActionId, sections])
   const downloadSubmissionDocument = async (submissionId, document) => {
     try {
@@ -265,6 +270,9 @@ export const ProponentEOC = ({ designatedActionId, readOnly = false }) => {
       }}
       blocker={blocker}
       dirty={dirty}
+      informationRequests={readOnly ? [] : serverData?.informationRequests}
+      submissionInformationRequests={serverData?.submissionInformationRequests}
+      onAnnounce={setMessage}
     />
   )
 }

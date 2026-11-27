@@ -26,6 +26,7 @@ import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
 import InitiativeAgreementTabs from './InitiativeAgreementTabs'
 import DocumentTree from './DocumentTree'
 import EOCRequirementSection from './EOCRequirementSection'
+import EOCInformationRequestSection from './EOCInformationRequestSection'
 import EOCSubmissionHistory from './EOCSubmissionHistory'
 import DesignatedActionNavigation from './DesignatedActionNavigation'
 import { constructAddress } from '@/utils/constructAddress'
@@ -125,7 +126,10 @@ export const EOCSubmissionPage = ({
   onUploadOpen = () => {},
   onUploadClose = () => {},
   blocker,
-  dirty
+  dirty,
+  informationRequests = [],
+  submissionInformationRequests = {},
+  onAnnounce = () => {}
 }) => {
   const { t } = useTranslation(['initiativeAgreement', 'report'])
   const actionLabel =
@@ -141,6 +145,36 @@ export const EOCSubmissionPage = ({
     return 2
   }, [data.daStatus, data.status])
 
+  // The EOCs government asked more about, open to this user (#5545).
+  const openRequests = useMemo(
+    () =>
+      Object.fromEntries(
+        informationRequests
+          .filter(
+            (request) => request.status === 'Requested' && request.canEdit
+          )
+          .map((request) => [String(request.evidenceRequirementId), request])
+      ),
+    [informationRequests]
+  )
+  const openSections = sections.filter((section) =>
+    Boolean(openRequests[String(section.id)])
+  )
+  const setSectionExpanded = (id, open) =>
+    setExpanded((previous) =>
+      open
+        ? previous.includes(id)
+          ? previous
+          : [...previous, id]
+        : previous.filter((expandedId) => expandedId !== id)
+    )
+  const goToSection = (id) => {
+    setSectionExpanded(id, true)
+    window.setTimeout(() => {
+      document.getElementById(`eoc-response-heading-${id}`)?.focus()
+    }, 0)
+  }
+
   const renderResponseSections = (
     responseData,
     isReadOnly = false,
@@ -149,6 +183,21 @@ export const EOCSubmissionPage = ({
     <Stack spacing={1.5}>
       {sections.map((requirement, index) => {
         const id = String(requirement.id)
+        if (!isReadOnly && openRequests[id]) {
+          return (
+            <EOCInformationRequestSection
+              key={`${id}-request-${openRequests[id].id}`}
+              designatedActionId={designatedActionId}
+              requirement={requirement}
+              index={index}
+              request={openRequests[id]}
+              isSigner={isSigner}
+              expanded={expanded.includes(id)}
+              setExpanded={(open) => setSectionExpanded(id, open)}
+              onAnnounce={onAnnounce}
+            />
+          )
+        }
         return (
           <EOCRequirementSection
             key={id}
@@ -194,6 +243,8 @@ export const EOCSubmissionPage = ({
           <EOCSubmissionHistory
             submissions={submissions}
             onDownload={onDownload}
+            designatedActionId={designatedActionId}
+            informationRequests={submissionInformationRequests}
           />
         }
       />
@@ -307,6 +358,52 @@ export const EOCSubmissionPage = ({
                 />
               </BCBox>
             </BCBox>
+
+            {openSections.length > 0 && (
+              <Alert
+                severity="warning"
+                // Present on load, so a status, not an interrupting alert.
+                role="status"
+                sx={{ mb: 2 }}
+                data-test="eoc-information-request-banner"
+              >
+                <BCTypography component="p" sx={{ fontWeight: 700 }}>
+                  {t('initiativeAgreement:informationRequest.bannerTitle')}
+                </BCTypography>
+                <BCTypography component="p">
+                  {t('initiativeAgreement:informationRequest.bannerBody', {
+                    numbers: openSections
+                      .map(
+                        (section) =>
+                          section.requirementNumber ??
+                          sections.indexOf(section) + 1
+                      )
+                      .join(', ')
+                  })}
+                </BCTypography>
+                <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                  {openSections.map((section) => {
+                    const number =
+                      section.requirementNumber ?? sections.indexOf(section) + 1
+                    return (
+                      <Link
+                        key={section.id}
+                        component="button"
+                        type="button"
+                        variant="body2"
+                        onClick={() => goToSection(String(section.id))}
+                        sx={{ textDecoration: 'underline' }}
+                        data-test={`eoc-information-go-to-${section.id}`}
+                      >
+                        {t('initiativeAgreement:informationRequest.goToEoc', {
+                          number
+                        })}
+                      </Link>
+                    )
+                  })}
+                </Stack>
+              </Alert>
+            )}
 
             {data.revisionRequest && (
               <Alert severity="info" sx={{ mb: 2 }}>
@@ -452,6 +549,8 @@ export const EOCSubmissionPage = ({
       <EOCSubmissionHistory
         submissions={serverData.submissions || []}
         onDownload={onDownload}
+        designatedActionId={designatedActionId}
+        informationRequests={submissionInformationRequests}
       />
 
       <BCBox mt={3} data-test="eoc-comments-section">

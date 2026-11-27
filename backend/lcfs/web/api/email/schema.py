@@ -46,4 +46,6 @@ TEMPLATE_MAPPING = {
     "IDIR_COMPLIANCE_MANAGER__GOVERNMENT_NOTIFICATION": "government_notification.html",
     "IDIR_DIRECTOR__GOVERNMENT_NOTIFICATION": "government_notification.html",
     "IDIR_ANY__INTERNAL_COMMENT__MENTION": "idir_any__internal_comment__mention.html",
+    "BCEID__INITIATIVE_AGREEMENT__EOC_INFORMATION_REQUESTED": "eoc_information_request.html",
+    "IDIR_ANALYST__INITIATIVE_AGREEMENT__EOC_INFORMATION_SUBMITTED": "eoc_information_request.html",
 }
