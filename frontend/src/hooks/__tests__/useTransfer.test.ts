@@ -2,6 +2,8 @@ import { waitFor } from '@testing-library/react'
 import { describe, expect, vi, beforeEach, afterEach } from 'vite-plus/test'
 import { useApiService } from '@/services/useApiService'
 import { test } from '@/tests/utils/fixtures'
+import axios from 'axios'
+import type { ApiServiceInstance } from '@/services/useApiService'
 import {
   useTransfer,
   useCreateUpdateTransfer,
@@ -10,6 +12,11 @@ import {
 
 vi.mock('@/services/useApiService')
 
+const apiService = (
+  overrides: Partial<ApiServiceInstance>
+): ApiServiceInstance =>
+  Object.assign(axios.create(), { download: vi.fn() }, overrides)
+
 describe('useTransfer', () => {
   const mockGet = vi.fn()
   const mockPost = vi.fn()
@@ -17,11 +24,9 @@ describe('useTransfer', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(useApiService).mockReturnValue({
-      get: mockGet,
-      post: mockPost,
-      put: mockPut
-    })
+    vi.mocked(useApiService).mockReturnValue(
+      apiService({ get: mockGet, post: mockPost, put: mockPut })
+    )
   })
 
   afterEach(() => {
@@ -237,7 +242,7 @@ describe('useTransfer', () => {
       mockPut.mockResolvedValue(mockResponse)
 
       const { result } = renderHook(
-        () => useUpdateCategory(transferId),
+        () => useUpdateCategory(transferId, {}),
         [query]
       )
 
@@ -261,7 +266,7 @@ describe('useTransfer', () => {
       mockPut.mockRejectedValue(mockError)
 
       const { result } = renderHook(
-        () => useUpdateCategory(transferId),
+        () => useUpdateCategory(transferId, {}),
         [query]
       )
 
@@ -304,7 +309,7 @@ describe('useTransfer', () => {
       renderHook,
       query
     }) => {
-      const { result } = renderHook(() => useUpdateCategory(123), [query])
+      const { result } = renderHook(() => useUpdateCategory(123, {}), [query])
 
       expect(result.current).toHaveProperty('mutate')
       expect(result.current).toHaveProperty('mutateAsync')

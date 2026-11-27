@@ -15,9 +15,9 @@ import SyncAlt from '@mui/icons-material/SyncAlt'
 import type { SxProps, Theme } from '@mui/material/styles'
 
 interface TransferDetailsCardProps {
-  fromOrgId?: number
+  fromOrgId?: number | string
   fromOrganization?: string
-  toOrgId?: number
+  toOrgId?: number | string
   toOrganization?: string
   quantity?: number
   pricePerUnit?: number

@@ -22,8 +22,8 @@ interface TransferViewProps {
   editorMode?: boolean
   transferData?: {
     currentStatus?: { status?: string }
-    toOrganization?: { name?: string; organizationId?: number }
-    fromOrganization?: { name?: string; organizationId?: number }
+    toOrganization?: { name?: string; organizationId?: number | string }
+    fromOrganization?: { name?: string; organizationId?: number | string }
     quantity?: number
     pricePerUnit?: number
     transferHistory?: TransferHistoryEntry[]

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { FormProvider, useForm } from 'react-hook-form'
+import type { DefaultValues } from 'react-hook-form'
+import type { Resolver, ResolverOptions } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import {
   useLocation,
@@ -17,6 +19,7 @@ import { useCreateUpdateTransfer, useTransfer } from '@/hooks/useTransfer'
 import { yupResolver } from '@hookform/resolvers/yup'
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import type { IconProp } from '@fortawesome/fontawesome-svg-core'
 import Box from '@mui/material/Box'
 import '@mui/material/Divider'
 import Stack from '@mui/material/Stack'
@@ -48,29 +51,58 @@ import { CategoryCheckbox } from './components/CategoryCheckbox'
 import { Recommendation } from './components/Recommendation'
 import SigningAuthority from './components/SigningAuthority'
 import EntityComments from '@/components/Comments'
+import type { BCAlertHandle } from '@/components/BCAlert/BCAlert'
+import type { AlertSeverity } from '@/components/BCAlert/BCAlertRoot'
+import type { TransferModalData, TransferOrganization } from './buttonConfigs'
+import type {
+  AddEditTransferFormData,
+  AddEditTransferFormState
+} from './_schema'
+
+const schemaResolver = yupResolver(AddEditTransferSchema)
+const transferResolver: Resolver<
+  AddEditTransferFormState,
+  unknown,
+  AddEditTransferFormData
+> = (values, context, options) =>
+  schemaResolver(
+    values,
+    context,
+    options as unknown as ResolverOptions<AddEditTransferFormData>
+  )
 
 export const AddEditViewTransfer = () => {
   const queryClient = useQueryClient()
   const theme = useTheme()
   const isMobileSize = useMediaQuery(theme.breakpoints.down('sm'))
-  const [modalData, setModalData] = useState(null)
+  const [modalData, setModalData] = useState<TransferModalData | null>(null)
   const { t } = useTranslation(['common', 'transfer'])
   const navigate = useNavigate()
   const matches = useMatches()
-  const mode = matches[matches.length - 1]?.handle?.mode
+  const mode =
+    (matches[matches.length - 1]?.handle as { mode?: string } | undefined)
+      ?.mode ?? ''
   const location = useLocation()
   const { transferId } = useParams()
   const [alertMessage, setAlertMessage] = useState('')
-  const [alertSeverity, setAlertSeverity] = useState('info')
-  const [steps, setSteps] = useState(['Sent', 'Submitted', 'Recorded'])
+  const [alertSeverity, setAlertSeverity] = useState<AlertSeverity>('info')
+  const [steps, setSteps] = useState<string[]>([
+    'Sent',
+    'Submitted',
+    'Recorded'
+  ])
   const { data: currentUser, hasRoles, hasAnyRole } = useCurrentUser()
-  const { data: toOrgData } = useRegExtOrgs()
+  const { data: toOrgData } = useRegExtOrgs<TransferOrganization>({})
   const isGovernmentUser = !!currentUser?.isGovernmentUser
   const currentUserOrgId = currentUser?.organization?.organizationId
-  const alertRef = useRef()
+  const alertRef = useRef<BCAlertHandle | null>(null)
 
-  const methods = useForm({
-    resolver: yupResolver(AddEditTransferSchema),
+  const methods = useForm<
+    AddEditTransferFormState,
+    unknown,
+    AddEditTransferFormData
+  >({
+    resolver: transferResolver,
     mode: 'onChange',
     defaultValues: {
       fromOrganizationId: currentUser?.organization?.organizationId || '',
@@ -83,7 +115,7 @@ export const AddEditViewTransfer = () => {
       toOrgComment: '',
       govComment: '',
       recommendation: null
-    }
+    } as unknown as DefaultValues<AddEditTransferFormData>
   })
 
   // Fetch the transfer details
@@ -95,8 +127,7 @@ export const AddEditViewTransfer = () => {
   } = useTransfer(transferId, {
     enabled: !!transferId,
     retry: false,
-    staleTime: 0,
-    keepPreviousData: false
+    staleTime: 0
   })
 
   const queryState = queryClient.getQueryState(['transfer', transferId])
@@ -120,15 +151,17 @@ export const AddEditViewTransfer = () => {
       // Populate the form with fetched transfer data
       methods.reset((prevValues) => ({
         ...prevValues, // Preserve previous values
-        fromOrganizationId: transferData.fromOrganization.organizationId,
-        toOrganizationId: transferData.toOrganization.organizationId,
-        quantity: transferData.quantity,
-        pricePerUnit: transferData.pricePerUnit,
-        agreementDate: transferData.agreementDate
+        fromOrganizationId: (transferData.fromOrganization?.organizationId ??
+          prevValues.fromOrganizationId) as string,
+        toOrganizationId: (transferData.toOrganization?.organizationId ??
+          prevValues.toOrganizationId) as string,
+        quantity: transferData.quantity ?? prevValues.quantity,
+        pricePerUnit: transferData.pricePerUnit ?? prevValues.pricePerUnit,
+        agreementDate: (transferData.agreementDate
           ? dateFormatter(transferData.agreementDate)
-          : new Date().toISOString().split('T')[0],
+          : new Date().toISOString().split('T')[0]) as unknown as Date,
         recommendation:
-          prevValues.recommendation ?? transferData.recommendation,
+          prevValues.recommendation ?? transferData.recommendation ?? null,
         signingAuthorityDeclaration:
           prevValues.signingAuthorityDeclaration ?? false,
         fromOrgComment:
@@ -209,7 +242,9 @@ export const AddEditViewTransfer = () => {
       },
       onError: (_error) => {
         setModalData(null)
-        const errorMsg = _error.response.data?.detail
+        const errorMsg = (
+          _error as Error & { response?: { data?: { detail?: string } } }
+        ).response?.data?.detail
         if (errorMsg) {
           setAlertMessage(errorMsg)
         } else {
@@ -220,13 +255,13 @@ export const AddEditViewTransfer = () => {
           )
         }
         setAlertSeverity('error')
-        alertRef.current.triggerAlert()
+        alertRef.current?.triggerAlert()
         // Scroll back to the top of the page
         window.scrollTo(0, 0)
       }
     })
 
-  const currentStatus = transferData?.currentStatus.status
+  const currentStatus = transferData?.currentStatus?.status ?? ''
 
   const fromOrgId =
     transferData?.fromOrganization?.organizationId ||
@@ -234,17 +269,17 @@ export const AddEditViewTransfer = () => {
   const toOrgId =
     transferData?.toOrganization?.organizationId ||
     methods.getValues('toOrganizationId')
-  const transferStatus = transferData?.currentStatus?.status
+  const transferStatus = transferData?.currentStatus?.status ?? ''
 
   const commentField =
     currentUserOrgId === fromOrgId ? 'fromOrgComment' : 'toOrgComment'
 
   useEffect(() => {
-    const statusSet = new Set()
+    const statusSet = new Set<string>()
     transferData?.transferHistory?.forEach((item) => {
-      statusSet.add(item.transferStatus.status)
+      if (item.transferStatus?.status) statusSet.add(item.transferStatus.status)
     })
-    if (statusSet.length === 0) {
+    if (statusSet.size === 0) {
       setSteps(['Sent', 'Submitted', 'Recorded'])
     } else {
       statusSet.delete(TRANSFER_STATUSES.DRAFT)
@@ -279,7 +314,6 @@ export const AddEditViewTransfer = () => {
   const buttonClusterConfig = useMemo(
     () =>
       buttonClusterConfigFn({
-        transferId,
         toOrgData,
         hasRoles,
         hasAnyRole,
@@ -294,14 +328,12 @@ export const AddEditViewTransfer = () => {
         signingAuthorityDeclaration
       }),
     [
-      transferId,
       toOrgData,
       hasRoles,
       hasAnyRole,
       currentUser,
       methods,
       t,
-      setModalData,
       createUpdateTransfer,
       transferData,
       isGovernmentUser,
@@ -331,7 +363,7 @@ export const AddEditViewTransfer = () => {
     return <Loading message={t('transfer:processingText')} />
 
   if (
-    (isLoadingError && editorMode !== 'add') ||
+    (isLoadingError && !Object.is(editorMode, 'add')) ||
     queryState?.status === 'error'
   ) {
     return (
@@ -393,7 +425,7 @@ export const AddEditViewTransfer = () => {
             orientation={isMobileSize ? 'vertical' : 'horizontal'}
           >
             {steps.map((label, index) => {
-              const labelProps = {}
+              const labelProps: { error?: boolean } = {}
               if (
                 ['Rescinded', 'Declined', 'Refused', 'Deleted'].includes(label)
               ) {
@@ -429,7 +461,6 @@ export const AddEditViewTransfer = () => {
               </>
             ) : (
               <TransferView
-                transferId={transferId}
                 editorMode={editorMode}
                 transferData={transferData}
                 categoryOverride={
@@ -444,10 +475,8 @@ export const AddEditViewTransfer = () => {
               />
             )}
 
-            {[
-              TRANSFER_STATUSES.SUBMITTED,
-              TRANSFER_STATUSES.RECOMMENDED
-            ].includes(currentStatus) &&
+            {(currentStatus === TRANSFER_STATUSES.SUBMITTED ||
+              currentStatus === TRANSFER_STATUSES.RECOMMENDED) &&
               hasAnyRole(roles.analyst, roles.director) && (
                 <>
                   {hasRoles(roles.director) ? (
@@ -506,7 +535,7 @@ export const AddEditViewTransfer = () => {
             {/* Buttons */}
             <Stack
               component="div"
-              direction={{ md: 'coloumn', lg: 'row' }}
+              direction={{ md: 'column', lg: 'row' }}
               justifyContent="flex-start"
               mt={4}
               gap={2}
@@ -555,7 +584,7 @@ export const AddEditViewTransfer = () => {
                               startIcon={
                                 config.startIcon && (
                                   <FontAwesomeIcon
-                                    icon={config.startIcon}
+                                    icon={config.startIcon as IconProp}
                                     className="small-icon"
                                   />
                                 )
@@ -614,7 +643,7 @@ export const AddEditViewTransfer = () => {
                                       startIcon={
                                         config.startIcon && (
                                           <FontAwesomeIcon
-                                            icon={config.startIcon}
+                                            icon={config.startIcon as IconProp}
                                             className="small-icon"
                                           />
                                         )

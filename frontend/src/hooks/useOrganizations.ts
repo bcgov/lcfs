@@ -140,7 +140,11 @@ export const useOrganizationNames = <T = unknown>(
   })
 }
 
-export const useRegExtOrgs = (options: QueryOptions<unknown>) => {
+export const useRegExtOrgs = <
+  T = { organizationId: number | string; name: string }
+>(
+  options: QueryOptions<T[]> = {}
+) => {
   const client = useApiService()
 
   return useQuery({

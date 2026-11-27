@@ -20,7 +20,7 @@ function hasRecommendationData(
   return typeof data === 'object' && data !== null
 }
 
-export const Recommendation = () => {
+export const Recommendation = (_props: { currentStatus?: string }) => {
   const { t } = useTranslation(['common', 'transfer'])
   const { transferId } = useParams()
   const { data } = useTransfer(transferId, {

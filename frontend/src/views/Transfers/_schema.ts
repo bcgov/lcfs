@@ -37,3 +37,8 @@ export const AddEditTransferSchema = Yup.object({
 export type AddEditTransferFormData = Yup.InferType<
   typeof AddEditTransferSchema
 >
+
+export type AddEditTransferFormState = AddEditTransferFormData & {
+  recommendation: string | null
+  signingAuthorityDeclaration: boolean
+}
