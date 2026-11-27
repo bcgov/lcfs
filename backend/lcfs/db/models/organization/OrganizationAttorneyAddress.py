@@ -17,7 +17,7 @@ class OrganizationAttorneyAddress(BaseModel, Auditable, EffectiveDates):
     city = Column(String(100), nullable=True)
     province_state = Column(String(50), nullable=True)
     country = Column(String(100), nullable=True)
-    postalCode_zipCode = Column(String(10), nullable=True)
+    postalCode_zipCode = Column(String(30), nullable=True)
 
     organization = relationship(
         "Organization", back_populates="org_attorney_address", uselist=False

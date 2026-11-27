@@ -22,6 +22,7 @@ const mockWatch = vi.fn()
 const mockTrigger = vi.fn()
 const mockReset = vi.fn()
 const mockSetError = vi.fn()
+const mockClearErrors = vi.fn()
 const mockHandleSubmit = vi.fn((fn) => (event) => {
   event?.preventDefault?.()
   fn({
@@ -89,7 +90,7 @@ vi.mock('react-hook-form', () => ({
     trigger: mockTrigger,
     reset: mockReset,
     setError: mockSetError,
-    clearErrors: vi.fn(),
+    clearErrors: mockClearErrors,
     control: {}
   }),
   Controller: React.forwardRef(function ControllerMock({ name, render }, ref) {
@@ -398,6 +399,7 @@ describe('AddEditOrgForm Component', () => {
       post: mockApiPost,
       put: mockApiPut
     })
+
     useParams.mockReturnValue({ orgID: undefined })
     useOrganization.mockReturnValue({
       data: null,
@@ -411,6 +413,30 @@ describe('AddEditOrgForm Component', () => {
 
     mockWatch.mockImplementation(() => '')
     mockSetError.mockClear()
+  })
+
+  it('clears stale head office city errors when changing away from special types', () => {
+    let typeIds = ['3']
+    mockWatch.mockImplementation((field) => {
+      if (field === 'orgTypeIds') return typeIds
+      if (field === 'availableRoles') return []
+      return ''
+    })
+    const { rerender } = render(
+      <Wrapper>
+        <AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />
+      </Wrapper>
+    )
+    mockClearErrors.mockClear()
+    typeIds = ['1']
+    rerender(
+      <Wrapper>
+        <AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />
+      </Wrapper>
+    )
+    expect(mockClearErrors).toHaveBeenCalledWith(
+      expect.arrayContaining(['orgHeadOfficeCity'])
+    )
   })
 
   describe('Basic Rendering - Form Structure', () => {

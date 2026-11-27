@@ -12,6 +12,8 @@ from lcfs.web.api.organizations.schema import (
     OrganizationCreateSchema,
     OrganizationUpdateSchema,
     OrganizationAddressSchema,
+    OrganizationResponseSchema,
+    OrganizationSchema,
     PenaltyAnalyticsResponseSchema,
     PenaltyLogCreateSchema,
     PenaltyLogUpdateSchema,
@@ -24,6 +26,7 @@ from lcfs.db.models.organization.OrganizationStatus import (
 from lcfs.web.api.base import PaginationRequestSchema, FilterModel
 from lcfs.db.models.user.Role import RoleEnum
 from unittest.mock import patch
+from pydantic import ValidationError
 
 
 def create_mock_org_status(status_enum: OrgStatusEnum):
@@ -74,6 +77,274 @@ def mock_association_repo_methods(mock_repo, type_ids=(1,)):
     mock_repo.get_organization_response = AsyncMock(
         return_value=MagicMock(organization_id=1)
     )
+
+
+def _address(street="1 Test Street", city="Test City", postal="V1A 1A1"):
+    return {
+        "name": "Test Org",
+        "street_address": street,
+        "city": city,
+        "postalCode_zipCode": postal,
+        "province_state": "BC",
+        "country": "Canada",
+    }
+
+
+@pytest.mark.parametrize(
+    "keys,expected",
+    [
+        (["fuel_producer"], True),
+        (["lcjfip"], True),
+        (["fuel_producer", "lcjfip"], True),
+        (["fuel_producer", "exempted_supplier"], False),
+        (["lcjfip", "fuel_supplier"], False),
+        ([], False),
+    ],
+)
+def test_special_address_type_selection(keys, expected):
+    types = [SimpleNamespace(org_type=key) for key in keys]
+    assert OrganizationsService._requires_special_address(types) is expected
+
+
+def test_response_schemas_accept_legacy_phone_and_postal_code():
+    org = {
+        "organization_id": 1,
+        "name": "Test Org",
+        "operating_name": "Test Org",
+        "organization_status_id": 1,
+        "has_early_issuance": False,
+        "phone": "legacy / phone",
+        "org_address": _address(postal="legacy/postal"),
+        "org_attorney_address": _address(postal="legacy/postal"),
+    }
+    assert OrganizationSchema.model_validate(org).phone == "legacy / phone"
+    response = OrganizationResponseSchema.model_validate(org)
+    assert response.org_address.postalCode_zipCode == "legacy/postal"
+    assert response.org_attorney_address.postalCode_zipCode == "legacy/postal"
+
+
+def test_input_phone_and_postal_validation():
+    base = dict(
+        name="Test Org",
+        operating_name="Test Org",
+        organization_status_id=1,
+        has_early_issuance=False,
+        organization_type_ids=[3],
+        email="test@example.com",
+    )
+    valid = OrganizationCreateSchema(
+        **base, phone="+44 20 7946 0958", attorney_address=_address(postal="A" * 30)
+    )
+    assert valid.attorney_address.postalCode_zipCode == "A" * 30
+    with pytest.raises(ValidationError):
+        OrganizationCreateSchema(**base, phone="invalid!")
+    with pytest.raises(ValidationError):
+        OrganizationCreateSchema(**base, attorney_address=_address(postal="A" * 31))
+    with pytest.raises(ValidationError):
+        OrganizationCreateSchema(**base, address=_address(postal="SW1A 2AA"))
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "org_type,is_bceid", [("fuel_producer", False), ("lcjfip", True)]
+)
+async def test_create_special_org_requires_email_and_head_office(
+    organizations_service, mock_repo, org_type, is_bceid
+):
+    mock_association_repo_methods(mock_repo, (3,))
+    mock_repo.get_organization_types_by_ids = AsyncMock(
+        return_value=[
+            SimpleNamespace(
+                organization_type_id=3,
+                org_type=org_type,
+                is_bceid_user=is_bceid,
+                display_order=1,
+            )
+        ]
+    )
+    base = dict(
+        name="Test Org",
+        operating_name="Test Org",
+        organization_status_id=1,
+        has_early_issuance=False,
+        organization_type_ids=[3],
+    )
+    with pytest.raises(ValueError, match="Email is required"):
+        await organizations_service.create_organization(
+            OrganizationCreateSchema(**base, attorney_address=_address())
+        )
+    with pytest.raises(ValueError, match="Head office address"):
+        await organizations_service.create_organization(
+            OrganizationCreateSchema(
+                **base, email="test@example.com", attorney_address={}
+            )
+        )
+    mock_repo.create_organization = AsyncMock(return_value=MagicMock(organization_id=1))
+    mock_repo.update_early_issuance_by_year = AsyncMock()
+    with patch(
+        "lcfs.web.api.organizations.services.FastAPICache.clear", new_callable=AsyncMock
+    ):
+        await organizations_service.create_organization(
+            OrganizationCreateSchema(
+                **base, email="test@example.com", attorney_address=_address()
+            )
+        )
+    created = mock_repo.create_organization.await_args.args[0]
+    assert created.org_address is None
+    assert created.org_attorney_address.street_address == "1 Test Street"
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "address", [{}, _address(street=""), _address(city=None), _address(postal=None)]
+)
+async def test_create_and_update_bceid_reject_incomplete_service_address(
+    organizations_service, mock_repo, address
+):
+    mock_association_repo_methods(mock_repo)
+    base = dict(organization_type_ids=[1], has_early_issuance=False)
+    create = OrganizationCreateSchema(
+        **base,
+        name="Test Org",
+        operating_name="Test Org",
+        email="test@example.com",
+        organization_status_id=1,
+        address=address,
+    )
+    with pytest.raises(ValueError, match="Address is required"):
+        await organizations_service.create_organization(create)
+    mock_repo.get_organization = AsyncMock(return_value=MagicMock())
+    with pytest.raises(ValueError, match="Address is required"):
+        await organizations_service.update_organization(
+            1, OrganizationUpdateSchema(**base, address=address)
+        )
+
+
+@pytest.mark.anyio
+async def test_mixed_bceid_create_preserves_attorney_address_requirement(
+    organizations_service, mock_repo
+):
+    mock_association_repo_methods(mock_repo, (1, 3))
+    mock_repo.get_organization_types_by_ids = AsyncMock(
+        return_value=[
+            SimpleNamespace(
+                organization_type_id=1,
+                org_type="fuel_supplier",
+                is_bceid_user=True,
+                display_order=1,
+            ),
+            SimpleNamespace(
+                organization_type_id=3,
+                org_type="fuel_producer",
+                is_bceid_user=False,
+                display_order=2,
+            ),
+        ]
+    )
+    with pytest.raises(ValueError, match="Attorney address is required"):
+        await organizations_service.create_organization(
+            OrganizationCreateSchema(
+                name="Test Org",
+                operating_name="Test Org",
+                email="test@example.com",
+                organization_status_id=1,
+                organization_type_ids=[1, 3],
+                has_early_issuance=False,
+                address=_address(),
+            )
+        )
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("address", [{}, None])
+async def test_update_special_org_clears_service_address_without_losing_head_office(
+    organizations_service, mock_repo, address
+):
+    organization = _listed_organization()
+    organization.org_address = MagicMock()
+    organization.org_attorney_address = SimpleNamespace(**_address())
+    _prepare_update_repo(mock_repo, organization)
+    mock_repo.get_organization_types_by_ids = AsyncMock(
+        return_value=[
+            SimpleNamespace(
+                organization_type_id=1,
+                org_type="lcjfip",
+                is_bceid_user=True,
+                display_order=1,
+            )
+        ]
+    )
+    with patch(
+        "lcfs.web.api.organizations.services.FastAPICache.clear", new_callable=AsyncMock
+    ):
+        await organizations_service.update_organization(
+            1,
+            OrganizationUpdateSchema(
+                has_early_issuance=False, organization_type_ids=[1], address=address
+            ),
+        )
+    assert organization.org_address is None
+    assert organization.org_attorney_address.street_address == "1 Test Street"
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("head_office", [None, {}, _address(city="")])
+async def test_update_special_org_rejects_explicitly_missing_head_office(
+    organizations_service, mock_repo, head_office
+):
+    organization = _listed_organization()
+    organization.org_attorney_address = SimpleNamespace(**_address())
+    _prepare_update_repo(mock_repo, organization)
+    mock_repo.get_organization_types_by_ids = AsyncMock(
+        return_value=[
+            SimpleNamespace(
+                organization_type_id=1,
+                org_type="fuel_producer",
+                is_bceid_user=False,
+                display_order=1,
+            )
+        ]
+    )
+    with pytest.raises(ValueError, match="Head office address"):
+        await organizations_service.update_organization(
+            1,
+            OrganizationUpdateSchema(
+                has_early_issuance=False,
+                organization_type_ids=[1],
+                attorney_address=head_office,
+            ),
+        )
+
+
+@pytest.mark.anyio
+async def test_update_special_org_preserves_omitted_addresses(
+    organizations_service, mock_repo
+):
+    organization = _listed_organization()
+    service_address = organization.org_address = SimpleNamespace(**_address())
+    head_office = organization.org_attorney_address = SimpleNamespace(**_address())
+    _prepare_update_repo(mock_repo, organization)
+    mock_repo.get_organization_types_by_ids = AsyncMock(
+        return_value=[
+            SimpleNamespace(
+                organization_type_id=1,
+                org_type="fuel_producer",
+                is_bceid_user=False,
+                display_order=1,
+            )
+        ]
+    )
+    with patch(
+        "lcfs.web.api.organizations.services.FastAPICache.clear", new_callable=AsyncMock
+    ):
+        await organizations_service.update_organization(
+            1,
+            OrganizationUpdateSchema(
+                has_early_issuance=False, organization_type_ids=[1]
+            ),
+        )
+    assert organization.org_address is service_address
+    assert organization.org_attorney_address is head_office
 
 
 @pytest.fixture
@@ -709,7 +980,8 @@ async def test_update_organization_omitting_available_roles_leaves_them_untouche
 
     mock_repo.get_organization = AsyncMock(
         return_value=MagicMock(
-            organization_address_id=1, organization_attorney_address_id=1
+            organization_address_id=1, organization_attorney_address_id=1,
+            org_address=SimpleNamespace(**_address()),
         )
     )
     mock_repo.get_current_year_early_issuance = AsyncMock(return_value=False)
@@ -739,7 +1011,8 @@ async def test_update_organization_with_empty_available_roles_withdraws_all(
 
     mock_repo.get_organization = AsyncMock(
         return_value=MagicMock(
-            organization_address_id=1, organization_attorney_address_id=1
+            organization_address_id=1, organization_attorney_address_id=1,
+            org_address=SimpleNamespace(**_address()),
         )
     )
     mock_repo.get_current_year_early_issuance = AsyncMock(return_value=False)

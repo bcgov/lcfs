@@ -21,7 +21,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { createValidationSchema } from './_schema'
+import { createValidationSchema, isSpecialAddressOrganization } from './_schema'
 
 // Internal Modules
 
@@ -77,6 +77,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
 
   // State for tracking validation requirements from the selected org types
   const [requiresBCeID, setRequiresBCeID] = useState(true)
+  const [requiresSpecialAddress, setRequiresSpecialAddress] = useState(false)
 
   // useForm hook setup with React Hook Form - validation handled in onSubmit
   const methods = useForm({
@@ -134,16 +135,23 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
       const newRequiresBCeID =
         selectedTypes.length === 0 ||
         selectedTypes.some((type) => type.isBceidUser)
+      const newRequiresSpecialAddress =
+        isSpecialAddressOrganization(selectedTypes)
       setRequiresBCeID(newRequiresBCeID)
+      setRequiresSpecialAddress(newRequiresSpecialAddress)
 
       // Handle validation when switching organization types
       if (!newRequiresBCeID) {
-        // For non-BCeID types, clear errors for fields that are now optional
+        clearErrors('orgPhoneNumber')
+      }
+      if (!newRequiresBCeID || newRequiresSpecialAddress) {
+        clearErrors(['orgStreetAddress', 'orgCity', 'orgPostalCodeZipCode'])
+      }
+      if (!newRequiresSpecialAddress) {
         clearErrors([
-          'orgPhoneNumber',
-          'orgStreetAddress',
-          'orgCity',
-          'orgPostalCodeZipCode'
+          'orgHeadOfficeStreetAddress',
+          'orgHeadOfficeCity',
+          'orgHeadOfficePostalCodeZipCode'
         ])
       }
     }
@@ -187,6 +195,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
     if (isFetched && data) {
       const shouldSyncNames = data.name === data.operatingName
       const shouldSyncAddress =
+        !!data.orgAddress?.streetAddress &&
         data.orgAddress?.streetAddress ===
           data.orgAttorneyAddress?.streetAddress &&
         data.orgAddress?.addressOther ===
@@ -859,7 +868,10 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
               >
                 <InputLabel htmlFor="orgStreetAddress" sx={{ pb: 1 }}>
                   {t('org:streetAddrLabel')}
-                  {requiresBCeID ? '' : ' (optional)'}:
+                  {requiresBCeID && !requiresSpecialAddress
+                    ? ''
+                    : ' (optional)'}
+                  :
                 </InputLabel>
                 <Controller
                   name="orgStreetAddress"
@@ -899,10 +911,13 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
               <Box mb={2}>
                 <InputLabel htmlFor="orgCity" sx={{ pb: 1 }}>
                   {t('org:cityLabel')}
-                  {requiresBCeID ? '' : ' (optional)'}:
+                  {requiresBCeID && !requiresSpecialAddress
+                    ? ''
+                    : ' (optional)'}
+                  :
                 </InputLabel>
                 <TextField
-                  required={requiresBCeID}
+                  required={requiresBCeID && !requiresSpecialAddress}
                   id="orgCity"
                   data-test="orgCity"
                   variant="outlined"
@@ -943,10 +958,13 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
               <Box mb={2}>
                 <InputLabel htmlFor="orgPostalCodeZipCode" sx={{ pb: 1 }}>
                   {t('org:poLabel')}
-                  {requiresBCeID ? '' : ' (optional)'}:
+                  {requiresBCeID && !requiresSpecialAddress
+                    ? ''
+                    : ' (optional)'}
+                  :
                 </InputLabel>
                 <TextField
-                  required={requiresBCeID}
+                  required={requiresBCeID && !requiresSpecialAddress}
                   id="orgPostalCodeZipCode"
                   data-test="orgPostalCodeZipCode"
                   variant="outlined"
@@ -1038,10 +1056,11 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
               </Box>
               <Box mb={2}>
                 <InputLabel htmlFor="orgHeadOfficeStreetAddress" sx={{ pb: 1 }}>
-                  {t('org:streetAddrLabel')}:
+                  {t('org:streetAddrLabel')}
+                  {requiresSpecialAddress ? '' : ' (optional)'}:
                 </InputLabel>
                 <TextField
-                  required
+                  required={requiresSpecialAddress}
                   disabled={sameAsServiceAddress}
                   id="orgHeadOfficeStreetAddress"
                   data-test="orgHeadOfficeStreetAddress"
@@ -1073,10 +1092,11 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
               </Box>
               <Box mb={2}>
                 <InputLabel htmlFor="orgHeadOfficeCity" sx={{ pb: 1 }}>
-                  {t('org:cityLabel')}:
+                  {t('org:cityLabel')}
+                  {requiresSpecialAddress ? '' : ' (optional)'}:
                 </InputLabel>
                 <TextField
-                  required
+                  required={requiresSpecialAddress}
                   disabled={sameAsServiceAddress}
                   id="orgHeadOfficeCity"
                   data-test="orgHeadOfficeCity"
@@ -1122,10 +1142,11 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
                   htmlFor="orgHeadOfficePostalCodeZipCode"
                   sx={{ pb: 1 }}
                 >
-                  {t('org:poZipLabel')}:
+                  {t('org:poZipLabel')}
+                  {requiresSpecialAddress ? '' : ' (optional)'}:
                 </InputLabel>
                 <TextField
-                  required
+                  required={requiresSpecialAddress}
                   disabled={sameAsServiceAddress}
                   id="orgHeadOfficePostalCodeZipCode"
                   data-test="orgHeadOfficePostalCodeZipCode"
