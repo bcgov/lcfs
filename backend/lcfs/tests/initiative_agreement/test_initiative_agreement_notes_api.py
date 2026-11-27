@@ -22,6 +22,10 @@ from lcfs.tests.initiative_agreement.test_initiative_agreement_api import (
     _two_org_ids,
 )
 
+# These tests are about what an edit does; the package lock (#5554) has
+# its own tests in initiative_agreement/test_package_edit_lock.py.
+pytestmark = pytest.mark.usefixtures("underway_packages_editable")
+
 IDIR_DIRECTOR = [RoleEnum.DIRECTOR, RoleEnum.GOVERNMENT]
 
 

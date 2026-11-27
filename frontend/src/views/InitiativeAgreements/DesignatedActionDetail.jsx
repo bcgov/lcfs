@@ -44,6 +44,7 @@ import {
 } from './components/DesignatedActionWorkflow'
 import { EditDesignatedAction } from './components/EditDesignatedAction'
 import { DesignatedActionHistoryPanel } from './components/DesignatedActionHistoryPanel'
+import { PackageLockNotice } from './components/PackageLockNotice'
 
 // The shared document machinery keys on this string for designated actions.
 const PARENT_TYPE = 'designatedAction'
@@ -190,6 +191,10 @@ const DesignatedActionDetailBase = () => {
     )
   }
 
+  // Once the agreement is Underway its package is read-only (#5554): the
+  // action's details, its evidence requirements and its documents. The
+  // review on this page carries on.
+  const packageEditable = action.packageEditable === true
   const displayOrder = action.currentStatus?.displayOrder ?? 0
   const actionLabel = `DA${action.actionNumber}-IA${action.initiativeAgreementId}`
   const siblings = action.siblingActionIds || []
@@ -244,6 +249,10 @@ const DesignatedActionDetailBase = () => {
       </BCTypography>
       <Divider sx={{ mt: 2, mb: 3 }} />
 
+      {!packageEditable && (
+        <PackageLockNotice status={action.agreementLifecycleStatus} />
+      )}
+
       {/* Centred on the page, per the design review (#5118). */}
       <Stepper
         alternativeLabel
@@ -262,7 +271,9 @@ const DesignatedActionDetailBase = () => {
         color="nav"
         data-test="designated-action-card"
         headerAction={
-          <EditDesignatedAction action={action} onChanged={refreshAction} />
+          packageEditable && (
+            <EditDesignatedAction action={action} onChanged={refreshAction} />
+          )
         }
         content={
           <BCBox p={1}>
@@ -419,28 +430,35 @@ const DesignatedActionDetailBase = () => {
                 // Subfolders turned on at the business area's request
                 // (2026-09-01), superseding the earlier one-level cap.
                 allowSubfolders
+                readOnly={!packageEditable}
                 title={t('initiativeAgreement:actionDetail.documents')}
                 headerAction={
                   // Upload stays IDIR-side, like the API.
-                  <Role
-                    roles={[roles.ia_analyst, roles.ia_manager, roles.director]}
-                  >
-                    <BCTypography
-                      component="button"
-                      variant="body4"
-                      color="link"
-                      data-test="upload-documents-button"
-                      onClick={() => setUploadOpen(true)}
-                      sx={{
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        textDecoration: 'underline'
-                      }}
+                  packageEditable && (
+                    <Role
+                      roles={[
+                        roles.ia_analyst,
+                        roles.ia_manager,
+                        roles.director
+                      ]}
                     >
-                      {t('initiativeAgreement:actionDetail.manageDocuments')}
-                    </BCTypography>
-                  </Role>
+                      <BCTypography
+                        component="button"
+                        variant="body4"
+                        color="link"
+                        data-test="upload-documents-button"
+                        onClick={() => setUploadOpen(true)}
+                        sx={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          textDecoration: 'underline'
+                        }}
+                      >
+                        {t('initiativeAgreement:actionDetail.manageDocuments')}
+                      </BCTypography>
+                    </Role>
+                  )
                 }
               />
             </BCBox>
@@ -452,6 +470,7 @@ const DesignatedActionDetailBase = () => {
                 // only; directors see the review without controls that
                 // would be refused.
                 canEdit={canRecommend}
+                canEditWording={packageEditable}
                 missingInformationReadOnly={!canRecommend}
                 renderRequestAction={renderRequestAction}
               />
@@ -469,15 +488,17 @@ const DesignatedActionDetailBase = () => {
         }
       />
 
-      <DocumentUploadDialog
-        open={uploadOpen}
-        close={() => {
-          setUploadOpen(false)
-          refreshTree()
-        }}
-        parentType={PARENT_TYPE}
-        parentID={designatedActionId}
-      />
+      {packageEditable && (
+        <DocumentUploadDialog
+          open={uploadOpen}
+          close={() => {
+            setUploadOpen(false)
+            refreshTree()
+          }}
+          parentType={PARENT_TYPE}
+          parentID={designatedActionId}
+        />
+      )}
 
       {/* The audit trail behind every workflow step (#4898). */}
       <Role roles={[roles.ia_analyst, roles.ia_manager, roles.director]}>

@@ -269,3 +269,21 @@ def compliance_report_base_schema(
 def mock_transaction_repo():
     """Fixture to provide a mock transaction repository."""
     return MagicMock()
+
+
+@pytest.fixture
+def underway_packages_editable(monkeypatch):
+    """Open an Underway initiative agreement's package to direct edits.
+
+    For tests about what an edit does (note numbering, folder rules, the
+    change log), not whether the package lock allows it, which
+    initiative_agreement/test_package_edit_lock.py covers. Their agreements
+    are seeded Underway, as government created them before #5553.
+    """
+    from lcfs.web.api.initiative_agreement import workflow
+
+    monkeypatch.setattr(
+        workflow,
+        "LIFECYCLE_STATUSES_EDITABLE",
+        (workflow.LIFECYCLE_STATUS_DRAFT, workflow.LIFECYCLE_STATUS_UNDERWAY),
+    )

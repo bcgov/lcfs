@@ -24,6 +24,7 @@ from lcfs.services.s3.schema import (
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
 from lcfs.web.api.document_folder.constants import FOLDER_ENABLED_PARENT_TYPES
 from lcfs.web.api.initiative_agreement.validation import InitiativeAgreementValidation
+from lcfs.web.api.initiative_agreement.workflow import PACKAGE_DOCUMENT_PARENT_TYPES
 from lcfs.web.api.charging_site.validation import ChargingSiteValidation
 from lcfs.web.core.decorators import view_handler
 
@@ -89,6 +90,7 @@ async def validate_parent_access(
     cs_validate: ChargingSiteValidation,
     ci_validate,
     write: bool = False,
+    document_id: Optional[int] = None,
 ) -> None:
     """
     Assert the caller may reach *parent_id* of *parent_type*.
@@ -96,14 +98,20 @@ async def validate_parent_access(
     Every document route funnels through this, so a parent type that is not
     handled fails closed rather than silently skipping validation. *write*
     distinguishes internal comment edits from reads, applies the supplier
-    upload window for CI applications, and blocks government writes to fuel
-    production facility documents; the other surfaces grant both together.
+    upload window for CI applications, blocks government writes to fuel
+    production facility documents, and applies the initiative agreement
+    package lock (#5554); the other surfaces grant both together. A write's
+    *document_id* names the file it acts on; without one it is an upload.
     """
     if parent_type == "compliance_report":
         compliance_report = await cr_validate.validate_organization_access(parent_id)
         await cr_validate.validate_compliance_report_access(compliance_report)
     elif parent_type == "initiativeAgreement":
         await ia_validate.validate_organization_access(parent_id)
+        if write:
+            await ia_validate.validate_package_document_write(
+                parent_type, parent_id, document_id
+            )
     elif parent_type in ("adminAdjustment", "administrativeAdjustment"):
         # The service layer and the delete route spell this
         # "administrativeAdjustment"; the frontend sends the same. Accept both
@@ -115,6 +123,10 @@ async def validate_parent_access(
             parent_id
         )
         await ia_validate.validate_organization_access(agreement_id)
+        if write:
+            await ia_validate.validate_package_document_write(
+                parent_type, parent_id, document_id
+            )
     elif parent_type == "charging_site":
         await cs_validate.validate_organization_access(parent_id)
     elif parent_type == "ci_application":
@@ -229,8 +241,21 @@ async def upload_file(
         compliance_report = await cr_validate.validate_organization_access(parent_id)
         await cr_validate.validate_compliance_report_access(compliance_report)
 
-    if parent_type == "initiativeAgreement":
-        await ia_validate.validate_organization_access(parent_id)
+    if parent_type in PACKAGE_DOCUMENT_PARENT_TYPES:
+        # Access, then the package lock (#5554): a file added to, or
+        # replacing one on, an agreement's package is a package edit.
+        await validate_parent_access(
+            parent_type,
+            parent_id,
+            request,
+            document_service,
+            cr_validate,
+            ia_validate,
+            aa_validate,
+            cs_validate,
+            ci_validate,
+            write=True,
+        )
 
     if parent_type == "adminAdjustment":
         await aa_validate.validate_organization_access(parent_id)
@@ -352,6 +377,7 @@ async def rename_file(
         cs_validate,
         ci_validate,
         write=True,
+        document_id=document_id,
     )
 
     document = await document_service.rename_file(
@@ -454,6 +480,7 @@ async def delete_file(
         cs_validate,
         ci_validate,
         write=True,
+        document_id=document_id,
     )
 
     await document_service.delete_file(document_id, parent_id, parent_type)

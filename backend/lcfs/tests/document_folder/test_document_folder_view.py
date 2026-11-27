@@ -35,6 +35,10 @@ from lcfs.tests.initiative_agreement.test_initiative_agreement_api import (
     _two_org_ids,
 )
 
+# These tests are about what an edit does; the package lock (#5554) has
+# its own tests in initiative_agreement/test_package_edit_lock.py.
+pytestmark = pytest.mark.usefixtures("underway_packages_editable")
+
 
 async def _seed_da(dbsession, code="IA-26FLD1"):
     org_id, _ = await _two_org_ids(dbsession)

@@ -64,6 +64,9 @@ export const EvidenceRequirementCard = ({
   onSave,
   onRemove,
   canEdit,
+  // Rewording or removing the requirement is a package edit (#5554); the
+  // assessment canEdit covers is the review, which carries on.
+  canEditWording = true,
   missingInformationReadOnly,
   actions,
   allRequestsComplete,
@@ -280,7 +283,7 @@ export const EvidenceRequirementCard = ({
               {saveError}
             </BCAlert>
           )}
-          {canEdit && (
+          {canEdit && canEditWording && (
             <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
               <Tooltip
                 title={t('initiativeAgreement:evidence.removeRequirement')}
@@ -330,6 +333,7 @@ export const EvidenceRequirementCard = ({
           />
           <EvidenceRichTextField
             {...fieldProps('description', 'description', 'evidenceSummary')}
+            canEdit={canEdit && canEditWording}
             allowPencil={false}
             required
           />

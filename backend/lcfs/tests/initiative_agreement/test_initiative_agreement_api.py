@@ -1124,6 +1124,7 @@ async def test_create_agreement_is_closed_to_a_proponent(
 
 
 @pytest.mark.anyio
+@pytest.mark.usefixtures("underway_packages_editable")
 async def test_update_agreement_edits_a_submitted_agreement(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
@@ -1166,6 +1167,7 @@ async def test_update_agreement_edits_a_submitted_agreement(
 
 
 @pytest.mark.anyio
+@pytest.mark.usefixtures("underway_packages_editable")
 async def test_update_agreement_leaves_omitted_fields_alone(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
@@ -1189,6 +1191,7 @@ async def test_update_agreement_leaves_omitted_fields_alone(
 
 
 @pytest.mark.anyio
+@pytest.mark.usefixtures("underway_packages_editable")
 async def test_update_agreement_may_keep_its_own_code(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
@@ -1206,6 +1209,7 @@ async def test_update_agreement_may_keep_its_own_code(
 
 
 @pytest.mark.anyio
+@pytest.mark.usefixtures("underway_packages_editable")
 async def test_update_agreement_rejects_another_agreements_code(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
@@ -1224,6 +1228,7 @@ async def test_update_agreement_rejects_another_agreements_code(
 
 
 @pytest.mark.anyio
+@pytest.mark.usefixtures("underway_packages_editable")
 async def test_update_agreement_requires_a_code(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
@@ -1257,6 +1262,7 @@ async def test_update_agreement_rejects_a_code_longer_than_the_column(
 
 
 @pytest.mark.anyio
+@pytest.mark.usefixtures("underway_packages_editable")
 async def test_update_agreement_rejects_an_unknown_type(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
@@ -1274,6 +1280,7 @@ async def test_update_agreement_rejects_an_unknown_type(
 
 
 @pytest.mark.anyio
+@pytest.mark.usefixtures("underway_packages_editable")
 async def test_update_agreement_rejects_an_end_before_its_start(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
@@ -1331,6 +1338,7 @@ async def test_update_agreement_edits_a_draft(
 
 
 @pytest.mark.anyio
+@pytest.mark.usefixtures("underway_packages_editable")
 async def test_update_agreement_fills_in_a_missing_organization(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
@@ -1352,6 +1360,7 @@ async def test_update_agreement_fills_in_a_missing_organization(
 
 
 @pytest.mark.anyio
+@pytest.mark.usefixtures("underway_packages_editable")
 async def test_update_agreement_cannot_change_or_clear_a_set_organization(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
@@ -1379,6 +1388,7 @@ async def test_update_agreement_cannot_change_or_clear_a_set_organization(
 
 
 @pytest.mark.anyio
+@pytest.mark.usefixtures("underway_packages_editable")
 async def test_update_agreement_refuses_an_unknown_organization(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
