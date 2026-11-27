@@ -16,7 +16,7 @@ No backfill: versions are written only when a change order touches a
 record.
 
 Revision ID: fce153b2e467
-Revises: f29bf127e5a5
+Revises: 573dc510e543
 Create Date: 2026-11-24 15:00:00.000000
 """
 
@@ -25,7 +25,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision = "fce153b2e467"
-down_revision = "f29bf127e5a5"
+down_revision = "573dc510e543"
 branch_labels = None
 depends_on = None
 
@@ -198,10 +198,10 @@ AUDITED_TABLES = (
 
 
 def _add_audit_triggers():
-    """Audit this migration's tables only. ensure_audit_triggers() would also
-    attach the trigger to every other table without one, including
-    scheduled_job_lease, whose text key the audit trigger cannot handle: the
-    maintenance jobs' lease writes would then fail."""
+    """Audit this migration's tables only. ensure_audit_triggers() would
+    also attach the trigger to every other table that has none, which is not
+    this migration's business; 573dc510e543 keeps it off scheduled_job_lease,
+    whose text key the audit trigger cannot handle."""
     for table in AUDITED_TABLES:
         trigger = f"audit_{table}_insert_update_delete"[:63]
         op.execute(f"""
