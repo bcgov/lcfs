@@ -37,6 +37,18 @@ from lcfs.web.exception.exceptions import DataNotFoundException, ServiceExceptio
 
 logger = structlog.get_logger(__name__)
 
+GOVERNMENT_ROLES = {
+    RoleEnum.GOVERNMENT,
+    RoleEnum.ADMINISTRATOR,
+    RoleEnum.ANALYST,
+    RoleEnum.COMPLIANCE_MANAGER,
+    RoleEnum.DIRECTOR,
+}
+
+
+def _is_government_user(user: UserProfile) -> bool:
+    return bool(GOVERNMENT_ROLES.intersection(getattr(user, "role_names", []) or []))
+
 
 class TransferServices:
     def __init__(
@@ -72,6 +84,8 @@ class TransferServices:
         for t in transfers:
             # Convert to schema
             transfer_schema = TransferSchema.model_validate(t)
+            if not _is_government_user(user):
+                transfer_schema.recommendation = None
             # Sort the existing comments by create_date
             sorted_comments = sorted(
                 t.transfer_comments, key=lambda c: c.create_date or datetime.min
@@ -110,6 +124,7 @@ class TransferServices:
         transfer = await self.repo.get_transfer_by_id(transfer_id)
         # Check if the current viewer is a gov user
         is_government_viewer = user_has_roles(user, [RoleEnum.GOVERNMENT])
+        is_internal_viewer = _is_government_user(user)
         if not transfer or (
             self._status_hidden_from(transfer, user, is_government_viewer)
             or (
@@ -124,6 +139,8 @@ class TransferServices:
             raise DataNotFoundException(f"Transfer with ID {transfer_id} not found")
 
         transfer_view = TransferSchema.model_validate(transfer)
+        if not is_internal_viewer:
+            transfer_view.recommendation = None
 
         # Gather the comments from the new transfer_comment table
         sorted_comments = sorted(

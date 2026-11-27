@@ -999,7 +999,15 @@ def _assignment_event_name(
 
 
 def _is_idir_user(user: Optional[UserProfile]) -> bool:
-    return bool(user and RoleEnum.GOVERNMENT in (getattr(user, "role_names", []) or []))
+    government_roles = {
+        RoleEnum.GOVERNMENT,
+        RoleEnum.ADMINISTRATOR,
+        RoleEnum.ANALYST,
+        RoleEnum.COMPLIANCE_MANAGER,
+        RoleEnum.DIRECTOR,
+    }
+    user_roles = getattr(user, "role_names", []) or []
+    return bool(user and government_roles.intersection(user_roles))
 
 
 def _to_assigned_analyst(user) -> Optional[AssignedAnalystSchema]:
@@ -1047,6 +1055,7 @@ def _effective_priority_score(ci: CIApplication) -> Optional[int]:
 def _to_list_item(
     ci: CIApplication,
     last_comment_entry: Optional[Tuple] = None,
+    include_internal_fields: bool = True,
 ) -> CIApplicationBaseSchema:
     last_comment: Optional[LatestCommentSchema] = None
     if last_comment_entry is not None:
@@ -1076,13 +1085,48 @@ def _to_list_item(
             getattr(ci, "pathway_supplemental_edit_enabled", False)
         ),
         document_upload_enabled=bool(getattr(ci, "document_upload_enabled", False)),
-        preliminary_risk_assessment=getattr(ci, "preliminary_risk_assessment", None),
+        preliminary_risk_assessment=(
+            getattr(ci, "preliminary_risk_assessment", None)
+            if include_internal_fields
+            else None
+        ),
         update_date=ci.update_date.isoformat() if ci.update_date else None,
         create_date=ci.create_date.isoformat() if ci.create_date else None,
-        assigned_analyst=_to_assigned_analyst(getattr(ci, "assigned_analyst", None)),
+        assigned_analyst=(
+            _to_assigned_analyst(getattr(ci, "assigned_analyst", None))
+            if include_internal_fields
+            else None
+        ),
         last_comment=last_comment,
-        priority_score=_effective_priority_score(ci),
-        verification_level=_verification_level_from_progress(ci),
+        priority_score=(
+            _effective_priority_score(ci) if include_internal_fields else None
+        ),
+        verification_level=(
+            _verification_level_from_progress(ci) if include_internal_fields else None
+        ),
+    )
+
+
+def _mask_ci_internal_fields(schema: CIApplicationSchema) -> CIApplicationSchema:
+    """Remove internal government review details from a supplier response."""
+    return schema.model_copy(
+        update={
+            "preliminary_risk_assessment": None,
+            "priority_score": None,
+            "assigned_analyst": None,
+            "assignment_history": None,
+            "return_history": None,
+            "verification_1_user": None,
+            "verification_1_date": None,
+            "verification_2_user": None,
+            "verification_2_date": None,
+            "verification_2_risk_assessment": None,
+            "verification_2_priority_score": None,
+            "recommendation_user": None,
+            "recommendation_date": None,
+            "approval_user": None,
+            "approval_date": None,
+        }
     )
 
 
@@ -1125,12 +1169,15 @@ class CIApplicationServices:
             display_name = await self.user_repo.get_full_name(ci.signature_user)
             if display_name:
                 display_name = display_name.strip() or None
-        return _to_full_schema(
+        schema = _to_full_schema(
             ci,
             signature_user_display_name=display_name,
             include_assignment_history=_is_idir_user(requesting_user),
             viewer=requesting_user,
         )
+        if not _is_idir_user(requesting_user):
+            schema = _mask_ci_internal_fields(schema)
+        return schema
 
     async def _get_assignment_user(
         self, ci_application: CIApplication, analyst_id: Optional[int]
@@ -1800,6 +1847,7 @@ class CIApplicationServices:
         pagination: PaginationRequestSchema,
         organization_id: Optional[int],
         exclude_draft: bool = False,
+        requesting_user: Optional[UserProfile] = None,
     ) -> CIApplicationsListSchema:
         items, total = await self.repo.list_paginated(
             pagination,
@@ -1820,6 +1868,7 @@ class CIApplicationServices:
                 _to_list_item(
                     ci,
                     last_comment_entry=latest_comments.get(ci.ci_application_id),
+                    include_internal_fields=_is_idir_user(requesting_user),
                 )
                 for ci in items
             ],
@@ -1945,7 +1994,7 @@ class CIApplicationServices:
         await self.repo.update(ci_application)
 
         ci = await self.repo.get_by_id(ci_application.ci_application_id)
-        return await self._to_full_schema_with_user(ci)
+        return await self._to_full_schema_with_user(ci, user)
 
     @service_handler
     async def complete_verification_1(
