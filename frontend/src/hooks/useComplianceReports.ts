@@ -657,7 +657,7 @@ export const useCreateSupplementalReport = (
   reportID: number | string | undefined | null,
   options: ExtMutationOptions<
     AxiosResponse<ComplianceReportCreationResult>,
-    unknown
+    void
   > = {}
 ) => {
   const client = useApiService()
@@ -673,9 +673,9 @@ export const useCreateSupplementalReport = (
   return useMutation<
     AxiosResponse<ComplianceReportCreationResult>,
     Error,
-    unknown
+    void
   >({
-    mutationFn: async (_variables: unknown) => {
+    mutationFn: async () => {
       if (!reportID) {
         throw new Error('Report ID is required')
       }

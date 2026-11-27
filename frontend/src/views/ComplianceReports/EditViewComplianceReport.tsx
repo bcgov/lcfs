@@ -695,7 +695,7 @@ export const EditViewComplianceReport = ({
       // Action functions
       updateComplianceReport,
       deleteComplianceReport: (_data) => deleteComplianceReport(),
-      createSupplementalReport: (data) => createSupplementalReport(data),
+      createSupplementalReport: (_data) => createSupplementalReport(),
       createIdirSupplementalReport: (data) =>
         createIdirSupplementalReport(data),
       createAnalystAdjustment,

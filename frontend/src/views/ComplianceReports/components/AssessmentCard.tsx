@@ -124,7 +124,7 @@ export const AssessmentCard = ({
   const handleCreateSupplementalClick = () => {
     setModalData({
       primaryButtonAction: () => {
-        createSupplementalReport(undefined)
+        createSupplementalReport()
       },
       primaryButtonText: t('report:createSupplementalRptBtn'),
       primaryButtonLoading: isLoading,
