@@ -1,4 +1,4 @@
-import type { ColDef, ValueFormatterParams } from 'ag-grid-community'
+import type { ColDef } from 'ag-grid-community'
 import {
   numberFormatter,
   currencyFormatter,
@@ -12,15 +12,7 @@ import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filte
 import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
 import { useTransactionStatuses } from '@/hooks/useTransactions'
 
-// Shared formatters preserve null and non-numeric input, while AG Grid's
-// formatter type only permits strings. Keep that runtime contract here.
-type TransactionColDef = Omit<ColDef, 'valueFormatter'> & {
-  valueFormatter?: (params: ValueFormatterParams) => unknown
-}
-
-export const transactionsColDefs = (
-  t: (key: string) => string
-): TransactionColDef[] => [
+export const transactionsColDefs = (t: (key: string) => string): ColDef[] => [
   {
     colId: 'status',
     field: 'status',
@@ -103,7 +95,10 @@ export const transactionsColDefs = (
       if (suffix) {
         return `${displayType} - ${suffix}`
       }
-      return displayType
+      // spacesFormatter passes through nonstring inputs unchanged; AG Grid
+      // models valueFormatter as returning a string, while this grid expects
+      // the helper's existing pass-through behavior.
+      return displayType as string
     },
     filter: true, // Enable filtering
     filterParams: {
@@ -185,7 +180,9 @@ export const transactionsColDefs = (
     colId: 'pricePerUnit',
     field: 'pricePerUnit',
     headerName: t('txn:txnColLabels.pricePerUnit'),
-    valueFormatter: currencyFormatter,
+    // The formatter returns raw nonnumeric values unchanged; AG Grid's type
+    // models this callback as string even though the runtime supports pass-through values.
+    valueFormatter: (params) => currencyFormatter(params) as string,
     minWidth: 190,
     valueGetter: (params) => {
       const value = params.data?.pricePerUnit

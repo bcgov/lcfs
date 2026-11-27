@@ -30,6 +30,17 @@ import OrganizationList from './components/OrganizationList'
 import Loading from '@/components/Loading'
 import { ConditionalLinkRenderer } from '@/utils/grid/cellRenderers'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
+import type {
+  BCGridQueryData,
+  BCGridRow,
+  BCGridViewerProps,
+  BCPaginationFilter,
+  BCPaginationOptions
+} from '@/components/BCDataGrid/types'
+import type { GetRowIdParams } from 'ag-grid-community'
+import type { RendererProps } from '@/utils/grid/cellRenderers'
+import type { ReactNode, SyntheticEvent } from 'react'
+import type { AgGridReact } from 'ag-grid-react'
 import {
   useGetTransactionList,
   useDownloadTransactions
@@ -38,14 +49,44 @@ import '@/constants/schedules'
 import { CreditTradingMarket } from './CreditTradingMarket/CreditTradingMarket'
 import { CreditMarketAuditLogTable } from './CreditTradingMarket/CreditMarketAuditLogTable'
 
-const initialPaginationOptions = {
+const initialPaginationOptions: BCPaginationOptions = {
   page: 1,
   size: 10,
   sortOrders: defaultSortModel,
   filters: []
 }
 
-function TabPanel({ children, value, index }) {
+interface TransactionRow extends BCGridRow {
+  transactionId: string | number
+  transactionType: string
+  fromOrganization?: string | null
+  status?: string
+  compliancePeriod?: string | null
+}
+
+const isTransactionRow = (data: unknown): data is TransactionRow =>
+  typeof data === 'object' &&
+  data !== null &&
+  'transactionId' in data &&
+  (typeof data.transactionId === 'string' ||
+    typeof data.transactionId === 'number') &&
+  'transactionType' in data &&
+  typeof data.transactionType === 'string' &&
+  (!('fromOrganization' in data) ||
+    data.fromOrganization === null ||
+    typeof data.fromOrganization === 'string') &&
+  (!('status' in data) || typeof data.status === 'string') &&
+  (!('compliancePeriod' in data) ||
+    data.compliancePeriod === null ||
+    typeof data.compliancePeriod === 'string')
+
+interface TabPanelProps {
+  children: ReactNode
+  value: number
+  index: number
+}
+
+function TabPanel({ children, value, index }: TabPanelProps) {
   return (
     <BCBox
       role="tabpanel"
@@ -64,24 +105,30 @@ export const Transactions = () => {
   const navigate = useNavigate()
   const location = useLocation()
   useApiService()
-  const gridRef = useRef()
+  const gridRef = useRef<AgGridReact<BCGridRow> | null>(null)
   const downloadButtonRef = useRef(null)
   const { data: currentUser, hasAnyRole, hasRoles } = useCurrentUser()
 
-  const highlightedId = new URLSearchParams(location.search).get('hid')
-  const [tabsOrientation, setTabsOrientation] = useState('horizontal')
+  const [tabsOrientation, setTabsOrientation] = useState<
+    'horizontal' | 'vertical'
+  >('horizontal')
 
   const [isDownloadingTransactions, setIsDownloadingTransactions] =
     useState(false)
   const [alertMessage, setAlertMessage] = useState('')
-  const [alertSeverity, setAlertSeverity] = useState('info')
+  const [alertSeverity, setAlertSeverity] = useState<
+    'info' | 'success' | 'warning' | 'error' | 'pending'
+  >('info')
 
-  const [paginationOptions, setPaginationOptions] = useState(
-    initialPaginationOptions
-  )
+  const [paginationOptions, setPaginationOptions] =
+    useState<BCPaginationOptions>(initialPaginationOptions)
 
   // Initialize selected organization from session storage for persistence
-  const [selectedOrg, setSelectedOrg] = useState(() => {
+  const [selectedOrg, setSelectedOrg] = useState<{
+    id: string | number | null
+    label: string | null
+    name: string | null
+  }>(() => {
     const savedOrgFilter = sessionStorage.getItem('transactions-grid-orgFilter')
     if (savedOrgFilter) {
       try {
@@ -93,20 +140,26 @@ export const Transactions = () => {
     return { id: null, label: null, name: null }
   })
 
-  const queryData = useGetTransactionList(
+  const transactionQuery = useGetTransactionList(
     {
       ...paginationOptions,
       selectedOrgId: selectedOrg?.id
     },
     {
-      cacheTime: 0,
+      gcTime: 0,
       staleTime: 0
     }
   )
+  const queryData: BCGridQueryData<BCGridRow> = {
+    data: transactionQuery.data,
+    error: transactionQuery.error,
+    isError: transactionQuery.isError,
+    isLoading: transactionQuery.isLoading
+  }
 
-  const { mutateAsync: downloadTransactions } = useDownloadTransactions()
+  const { mutateAsync: downloadTransactions } = useDownloadTransactions({})
 
-  const getRowId = useCallback((params) => {
+  const getRowId = useCallback((params: GetRowIdParams) => {
     return (
       params.data.transactionType.toLowerCase() +
       '-' +
@@ -115,16 +168,23 @@ export const Transactions = () => {
   }, [])
 
   const shouldRenderLink = useCallback(
-    (props) => {
+    (props: RendererProps) => {
+      const transactionType =
+        props.data &&
+        typeof props.data === 'object' &&
+        'transactionType' in props.data
+          ? props.data.transactionType
+          : undefined
+      if (typeof transactionType !== 'string') return false
       // Legacy/Standalone and Aggregator Issuance transactions have no detail view page
       if (
-        props.data.transactionType === 'StandaloneTransaction' ||
-        props.data.transactionType === 'AggregatorIssuance'
+        transactionType === 'StandaloneTransaction' ||
+        transactionType === 'AggregatorIssuance'
       ) {
         return false
       }
       return (
-        props.data.transactionType !== 'ComplianceReport' ||
+        transactionType !== 'ComplianceReport' ||
         hasAnyRole(
           roles.government,
           roles.signing_authority,
@@ -140,32 +200,34 @@ export const Transactions = () => {
       cellRenderer: ConditionalLinkRenderer(shouldRenderLink),
       cellRendererParams: {
         isAbsolute: true,
-        url: (
-          data // Based on the user Type (BCeID or IDIR) navigate to specific view
-        ) => {
+        url: (params: { data: unknown }) => {
+          if (!isTransactionRow(params.data)) return undefined
+          const data = params.data
           const {
             transactionId,
             transactionType,
             fromOrganization,
             status,
             compliancePeriod
-          } = data.data
+          } = data
           const userOrgName = currentUser?.organization?.name
 
           // Define routes mapping for transaction types
-          const routesMapping = {
+          const routesMapping: Partial<
+            Record<string, Partial<Record<'view' | 'edit', string>>>
+          > = {
             Transfer: {
               view: ROUTES.TRANSFERS.VIEW,
               edit: ROUTES.TRANSFERS.EDIT
             },
             AdminAdjustment: {
-              view: currentUser.isGovernmentUser
+              view: currentUser?.isGovernmentUser
                 ? ROUTES.TRANSACTIONS.ADMIN_ADJUSTMENT.VIEW
                 : ROUTES.TRANSACTIONS.ADMIN_ADJUSTMENT.ORG_VIEW,
               edit: ROUTES.TRANSACTIONS.ADMIN_ADJUSTMENT.EDIT
             },
             InitiativeAgreement: {
-              view: currentUser.isGovernmentUser
+              view: currentUser?.isGovernmentUser
                 ? ROUTES.TRANSACTIONS.INITIATIVE_AGREEMENT.VIEW
                 : ROUTES.TRANSACTIONS.INITIATIVE_AGREEMENT.ORG_VIEW,
               edit: ROUTES.TRANSACTIONS.INITIATIVE_AGREEMENT.EDIT
@@ -189,10 +251,10 @@ export const Transactions = () => {
 
           if (routeTemplate) {
             return routeTemplate
-              .replace(':transactionId', transactionId)
-              .replace(':transferId', transactionId)
-              .replace(':compliancePeriod', compliancePeriod)
-              .replace(':complianceReportId', transactionId)
+              .replace(':transactionId', String(transactionId))
+              .replace(':transferId', String(transactionId))
+              .replace(':compliancePeriod', String(compliancePeriod))
+              .replace(':complianceReportId', String(transactionId))
           } else {
             console.error(
               'No route defined for this transaction type and scenario'
@@ -211,13 +273,15 @@ export const Transactions = () => {
     } else if (selectedOrg.id) {
       return apiRoutes.exportFilteredTransactionsByOrg.replace(
         ':orgID',
-        selectedOrg?.id
+        String(selectedOrg?.id)
       )
     }
     return apiRoutes.exportTransactions
   }, [selectedOrg, hasRoles])
 
-  const convertToBackendFilters = (model = {}) =>
+  const convertToBackendFilters = (
+    model: Record<string, BCPaginationFilter> = {}
+  ) =>
     Object.entries(model).map(([field, cfg]) => ({
       field,
       filterType: cfg.filterType || 'text',
@@ -227,10 +291,14 @@ export const Transactions = () => {
       dateTo: cfg.dateTo
     }))
 
-  const buildExportPayload = (gridApi) => ({
+  const buildExportPayload = (
+    gridApi:
+      | { getFilterModel?: () => Record<string, BCPaginationFilter> }
+      | undefined
+  ) => ({
     page: 1,
     size: 10000, // ignored by back-end but required by schema
-    filters: convertToBackendFilters(gridApi.getFilterModel?.() || {}),
+    filters: convertToBackendFilters(gridApi?.getFilterModel?.() || {}),
     sortOrders: []
   })
 
@@ -274,25 +342,32 @@ export const Transactions = () => {
   }, [])
 
   // Function to update organization filter with session storage persistence
-  const updateOrgFilter = useCallback((orgData) => {
-    setSelectedOrg(orgData)
+  const updateOrgFilter = useCallback(
+    (orgData: {
+      id: string | number | null
+      label: string | null
+      name: string | null
+    }) => {
+      setSelectedOrg(orgData)
 
-    try {
-      if (orgData.id && orgData.label) {
-        sessionStorage.setItem(
-          'transactions-grid-orgFilter',
-          JSON.stringify(orgData)
+      try {
+        if (orgData.id && orgData.label) {
+          sessionStorage.setItem(
+            'transactions-grid-orgFilter',
+            JSON.stringify(orgData)
+          )
+        } else {
+          sessionStorage.removeItem('transactions-grid-orgFilter')
+        }
+      } catch (error) {
+        console.warn(
+          'Failed to update organization filter in session storage:',
+          error
         )
-      } else {
-        sessionStorage.removeItem('transactions-grid-orgFilter')
       }
-    } catch (error) {
-      console.warn(
-        'Failed to update organization filter in session storage:',
-        error
-      )
-    }
-  }, [])
+    },
+    []
+  )
 
   const resetGridFiltersState = useCallback(() => {
     setPaginationOptions(initialPaginationOptions)
@@ -305,21 +380,26 @@ export const Transactions = () => {
     }
   }, [updateOrgFilter])
 
-  const filterToolbarConfig = useMemo(() => {
+  const filterToolbarConfig = useMemo<
+    NonNullable<BCGridViewerProps<BCGridRow>['filterToolbarConfig']>
+  >(() => {
     if (!selectedOrg.id || !selectedOrg.label) {
       return { additionalPills: [] }
     }
-    return {
+    const config: NonNullable<
+      BCGridViewerProps<BCGridRow>['filterToolbarConfig']
+    > = {
       additionalPills: [
         {
           id: `organization-${selectedOrg.id}`,
           label: t('common:Organization', 'Organization'),
-          value: selectedOrg.name,
+          value: selectedOrg.name ?? undefined,
           type: 'select',
           onRemove: () => updateOrgFilter({ id: null, label: null, name: null })
         }
       ]
     }
+    return config
   }, [selectedOrg.id, selectedOrg.label, selectedOrg.name, t, updateOrgFilter])
 
   // Determine if the user is eligible for credit trading market tab
@@ -338,7 +418,7 @@ export const Transactions = () => {
         ? 'credit-trading-market-audit-log'
         : 'transactions'
 
-  const tabRoutes = [ROUTES.TRANSACTIONS.LIST]
+  const tabRoutes: string[] = [ROUTES.TRANSACTIONS.LIST]
   if (showCreditTradingTab) {
     tabRoutes.push(ROUTES.TRANSACTIONS.CREDIT_TRADING_MARKET)
   }
@@ -368,13 +448,13 @@ export const Transactions = () => {
     return <Loading />
   }
 
-  const handleChangeTab = (event, newValue) => {
+  const handleChangeTab = (_event: SyntheticEvent, newValue: number) => {
     const nextRoute = tabRoutes[newValue] || ROUTES.TRANSACTIONS.LIST
     navigate(nextRoute)
   }
 
   // Convert tab parameter to index
-  const getTabIndex = (tab) => {
+  const getTabIndex = (tab: string) => {
     if (tab === 'credit-trading-market' && showCreditTradingTab) return 1
     if (
       tab === 'credit-trading-market-audit-log' &&
@@ -488,7 +568,6 @@ export const Transactions = () => {
                   ...newPagination
                 }))
               }
-              highlightedRowId={highlightedId}
               filterToolbarConfig={filterToolbarConfig}
               onClearFilters={resetGridFiltersState}
             />

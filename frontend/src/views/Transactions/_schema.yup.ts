@@ -2,8 +2,18 @@ import * as Yup from 'yup'
 
 export const AddEditTransactionSchema = Yup.object({
   txnType: Yup.string().required('Transaction type is required'),
-  toOrganizationId: Yup.string().required('Organization selection is required'),
+  toOrganizationId: Yup.mixed<string | number>()
+    .nullable()
+    .transform((value, originalValue) =>
+      typeof originalValue === 'number' ? String(originalValue) : value
+    )
+    .test(
+      'required',
+      'Organization selection is required',
+      (value) => value !== null && value !== undefined && value !== ''
+    ),
   complianceUnits: Yup.number()
+    .nullable()
     .typeError('Compliance units must be a number')
     .when('txnType', (txnType, schema) => {
       return txnType[0] === 'initiativeAgreement'
@@ -12,7 +22,11 @@ export const AddEditTransactionSchema = Yup.object({
           )
         : schema
     })
-    .required('Compliance units is required'),
+    .test(
+      'required',
+      'Compliance units is required',
+      (value) => value !== null && value !== undefined
+    ),
   transactionEffectiveDate: Yup.string()
     .transform((value, originalValue) => {
       // If the original value is an empty string, return null
@@ -36,5 +50,6 @@ export const AddEditTransactionSchema = Yup.object({
     .nullable()
     .default(null),
   toOrgComment: Yup.string(),
+  govComment: Yup.string().nullable(),
   internalComment: Yup.string()
 })

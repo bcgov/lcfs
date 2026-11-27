@@ -35,19 +35,19 @@ interface ButtonClusterParams {
 }
 
 const outlineBase = {
-  variant: 'outlined',
-  color: 'primary'
+  variant: 'outlined' as const,
+  color: 'primary' as const
 }
 
 const containedBase = {
-  variant: 'contained',
-  color: 'primary',
+  variant: 'contained' as const,
+  color: 'primary' as const,
   iconColor: colors.white.main
 }
 
 const redBase = {
-  variant: 'outlined',
-  color: 'error',
+  variant: 'outlined' as const,
+  color: 'error' as const,
   iconColor: colors.error.main
 }
 

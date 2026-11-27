@@ -5,6 +5,13 @@ import BCBox from '@/components/BCBox'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { defaultInitialPagination } from '@/constants/schedules'
 import { useCreditMarketAuditLogs } from '@/hooks/useOrganization'
+import type { GetRowIdParams } from 'ag-grid-community'
+import type {
+  BCGridRef,
+  BCGridRow,
+  BCGridQueryData,
+  BCPaginationOptions
+} from '@/components/BCDataGrid/types'
 
 import { creditMarketAuditLogColDefs, defaultAuditSortModel } from './_schema'
 
@@ -15,18 +22,25 @@ const initialPaginationOptions = {
 
 export const CreditMarketAuditLogTable = () => {
   const { t } = useTranslation(['creditMarket'])
-  const gridRef = useRef(null)
-  const [paginationOptions, setPaginationOptions] = useState(
-    initialPaginationOptions
-  )
+  const gridRef: BCGridRef = useRef(null)
+  const [paginationOptions, setPaginationOptions] =
+    useState<BCPaginationOptions>(initialPaginationOptions)
 
-  const queryData = useCreditMarketAuditLogs(paginationOptions, {
+  const auditQuery = useCreditMarketAuditLogs(paginationOptions, {
     cacheTime: 0,
     staleTime: 0
   })
+  const queryData: BCGridQueryData<BCGridRow> = {
+    data: auditQuery.data,
+    error: auditQuery.error,
+    isError: auditQuery.isError,
+    isLoading: auditQuery.isLoading
+  }
 
-  const getRowId = useCallback((params) => {
-    return params.data.creditMarketAuditLogId.toString()
+  const auditGridProps = { defaultSortModel: defaultAuditSortModel }
+
+  const getRowId = useCallback((params: GetRowIdParams<BCGridRow>) => {
+    return String(params.data.creditMarketAuditLogId)
   }, [])
 
   return (
@@ -35,10 +49,12 @@ export const CreditMarketAuditLogTable = () => {
         gridRef={gridRef}
         queryData={queryData}
         dataKey="creditMarketAuditLogs"
-        columnDefs={creditMarketAuditLogColDefs(t)}
+        columnDefs={creditMarketAuditLogColDefs((key, fallback) =>
+          fallback === undefined ? t(key) : t(key, fallback)
+        )}
         gridKey="credit-market-audit-log-grid"
         getRowId={getRowId}
-        defaultSortModel={defaultAuditSortModel}
+        {...auditGridProps}
         overlayNoRowsTemplate={t(
           'creditMarket:noAuditLogsFound',
           'No audit log entries found'

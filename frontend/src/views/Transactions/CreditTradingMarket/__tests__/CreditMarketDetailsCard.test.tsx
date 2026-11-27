@@ -4,27 +4,88 @@ import { screen, act } from '@testing-library/react'
 import { vi, describe, expect, beforeEach } from 'vite-plus/test'
 import { CreditMarketDetailsCard } from '../CreditMarketDetailsCard'
 import { test } from '@/tests/utils/fixtures'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
-import {
-  useOrganization,
-  useUpdateCurrentOrgCreditMarket,
-  useUpdateOrganizationCreditMarket
-} from '@/hooks/useOrganization'
-import { useQueryClient } from '@tanstack/react-query'
 
-// Mock the hooks
-vi.mock('@/hooks/useCurrentUser')
-vi.mock('@/hooks/useOrganization')
-vi.mock('@tanstack/react-query')
+interface MockUser {
+  firstName: string | null
+  lastName: string | null
+  roles: { name: string }[]
+  organization: { organizationId: number }
+}
+interface MockOrganization {
+  organizationId: number
+  creditMarketContactName?: string | null
+  creditMarketContactPhone?: string | null
+  creditMarketContactEmail?: string | null
+  creditMarketIsSeller: boolean
+  creditMarketIsBuyer: boolean
+  creditsToSell: number
+  displayInCreditMarket: boolean
+  totalBalance: number | null
+  total_balance?: number
+  orgStatus: { status: string }
+  phone: string | null
+  email: string | null
+}
+interface MockMutationOptions {
+  onSuccess?: () => void
+  onError?: (error: Error) => void
+}
+interface MockMutation {
+  mutate: ReturnType<typeof vi.fn>
+  isPending: boolean
+  isError: boolean
+  error: null
+}
+const {
+  mockUseCurrentUser,
+  mockUseOrganization,
+  mockUseUpdateCurrentOrgCreditMarket,
+  mockUseUpdateOrganizationCreditMarket,
+  mockUseQueryClient
+} = vi.hoisted(() => ({
+  mockUseCurrentUser: vi.fn<
+    () => {
+      data: MockUser | null
+      hasAnyRole: (...roles: string[]) => boolean
+    }
+  >(),
+  mockUseOrganization:
+    vi.fn<() => { data: MockOrganization | null; isLoading: boolean }>(),
+  mockUseUpdateCurrentOrgCreditMarket:
+    vi.fn<(options?: MockMutationOptions) => MockMutation>(),
+  mockUseUpdateOrganizationCreditMarket: vi.fn<() => MockMutation>(),
+  mockUseQueryClient:
+    vi.fn<() => { refetchQueries: ReturnType<typeof vi.fn> }>()
+}))
+vi.mock('@/hooks/useCurrentUser', () => ({
+  useCurrentUser: mockUseCurrentUser
+}))
+vi.mock('@/hooks/useOrganization', () => ({
+  useOrganization: mockUseOrganization,
+  useUpdateCurrentOrgCreditMarket: mockUseUpdateCurrentOrgCreditMarket,
+  useUpdateOrganizationCreditMarket: mockUseUpdateOrganizationCreditMarket
+}))
+vi.mock('@tanstack/react-query', () => ({ useQueryClient: mockUseQueryClient }))
 
 // Mock FontAwesome icons
 vi.mock('@fortawesome/react-fontawesome', () => ({
-  FontAwesomeIcon: ({ icon }) => <span data-testid={`icon-${icon.iconName}`} />
+  FontAwesomeIcon: ({ icon }: { icon: { iconName: string } }) => (
+    <span data-testid={`icon-${icon.iconName}`} />
+  )
 }))
 
 // Mock BC Components to be simpler for testing
 vi.mock('@/components/BCWidgetCard/BCWidgetCard', () => ({
-  default: ({ title, content, editButton, ...props }) => (
+  default: ({
+    title,
+    content,
+    editButton,
+    ...props
+  }: {
+    title: React.ReactNode
+    content: React.ReactNode
+    editButton?: { onClick: () => void; id: string; text: React.ReactNode }
+  } & React.HTMLAttributes<HTMLDivElement>) => (
     <div data-testid="bc-widget-card" {...props}>
       <h2>{title}</h2>
       {editButton && (
@@ -53,7 +114,14 @@ vi.mock('react-hook-form', () => ({
     formState: { isDirty: false },
     watch: mockWatch
   }),
-  Controller: ({ render }) => {
+  Controller: ({
+    render
+  }: {
+    render: (props: {
+      field: { value: string; onChange: ReturnType<typeof vi.fn> }
+      fieldState: object
+    }) => React.ReactNode
+  }) => {
     const fieldProps = { value: '', onChange: vi.fn() }
     return render({ field: fieldProps, fieldState: {} })
   }
@@ -66,7 +134,7 @@ const mockCurrentUser = {
   organization: { organizationId: 1 }
 }
 
-const mockHasAnyRole = vi.fn((...roleNames) =>
+const mockHasAnyRole = vi.fn((...roleNames: string[]) =>
   roleNames.some((roleName) =>
     mockCurrentUser.roles.some((userRole) => userRole.name === roleName)
   )
@@ -110,37 +178,48 @@ describe('CreditMarketDetailsCard', () => {
     vi.clearAllMocks()
     mockHasAnyRole.mockClear()
 
-    mockHandleSubmit.mockImplementation((fn) => (e) => {
-      e?.preventDefault?.()
-      const formData = {
-        contactName: 'Jane Smith',
-        phone: '555-1234',
-        email: 'jane@example.com',
-        isSeller: true,
-        isBuyer: false,
-        creditsToSell: '100',
-        displayInMarket: true
-      }
-      fn(formData)
-    })
+    mockHandleSubmit.mockImplementation(
+      (
+        fn: (data: {
+          contactName: string
+          phone: string
+          email: string
+          isSeller: boolean
+          isBuyer: boolean
+          creditsToSell: string
+          displayInMarket: boolean
+        }) => void
+      ) =>
+        (e?: { preventDefault?: () => void }) => {
+          e?.preventDefault?.()
+          const formData = {
+            contactName: 'Jane Smith',
+            phone: '555-1234',
+            email: 'jane@example.com',
+            isSeller: true,
+            isBuyer: false,
+            creditsToSell: '100',
+            displayInMarket: true
+          }
+          fn(formData)
+        }
+    )
 
     mockWatch.mockReturnValue(true)
 
-    vi.mocked(useCurrentUser).mockReturnValue({
+    mockUseCurrentUser.mockReturnValue({
       data: mockCurrentUser,
       hasAnyRole: mockHasAnyRole
     })
-    vi.mocked(useOrganization).mockReturnValue({
+    mockUseOrganization.mockReturnValue({
       data: mockOrganizationData,
       isLoading: false
     })
-    vi.mocked(useUpdateCurrentOrgCreditMarket).mockReturnValue(
-      mockUpdateMutation
-    )
-    vi.mocked(useUpdateOrganizationCreditMarket).mockReturnValue(
+    mockUseUpdateCurrentOrgCreditMarket.mockReturnValue(mockUpdateMutation)
+    mockUseUpdateOrganizationCreditMarket.mockReturnValue(
       mockAdminUpdateMutation
     )
-    vi.mocked(useQueryClient).mockReturnValue(mockQueryClient)
+    mockUseQueryClient.mockReturnValue(mockQueryClient)
   })
 
   describe('Loading and Basic Rendering', () => {
@@ -149,7 +228,7 @@ describe('CreditMarketDetailsCard', () => {
       theme,
       i18n
     }) => {
-      vi.mocked(useOrganization).mockReturnValue({
+      mockUseOrganization.mockReturnValue({
         data: null,
         isLoading: true
       })
@@ -187,7 +266,7 @@ describe('CreditMarketDetailsCard', () => {
       theme,
       i18n
     }) => {
-      vi.mocked(useCurrentUser).mockReturnValue({
+      mockUseCurrentUser.mockReturnValue({
         data: { ...mockCurrentUser, roles: [{ name: 'supplier' }] },
         hasAnyRole: () => false
       })
@@ -202,7 +281,7 @@ describe('CreditMarketDetailsCard', () => {
       theme,
       i18n
     }) => {
-      vi.mocked(useCurrentUser).mockReturnValue({
+      mockUseCurrentUser.mockReturnValue({
         data: null,
         hasAnyRole: () => false
       })
@@ -327,7 +406,7 @@ describe('CreditMarketDetailsCard', () => {
         i18n
       ])
 
-      expect(useUpdateOrganizationCreditMarket).toHaveBeenCalledWith(
+      expect(mockUseUpdateOrganizationCreditMarket).toHaveBeenCalledWith(
         5,
         expect.objectContaining({
           clearCache: true,
@@ -365,7 +444,7 @@ describe('CreditMarketDetailsCard', () => {
           'creditMarketContactPhone'
         ]
       )
-      vi.mocked(useOrganization).mockReturnValue({
+      mockUseOrganization.mockReturnValue({
         data: orgDataWithoutCreditMarketContact,
         isLoading: false
       })
@@ -382,7 +461,7 @@ describe('CreditMarketDetailsCard', () => {
       theme,
       i18n
     }) => {
-      vi.mocked(useOrganization).mockReturnValue({
+      mockUseOrganization.mockReturnValue({
         data: {
           ...mockOrganizationData,
           creditMarketContactName: null,
@@ -394,7 +473,7 @@ describe('CreditMarketDetailsCard', () => {
         isLoading: false
       })
 
-      vi.mocked(useCurrentUser).mockReturnValue({
+      mockUseCurrentUser.mockReturnValue({
         data: { ...mockCurrentUser, firstName: null, lastName: null },
         hasAnyRole: mockHasAnyRole
       })
@@ -407,7 +486,7 @@ describe('CreditMarketDetailsCard', () => {
     })
 
     test('displays seller role only', ({ render, theme, i18n }) => {
-      vi.mocked(useOrganization).mockReturnValue({
+      mockUseOrganization.mockReturnValue({
         data: {
           ...mockOrganizationData,
           creditMarketIsSeller: true,
@@ -422,7 +501,7 @@ describe('CreditMarketDetailsCard', () => {
     })
 
     test('displays buyer role only', ({ render, theme, i18n }) => {
-      vi.mocked(useOrganization).mockReturnValue({
+      mockUseOrganization.mockReturnValue({
         data: {
           ...mockOrganizationData,
           creditMarketIsSeller: false,
@@ -437,7 +516,7 @@ describe('CreditMarketDetailsCard', () => {
     })
 
     test('displays both seller and buyer roles', ({ render, theme, i18n }) => {
-      vi.mocked(useOrganization).mockReturnValue({
+      mockUseOrganization.mockReturnValue({
         data: {
           ...mockOrganizationData,
           creditMarketIsSeller: true,
@@ -456,7 +535,7 @@ describe('CreditMarketDetailsCard', () => {
       theme,
       i18n
     }) => {
-      vi.mocked(useOrganization).mockReturnValue({
+      mockUseOrganization.mockReturnValue({
         data: {
           ...mockOrganizationData,
           creditMarketIsSeller: false,
@@ -475,7 +554,7 @@ describe('CreditMarketDetailsCard', () => {
       theme,
       i18n
     }) => {
-      vi.mocked(useOrganization).mockReturnValue({
+      mockUseOrganization.mockReturnValue({
         data: { ...mockOrganizationData, orgStatus: { status: 'Active' } },
         isLoading: false
       })
@@ -514,7 +593,7 @@ describe('CreditMarketDetailsCard', () => {
       theme,
       i18n
     }) => {
-      vi.mocked(useOrganization).mockReturnValue({
+      mockUseOrganization.mockReturnValue({
         data: { ...mockOrganizationData, displayInCreditMarket: false },
         isLoading: false
       })
@@ -533,7 +612,7 @@ describe('CreditMarketDetailsCard', () => {
     }) => {
       render(<CreditMarketDetailsCard />, [theme, i18n])
 
-      expect(vi.mocked(useOrganization)).toHaveBeenCalledWith(1, {
+      expect(mockUseOrganization).toHaveBeenCalledWith(1, {
         enabled: true,
         staleTime: 0,
         cacheTime: 0
@@ -543,7 +622,7 @@ describe('CreditMarketDetailsCard', () => {
     test('initializes mutation hook correctly', ({ render, theme, i18n }) => {
       render(<CreditMarketDetailsCard />, [theme, i18n])
 
-      expect(vi.mocked(useUpdateCurrentOrgCreditMarket)).toHaveBeenCalledWith(
+      expect(mockUseUpdateCurrentOrgCreditMarket).toHaveBeenCalledWith(
         expect.objectContaining({
           clearCache: true,
           invalidateRelatedQueries: true,
@@ -560,7 +639,7 @@ describe('CreditMarketDetailsCard', () => {
     }) => {
       render(<CreditMarketDetailsCard />, [theme, i18n])
 
-      expect(vi.mocked(useQueryClient)).toHaveBeenCalled()
+      expect(mockUseQueryClient).toHaveBeenCalled()
     })
   })
 
@@ -570,7 +649,7 @@ describe('CreditMarketDetailsCard', () => {
       theme,
       i18n
     }) => {
-      vi.mocked(useOrganization).mockReturnValue({
+      mockUseOrganization.mockReturnValue({
         data: null,
         isLoading: false
       })
@@ -599,9 +678,9 @@ describe('CreditMarketDetailsCard', () => {
     }) => {
       const onSuccess = vi.fn()
       const onSaveSuccess = vi.fn()
-      vi.mocked(useUpdateCurrentOrgCreditMarket).mockImplementation(
-        ({ onSuccess: callback }) => {
-          onSuccess.mockImplementation(callback)
+      mockUseUpdateCurrentOrgCreditMarket.mockImplementation(
+        ({ onSuccess: callback } = {}) => {
+          if (callback) onSuccess.mockImplementation(callback)
           return mockUpdateMutation
         }
       )
@@ -615,10 +694,9 @@ describe('CreditMarketDetailsCard', () => {
         onSuccess()
       })
 
-      expect(mockQueryClient.refetchQueries).toHaveBeenCalledWith([
-        'organization',
-        1
-      ])
+      expect(mockQueryClient.refetchQueries).toHaveBeenCalledWith({
+        queryKey: ['organization', 1]
+      })
       expect(onSaveSuccess).toHaveBeenCalled()
     })
 
@@ -632,9 +710,9 @@ describe('CreditMarketDetailsCard', () => {
         .mockImplementation(() => {})
       const onError = vi.fn()
 
-      vi.mocked(useUpdateCurrentOrgCreditMarket).mockImplementation(
-        ({ onError: callback }) => {
-          onError.mockImplementation(callback)
+      mockUseUpdateCurrentOrgCreditMarket.mockImplementation(
+        ({ onError: callback } = {}) => {
+          if (callback) onError.mockImplementation(callback)
           return mockUpdateMutation
         }
       )
@@ -653,7 +731,7 @@ describe('CreditMarketDetailsCard', () => {
     })
 
     test('handles missing user name gracefully', ({ render, theme, i18n }) => {
-      vi.mocked(useCurrentUser).mockReturnValue({
+      mockUseCurrentUser.mockReturnValue({
         data: { ...mockCurrentUser, firstName: '', lastName: '' },
         hasAnyRole: mockHasAnyRole
       })
@@ -666,7 +744,7 @@ describe('CreditMarketDetailsCard', () => {
     })
 
     test('handles available balance fallback', ({ render, theme, i18n }) => {
-      vi.mocked(useOrganization).mockReturnValue({
+      mockUseOrganization.mockReturnValue({
         data: {
           ...mockOrganizationData,
           totalBalance: null,
@@ -683,7 +761,7 @@ describe('CreditMarketDetailsCard', () => {
     })
 
     test('handles zero available balance', ({ render, theme, i18n }) => {
-      vi.mocked(useOrganization).mockReturnValue({
+      mockUseOrganization.mockReturnValue({
         data: { ...mockOrganizationData, totalBalance: 0 },
         isLoading: false
       })

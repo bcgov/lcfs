@@ -1,7 +1,12 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
-import { CreditMarketTable } from './CreditMarketTable'
+import {
+  CreditMarketTable,
+  type CreditMarketSelection,
+  type CreditMarketTableHandle
+} from './CreditMarketTable'
+import type { BCGridRef } from '@/components/BCDataGrid/types'
 import { CreditMarketAccordion } from './CreditMarketAccordion'
 import { CreditMarketDetailsCard } from './CreditMarketDetailsCard'
 import BCTypography from '@/components/BCTypography'
@@ -22,9 +27,10 @@ export const CreditTradingMarket = () => {
     currentUser?.organization?.organizationName ||
     currentUser?.organization?.legalName ||
     ''
-  const [selectedListing, setSelectedListing] = useState(null)
-  const gridRef = useRef(null)
-  const tableRef = useRef(null)
+  const [selectedListing, setSelectedListing] =
+    useState<CreditMarketSelection | null>(null)
+  const gridRef: BCGridRef = useRef(null)
+  const tableRef = useRef<CreditMarketTableHandle>(null)
 
   useEffect(() => {
     if (!isGovernmentUser && userOrgId) {
@@ -37,7 +43,7 @@ export const CreditTradingMarket = () => {
     }
   }, [isGovernmentUser, userOrgId, userOrgName])
 
-  const handleRowSelect = useCallback((row) => {
+  const handleRowSelect = useCallback((row: CreditMarketSelection | null) => {
     setSelectedListing(row)
   }, [])
 

@@ -3,9 +3,11 @@ import { useParams, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAdminAdjustment } from '@/hooks/useAdminAdjustment'
 import { useInitiativeAgreement } from '@/hooks/useInitiativeAgreement'
+import type { FloatingAlertHandle } from '@/components/BCAlert/FloatingAlert'
 import { OrgTransactionDetails } from '@/views/Transactions/components'
 import Loading from '@/components/Loading'
 import { FloatingAlert } from '@/components/BCAlert'
+import { isAxiosError } from 'axios'
 import BCTypography from '@/components/BCTypography'
 import {
   ADMIN_ADJUSTMENT,
@@ -19,13 +21,15 @@ export const ViewOrgTransaction = () => {
     'initiativeagreement',
     'transaction'
   ])
-  const alertRef = useRef()
+  const alertRef = useRef<FloatingAlertHandle | null>(null)
 
   // Get transaction ID from URL parameters
   const { transactionId } = useParams()
 
   const location = useLocation()
-  const [transactionType, setTransactionType] = useState(null)
+  const [transactionType, setTransactionType] = useState<
+    typeof ADMIN_ADJUSTMENT | typeof INITIATIVE_AGREEMENT | null
+  >(null)
 
   // Effect to determine transaction type from URL
   useEffect(() => {
@@ -61,8 +65,11 @@ export const ViewOrgTransaction = () => {
 
   useEffect(() => {
     if (isLoadingError) {
+      const responseDetail = isAxiosError<{ detail?: string }>(error)
+        ? error.response?.data?.detail
+        : undefined
       alertRef.current?.triggerAlert({
-        message: error.response?.data?.detail || error.message,
+        message: responseDetail || error.message,
         severity: 'error'
       })
     }
@@ -85,7 +92,7 @@ export const ViewOrgTransaction = () => {
       )
     }
 
-    if (!transactionData) {
+    if (!transactionData || !transactionType) {
       return null
     }
 

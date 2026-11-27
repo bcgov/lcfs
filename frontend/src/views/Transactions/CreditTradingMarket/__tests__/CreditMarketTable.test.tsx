@@ -2,18 +2,77 @@ import React from 'react'
 import { screen, waitFor, act } from '@testing-library/react'
 import { vi, describe, expect, beforeEach } from 'vite-plus/test'
 import { CreditMarketTable } from '../CreditMarketTable'
+import type { CreditMarketTableHandle } from '../CreditMarketTable'
 import { test } from '@/tests/utils/fixtures'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useCreditMarketListings } from '@/hooks/useOrganization'
 
 // Mock the hooks
-vi.mock('@/hooks/useCurrentUser')
-vi.mock('@/hooks/useOrganization')
+interface Listing {
+  organizationId: number
+  organizationName: string
+  creditsToSell?: number
+  displayInCreditMarket?: boolean
+  creditMarketIsSeller?: boolean
+  creditMarketIsBuyer?: boolean
+  creditMarketContactName?: string
+  creditMarketContactEmail?: string
+  creditMarketContactPhone?: string
+}
+interface GridRow {
+  id: number
+  organizationName: string
+}
+interface GridProps {
+  queryData: {
+    data: {
+      creditMarketListings: GridRow[]
+      pagination: { total: number; totalPages: number }
+    }
+    isLoading: boolean
+    isError: boolean
+    error: Error | null
+  }
+  overlayNoRowsTemplate: string
+  columnDefs: unknown[]
+  getRowId: (params: { data: { id: number } }) => string
+  onPaginationChange: (options: { page: number; size?: number }) => void
+  paginationOptions: { page: number; size: number }
+  gridOptions: object
+  onRowClicked: (event: {
+    data: GridRow
+    api: { deselectAll: () => void }
+    node: { setSelected: (selected: boolean) => void }
+  }) => void
+}
+const { mockUseCurrentUser, mockUseCreditMarketListings } = vi.hoisted(() => ({
+  mockUseCurrentUser: vi.fn<
+    () => {
+      data:
+        | { organization: { organizationId: number } | null }
+        | null
+        | undefined
+    }
+  >(),
+  mockUseCreditMarketListings: vi.fn<
+    () => {
+      data: Listing[] | null | undefined
+      isLoading: boolean
+      isError: boolean
+      error: Error | null
+      refetch?: () => unknown
+    }
+  >()
+}))
+vi.mock('@/hooks/useCurrentUser', () => ({
+  useCurrentUser: mockUseCurrentUser
+}))
+vi.mock('@/hooks/useOrganization', () => ({
+  useCreditMarketListings: mockUseCreditMarketListings
+}))
 
 // Mock translation hook
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key, defaultValue) => defaultValue || key
+    t: (key: string, defaultValue?: string) => defaultValue || key
   })
 }))
 
@@ -31,9 +90,9 @@ vi.mock('../_schema', () => ({
 }))
 
 // Mock BCGridViewer component to capture all props
-const mockBCGridViewer = vi.fn()
+const mockBCGridViewer = vi.fn<(props: GridProps) => void>()
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  BCGridViewer: (props) => {
+  BCGridViewer: (props: GridProps) => {
     mockBCGridViewer(props)
     const {
       queryData,
@@ -77,7 +136,12 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 
 // Mock Material-UI Box
 vi.mock('@mui/material/Box', () => ({
-  default: ({ children, ...props }) => {
+  default: ({
+    children,
+    ...props
+  }: React.PropsWithChildren<
+    { component?: string; sx?: object } & React.HTMLAttributes<HTMLDivElement>
+  >) => {
     delete props.component
     delete props.sx
     return (
@@ -144,8 +208,8 @@ describe('CreditMarketTable', () => {
     mockRefetchListings.mockReset()
 
     // Setup default mocks
-    vi.mocked(useCurrentUser).mockReturnValue({ data: mockCurrentUser })
-    vi.mocked(useCreditMarketListings).mockReturnValue({
+    mockUseCurrentUser.mockReturnValue({ data: mockCurrentUser })
+    mockUseCreditMarketListings.mockReturnValue({
       data: mockCreditMarketData,
       isLoading: false,
       isError: false,
@@ -177,7 +241,7 @@ describe('CreditMarketTable', () => {
 
   describe('Loading and Error States', () => {
     test('shows loading state correctly', ({ render }) => {
-      vi.mocked(useCreditMarketListings).mockReturnValue({
+      mockUseCreditMarketListings.mockReturnValue({
         data: null,
         isLoading: true,
         isError: false,
@@ -192,7 +256,7 @@ describe('CreditMarketTable', () => {
 
     test('shows error state correctly', ({ render }) => {
       const testError = new Error('Network error')
-      vi.mocked(useCreditMarketListings).mockReturnValue({
+      mockUseCreditMarketListings.mockReturnValue({
         data: null,
         isLoading: false,
         isError: true,
@@ -208,7 +272,7 @@ describe('CreditMarketTable', () => {
     })
 
     test('shows no data message when no listings available', ({ render }) => {
-      vi.mocked(useCreditMarketListings).mockReturnValue({
+      mockUseCreditMarketListings.mockReturnValue({
         data: [],
         isLoading: false,
         isError: false,
@@ -268,7 +332,7 @@ describe('CreditMarketTable', () => {
     test('sorts alphabetically when user has no organization', async ({
       render
     }) => {
-      vi.mocked(useCurrentUser).mockReturnValue({ data: mockCurrentUserNoOrg })
+      mockUseCurrentUser.mockReturnValue({ data: mockCurrentUserNoOrg })
 
       render(<CreditMarketTable />, [])
 
@@ -287,7 +351,7 @@ describe('CreditMarketTable', () => {
     test('sorts alphabetically when user org not in data', async ({
       render
     }) => {
-      vi.mocked(useCurrentUser).mockReturnValue({
+      mockUseCurrentUser.mockReturnValue({
         data: { organization: { organizationId: 999 } }
       })
 
@@ -306,7 +370,7 @@ describe('CreditMarketTable', () => {
     })
 
     test('handles null creditMarketData', async ({ render }) => {
-      vi.mocked(useCreditMarketListings).mockReturnValue({
+      mockUseCreditMarketListings.mockReturnValue({
         data: null,
         isLoading: false,
         isError: false,
@@ -321,7 +385,7 @@ describe('CreditMarketTable', () => {
     })
 
     test('handles undefined creditMarketData', async ({ render }) => {
-      vi.mocked(useCreditMarketListings).mockReturnValue({
+      mockUseCreditMarketListings.mockReturnValue({
         data: undefined,
         isLoading: false,
         isError: false,
@@ -344,7 +408,7 @@ describe('CreditMarketTable', () => {
         }
       ]
 
-      vi.mocked(useCreditMarketListings).mockReturnValue({
+      mockUseCreditMarketListings.mockReturnValue({
         data: incompleteData,
         isLoading: false,
         isError: false,
@@ -422,7 +486,7 @@ describe('CreditMarketTable', () => {
     })
 
     test('handles pagination changes correctly', async ({ render }) => {
-      let capturedProps = null
+      let capturedProps: GridProps | undefined
       mockBCGridViewer.mockImplementation((props) => {
         capturedProps = props
         return <div data-test="mock-grid">Mock Grid</div>
@@ -436,7 +500,7 @@ describe('CreditMarketTable', () => {
 
       // Test pagination change
       await act(async () => {
-        capturedProps.onPaginationChange({ page: 2, size: 20 })
+        capturedProps?.onPaginationChange({ page: 2, size: 20 })
       })
 
       // Re-render should be triggered with updated pagination
@@ -446,7 +510,7 @@ describe('CreditMarketTable', () => {
     })
 
     test('merges pagination options correctly', async ({ render }) => {
-      let capturedProps = null
+      let capturedProps: GridProps | undefined
       mockBCGridViewer.mockImplementation((props) => {
         capturedProps = props
         return <div data-test="mock-grid">Mock Grid</div>
@@ -460,7 +524,7 @@ describe('CreditMarketTable', () => {
 
       // Test partial pagination change
       await act(async () => {
-        capturedProps.onPaginationChange({ page: 3 })
+        capturedProps?.onPaginationChange({ page: 3 })
       })
 
       // Should merge with existing options
@@ -511,7 +575,7 @@ describe('CreditMarketTable', () => {
         creditMarketContactPhone: `555-000${index + 1}`
       }))
 
-      vi.mocked(useCreditMarketListings).mockReturnValue({
+      mockUseCreditMarketListings.mockReturnValue({
         data: largeDataset,
         isLoading: false,
         isError: false,
@@ -546,8 +610,8 @@ describe('CreditMarketTable', () => {
         creditMarketContactPhone: `555-000${index + 1}`
       }))
 
-      vi.mocked(useCurrentUser).mockReturnValue({ data: mockCurrentUserNoOrg })
-      vi.mocked(useCreditMarketListings).mockReturnValue({
+      mockUseCurrentUser.mockReturnValue({ data: mockCurrentUserNoOrg })
+      mockUseCreditMarketListings.mockReturnValue({
         data: largeDataset,
         isLoading: false,
         isError: false,
@@ -555,7 +619,7 @@ describe('CreditMarketTable', () => {
         refetch: mockRefetchListings
       })
 
-      let capturedProps = null
+      let capturedProps: GridProps | undefined
       mockBCGridViewer.mockImplementation((props) => {
         capturedProps = props
         return <div data-test="mock-grid">Mock Grid</div>
@@ -564,31 +628,31 @@ describe('CreditMarketTable', () => {
       render(<CreditMarketTable />, [])
 
       await waitFor(() => {
-        expect(capturedProps.queryData.data.creditMarketListings).toHaveLength(
+        expect(capturedProps?.queryData.data.creditMarketListings).toHaveLength(
           10
         )
         expect(
-          capturedProps.queryData.data.creditMarketListings[0].organizationName
+          capturedProps?.queryData.data.creditMarketListings[0].organizationName
         ).toBe('Organization 01')
       })
 
       await act(async () => {
-        capturedProps.onPaginationChange({ page: 2 })
+        capturedProps?.onPaginationChange({ page: 2 })
       })
 
       await waitFor(() => {
-        expect(capturedProps.paginationOptions.page).toBe(2)
-        expect(capturedProps.queryData.data.creditMarketListings).toHaveLength(
+        expect(capturedProps?.paginationOptions.page).toBe(2)
+        expect(capturedProps?.queryData.data.creditMarketListings).toHaveLength(
           10
         )
         expect(
-          capturedProps.queryData.data.creditMarketListings[0].organizationName
+          capturedProps?.queryData.data.creditMarketListings[0].organizationName
         ).toBe('Organization 11')
       })
     })
 
     test('passes loading state through queryData', ({ render }) => {
-      vi.mocked(useCreditMarketListings).mockReturnValue({
+      mockUseCreditMarketListings.mockReturnValue({
         data: null,
         isLoading: true,
         isError: false,
@@ -604,7 +668,7 @@ describe('CreditMarketTable', () => {
 
     test('passes error state through queryData', ({ render }) => {
       const testError = new Error('Test error')
-      vi.mocked(useCreditMarketListings).mockReturnValue({
+      mockUseCreditMarketListings.mockReturnValue({
         data: null,
         isLoading: false,
         isError: true,
@@ -672,7 +736,7 @@ describe('CreditMarketTable', () => {
 
   describe('Edge Cases', () => {
     test('handles null current user gracefully', async ({ render }) => {
-      vi.mocked(useCurrentUser).mockReturnValue({ data: null })
+      mockUseCurrentUser.mockReturnValue({ data: null })
 
       render(<CreditMarketTable />, [])
 
@@ -689,7 +753,7 @@ describe('CreditMarketTable', () => {
     })
 
     test('handles undefined current user gracefully', async ({ render }) => {
-      vi.mocked(useCurrentUser).mockReturnValue({ data: undefined })
+      mockUseCurrentUser.mockReturnValue({ data: undefined })
 
       render(<CreditMarketTable />, [])
 
@@ -701,7 +765,7 @@ describe('CreditMarketTable', () => {
     })
 
     test('handles empty array for creditMarketData', async ({ render }) => {
-      vi.mocked(useCreditMarketListings).mockReturnValue({
+      mockUseCreditMarketListings.mockReturnValue({
         data: [],
         isLoading: false,
         isError: false,
@@ -720,7 +784,7 @@ describe('CreditMarketTable', () => {
     })
 
     test('handles single organization', async ({ render }) => {
-      vi.mocked(useCreditMarketListings).mockReturnValue({
+      mockUseCreditMarketListings.mockReturnValue({
         data: [mockCreditMarketData[0]],
         isLoading: false,
         isError: false,
@@ -783,7 +847,8 @@ describe('CreditMarketTable', () => {
         expect(mockBCGridViewer).toHaveBeenCalled()
       })
 
-      const lastCall = mockBCGridViewer.mock.calls.at(-1)[0]
+      const lastCall =
+        mockBCGridViewer.mock.calls[mockBCGridViewer.mock.calls.length - 1][0]
       expect(lastCall.gridOptions).toMatchObject({
         rowSelection: 'single'
       })
@@ -798,7 +863,8 @@ describe('CreditMarketTable', () => {
         expect(mockBCGridViewer).toHaveBeenCalled()
       })
 
-      const lastCall = mockBCGridViewer.mock.calls.at(-1)[0]
+      const lastCall =
+        mockBCGridViewer.mock.calls[mockBCGridViewer.mock.calls.length - 1][0]
       const mockApi = { deselectAll: vi.fn() }
       const mockNode = { setSelected: vi.fn() }
 
@@ -829,7 +895,8 @@ describe('CreditMarketTable', () => {
         expect(mockBCGridViewer).toHaveBeenCalled()
       })
 
-      const lastCall = mockBCGridViewer.mock.calls.at(-1)[0]
+      const lastCall =
+        mockBCGridViewer.mock.calls[mockBCGridViewer.mock.calls.length - 1][0]
       const mockApi = { deselectAll: vi.fn() }
 
       act(() =>
@@ -848,7 +915,7 @@ describe('CreditMarketTable', () => {
   describe('Imperative API', () => {
     test('exposes refreshListings via ref', async ({ render }) => {
       mockRefetchListings.mockResolvedValue({})
-      const tableRef = React.createRef()
+      const tableRef = React.createRef<CreditMarketTableHandle>()
 
       render(<CreditMarketTable ref={tableRef} />, [])
 
@@ -857,7 +924,7 @@ describe('CreditMarketTable', () => {
       })
 
       await act(async () => {
-        await tableRef.current.refreshListings()
+        await tableRef.current?.refreshListings()
       })
 
       expect(mockRefetchListings).toHaveBeenCalled()

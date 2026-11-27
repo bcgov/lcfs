@@ -50,7 +50,7 @@ When('the analyst starts a new initiative agreement transaction', () => {
 
 When(
   'the analyst enters {string} units to organization {string} with effective date {string} and comment {string}',
-  (units, orgId, effectiveDate, comment) => {
+  (units: string, orgId: string, effectiveDate: string, comment: string) => {
     cy.get('#to-organization-id').click()
     cy.get(`[data-value="${orgId}"]`).click()
     cy.get('input[name="complianceUnits"]').type(units)
