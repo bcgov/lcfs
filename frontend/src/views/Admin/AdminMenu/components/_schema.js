@@ -8,6 +8,8 @@ import {
   RoleRenderer,
   StatusRenderer
 } from '@/utils/grid/cellRenderers'
+import { createCopyRowActionColumn } from '@/utils/grid/copyRowActionColumn'
+import { roles } from '@/constants/roles'
 import '@/hooks/useRole'
 import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCSelectFloatingFilter'
 import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
@@ -110,7 +112,24 @@ export const usersColumnDefs = (t) => [
     headerName: t('admin:OrgId'),
     valueGetter: (params) => params.data.organization.organizationId,
     hide: true
-  }
+  },
+  createCopyRowActionColumn(t, {
+    copyValueGetters: {
+      role: ({ data }) =>
+        data.isActive
+          ? data.roles
+              .map((role) => role.name)
+              .filter(
+                (role) => role !== roles.government && role !== roles.supplier
+              )
+              .join(', ')
+          : '',
+      isActive: ({ data }) =>
+        data.isActive
+          ? t('admin:userColLabels.active')
+          : t('admin:userColLabels.inactive')
+    }
+  })
 ]
 
 const prefixMap = {
