@@ -9,14 +9,14 @@ lease claim fail and stop the scheduled maintenance jobs. The lease is
 operational state, not business data, so it is excluded from audit coverage.
 
 Revision ID: 573dc510e543
-Revises: c3a7e91d5f48
+Revises: f29bf127e5a5
 Create Date: 2026-11-24 10:00:00.000000
 """
 
 from alembic import op
 
 revision = "573dc510e543"
-down_revision = "c3a7e91d5f48"
+down_revision = "f29bf127e5a5"
 branch_labels = None
 depends_on = None
 
