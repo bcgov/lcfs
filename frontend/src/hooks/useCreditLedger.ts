@@ -4,6 +4,57 @@ import { apiRoutes } from '@/constants/routes/apiRoutes'
 import type { AxiosRequestConfig } from 'axios'
 import type { Filter, QueryOptions, SortOrder } from './types'
 
+export interface CreditLedgerTransaction {
+  transactionType: string
+  description?: string | null
+  compliancePeriod: string
+  organizationId: number
+  complianceUnits: number | string
+  availableBalance: number | string | null
+  updateDate: string
+}
+
+export interface CreditLedgerResponse {
+  ledger: CreditLedgerTransaction[]
+  pagination: { page: number; size: number; total: number; totalPages: number }
+}
+
+export interface PeriodLedgerTransaction {
+  transactionId: number
+  transactionType: string
+  description?: string | null
+  effectiveDate?: string | null
+  unitsIn: number
+  unitsOut: number
+  runningBalance: number
+  status?: string | null
+  isPending: boolean
+}
+
+export interface PeriodLedgerResponse {
+  organizationId: number
+  compliancePeriod: number
+  includePending: boolean
+  transactions: PeriodLedgerTransaction[]
+  totalsByType: {
+    transactionType: string
+    unitsIn: number
+    unitsOut: number
+    net: number
+  }[]
+  totalUnitsIn: number
+  totalUnitsOut: number
+  totalNet: number
+  assessedBalance: {
+    previousYear?: number | null
+    previousBalance?: number | null
+    previousNonAssessment?: boolean
+    currentYear: number
+    currentBalance?: number | null
+    currentNonAssessment?: boolean
+  }
+}
+
 export const useCreditLedger = (
   {
     orgId,
@@ -20,7 +71,7 @@ export const useCreditLedger = (
     sortOrders?: SortOrder[]
     extraFilters?: Filter[]
   } = {},
-  options: QueryOptions<unknown>
+  options?: QueryOptions<CreditLedgerResponse>
 ) => {
   const api = useApiService()
 
@@ -53,7 +104,7 @@ export const useCreditLedger = (
       }
 
       const url = apiRoutes.creditLedger.replace(':orgID', String(orgId ?? ''))
-      const { data } = await api.post(url, body)
+      const { data } = await api.post<CreditLedgerResponse>(url, body)
       return data
     },
     ...options
@@ -70,7 +121,7 @@ export const usePeriodCreditLedger = (
     complianceYear?: number | string | null
     includePending?: boolean
   } = {},
-  options: QueryOptions<unknown> = {}
+  options: QueryOptions<PeriodLedgerResponse> = {}
 ) => {
   const api = useApiService()
 
@@ -81,7 +132,7 @@ export const usePeriodCreditLedger = (
       const url = apiRoutes.creditLedgerPeriod
         .replace(':orgID', String(orgId ?? ''))
         .replace(':year', String(complianceYear ?? ''))
-      const { data } = await api.get(url, {
+      const { data } = await api.get<PeriodLedgerResponse>(url, {
         params: { include_pending: includePending }
       })
       return data
@@ -90,13 +141,13 @@ export const usePeriodCreditLedger = (
   })
 }
 
-export const useDownloadCreditLedger = (apiOpts: AxiosRequestConfig) => {
+export const useDownloadCreditLedger = (apiOpts?: AxiosRequestConfig) => {
   const api = useApiService(apiOpts)
   return ({
     orgId,
     format = 'xlsx'
   }: {
-    orgId: number | string
+    orgId?: number | string | null
     format?: string
   }) =>
     api.download({
@@ -137,7 +188,7 @@ export const useDownloadPeriodCreditLedger = (apiOpts?: AxiosRequestConfig) => {
 
 export const useCreditLedgerYears = (
   orgId: number | string | undefined | null,
-  options: QueryOptions<unknown>
+  options?: QueryOptions<string[]>
 ) => {
   const api = useApiService()
 
@@ -149,7 +200,7 @@ export const useCreditLedgerYears = (
         ':orgID',
         String(orgId ?? '')
       )
-      const { data } = await api.get(url)
+      const { data } = await api.get<string[]>(url)
       return data
     },
     staleTime: 5 * 60 * 1000, // 5 minutes

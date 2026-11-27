@@ -11,19 +11,36 @@ import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import theme from '@/themes'
 
 import { CreditLedgerPeriod } from '../CreditLedgerPeriod'
-
-import {
-  usePeriodCreditLedger,
-  useDownloadCreditLedger,
-  useCreditLedgerYears
+import type { CreditLedgerProps } from '../CreditLedger'
+import type {
+  PeriodLedgerResponse,
+  useDownloadCreditLedger
 } from '@/hooks/useCreditLedger'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
+
+const { mockPeriod, mockYears, mockDownload, mockCurrentUser } = vi.hoisted(
+  () => ({
+    mockPeriod: vi.fn<
+      () => {
+        data: PeriodLedgerResponse
+        isLoading: boolean
+        isError: boolean
+      }
+    >(),
+    mockYears: vi.fn<() => { data: string[] }>(),
+    mockDownload: vi.fn<typeof useDownloadCreditLedger>(),
+    mockCurrentUser: vi.fn<
+      () => {
+        data: { organization: { organizationId: number } }
+      }
+    >()
+  })
+)
 
 // t returns the key, interpolating year/type so period + assessed labels are
 // assertable.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key, opts) => {
+    t: (key: string, opts?: { year?: number; type?: string }) => {
       if (opts && opts.year != null) return `${key}|${opts.year}`
       if (opts && opts.type != null) return `${key}|${opts.type}`
       return key
@@ -35,23 +52,18 @@ vi.mock('react-i18next', () => ({
 // formatTransactionId is kept real so the id prefixes are exercised for real.
 vi.mock('@/utils/formatters', async (importOriginal) => ({
   ...(await importOriginal()),
-  dateFormatter: ({ value }) => value
+  dateFormatter: ({ value }: { value: string }) => value
 }))
 
 vi.mock('@/hooks/useCreditLedger', () => ({
-  usePeriodCreditLedger: vi.fn(),
-  useDownloadCreditLedger: vi.fn(),
-  useCreditLedgerYears: vi.fn()
+  usePeriodCreditLedger: mockPeriod,
+  useDownloadCreditLedger: mockDownload,
+  useCreditLedgerYears: mockYears
 }))
 
 vi.mock('@/hooks/useCurrentUser', () => ({
-  useCurrentUser: vi.fn()
+  useCurrentUser: mockCurrentUser
 }))
-
-const mockPeriod = vi.mocked(usePeriodCreditLedger)
-const mockYears = vi.mocked(useCreditLedgerYears)
-const mockDownload = vi.mocked(useDownloadCreditLedger)
-const mockCurrentUser = vi.mocked(useCurrentUser)
 
 const PERIOD_PAYLOAD = {
   organizationId: 999,
@@ -101,7 +113,7 @@ const PERIOD_PAYLOAD = {
   }
 }
 
-const renderComponent = (props = {}) => {
+const renderComponent = (props: CreditLedgerProps = {}) => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } }
   })

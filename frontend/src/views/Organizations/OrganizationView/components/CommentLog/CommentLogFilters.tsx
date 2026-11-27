@@ -10,9 +10,27 @@ import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { useDebounce } from '@/utils/debounce'
 
 import { FilterToolbar } from '@/components/FilterToolbar'
+import type { CommentLogFilters as CommentLogFilterValues } from '@/hooks/useOrganizationComments'
+import type { FilterToolbarPill } from '@/components/FilterToolbar/filterUtils'
 
-const buildOptions = (values) =>
-  values.map((v) => ({ label: String(v), value: v }))
+type FilterOption<T extends string | number> = { label: string; value: T }
+
+const buildOptions = <T extends string | number>(
+  values: T[]
+): FilterOption<T>[] => values.map((v) => ({ label: String(v), value: v }))
+
+type SetCommentLogFilter = (
+  key: keyof CommentLogFilterValues,
+  value: unknown
+) => void
+
+interface CommentLogFiltersProps {
+  filters: CommentLogFilterValues
+  setFilter: SetCommentLogFilter
+  clearFilters: () => void
+  categories: string[]
+  years: number[]
+}
 
 /**
  * Filter bar for the organization Comment Log.
@@ -23,7 +41,7 @@ export const CommentLogFilters = ({
   clearFilters,
   categories,
   years
-}) => {
+}: CommentLogFiltersProps) => {
   const { t } = useTranslation(['internalComment'])
   const searchId = useId()
   const categoryId = useId()
@@ -61,9 +79,15 @@ export const CommentLogFilters = ({
   const categoryOptions = useMemo(() => buildOptions(categories), [categories])
   const yearOptions = useMemo(() => buildOptions(years), [years])
 
-  const pills = useMemo(() => {
-    const out = []
-    const push = (id, key, label, value, onRemove) => {
+  const pills = useMemo<FilterToolbarPill[]>(() => {
+    const out: FilterToolbarPill[] = []
+    const push = (
+      id: string,
+      key: string,
+      label: string,
+      value: string,
+      onRemove: () => void
+    ) => {
       out.push({
         id,
         label,
@@ -181,9 +205,7 @@ export const CommentLogFilters = ({
               onChange={(_, option) =>
                 setFilter('category', option?.value ?? null)
               }
-              getOptionLabel={(o) =>
-                typeof o === 'string' ? o : (o?.label ?? '')
-              }
+              getOptionLabel={(o) => o.label}
               sx={{ width: 200 }}
               renderInput={(params) => (
                 <TextField
@@ -220,9 +242,7 @@ export const CommentLogFilters = ({
               onChange={(_, option) =>
                 setFilter('complianceYear', option?.value ?? null)
               }
-              getOptionLabel={(o) =>
-                typeof o === 'string' ? o : (o?.label ?? '')
-              }
+              getOptionLabel={(o) => o.label}
               sx={{ width: 120 }}
               renderInput={(params) => (
                 <TextField

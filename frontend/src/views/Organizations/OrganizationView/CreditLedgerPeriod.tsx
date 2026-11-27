@@ -7,6 +7,7 @@ import Chip from '@mui/material/Chip'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
 import TableCell from '@mui/material/TableCell'
+import type { TableCellProps } from '@mui/material/TableCell'
 import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
@@ -23,10 +24,12 @@ import {
   useDownloadCreditLedger,
   useCreditLedgerYears
 } from '@/hooks/useCreditLedger'
+import type { PeriodLedgerTransaction } from '@/hooks/useCreditLedger'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { dateFormatter, formatTransactionId } from '@/utils/formatters'
+import type { CreditLedgerProps } from './CreditLedger'
 
-const TYPE_LABELS = {
+const TYPE_LABELS: Partial<Record<string, string>> = {
   Transfer: 'Transfer',
   InitiativeAgreement: 'Initiative Agreement',
   AdminAdjustment: 'Administrative Adjustment',
@@ -35,7 +38,7 @@ const TYPE_LABELS = {
   StandaloneTransaction: 'Legacy Transaction'
 }
 
-const formatType = (txn) => {
+const formatType = (txn: PeriodLedgerTransaction) => {
   const base = TYPE_LABELS[txn.transactionType] || txn.transactionType
   if (txn.transactionType === 'ComplianceReport' && txn.description) {
     return `${base} - ${txn.description}`
@@ -43,8 +46,9 @@ const formatType = (txn) => {
   return base
 }
 
-const formatUnits = (n) => (n ? Number(n).toLocaleString() : '-')
-const formatDate = (iso) => (iso ? dateFormatter({ value: iso }) : '-')
+const formatUnits = (n: number) => (n ? Number(n).toLocaleString() : '-')
+const formatDate = (iso?: string | null) =>
+  iso ? dateFormatter({ value: iso }) : '-'
 
 const cellSx = {
   py: 1.25,
@@ -58,6 +62,14 @@ const cellSx = {
 //
 // `blankIfNull` is for the assessed balances, which are absent (not zero) for a
 // year with no assessed report — showing 0 there would read as a real balance.
+interface NumberCellProps extends Pick<TableCellProps, 'align'> {
+  value: number | string | null | undefined
+  bold?: boolean
+  dataTest?: string
+  blankIfNull?: boolean
+  sx?: React.CSSProperties
+}
+
 const NumberCell = ({
   value,
   bold = false,
@@ -65,7 +77,7 @@ const NumberCell = ({
   align = 'right',
   blankIfNull = false,
   sx
-}) => (
+}: NumberCellProps) => (
   <TableCell
     align={align}
     data-test={dataTest}
@@ -102,7 +114,19 @@ const assessedCellSx = {
 
 // A year completed as a non-assessment has no assessed balance (#5304). It is
 // labelled rather than left blank, which would read as "not assessed yet".
-const AssessedBalanceCell = ({ balance, nonAssessment, label, dataTest }) =>
+interface AssessedBalanceCellProps {
+  balance: NumberCellProps['value']
+  nonAssessment?: boolean
+  label: string
+  dataTest: string
+}
+
+const AssessedBalanceCell = ({
+  balance,
+  nonAssessment,
+  label,
+  dataTest
+}: AssessedBalanceCellProps) =>
   nonAssessment ? (
     <TableCell
       align="right"
@@ -121,13 +145,13 @@ const AssessedBalanceCell = ({ balance, nonAssessment, label, dataTest }) =>
     />
   )
 
-export const CreditLedgerPeriod = ({ organizationId }) => {
+export const CreditLedgerPeriod = ({ organizationId }: CreditLedgerProps) => {
   const { t } = useTranslation(['org', 'common'])
 
   const { data: currentUser } = useCurrentUser()
   const orgID = organizationId ?? currentUser?.organization?.organizationId
 
-  const [selectedYear, setSelectedYear] = useState(null)
+  const [selectedYear, setSelectedYear] = useState<number | null>(null)
   const [showTotals, setShowTotals] = useState(false)
   const [showPending, setShowPending] = useState(false)
 

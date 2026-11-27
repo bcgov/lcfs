@@ -5,19 +5,50 @@ import { CreditLedgerLegacy } from '../CreditLedgerLegacy'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import theme from '@/themes'
-
-// Import mocked functions after mocking
-import {
-  useCreditLedger,
-  useDownloadCreditLedger,
-  useCreditLedgerYears
+import type { CreditLedgerProps } from '../CreditLedger'
+import type { BCGridViewerProps } from '@/components/BCDataGrid/BCGridViewer'
+import type {
+  CreditLedgerResponse,
+  CreditLedgerTransaction,
+  useDownloadCreditLedger
 } from '@/hooks/useCreditLedger'
-import {
-  useOrganizationBalance,
-  useCurrentOrgBalance
-} from '@/hooks/useOrganization'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useTranslation } from 'react-i18next'
+
+type LedgerRow = Omit<CreditLedgerTransaction, 'organizationId'>
+type BalanceResult = { data: { totalBalance: number } | null }
+type DivMockProps = { children?: React.ReactNode } & Record<string, unknown>
+
+const {
+  mockUseCreditLedger,
+  mockUseDownloadCreditLedger,
+  mockUseCreditLedgerYears,
+  mockUseOrganizationBalance,
+  mockUseCurrentOrgBalance,
+  mockUseCurrentUser
+} = vi.hoisted(() => ({
+  mockUseCreditLedger: vi.fn<
+    () => {
+      data: {
+        ledger: LedgerRow[]
+        pagination: Partial<CreditLedgerResponse['pagination']> | null
+      }
+      isLoading: boolean
+    }
+  >(),
+  mockUseDownloadCreditLedger: vi.fn<typeof useDownloadCreditLedger>(),
+  mockUseCreditLedgerYears: vi.fn<
+    () => {
+      data: string[]
+      isLoading: boolean
+    }
+  >(),
+  mockUseOrganizationBalance: vi.fn<() => BalanceResult>(),
+  mockUseCurrentOrgBalance: vi.fn<() => BalanceResult>(),
+  mockUseCurrentUser: vi.fn<
+    () => {
+      data: { organization: { organizationId: number } } | null
+    }
+  >()
+}))
 
 // Mock translation
 vi.mock('react-i18next', () => ({
@@ -35,8 +66,8 @@ vi.mock('@/utils/formatters', () => ({
 
 // Mock components
 vi.mock('@/components/BCBox', () => ({
-  default: ({ children, ...props }) => {
-    const domProps = {}
+  default: ({ children, ...props }: DivMockProps) => {
+    const domProps: Record<string, unknown> = {}
     // Only pass through standard DOM attributes
     Object.keys(props).forEach((key) => {
       if (
@@ -52,8 +83,8 @@ vi.mock('@/components/BCBox', () => ({
 }))
 
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, ...props }) => {
-    const domProps = {}
+  default: ({ children, ...props }: DivMockProps) => {
+    const domProps: Record<string, unknown> = {}
     // Only pass through standard DOM attributes
     Object.keys(props).forEach((key) => {
       if (
@@ -76,8 +107,14 @@ vi.mock('@/components/DownloadButton', () => ({
     isDownloading,
     dataTest,
     ...props
-  }) => {
-    const domProps = {}
+  }: Pick<
+    React.ComponentProps<
+      typeof import('@/components/DownloadButton').DownloadButton
+    >,
+    'onDownload' | 'label' | 'downloadLabel' | 'isDownloading' | 'dataTest'
+  > &
+    Record<string, unknown>) => {
+    const domProps: Record<string, unknown> = {}
     // Only pass through standard DOM attributes
     Object.keys(props).forEach((key) => {
       if (
@@ -97,100 +134,113 @@ vi.mock('@/components/DownloadButton', () => ({
   }
 }))
 
-let lastGridProps = null
+type GridMockProps = Pick<
+  BCGridViewerProps,
+  | 'onPaginationChange'
+  | 'gridKey'
+  | 'dataKey'
+  | 'suppressPagination'
+  | 'paginationOptions'
+  | 'defaultColDef'
+  | 'autoSizeStrategy'
+> & {
+  queryData?: { data?: { ledger?: LedgerRow[] } }
+  getRowId?: (params: { data: LedgerRow }) => string
+  columnDefs?: {
+    field?: string
+    valueFormatter?: (params: { data: LedgerRow }) => string
+  }[]
+}
+
+let lastGridProps: GridMockProps | null = null
 
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => {
   return {
-    BCGridViewer: React.forwardRef(function CreditLedgerGridMock(
-      {
-        queryData,
-        onPaginationChange,
-        getRowId,
-        gridKey,
-        dataKey,
-        columnDefs,
-        suppressPagination,
-        paginationOptions,
-        defaultColDef,
-        autoSizeStrategy,
-        ...props
-      },
-      ref
-    ) {
-      lastGridProps = {
-        queryData,
-        onPaginationChange,
-        getRowId,
-        gridKey,
-        dataKey,
-        columnDefs,
-        suppressPagination,
-        paginationOptions,
-        defaultColDef,
-        autoSizeStrategy
-      }
-      const domProps = {}
-      // Only pass through standard DOM attributes
-      Object.keys(props).forEach((key) => {
-        if (
-          key.startsWith('data-') ||
-          key.startsWith('aria-') ||
-          ['id', 'className', 'style'].includes(key)
-        ) {
-          domProps[key] = props[key]
+    BCGridViewer: React.forwardRef<HTMLDivElement, GridMockProps>(
+      function CreditLedgerGridMock(
+        {
+          queryData,
+          onPaginationChange,
+          getRowId,
+          gridKey,
+          dataKey,
+          columnDefs,
+          suppressPagination,
+          paginationOptions,
+          defaultColDef,
+          autoSizeStrategy,
+          ...rest
+        },
+        ref
+      ) {
+        lastGridProps = {
+          queryData,
+          onPaginationChange,
+          getRowId,
+          gridKey,
+          dataKey,
+          columnDefs,
+          suppressPagination,
+          paginationOptions,
+          defaultColDef,
+          autoSizeStrategy
         }
-      })
-      return (
-        <div ref={ref} data-test="credit-ledger-grid" {...domProps}>
-          Mock Grid with {queryData?.data?.ledger?.length || 0} items
-          {queryData?.data?.ledger?.map((item, index) => (
-            <div
-              key={getRowId ? getRowId({ data: item }) : index}
-              data-test={`grid-row-${index}`}
+        const props: Record<string, unknown> = rest
+        const domProps: Record<string, unknown> = {}
+        // Only pass through standard DOM attributes
+        Object.keys(props).forEach((key) => {
+          if (
+            key.startsWith('data-') ||
+            key.startsWith('aria-') ||
+            ['id', 'className', 'style'].includes(key)
+          ) {
+            domProps[key] = props[key]
+          }
+        })
+        return (
+          <div ref={ref} data-test="credit-ledger-grid" {...domProps}>
+            Mock Grid with {queryData?.data?.ledger?.length || 0} items
+            {queryData?.data?.ledger?.map((item, index) => (
+              <div
+                key={getRowId ? getRowId({ data: item }) : index}
+                data-test={`grid-row-${index}`}
+              >
+                {item.compliancePeriod}-{item.complianceUnits}-
+                {item.transactionType}
+              </div>
+            ))}
+            <button
+              data-test="pagination-change"
+              onClick={() =>
+                onPaginationChange && onPaginationChange({ page: 2, size: 20 })
+              }
             >
-              {item.compliancePeriod}-{item.complianceUnits}-
-              {item.transactionType}
-            </div>
-          ))}
-          <button
-            data-test="pagination-change"
-            onClick={() =>
-              onPaginationChange && onPaginationChange({ page: 2, size: 20 })
-            }
-          >
-            Change Page
-          </button>
-        </div>
-      )
-    })
+              Change Page
+            </button>
+          </div>
+        )
+      }
+    )
   }
 })
 
 // Mock hooks
 vi.mock('@/hooks/useCreditLedger', () => ({
-  useCreditLedger: vi.fn(),
-  useDownloadCreditLedger: vi.fn(),
-  useCreditLedgerYears: vi.fn()
+  useCreditLedger: mockUseCreditLedger,
+  useDownloadCreditLedger: mockUseDownloadCreditLedger,
+  useCreditLedgerYears: mockUseCreditLedgerYears
 }))
 
 vi.mock('@/hooks/useOrganization', () => ({
-  useOrganizationBalance: vi.fn(),
-  useCurrentOrgBalance: vi.fn()
+  useOrganizationBalance: mockUseOrganizationBalance,
+  useCurrentOrgBalance: mockUseCurrentOrgBalance
 }))
 
 vi.mock('@/hooks/useCurrentUser', () => ({
-  useCurrentUser: vi.fn()
+  useCurrentUser: mockUseCurrentUser
 }))
 
-const mockUseCreditLedger = vi.mocked(useCreditLedger)
-const mockUseDownloadCreditLedger = vi.mocked(useDownloadCreditLedger)
-const mockUseCreditLedgerYears = vi.mocked(useCreditLedgerYears)
-const mockUseOrganizationBalance = vi.mocked(useOrganizationBalance)
-const mockUseCurrentOrgBalance = vi.mocked(useCurrentOrgBalance)
-const mockUseCurrentUser = vi.mocked(useCurrentUser)
-vi.mocked(useTranslation)
-
-const renderComponent = (props = {}) => {
+const renderComponent = (props: CreditLedgerProps = {}) => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -373,11 +423,11 @@ describe('CreditLedgerLegacy Component Tests', () => {
 
       renderComponent()
 
-      const transactionTypeCol = lastGridProps.columnDefs.find(
+      const transactionTypeCol = lastGridProps?.columnDefs?.find(
         (col) => col.field === 'transactionType'
       )
 
-      const formatted = transactionTypeCol.valueFormatter({
+      const formatted = transactionTypeCol?.valueFormatter?.({
         data: ledgerData[0]
       })
 

@@ -29,7 +29,7 @@ describe('Penalty Log Changes - Issue #3346', () => {
         const description = period.description || ''
         const yearMatch = description.match(/(\d{4})/)
         if (yearMatch) {
-          const year = parseInt(yearMatch[1], 10)
+          const year = parseInt(yearMatch?.[1] ?? '', 10)
           return year <= currentYear
         }
         return true
@@ -39,7 +39,7 @@ describe('Penalty Log Changes - Issue #3346', () => {
       expect(filtered.map((p) => p.compliancePeriodId)).toEqual([1, 2, 3])
       expect(
         filtered.every((p) => {
-          const year = parseInt(p.description.match(/(\d{4})/)[1], 10)
+          const year = parseInt(p.description.match(/(\d{4})/)?.[1] ?? '', 10)
           return year <= currentYear
         })
       ).toBe(true)
@@ -50,7 +50,7 @@ describe('Penalty Log Changes - Issue #3346', () => {
       const period = { description: '2024 Compliance Period' }
 
       const yearMatch = period.description.match(/(\d{4})/)
-      const year = parseInt(yearMatch[1], 10)
+      const year = parseInt(yearMatch?.[1] ?? '', 10)
 
       expect(year).toBe(currentYear)
       expect(year <= currentYear).toBe(true)
@@ -66,7 +66,7 @@ describe('Penalty Log Changes - Issue #3346', () => {
 
       futurePeriods.forEach((period) => {
         const yearMatch = period.description.match(/(\d{4})/)
-        const year = parseInt(yearMatch[1], 10)
+        const year = parseInt(yearMatch?.[1] ?? '', 10)
         expect(year).toBeGreaterThan(currentYear)
         expect(year <= currentYear).toBe(false)
       })

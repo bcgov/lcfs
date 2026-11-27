@@ -2,11 +2,18 @@ import { useState, useRef, useCallback } from 'react'
 import Grid from '@mui/material/Grid'
 import FormControl from '@mui/material/FormControl'
 import Select from '@mui/material/Select'
+import type { SelectChangeEvent } from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
+import type { ColDef, GetRowIdParams } from 'ag-grid-community'
 
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
+import type {
+  BCGridRef,
+  BCGridRow,
+  BCPaginationOptions
+} from '@/components/BCDataGrid/types'
 import { DownloadButton } from '@/components/DownloadButton'
 
 import {
@@ -16,7 +23,8 @@ import {
 } from '@/hooks/useCreditLedger'
 import {
   useOrganizationBalance,
-  useCurrentOrgBalance
+  useCurrentOrgBalance,
+  type OrganizationBalance
 } from '@/hooks/useOrganization'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useTranslation } from 'react-i18next'
@@ -25,10 +33,11 @@ import {
   numberFormatter,
   spacesFormatter
 } from '@/utils/formatters'
+import type { CreditLedgerProps } from './CreditLedger'
 
-export const CreditLedgerLegacy = ({ organizationId }) => {
+export const CreditLedgerLegacy = ({ organizationId }: CreditLedgerProps) => {
   const { t } = useTranslation(['org', 'common'])
-  const gridRef = useRef(null)
+  const gridRef: BCGridRef = useRef(null)
 
   const { data: currentUser } = useCurrentUser()
   // Use passed organizationId prop, fallback to current user's org for backward compatibility
@@ -68,7 +77,8 @@ export const CreditLedgerLegacy = ({ organizationId }) => {
   const { data: currentOrgBalance } = useCurrentOrgBalance({
     enabled: isViewingOwnOrg
   })
-  const { data: specificOrgBalance } = useOrganizationBalance(orgID)
+  const { data: specificOrgBalance } =
+    useOrganizationBalance<OrganizationBalance>(orgID)
 
   // Use current org balance if viewing own org, otherwise use specific org balance
   const orgBalance = isViewingOwnOrg ? currentOrgBalance : specificOrgBalance
@@ -136,10 +146,10 @@ export const CreditLedgerLegacy = ({ organizationId }) => {
     totalPages: 0
   }
 
-  const onPaginationChange = (newPg) =>
+  const onPaginationChange = (newPg: BCPaginationOptions) =>
     setPagination((prev) => ({ ...prev, ...newPg }))
 
-  const onPeriodChange = (e) => {
+  const onPeriodChange = (e: SelectChangeEvent<string>) => {
     setSelectedPeriod(e.target.value)
     setPagination({ page: 1, size: pagination.size })
   }
@@ -155,7 +165,7 @@ export const CreditLedgerLegacy = ({ organizationId }) => {
   )
 
   // Column defs
-  const columnDefs = [
+  const columnDefs: ColDef<BCGridRow>[] = [
     {
       field: 'compliancePeriod',
       headerName: t('org:ledger.complianceYear'),
@@ -180,14 +190,16 @@ export const CreditLedgerLegacy = ({ organizationId }) => {
       field: 'transactionType',
       headerName: t('org:ledger.transactionType'),
       valueFormatter: (params) => {
-        const transactionType = params.data.transactionType
-        const description = params.data.description
+        const { transactionType, description } = params.data as Pick<
+          (typeof rowData)[number],
+          'transactionType' | 'description'
+        >
 
         // Map StandaloneTransaction to Legacy Transaction for display
         const displayType =
           transactionType === 'StandaloneTransaction'
             ? 'Legacy Transaction'
-            : spacesFormatter({ value: transactionType })
+            : (spacesFormatter({ value: transactionType }) as string)
 
         // Append description for Compliance Reports (e.g., "Compliance Report - Original")
         if (transactionType === 'ComplianceReport' && description) {
@@ -208,7 +220,7 @@ export const CreditLedgerLegacy = ({ organizationId }) => {
       sort: 'desc'
     }
   ]
-  const getRowId = (p) =>
+  const getRowId = (p: GetRowIdParams<BCGridRow>) =>
     `${p.data.updateDate}-${p.data.transactionType}-${p.data.complianceUnits}-${p.data.description || ''}`
 
   return (

@@ -3,10 +3,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vite-plus/test'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import ThemeProvider from '@mui/material/styles/ThemeProvider'
+import type { ComponentProps } from 'react'
+import type { BCGridViewerProps } from '@/components/BCDataGrid/BCGridViewer'
 import theme from '@/themes'
 import { AutomaticPenaltyLogGrid, PenaltyHistoryGrid } from '../PenaltyGrids'
 
-const mockBCGridViewer = vi.hoisted(() => vi.fn())
+const mockBCGridViewer = vi.hoisted(() =>
+  vi.fn<(props: BCGridViewerProps) => void>()
+)
 
 // Mock hooks
 const mockNavigate = vi.fn()
@@ -18,8 +22,8 @@ vi.mock('react-router-dom', async () => {
   }
 })
 
-const mockT = vi.fn((key, options) => {
-  const translations = {
+const mockT = vi.fn((key: string, options?: { defaultValue?: string }) => {
+  const translations: Partial<Record<string, string>> = {
     'org:penaltyLog.history': 'Penalty history',
     'org:penaltyLog.discretionaryPenalties': 'Penalty history',
     'org:penaltyLog.addPenaltyBtn': 'Add/Edit discretionary penalties',
@@ -74,13 +78,14 @@ vi.mock('@/hooks/useOrganization', () => ({
 
 // Mock BCGridViewer
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  BCGridViewer: (props) => {
+  BCGridViewer: (props: BCGridViewerProps) => {
     mockBCGridViewer(props)
+    const logs = props.queryData?.data?.penaltyLogs
     return (
       <div data-testid="bc-grid-viewer">
         <div data-testid="column-count">{props.columnDefs?.length || 0}</div>
         <div data-testid="data-loaded">
-          {props.queryData?.data?.penaltyLogs?.length || 0}
+          {Array.isArray(logs) ? logs.length : 0}
         </div>
       </div>
     )
@@ -89,12 +94,16 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
 
 // Mock Role component
 vi.mock('@/components/Role', () => ({
-  Role: ({ children }) => <div data-testid="role-wrapper">{children}</div>
+  Role: ({
+    children
+  }: ComponentProps<typeof import('@/components/Role').Role>) => (
+    <div data-testid="role-wrapper">{children}</div>
+  )
 }))
 
 vi.mock('@/components/BCButton', () => ({
   __esModule: true,
-  default: ({ children, onClick, ...props }) => (
+  default: ({ children, onClick, ...props }: ComponentProps<'button'>) => (
     <button onClick={onClick} {...props}>
       {children}
     </button>
@@ -103,7 +112,11 @@ vi.mock('@/components/BCButton', () => ({
 
 // Mock ClearFiltersButton
 vi.mock('@/components/ClearFiltersButton', () => ({
-  ClearFiltersButton: ({ onClick }) => (
+  ClearFiltersButton: ({
+    onClick
+  }: ComponentProps<
+    typeof import('@/components/ClearFiltersButton').ClearFiltersButton
+  >) => (
     <button data-testid="clear-filters-btn" onClick={onClick}>
       Clear Filters
     </button>
@@ -111,7 +124,7 @@ vi.mock('@/components/ClearFiltersButton', () => ({
 }))
 
 describe('PenaltyHistoryGrid - Button Label', () => {
-  let queryClient
+  let queryClient: QueryClient
 
   beforeEach(() => {
     queryClient = new QueryClient({
@@ -127,7 +140,7 @@ describe('PenaltyHistoryGrid - Button Label', () => {
     queryClient.clear()
   })
 
-  const renderComponent = (organizationId = '123') => {
+  const renderComponent = (organizationId: string | null = '123') => {
     return render(
       <QueryClientProvider client={queryClient}>
         <ThemeProvider theme={theme}>
@@ -178,7 +191,7 @@ describe('PenaltyHistoryGrid - Button Label', () => {
 })
 
 describe('PenaltyHistoryGrid - Component Functionality', () => {
-  let queryClient
+  let queryClient: QueryClient
 
   beforeEach(() => {
     queryClient = new QueryClient({
@@ -258,9 +271,9 @@ describe('PenaltyHistoryGrid - Component Functionality', () => {
     )?.[0]
 
     expect(gridProps).toBeDefined()
-    expect(gridProps.columnState).toEqual([])
+    expect(gridProps?.columnState).toEqual([])
     expect(
-      gridProps.columnDefs.every((columnDef) => columnDef.minWidth > 0)
+      gridProps?.columnDefs?.every(({ minWidth }) => (minWidth ?? 0) > 0)
     ).toBe(true)
   })
 
@@ -271,8 +284,8 @@ describe('PenaltyHistoryGrid - Component Functionality', () => {
       ([props]) => props.gridKey === 'penalty-log-history'
     )?.[0]
 
-    expect(gridProps.queryData.data.penaltyLogs).toHaveLength(2)
-    expect(gridProps.queryData.data.pagination).toEqual({
+    expect(gridProps?.queryData?.data?.penaltyLogs).toHaveLength(2)
+    expect(gridProps?.queryData?.data?.pagination).toEqual({
       total: 12,
       page: 1,
       size: 2,
@@ -282,7 +295,7 @@ describe('PenaltyHistoryGrid - Component Functionality', () => {
 })
 
 describe('AutomaticPenaltyLogGrid - Grid Sizing', () => {
-  let queryClient
+  let queryClient: QueryClient
 
   beforeEach(() => {
     queryClient = new QueryClient({
@@ -298,7 +311,11 @@ describe('AutomaticPenaltyLogGrid - Grid Sizing', () => {
     queryClient.clear()
   })
 
-  const renderComponent = (automaticPenaltyRows = []) => {
+  const renderComponent = (
+    automaticPenaltyRows: ComponentProps<
+      typeof AutomaticPenaltyLogGrid
+    >['automaticPenaltyRows'] = []
+  ) => {
     return render(
       <QueryClientProvider client={queryClient}>
         <ThemeProvider theme={theme}>
@@ -320,14 +337,14 @@ describe('AutomaticPenaltyLogGrid - Grid Sizing', () => {
     )?.[0]
 
     expect(gridProps).toBeDefined()
-    expect(gridProps.columnState).toEqual([])
+    expect(gridProps?.columnState).toEqual([])
     expect(
-      gridProps.columnDefs.find(
+      gridProps?.columnDefs?.find(
         (columnDef) => columnDef.field === 'description'
       )
     ).toMatchObject({ flex: 2, minWidth: 420 })
     expect(
-      gridProps.columnDefs.every((columnDef) => columnDef.minWidth > 0)
+      gridProps?.columnDefs?.every(({ minWidth }) => (minWidth ?? 0) > 0)
     ).toBe(true)
   })
 
@@ -359,22 +376,27 @@ describe('AutomaticPenaltyLogGrid - Grid Sizing', () => {
       ([props]) => props.gridKey === 'automatic-penalty-log-history'
     )?.[0]
 
-    expect(gridProps.queryData.data.penaltyLogs).toHaveLength(10)
+    expect(gridProps?.queryData?.data?.penaltyLogs).toHaveLength(10)
 
+    const onPaginationChange = gridProps?.onPaginationChange
+    if (!onPaginationChange) {
+      throw new Error('Expected a pagination callback for automatic penalties')
+    }
     act(() => {
-      gridProps.onPaginationChange({ page: 2, size: 10 })
+      onPaginationChange({ page: 2, size: 10 })
     })
 
     const updatedGridProps = mockBCGridViewer.mock.calls
       .map(([props]) => props)
-      .findLast((props) => props.gridKey === 'automatic-penalty-log-history')
+      .reverse()
+      .find((props) => props.gridKey === 'automatic-penalty-log-history')
 
-    expect(updatedGridProps.queryData.data.penaltyLogs).toHaveLength(2)
+    expect(updatedGridProps?.queryData?.data?.penaltyLogs).toHaveLength(2)
   })
 })
 
 describe('PenaltyHistoryGrid - Edge Cases', () => {
-  let queryClient
+  let queryClient: QueryClient
 
   beforeEach(() => {
     queryClient = new QueryClient({
@@ -405,7 +427,7 @@ describe('PenaltyHistoryGrid - Edge Cases', () => {
   it('should handle empty penalty logs', async () => {
     const { useOrganizationPenaltyLogs } =
       await import('@/hooks/useOrganization')
-    const mockHook = vi.mocked(useOrganizationPenaltyLogs)
+    const mockHook = vi.mocked(useOrganizationPenaltyLogs, { partial: true })
 
     mockHook.mockReturnValue({
       data: {
@@ -425,7 +447,7 @@ describe('PenaltyHistoryGrid - Edge Cases', () => {
   it('should handle loading state', async () => {
     const { useOrganizationPenaltyLogs } =
       await import('@/hooks/useOrganization')
-    const mockHook = vi.mocked(useOrganizationPenaltyLogs)
+    const mockHook = vi.mocked(useOrganizationPenaltyLogs, { partial: true })
 
     mockHook.mockReturnValue({
       data: undefined,

@@ -1,4 +1,5 @@
 import { useCallback, useId, useMemo, useState } from 'react'
+import type { MouseEvent } from 'react'
 import {
   Card,
   CardContent,
@@ -32,12 +33,27 @@ import {
   formatPlainNumber
 } from './_supplyHistoryFormatters'
 
+type FuelCategoryRow = {
+  reportingYear: string
+  fuelCategory: string
+  totalEnergy: number | string | null
+  totalLitres: number | string | null
+  totalComplianceUnits: number | string | null
+}
+type FuelCategory = { name: string; color: string; stripeAngle: number | null }
+type ChartPoint = {
+  axisValue: string
+  marker: string
+  seriesName: string
+  value: number
+}
+
 const STRIPE_COLOR = 'rgba(255, 255, 255, 0.35)'
 
 // Fixed colour and pattern per category, so hiding one never repaints the
 // others and colour is never the only cue. Blue/orange/magenta keep their
 // separation under the common colour-vision deficiencies.
-const FUEL_CATEGORIES = [
+const FUEL_CATEGORIES: FuelCategory[] = [
   { name: 'Gasoline', color: BC_CHART_COLORS.blue, stripeAngle: null },
   { name: 'Diesel', color: BC_CHART_COLORS.orange, stripeAngle: 45 },
   { name: 'Jet fuel', color: BC_CHART_COLORS.magenta, stripeAngle: -45 }
@@ -68,9 +84,11 @@ const MEASURES = {
     // A share of a net (credit minus debit) total is not meaningful.
     showShare: false
   }
-}
+} as const
 
-const toDecal = (stripeAngle) =>
+type MeasureKey = keyof typeof MEASURES
+
+const toDecal = (stripeAngle: number | null) =>
   stripeAngle === null
     ? undefined
     : {
@@ -82,7 +100,7 @@ const toDecal = (stripeAngle) =>
         color: STRIPE_COLOR
       }
 
-const toSwatchBackground = ({ color, stripeAngle }) =>
+const toSwatchBackground = ({ color, stripeAngle }: FuelCategory) =>
   stripeAngle === null
     ? color
     : `repeating-linear-gradient(${stripeAngle + 90}deg, ${STRIPE_COLOR} 0 2px, transparent 2px 8px), ${color}`
@@ -97,10 +115,16 @@ const focusVisibleSx = {
   }
 }
 
-const formatShare = (share) =>
+const formatShare = (share: number | null) =>
   share === null ? '' : `${Number(share.toFixed(1))}%`
 
-const CategorySwatch = ({ category, muted = false }) => (
+const CategorySwatch = ({
+  category,
+  muted = false
+}: {
+  category: FuelCategory
+  muted?: boolean
+}) => (
   <BCBox
     component="span"
     aria-hidden="true"
@@ -116,11 +140,15 @@ const CategorySwatch = ({ category, muted = false }) => (
   />
 )
 
-export const FuelCategoryBreakdown = ({ rows = [] }) => {
+export const FuelCategoryBreakdown = ({
+  rows = []
+}: {
+  rows?: FuelCategoryRow[]
+}) => {
   const { t } = useTranslation(['org'])
   const tableId = useId()
   const categoriesHelpId = useId()
-  const [measureKey, setMeasureKey] = useState('energy')
+  const [measureKey, setMeasureKey] = useState<MeasureKey>('energy')
   const [visibleCategories, setVisibleCategories] = useState(() =>
     FUEL_CATEGORIES.map((category) => category.name)
   )
@@ -133,13 +161,13 @@ export const FuelCategoryBreakdown = ({ rows = [] }) => {
     const years = Array.from(
       new Set(rows.map((row) => row.reportingYear))
     ).sort()
-    const valuesByYear = {}
+    const valuesByYear: Record<string, Record<string, number>> = {}
     rows.forEach((row) => {
       valuesByYear[row.reportingYear] ||= {}
       valuesByYear[row.reportingYear][row.fuelCategory] =
         Number(row[measure.field]) || 0
     })
-    const valueFor = (year, categoryName) =>
+    const valueFor = (year: string, categoryName: string) =>
       valuesByYear[year]?.[categoryName] ?? 0
     const yearTotals = Object.fromEntries(
       years.map((year) => [
@@ -160,7 +188,7 @@ export const FuelCategoryBreakdown = ({ rows = [] }) => {
       (sum, value) => sum + value,
       0
     )
-    const shareOf = (value, total) =>
+    const shareOf = (value: number, total: number) =>
       measure.showShare && total > 0 ? (value / total) * 100 : null
 
     return {
@@ -174,7 +202,7 @@ export const FuelCategoryBreakdown = ({ rows = [] }) => {
   }, [rows, measure])
 
   const formatCompactValue = useCallback(
-    (value) => abbreviateNumber(value, { unitLabel: measure.unit }),
+    (value: number) => abbreviateNumber(value, { unitLabel: measure.unit }),
     [measure.unit]
   )
 
@@ -204,7 +232,7 @@ export const FuelCategoryBreakdown = ({ rows = [] }) => {
         trigger: 'axis',
         appendToBody: true,
         axisPointer: { type: 'shadow' },
-        formatter: (params) => {
+        formatter: (params: ChartPoint[]) => {
           if (!params?.length) {
             return ''
           }
@@ -249,7 +277,7 @@ export const FuelCategoryBreakdown = ({ rows = [] }) => {
         },
         axisLabel: {
           ...BC_CHART_AXIS_LABEL,
-          formatter: (value) => formatCompactAxisNumber(value)
+          formatter: (value: number) => formatCompactAxisNumber(value)
         }
       },
       series: FUEL_CATEGORIES.filter((category) =>
@@ -279,13 +307,16 @@ export const FuelCategoryBreakdown = ({ rows = [] }) => {
     ]
   )
 
-  const handleMeasureChange = (_, nextMeasure) => {
+  const handleMeasureChange = (
+    _: MouseEvent<HTMLElement>,
+    nextMeasure: MeasureKey | null
+  ) => {
     if (nextMeasure) {
       setMeasureKey(nextMeasure)
     }
   }
 
-  const toggleCategory = (categoryName) => {
+  const toggleCategory = (categoryName: string) => {
     setVisibleCategories((current) => {
       if (!current.includes(categoryName)) {
         return [...current, categoryName]

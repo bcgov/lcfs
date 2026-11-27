@@ -6,6 +6,7 @@ import { BCResponsiveEChart } from './BCResponsiveEchart'
 import BCTypography from '../BCTypography'
 import type { EChartsOption } from 'echarts'
 import type { ReactNode } from 'react'
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 
 type BCMetricCardProps = {
   title: string
@@ -13,6 +14,7 @@ type BCMetricCardProps = {
   subtitle?: ReactNode
   option?: EChartsOption
   ariaLabel?: string
+  icon?: IconDefinition
 }
 
 export const BCMetricCard = ({

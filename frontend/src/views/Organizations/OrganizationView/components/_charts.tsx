@@ -1,3 +1,4 @@
+import type { TooltipComponentOption } from 'echarts'
 import { currencyFormatter } from '@/utils/formatters'
 import {
   BC_CHART_AXIS_LABEL,
@@ -7,6 +8,34 @@ import {
   getStandardChartOptions,
   getStandardLineSeriesStyle
 } from '@/components/charts/chartStyles'
+
+type PaletteColor = { main?: string }
+type ChartPalette = {
+  primary?: PaletteColor
+  warning?: PaletteColor
+  success?: PaletteColor
+  info?: PaletteColor
+  white?: PaletteColor
+  black?: PaletteColor
+  common?: { white?: string; black?: string }
+  background?: { paper?: string }
+  text?: { main?: string; primary?: string }
+}
+type ChartTheme = { palette?: ChartPalette }
+type PenaltyChartRow = {
+  year: string | number
+  autoRenewable: number
+  autoLowCarbon: number
+}
+type PenaltyChartTotals = {
+  autoRenewable: number
+  autoLowCarbon: number
+  discretionary: number
+}
+type TooltipFormatter = Exclude<
+  TooltipComponentOption['formatter'],
+  string | undefined
+>
 
 export const PENALTY_CHART_LABELS = {
   automaticRenewableFuelPenalty: 'Automatic renewable fuel penalty',
@@ -27,27 +56,43 @@ const compactCurrencyFormatter = new Intl.NumberFormat('en-CA', {
   maximumFractionDigits: 2
 })
 
-const formatAxisTooltip = (params) => {
-  if (!params?.length) return ''
+const formatAxisTooltip: TooltipFormatter = (params) => {
+  if (!Array.isArray(params) || !params.length) return ''
 
-  const year = params[0].axisValueLabel ?? params[0].axisValue ?? ''
+  const point = params[0] as (typeof params)[0] & {
+    axisValueLabel?: string
+    axisValue?: string
+  }
+  const year = point.axisValueLabel ?? point.axisValue ?? ''
   const values = params.map(
     ({ marker = '', seriesName, value }) =>
-      `${marker}${seriesName}: ${currencyFormatter(value)}`
+      `${marker}${seriesName}: ${currencyFormatter(value as number)}`
   )
 
   return [year, ...values].join('<br/>')
 }
 
-const formatItemTooltip = ({ marker = '', name, value, percent }) =>
-  `${marker}${name}: ${currencyFormatter(value)} (${percent}%)`
+const formatItemTooltip: TooltipFormatter = (params) => {
+  const {
+    marker = '',
+    name,
+    value,
+    percent
+  } = params as {
+    marker?: string
+    name: string
+    value: number
+    percent: number
+  }
+  return `${marker}${name}: ${currencyFormatter(value)} (${percent}%)`
+}
 
-const formatCompactNumber = (value) =>
+const formatCompactNumber = (value: number) =>
   value >= 1000 ? `${value / 1000}k` : value
 
 const chartCurrencyLabel = (overrides = {}) => ({
   show: true,
-  formatter: ({ value }) =>
+  formatter: ({ value }: { value: number }) =>
     Number(value) === 0 ? '' : compactCurrencyFormatter.format(value),
   color: '#ffffff',
   fontSize: 11,
@@ -55,10 +100,18 @@ const chartCurrencyLabel = (overrides = {}) => ({
   ...overrides
 })
 
-const getPaletteColor = (palette, key, fallbackKey) =>
-  palette?.[key]?.main ?? palette?.[fallbackKey]?.main
+const getPaletteColor = (
+  palette: ChartPalette | undefined,
+  key: 'primary' | 'warning' | 'success' | 'info',
+  fallbackKey?: 'primary' | 'warning' | 'success' | 'info'
+) =>
+  palette?.[key]?.main ??
+  (fallbackKey ? palette?.[fallbackKey]?.main : undefined)
 
-export const useStackedBarOption = (data, theme) => {
+export const useStackedBarOption = (
+  data: PenaltyChartRow[],
+  theme?: ChartTheme
+) => {
   const palette = theme?.palette
   const chartColors = [
     getPaletteColor(palette, 'primary') ?? BC_CHART_COLORS.blue,
@@ -89,7 +142,7 @@ export const useStackedBarOption = (data, theme) => {
       },
       axisLabel: {
         ...BC_CHART_AXIS_LABEL,
-        formatter: (value) => compactCurrencyFormatter.format(value)
+        formatter: (value: number) => compactCurrencyFormatter.format(value)
       }
     },
     series: [
@@ -118,7 +171,10 @@ export const useStackedBarOption = (data, theme) => {
   })
 }
 
-export const usePenaltyMixOption = (totals, theme) => {
+export const usePenaltyMixOption = (
+  totals: PenaltyChartTotals,
+  theme?: ChartTheme
+) => {
   const palette = theme?.palette
   const white =
     palette?.common?.white ?? palette?.white?.main ?? palette?.background?.paper
@@ -128,7 +184,7 @@ export const usePenaltyMixOption = (totals, theme) => {
     getPaletteColor(palette, 'primary'),
     getPaletteColor(palette, 'warning'),
     getPaletteColor(palette, 'success', 'info')
-  ].filter(Boolean)
+  ].filter((color): color is string => Boolean(color))
   const labelColors = [
     white,
     black ?? getPaletteColor(palette, 'primary'),
@@ -173,8 +229,13 @@ export const usePenaltyMixOption = (totals, theme) => {
         emphasis: {
           label: {
             show: true,
-            formatter: ({ value, percent }) =>
-              `${compactCurrencyFormatter.format(value)}\n${percent}%`,
+            formatter: ({
+              value,
+              percent
+            }: {
+              value: number
+              percent: number
+            }) => `${compactCurrencyFormatter.format(value)}\n${percent}%`,
             fontWeight: 'bold'
           }
         },
@@ -201,18 +262,21 @@ export const usePenaltyMixOption = (totals, theme) => {
 }
 
 export const useSparklineOption = (
-  labels,
-  data,
+  labels: string[],
+  data: number[],
   seriesName = 'Series',
-  { formatCurrency = false, theme } = {}
+  {
+    formatCurrency = false,
+    theme
+  }: { formatCurrency?: boolean; theme?: ChartTheme } = {}
 ) => {
   const palette = theme?.palette
   const lineColor = getPaletteColor(palette, 'info', 'primary')
   const tooltipValueFormatter = formatCurrency
     ? currencyFormatter
-    : (value) => value
+    : (value: number) => value
   const axisValueFormatter = formatCurrency
-    ? (value) => compactCurrencyFormatter.format(value)
+    ? (value: number) => compactCurrencyFormatter.format(value)
     : formatCompactNumber
 
   return getStandardChartOptions({
@@ -221,10 +285,10 @@ export const useSparklineOption = (
       trigger: 'axis',
       axisPointer: { type: 'line' },
       formatter: (params) => {
-        if (!params?.length) return ''
-        const point = params[0]
+        if (!Array.isArray(params) || !params.length) return ''
+        const point = params[0] as (typeof params)[0] & { axisValue?: string }
         return `${point.marker}${point.axisValue}: ${tooltipValueFormatter(
-          point.data
+          point.data as number
         )}`
       }
     },

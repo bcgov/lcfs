@@ -159,7 +159,7 @@ export const discretionaryPenaltyLogColumnDefs: ColDef[] = [
 
 export const penaltyLogEditorColDefs = (
   compliancePeriodLabelMap: Map<number, string>,
-  complianceValues: number[],
+  complianceValues: Array<number | string>,
   t: (key: string, options?: Record<string, unknown>) => string
 ): ColDef[] => [
   validation,

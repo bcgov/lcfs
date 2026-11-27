@@ -3,6 +3,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vite-plus/test'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import ThemeProvider from '@mui/material/styles/ThemeProvider'
+import type { ComponentProps } from 'react'
+import type { CompliancePeriod } from '@/hooks/useComplianceReports'
 import theme from '@/themes'
 import { PenaltyLogManage } from '../PenaltyLogManage'
 
@@ -17,7 +19,7 @@ vi.mock('react-router-dom', async () => {
   }
 })
 
-const mockT = vi.fn((key, options) => {
+const mockT = vi.fn((key: string, options?: { defaultValue?: string }) => {
   if (options?.defaultValue) return options.defaultValue
   return key
 })
@@ -86,8 +88,12 @@ const mockCompliancePeriods = [
   }
 ]
 
+const mockCompliancePeriod = vi.hoisted(() =>
+  vi.fn<() => { data: CompliancePeriod[] | null; isLoading: boolean }>()
+)
+
 vi.mock('@/hooks/useComplianceReports', () => ({
-  useCompliancePeriod: vi.fn(() => ({
+  useCompliancePeriod: mockCompliancePeriod.mockImplementation(() => ({
     data: mockCompliancePeriods,
     isLoading: false
   }))
@@ -95,7 +101,12 @@ vi.mock('@/hooks/useComplianceReports', () => ({
 
 // Mock BCGridEditor
 vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
-  BCGridEditor: ({ columnDefs, rowData }) => (
+  BCGridEditor: ({
+    columnDefs,
+    rowData
+  }: ComponentProps<
+    typeof import('@/components/BCDataGrid/BCGridEditor').BCGridEditor
+  >) => (
     <div data-testid="bc-grid-editor">
       <div data-testid="column-defs-count">{columnDefs?.length || 0}</div>
       <div data-testid="row-data-count">{rowData?.length || 0}</div>
@@ -104,7 +115,7 @@ vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
 }))
 
 describe('PenaltyLogManage - Year Filtering', () => {
-  let queryClient
+  let queryClient: QueryClient
 
   beforeEach(() => {
     queryClient = new QueryClient({
@@ -146,10 +157,7 @@ describe('PenaltyLogManage - Year Filtering', () => {
     expect(container).toBeTruthy()
   })
 
-  it('should filter out future years from compliance period options', async () => {
-    const { useCompliancePeriod } = await import('@/hooks/useComplianceReports')
-    const mockHook = vi.mocked(useCompliancePeriod)
-
+  it('should filter out future years from compliance period options', () => {
     // Mock Date.prototype.getFullYear
     const getFullYearSpy = vi
       .spyOn(Date.prototype, 'getFullYear')
@@ -157,7 +165,7 @@ describe('PenaltyLogManage - Year Filtering', () => {
 
     const { container } = renderComponent()
 
-    expect(mockHook).toHaveBeenCalled()
+    expect(mockCompliancePeriod).toHaveBeenCalled()
 
     // The component should have been rendered without errors
     expect(container).toBeTruthy()
@@ -183,10 +191,7 @@ describe('PenaltyLogManage - Year Filtering', () => {
     getFullYearSpy.mockRestore()
   })
 
-  it('should handle compliance periods with no year in description', async () => {
-    const { useCompliancePeriod } = await import('@/hooks/useComplianceReports')
-    const mockHook = vi.mocked(useCompliancePeriod)
-
+  it('should handle compliance periods with no year in description', () => {
     // Add a period without a year
     const periodsWithNoYear = [
       ...mockCompliancePeriods,
@@ -197,7 +202,7 @@ describe('PenaltyLogManage - Year Filtering', () => {
       }
     ]
 
-    mockHook.mockReturnValue({
+    mockCompliancePeriod.mockReturnValue({
       data: periodsWithNoYear,
       isLoading: false
     })
@@ -209,11 +214,8 @@ describe('PenaltyLogManage - Year Filtering', () => {
     expect(screen.getByText('Manage penalty log entries')).toBeInTheDocument()
   })
 
-  it('should handle empty compliance periods array', async () => {
-    const { useCompliancePeriod } = await import('@/hooks/useComplianceReports')
-    const mockHook = vi.mocked(useCompliancePeriod)
-
-    mockHook.mockReturnValue({
+  it('should handle empty compliance periods array', () => {
+    mockCompliancePeriod.mockReturnValue({
       data: [],
       isLoading: false
     })
@@ -224,11 +226,8 @@ describe('PenaltyLogManage - Year Filtering', () => {
     expect(screen.getByText('Manage penalty log entries')).toBeInTheDocument()
   })
 
-  it('should handle null compliance periods', async () => {
-    const { useCompliancePeriod } = await import('@/hooks/useComplianceReports')
-    const mockHook = vi.mocked(useCompliancePeriod)
-
-    mockHook.mockReturnValue({
+  it('should handle null compliance periods', () => {
+    mockCompliancePeriod.mockReturnValue({
       data: null,
       isLoading: false
     })
@@ -257,7 +256,7 @@ describe('PenaltyLogManage - Year Filtering', () => {
 })
 
 describe('PenaltyLogManage - Component Integration', () => {
-  let queryClient
+  let queryClient: QueryClient
 
   beforeEach(() => {
     queryClient = new QueryClient({

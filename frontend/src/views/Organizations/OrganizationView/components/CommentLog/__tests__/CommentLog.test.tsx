@@ -13,10 +13,14 @@ import internalComment from '@/assets/locales/en/internalComment.json'
 import theme from '@/themes'
 import { roles } from '@/constants/roles'
 import { CommentLog } from '../CommentLog'
+import type {
+  OrganizationCommentRecord,
+  UseOrganizationCommentsResult
+} from '@/hooks/useOrganizationComments'
 
 // ----- Mocks ---------------------------------------------------------
 
-const baseHookState = () => ({
+const baseHookState = (): UseOrganizationCommentsResult => ({
   filters: {
     category: null,
     complianceYear: null,
@@ -40,10 +44,13 @@ const baseHookState = () => ({
   refetch: vi.fn()
 })
 
-const mockHook = vi.fn(() => baseHookState())
+const mockHook = vi.fn<
+  (orgId: number | string | undefined | null) => UseOrganizationCommentsResult
+>(() => baseHookState())
 
 vi.mock('@/hooks/useOrganizationComments', () => ({
-  useOrganizationComments: (...args) => mockHook(...args),
+  useOrganizationComments: (orgId: number | string | undefined | null) =>
+    mockHook(orgId),
   useCommentCategories: () => ({ data: [] }),
   useEditOrganizationComment: () => ({ mutate: vi.fn(), isPending: false }),
   COMPANY_OVERVIEW_ENTITY_TYPE: 'Organization'
@@ -51,7 +58,7 @@ vi.mock('@/hooks/useOrganizationComments', () => ({
 
 const mockUser = vi.fn(() => ({
   data: { organization: { organizationId: 123 } },
-  hasRoles: (...rs) => rs.includes(roles.government)
+  hasRoles: (...rs: string[]) => rs.includes(roles.government)
 }))
 vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: () => mockUser()
@@ -65,9 +72,7 @@ vi.mock('@/hooks/useMentionableUsers', () => ({
 // Stub the filter bar to a single visible category select to keep
 // component tests focused on rendering / pagination / sanitization.
 vi.mock('../CommentLogFilters', () => ({
-  CommentLogFilters: ({ isGovernment }) => (
-    <div data-test="filters" data-government={String(isGovernment)} />
-  )
+  CommentLogFilters: () => <div data-test="filters" />
 }))
 
 // ----- Helpers -------------------------------------------------------
@@ -98,25 +103,33 @@ const renderCommentLog = () => {
   )
 }
 
-const sampleComment = (overrides = {}) => ({
-  internalCommentId: 1,
-  comment: '<p>Hello <strong>world</strong></p>',
-  plainTextComment: 'Hello world',
-  entityType: 'complianceReport',
-  entityId: 10,
-  category: 'Compliance notes',
-  complianceYear: 2024,
-  organizationId: 123,
-  organizationName: 'LCFS Org 1',
-  visibility: 'Internal',
-  audienceScope: 'Analyst',
-  createUser: 'analyst1',
-  fullName: 'Guy Analyst',
-  createDate: '2025-03-27T10:40:54Z',
-  updateDate: '2025-03-27T10:40:54Z',
-  canEdit: false,
-  ...overrides
-})
+const sampleComment = (
+  overrides: Partial<OrganizationCommentRecord> = {}
+): OrganizationCommentRecord =>
+  Object.assign(
+    {
+      internalCommentId: 1,
+      comment: '<p>Hello <strong>world</strong></p>',
+      plainTextComment: 'Hello world',
+      entityType: 'complianceReport',
+      entityId: 10,
+      category: 'Compliance notes',
+      complianceYear: 2024,
+      organizationId: 123,
+      organizationName: 'LCFS Org 1',
+      visibility: 'Internal',
+      audienceScope: 'Analyst',
+      createUser: 'analyst1',
+      fullName: 'Guy Analyst',
+      createDate: '2025-03-27T10:40:54Z',
+      updateDate: '2025-03-27T10:40:54Z',
+      updateUser: null,
+      updateFullName: null,
+      documents: [],
+      canEdit: false
+    } satisfies OrganizationCommentRecord,
+    overrides
+  )
 
 // ----- Tests ---------------------------------------------------------
 
@@ -179,7 +192,7 @@ describe('CommentLog', () => {
             sampleComment({
               entityType: 'ciApplication',
               category: 'CI application notes',
-              complianceYear
+              complianceYear: complianceYear ?? null
             })
           ],
           pagination: { page: 1, size: 25, total: 1, totalPages: 1 }
@@ -250,7 +263,7 @@ describe('CommentLog', () => {
     const body = within(row).getByTestId('comment-body')
     expect(body.innerHTML).toContain('<strong>bold</strong>')
     expect(body.innerHTML).not.toContain('<script')
-    expect(window.__pwned).toBeUndefined()
+    expect((window as Window & { __pwned?: boolean }).__pwned).toBeUndefined()
   })
 
   it('renders consecutive comments from the same entity without reordering them', () => {
@@ -306,7 +319,7 @@ describe('CommentLog', () => {
       'href',
       '/compliance-reporting/2024/10'
     )
-    expect(row.querySelector('time').parentElement).toHaveTextContent(
+    expect(row.querySelector('time')?.parentElement).toHaveTextContent(
       /^Guy Analyst, .+ - CR #10$/
     )
     expect(within(row).getByTestId('comment-body')).toHaveTextContent(
@@ -336,7 +349,7 @@ describe('CommentLog', () => {
       'href',
       '/compliance-reporting/2024/10'
     )
-    expect(row.querySelector('time').parentElement).toHaveTextContent(
+    expect(row.querySelector('time')?.parentElement).toHaveTextContent(
       /^Guy Analyst, .+ - CR #10$/
     )
     expect(within(row).getByTestId('comment-body')).toHaveTextContent(
