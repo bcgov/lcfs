@@ -6,7 +6,7 @@ import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import theme from '@/themes'
 
 // Mock the translation function
-const mockT = vi.fn((key) => key)
+const mockT = vi.fn((key: string) => key)
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: mockT
@@ -15,7 +15,7 @@ vi.mock('react-i18next', () => ({
 
 // Mock the numberFormatter utility
 vi.mock('@/utils/formatters', () => ({
-  numberFormatter: vi.fn(({ value }) => `${value}`)
+  numberFormatter: vi.fn(({ value }: { value?: number | string }) => `${value}`)
 }))
 
 // Mock organization data
@@ -37,12 +37,30 @@ const mockOrganizations = [
 // Mock the useOrganizationNames hook
 const mockUseOrganizationNames = vi.fn()
 vi.mock('@/hooks/useOrganizations', () => ({
-  useOrganizationNames: (statuses) => mockUseOrganizationNames(statuses)
+  useOrganizationNames: (statuses: string[] | null) =>
+    mockUseOrganizationNames(statuses)
 }))
 
-const renderComponent = (props = {}) => {
+interface TestSelection {
+  id: number | string | null
+  label: string | null
+  name: string | null
+}
+
+const renderComponent = (
+  props: {
+    selectedOrg?: TestSelection | null
+    onOrgChange?: (selection: TestSelection) => void
+    onlyRegistered?: boolean
+    orgFilter?: string
+    includeAllOption?: boolean
+    label?: string
+    placeholder?: string
+    showSelectedLabel?: boolean
+  } = {}
+) => {
   const defaultProps = {
-    onOrgChange: vi.fn(),
+    onOrgChange: vi.fn((_selection: TestSelection) => undefined),
     ...props
   }
 
@@ -125,7 +143,13 @@ describe('OrganizationList Component', () => {
     })
 
     it('selects the current organization when selectedOrg id is a string', async () => {
-      renderComponent({ selectedOrg: { id: '1' } })
+      renderComponent({
+        selectedOrg: {
+          id: '1',
+          label: 'Organization One',
+          name: 'Organization One'
+        }
+      })
 
       await waitFor(() => {
         expect(screen.getByRole('combobox')).toHaveValue('Organization One')
@@ -144,7 +168,11 @@ describe('OrganizationList Component', () => {
 
   describe('Selected Organization Display', () => {
     it('displays selected organization label when provided', () => {
-      const selectedOrg = { id: 1, label: 'Test Organization' }
+      const selectedOrg = {
+        id: 1,
+        label: 'Test Organization',
+        name: 'Test Organization'
+      }
       renderComponent({ selectedOrg })
 
       expect(screen.getByText('Test Organization')).toBeInTheDocument()
@@ -227,7 +255,11 @@ describe('OrganizationList Component', () => {
 
   describe('TextField Value Logic', () => {
     it('finds correct option when selectedOrg is provided', async () => {
-      const selectedOrg = { id: 1, label: 'Organization One' }
+      const selectedOrg = {
+        id: 1,
+        label: 'Organization One',
+        name: 'Organization One'
+      }
       renderComponent({ selectedOrg })
 
       await waitFor(() => {
@@ -236,7 +268,11 @@ describe('OrganizationList Component', () => {
     })
 
     it('handles selectedOrg not found in options list', async () => {
-      const selectedOrg = { id: 999, label: 'Non-existent Organization' }
+      const selectedOrg = {
+        id: 999,
+        label: 'Non-existent Organization',
+        name: 'Non-existent Organization'
+      }
       renderComponent({ selectedOrg })
 
       await waitFor(() => {

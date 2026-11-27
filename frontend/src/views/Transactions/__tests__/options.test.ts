@@ -8,10 +8,33 @@ vi.mock('@/hooks/useTransactions', () => ({
   useTransactionStatuses: vi.fn()
 }))
 
-const t = (key) => key
+const t = (key: string) => key
 const colDefs = transactionsColDefs(t)
+type TransactionColDef = (typeof colDefs)[number]
+const valueFormatter = (col: TransactionColDef) => {
+  if (typeof col.valueFormatter !== 'function') {
+    throw new Error('Expected value formatter')
+  }
+  return col.valueFormatter
+}
+const valueGetter = (col: TransactionColDef) => {
+  if (typeof col.valueGetter !== 'function') {
+    throw new Error('Expected value getter')
+  }
+  return col.valueGetter
+}
 
-const makeRow = (overrides = {}) => ({
+const makeRow = (
+  overrides: Partial<{
+    transactionType: string
+    transactionId: number
+    compliancePeriod: string | null
+    fromOrganization: string | null
+    toOrganization: string
+    pricePerUnit: number | null
+    description: string | null
+  }> = {}
+) => ({
   data: {
     transactionType: 'Transfer',
     transactionId: 1,
@@ -23,6 +46,13 @@ const makeRow = (overrides = {}) => ({
     ...overrides
   }
 })
+
+const formatterParams = (data: ReturnType<typeof makeRow>['data']) =>
+  ({ data, value: undefined }) as Parameters<
+    ReturnType<typeof valueFormatter>
+  >[0]
+const getterParams = (data: ReturnType<typeof makeRow>['data']) =>
+  ({ data }) as Parameters<ReturnType<typeof valueGetter>>[0]
 
 // ---------------------------------------------------------------------------
 // defaultSortModel
@@ -45,44 +75,53 @@ describe('defaultSortModel', () => {
 // transactionType column — valueFormatter
 // ---------------------------------------------------------------------------
 describe('transactionsColDefs — transactionType column', () => {
-  const col = colDefs.find((c) => c.colId === 'transactionType')
+  const col = colDefs.find((c) => c.colId === 'transactionType')!
 
   it('formats StandaloneTransaction as "Legacy Transaction"', () => {
-    const params = makeRow({
-      transactionType: 'StandaloneTransaction',
-      description: null
-    })
-    expect(col.valueFormatter(params)).toBe('Legacy Transaction')
+    const params = formatterParams(
+      makeRow({
+        transactionType: 'StandaloneTransaction',
+        description: null
+      }).data
+    )
+    expect(valueFormatter(col)(params)).toBe('Legacy Transaction')
   })
 
   it('adds spaces to camelCase type names', () => {
-    const params = makeRow({
-      transactionType: 'InitiativeAgreement',
-      description: null
-    })
+    const params = formatterParams(
+      makeRow({
+        transactionType: 'InitiativeAgreement',
+        description: null
+      }).data
+    )
     // spacesFormatter adds spaces between camelCase words
-    const formatted = col.valueFormatter(params)
+    const formatted = valueFormatter(col)(params)
     expect(formatted).toMatch(/Initiative/i)
   })
 
   it('appends description suffix when present', () => {
-    const params = makeRow({
-      transactionType: 'AdminAdjustment',
-      description: 'Q1 Correction'
-    })
-    const formatted = col.valueFormatter(params)
+    const params = formatterParams(
+      makeRow({
+        transactionType: 'AdminAdjustment',
+        description: 'Q1 Correction'
+      }).data
+    )
+    const formatted = valueFormatter(col)(params)
     expect(formatted).toContain('Q1 Correction')
     expect(formatted).toContain(' - ')
   })
 
   it('does not append suffix when description is null', () => {
-    const params = makeRow({ transactionType: 'Transfer', description: null })
-    expect(col.valueFormatter(params)).not.toContain(' - ')
+    const params = formatterParams(
+      makeRow({ transactionType: 'Transfer', description: null }).data
+    )
+    expect(valueFormatter(col)(params)).not.toContain(' - ')
   })
 
   it('provides static transaction-type options via floatingFilterComponentParams', () => {
-    const { data } = col.floatingFilterComponentParams.optionsQuery()
-    const types = data.map((d) => d.type)
+    const optionsQuery = col.floatingFilterComponentParams!.optionsQuery
+    const { data } = optionsQuery()
+    const types = data.map((d: { type: string }) => d.type)
     expect(types).toContain('Transfer')
     expect(types).toContain('ComplianceReport')
     expect(types).toContain('AdminAdjustment')
@@ -96,17 +135,23 @@ describe('transactionsColDefs — transactionType column', () => {
 // compliancePeriod column — valueGetter
 // ---------------------------------------------------------------------------
 describe('transactionsColDefs — compliancePeriod column', () => {
-  const col = colDefs.find((c) => c.colId === 'compliancePeriod')
+  const col = colDefs.find((c) => c.colId === 'compliancePeriod')!
 
   it('returns the compliancePeriod when present', () => {
-    expect(col.valueGetter(makeRow({ compliancePeriod: '2023' }))).toBe('2023')
+    expect(
+      valueGetter(col)(getterParams(makeRow({ compliancePeriod: '2023' }).data))
+    ).toBe('2023')
   })
 
   it('falls back to "N/A" when compliancePeriod is absent', () => {
-    expect(col.valueGetter(makeRow({ compliancePeriod: null }))).toBe('N/A')
-    expect(col.valueGetter(makeRow({ compliancePeriod: undefined }))).toBe(
-      'N/A'
-    )
+    expect(
+      valueGetter(col)(getterParams(makeRow({ compliancePeriod: null }).data))
+    ).toBe('N/A')
+    expect(
+      valueGetter(col)(
+        getterParams(makeRow({ compliancePeriod: undefined }).data)
+      )
+    ).toBe('N/A')
   })
 })
 
@@ -114,16 +159,20 @@ describe('transactionsColDefs — compliancePeriod column', () => {
 // fromOrganization column — valueGetter
 // ---------------------------------------------------------------------------
 describe('transactionsColDefs — fromOrganization column', () => {
-  const col = colDefs.find((c) => c.colId === 'fromOrganization')
+  const col = colDefs.find((c) => c.colId === 'fromOrganization')!
 
   it('returns the organisation name when present', () => {
-    expect(col.valueGetter(makeRow({ fromOrganization: 'Delta Fuels' }))).toBe(
-      'Delta Fuels'
-    )
+    expect(
+      valueGetter(col)(
+        getterParams(makeRow({ fromOrganization: 'Delta Fuels' }).data)
+      )
+    ).toBe('Delta Fuels')
   })
 
   it('falls back to "N/A" when fromOrganization is absent', () => {
-    expect(col.valueGetter(makeRow({ fromOrganization: null }))).toBe('N/A')
+    expect(
+      valueGetter(col)(getterParams(makeRow({ fromOrganization: null }).data))
+    ).toBe('N/A')
   })
 })
 
@@ -131,22 +180,30 @@ describe('transactionsColDefs — fromOrganization column', () => {
 // pricePerUnit column — valueGetter
 // ---------------------------------------------------------------------------
 describe('transactionsColDefs — pricePerUnit column', () => {
-  const col = colDefs.find((c) => c.colId === 'pricePerUnit')
+  const col = colDefs.find((c) => c.colId === 'pricePerUnit')!
 
   it('returns the numeric value when present', () => {
-    expect(col.valueGetter(makeRow({ pricePerUnit: 25.5 }))).toBe(25.5)
+    expect(
+      valueGetter(col)(getterParams(makeRow({ pricePerUnit: 25.5 }).data))
+    ).toBe(25.5)
   })
 
   it('returns 0 as-is', () => {
-    expect(col.valueGetter(makeRow({ pricePerUnit: 0 }))).toBe(0)
+    expect(
+      valueGetter(col)(getterParams(makeRow({ pricePerUnit: 0 }).data))
+    ).toBe(0)
   })
 
   it('returns "N/A" when pricePerUnit is null', () => {
-    expect(col.valueGetter(makeRow({ pricePerUnit: null }))).toBe('N/A')
+    expect(
+      valueGetter(col)(getterParams(makeRow({ pricePerUnit: null }).data))
+    ).toBe('N/A')
   })
 
   it('returns "N/A" when pricePerUnit is undefined', () => {
-    expect(col.valueGetter(makeRow({ pricePerUnit: undefined }))).toBe('N/A')
+    expect(
+      valueGetter(col)(getterParams(makeRow({ pricePerUnit: undefined }).data))
+    ).toBe('N/A')
   })
 })
 
@@ -154,8 +211,8 @@ describe('transactionsColDefs — pricePerUnit column', () => {
 // updateDate column — comparator
 // ---------------------------------------------------------------------------
 describe('transactionsColDefs — updateDate column comparator', () => {
-  const col = colDefs.find((c) => c.colId === 'updateDate')
-  const comparator = col.filterParams.comparator
+  const col = colDefs.find((c) => c.colId === 'updateDate')!
+  const comparator = col.filterParams!.comparator!
 
   it('returns -1 when cellDate is before filterDate', () => {
     const filterDate = new Date(2024, 5, 1) // local 1 Jun 2024

@@ -1,7 +1,8 @@
 import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, it, expect, beforeEach, vi } from 'vite-plus/test'
+import { describe, it, expect, beforeEach, afterAll, vi } from 'vite-plus/test'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
 import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import theme from '@/themes'
 import { useTransactionMutation } from '../transactionMutation'
@@ -9,7 +10,7 @@ import { TRANSACTION_STATUSES } from '@/constants/statuses'
 import { INITIATIVE_AGREEMENT } from '@/views/Transactions/constants'
 import { ROUTES, buildPath } from '@/routes/routes'
 
-let navigate
+let navigate: ReturnType<typeof vi.fn> = vi.fn()
 
 // Mock necessary functions
 vi.mock('react-router-dom', async () => {
@@ -20,7 +21,7 @@ vi.mock('react-router-dom', async () => {
   }
 })
 
-const renderComponent = (HookComponent) => {
+const renderComponent = (HookComponent: ReactNode) => {
   const queryClient = new QueryClient()
   return render(
     <QueryClientProvider client={queryClient}>
@@ -32,7 +33,7 @@ const renderComponent = (HookComponent) => {
 }
 
 describe('useTransactionMutation', () => {
-  const t = vi.fn((key) => key)
+  const t = vi.fn((key: string) => key)
   const setAlertMessage = vi.fn()
   const setAlertSeverity = vi.fn()
   const setModalData = vi.fn()
@@ -58,21 +59,16 @@ describe('useTransactionMutation', () => {
         alertRef,
         queryClient
       )
+      const response = {
+        data: {
+          currentStatus: { status: TRANSACTION_STATUSES.DRAFT },
+          initiativeAgreementId: '123',
+          history: []
+        }
+      }
       return (
         <button
-          onClick={() =>
-            handleSuccess(
-              {
-                data: {
-                  currentStatus: { status: TRANSACTION_STATUSES.DRAFT },
-                  initiativeAgreementId: '123',
-                  history: []
-                }
-              },
-              '123',
-              INITIATIVE_AGREEMENT
-            )
-          }
+          onClick={() => handleSuccess(response, '123', INITIATIVE_AGREEMENT)}
         >
           Test
         </button>

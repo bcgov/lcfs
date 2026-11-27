@@ -1,16 +1,43 @@
 import { render, screen } from '@testing-library/react'
+import type { ComponentProps } from 'react'
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vite-plus/test'
 import { TransactionDetails } from '../TransactionDetails'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import ThemeProvider from '@mui/material/styles/ThemeProvider'
-import { useOrganizationNames } from '@/hooks/useOrganizations'
-import { useOrganizationBalance } from '@/hooks/useOrganization'
 import theme from '@/themes'
 import { FormProvider, useForm } from 'react-hook-form'
 import { MemoryRouter } from 'react-router-dom'
 
-vi.mock('@/hooks/useOrganizations')
-vi.mock('@/hooks/useOrganization')
+interface TestOrganization {
+  organizationId: number | string
+  name: string
+}
+
+interface TestBalance {
+  totalBalance: number
+  reservedBalance: number
+}
+
+const hookMocks = vi.hoisted(() => ({
+  useOrganizationNames: vi.fn<
+    (statuses: string[] | null) => {
+      data: TestOrganization[] | null
+      isLoading?: boolean
+    }
+  >(),
+  useOrganizationBalance: vi.fn<
+    (organizationID: string | number | null | undefined) => {
+      data: TestBalance | null
+    }
+  >()
+}))
+
+vi.mock('@/hooks/useOrganizations', () => ({
+  useOrganizationNames: hookMocks.useOrganizationNames
+}))
+vi.mock('@/hooks/useOrganization', () => ({
+  useOrganizationBalance: hookMocks.useOrganizationBalance
+}))
 vi.mock('@/utils/formatters', () => ({
   dateFormatter: vi.fn(() => '2024-01-01'),
   numberFormatter: vi.fn((value) =>
@@ -29,7 +56,7 @@ vi.mock('@react-keycloak/web', () => ({
 }))
 
 // Mock the translation function
-const mockT = vi.fn((key) => key)
+const mockT = vi.fn((key: string) => key)
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: mockT
@@ -54,7 +81,9 @@ const mockBalance = {
 
 // Simple wrapper component
 const createWrapper = () => {
-  const WrapperComponent = (props) => {
+  const WrapperComponent = (
+    props: ComponentProps<typeof TransactionDetails>
+  ) => {
     const queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
@@ -99,8 +128,8 @@ describe('TransactionDetails Component', () => {
 
   describe('Loading States', () => {
     it('should render loading component when orgData is null', () => {
-      useOrganizationNames.mockReturnValue({ data: null })
-      useOrganizationBalance.mockReturnValue({ data: null })
+      hookMocks.useOrganizationNames.mockReturnValue({ data: null })
+      hookMocks.useOrganizationBalance.mockReturnValue({ data: null })
 
       const WrapperComponent = createWrapper()
       render(<WrapperComponent transactionId={null} isEditable={true} />)
@@ -109,8 +138,8 @@ describe('TransactionDetails Component', () => {
     })
 
     it('should render loading component when orgData is empty array', () => {
-      useOrganizationNames.mockReturnValue({ data: [] })
-      useOrganizationBalance.mockReturnValue({ data: null })
+      hookMocks.useOrganizationNames.mockReturnValue({ data: [] })
+      hookMocks.useOrganizationBalance.mockReturnValue({ data: null })
 
       const WrapperComponent = createWrapper()
       render(<WrapperComponent transactionId={null} isEditable={true} />)
@@ -121,13 +150,12 @@ describe('TransactionDetails Component', () => {
 
   describe('Normal Rendering', () => {
     beforeEach(() => {
-      useOrganizationNames.mockReturnValue({
+      hookMocks.useOrganizationNames.mockReturnValue({
         data: mockOrganizations,
         isLoading: false
       })
-      useOrganizationBalance.mockReturnValue({
-        data: mockBalance,
-        isLoading: false
+      hookMocks.useOrganizationBalance.mockReturnValue({
+        data: mockBalance
       })
     })
 
@@ -144,21 +172,23 @@ describe('TransactionDetails Component', () => {
       const WrapperComponent = createWrapper()
       render(<WrapperComponent transactionId={null} isEditable={true} />)
 
-      expect(useOrganizationNames).toHaveBeenCalledWith(null)
+      expect(hookMocks.useOrganizationNames).toHaveBeenCalledWith(null)
     })
 
     it('should call useOrganizationBalance hook', () => {
       const WrapperComponent = createWrapper()
       render(<WrapperComponent transactionId={null} isEditable={true} />)
 
-      expect(useOrganizationBalance).toHaveBeenCalled()
+      expect(hookMocks.useOrganizationBalance).toHaveBeenCalled()
     })
   })
 
   describe('Transaction Type Display', () => {
     beforeEach(() => {
-      useOrganizationNames.mockReturnValue({ data: mockOrganizations })
-      useOrganizationBalance.mockReturnValue({ data: mockBalance })
+      hookMocks.useOrganizationNames.mockReturnValue({
+        data: mockOrganizations
+      })
+      hookMocks.useOrganizationBalance.mockReturnValue({ data: mockBalance })
     })
 
     it('should show transaction type radio buttons when transactionId is null', () => {
@@ -186,8 +216,10 @@ describe('TransactionDetails Component', () => {
 
   describe('Form Controls', () => {
     beforeEach(() => {
-      useOrganizationNames.mockReturnValue({ data: mockOrganizations })
-      useOrganizationBalance.mockReturnValue({ data: mockBalance })
+      hookMocks.useOrganizationNames.mockReturnValue({
+        data: mockOrganizations
+      })
+      hookMocks.useOrganizationBalance.mockReturnValue({ data: mockBalance })
     })
 
     it('should render form elements that exist', () => {
@@ -208,8 +240,10 @@ describe('TransactionDetails Component', () => {
 
   describe('Props Variations', () => {
     beforeEach(() => {
-      useOrganizationNames.mockReturnValue({ data: mockOrganizations })
-      useOrganizationBalance.mockReturnValue({ data: mockBalance })
+      hookMocks.useOrganizationNames.mockReturnValue({
+        data: mockOrganizations
+      })
+      hookMocks.useOrganizationBalance.mockReturnValue({ data: mockBalance })
     })
 
     it('should handle radio buttons with different props', () => {
@@ -251,8 +285,10 @@ describe('TransactionDetails Component', () => {
 
   describe('Component Functions', () => {
     beforeEach(() => {
-      useOrganizationNames.mockReturnValue({ data: mockOrganizations })
-      useOrganizationBalance.mockReturnValue({ data: mockBalance })
+      hookMocks.useOrganizationNames.mockReturnValue({
+        data: mockOrganizations
+      })
+      hookMocks.useOrganizationBalance.mockReturnValue({ data: mockBalance })
     })
 
     it('should execute displayBalance and renderError functions during rendering', () => {
@@ -267,8 +303,10 @@ describe('TransactionDetails Component', () => {
 
   describe('Conditional Rendering Logic', () => {
     beforeEach(() => {
-      useOrganizationNames.mockReturnValue({ data: mockOrganizations })
-      useOrganizationBalance.mockReturnValue({ data: mockBalance })
+      hookMocks.useOrganizationNames.mockReturnValue({
+        data: mockOrganizations
+      })
+      hookMocks.useOrganizationBalance.mockReturnValue({ data: mockBalance })
     })
 
     it('should handle different transactionId states', () => {
@@ -305,14 +343,16 @@ describe('TransactionDetails Component', () => {
 
   describe('Hook Integrations', () => {
     it('should integrate with organization hooks correctly', () => {
-      useOrganizationNames.mockReturnValue({ data: mockOrganizations })
-      useOrganizationBalance.mockReturnValue({ data: mockBalance })
+      hookMocks.useOrganizationNames.mockReturnValue({
+        data: mockOrganizations
+      })
+      hookMocks.useOrganizationBalance.mockReturnValue({ data: mockBalance })
 
       const WrapperComponent = createWrapper()
       render(<WrapperComponent transactionId={null} isEditable={true} />)
 
-      expect(useOrganizationNames).toHaveBeenCalledWith(null)
-      expect(useOrganizationBalance).toHaveBeenCalled()
+      expect(hookMocks.useOrganizationNames).toHaveBeenCalledWith(null)
+      expect(hookMocks.useOrganizationBalance).toHaveBeenCalled()
     })
   })
 })

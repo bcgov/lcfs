@@ -15,7 +15,32 @@ import { ADMIN_ADJUSTMENT } from '@/views/Transactions/constants'
 import { useDocuments, useDownloadDocument } from '@/hooks/useDocuments.js'
 import DocumentPreviewButton from '@/components/Documents/DocumentPreviewButton'
 
-export const OrgTransactionDetails = ({ transactionType, transactionData }) => {
+interface TransactionHistoryEntry {
+  adminAdjustmentStatus?: { status?: string } | null
+  initiativeAgreementStatus?: { status?: string } | null
+  createDate: string
+}
+
+interface OrgTransactionData {
+  history?: TransactionHistoryEntry[] | null
+  createDate: string
+  transactionEffectiveDate?: string | null
+  adminAdjustmentId?: number | null
+  initiativeAgreementId?: number | null
+  toOrganization: { name: string }
+  complianceUnits: number | string
+  govComment?: string | null
+}
+
+interface OrgTransactionDetailsProps {
+  transactionType: string
+  transactionData: OrgTransactionData
+}
+
+export const OrgTransactionDetails = ({
+  transactionType,
+  transactionData
+}: OrgTransactionDetailsProps) => {
   const { t } = useTranslation([
     'common',
     'adminadjustment',
@@ -24,7 +49,7 @@ export const OrgTransactionDetails = ({ transactionType, transactionData }) => {
   ])
 
   // Determine the appropriate status field based on the transaction type
-  const statusField =
+  const statusField: 'adminAdjustmentStatus' | 'initiativeAgreementStatus' =
     transactionType === ADMIN_ADJUSTMENT
       ? 'adminAdjustmentStatus'
       : 'initiativeAgreementStatus'
@@ -104,7 +129,8 @@ export const OrgTransactionDetails = ({ transactionType, transactionData }) => {
                   parentType={transactionType}
                   parentID={
                     transactionData.adminAdjustmentId ??
-                    transactionData.initiativeAgreementId
+                    transactionData.initiativeAgreementId ??
+                    ''
                   }
                   document={file}
                 />
@@ -121,7 +147,8 @@ export const OrgTransactionDetails = ({ transactionType, transactionData }) => {
       )}
       <BCTypography variant="body2">
         <strong>{t('txn:approvedLabel')}</strong>{' '}
-        {formatDateWithTimezoneAbbr(approvedDate)} {t('txn:approvedByDirector')}
+        {formatDateWithTimezoneAbbr(approvedDate ?? '')}{' '}
+        {t('txn:approvedByDirector')}
       </BCTypography>
     </Box>
   )

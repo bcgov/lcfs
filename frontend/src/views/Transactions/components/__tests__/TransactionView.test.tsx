@@ -1,4 +1,5 @@
 import 'react'
+import type { ComponentProps } from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vite-plus/test'
 import { TransactionView } from '../TransactionView'
@@ -52,7 +53,7 @@ vi.mock('@/constants/statuses', () => ({
   }
 }))
 
-vi.mock('@/views/Transactions/constants.js', () => ({
+vi.mock('@/views/Transactions/constants', () => ({
   ADMIN_ADJUSTMENT: 'AdminAdjustment',
   INITIATIVE_AGREEMENT: 'InitiativeAgreement'
 }))
@@ -73,7 +74,7 @@ vi.mock('@/contexts/AuthorizationContext', () => ({
   })
 }))
 
-const renderComponent = (props) => {
+const renderComponent = (props: ComponentProps<typeof TransactionView>) => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -90,13 +91,16 @@ const renderComponent = (props) => {
 }
 
 describe('TransactionView Component', () => {
-  let mockHasAnyRole, mockViewDocument
+  let mockHasAnyRole: ReturnType<typeof vi.fn<(role: string) => boolean>>
+  let mockViewDocument: ReturnType<
+    typeof vi.fn<(documentID: number | string) => void>
+  >
 
   beforeEach(() => {
     vi.clearAllMocks()
 
-    mockHasAnyRole = vi.fn()
-    mockViewDocument = vi.fn()
+    mockHasAnyRole = vi.fn<(role: string) => boolean>()
+    mockViewDocument = vi.fn<(documentID: number | string) => void>()
 
     mockUseCurrentUser.mockReturnValue({
       hasAnyRole: mockHasAnyRole

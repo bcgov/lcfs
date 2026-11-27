@@ -1,7 +1,11 @@
 import { buttonClusterConfigFn } from '../buttonConfigs'
 import { TRANSACTION_STATUSES } from '@/constants/statuses'
 import { roles } from '@/constants/roles'
-import { ADMIN_ADJUSTMENT } from '@/views/Transactions/constants'
+import {
+  ADMIN_ADJUSTMENT,
+  INITIATIVE_AGREEMENT
+} from '@/views/Transactions/constants'
+import type { RoleName } from '@/constants/roles'
 import { describe, expect, it, vi, beforeEach } from 'vite-plus/test'
 
 vi.mock('@/themes/base/colors', () => ({
@@ -16,20 +20,24 @@ vi.mock('@fortawesome/free-solid-svg-icons', () => ({
   faTrash: 'faTrash'
 }))
 
+const iconColor = (button: object) =>
+  'iconColor' in button ? button.iconColor : undefined
+const disabled = (button: object) =>
+  'disabled' in button ? button.disabled : undefined
+
 describe('buttonConfigs', () => {
   describe('Button Configuration Styles', () => {
     it('should create buttons with outlined variant', () => {
       const mockParams = {
         transactionId: 123,
-        transactionType: 'initiativeAgreement',
-        methods: { getValues: vi.fn() },
+        transactionType: INITIATIVE_AGREEMENT,
         hasRoles: vi.fn(() => true),
-        t: vi.fn((key) => key),
+        t: vi.fn((key: string) => key),
         setModalData: vi.fn(),
         createUpdateAdminAdjustment: vi.fn(),
         createUpdateInitiativeAgreement: vi.fn(),
         internalComment: 'test'
-      }
+      } satisfies Parameters<typeof buttonClusterConfigFn>[0]
 
       const result = buttonClusterConfigFn(mockParams)
 
@@ -40,58 +48,53 @@ describe('buttonConfigs', () => {
     it('should create buttons with contained variant', () => {
       const mockParams = {
         transactionId: 123,
-        transactionType: 'initiativeAgreement',
-        methods: { getValues: vi.fn() },
+        transactionType: INITIATIVE_AGREEMENT,
         hasRoles: vi.fn(() => true),
-        t: vi.fn((key) => key),
+        t: vi.fn((key: string) => key),
         setModalData: vi.fn(),
         createUpdateAdminAdjustment: vi.fn(),
         createUpdateInitiativeAgreement: vi.fn(),
         internalComment: 'test'
-      }
+      } satisfies Parameters<typeof buttonClusterConfigFn>[0]
 
       const result = buttonClusterConfigFn(mockParams)
 
       expect(result.New[1].variant).toBe('contained')
       expect(result.New[1].color).toBe('primary')
-      expect(result.New[1].iconColor).toBe('#ffffff')
+      expect(iconColor(result.New[1])).toBe('#ffffff')
     })
 
     it('should create buttons with red outlined variant', () => {
       const mockParams = {
         transactionId: 123,
-        transactionType: 'initiativeAgreement',
-        methods: { getValues: vi.fn() },
+        transactionType: INITIATIVE_AGREEMENT,
         hasRoles: vi.fn(() => true),
-        t: vi.fn((key) => key),
+        t: vi.fn((key: string) => key),
         setModalData: vi.fn(),
         createUpdateAdminAdjustment: vi.fn(),
         createUpdateInitiativeAgreement: vi.fn(),
         internalComment: 'test'
-      }
+      } satisfies Parameters<typeof buttonClusterConfigFn>[0]
 
       const result = buttonClusterConfigFn(mockParams)
 
       expect(result.Draft[0].variant).toBe('outlined')
       expect(result.Draft[0].color).toBe('error')
-      expect(result.Draft[0].iconColor).toBe('#ff0000')
+      expect(iconColor(result.Draft[0])).toBe('#ff0000')
       expect(result.Recommended[0].variant).toBe('outlined')
       expect(result.Recommended[0].color).toBe('error')
     })
   })
 
   describe('buttonClusterConfigFn', () => {
-    const mockT = vi.fn((key) => key)
+    const mockT = vi.fn((key: string) => key)
     const mockSetModalData = vi.fn()
     const mockCreateUpdateAdminAdjustment = vi.fn()
     const mockCreateUpdateInitiativeAgreement = vi.fn()
-    const mockHasRoles = vi.fn()
-    const mockMethods = { getValues: vi.fn() }
-
-    const baseMockParams = {
+    const mockHasRoles = vi.fn((_role: RoleName) => false)
+    const baseMockParams: Parameters<typeof buttonClusterConfigFn>[0] = {
       transactionId: 123,
-      transactionType: 'initiativeAgreement',
-      methods: mockMethods,
+      transactionType: INITIATIVE_AGREEMENT,
       hasRoles: mockHasRoles,
       t: mockT,
       setModalData: mockSetModalData,
@@ -136,8 +139,8 @@ describe('buttonConfigs', () => {
 
         const result = buttonClusterConfigFn(baseMockParams)
 
-        expect(result.New[0].disabled).toBe(true)
-        expect(result.Draft[1].disabled).toBe(true)
+        expect(disabled(result.New[0])).toBe(true)
+        expect(disabled(result.Draft[1])).toBe(true)
       })
 
       it('should be enabled if user has analyst role', () => {
@@ -145,12 +148,12 @@ describe('buttonConfigs', () => {
 
         const result = buttonClusterConfigFn(baseMockParams)
 
-        expect(result.New[0].disabled).toBe(false)
-        expect(result.Draft[1].disabled).toBe(false)
+        expect(disabled(result.New[0])).toBe(false)
+        expect(disabled(result.Draft[1])).toBe(false)
       })
 
       it('should call createUpdateAdminAdjustment for ADMIN_ADJUSTMENT transaction type', () => {
-        const params = {
+        const params: Parameters<typeof buttonClusterConfigFn>[0] = {
           ...baseMockParams,
           transactionType: ADMIN_ADJUSTMENT
         }
@@ -194,7 +197,7 @@ describe('buttonConfigs', () => {
 
         const result = buttonClusterConfigFn(baseMockParams)
 
-        expect(result.Draft[0].disabled).toBe(true)
+        expect(disabled(result.Draft[0])).toBe(true)
       })
 
       it('should setup modal with correct config', () => {
@@ -216,7 +219,7 @@ describe('buttonConfigs', () => {
       })
 
       it('should execute primaryButtonAction with ADMIN_ADJUSTMENT', async () => {
-        const params = {
+        const params: Parameters<typeof buttonClusterConfigFn>[0] = {
           ...baseMockParams,
           transactionType: ADMIN_ADJUSTMENT
         }
@@ -245,18 +248,21 @@ describe('buttonConfigs', () => {
 
         const result = buttonClusterConfigFn(baseMockParams)
 
-        expect(result.New[1].disabled).toBe(true)
-        expect(result.Draft[2].disabled).toBe(true)
+        expect(disabled(result.New[1])).toBe(true)
+        expect(disabled(result.Draft[2])).toBe(true)
       })
 
       it('should be disabled if no transactionId', () => {
-        const params = { ...baseMockParams, transactionId: null }
+        const params: Parameters<typeof buttonClusterConfigFn>[0] = {
+          ...baseMockParams,
+          transactionId: null
+        }
         mockHasRoles.mockImplementation((role) => role === roles.analyst)
 
         const result = buttonClusterConfigFn(params)
 
-        expect(result.New[1].disabled).toBe(true)
-        expect(result.Draft[2].disabled).toBe(true)
+        expect(disabled(result.New[1])).toBe(true)
+        expect(disabled(result.Draft[2])).toBe(true)
       })
 
       it('should setup modal with correct config', async () => {
@@ -304,7 +310,7 @@ describe('buttonConfigs', () => {
 
         const result = buttonClusterConfigFn(baseMockParams)
 
-        expect(result.Recommended[1].disabled).toBe(true)
+        expect(disabled(result.Recommended[1])).toBe(true)
       })
 
       it('should setup modal with warning text', async () => {
@@ -352,7 +358,7 @@ describe('buttonConfigs', () => {
 
         const result = buttonClusterConfigFn(baseMockParams)
 
-        expect(result.Recommended[2].disabled).toBe(true)
+        expect(disabled(result.Recommended[2])).toBe(true)
       })
 
       it('should setup modal with correct config', async () => {
@@ -411,7 +417,7 @@ describe('buttonConfigs', () => {
       })
 
       it('should execute primaryButtonAction with ADMIN_ADJUSTMENT', async () => {
-        const params = {
+        const params: Parameters<typeof buttonClusterConfigFn>[0] = {
           ...baseMockParams,
           transactionType: ADMIN_ADJUSTMENT
         }
@@ -466,16 +472,22 @@ describe('buttonConfigs', () => {
 
     describe('Edge Cases', () => {
       it('should handle missing transactionId gracefully', () => {
-        const params = { ...baseMockParams, transactionId: undefined }
+        const params: Parameters<typeof buttonClusterConfigFn>[0] = {
+          ...baseMockParams,
+          transactionId: undefined
+        }
 
         const result = buttonClusterConfigFn(params)
 
         expect(result).toBeDefined()
-        expect(result.New[1].disabled).toBe(true)
+        expect(disabled(result.New[1])).toBe(true)
       })
 
       it('should handle missing internalComment gracefully', () => {
-        const params = { ...baseMockParams, internalComment: undefined }
+        const params: Parameters<typeof buttonClusterConfigFn>[0] = {
+          ...baseMockParams,
+          internalComment: undefined
+        }
 
         const result = buttonClusterConfigFn(params)
 
@@ -483,13 +495,16 @@ describe('buttonConfigs', () => {
       })
 
       it('should handle falsy hasRoles function', () => {
-        const params = { ...baseMockParams, hasRoles: vi.fn(() => false) }
+        const params: Parameters<typeof buttonClusterConfigFn>[0] = {
+          ...baseMockParams,
+          hasRoles: vi.fn(() => false)
+        }
 
         const result = buttonClusterConfigFn(params)
 
         expect(result).toBeDefined()
-        expect(result.New[0].disabled).toBe(true)
-        expect(result.New[1].disabled).toBe(true)
+        expect(disabled(result.New[0])).toBe(true)
+        expect(disabled(result.New[1])).toBe(true)
       })
     })
 

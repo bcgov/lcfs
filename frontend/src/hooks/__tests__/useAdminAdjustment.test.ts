@@ -1,6 +1,8 @@
 import { waitFor } from '@testing-library/react'
 import { describe, expect, vi, beforeEach, afterEach } from 'vite-plus/test'
 import { useApiService } from '@/services/useApiService'
+import axios from 'axios'
+import type { ApiServiceInstance } from '@/services/useApiService'
 import { test } from '@/tests/utils/fixtures'
 import {
   useAdminAdjustment,
@@ -9,12 +11,17 @@ import {
 
 vi.mock('@/services/useApiService')
 
+const apiService = (
+  overrides: Partial<ApiServiceInstance>
+): ApiServiceInstance =>
+  Object.assign(axios.create(), { download: vi.fn() }, overrides)
+
 describe('useAdminAdjustment', () => {
   const mockGet = vi.fn()
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(useApiService).mockReturnValue({ get: mockGet })
+    vi.mocked(useApiService).mockReturnValue(apiService({ get: mockGet }))
   })
 
   afterEach(() => {
@@ -34,7 +41,7 @@ describe('useAdminAdjustment', () => {
     }
     mockGet.mockResolvedValue({ data: mockData })
 
-    const { result } = renderHook(() => useAdminAdjustment(123), [query])
+    const { result } = renderHook(() => useAdminAdjustment(123, {}), [query])
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true)
@@ -49,7 +56,10 @@ describe('useAdminAdjustment', () => {
     query
   }) => {
     mockGet.mockRejectedValue(new Error('Request failed'))
-    const { result } = renderHook(() => useAdminAdjustment(), [query])
+    const { result } = renderHook(
+      () => useAdminAdjustment(undefined, {}),
+      [query]
+    )
 
     // Should attempt to call with undefined ID
     await waitFor(() => {
@@ -97,10 +107,12 @@ describe('useCreateUpdateAdminAdjustment', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(useApiService).mockReturnValue({
-      post: mockPost,
-      put: mockPut
-    })
+    vi.mocked(useApiService).mockReturnValue(
+      apiService({
+        post: mockPost,
+        put: mockPut
+      })
+    )
   })
 
   afterEach(() => {
@@ -118,7 +130,7 @@ describe('useCreateUpdateAdminAdjustment', () => {
     mockPost.mockResolvedValue({ data: mockData })
 
     const { result } = renderHook(
-      () => useCreateUpdateAdminAdjustment(),
+      () => useCreateUpdateAdminAdjustment(undefined, {}),
       [query]
     )
 
@@ -150,7 +162,7 @@ describe('useCreateUpdateAdminAdjustment', () => {
     mockPut.mockResolvedValue({ data: mockData })
 
     const { result } = renderHook(
-      () => useCreateUpdateAdminAdjustment(123),
+      () => useCreateUpdateAdminAdjustment(123, {}),
       [query]
     )
 
@@ -182,7 +194,7 @@ describe('useCreateUpdateAdminAdjustment', () => {
     mockPost.mockRejectedValue(new Error(errorMessage))
 
     const { result } = renderHook(
-      () => useCreateUpdateAdminAdjustment(),
+      () => useCreateUpdateAdminAdjustment(undefined, {}),
       [query]
     )
 
@@ -207,7 +219,7 @@ describe('useCreateUpdateAdminAdjustment', () => {
     query
   }) => {
     const { result } = renderHook(
-      () => useCreateUpdateAdminAdjustment(),
+      () => useCreateUpdateAdminAdjustment(undefined, {}),
       [query]
     )
 
@@ -239,7 +251,7 @@ describe('useCreateUpdateAdminAdjustment', () => {
     mockPost.mockResolvedValue({ data: mockResponse })
 
     const { result } = renderHook(
-      () => useCreateUpdateAdminAdjustment(),
+      () => useCreateUpdateAdminAdjustment(undefined, {}),
       [query]
     )
 
@@ -256,9 +268,9 @@ describe('useCreateUpdateAdminAdjustment', () => {
       expect(result.current.isSuccess).toBe(true)
     })
 
-    expect(result.current.data.data).toEqual(mockResponse)
-    expect(result.current.data.data.adminAdjustmentId).toBe(456)
-    expect(result.current.data.data.adjustmentType).toBe('DEBIT')
+    expect(result.current.data!.data).toEqual(mockResponse)
+    expect(result.current.data!.data.adminAdjustmentId).toBe(456)
+    expect(result.current.data!.data.adjustmentType).toBe('DEBIT')
   })
 
   test('should handle empty adjustment data', async ({ renderHook, query }) => {
@@ -266,7 +278,7 @@ describe('useCreateUpdateAdminAdjustment', () => {
     mockPost.mockResolvedValue({ data: mockData })
 
     const { result } = renderHook(
-      () => useCreateUpdateAdminAdjustment(),
+      () => useCreateUpdateAdminAdjustment(undefined, {}),
       [query]
     )
 
@@ -304,7 +316,7 @@ describe('useCreateUpdateAdminAdjustment', () => {
     mockPost.mockResolvedValue({ data: mockResponse })
 
     const { result } = renderHook(
-      () => useCreateUpdateAdminAdjustment(),
+      () => useCreateUpdateAdminAdjustment(undefined, {}),
       [query]
     )
 
@@ -318,8 +330,8 @@ describe('useCreateUpdateAdminAdjustment', () => {
       '/admin-adjustments/',
       fullAdjustmentData
     )
-    expect(result.current.data.data).toEqual(mockResponse)
-    expect(result.current.data.data.referenceNumber).toBe('REF-123')
-    expect(result.current.data.data.category).toBe('COMPLIANCE')
+    expect(result.current.data!.data).toEqual(mockResponse)
+    expect(result.current.data!.data.referenceNumber).toBe('REF-123')
+    expect(result.current.data!.data.category).toBe('COMPLIANCE')
   })
 })

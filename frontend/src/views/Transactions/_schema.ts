@@ -1,3 +1,4 @@
+import type { ColDef, ValueFormatterParams } from 'ag-grid-community'
 import {
   numberFormatter,
   currencyFormatter,
@@ -11,7 +12,15 @@ import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components/Filte
 import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
 import { useTransactionStatuses } from '@/hooks/useTransactions'
 
-export const transactionsColDefs = (t) => [
+// Shared formatters preserve null and non-numeric input, while AG Grid's
+// formatter type only permits strings. Keep that runtime contract here.
+type TransactionColDef = Omit<ColDef, 'valueFormatter'> & {
+  valueFormatter?: (params: ValueFormatterParams) => unknown
+}
+
+export const transactionsColDefs = (
+  t: (key: string) => string
+): TransactionColDef[] => [
   {
     colId: 'status',
     field: 'status',
@@ -25,8 +34,12 @@ export const transactionsColDefs = (t) => [
       optionsQuery: useTransactionStatuses
     },
     filterParams: {
-      textFormatter: (value) => value.toLowerCase(),
-      textCustomComparator: (filter, value, filterText) => {
+      textFormatter: (value: string) => value.toLowerCase(),
+      textCustomComparator: (
+        _filter: string,
+        value: string,
+        filterText: string
+      ) => {
         // Split the filter text by comma and trim each value
         const filterValues = filterText
           .split(',')
@@ -94,8 +107,12 @@ export const transactionsColDefs = (t) => [
     },
     filter: true, // Enable filtering
     filterParams: {
-      textFormatter: (value) => value.replace(/\s+/g, '').toLowerCase(),
-      textCustomComparator: (filter, value, filterText) => {
+      textFormatter: (value: string) => value.replace(/\s+/g, '').toLowerCase(),
+      textCustomComparator: (
+        _filter: string,
+        value: string,
+        filterText: string
+      ) => {
         // Remove spaces and convert both to lowercase for comparison
         const cleanFilterText = filterText.replace(/\s+/g, '').toLowerCase()
         const cleanValue = value.replace(/\s+/g, '').toLowerCase()
@@ -190,7 +207,7 @@ export const transactionsColDefs = (t) => [
     filterParams: {
       filterOptions: ['inRange', 'equals', 'lessThan', 'greaterThan'],
       defaultOption: 'inRange',
-      comparator: (filterDate, cellValue) => {
+      comparator: (filterDate: Date, cellValue: string) => {
         const cellDate = new Date(cellValue).setHours(0, 0, 0, 0)
         const filterDateOnly = new Date(filterDate).setHours(0, 0, 0, 0)
 

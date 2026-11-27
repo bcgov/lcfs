@@ -22,7 +22,38 @@ import {
   INITIATIVE_AGREEMENT
 } from '@/views/Transactions/constants'
 
-export const TransactionDetails = ({ transactionId, isEditable }) => {
+interface TransactionFormValues extends Record<string, unknown> {
+  toOrganizationId?: string | number | null
+  txnType?: string
+  complianceUnits?: number | string
+  transactionEffectiveDate?: string
+}
+
+type TransactionField =
+  | 'toOrganizationId'
+  | 'txnType'
+  | 'complianceUnits'
+  | 'transactionEffectiveDate'
+
+interface OrganizationRow {
+  organizationId: string | number
+  name?: string
+}
+
+interface OrganizationBalance {
+  totalBalance: number
+  reservedBalance: number
+}
+
+interface TransactionDetailsProps {
+  transactionId?: number | string | null
+  isEditable: boolean
+}
+
+export const TransactionDetails = ({
+  transactionId,
+  isEditable
+}: TransactionDetailsProps) => {
   const { t } = useTranslation(['txn'])
 
   const {
@@ -30,20 +61,21 @@ export const TransactionDetails = ({ transactionId, isEditable }) => {
     register,
     formState: { errors },
     control
-  } = useFormContext()
+  } = useFormContext<TransactionFormValues>()
 
-  const { data: orgData } = useOrganizationNames(null)
+  const { data: orgData } = useOrganizationNames<OrganizationRow>(null)
   const organizations =
     orgData?.map((org) => ({
-      value: parseInt(org.organizationId),
+      value: parseInt(String(org.organizationId)),
       label: org.name || t('common:unknown')
     })) || []
 
   const currentDate = new Date()
-  const maxDate = dateFormatter(currentDate)
+  const maxDate = dateFormatter({ value: currentDate })
 
   const selectedOrgId = watch('toOrganizationId')
-  const { data: orgBalanceInfo } = useOrganizationBalance(selectedOrgId)
+  const { data: orgBalanceInfo } =
+    useOrganizationBalance<OrganizationBalance>(selectedOrgId)
 
   // Fetching organization balance
   const displayBalance = () => {
@@ -54,7 +86,10 @@ export const TransactionDetails = ({ transactionId, isEditable }) => {
   }
 
   // Render form error messages
-  const renderError = (fieldName, sameAsField = null) => {
+  const renderError = (
+    fieldName: TransactionField,
+    sameAsField: TransactionField | null = null
+  ) => {
     // If the sameAsField is provided and is true, hide errors for this field
     if (sameAsField && watch(sameAsField)) {
       return null
@@ -97,7 +132,7 @@ export const TransactionDetails = ({ transactionId, isEditable }) => {
                 control={control}
                 defaultValue=""
                 render={({ field }) => (
-                  <RadioGroup id="txnType" name="txnType" row {...field}>
+                  <RadioGroup id="txnType" row {...field}>
                     <FormControlLabel
                       value={INITIATIVE_AGREEMENT}
                       control={
@@ -157,7 +192,6 @@ export const TransactionDetails = ({ transactionId, isEditable }) => {
                 <Controller
                   name="toOrganizationId"
                   control={control}
-                  displayEmpty
                   render={({ field }) => (
                     <Select
                       id="to-organization-id"

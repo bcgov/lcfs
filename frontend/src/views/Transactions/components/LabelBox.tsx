@@ -1,7 +1,16 @@
-import PropTypes from 'prop-types'
+import type { ComponentProps, ReactNode } from 'react'
+import type { TypographyProps } from '@mui/material/Typography'
 import '@mui/material/Typography'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
+
+interface LabelBoxProps extends Omit<ComponentProps<typeof BCBox>, 'ref'> {
+  label?: string | null
+  description?: string | null
+  children: ReactNode
+  labelVariant?: TypographyProps['variant']
+  descriptionVariant?: TypographyProps['variant']
+}
 
 export const LabelBox = ({
   label,
@@ -10,7 +19,7 @@ export const LabelBox = ({
   labelVariant,
   descriptionVariant,
   ...boxProps
-}) => {
+}: LabelBoxProps) => {
   return (
     <>
       {label && (
@@ -37,12 +46,4 @@ export const LabelBox = ({
       </BCBox>
     </>
   )
-}
-
-LabelBox.propTypes = {
-  label: PropTypes.string,
-  description: PropTypes.string,
-  children: PropTypes.node.isRequired,
-  labelVariant: PropTypes.string,
-  descriptionVariant: PropTypes.string
 }

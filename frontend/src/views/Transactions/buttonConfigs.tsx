@@ -1,8 +1,38 @@
 import colors from '@/themes/base/colors'
 import { faFloppyDisk, faTrash } from '@fortawesome/free-solid-svg-icons'
 import { TRANSACTION_STATUSES } from '@/constants/statuses'
-import { roles } from '@/constants/roles'
+import { roles, type RoleName } from '@/constants/roles'
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
+import type { TransactionKind } from './constants'
 import { ADMIN_ADJUSTMENT } from '@/views/Transactions/constants'
+
+type TransactionStatus =
+  (typeof TRANSACTION_STATUSES)[keyof typeof TRANSACTION_STATUSES]
+type TransactionFormData = Record<string, unknown>
+type TransactionMutation = (input: {
+  data: TransactionFormData & { currentStatus: TransactionStatus }
+}) => void | Promise<unknown>
+
+interface TransactionModalData {
+  primaryButtonAction: () => Promise<void>
+  primaryButtonText: string
+  primaryButtonColor: 'primary' | 'error'
+  secondaryButtonText: string
+  title: string
+  content: string
+  warningText?: string
+}
+
+interface ButtonClusterParams {
+  transactionId?: string | number | null
+  transactionType: TransactionKind | ''
+  hasRoles: (role: RoleName) => boolean
+  t: (key: string) => string
+  setModalData: (data: TransactionModalData) => void
+  createUpdateAdminAdjustment: TransactionMutation
+  createUpdateInitiativeAgreement: TransactionMutation
+  internalComment?: string
+}
 
 const outlineBase = {
   variant: 'outlined',
@@ -21,19 +51,19 @@ const redBase = {
   iconColor: colors.error.main
 }
 
-const outlinedButton = (label, startIcon) => ({
+const outlinedButton = (label: string, startIcon?: IconDefinition) => ({
   ...outlineBase,
   label,
   startIcon
 })
 
-const containedButton = (label, startIcon) => ({
+const containedButton = (label: string, startIcon?: IconDefinition) => ({
   ...containedBase,
   label,
   startIcon
 })
 
-const redOutlinedButton = (label, startIcon) => ({
+const redOutlinedButton = (label: string, startIcon?: IconDefinition) => ({
   ...redBase,
   label,
   startIcon
@@ -48,12 +78,12 @@ export const buttonClusterConfigFn = ({
   createUpdateAdminAdjustment,
   createUpdateInitiativeAgreement,
   internalComment
-}) => {
+}: ButtonClusterParams) => {
   const transactionButtons = {
     saveDraft: {
       ...outlinedButton(t(`txn:actionBtns.saveDraftBtn`), faFloppyDisk),
       id: 'save-draft-btn',
-      handler: (formData) => {
+      handler: (formData: TransactionFormData) => {
         const mutationFn =
           transactionType === ADMIN_ADJUSTMENT
             ? createUpdateAdminAdjustment
@@ -71,7 +101,7 @@ export const buttonClusterConfigFn = ({
     deleteDraft: {
       ...redOutlinedButton(t(`txn:actionBtns.deleteDraftBtn`), faTrash),
       id: 'delete-draft-btn',
-      handler: async (formData) => {
+      handler: async (formData: TransactionFormData) => {
         setModalData({
           primaryButtonAction: async () => {
             const mutationFn =
@@ -97,7 +127,7 @@ export const buttonClusterConfigFn = ({
     recommendTransaction: {
       ...containedButton(t(`txn:actionBtns.recommendBtn`)),
       id: 'recommend-btn',
-      handler: async (formData) => {
+      handler: async (formData: TransactionFormData) => {
         setModalData({
           primaryButtonAction: async () => {
             const mutationFn =
@@ -124,7 +154,7 @@ export const buttonClusterConfigFn = ({
     returnTransaction: {
       ...outlinedButton(t(`txn:actionBtns.returnToAnalystBtn`)),
       id: 'return-to-analyst-btn',
-      handler: async (formData) => {
+      handler: async (formData: TransactionFormData) => {
         setModalData({
           primaryButtonAction: async () => {
             const mutationFn =
@@ -151,7 +181,7 @@ export const buttonClusterConfigFn = ({
     approveTransaction: {
       ...containedButton(t(`txn:actionBtns.approveBtn`)),
       id: 'approve-btn',
-      handler: async (formData) => {
+      handler: async (formData: TransactionFormData) => {
         setModalData({
           primaryButtonAction: async () => {
             const mutationFn =
@@ -177,7 +207,7 @@ export const buttonClusterConfigFn = ({
     deleteTransaction: {
       ...redOutlinedButton(t(`txn:actionBtns.deleteBtn`), faTrash),
       id: 'delete-btn',
-      handler: async (formData) => {
+      handler: async (formData: TransactionFormData) => {
         setModalData({
           primaryButtonAction: async () => {
             const mutationFn =

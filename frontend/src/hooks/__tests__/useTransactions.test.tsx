@@ -2,6 +2,9 @@ import { test } from '@/tests/utils/fixtures'
 import { waitFor } from '@testing-library/react'
 import { describe, expect, vi, beforeEach } from 'vite-plus/test'
 import { useApiService } from '@/services/useApiService'
+import axios from 'axios'
+import type { ApiServiceInstance } from '@/services/useApiService'
+import { useQuery } from '@tanstack/react-query'
 import {
   useTransaction,
   useTransactionStatuses,
@@ -16,12 +19,34 @@ import { TRANSFER_STATUSES } from '@/constants/statuses'
 vi.mock('@/services/useApiService')
 vi.mock('@/hooks/useCurrentUser')
 
+const apiService = (
+  overrides: Partial<ApiServiceInstance>
+): ApiServiceInstance =>
+  Object.assign(axios.create(), { download: vi.fn() }, overrides)
+
+const mockCurrentUser = (hasRole: (role: string) => boolean) => {
+  vi.mocked(currentUserHooks.useCurrentUser).mockImplementation(() => {
+    const query = useQuery({
+      queryKey: ['test-current-user'],
+      queryFn: async () => ({}),
+      initialData: {}
+    })
+    return {
+      ...query,
+      hasRoles: hasRole,
+      hasAnyRole: hasRole,
+      sameOrganization: () => false,
+      fullName: () => ''
+    }
+  })
+}
+
 describe('useTransaction', () => {
   const mockGet = vi.fn()
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(useApiService).mockReturnValue({ get: mockGet })
+    vi.mocked(useApiService).mockReturnValue(apiService({ get: mockGet }))
   })
 
   test('fetches a single transaction by ID', async ({ renderHook, query }) => {
@@ -44,7 +69,7 @@ describe('useTransaction', () => {
     )
 
     await waitFor(() => expect(result.current.isError).toBe(true))
-    expect(result.current.error.message).toBe('Not found')
+    expect(result.current.error!.message).toBe('Not found')
   })
 })
 
@@ -53,7 +78,7 @@ describe('useTransactionStatuses', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(useApiService).mockReturnValue({ get: mockGet })
+    vi.mocked(useApiService).mockReturnValue(apiService({ get: mockGet }))
   })
 
   test('returns all statuses for a government user (no RECOMMENDED, no DELETED/SENT filter)', async ({
@@ -66,10 +91,7 @@ describe('useTransactionStatuses', () => {
       { status: TRANSFER_STATUSES.DELETED }
     ]
     mockGet.mockResolvedValue({ data: statuses })
-    vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
-      hasAnyRole: vi.fn(() => false),
-      isLoading: false
-    })
+    mockCurrentUser(() => false)
 
     const { result } = renderHook(() => useTransactionStatuses({}), [query])
 
@@ -90,10 +112,7 @@ describe('useTransactionStatuses', () => {
       { status: 'Draft' }
     ]
     mockGet.mockResolvedValue({ data: statuses })
-    vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
-      hasAnyRole: vi.fn((role) => role === roles.supplier),
-      isLoading: false
-    })
+    mockCurrentUser((role) => role === roles.supplier)
 
     const { result } = renderHook(() => useTransactionStatuses({}), [query])
 
@@ -116,10 +135,7 @@ describe('useTransactionStatuses', () => {
       { status: TRANSFER_STATUSES.RECORDED }
     ]
     mockGet.mockResolvedValue({ data: statuses })
-    vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
-      hasAnyRole: vi.fn(() => false),
-      isLoading: false
-    })
+    mockCurrentUser(() => false)
 
     const { result } = renderHook(() => useTransactionStatuses({}), [query])
 
@@ -135,11 +151,8 @@ describe('useGetTransactionList', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(useApiService).mockReturnValue({ post: mockPost })
-    vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
-      hasRoles: vi.fn(() => false),
-      isLoading: false
-    })
+    vi.mocked(useApiService).mockReturnValue(apiService({ post: mockPost }))
+    mockCurrentUser(() => false)
   })
 
   test('calls the generic transactions endpoint for government users', async ({
@@ -165,10 +178,7 @@ describe('useGetTransactionList', () => {
     renderHook,
     query
   }) => {
-    vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
-      hasRoles: vi.fn((role) => role === roles.supplier),
-      isLoading: false
-    })
+    mockCurrentUser((role) => role === roles.supplier)
     mockPost.mockResolvedValue({ data: [] })
 
     const { result } = renderHook(
@@ -204,7 +214,7 @@ describe('useTransactionDocuments', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(useApiService).mockReturnValue({ get: mockGet })
+    vi.mocked(useApiService).mockReturnValue(apiService({ get: mockGet }))
   })
 
   test('fetches documents for the given parent', async ({
@@ -230,7 +240,9 @@ describe('useDownloadTransactions', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(useApiService).mockReturnValue({ download: mockDownload })
+    vi.mocked(useApiService).mockReturnValue(
+      apiService({ download: mockDownload })
+    )
   })
 
   test('exposes a mutate function', ({ renderHook, query }) => {

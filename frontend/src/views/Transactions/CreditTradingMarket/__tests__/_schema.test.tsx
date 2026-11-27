@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vite-plus/test'
 import { render, screen } from '@testing-library/react'
 import { creditMarketAuditLogColDefs, formatAuditChanges } from '../_schema'
 
-const t = (key, fallback) => fallback ?? key
+const t = (key: string, fallback?: string) => fallback ?? key
 
 describe('formatAuditChanges', () => {
   it('renders each field change as a labelled old → new line', () => {
@@ -33,14 +33,19 @@ describe('formatAuditChanges', () => {
   })
 
   it('returns nothing for legacy rows without a diff', () => {
-    expect(formatAuditChanges(undefined, t)).toEqual([])
+    expect(formatAuditChanges([], t)).toEqual([])
     expect(formatAuditChanges([], t)).toEqual([])
   })
 })
 
 describe('creditMarketAuditLogColDefs', () => {
   const colDefs = creditMarketAuditLogColDefs(t)
-  const byField = (field) => colDefs.find((c) => c.field === field)
+  const byField = (field: string) => colDefs.find((c) => c.field === field)!
+  const callValueFormatter = (field: string, params: { value: unknown }) => {
+    const formatter = byField(field).valueFormatter
+    if (typeof formatter !== 'function') throw new Error('Expected formatter')
+    return formatter(params as Parameters<typeof formatter>[0])
+  }
 
   it('includes action and changes columns alongside the snapshot columns', () => {
     expect(colDefs.map((c) => c.field)).toEqual([
@@ -58,10 +63,8 @@ describe('creditMarketAuditLogColDefs', () => {
   })
 
   it('shows N/A for rows without an action', () => {
-    expect(byField('action').valueFormatter({ value: null })).toBe('N/A')
-    expect(byField('action').valueFormatter({ value: 'Removed' })).toBe(
-      'Removed'
-    )
+    expect(callValueFormatter('action', { value: null })).toBe('N/A')
+    expect(callValueFormatter('action', { value: 'Removed' })).toBe('Removed')
   })
 
   it('renders change lines in the changes cell', () => {
@@ -70,15 +73,27 @@ describe('creditMarketAuditLogColDefs', () => {
       changes: [{ field: 'credits_to_sell', oldValue: 10, newValue: 20 }]
     }
 
-    expect(changes.valueGetter({ data })).toBe('Credits to sell: 10 → 20')
+    const valueGetter = changes.valueGetter
+    if (typeof valueGetter !== 'function') throw new Error('Expected getter')
+    expect(valueGetter({ data } as Parameters<typeof valueGetter>[0])).toBe(
+      'Credits to sell: 10 → 20'
+    )
 
-    render(changes.cellRenderer({ data }))
+    const cellRenderer = changes.cellRenderer
+    if (typeof cellRenderer !== 'function') throw new Error('Expected renderer')
+    render(cellRenderer({ data }))
     expect(screen.getByText('Credits to sell: 10 → 20')).toBeInTheDocument()
   })
 
   it('says when no change details were recorded', () => {
     const changes = byField('changes')
-    expect(changes.cellRenderer({ data: { changes: [] } })).toBe('Not recorded')
-    expect(changes.valueGetter({ data: {} })).toBe('')
+    const cellRenderer = changes.cellRenderer
+    const valueGetter = changes.valueGetter
+    if (typeof cellRenderer !== 'function') throw new Error('Expected renderer')
+    if (typeof valueGetter !== 'function') throw new Error('Expected getter')
+    expect(cellRenderer({ data: { changes: [] } })).toBe('Not recorded')
+    expect(valueGetter({ data: {} } as Parameters<typeof valueGetter>[0])).toBe(
+      ''
+    )
   })
 })

@@ -4,13 +4,27 @@ import { screen, fireEvent } from '@testing-library/react'
 import { vi } from 'vite-plus/test'
 import { OrgTransactionDetails } from '@/views/Transactions/components'
 import { ADMIN_ADJUSTMENT } from '@/views/Transactions/constants'
-import { useDocuments, useDownloadDocument } from '@/hooks/useDocuments.js'
+import type { DocumentMetadata } from '@/types/documents'
 
 // Mock hooks
-vi.mock('@/hooks/useDocuments.js', () => ({
-  useDocuments: vi.fn(),
-  useDownloadDocument: vi.fn()
+const hookMocks = vi.hoisted(() => ({
+  useDocuments:
+    vi.fn<
+      (
+        parentType: string,
+        parentID: number | string | null | undefined
+      ) => { data: DocumentMetadata[] | null }
+    >(),
+  useDownloadDocument:
+    vi.fn<
+      (
+        parentType: string,
+        parentID: number | string | null | undefined
+      ) => (documentID: number | string) => void
+    >()
 }))
+
+vi.mock('@/hooks/useDocuments.js', () => hookMocks)
 
 vi.mock('@/components/Documents/DocumentPreviewButton', () => ({
   __esModule: true,
@@ -21,14 +35,14 @@ vi.mock('@/components/Documents/DocumentPreviewButton', () => ({
   )
 }))
 
-const mockUseDocuments = vi.mocked(useDocuments)
-const mockUseDownloadDocument = vi.mocked(useDownloadDocument)
+const mockUseDocuments = hookMocks.useDocuments
+const mockUseDownloadDocument = hookMocks.useDownloadDocument
 
 // Mock translations
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => {
-      const translations = {
+    t: (key: string) => {
+      const translations: Record<string, string> = {
         'txn:administrativeAdjustment': 'Administrative adjustment',
         'txn:initiativeAgreement': 'Initiative agreement',
         'txn:complianceUnitsLabel': 'Compliance units',
@@ -49,9 +63,12 @@ vi.mock('react-i18next', () => ({
 
 // Mock formatters
 vi.mock('@/utils/formatters', () => ({
-  dateFormatter: ({ value }) => (value ? '2024-01-01' : ''),
-  formatDateWithTimezoneAbbr: (value) => (value ? 'January 1, 2024' : ''),
-  numberFormatter: ({ value }) => (value ? value.toLocaleString() : '0')
+  dateFormatter: ({ value }: { value?: number | string }) =>
+    value ? '2024-01-01' : '',
+  formatDateWithTimezoneAbbr: (value: string | number | Date) =>
+    value ? 'January 1, 2024' : '',
+  numberFormatter: ({ value }: { value?: number | string }) =>
+    value ? value.toLocaleString() : '0'
 }))
 
 // Test data fixtures
@@ -92,8 +109,8 @@ const historyWithoutApproved = [
 ]
 
 const mockFiles = [
-  { documentId: 1, fileName: 'file1.pdf' },
-  { documentId: 2, fileName: 'file2.doc' }
+  { documentId: 1, fileName: 'file1.pdf', fileSize: 0, createDate: null },
+  { documentId: 2, fileName: 'file2.doc', fileSize: 0, createDate: null }
 ]
 
 describe('OrgTransactionDetails Component', () => {
