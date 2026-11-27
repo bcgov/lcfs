@@ -4,9 +4,11 @@ import { vi, describe, it, expect, beforeEach } from 'vite-plus/test'
 import { AddEditOrg } from '../AddEditOrg'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useOrganization, useOrganizationTypes } from '@/hooks/useOrganization'
-import { useApiService } from '@/services/useApiService'
+import i18n from '@/i18n'
 import '@tanstack/react-query'
+import type { AddressAutocompleteProps } from '@/components/BCForm/AddressAutocomplete'
+import type { ReactNode } from 'react'
+import type { NavigateOptions, To } from 'react-router-dom'
 
 // Mock react-i18next
 
@@ -23,7 +25,14 @@ vi.mock('react-router-dom', () => ({
 
 // Mock AddressAutocomplete to prevent network requests
 vi.mock('@/components/BCForm/AddressAutocomplete', () => ({
-  AddressAutocomplete: React.forwardRef(function AddressAutocompleteMock(
+  AddressAutocomplete: React.forwardRef<
+    HTMLInputElement,
+    AddressAutocompleteProps & {
+      name?: string
+      placeholder?: string
+      onBlur?: React.FocusEventHandler<HTMLInputElement>
+    }
+  >(function AddressAutocompleteMock(
     { name, placeholder = 'Start typing address...', value, onChange, onBlur },
     ref
   ) {
@@ -33,8 +42,8 @@ vi.mock('@/components/BCForm/AddressAutocomplete', () => ({
         id={name}
         name={name}
         placeholder={placeholder}
-        value={value || ''}
-        onChange={(e) => onChange && onChange(e.target.value)}
+        value={typeof value === 'string' ? value : value?.fullAddress || ''}
+        onChange={(event) => onChange?.(event.target.value)}
         onBlur={onBlur}
         data-testid={`address-autocomplete-${name}`}
         aria-label={name?.includes('street') ? 'org:streetAddrLabel' : name}
@@ -59,21 +68,34 @@ vi.mock('@tanstack/react-query', async () => {
 
 // Mock hooks
 vi.mock('@/hooks/useOrganization')
-vi.mock('@/services/useApiService')
 
 // Mock BCWidgetCard component
 vi.mock('@/components/BCWidgetCard/BCWidgetCard', () => ({
-  default: vi.fn(({ title, content, id, color, 'data-test': dataTest }) => (
-    <div
-      data-test="bc-widget-card"
-      data-container-test={dataTest}
-      data-title={title}
-      data-id={id}
-      data-color={color}
-    >
-      {content}
-    </div>
-  ))
+  default: vi.fn(
+    ({
+      title,
+      content,
+      id,
+      color,
+      'data-test': dataTest
+    }: {
+      title: string
+      content: ReactNode
+      id: string
+      color: string
+      'data-test'?: string
+    }) => (
+      <div
+        data-test="bc-widget-card"
+        data-container-test={dataTest}
+        data-title={title}
+        data-id={id}
+        data-color={color}
+      >
+        {content}
+      </div>
+    )
+  )
 }))
 
 // Mock AddEditOrgForm component
@@ -82,58 +104,30 @@ vi.mock('../AddEditOrgForm', () => ({
 }))
 
 describe('AddEditOrg', () => {
-  const mockT = vi.fn((key) => `translated-${key}`)
-  let mockNavigate
-  let apiSpy
+  type TranslationFunction = ReturnType<typeof useTranslation>['t']
+  const mockT = vi.fn(
+    (key: string) => `translated-${key}`
+  ) as unknown as TranslationFunction
+  const mockNavigate: ReturnType<typeof useNavigate> = (
+    _destination: To | number,
+    _options?: NavigateOptions
+  ) => {}
 
   beforeEach(() => {
-    mockNavigate = vi.fn()
-    useNavigate.mockReturnValue(mockNavigate)
-    useParams.mockReturnValue({ orgID: undefined })
+    vi.mocked(useNavigate).mockReturnValue(mockNavigate)
+    vi.mocked(useParams).mockReturnValue({ orgID: undefined })
 
-    // Mocking the useOrganization hook
-    useOrganization.mockReturnValue({
-      isFetched: true
-    })
-
-    // Mock organization types with BCeID required type for validation testing
     vi.clearAllMocks()
-    useTranslation.mockReturnValue({ t: mockT })
-    useOrganizationTypes.mockReturnValue({
-      data: [
+    vi.mocked(useTranslation).mockReturnValue(
+      Object.assign(
+        [mockT, i18n, true] as [TranslationFunction, typeof i18n, boolean],
         {
-          organizationTypeId: 1,
-          organizationTypeName: 'Fuel Supplier',
-          isBceidUser: true
-        },
-        {
-          organizationTypeId: 2,
-          organizationTypeName: 'Initiative Agreement Holder',
-          isBceidUser: false
+          t: mockT,
+          i18n,
+          ready: true
         }
-      ],
-      isLoading: false,
-      error: null
-    })
-    useApiService.mockReturnValue({
-      post: vi.fn(),
-      put: vi.fn()
-    })
-
-    mockNavigate = vi.fn()
-    useNavigate.mockReturnValue(mockNavigate)
-    useParams.mockReturnValue({ orgID: undefined })
-
-    useOrganization.mockReturnValue({
-      data: null,
-      isFetched: true
-    })
-
-    apiSpy = {
-      post: vi.fn().mockResolvedValue({}),
-      put: vi.fn().mockResolvedValue({})
-    }
-    useApiService.mockReturnValue(apiSpy)
+      )
+    )
   })
 
   // Note: Tests for AddEditOrgForm component rendering should be in AddEditOrgForm.test.jsx
@@ -141,7 +135,7 @@ describe('AddEditOrg', () => {
 
   it('renders in edit mode when orgID is present', () => {
     // Arrange
-    useParams.mockReturnValue({ orgID: 'test-org-123' })
+    vi.mocked(useParams).mockReturnValue({ orgID: 'test-org-123' })
 
     // Act
     render(<AddEditOrg />)
@@ -158,7 +152,7 @@ describe('AddEditOrg', () => {
 
   it('passes correct props to AddEditOrgForm component', () => {
     // Arrange
-    useParams.mockReturnValue({ orgID: 'test-org-123' })
+    vi.mocked(useParams).mockReturnValue({ orgID: 'test-org-123' })
 
     // Act
     render(<AddEditOrg />)
@@ -169,7 +163,7 @@ describe('AddEditOrg', () => {
 
   it('renders in add mode when orgID is not present', () => {
     // Arrange
-    useParams.mockReturnValue({ orgID: undefined })
+    vi.mocked(useParams).mockReturnValue({ orgID: undefined })
 
     // Act
     render(<AddEditOrg />)
@@ -186,7 +180,7 @@ describe('AddEditOrg', () => {
 
   it('renders with correct static props for BCWidgetCard', () => {
     // Arrange
-    useParams.mockReturnValue({ orgID: 'test-id' })
+    vi.mocked(useParams).mockReturnValue({ orgID: 'test-id' })
 
     // Act
     render(<AddEditOrg />)
@@ -203,7 +197,7 @@ describe('AddEditOrg', () => {
 
   it('calls useTranslation hook with correct parameters', () => {
     // Arrange
-    useParams.mockReturnValue({ orgID: 'test-id' })
+    vi.mocked(useParams).mockReturnValue({ orgID: 'test-id' })
 
     // Act
     render(<AddEditOrg />)
@@ -215,7 +209,7 @@ describe('AddEditOrg', () => {
   it('calls useParams hook to extract orgID', () => {
     // Arrange
     const testOrgId = 'test-organization-id'
-    useParams.mockReturnValue({ orgID: testOrgId })
+    vi.mocked(useParams).mockReturnValue({ orgID: testOrgId })
 
     // Act
     render(<AddEditOrg />)
@@ -228,7 +222,7 @@ describe('AddEditOrg', () => {
 
   it('renders AddEditOrgForm component within BCWidgetCard content', () => {
     // Arrange
-    useParams.mockReturnValue({ orgID: 'test-id' })
+    vi.mocked(useParams).mockReturnValue({ orgID: 'test-id' })
 
     // Act
     render(<AddEditOrg />)

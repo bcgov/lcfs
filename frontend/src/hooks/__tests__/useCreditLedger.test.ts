@@ -9,15 +9,21 @@ import {
 } from '@/hooks/useCreditLedger'
 import { useApiService } from '@/services/useApiService'
 import { test } from '@/tests/utils/fixtures'
+import axios from 'axios'
+import type { ApiServiceInstance } from '@/services/useApiService'
+import type { SortOrder } from '../types'
 
 vi.mock('@/services/useApiService')
+
+const apiService = (methods: Partial<ApiServiceInstance>): ApiServiceInstance =>
+  Object.assign(axios.create(), { download: vi.fn() }, methods)
 
 describe('useCreditLedger', () => {
   const mockPost = vi.fn()
 
   beforeEach(() => {
     vi.resetAllMocks()
-    vi.mocked(useApiService).mockReturnValue({ post: mockPost })
+    vi.mocked(useApiService).mockReturnValue(apiService({ post: mockPost }))
   })
 
   test('should fetch credit ledger successfully with all parameters', async ({
@@ -33,7 +39,7 @@ describe('useCreditLedger', () => {
     }
     mockPost.mockResolvedValueOnce({ data: mockData })
 
-    const params = {
+    const params: Parameters<typeof useCreditLedger>[0] = {
       orgId: '123',
       page: 1,
       size: 10,
@@ -240,7 +246,7 @@ describe('useCreditLedger', () => {
     const mockData = { transactions: [], totalCount: 0 }
     mockPost.mockResolvedValueOnce({ data: mockData })
 
-    const sortOrders = [
+    const sortOrders: SortOrder[] = [
       { field: 'created_date', direction: 'desc' },
       { field: 'credits', direction: 'asc' }
     ]
@@ -270,7 +276,7 @@ describe('usePeriodCreditLedger', () => {
 
   beforeEach(() => {
     vi.resetAllMocks()
-    vi.mocked(useApiService).mockReturnValue({ get: mockGet })
+    vi.mocked(useApiService).mockReturnValue(apiService({ get: mockGet }))
   })
 
   test('fetches the period ledger with the include_pending param', async ({
@@ -329,7 +335,9 @@ describe('useDownloadCreditLedger', () => {
 
   beforeEach(() => {
     vi.resetAllMocks()
-    vi.mocked(useApiService).mockReturnValue({ download: mockDownload })
+    vi.mocked(useApiService).mockReturnValue(
+      apiService({ download: mockDownload })
+    )
   })
 
   test('should return a download function', () => {
@@ -407,11 +415,14 @@ describe('useDownloadCreditLedger', () => {
   it('should ignore compliance year so filtered dashboards download the full ledger', () => {
     const downloadFn = useDownloadCreditLedger()
 
-    downloadFn({
+    const downloadParams: Parameters<typeof downloadFn>[0] & {
+      complianceYear: string
+    } = {
       orgId: '123',
       complianceYear: '2024',
       format: 'xlsx'
-    })
+    }
+    downloadFn(downloadParams)
 
     expect(mockDownload).toHaveBeenCalledWith({
       url: expect.stringContaining('123'),
@@ -432,10 +443,13 @@ describe('useDownloadCreditLedger', () => {
   test('should handle missing orgId in download parameters', () => {
     const downloadFn = useDownloadCreditLedger()
 
-    downloadFn({
+    const downloadParams: Parameters<typeof downloadFn>[0] & {
+      complianceYear: string
+    } = {
       complianceYear: '2024',
       format: 'xlsx'
-    })
+    }
+    downloadFn(downloadParams)
 
     // Should still call download even with undefined orgId
     expect(mockDownload).toHaveBeenCalledWith({
@@ -453,7 +467,7 @@ describe('useCreditLedgerYears', () => {
 
   beforeEach(() => {
     vi.resetAllMocks()
-    vi.mocked(useApiService).mockReturnValue({ get: mockGet })
+    vi.mocked(useApiService).mockReturnValue(apiService({ get: mockGet }))
   })
 
   test('should fetch organization years successfully', async ({
@@ -536,7 +550,9 @@ describe('useDownloadPeriodCreditLedger', () => {
 
   beforeEach(() => {
     vi.resetAllMocks()
-    vi.mocked(useApiService).mockReturnValue({ download: mockDownload })
+    vi.mocked(useApiService).mockReturnValue(
+      apiService({ download: mockDownload })
+    )
   })
 
   it('hits the period export endpoint for the requested year', () => {

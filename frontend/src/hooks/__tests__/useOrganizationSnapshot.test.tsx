@@ -1,6 +1,7 @@
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { vi, describe, it, expect, beforeEach } from 'vite-plus/test'
+import type { ReactNode } from 'react'
 import {
   useOrganizationSnapshot,
   useUpdateOrganizationSnapshot
@@ -31,7 +32,7 @@ const createWrapper = () => {
       mutations: { retry: false }
     }
   })
-  return function QueryWrapper({ children }) {
+  return function QueryWrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     )
@@ -275,7 +276,7 @@ describe('useOrganizationSnapshot', () => {
         expect(result.current.isError).toBe(true)
       })
 
-      expect(result.current.error.message).toBe('Report ID is required')
+      expect(result.current.error?.message).toBe('Report ID is required')
     })
   })
 })

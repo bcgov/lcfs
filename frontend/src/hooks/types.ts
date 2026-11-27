@@ -18,9 +18,18 @@ export interface Filter {
 export interface PaginationParams {
   page?: number
   size?: number
-  filters?: Filter[]
+  filters?: Array<
+    | Filter
+    | {
+        field: string
+        values: unknown[]
+        type: string
+        filterType?: string
+      }
+    | Record<string, unknown>
+  >
   sort_orders?: SortOrder[]
-  sortOrders?: SortOrder[]
+  sortOrders?: Array<SortOrder | Record<string, unknown>>
   organizationId?: number | string | null
   [key: string]: unknown
 }

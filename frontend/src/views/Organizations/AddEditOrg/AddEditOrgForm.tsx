@@ -17,11 +17,13 @@ import TextField from '@mui/material/TextField'
 import '@mui/icons-material/Close'
 import BCTypography from '@/components/BCTypography'
 import { useMutation } from '@tanstack/react-query'
+import { isAxiosError } from 'axios'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { createValidationSchema } from './_schema'
+import type { BCAlert2Handle } from '@/components/BCAlert/BCAlert2'
 
 // Internal Modules
 
@@ -31,6 +33,7 @@ import BCButton from '@/components/BCButton'
 import Loading from '@/components/Loading'
 import '@/routes/routes'
 import { useOrganization, useOrganizationTypes } from '@/hooks/useOrganization'
+import type { OrganizationTypeData } from '@/hooks/useOrganization'
 import { useApiService } from '@/services/useApiService'
 import { AddressAutocomplete } from '@/components/BCForm/AddressAutocomplete'
 import { BCFormCheckbox } from '@/components/BCForm/BCFormCheckbox'
@@ -44,10 +47,67 @@ import { getCurrentEarlyIssuanceYear } from '@/constants/common'
 import ReferenceCompareBox from './ReferenceCompareBox'
 
 // Component for adding a new organization
-export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
+type AddEditOrgFormProps = {
+  handleSaveSuccess?: (organizationId?: number | string) => void
+  handleCancelEdit?: () => void
+}
+
+type OrgFormValues = {
+  orgLegalName: string
+  orgOperatingName: string
+  orgEmailAddress: string
+  orgPhoneNumber: string
+  orgContactName: string
+  orgTypeIds: string[]
+  availableRoles: string[]
+  orgRegForTransfers: string
+  orgStreetAddress: string
+  orgCity: string
+  orgPostalCodeZipCode: string
+  orgAddressOther: string
+  orgProvince: string
+  orgCountry: string
+  orgHeadOfficeStreetAddress: string
+  orgHeadOfficeAddressOther: string
+  orgHeadOfficeCity: string
+  orgHeadOfficeProvince: string
+  orgHeadOfficeCountry: string
+  orgHeadOfficePostalCodeZipCode: string
+  orgEDRMSRecord: string
+  recordsAddress: string
+  hasEarlyIssuance: string
+  orgCreditTradingEnabled?: string
+}
+type OrgTextField = Exclude<
+  keyof OrgFormValues,
+  'orgTypeIds' | 'availableRoles'
+>
+type OrganizationPayload = {
+  organizationId: string | undefined
+  name: string
+  operatingName: string
+  email: string
+  phone: string
+  contactName: string | null
+  edrmsRecord: string
+  recordsAddress: string
+  hasEarlyIssuance: boolean
+  organizationStatusId: number
+  organizationTypeIds: number[]
+  availableRoles: string[]
+  creditTradingEnabled: boolean
+  address: Record<string, string>
+  attorneyAddress: Record<string, string>
+}
+
+export const AddEditOrgForm = ({
+  handleSaveSuccess,
+  handleCancelEdit
+}: AddEditOrgFormProps) => {
   const { t } = useTranslation(['common', 'org'])
   useNavigate()
-  const alertRef = useRef(null)
+  const alertRef = useRef<BCAlert2Handle | null>(null)
+  const alertProps = { dismissable: true, noFade: true }
   const location = useLocation()
   const organizationSnapshot = location.state?.organizationSnapshot
   const reportID = location.state?.reportID
@@ -65,7 +125,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
     retry: false
   })
   const { data: orgTypes } = useOrganizationTypes()
-  const dismissBox = (boxType) => {
+  const dismissBox = (boxType: keyof typeof dismissedBoxes) => {
     setDismissedBoxes((prev) => ({
       ...prev,
       [boxType]: true
@@ -79,7 +139,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
   const [requiresBCeID, setRequiresBCeID] = useState(true)
 
   // useForm hook setup with React Hook Form - validation handled in onSubmit
-  const methods = useForm({
+  const methods = useForm<OrgFormValues>({
     mode: 'onTouched',
     reValidateMode: 'onChange',
     defaultValues: {
@@ -128,8 +188,10 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
   // requirements: BCeID rules apply when ANY selected type is a BCeID type.
   useEffect(() => {
     if (watchedOrgTypeIds && orgTypes && orgTypes.length > 0) {
-      const selectedTypes = orgTypes.filter((type) =>
-        watchedOrgTypeIds.includes(type.organizationTypeId.toString())
+      const selectedTypes = orgTypes.filter(
+        (type) =>
+          type.organizationTypeId !== undefined &&
+          watchedOrgTypeIds.includes(type.organizationTypeId.toString())
       )
       const newRequiresBCeID =
         selectedTypes.length === 0 ||
@@ -153,7 +215,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
   // by adding them to "Roles available". Only reacts to types newly checked
   // since the last observation, so hydrating an existing organization (or
   // unchecking a type) never changes the role selection.
-  const prevOrgTypeIdsRef = useRef(null)
+  const prevOrgTypeIdsRef = useRef<string[] | null>(null)
   useEffect(() => {
     if (!watchedOrgTypeIds || !orgTypes || orgTypes.length === 0) {
       return
@@ -170,10 +232,13 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
       return
     }
     const newKeys = orgTypes
-      .filter((type) =>
-        newlyChecked.includes(type.organizationTypeId.toString())
+      .filter(
+        (type) =>
+          type.organizationTypeId !== undefined &&
+          newlyChecked.includes(type.organizationTypeId.toString())
       )
       .map((type) => type.orgType)
+      .filter((type): type is string => typeof type === 'string')
     const currentRoles = watch('availableRoles') || []
     const additions = suggestedRolesForTypes(newKeys, currentRoles)
     if (additions.length > 0) {
@@ -196,7 +261,10 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
           data.orgAttorneyAddress?.postalcodeZipcode
 
       const hydratedOrgTypeIds = data.orgTypes?.length
-        ? data.orgTypes.map((type) => type.organizationTypeId.toString())
+        ? data.orgTypes
+            .map((type) => type.organizationTypeId)
+            .filter((id): id is number => typeof id === 'number')
+            .map(String)
         : [
             data.organizationTypeId?.toString() ||
               data.orgType?.organizationTypeId?.toString() ||
@@ -205,18 +273,18 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
       prevOrgTypeIdsRef.current = hydratedOrgTypeIds
 
       reset({
-        orgLegalName: data.name,
-        orgOperatingName: data.operatingName,
-        orgEmailAddress: data.email,
-        orgPhoneNumber: data.phone,
+        orgLegalName: data.name || '',
+        orgOperatingName: data.operatingName || '',
+        orgEmailAddress: data.email || '',
+        orgPhoneNumber: data.phone || '',
         orgContactName: data.contactName || '',
-        orgEDRMSRecord: data.edrmsRecord,
+        orgEDRMSRecord: data.edrmsRecord || '',
         recordsAddress: data.recordsAddress || '',
         hasEarlyIssuance: data.hasEarlyIssuance ? 'yes' : 'no',
         orgTypeIds: hydratedOrgTypeIds,
         availableRoles: data.availableRoles || [],
         orgRegForTransfers:
-          data.orgStatus.organizationStatusId === 2 ? '2' : '1',
+          data.orgStatus?.organizationStatusId === 2 ? '2' : '1',
         orgStreetAddress: data.orgAddress?.streetAddress || '',
         orgAddressOther: data.orgAddress?.addressOther || '',
         orgCity: data.orgAddress?.city || '',
@@ -245,7 +313,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
 
   // Set value and trigger validation function
   const setValueAndTriggerValidation = useCallback(
-    (fieldName, value) => {
+    (fieldName: OrgTextField, value: string) => {
       if (watch(fieldName) !== value) {
         setValue(fieldName, value)
         if (value && value.trim().length > 0) {
@@ -258,7 +326,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
 
   // Clear fields function
   const clearFields = useCallback(
-    (fields) => {
+    (fields: OrgTextField[]) => {
       fields.forEach((fieldName) => {
         if (watch(fieldName)) {
           setValue(fieldName, '')
@@ -269,7 +337,10 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
   )
 
   // Function to render form error messages
-  const renderError = (fieldName, sameAsField = null) => {
+  const renderError = (
+    fieldName: keyof OrgFormValues,
+    sameAsField?: OrgTextField
+  ) => {
     // If the sameAsField is provided and is true, hide errors for this field
     if (sameAsField && watch(sameAsField)) {
       return null
@@ -284,34 +355,48 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
   }
 
   // Custom validation helper for conditional fields
-  const validateConditionalFields = async (data) => {
+  const validateConditionalFields = async (data: OrgFormValues) => {
     const validationSchema = createValidationSchema(
-      orgTypes || [],
+      (orgTypes || []).filter(
+        (type): type is OrganizationTypeData & { organizationTypeId: number } =>
+          typeof type.organizationTypeId === 'number'
+      ),
       data.orgTypeIds
     )
     try {
       await validationSchema.validate(data, { abortEarly: false })
       return { isValid: true, errors: {} }
     } catch (validationErrors) {
-      const formattedErrors = {}
-      validationErrors.inner.forEach((error) => {
-        formattedErrors[error.path] = error.message
-      })
+      const formattedErrors: Partial<Record<keyof OrgFormValues, string>> = {}
+      if (
+        !(validationErrors instanceof Error) ||
+        !('inner' in validationErrors) ||
+        !Array.isArray(validationErrors.inner)
+      ) {
+        throw validationErrors
+      }
+      validationErrors.inner.forEach(
+        (error: { path?: string; message: string }) => {
+          if (error.path && error.path in data) {
+            formattedErrors[error.path as keyof OrgFormValues] = error.message
+          }
+        }
+      )
       return { isValid: false, errors: formattedErrors }
     }
   }
 
   // Prepare payload and call mutate function
-  const onSubmit = async (data) => {
+  const onSubmit = async (data: OrgFormValues) => {
     // Perform custom validation based on the current organization type
     const validation = await validateConditionalFields(data)
 
     if (!validation.isValid) {
       // Set form errors for the failing fields
       Object.keys(validation.errors).forEach((fieldName) => {
-        methods.setError(fieldName, {
+        methods.setError(fieldName as keyof OrgFormValues, {
           type: 'manual',
-          message: validation.errors[fieldName]
+          message: validation.errors[fieldName as keyof OrgFormValues]
         })
       })
       return // Don't submit if validation fails
@@ -365,7 +450,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
     isError: isCreateOrgError,
     error: createOrgError
   } = useMutation({
-    mutationFn: async (userData) =>
+    mutationFn: async (userData: OrganizationPayload) =>
       await apiService.post('/organizations/create', userData),
     onSuccess: (response) => {
       // Redirect to Organization route on success
@@ -385,7 +470,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
     isError: isUpdateOrgError,
     error: updateOrgError
   } = useMutation({
-    mutationFn: async (payload) =>
+    mutationFn: async (payload: OrganizationPayload) =>
       await apiService.put(`/organizations/${orgID}`, payload),
     onSuccess: () => {
       if (handleSaveSuccess) {
@@ -495,8 +580,12 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
       {/* Error Alert */}
       {(isCreateOrgError || isUpdateOrgError) && (
         <BCAlert severity="error">
-          {updateOrgError?.response?.data?.detail ||
-            createOrgError?.response?.data?.detail ||
+          {(isAxiosError<{ detail?: string }>(updateOrgError)
+            ? updateOrgError.response?.data?.detail
+            : undefined) ||
+            (isAxiosError<{ detail?: string }>(createOrgError)
+              ? createOrgError.response?.data?.detail
+              : undefined) ||
             t('common:submitError')}
         </BCAlert>
       )}
@@ -507,7 +596,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
         sx={{ mt: 2 }}
       >
         {/* Form Fields */}
-        <BCAlert2 ref={alertRef} dismissable={true} noFade={true} />
+        <BCAlert2 ref={alertRef} {...alertProps} />
         <Grid container spacing={3} sx={{ alignItems: 'stretch' }}>
           <Grid item xs={12} md={6}>
             <Box
@@ -590,7 +679,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
                           />
                         }
                         label={
-                          <BCTypography variant="subtitle3">
+                          <BCTypography variant="subtitle2">
                             {t('org:sameAsLegalNameLabel')}
                           </BCTypography>
                         }
@@ -671,19 +760,23 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
                 <Box mb={2} data-test="orgTypeSection">
                   <Grid container spacing={2}>
                     <Grid item xs={12} sm={6}>
-                      <BCFormCheckbox
+                      <BCFormCheckbox<OrgFormValues>
                         form={methods}
                         name="orgTypeIds"
                         label={`${t('org:orgTypeLabel')}:`}
-                        options={(orgTypes || []).map((type) => ({
-                          value: type.organizationTypeId.toString(),
-                          label: type.description || type.orgType
-                        }))}
+                        options={(orgTypes || [])
+                          .filter(
+                            (type) => type.organizationTypeId !== undefined
+                          )
+                          .map((type) => ({
+                            value: String(type.organizationTypeId),
+                            label: type.description || type.orgType
+                          }))}
                       />
                       {renderError('orgTypeIds')}
                     </Grid>
                     <Grid item xs={12} sm={6}>
-                      <BCFormCheckbox
+                      <BCFormCheckbox<OrgFormValues>
                         form={methods}
                         name="availableRoles"
                         label={`${t('org:rolesAvailableLabel')}:`}
@@ -708,12 +801,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
                           name="orgRegForTransfers"
                           defaultValue=""
                           render={({ field }) => (
-                            <RadioGroup
-                              row
-                              id="orgRegForTransfers"
-                              name="orgRegForTransfers"
-                              {...field}
-                            >
+                            <RadioGroup row id="orgRegForTransfers" {...field}>
                               <FormControlLabel
                                 value="2"
                                 control={
@@ -739,9 +827,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
                               />
                             </RadioGroup>
                           )}
-                        >
-                          /
-                        </Controller>
+                        ></Controller>
                         {renderError('orgRegForTransfers')}
                       </Grid>
                     </Grid>
@@ -769,7 +855,6 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
                             <RadioGroup
                               row
                               id="hasEarlyIssuance"
-                              name="hasEarlyIssuance"
                               sx={{ pt: 1 }}
                               {...field}
                             >
@@ -798,9 +883,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
                               />
                             </RadioGroup>
                           )}
-                        >
-                          /
-                        </Controller>
+                        ></Controller>
                         {renderError('hasEarlyIssuance')}
                       </Grid>
                     </Grid>
@@ -872,8 +955,11 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
                         if (typeof address === 'string') {
                           setValue('orgStreetAddress', address)
                         } else {
-                          setValue('orgStreetAddress', address.streetAddress)
-                          setValue('orgCity', address.city)
+                          setValue(
+                            'orgStreetAddress',
+                            address.streetAddress || ''
+                          )
+                          setValue('orgCity', address.city || '')
                           setValue('orgPostalCodeZipCode', '')
                           // Trigger validation for the updated fields
                           trigger('orgStreetAddress')
@@ -1176,7 +1262,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
                   backgroundColor: 'white.main',
                   ml: 2
                 }}
-                onClick={() => handleCancelEdit()}
+                onClick={() => handleCancelEdit?.()}
               >
                 <BCTypography variant="subtitle2" textTransform="none">
                   {t('cancelBtn')}

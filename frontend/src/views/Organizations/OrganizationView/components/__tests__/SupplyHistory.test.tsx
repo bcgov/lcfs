@@ -8,14 +8,22 @@ import { normalizeFuelTypeVolumeTrendRows } from '../supplyHistoryHelpers'
 import { supplyHistoryColDefs } from '../_supplyHistorySchema'
 import theme from '@/themes'
 
-const mockUseOrganizationFuelSupply = vi.fn()
+const mockUseOrganizationFuelSupply = vi.fn<(...args: unknown[]) => unknown>()
 
 vi.mock('echarts-for-react', () => ({
   default: () => <div data-test="echarts" />
 }))
 
 vi.mock('@/components/charts/BCResponsiveEchart', () => ({
-  BCResponsiveEChart: ({ ariaLabel, ariaDescription, ariaDescribedBy }) => (
+  BCResponsiveEChart: ({
+    ariaLabel,
+    ariaDescription,
+    ariaDescribedBy
+  }: {
+    ariaLabel?: string
+    ariaDescription?: string
+    ariaDescribedBy?: string
+  }) => (
     <div
       role="img"
       aria-label={ariaDescription || ariaLabel}
@@ -27,7 +35,8 @@ vi.mock('@/components/charts/BCResponsiveEchart', () => ({
 }))
 
 vi.mock('@/hooks/useFuelSupply', () => ({
-  useOrganizationFuelSupply: (...args) => mockUseOrganizationFuelSupply(...args)
+  useOrganizationFuelSupply: (...args: unknown[]) =>
+    mockUseOrganizationFuelSupply(...args)
 }))
 
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
@@ -158,19 +167,36 @@ describe('SupplyHistory', () => {
     const submissionDateCol = supplyHistoryColDefs().find(
       (col) => col.field === 'reportSubmissionDate'
     )
+    if (!submissionDateCol) {
+      throw new Error('Submission date column was not configured')
+    }
 
     expect(submissionDateCol.filter).toBe('agDateColumnFilter')
     expect(submissionDateCol.floatingFilterComponent).toBeDefined()
+    const valueFormatter = submissionDateCol.valueFormatter
+    if (typeof valueFormatter !== 'function') {
+      throw new Error('Submission date value formatter was not configured')
+    }
     expect(
-      submissionDateCol.valueFormatter({
-        value: '2025-04-01T03:00:00+00:00'
-      })
+      Reflect.apply(valueFormatter, undefined, [
+        {
+          value: '2025-04-01T03:00:00+00:00'
+        }
+      ])
     ).toBe('2025-03-31')
+    const comparator =
+      typeof submissionDateCol.filterParams === 'object' &&
+      submissionDateCol.filterParams
+        ? submissionDateCol.filterParams.comparator
+        : undefined
+    if (typeof comparator !== 'function') {
+      throw new Error('Submission date filter comparator was not configured')
+    }
     expect(
-      submissionDateCol.filterParams.comparator(
+      Reflect.apply(comparator, undefined, [
         new Date(2025, 2, 31),
         '2025-04-01T03:00:00+00:00'
-      )
+      ])
     ).toBe(0)
   })
 
@@ -299,13 +325,20 @@ describe('SupplyHistory', () => {
     expect(tables).toHaveLength(4)
     for (const table of tables) {
       const disclosure = table.closest('details')
+      const caption = table.querySelector('caption')
+      if (!disclosure || !caption) {
+        throw new Error('Chart table disclosure or caption was not rendered')
+      }
       const summary = within(disclosure).getByText(
-        `View data table for ${table.querySelector('caption').textContent.replace(' data values', '')}`
+        `View data table for ${caption.textContent?.replace(' data values', '')}`
       )
       expect(summary).toHaveAttribute('aria-controls', table.id)
       await user.click(summary)
       expect(disclosure).toHaveAttribute('open')
       const scrollRegion = disclosure.querySelector('[role="region"]')
+      if (!scrollRegion) {
+        throw new Error('Chart data table scroll region was not rendered')
+      }
       expect(scrollRegion).toHaveAttribute('tabindex', '0')
       expect(scrollRegion).toHaveStyle({ overflowX: 'auto' })
     }

@@ -3,18 +3,47 @@ import { beforeEach, describe, it, expect, vi } from 'vite-plus/test'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { AddEditOrgForm } from '../AddEditOrgForm'
-import { useApiService } from '@/services/useApiService'
-import { useOrganization, useOrganizationTypes } from '@/hooks/useOrganization'
-import {
-  useNavigate,
-  useParams,
-  useLocation,
-  MemoryRouter
-} from 'react-router-dom'
+import { MemoryRouter } from 'react-router-dom'
 import '@/routes/routes'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { I18nextProvider } from 'react-i18next'
 import i18n from '@/i18n'
+import type { PropsWithChildren, ReactNode } from 'react'
+import type { AddressAutocompleteProps } from '@/components/BCForm/AddressAutocomplete'
+import type { BCFormCheckboxProps } from '@/components/BCForm/BCFormCheckbox'
+import type {
+  OrganizationData,
+  OrganizationTypeData
+} from '@/hooks/useOrganization'
+
+type ReferenceCompareProps = {
+  title: string
+  data?: Array<{ label?: string; value: string }>
+  onDismiss?: () => void
+}
+
+type TestOrganizationHook = () => {
+  data?: OrganizationData
+  isFetched: boolean
+}
+type TestOrganizationTypesHook = () => {
+  data?: OrganizationTypeData[]
+  isLoading?: boolean
+  error?: Error | null
+}
+const hooks = vi.hoisted(() => ({
+  useNavigate: vi.fn<() => () => void>(),
+  useParams: vi.fn<() => { orgID?: string }>(),
+  useLocation: vi.fn<() => { state: unknown }>(),
+  useApiService: vi.fn<
+    () => {
+      post: (...args: unknown[]) => unknown
+      put: (...args: unknown[]) => unknown
+    }
+  >(),
+  useOrganization: vi.fn<TestOrganizationHook>(),
+  useOrganizationTypes: vi.fn<TestOrganizationTypesHook>()
+}))
 
 // Mock form implementation
 const mockSetValue = vi.fn()
@@ -22,61 +51,64 @@ const mockWatch = vi.fn()
 const mockTrigger = vi.fn()
 const mockReset = vi.fn()
 const mockSetError = vi.fn()
-const mockHandleSubmit = vi.fn((fn) => (event) => {
-  event?.preventDefault?.()
-  fn({
-    orgLegalName: 'Test Org',
-    orgOperatingName: 'Test Operating',
-    orgEmailAddress: 'test@example.com',
-    orgPhoneNumber: '604-555-1234',
-    orgContactName: 'Jane Contact',
-    orgStreetAddress: '123 Test St',
-    orgCity: 'Test City',
-    orgPostalCodeZipCode: 'V6B3K9',
-    orgRegForTransfers: '1',
-    hasEarlyIssuance: 'no',
-    orgEDRMSRecord: 'EDRMS-123',
-    orgTypeIds: ['1'],
-    availableRoles: ['Compliance Reporting']
-  })
-})
+const mockHandleSubmit = vi.fn(
+  (fn: (data: Record<string, unknown>) => unknown) =>
+    (event?: { preventDefault?: () => void }) => {
+      event?.preventDefault?.()
+      fn({
+        orgLegalName: 'Test Org',
+        orgOperatingName: 'Test Operating',
+        orgEmailAddress: 'test@example.com',
+        orgPhoneNumber: '604-555-1234',
+        orgContactName: 'Jane Contact',
+        orgStreetAddress: '123 Test St',
+        orgCity: 'Test City',
+        orgPostalCodeZipCode: 'V6B3K9',
+        orgRegForTransfers: '1',
+        hasEarlyIssuance: 'no',
+        orgEDRMSRecord: 'EDRMS-123',
+        orgTypeIds: ['1'],
+        availableRoles: ['Compliance Reporting']
+      })
+    }
+)
 
 // Mock dependencies
 vi.mock('react-router-dom', async (importOriginal) => {
-  const actual = await importOriginal()
+  const actual = await importOriginal<typeof import('react-router-dom')>()
   return {
     ...actual,
-    useParams: vi.fn(),
-    useNavigate: vi.fn(),
-    useLocation: vi.fn()
+    useParams: hooks.useParams,
+    useNavigate: hooks.useNavigate,
+    useLocation: hooks.useLocation
   }
 })
 
 vi.mock('@/services/useApiService', () => ({
-  useApiService: vi.fn()
+  useApiService: hooks.useApiService
 }))
 
 vi.mock('@/hooks/useOrganization', () => ({
-  useOrganization: vi.fn(),
-  useOrganizationTypes: vi.fn()
+  useOrganization: hooks.useOrganization,
+  useOrganizationTypes: hooks.useOrganizationTypes
 }))
 
 vi.mock('react-i18next', async (importOriginal) => {
-  const actual = await importOriginal()
+  const actual = await importOriginal<typeof import('react-i18next')>()
   return {
     ...actual,
     useTranslation: vi.fn(() => ({
-      t: (key) =>
+      t: (key: string) =>
         key === 'org:sameAsLegalNameLabel' ? 'Same as legal name' : key,
       i18n: { changeLanguage: vi.fn() }
     })),
-    I18nextProvider: ({ children }) => children
+    I18nextProvider: ({ children }: PropsWithChildren) => children
   }
 })
 
 vi.mock('react-hook-form', () => ({
   useForm: () => ({
-    register: vi.fn().mockImplementation((name) => ({
+    register: vi.fn().mockImplementation((name: string) => ({
       name,
       onChange: vi.fn(),
       onBlur: vi.fn(),
@@ -92,7 +124,21 @@ vi.mock('react-hook-form', () => ({
     clearErrors: vi.fn(),
     control: {}
   }),
-  Controller: React.forwardRef(function ControllerMock({ name, render }, ref) {
+  Controller: ({
+    name,
+    render
+  }: {
+    name: string
+    render: (args: {
+      field: {
+        onChange: () => void
+        value: string
+        name: string
+        ref: () => void
+      }
+      fieldState: Record<string, never>
+    }) => ReactNode
+  }) => {
     return (
       <div data-testid={`controller-${name}`} data-test={`controller-${name}`}>
         {render({
@@ -100,17 +146,17 @@ vi.mock('react-hook-form', () => ({
             onChange: vi.fn(),
             value: '',
             name,
-            ref: ref || vi.fn()
+            ref: vi.fn()
           },
           fieldState: {}
         })}
       </div>
     )
-  })
+  }
 }))
 
 vi.mock('@tanstack/react-query', async (importOriginal) => {
-  const actual = await importOriginal()
+  const actual = await importOriginal<typeof import('@tanstack/react-query')>()
   return {
     ...actual,
     useMutation: vi.fn(() => ({
@@ -123,7 +169,14 @@ vi.mock('@tanstack/react-query', async (importOriginal) => {
 
 // Simple component mocks
 vi.mock('@/components/BCButton', () => ({
-  default: (props) => (
+  default: (
+    props: PropsWithChildren<{
+      onClick?: () => void
+      type?: 'button' | 'reset' | 'submit'
+      ['data-test']?: string
+      ['data-testid']?: string
+    }>
+  ) => (
     <button
       onClick={props.onClick}
       type={props.type}
@@ -135,12 +188,17 @@ vi.mock('@/components/BCButton', () => ({
 }))
 
 vi.mock('@/components/BCAlert', () => ({
-  default: (props) => (
+  default: (props: PropsWithChildren<{ severity?: string }>) => (
     <div data-testid="bc-alert" data-severity={props.severity}>
       {props.children}
     </div>
   ),
-  BCAlert2: React.forwardRef(function BCAlertMock(props, ref) {
+  BCAlert2: React.forwardRef(function BCAlertMock(
+    props: { dismissable?: boolean },
+    ref: React.ForwardedRef<{
+      triggerAlert: (payload: { severity: string; message: string }) => void
+    }>
+  ) {
     React.useImperativeHandle(ref, () => ({
       triggerAlert: vi.fn()
     }))
@@ -153,24 +211,35 @@ vi.mock('@/components/BCAlert', () => ({
 }))
 
 vi.mock('@/components/Loading', () => ({
-  default: (props) => <div data-testid="loading">{props.message}</div>
+  default: (props: { message?: ReactNode }) => (
+    <div data-testid="loading">{props.message}</div>
+  )
 }))
 
 vi.mock('@/components/BCForm/AddressAutocomplete', () => ({
-  AddressAutocomplete: React.forwardRef(
-    function AddressAutocompleteMock(props, ref) {
-      return (
-        <input
-          ref={ref}
-          data-test={`address-autocomplete-${props.name || 'default'}`}
-          data-testid="address-autocomplete"
-          value={props.value || ''}
-          onChange={(e) => props.onChange && props.onChange(e.target.value)}
-        />
-      )
-    }
-  ),
-  BCFormCheckbox: ({ name, label, options }) => (
+  AddressAutocomplete: React.forwardRef(function AddressAutocompleteMock(
+    props: AddressAutocompleteProps & { name?: string },
+    ref: React.ForwardedRef<HTMLInputElement>
+  ) {
+    return (
+      <input
+        ref={ref}
+        data-test={`address-autocomplete-${props.name || 'default'}`}
+        data-testid="address-autocomplete"
+        value={
+          typeof props.value === 'string'
+            ? props.value
+            : props.value?.fullAddress || ''
+        }
+        onChange={(e) => props.onChange && props.onChange(e.target.value)}
+      />
+    )
+  }),
+  BCFormCheckbox: ({
+    name,
+    label,
+    options
+  }: BCFormCheckboxProps<Record<string, string[]>>) => (
     <div
       data-test={`${name}-checkbox-group`}
       data-testid={`${name}-checkbox-group`}
@@ -187,7 +256,7 @@ vi.mock('@/components/BCForm/AddressAutocomplete', () => ({
 }))
 
 vi.mock('../ReferenceCompareBox', () => ({
-  default: (props) => (
+  default: (props: ReferenceCompareProps) => (
     <div data-testid="reference-compare-box">
       <div>{props.title}</div>
       <button onClick={props.onDismiss}>Dismiss</button>
@@ -202,15 +271,26 @@ vi.mock('../ReferenceCompareBox', () => ({
 
 // Material UI simple mocks
 vi.mock('@mui/material/Box', () => ({
-  default: ({ children, component = 'div', flexWrap, ...props }) => {
-    const domProps = { ...props }
-    if (flexWrap) domProps.style = { ...domProps.style, flexWrap }
+  default: ({
+    children,
+    component = 'div',
+    flexWrap,
+    ...props
+  }: PropsWithChildren<{
+    component?: React.ElementType
+    flexWrap?: React.CSSProperties['flexWrap']
+    [key: string]: unknown
+  }>) => {
+    const domProps = flexWrap ? { ...props, style: { flexWrap } } : props
     return React.createElement(component, domProps, children)
   }
 }))
 
 vi.mock('@mui/material/Paper', () => ({
-  default: ({ children, ...props }) => (
+  default: ({
+    children,
+    ...props
+  }: PropsWithChildren<Record<string, unknown>>) => (
     <div data-test="addEditOrgContainer" {...props}>
       {children}
     </div>
@@ -218,7 +298,7 @@ vi.mock('@mui/material/Paper', () => ({
 }))
 
 vi.mock('@mui/material/Grid', () => ({
-  default: (props) => {
+  default: (props: PropsWithChildren<Record<string, unknown>>) => {
     const { children, ...domProps } = props
     // Filter out Grid-specific props that shouldn't be passed to DOM
     for (const key of [
@@ -254,15 +334,27 @@ vi.mock('@mui/material/TextField', () => ({
       select,
       children,
       ...props
+    }: {
+      id?: string
+      label?: ReactNode
+      error?: boolean
+      helperText?: ReactNode
+      fullWidth?: boolean
+      variant?: string
+      select?: boolean
+      children?: ReactNode
+      SelectProps?: object
+      ['data-test']?: string
+      [key: string]: unknown
     },
-    ref
+    ref: React.ForwardedRef<HTMLInputElement>
   ) {
     delete props.SelectProps
     return (
       <div data-testid={id || 'text-field'}>
         {label && <label htmlFor={id}>{label}</label>}
         {select ? (
-          <select id={id} ref={ref} data-test={props['data-test']} {...props}>
+          <select id={id} data-test={props['data-test']} {...props}>
             {children}
           </select>
         ) : (
@@ -282,7 +374,7 @@ vi.mock('@mui/material/TextField', () => ({
 }))
 
 vi.mock('@mui/material/FormControl', () => ({
-  default: (props) => {
+  default: (props: PropsWithChildren<Record<string, unknown>>) => {
     const { children, ...domProps } = props
     for (const key of ['fullWidth', 'variant', 'component', 'margin']) {
       delete domProps[key]
@@ -292,20 +384,31 @@ vi.mock('@mui/material/FormControl', () => ({
 }))
 
 vi.mock('@mui/material/FormControlLabel', async (importOriginal) => {
-  const actual = await importOriginal()
+  const actual =
+    await importOriginal<typeof import('@mui/material/FormControlLabel')>()
   return { default: actual.default }
 })
 
 vi.mock('@mui/material/FormLabel', () => ({
-  default: ({ children, ...props }) => <div {...props}>{children}</div>
+  default: ({
+    children,
+    ...props
+  }: PropsWithChildren<Record<string, unknown>>) => (
+    <div {...props}>{children}</div>
+  )
 }))
 
 vi.mock('@mui/material/InputLabel', () => ({
-  default: ({ children, ...props }) => <label {...props}>{children}</label>
+  default: ({
+    children,
+    ...props
+  }: PropsWithChildren<Record<string, unknown>>) => (
+    <label {...props}>{children}</label>
+  )
 }))
 
 vi.mock('@mui/material/RadioGroup', () => ({
-  default: (props) => {
+  default: (props: PropsWithChildren<Record<string, unknown>>) => {
     const { children, ...domProps } = props
     for (const key of ['row', 'defaultValue', 'value', 'onChange', 'name']) {
       delete domProps[key]
@@ -315,7 +418,10 @@ vi.mock('@mui/material/RadioGroup', () => ({
 }))
 
 vi.mock('@mui/material/Radio', () => ({
-  default: React.forwardRef(function RadioMock(props, ref) {
+  default: React.forwardRef(function RadioMock(
+    props: React.ComponentProps<'input'> & { ['data-test']?: string },
+    ref: React.ForwardedRef<HTMLInputElement>
+  ) {
     return (
       <input
         ref={ref}
@@ -330,7 +436,7 @@ vi.mock('@mui/material/Radio', () => ({
 }))
 
 vi.mock('@mui/material/Checkbox', async (importOriginal) => {
-  const actual = await importOriginal()
+  const actual = await importOriginal<typeof import('@mui/material/Checkbox')>()
   return { default: actual.default }
 })
 
@@ -338,7 +444,7 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false }, mutations: { retry: false } }
 })
 
-const Wrapper = ({ children }) => (
+const Wrapper = ({ children }: PropsWithChildren) => (
   <QueryClientProvider client={queryClient}>
     <I18nextProvider i18n={i18n}>
       <MemoryRouter initialEntries={['/organizations/add']}>
@@ -392,18 +498,18 @@ describe('AddEditOrgForm Component', () => {
     vi.clearAllMocks()
 
     // Setup default mocks
-    useNavigate.mockReturnValue(mockNavigate)
-    useLocation.mockReturnValue({ state: {} })
-    useApiService.mockReturnValue({
+    hooks.useNavigate.mockReturnValue(mockNavigate)
+    hooks.useLocation.mockReturnValue({ state: {} })
+    hooks.useApiService.mockReturnValue({
       post: mockApiPost,
       put: mockApiPut
     })
-    useParams.mockReturnValue({ orgID: undefined })
-    useOrganization.mockReturnValue({
-      data: null,
+    hooks.useParams.mockReturnValue({ orgID: undefined })
+    hooks.useOrganization.mockReturnValue({
+      data: undefined,
       isFetched: false
     })
-    useOrganizationTypes.mockReturnValue({
+    hooks.useOrganizationTypes.mockReturnValue({
       data: mockOrgTypes,
       isLoading: false,
       error: null
@@ -584,8 +690,8 @@ describe('AddEditOrgForm Component', () => {
 
   describe('Data Loading and Edit Mode', () => {
     it('handles edit mode with organization data', () => {
-      useParams.mockReturnValue({ orgID: '123' })
-      useOrganization.mockReturnValue({
+      hooks.useParams.mockReturnValue({ orgID: '123' })
+      hooks.useOrganization.mockReturnValue({
         data: {
           name: 'Test Organization',
           operatingName: 'Test Operating Name',
@@ -607,9 +713,9 @@ describe('AddEditOrgForm Component', () => {
     })
 
     it('handles new organization mode', () => {
-      useParams.mockReturnValue({ orgID: undefined })
-      useOrganization.mockReturnValue({
-        data: null,
+      hooks.useParams.mockReturnValue({ orgID: undefined })
+      hooks.useOrganization.mockReturnValue({
+        data: undefined,
         isFetched: false
       })
 
@@ -668,8 +774,8 @@ describe('AddEditOrgForm Component', () => {
     })
 
     it('handles organization type loading state', () => {
-      useOrganizationTypes.mockReturnValue({
-        data: null,
+      hooks.useOrganizationTypes.mockReturnValue({
+        data: undefined,
         isLoading: true,
         error: null
       })
@@ -687,8 +793,8 @@ describe('AddEditOrgForm Component', () => {
     })
 
     it('handles organization type error state', () => {
-      useOrganizationTypes.mockReturnValue({
-        data: null,
+      hooks.useOrganizationTypes.mockReturnValue({
+        data: undefined,
         isLoading: false,
         error: new Error('Failed to load organization types')
       })
@@ -706,8 +812,8 @@ describe('AddEditOrgForm Component', () => {
     })
 
     it('populates form correctly in edit mode with organization type', async () => {
-      useParams.mockReturnValue({ orgID: '123' })
-      useOrganization.mockReturnValue({
+      hooks.useParams.mockReturnValue({ orgID: '123' })
+      hooks.useOrganization.mockReturnValue({
         data: {
           name: 'Test Organization',
           operatingName: 'Test Org',
@@ -794,8 +900,8 @@ describe('AddEditOrgForm Component', () => {
     })
 
     it('does not suggest roles while hydrating an existing organization', () => {
-      useParams.mockReturnValue({ orgID: '123' })
-      useOrganization.mockReturnValue({
+      hooks.useParams.mockReturnValue({ orgID: '123' })
+      hooks.useOrganization.mockReturnValue({
         data: {
           name: 'Existing Org',
           operatingName: 'Existing Org',

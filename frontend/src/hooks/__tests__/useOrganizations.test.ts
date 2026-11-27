@@ -3,6 +3,8 @@ import { describe, expect, vi, beforeEach, afterEach } from 'vite-plus/test'
 import { useApiService } from '@/services/useApiService'
 import { test } from '@/tests/utils/fixtures'
 import { ORGANIZATION_STATUSES } from '@/constants/statuses'
+import axios from 'axios'
+import type { ApiServiceInstance } from '@/services/useApiService'
 import {
   useOrganizationStatuses,
   useOrganizationListStatuses,
@@ -12,14 +14,19 @@ import {
 
 vi.mock('@/services/useApiService')
 
+const apiService = (methods: Partial<ApiServiceInstance>): ApiServiceInstance =>
+  Object.assign(axios.create(), { download: vi.fn() }, methods)
+
 describe('useOrganizations', () => {
   const mockGet = vi.fn()
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(useApiService).mockReturnValue({
-      get: mockGet
-    })
+    vi.mocked(useApiService).mockReturnValue(
+      apiService({
+        get: mockGet
+      })
+    )
   })
 
   afterEach(() => {
@@ -39,7 +46,7 @@ describe('useOrganizations', () => {
       }
       mockGet.mockResolvedValue({ data: mockData })
 
-      const { result } = renderHook(() => useOrganizationStatuses(), [query])
+      const { result } = renderHook(() => useOrganizationStatuses({}), [query])
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true)
@@ -53,7 +60,7 @@ describe('useOrganizations', () => {
       const mockError = new Error('Failed to fetch statuses')
       mockGet.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useOrganizationStatuses(), [query])
+      const { result } = renderHook(() => useOrganizationStatuses({}), [query])
 
       await waitFor(() => {
         expect(result.current.isError).toBe(true)
@@ -97,7 +104,7 @@ describe('useOrganizations', () => {
       mockGet.mockResolvedValue({ data: mockData })
 
       const { result } = renderHook(
-        () => useOrganizationListStatuses(),
+        () => useOrganizationListStatuses({}),
         [query]
       )
 
@@ -117,7 +124,7 @@ describe('useOrganizations', () => {
       mockGet.mockResolvedValue({ data: [] })
 
       const { result } = renderHook(
-        () => useOrganizationListStatuses(),
+        () => useOrganizationListStatuses({}),
         [query]
       )
 
@@ -139,7 +146,7 @@ describe('useOrganizations', () => {
       mockGet.mockResolvedValue({ data: mockData })
 
       const { result } = renderHook(
-        () => useOrganizationListStatuses(),
+        () => useOrganizationListStatuses({}),
         [query]
       )
 
@@ -156,7 +163,7 @@ describe('useOrganizations', () => {
       mockGet.mockRejectedValue(mockError)
 
       const { result } = renderHook(
-        () => useOrganizationListStatuses(),
+        () => useOrganizationListStatuses({}),
         [query]
       )
 
@@ -268,7 +275,7 @@ describe('useOrganizations', () => {
 
     test('should handle empty status array', async ({ renderHook, query }) => {
       const mockData = { organizations: [] }
-      const statuses = []
+      const statuses: string[] = []
       mockGet.mockResolvedValue({ data: mockData })
 
       const { result } = renderHook(
@@ -307,7 +314,7 @@ describe('useOrganizations', () => {
       mockGet.mockResolvedValue({ data: mockData })
 
       const { result } = renderHook(
-        () => useOrganizationNames('active'),
+        () => Reflect.apply(useOrganizationNames, undefined, ['active']),
         [query]
       )
 

@@ -2,17 +2,7 @@ import i18n from '@/i18n'
 import { BCDateFloatingFilter } from '@/components/BCDataGrid/components/Filters/BCDateFloatingFilter'
 import { formatNumberWithCommas } from '@/utils/formatters'
 import type { ColDef } from 'ag-grid-community'
-
-type SupplyHistoryRow = {
-  compliancePeriod?: string | number
-  reportSubmissionDate?: string | Date | null
-  fuelType?: string
-  fuelCategory?: string
-  provisionOfTheAct?: string
-  fuelCode?: string | null
-  fuelQuantity?: number | null
-  units?: string
-}
+import type { BCGridRow } from '@/components/BCDataGrid/types'
 
 const VANCOUVER_TIME_ZONE = 'America/Vancouver'
 
@@ -59,7 +49,7 @@ const dateFilterComparator = (
   return 0
 }
 
-export const supplyHistoryColDefs = (): ColDef<SupplyHistoryRow>[] => [
+export const supplyHistoryColDefs = (): ColDef<BCGridRow>[] => [
   {
     field: 'compliancePeriod',
     headerName: i18n.t('org:supplyHistory.columns.year'),
@@ -86,7 +76,8 @@ export const supplyHistoryColDefs = (): ColDef<SupplyHistoryRow>[] => [
       initialFilterType: 'equals',
       label: 'YYYY-MM-DD'
     },
-    valueFormatter: (params) => formatDateOnly(params.value)
+    valueFormatter: (params) =>
+      formatDateOnly(params.value as string | Date | null | undefined)
   },
   {
     field: 'fuelType',
@@ -115,7 +106,7 @@ export const supplyHistoryColDefs = (): ColDef<SupplyHistoryRow>[] => [
     minWidth: 140,
     flex: 0.8,
     sortable: true,
-    valueFormatter: (params) => params.value || '-'
+    valueFormatter: (params) => String(params.value || '-')
   },
   {
     field: 'fuelQuantity',
@@ -124,7 +115,15 @@ export const supplyHistoryColDefs = (): ColDef<SupplyHistoryRow>[] => [
     flex: 0.9,
     sortable: true,
     filter: 'agNumberColumnFilter',
-    valueFormatter: ({ value }) => String(formatNumberWithCommas({ value }))
+    valueFormatter: ({ value }) =>
+      String(
+        formatNumberWithCommas({
+          value:
+            typeof value === 'number' || typeof value === 'string'
+              ? value
+              : undefined
+        })
+      )
   },
   {
     field: 'units',
@@ -136,7 +135,7 @@ export const supplyHistoryColDefs = (): ColDef<SupplyHistoryRow>[] => [
   }
 ]
 
-export const defaultColDef: ColDef<SupplyHistoryRow> = {
+export const defaultColDef: ColDef<BCGridRow> = {
   editable: false,
   resizable: true,
   filter: true,
@@ -156,4 +155,4 @@ export const gridOptions = {
   },
   enableCellTextSelection: true,
   ensureDomOrder: true
-}
+} satisfies import('ag-grid-community').GridOptions<BCGridRow>

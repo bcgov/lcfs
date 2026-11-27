@@ -4,14 +4,15 @@ import { screen, fireEvent, waitFor } from '@testing-library/react'
 import { Organizations } from '../Organizations'
 import { test } from '@/tests/utils/fixtures'
 import { ROUTES } from '@/routes/routes'
+import type { BCGridViewerProps } from '@/components/BCDataGrid/BCGridViewer'
 
 const navigateMock = vi.fn()
-const mockDownload = vi.fn()
+const mockDownload = vi.fn<() => Promise<unknown>>()
 const mockLocationValue = {
   pathname: '/organizations',
   search: '',
   hash: '',
-  state: null
+  state: null as Record<string, unknown> | null
 }
 
 // Mock react-router-dom
@@ -25,26 +26,7 @@ vi.mock('react-router-dom', async () => {
 })
 
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  BCGridViewer: (props) => {
-    const { gridRef, ...otherProps } = props
-    for (const key of [
-      'onPaginationChange',
-      'queryData',
-      'getRowId',
-      'gridOptions',
-      'defaultColDef',
-      'handleGridKey'
-    ]) {
-      delete otherProps[key]
-    }
-
-    // Set up gridRef with clearFilters method
-    if (gridRef) {
-      gridRef.current = {
-        clearFilters: vi.fn()
-      }
-    }
-
+  BCGridViewer: ({ gridRef: _gridRef, ...otherProps }: BCGridViewerProps) => {
     return (
       <div data-test="bc-grid-viewer" data-testid="grid" {...otherProps}>
         BCGridViewer
@@ -85,8 +67,8 @@ vi.mock('@/hooks/useOrganizations', () => ({
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => {
-      const translations = {
+    t: (key: string) => {
+      const translations: Record<string, string> = {
         'org:title': 'Organizations',
         'org:newOrgBtn': 'Add Organization',
         'org:orgDownloadBtn': 'Download Organizations',
@@ -143,7 +125,10 @@ vi.mock('@/routes/routes', () => ({
 
 // Mock UI components
 vi.mock('@/components/BCAlert', () => ({
-  default: ({ children, severity }) => (
+  default: ({
+    children,
+    severity
+  }: React.PropsWithChildren<{ severity?: string }>) => (
     <div data-test="alert-box" data-severity={severity}>
       {children}
     </div>
@@ -151,11 +136,22 @@ vi.mock('@/components/BCAlert', () => ({
 }))
 
 vi.mock('@/components/BCBox', () => ({
-  default: ({ children }) => <div data-test="bc-box">{children}</div>
+  default: ({ children }: React.PropsWithChildren) => (
+    <div data-test="bc-box">{children}</div>
+  )
 }))
 
 vi.mock('@/components/BCButton', () => ({
-  default: ({ children, onClick, startIcon, disabled }) => (
+  default: ({
+    children,
+    onClick,
+    startIcon,
+    disabled
+  }: React.PropsWithChildren<{
+    onClick?: React.MouseEventHandler<HTMLButtonElement>
+    startIcon?: React.ReactNode
+    disabled?: boolean
+  }>) => (
     <button data-test="bc-button" onClick={onClick} disabled={disabled}>
       {startIcon && <span data-test="start-icon">{startIcon}</span>}
       {children}
@@ -164,17 +160,28 @@ vi.mock('@/components/BCButton', () => ({
 }))
 
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children }) => <span data-test="bc-typography">{children}</span>
+  default: ({ children }: React.PropsWithChildren) => (
+    <span data-test="bc-typography">{children}</span>
+  )
 }))
 
 vi.mock('@mui/material/Stack', () => ({
-  default: ({ children, direction, spacing, flexWrap }) => (
+  default: ({
+    children,
+    direction,
+    spacing,
+    flexWrap
+  }: React.PropsWithChildren<{
+    direction?: React.CSSProperties['flexDirection'] | Record<string, string>
+    spacing?: number | Record<string, number>
+    flexWrap?: React.CSSProperties['flexWrap']
+  }>) => (
     <div
       data-test="mui-stack"
       style={{
         display: 'flex',
-        flexDirection: direction || 'column',
-        gap: spacing,
+        flexDirection: typeof direction === 'string' ? direction : 'column',
+        gap: typeof spacing === 'number' ? spacing : undefined,
         flexWrap: flexWrap || 'nowrap'
       }}
     >
@@ -184,11 +191,21 @@ vi.mock('@mui/material/Stack', () => ({
 }))
 
 vi.mock('@mui/material/TextField', () => ({
-  default: ({ value, onChange, label, disabled }) => (
+  default: ({
+    value,
+    onChange,
+    label,
+    disabled
+  }: {
+    value?: string | number
+    onChange?: React.ChangeEventHandler<HTMLInputElement>
+    label?: string
+    disabled?: boolean
+  }) => (
     <input
       data-test="mui-textfield"
       value={value}
-      onChange={(e) => onChange && onChange(e)}
+      onChange={(e) => onChange?.(e)}
       placeholder={label}
       disabled={disabled}
     />
@@ -196,7 +213,7 @@ vi.mock('@mui/material/TextField', () => ({
 }))
 
 vi.mock('@fortawesome/react-fontawesome', () => ({
-  FontAwesomeIcon: ({ icon }) => (
+  FontAwesomeIcon: ({ icon }: { icon?: { iconName?: string } }) => (
     <span data-test="font-awesome-icon" data-icon={icon?.iconName}>
       Icon
     </span>
@@ -206,8 +223,20 @@ vi.mock('@fortawesome/react-fontawesome', () => ({
 vi.mock('@/components/DownloadButton', () => {
   return {
     DownloadButton: React.forwardRef(function MockDownloadButton(
-      { onDownload, isDownloading, label, downloadLabel, dataTest },
-      ref
+      {
+        onDownload,
+        isDownloading,
+        label,
+        downloadLabel,
+        dataTest
+      }: {
+        onDownload?: () => void | Promise<unknown>
+        isDownloading?: boolean
+        label?: string
+        downloadLabel?: string
+        dataTest?: string
+      },
+      ref: React.ForwardedRef<HTMLButtonElement>
     ) {
       return (
         <button
@@ -224,7 +253,10 @@ vi.mock('@/components/DownloadButton', () => {
 })
 
 vi.mock('@/components/Role', () => ({
-  Role: ({ children, roles }) => (
+  Role: ({
+    children,
+    roles
+  }: React.PropsWithChildren<{ roles?: string[] }>) => (
     <div data-test="role-component" data-roles={roles?.join(',')}>
       {children}
     </div>
@@ -481,8 +513,8 @@ describe('Organizations Component', () => {
     test('shows loading state during organization download', async ({
       render
     }) => {
-      let resolveDownload
-      const downloadPromise = new Promise((resolve) => {
+      let resolveDownload: (value: object) => void = () => {}
+      const downloadPromise = new Promise<object>((resolve) => {
         resolveDownload = resolve
       })
       mockDownload.mockReturnValue(downloadPromise)
@@ -504,8 +536,8 @@ describe('Organizations Component', () => {
     })
 
     test('shows loading state during user download', async ({ render }) => {
-      let resolveDownload
-      const downloadPromise = new Promise((resolve) => {
+      let resolveDownload: (value: object) => void = () => {}
+      const downloadPromise = new Promise<object>((resolve) => {
         resolveDownload = resolve
       })
       mockDownload.mockReturnValue(downloadPromise)
