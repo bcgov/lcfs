@@ -4,12 +4,20 @@ import Collapse from '@mui/material/Collapse'
 import IconButton from '@mui/material/IconButton'
 import { useTranslation } from 'react-i18next'
 import BCTypography from '@/components/BCTypography'
-import { LabelBox } from '@/views/Transactions/components/LabelBox.jsx'
+import { LabelBox } from '@/views/Transactions/components/LabelBox'
 import DocumentTable from '@/components/Documents/DocumentTable'
 import ExpandLess from '@mui/icons-material/ExpandLess'
 import ExpandMore from '@mui/icons-material/ExpandMore'
 
-function TransactionDocuments({ parentType, parentID }) {
+interface TransactionDocumentsProps {
+  parentType: string
+  parentID: number | string
+}
+
+function TransactionDocuments({
+  parentType,
+  parentID
+}: TransactionDocumentsProps) {
   const { t } = useTranslation(['report'])
   const [isExpanded, setIsExpanded] = useState(false)
 

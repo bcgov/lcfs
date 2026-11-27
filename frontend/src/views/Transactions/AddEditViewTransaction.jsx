@@ -54,7 +54,7 @@ import {
 import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
 import '@/views/SupportingDocuments/SupportingDocumentSummary.jsx'
 import { useTransactionDocuments } from '@/hooks/useTransactions.js'
-import TransactionDocuments from '@/views/Transactions/components/Documents.jsx'
+import TransactionDocuments from '@/views/Transactions/components/Documents'
 
 export const AddEditViewTransaction = () => {
   const queryClient = useQueryClient()

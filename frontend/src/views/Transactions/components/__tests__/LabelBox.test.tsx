@@ -1,11 +1,18 @@
 import { render, screen } from '@testing-library/react'
+import type { ReactNode } from 'react'
+import type { ComponentProps } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { LabelBox } from '../LabelBox'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import theme from '@/themes'
 
-const renderComponent = (props = {}) => {
+type LabelBoxTestProps = Omit<ComponentProps<typeof LabelBox>, 'children'> & {
+  children?: ReactNode
+  'data-test'?: string
+}
+
+const renderComponent = (props: LabelBoxTestProps = {}) => {
   const queryClient = new QueryClient()
   return render(
     <QueryClientProvider client={queryClient}>

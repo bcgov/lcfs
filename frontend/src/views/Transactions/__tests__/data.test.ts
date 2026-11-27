@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vite-plus/test'
 import { ADMIN_ADJUSTMENT, INITIATIVE_AGREEMENT } from '../constants'
 
-// The legacy data.js file contained only commented-out fixture data and no
+// The legacy data fixture file contained only commented-out fixture data and no
 // runtime exports.  These tests cover the sibling constants module, which
 // provides the transaction-type string literals consumed throughout the
 // Transactions views.

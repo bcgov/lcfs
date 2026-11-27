@@ -18,7 +18,7 @@ vi.mock('react-hook-form', () => ({
 }))
 
 // Mock useTranslation to return the t function
-const mockT = vi.fn((key) => key)
+const mockT = vi.fn((key: string) => key)
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: mockT
@@ -27,7 +27,14 @@ vi.mock('react-i18next', () => ({
 
 const commentField = 'comment'
 
-const renderComponent = (props) => {
+function assertElement(element: Element | null): asserts element is Element {
+  if (!element) throw new Error('Expected element to exist')
+}
+
+const renderComponent = (props: {
+  commentField?: string | null
+  isEditable: boolean
+}) => {
   const queryClient = new QueryClient()
   return render(
     <QueryClientProvider client={queryClient}>
@@ -81,12 +88,14 @@ describe('Comments Component', () => {
     // Initially, the collapse should be hidden
     let collapseDiv = document.querySelector('.MuiCollapse-root')
     expect(collapseDiv).toBeInTheDocument()
+    assertElement(collapseDiv)
     expect(getComputedStyle(collapseDiv).height).toBe('0px')
 
     // Click to expand
     fireEvent.click(toggleButton)
     await waitFor(() => {
       collapseDiv = document.querySelector('.MuiCollapse-root')
+      assertElement(collapseDiv)
       expect(getComputedStyle(collapseDiv).height).not.toBe('0px')
     })
 
@@ -94,6 +103,7 @@ describe('Comments Component', () => {
     fireEvent.click(toggleButton)
     await waitFor(() => {
       collapseDiv = document.querySelector('.MuiCollapse-root')
+      assertElement(collapseDiv)
       expect(getComputedStyle(collapseDiv).height).toBe('0px')
     })
   })

@@ -7,17 +7,31 @@ import { formatDateWithTimezoneAbbr } from '@/utils/formatters'
 
 dayjs.extend(localizedFormat)
 
-export const TransactionHistory = ({ transactionHistory }) => {
+interface TransactionHistoryEntry {
+  adminAdjustmentStatus?: { status: string } | null
+  initiativeAgreementStatus?: { status: string } | null
+  createDate: string
+  displayName?: string | null
+  userProfile: { firstName: string; lastName: string }
+}
+
+interface TransactionHistoryProps {
+  transactionHistory?: TransactionHistoryEntry[] | null
+}
+
+export const TransactionHistory = ({
+  transactionHistory
+}: TransactionHistoryProps) => {
   const { t } = useTranslation(['common', 'transaction'])
 
-  const getTransactionStatusLabel = (status) => {
+  const getTransactionStatusLabel = (status: string) => {
     const basePath = 'txn:txnHistory'
     const statusNotFound = 'Status not found'
     return t(`${basePath}.${status}`, statusNotFound)
   }
 
   // Helper function to determine the correct status object
-  const getStatusObject = (historyItem) => {
+  const getStatusObject = (historyItem: TransactionHistoryEntry) => {
     if (historyItem.adminAdjustmentStatus) {
       return historyItem.adminAdjustmentStatus.status
     } else if (historyItem.initiativeAgreementStatus) {
@@ -26,7 +40,7 @@ export const TransactionHistory = ({ transactionHistory }) => {
     return 'Unknown Status' // Fallback in case no known status object keys are found
   }
 
-  if (transactionHistory?.length <= 0) {
+  if (transactionHistory?.length === 0) {
     return <></>
   }
 

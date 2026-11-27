@@ -279,9 +279,9 @@ export const useOrganizationUser = (
   })
 }
 
-export const useOrganizationBalance = (
+export const useOrganizationBalance = <T = unknown>(
   orgID: number | string | undefined | null,
-  options: QueryOptions<unknown> = {}
+  options: QueryOptions<T> = {}
 ) => {
   const client = useApiService()
   const { hasRoles } = useCurrentUser()
@@ -294,7 +294,7 @@ export const useOrganizationBalance = (
     ...restOptions
   } = options
 
-  return useQuery({
+  return useQuery<T>({
     queryKey: ['organization-balance', orgID],
     queryFn: async () => {
       if (!hasAccess) {

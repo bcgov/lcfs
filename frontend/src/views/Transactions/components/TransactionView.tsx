@@ -14,13 +14,25 @@ import { useDocuments, useDownloadDocument } from '@/hooks/useDocuments.js'
 import {
   ADMIN_ADJUSTMENT,
   INITIATIVE_AGREEMENT
-} from '@/views/Transactions/constants.js'
+} from '@/views/Transactions/constants'
 import DocumentPreviewButton from '@/components/Documents/DocumentPreviewButton'
 
 // Define common inline styles
 const inlineLabelStyle = { display: 'inline', marginRight: 6 }
 
-export const TransactionView = ({ transaction }) => {
+interface TransactionViewProps {
+  transaction: {
+    adminAdjustmentId?: number | null
+    initiativeAgreementId?: number | null
+    toOrganization?: { name?: string | null } | null
+    complianceUnits: number | string
+    transactionEffectiveDate?: string | null
+    govComment?: string | null
+    currentStatus?: { status?: string } | null
+  }
+}
+
+export const TransactionView = ({ transaction }: TransactionViewProps) => {
   const { t } = useTranslation(['txn'])
   const { hasAnyRole } = useCurrentUser()
 
@@ -127,7 +139,8 @@ export const TransactionView = ({ transaction }) => {
                           parentType={transactionType}
                           parentID={
                             transaction.adminAdjustmentId ??
-                            transaction.initiativeAgreementId
+                            transaction.initiativeAgreementId ??
+                            ''
                           }
                           document={file}
                         />

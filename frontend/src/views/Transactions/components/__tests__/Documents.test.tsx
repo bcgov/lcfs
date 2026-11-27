@@ -9,13 +9,19 @@ import theme from '@/themes'
 // Mock useTranslation to return the t function
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => key
+    t: (key: string) => key
   })
 }))
 
 // Mock only the DocumentTable component to avoid loading issues
 vi.mock('@/components/Documents/DocumentTable', () => ({
-  default: ({ parentID, parentType }) => (
+  default: ({
+    parentID,
+    parentType
+  }: {
+    parentID: number | string
+    parentType: string
+  }) => (
     <div
       data-testid="document-table"
       data-parent-id={parentID}
@@ -26,7 +32,9 @@ vi.mock('@/components/Documents/DocumentTable', () => ({
   )
 }))
 
-const renderComponent = (props = {}) => {
+const renderComponent = (
+  props: { parentID?: number | string; parentType?: string } = {}
+) => {
   const queryClient = new QueryClient()
   const defaultProps = {
     parentType: 'transaction',
@@ -43,6 +51,10 @@ const renderComponent = (props = {}) => {
       </ThemeProvider>
     </QueryClientProvider>
   )
+}
+
+function assertElement(element: Element | null): asserts element is Element {
+  if (!element) throw new Error('Expected element to exist')
 }
 
 describe('TransactionDocuments Component', () => {
@@ -66,6 +78,7 @@ describe('TransactionDocuments Component', () => {
     renderComponent()
     const collapseDiv = document.querySelector('.MuiCollapse-root')
     expect(collapseDiv).toBeInTheDocument()
+    assertElement(collapseDiv)
     expect(getComputedStyle(collapseDiv).height).toBe('0px')
   })
 
@@ -86,6 +99,7 @@ describe('TransactionDocuments Component', () => {
     renderComponent()
 
     const clickableBox = screen.getByText('txn:attachmentsTitle').closest('div')
+    assertElement(clickableBox)
 
     fireEvent.click(clickableBox)
 
@@ -106,10 +120,12 @@ describe('TransactionDocuments Component', () => {
     renderComponent()
 
     const clickableBox = screen.getByText('txn:attachmentsTitle').closest('div')
+    assertElement(clickableBox)
     fireEvent.click(clickableBox)
 
     await waitFor(() => {
       const collapseDiv = document.querySelector('.MuiCollapse-root')
+      assertElement(collapseDiv)
       expect(getComputedStyle(collapseDiv).height).not.toBe('0px')
     })
   })
@@ -118,11 +134,13 @@ describe('TransactionDocuments Component', () => {
     renderComponent()
 
     const clickableBox = screen.getByText('txn:attachmentsTitle').closest('div')
+    assertElement(clickableBox)
 
     // First click to expand
     fireEvent.click(clickableBox)
     await waitFor(() => {
       const collapseDiv = document.querySelector('.MuiCollapse-root')
+      assertElement(collapseDiv)
       expect(getComputedStyle(collapseDiv).height).not.toBe('0px')
     })
 
@@ -130,6 +148,7 @@ describe('TransactionDocuments Component', () => {
     fireEvent.click(clickableBox)
     await waitFor(() => {
       const collapseDiv = document.querySelector('.MuiCollapse-root')
+      assertElement(collapseDiv)
       expect(getComputedStyle(collapseDiv).height).toBe('0px')
     })
   })

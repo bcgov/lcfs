@@ -10,15 +10,22 @@ import { useTranslation } from 'react-i18next'
 import ExpandLess from '@mui/icons-material/ExpandLess'
 import ExpandMore from '@mui/icons-material/ExpandMore'
 
-export const Comments = ({ commentField, isEditable }) => {
+interface CommentsProps {
+  commentField?: string | null
+  isEditable: boolean
+}
+
+export const Comments = ({ commentField, isEditable }: CommentsProps) => {
   const { t } = useTranslation(['txn'])
   const [isExpanded, setIsExpanded] = useState(false)
 
-  const { register, getValues } = useFormContext()
+  const { register, getValues } =
+    useFormContext<Record<string, string | undefined>>()
 
   // Automatically expand the TextField if it has an initial value
   useEffect(() => {
     setTimeout(() => {
+      if (!commentField) return
       const value = getValues(commentField)
       if (value) {
         setIsExpanded(true)

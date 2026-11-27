@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import PropTypes from 'prop-types'
 import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
 import Autocomplete from '@mui/material/Autocomplete'
@@ -8,6 +7,34 @@ import BCTypography from '@/components/BCTypography'
 import { useTranslation } from 'react-i18next'
 import { useOrganizationNames } from '@/hooks/useOrganizations'
 import { numberFormatter } from '@/utils/formatters'
+import type { SyntheticEvent } from 'react'
+
+interface OrganizationOption {
+  organizationId: number | string | null
+  name: string
+  totalBalance: number
+  reservedBalance: number
+  label: string
+}
+
+interface OrganizationSummary extends Omit<OrganizationOption, 'label'> {}
+
+interface OrganizationSelection {
+  id: number | string | null
+  label: string | null
+  name: string | null
+}
+
+interface OrganizationListProps {
+  selectedOrg?: OrganizationSelection | null
+  onOrgChange: (selection: OrganizationSelection) => void
+  onlyRegistered?: boolean
+  orgFilter?: string
+  includeAllOption?: boolean
+  label?: string
+  placeholder?: string
+  showSelectedLabel?: boolean
+}
 
 const OrganizationList = ({
   selectedOrg,
@@ -18,17 +45,17 @@ const OrganizationList = ({
   label,
   placeholder,
   showSelectedLabel = true
-}) => {
+}: OrganizationListProps) => {
   const { t } = useTranslation(['transaction'])
   const statuses = onlyRegistered ? ['Registered'] : null
-  const { data, isLoading } = useOrganizationNames(
+  const { data, isLoading } = useOrganizationNames<OrganizationSummary>(
     statuses,
     orgFilter ? { orgFilter } : {}
   )
-  const [optionsList, setOptionsList] = useState([])
+  const [optionsList, setOptionsList] = useState<OrganizationOption[]>([])
 
   useEffect(() => {
-    if (!isLoading) {
+    if (!isLoading && data) {
       const formattedData = data.map((org) => ({
         ...org,
         label: `${org.name} ${t(
@@ -54,7 +81,10 @@ const OrganizationList = ({
     }
   }, [data, includeAllOption, isLoading, t])
 
-  const onInputBoxChanged = (event, input) => {
+  const onInputBoxChanged = (
+    _event: SyntheticEvent,
+    input: OrganizationOption | null
+  ) => {
     if (!input || input.name === t('txn:allOrganizations')) {
       onOrgChange({ id: null, label: null, name: null })
     } else {
@@ -75,7 +105,7 @@ const OrganizationList = ({
       )}
       <Stack
         component="div"
-        direction={{ md: 'coloumn', lg: 'row' }}
+        direction={{ md: 'column', lg: 'row' }}
         spacing={1}
         mt={1}
         useFlexGap
@@ -90,7 +120,7 @@ const OrganizationList = ({
           loading={isLoading}
           options={optionsList}
           getOptionLabel={(option) => option.name}
-          getOptionKey={(option) => option.organizationId}
+          getOptionKey={(option) => option.organizationId ?? 'all'}
           onChange={onInputBoxChanged}
           value={
             optionsList.find(
@@ -119,21 +149,6 @@ const OrganizationList = ({
       </Stack>
     </Box>
   )
-}
-
-OrganizationList.propTypes = {
-  selectedOrg: PropTypes.shape({
-    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    label: PropTypes.string,
-    name: PropTypes.string
-  }),
-  onOrgChange: PropTypes.func.isRequired,
-  onlyRegistered: PropTypes.bool,
-  orgFilter: PropTypes.string,
-  includeAllOption: PropTypes.bool,
-  label: PropTypes.string,
-  placeholder: PropTypes.string,
-  showSelectedLabel: PropTypes.bool
 }
 
 export default OrganizationList

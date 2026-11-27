@@ -55,13 +55,13 @@ export const useOrganizationListStatuses = (options: QueryOptions<unknown>) => {
  *   { staleTime: 5 * 60 * 1000 }
  * )
  */
-export const useOrganizationNames = (
+export const useOrganizationNames = <T = unknown>(
   statuses: string[] | null = null,
-  queryParamsOrOptions: QueryOptions<unknown> & {
+  queryParamsOrOptions: QueryOptions<T[]> & {
     orgFilter?: string
     filters?: Record<string, unknown>
   } = {},
-  options: QueryOptions<unknown> = {}
+  options: QueryOptions<T[]> = {}
 ) => {
   const client = useApiService()
 
@@ -125,7 +125,7 @@ export const useOrganizationNames = (
     querySegments.length > 0 ? `?${querySegments.join('&')}` : ''
   const filtersKey = JSON.stringify(queryParams.filters || {})
 
-  return useQuery({
+  return useQuery<T[]>({
     queryKey: [
       'organization-names',
       Array.isArray(statuses) ? statuses : null,
@@ -133,7 +133,7 @@ export const useOrganizationNames = (
       filtersKey
     ],
     queryFn: async () => {
-      const response = await client.get(`${basePath}${queryString}`)
+      const response = await client.get<T[]>(`${basePath}${queryString}`)
       return response.data
     },
     ...queryOptions

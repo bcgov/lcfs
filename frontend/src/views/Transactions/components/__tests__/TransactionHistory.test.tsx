@@ -1,4 +1,5 @@
 import 'react'
+import type { ComponentProps } from 'react'
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vite-plus/test'
 import { TransactionHistory } from '../TransactionHistory'
@@ -8,7 +9,7 @@ import theme from '@/themes'
 // Mock all external dependencies
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: vi.fn((key, fallback) => {
+    t: vi.fn((key: string, fallback?: string) => {
       if (key === 'txn:txnHistoryLabel') return 'Transaction history'
       if (key === 'govOrg') return 'Government Organization'
       if (key.includes('txn:txnHistory.')) {
@@ -24,12 +25,13 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('@/utils/formatters', () => ({
-  formatDateWithTimezoneAbbr: vi.fn((date) => `Formatted: ${date}`)
+  formatDateWithTimezoneAbbr: vi.fn(
+    (date: string | number | Date) => `Formatted: ${date}`
+  )
 }))
 
 vi.mock('dayjs', () => {
-  const mockDayjs = vi.fn()
-  mockDayjs.extend = vi.fn()
+  const mockDayjs = Object.assign(vi.fn(), { extend: vi.fn() })
   return { default: mockDayjs, __esModule: true }
 })
 
@@ -38,7 +40,7 @@ vi.mock('dayjs/plugin/localizedFormat', () => ({
 }))
 
 vi.mock('@/components/BCBox', () => ({
-  default: ({ children, ...props }) => (
+  default: ({ children, ...props }: ComponentProps<'div'>) => (
     <div data-test="bc-box" {...props}>
       {children}
     </div>
@@ -46,14 +48,16 @@ vi.mock('@/components/BCBox', () => ({
 }))
 
 vi.mock('@/components/BCTypography', () => ({
-  default: ({ children, ...props }) => (
+  default: ({ children, ...props }: ComponentProps<'div'>) => (
     <div data-test="bc-typography" {...props}>
       {children}
     </div>
   )
 }))
 
-const renderComponent = (props = {}) => {
+const renderComponent = (
+  props: ComponentProps<typeof TransactionHistory> = {}
+) => {
   return render(
     <ThemeProvider theme={theme}>
       <TransactionHistory {...props} />

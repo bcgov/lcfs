@@ -29,6 +29,7 @@ export const AddEditTransactionSchema = Yup.object({
         if (value === null) {
           return true // null is allowed
         }
+        if (value === undefined) return false
         return new Date(value) <= new Date()
       }
     )
