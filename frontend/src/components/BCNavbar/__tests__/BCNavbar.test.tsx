@@ -1,5 +1,13 @@
 import { render, screen } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vite-plus/test'
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  afterEach,
+  type Mock
+} from 'vite-plus/test'
 import { MemoryRouter } from 'react-router-dom'
 import ThemeProvider from '@mui/material/styles/ThemeProvider'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -273,6 +281,88 @@ describe('BCNavbar', () => {
       renderNavbar()
 
       expect(screen.getByTestId('bc-navbar')).toBeInTheDocument()
+    })
+  })
+
+  describe('when the tabs are wider than the bar', () => {
+    // The tab strip's visible width and the width its tabs need.
+    let visible = 500
+    let needed = 500
+
+    const isStrip = (el: Element) =>
+      el.getAttribute('data-test') === 'navbar-tabs'
+
+    beforeEach(() => {
+      vi.stubGlobal(
+        'ResizeObserver',
+        class {
+          constructor(private callback: () => void) {}
+          observe() {
+            this.callback()
+          }
+          disconnect() {}
+        }
+      )
+      vi.spyOn(Element.prototype, 'clientWidth', 'get').mockImplementation(
+        function (this: Element) {
+          return isStrip(this) ? visible : 0
+        }
+      )
+      vi.spyOn(Element.prototype, 'scrollWidth', 'get').mockImplementation(
+        function (this: Element) {
+          return isStrip(this) ? needed : 0
+        }
+      )
+    })
+
+    afterEach(() => {
+      vi.unstubAllGlobals()
+      vi.restoreAllMocks()
+    })
+
+    it('keeps every tab in the bar and fades the cut-off edge', () => {
+      visible = 500
+      needed = 800
+      renderNavbar()
+
+      expect(screen.getByTestId('navbar-tabs')).toHaveAttribute(
+        'data-clipped',
+        'end'
+      )
+      for (const name of ['Dashboard', 'Document', 'Compliance Report']) {
+        expect(screen.getByText(name)).toBeInTheDocument()
+      }
+    })
+
+    it('does not fade anything when the tabs fit', () => {
+      visible = 800
+      needed = 800
+      renderNavbar()
+
+      expect(screen.getByTestId('navbar-tabs')).not.toHaveAttribute(
+        'data-clipped'
+      )
+    })
+
+    it("scrolls the current page's tab into view", () => {
+      visible = 500
+      needed = 800
+      // The active tab sits at 600-750px along the strip.
+      vi.spyOn(HTMLElement.prototype, 'offsetLeft', 'get').mockImplementation(
+        function (this: HTMLElement) {
+          return this.classList.contains('active') ? 600 : 0
+        }
+      )
+      vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(
+        function (this: HTMLElement) {
+          return this.classList.contains('active') ? 150 : 0
+        }
+      )
+      const scrollTo = vi.spyOn(Element.prototype, 'scrollLeft', 'set')
+
+      renderNavbar('/compliance-report/history')
+
+      expect(scrollTo).toHaveBeenCalledWith(250)
     })
   })
 })
