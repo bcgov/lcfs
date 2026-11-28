@@ -286,7 +286,9 @@ class InitiativeAgreementRepository:
         query = (
             select(InitiativeAgreement)
             .options(
-                selectinload(InitiativeAgreement.to_organization),
+                selectinload(InitiativeAgreement.to_organization).selectinload(
+                    Organization.org_address
+                ),
                 selectinload(InitiativeAgreement.current_status),
                 # Agreement-management callers read the lifecycle status;
                 # a lazy load of it here raises MissingGreenlet.
@@ -966,6 +968,15 @@ class InitiativeAgreementRepository:
         return list(result.scalars().all())
 
     @repo_handler
+    async def get_user_profile_by_id(
+        self, user_profile_id: int
+    ) -> Optional[UserProfile]:
+        result = await self.db.execute(
+            select(UserProfile).where(UserProfile.user_profile_id == user_profile_id)
+        )
+        return result.scalars().first()
+
+    @repo_handler
     async def get_evidence_requirement(
         self, evidence_requirement_id: int
     ) -> Optional[EvidenceRequirement]:
@@ -1292,6 +1303,113 @@ class InitiativeAgreementRepository:
         result = await self.db.execute(
             select(InitiativeAgreementLifecycleStatus).where(
                 InitiativeAgreementLifecycleStatus.status == status
+            )
+        )
+        return result.scalars().first()
+
+    @repo_handler
+    async def get_portal_evidence_submissions(
+        self, designated_action_id: int, *, for_update=False
+    ):
+        from lcfs.db.models.initiative_agreement.DaEocSubmission import DaEocSubmission
+
+        query = (
+            select(DaEocSubmission)
+            .options(
+                selectinload(DaEocSubmission.documents),
+                selectinload(DaEocSubmission.history),
+            )
+            .where(DaEocSubmission.designated_action_id == designated_action_id)
+            .order_by(DaEocSubmission.da_eoc_submission_id.desc())
+            .execution_options(populate_existing=True)
+        )
+        if for_update:
+            query = query.with_for_update(of=DaEocSubmission)
+        return list((await self.db.execute(query)).scalars().all())
+
+    @repo_handler
+    async def get_eoc_document_snapshot(self, designated_action_id: int):
+        from lcfs.db.models.document import DocumentFolder, DocumentFolderItem
+
+        folders = (
+            (
+                await self.db.execute(
+                    select(DocumentFolder).where(
+                        DocumentFolder.parent_type == "designatedAction",
+                        DocumentFolder.parent_id == designated_action_id,
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        by_id = {folder.folder_id: folder for folder in folders}
+        rows = (
+            await self.db.execute(
+                select(Document, DocumentFolderItem.folder_id)
+                .join(
+                    designated_action_document_association,
+                    designated_action_document_association.c.document_id
+                    == Document.document_id,
+                )
+                .outerjoin(
+                    DocumentFolderItem,
+                    DocumentFolderItem.document_id == Document.document_id,
+                )
+                .where(
+                    designated_action_document_association.c.designated_action_id
+                    == designated_action_id,
+                    Document.deleted_date.is_(None),
+                )
+            )
+        ).all()
+        snapshot = []
+        for document, folder_id in rows:
+            path = []
+            seen = set()
+            while folder_id in by_id and folder_id not in seen:
+                seen.add(folder_id)
+                folder = by_id[folder_id]
+                path.insert(0, folder.name)
+                folder_id = folder.parent_folder_id
+            snapshot.append(
+                {
+                    "document_id": document.document_id,
+                    "file_name": document.display_name or document.file_name,
+                    "original_file_name": document.file_name,
+                    "display_name": document.display_name,
+                    "file_size": document.file_size,
+                    "mime_type": document.mime_type,
+                    "folder_path": path,
+                }
+            )
+        return snapshot
+
+    @repo_handler
+    async def get_submission_document(
+        self, designated_action_id, submission_id, document_id
+    ):
+        from lcfs.db.models.initiative_agreement.DaEocSubmission import (
+            DaEocSubmission,
+            da_eoc_submission_document_association,
+        )
+
+        result = await self.db.execute(
+            select(Document)
+            .join(
+                da_eoc_submission_document_association,
+                da_eoc_submission_document_association.c.document_id
+                == Document.document_id,
+            )
+            .join(
+                DaEocSubmission,
+                DaEocSubmission.da_eoc_submission_id
+                == da_eoc_submission_document_association.c.da_eoc_submission_id,
+            )
+            .where(
+                DaEocSubmission.designated_action_id == designated_action_id,
+                DaEocSubmission.da_eoc_submission_id == submission_id,
+                Document.document_id == document_id,
             )
         )
         return result.scalars().first()

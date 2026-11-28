@@ -412,7 +412,7 @@ async def test_placement_rows_die_with_their_document(
 
 
 @pytest.mark.anyio
-async def test_folder_management_remains_idir_only(
+async def test_proponents_can_create_and_manage_their_own_folders(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user, dbsession
 ):
     action = await _seed_da(dbsession, "IA-26FLDB")
@@ -422,7 +422,14 @@ async def test_folder_management_remains_idir_only(
     assert response.status_code == status.HTTP_200_OK
 
     response = await _create_folder(client, fastapi_app, action, "Proponent folder")
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_201_CREATED
+    folder_id = response.json()["folderId"]
+    folder = await dbsession.get(DocumentFolder, folder_id)
+    assert folder.create_user == "mockuser"
+    tree = (await client.get(_tree_url(fastapi_app, action))).json()
+    row = next(folder for folder in tree["folders"] if folder["folderId"] == folder_id)
+    assert row["canManage"] is True
+    assert row["canDelete"] is True
 
 
 # ---------------------------------------------------------------------------

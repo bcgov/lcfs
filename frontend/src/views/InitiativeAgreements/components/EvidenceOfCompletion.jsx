@@ -24,7 +24,12 @@ export const EvidenceOfCompletion = ({
   designatedActionId,
   canEdit = true,
   renderRequestAction = null,
-  missingInformationReadOnly = false
+  missingInformationReadOnly = false,
+  // Per-EOC requests (#5545): the cards ask one EOC at a time, so the
+  // "complete every request" hint does not apply, and an EOC whose request
+  // is open keeps the Missing information that was sent.
+  perEocRequests = false,
+  lockedMissingInformationIds = []
 }) => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const [expandedIds, setExpandedIds] = useState([])
@@ -153,13 +158,18 @@ export const EvidenceOfCompletion = ({
                 )
               }
               canEdit={canEdit}
-              missingInformationReadOnly={missingInformationReadOnly}
+              missingInformationReadOnly={
+                missingInformationReadOnly ||
+                lockedMissingInformationIds.includes(
+                  requirement.evidenceRequirementId
+                )
+              }
               actions={renderRequestAction?.(
                 requirement,
                 allRequestsComplete,
                 waitForAllRequirementSaves
               )}
-              allRequestsComplete={allRequestsComplete}
+              allRequestsComplete={perEocRequests || allRequestsComplete}
               onSave={(payload, callbacks) => {
                 const id = requirement.evidenceRequirementId
                 const pending = pendingSaves.current.get(id) ?? new Set()

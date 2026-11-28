@@ -163,7 +163,8 @@ const FileLabel = ({
 }) => {
   const { t } = useTranslation(['initiativeAgreement'])
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: docDragId(file.documentId)
+    id: docDragId(file.documentId),
+    disabled: file.canManage === false
   })
   const displayName = file.displayName || file.fileName
 
@@ -201,7 +202,7 @@ const FileLabel = ({
         component="span"
         variant="subtitle2"
         onDoubleClick={(event) => {
-          if (!canRename) return
+          if (!canRename || file.canManage === false) return
           event.stopPropagation()
           onStartRename()
         }}
@@ -226,7 +227,7 @@ const FileLabel = ({
       {/* Double-click is the mouse shortcut, but it is only a shortcut:
           a rename reachable no other way would be mouse-only, which axe
           cannot see and a keyboard user cannot get past. */}
-      {canRename && (
+      {canRename && file.canManage !== false && (
         <IconButton
           size="small"
           data-test={`tree-file-rename-${file.documentId}`}
@@ -264,7 +265,7 @@ const FileLabel = ({
       {/* Dragging to the top level is possible but the drop zone only
           exists mid-drag, below the tree, where nobody finds it. A
           button is discoverable and works from the keyboard. */}
-      {onMoveToRoot && (
+      {onMoveToRoot && file.canManage !== false && (
         <IconButton
           size="small"
           data-test={`tree-file-to-root-${file.documentId}`}
@@ -281,31 +282,35 @@ const FileLabel = ({
       )}
       {/* Removing a file sends it to the bin below; nothing is
           destroyed. */}
-      <IconButton
-        size="small"
-        data-test={`tree-file-delete-${file.documentId}`}
-        aria-label={t('initiativeAgreement:folders.deleteFile', {
-          name: file.fileName
-        })}
-        onClick={(event) => {
-          event.stopPropagation()
-          onDelete(file.documentId)
-        }}
-      >
-        <DeleteOutlineIcon fontSize="inherit" />
-      </IconButton>
-      <IconButton
-        size="small"
-        {...attributes}
-        {...listeners}
-        data-test={`tree-file-handle-${file.documentId}`}
-        aria-label={t('initiativeAgreement:folders.fileDragHandle', {
-          name: file.fileName
-        })}
-        sx={{ cursor: 'grab' }}
-      >
-        <DragIndicatorIcon fontSize="inherit" />
-      </IconButton>
+      {file.canManage !== false && (
+        <>
+          <IconButton
+            size="small"
+            data-test={`tree-file-delete-${file.documentId}`}
+            aria-label={t('initiativeAgreement:folders.deleteFile', {
+              name: file.fileName
+            })}
+            onClick={(event) => {
+              event.stopPropagation()
+              onDelete(file.documentId)
+            }}
+          >
+            <DeleteOutlineIcon fontSize="inherit" />
+          </IconButton>
+          <IconButton
+            size="small"
+            {...attributes}
+            {...listeners}
+            data-test={`tree-file-handle-${file.documentId}`}
+            aria-label={t('initiativeAgreement:folders.fileDragHandle', {
+              name: file.fileName
+            })}
+            sx={{ cursor: 'grab' }}
+          >
+            <DragIndicatorIcon fontSize="inherit" />
+          </IconButton>
+        </>
+      )}
     </Box>
   )
 }
@@ -334,11 +339,11 @@ const FolderLabel = ({
     // Nesting under another folder is the only thing folder-drag does, so
     // when subfolders are off the handle is inert rather than a drag that
     // could only ever be refused.
-    disabled: folder.isSystem || dragDisabled
+    disabled: folder.isSystem || dragDisabled || folder.canManage === false
   })
   const { setNodeRef: setDropRef, isOver } = useDroppable({
     id: folderDragId(folder.folderId),
-    disabled: invalid
+    disabled: invalid || folder.canManage === false
   })
   const [osDragOver, setOsDragOver] = useState(false)
 
@@ -353,6 +358,7 @@ const FolderLabel = ({
   }
 
   const isExternalFileDrag = (event) =>
+    folder.canManage !== false &&
     !externalDragSuppressed &&
     Array.from(event.dataTransfer?.types ?? []).includes('Files')
 
@@ -370,7 +376,7 @@ const FolderLabel = ({
       }}
       data-test={`tree-folder-${folder.folderId}`}
       onDoubleClick={(event) => {
-        if (folder.isSystem) return
+        if (folder.isSystem || folder.canManage === false) return
         event.stopPropagation()
         onStartRename()
       }}
@@ -435,7 +441,7 @@ const FolderLabel = ({
       <BCTypography component="span" variant="subtitle2" color="text.secondary">
         ({folder.documentCount})
       </BCTypography>
-      {!folder.isSystem && (
+      {!folder.isSystem && folder.canManage !== false && (
         <IconButton
           size="small"
           data-test={`folder-menu-${folder.folderId}`}
@@ -483,7 +489,8 @@ export const DocumentTree = ({
   title,
   headerAction,
   allowSubfolders = false,
-  enablePreview = false
+  enablePreview = false,
+  readOnly = false
 }) => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const { data: tree, isLoading } = useDocumentTree(parentType, parentID)
@@ -541,6 +548,40 @@ export const DocumentTree = ({
 
   if (isLoading) {
     return <Loading message={t('initiativeAgreement:folders.loading')} />
+  }
+
+  if (readOnly) {
+    const fileRow = (file) => (
+      <Box key={file.documentId} sx={{ my: 1 }}>
+        <Button onClick={() => downloadDocument(file.documentId)}>
+          {file.displayName || file.fileName}
+        </Button>
+        {enablePreview && (
+          <DocumentPreviewButton
+            document={file}
+            parentType={parentType}
+            parentID={parentID}
+          />
+        )}
+      </Box>
+    )
+    const folderRow = (folder) => (
+      <Box key={folder.folderId} sx={{ ml: 2 }}>
+        <BCTypography component="p">{folder.name}</BCTypography>
+        {folder.documents?.map(fileRow)}
+        {folder.children?.map(folderRow)}
+      </Box>
+    )
+    return (
+      <Paper variant="outlined" sx={{ p: 2 }}>
+        <BCTypography variant="h6">
+          {title || t('initiativeAgreement:actionDetail.documents')}
+        </BCTypography>
+        {tree?.rootDocuments?.map(fileRow)}
+        {tree?.folders?.map(folderRow)}
+        <DeletedItems parentType={parentType} parentID={parentID} readOnly />
+      </Paper>
+    )
   }
 
   const folders = tree?.folders ?? []
@@ -958,6 +999,17 @@ export const DocumentTree = ({
                       parentID={parentID}
                       enablePreview={enablePreview}
                       onDownload={downloadDocument}
+                      canRename={canRenameFiles}
+                      renaming={renamingFileId === file.documentId}
+                      onStartRename={() => setRenamingFileId(file.documentId)}
+                      onCommitRename={(value) =>
+                        commitFileRename(
+                          file.documentId,
+                          value,
+                          file.displayName || file.fileName
+                        )
+                      }
+                      onCancelRename={() => setRenamingFileId(null)}
                       onDelete={(documentId) =>
                         setPendingDelete({
                           documentId,

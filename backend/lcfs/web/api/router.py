@@ -45,6 +45,10 @@ from lcfs.web.api import (
     search,
 )
 
+from lcfs.web.api.initiative_agreement import (
+    eoc_information_request_documents,
+)
+
 api_router = APIRouter()
 api_router.include_router(monitoring.router)
 api_router.include_router(calculator.router, prefix="/calculator", tags=["public"])
@@ -102,6 +106,11 @@ api_router.include_router(
     tags=["initiative_agreements"],
 )
 api_router.include_router(lcjfip.router, prefix="/lcjfip", tags=["lcjfip"])
+api_router.include_router(
+    eoc_information_request_documents.router,
+    prefix="/initiative-agreements",
+    tags=["initiative_agreements"],
+)
 api_router.include_router(
     compliance_report.router, prefix="/reports", tags=["compliance_reports"]
 )

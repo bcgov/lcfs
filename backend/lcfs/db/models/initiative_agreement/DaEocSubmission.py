@@ -4,6 +4,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    JSON,
     String,
     Table,
     Text,
@@ -56,6 +57,11 @@ class DaEocSubmission(BaseModel, Auditable):
         Integer, ForeignKey("organization.organization_id"), nullable=False, index=True
     )
     status = Column(String(50), nullable=False, server_default="Draft")
+    evidence_responses = Column(
+        JSON().with_variant(JSONB(), "postgresql"),
+        nullable=True,
+        comment="Per-evidence-requirement applicant responses for this submission.",
+    )
     summary_of_work_completed = Column(Text)
     how_evidence_meets_agreement_requirements = Column(Text)
     exceptions_limitations_and_context = Column(Text)

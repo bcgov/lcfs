@@ -179,6 +179,36 @@ class CHESEmailService:
         return await self.send_email(email_payload)
 
     @service_handler
+    async def send_direct_notification_email(
+        self,
+        notification_type: NotificationTypeEnum,
+        email: EmailStr,
+        notification_context: Dict[str, Any],
+    ) -> bool:
+        """
+        Send one notification type's email to one user, not gated by their
+        subscriptions (see NotificationService.send_direct_notification).
+        """
+        if not settings.ches_enabled:
+            return False
+
+        if not self._validate_configuration():
+            return False
+
+        if not email:
+            return False
+
+        notification_context["environment"] = settings.environment.lower()
+
+        email_body = self._render_email_template(
+            notification_type.value, notification_context
+        )
+
+        email_payload = self._build_email_payload([email], notification_context, email_body)
+
+        return await self.send_email(email_payload)
+
+    @service_handler
     async def send_credit_market_report_email(
         self,
         recipients: List[str],

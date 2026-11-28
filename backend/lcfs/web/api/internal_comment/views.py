@@ -162,6 +162,8 @@ async def get_mentionable_users(
         RoleEnum.GOVERNMENT,
         RoleEnum.CI_APPLICANT,
         RoleEnum.SUPPLIER,
+        RoleEnum.IA_PROPONENT,
+        RoleEnum.IA_SIGNER,
         RoleEnum.LCJFIP_APPLICANT,
         RoleEnum.LCJFIP_ADMINISTRATOR,
     ]
@@ -195,6 +197,8 @@ async def create_comment(
         RoleEnum.GOVERNMENT,
         RoleEnum.CI_APPLICANT,
         RoleEnum.SUPPLIER,
+        RoleEnum.IA_PROPONENT,
+        RoleEnum.IA_SIGNER,
         RoleEnum.LCJFIP_APPLICANT,
         RoleEnum.LCJFIP_ADMINISTRATOR,
     ]
@@ -226,6 +230,8 @@ async def get_comments(
         RoleEnum.GOVERNMENT,
         RoleEnum.CI_APPLICANT,
         RoleEnum.SUPPLIER,
+        RoleEnum.IA_PROPONENT,
+        RoleEnum.IA_SIGNER,
         RoleEnum.LCJFIP_APPLICANT,
         RoleEnum.LCJFIP_ADMINISTRATOR,
     ]
@@ -261,6 +267,12 @@ async def update_comment(
     # only edits their own comments.
     user_role_names = request.user.role_names
     is_admin = RoleEnum.ADMINISTRATOR in user_role_names
+    if RoleEnum.GOVERNMENT not in user_role_names:
+        entity = await service.repo.get_comment_entity(internal_comment_id)
+        if entity and entity[0].value == "designatedAction":
+            # Portal roles edit only their own DA comments, including users
+            # who also administer their organization's account.
+            is_admin = False
     is_shared_company_overview = (
         RoleEnum.GOVERNMENT in user_role_names
         and await service.repo.is_organization_comment(internal_comment_id)

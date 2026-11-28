@@ -16,6 +16,7 @@ from lcfs.db.models.initiative_agreement.DesignatedActionHistory import (
     EVENT_ANALYST_UNASSIGNED,
     EVENT_CREDITS_ISSUED,
     EVENT_DETAILS_EDITED,
+    EVENT_INFORMATION_REQUESTED,
     DesignatedActionHistory,
 )
 from lcfs.db.models.initiative_agreement.EvidenceRequirement import (
@@ -50,6 +51,7 @@ from lcfs.web.api.base import (
     validate_pagination,
 )
 from lcfs.web.api.initiative_agreement.repo import InitiativeAgreementRepository
+from lcfs.web.api.initiative_agreement.rich_text import sanitize_eoc_rich_text
 from lcfs.web.api.initiative_agreement.schema import (
     AllDesignatedActionsListSchema,
     AssignedAnalystSchema,
@@ -912,6 +914,18 @@ class InitiativeAgreementServices:
             raise DataNotFoundException(
                 f"Designated action with id {designated_action_id} not found"
             )
+        if user and not user_has_roles(user, [RoleEnum.GOVERNMENT]):
+            org = getattr(user, "organization", None)
+            org_id = getattr(org, "organization_id", None)
+            if (
+                not any(
+                    role in user.role_names
+                    for role in (RoleEnum.IA_PROPONENT, RoleEnum.IA_SIGNER)
+                )
+                or org_id is None
+                or org_id != action.initiative_agreement.to_organization_id
+            ):
+                raise HTTPException(status_code=403, detail="Forbidden resource")
         return action
 
     async def _get_requirement_or_404(self, evidence_requirement_id: int, user):
@@ -964,6 +978,7 @@ class InitiativeAgreementServices:
                     "review_outcome": r.review_outcome,
                     "review_notes": r.review_notes,
                     "missing_information": r.missing_information,
+                    "reviewed_by_user_id": r.reviewed_by_user_id,
                     "reviewed_date": (
                         r.reviewed_date.isoformat() if r.reviewed_date else None
                     ),
@@ -1706,6 +1721,634 @@ class InitiativeAgreementServices:
                     notification_data=notification_data,
                 )
             )
+
+    EOC_FIELDS = {
+        "summary_of_work_completed": "Summary of work completed",
+        "how_evidence_meets_agreement_requirements": "How evidence meets agreement requirements",
+        "exceptions_limitations_and_context": "Exceptions, limitations and context",
+    }
+
+    @staticmethod
+    def _empty_eoc_response():
+        return {
+            "summary_of_work_completed": "",
+            "how_evidence_meets_agreement_requirements": "",
+            "exceptions_limitations_and_context": "",
+        }
+
+    def _eoc_response_map(self, submission, requirements, *, legacy_history=False):
+        """Return per-requirement responses, adapting #5499's scalar fields."""
+        stored = getattr(submission, "evidence_responses", None) if submission else None
+        if isinstance(stored, dict) and stored:
+            response_map = {
+                str(requirement_id): {
+                    field: (response or {}).get(field, "") or ""
+                    for field in self.EOC_FIELDS
+                }
+                for requirement_id, response in stored.items()
+            }
+            for requirement in requirements:
+                response_map.setdefault(
+                    str(requirement.evidence_requirement_id),
+                    self._empty_eoc_response(),
+                )
+            return response_map
+
+        scalar_response = (
+            {field: getattr(submission, field, None) or "" for field in self.EOC_FIELDS}
+            if submission
+            else self._empty_eoc_response()
+        )
+        requirement_ids = [
+            str(requirement.evidence_requirement_id) for requirement in requirements
+        ]
+        if not requirement_ids:
+            requirement_ids = ["completion"]
+        if legacy_history and not stored:
+            requirement_ids = ["completion"]
+        response_map = {
+            requirement_id: self._empty_eoc_response()
+            for requirement_id in requirement_ids
+        }
+        response_map[requirement_ids[0]] = scalar_response
+        return response_map
+
+    @staticmethod
+    def _eoc_response_api_map(response_map):
+        from lcfs.web.api.initiative_agreement.schema import (
+            EOCRequirementResponseSchema,
+        )
+
+        return {
+            str(requirement_id): EOCRequirementResponseSchema.model_validate(
+                response
+            ).model_dump(by_alias=True)
+            for requirement_id, response in response_map.items()
+        }
+
+    @staticmethod
+    def _eoc_requirement_snapshot(requirements):
+        return [
+            {
+                "id": requirement.evidence_requirement_id,
+                "requirementNumber": requirement.requirement_number,
+                "title": requirement.title,
+                "description": requirement.description,
+            }
+            for requirement in requirements
+        ]
+
+    def _eoc_response_payload(self, data, requirements):
+        """Validate nested response IDs and keep old scalar clients working."""
+        active_ids = [
+            str(requirement.evidence_requirement_id) for requirement in requirements
+        ]
+        if data.evidence_responses:
+            response_map = {
+                str(requirement_id): {
+                    field: sanitize_eoc_rich_text(value)
+                    for field, value in response.model_dump().items()
+                }
+                for requirement_id, response in data.evidence_responses.items()
+            }
+            allowed_ids = set(active_ids or ["completion"])
+            if set(response_map) - allowed_ids:
+                raise HTTPException(
+                    status_code=422,
+                    detail="Evidence responses contain an unknown requirement.",
+                )
+            for requirement_id in allowed_ids:
+                response_map.setdefault(requirement_id, self._empty_eoc_response())
+        else:
+            legacy_response = {
+                field: sanitize_eoc_rich_text(getattr(data, field))
+                for field in self.EOC_FIELDS
+            }
+            response_map = {
+                requirement_id: self._empty_eoc_response()
+                for requirement_id in (active_ids or ["completion"])
+            }
+            response_map[active_ids[0] if active_ids else "completion"] = (
+                legacy_response
+            )
+        return response_map
+
+    @staticmethod
+    def _submission_event(submission):
+        events = [
+            event
+            for event in submission.history
+            if event.event == "STATUS_CHANGE" and event.status == "Submitted"
+        ]
+        return (
+            max(events, key=lambda event: event.da_eoc_submission_history_id or 0)
+            if events
+            else None
+        )
+
+    @staticmethod
+    def _submission_sub_status(submission):
+        events = [
+            event for event in submission.history if event.event == "SUB_STATUS_CHANGE"
+        ]
+        return (
+            max(
+                events, key=lambda event: event.da_eoc_submission_history_id or 0
+            ).sub_status
+            if events
+            else None
+        )
+
+    def _eoc_is_editable(self, action, submissions):
+        status = action.current_status.status
+        if action.transaction_id is not None or status in (
+            "Approved",
+            "Rejected",
+            "Cancelled",
+            "Recommended to manager",
+            "Recommended to director",
+            "Not recommended",
+        ):
+            return False
+        latest = submissions[0] if submissions else None
+        prior = next((row for row in submissions if row.status != "Draft"), None)
+        requested = (
+            prior is not None
+            and self._submission_sub_status(prior) == "Information requested"
+        )
+        action_history = getattr(action, "_eoc_action_history", ())
+        info_request_id = self._latest_da_history_id(
+            action_history, event=EVENT_INFORMATION_REQUESTED
+        )
+        return_id = self._latest_da_history_id(
+            action_history, event="STATUS_CHANGE", status="Returned"
+        )
+        prior_event = self._submission_event(prior) if prior is not None else None
+        prior_snapshot = prior_event.snapshot or {} if prior_event else {}
+        consumed_info_request_id = (
+            prior_snapshot.get("da_information_request_history_id") or 0
+        )
+        consumed_return_id = prior_snapshot.get("da_return_history_id") or 0
+        requested = requested or bool(
+            info_request_id and info_request_id > consumed_info_request_id
+        )
+
+        # A new return is a concrete workflow event. `action.update_date` is
+        # unsuitable here because routine analyst edits also update it and
+        # would silently authorize another revision.
+        returned = bool(
+            status == "Returned" and return_id and return_id > consumed_return_id
+        )
+        if prior is None:
+            # Permit the first portal response for a DA that has not yet had a
+            # portal submission, including legacy evidence returned/requested
+            # through the existing DA workflow.
+            return status in ("Not started", "Information requested", "Returned")
+        return requested or returned
+
+    @staticmethod
+    def _latest_da_history_id(action_history, *, event, status=None):
+        for entry in action_history:
+            entry_status = getattr(getattr(entry, "status", None), "status", None)
+            if entry.event == event and (status is None or entry_status == status):
+                return entry.designated_action_history_id
+        return None
+
+    def _eoc_revision_request(self, action_history, submissions):
+        """Return only the outstanding, proponent-facing reason to revise."""
+        prior = next((row for row in submissions if row.status != "Draft"), None)
+        prior_event = self._submission_event(prior) if prior is not None else None
+        prior_snapshot = prior_event.snapshot or {} if prior_event else {}
+        consumed_info_request_id = (
+            prior_snapshot.get("da_information_request_history_id") or 0
+        )
+        consumed_return_id = prior_snapshot.get("da_return_history_id") or 0
+
+        candidates = []
+        for entry in action_history:
+            history_id = entry.designated_action_history_id
+            if (
+                entry.event == EVENT_INFORMATION_REQUESTED
+                and history_id > consumed_info_request_id
+            ):
+                candidates.append((entry, "Information requested"))
+            elif (
+                entry.event == "STATUS_CHANGE"
+                and getattr(getattr(entry, "status", None), "status", None)
+                == "Returned"
+                and history_id > consumed_return_id
+            ):
+                candidates.append((entry, "Returned"))
+
+        if not candidates:
+            return None
+        event, event_type = max(
+            candidates,
+            key=lambda candidate: candidate[0].designated_action_history_id,
+        )
+        # The information-request snapshot also contains internal evidence
+        # reviews. Only its comment is exposed, normalized as plain text.
+        message = unescape(
+            sanitize_comment_text(
+                (getattr(event, "snapshot", None) or {}).get("comment")
+            )
+        )
+        if not message:
+            return None
+        return {
+            "event_type": event_type,
+            "requested_at": getattr(event, "create_date", None),
+            "message": message,
+        }
+
+    async def get_eoc(self, designated_action_id: int):
+        from lcfs.web.api.initiative_agreement.schema import EOCSchema
+
+        action = await self._get_action_or_404(designated_action_id)
+        rows = await self.repo.get_portal_evidence_submissions(designated_action_id)
+        action._eoc_action_history = await self.repo.get_designated_action_history(
+            designated_action_id
+        )
+        editable = self._eoc_is_editable(action, rows)
+        latest = rows[0] if rows else None
+        requirements = await self.repo.get_evidence_requirements(designated_action_id)
+        agreement = await self.repo.get_initiative_agreement_by_id(
+            action.initiative_agreement_id
+        )
+        siblings = await self.repo.get_current_designated_actions(
+            action.initiative_agreement_id
+        )
+        sibling_action_ids = [
+            sibling.designated_action_id
+            for sibling in sorted(
+                siblings,
+                key=lambda sibling: (
+                    sibling.action_number,
+                    sibling.designated_action_id,
+                ),
+            )
+        ]
+        requirement_snapshot = self._eoc_requirement_snapshot(requirements)
+        history = []
+        for row in rows:
+            if row.organization_id != agreement.to_organization_id:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Submission organization does not match agreement",
+                )
+            event = self._submission_event(row)
+            if row.status == "Draft" or event is None:
+                continue
+            snapshot = event.snapshot or {}
+            submission_requirements = snapshot.get("requirements") or [
+                {
+                    "id": "completion",
+                    "requirementNumber": None,
+                    "title": "Evidence of completion",
+                    "description": None,
+                }
+            ]
+            responses = snapshot.get("evidence_responses") or self._eoc_response_map(
+                row, [], legacy_history=True
+            )
+            history.append(
+                {
+                    "id": row.da_eoc_submission_id,
+                    "status": row.status,
+                    "submittedAt": (
+                        event.create_date.isoformat() if event.create_date else None
+                    ),
+                    "submittedByUserId": event.user_profile_id,
+                    "content": snapshot.get(
+                        "content",
+                        {key: getattr(row, key) or "" for key in self.EOC_FIELDS},
+                    ),
+                    "requirements": submission_requirements,
+                    "evidenceResponses": self._eoc_response_api_map(responses),
+                    "documents": [
+                        {
+                            "documentId": doc["document_id"],
+                            "fileName": doc["file_name"],
+                            "fileSize": doc["file_size"],
+                            "folderPath": doc["folder_path"],
+                        }
+                        for doc in snapshot.get("documents", [])
+                    ],
+                }
+            )
+        latest_event = next(
+            (
+                self._submission_event(row)
+                for row in rows
+                if row.status != "Draft" and self._submission_event(row) is not None
+            ),
+            None,
+        )
+        portal_user = bool(
+            self.request
+            and self.request.user
+            and user_has_roles(
+                self.request.user, [RoleEnum.IA_PROPONENT, RoleEnum.IA_SIGNER]
+            )
+        )
+        applicant_profile_id = (
+            self.request.user.user_profile_id
+            if portal_user and editable
+            else (latest_event.user_profile_id if latest_event else None)
+        )
+        applicant_profile = (
+            await self.repo.get_user_profile_by_id(applicant_profile_id)
+            if applicant_profile_id is not None
+            else None
+        )
+        applicant_name = (
+            " ".join(
+                value
+                for value in (
+                    getattr(applicant_profile, "first_name", None),
+                    getattr(applicant_profile, "last_name", None),
+                )
+                if value
+            )
+            or None
+        )
+        from lcfs.web.api.initiative_agreement.eoc_information_request import (
+            EocInformationRequestService,
+        )
+
+        information_requests = await EocInformationRequestService(
+            request=self.request, ia_service=self
+        ).information_request_view(action, rows)
+        current_responses = self._eoc_response_map(latest, requirements)
+        legacy_content = (
+            {key: getattr(latest, key) or "" for key in self.EOC_FIELDS}
+            if latest
+            else {}
+        )
+        organization = agreement.to_organization
+        return EOCSchema(
+            designated_action_id=designated_action_id,
+            initiative_agreement_id=action.initiative_agreement_id,
+            ia_code=agreement.ia_code,
+            action_number=action.action_number,
+            name=action.name,
+            organization_name=organization.name if organization else None,
+            applicant=(
+                {
+                    "name": applicant_name,
+                    "title": getattr(applicant_profile, "title", None),
+                    "email": getattr(applicant_profile, "email", None),
+                    "phone": getattr(applicant_profile, "phone", None),
+                }
+                if applicant_profile
+                else None
+            ),
+            organization_details=(
+                {
+                    "address": getattr(organization, "org_address", None),
+                    "email": getattr(organization, "email", None),
+                    "phone": getattr(organization, "phone", None),
+                }
+                if organization
+                else None
+            ),
+            sibling_action_ids=sibling_action_ids,
+            da_status=action.current_status.status,
+            status=(
+                "Draft"
+                if editable or latest is None or latest.status == "Draft"
+                else latest.status
+            ),
+            can_edit=editable,
+            content=legacy_content,
+            evidence_responses=current_responses,
+            submitted_at=latest_event.create_date if latest_event else None,
+            submitted_by_user_id=(
+                latest_event.user_profile_id if latest_event else None
+            ),
+            requirements=requirement_snapshot,
+            submissions=history,
+            revision_request=(
+                self._eoc_revision_request(action._eoc_action_history, rows)
+                if editable
+                else None
+            ),
+            **information_requests,
+        )
+
+    async def validate_eoc_write(self, designated_action_id: int):
+        action = await self._get_action_or_404(designated_action_id, for_update=True)
+        if user_has_roles(self.request.user, [RoleEnum.GOVERNMENT]):
+            return action
+        rows = await self.repo.get_portal_evidence_submissions(
+            designated_action_id, for_update=True
+        )
+        action._eoc_action_history = await self.repo.get_designated_action_history(
+            designated_action_id
+        )
+        if any(
+            row.organization_id != action.initiative_agreement.to_organization_id
+            for row in rows
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="Submission organization does not match agreement",
+            )
+        if not self._eoc_is_editable(action, rows):
+            raise HTTPException(
+                status_code=409,
+                detail="This evidence is read-only until government requests a revision",
+            )
+        return action
+
+    async def save_eoc(self, designated_action_id: int, data, *, submit=False):
+        from sqlalchemy import insert
+        from lcfs.db.models.initiative_agreement.DaEocSubmission import (
+            DaEocSubmission,
+            DaEocSubmissionHistory,
+            da_eoc_submission_document_association,
+        )
+
+        user = self.request.user
+        if user_has_roles(user, [RoleEnum.GOVERNMENT]) or not any(
+            role in user.role_names
+            for role in (RoleEnum.IA_PROPONENT, RoleEnum.IA_SIGNER)
+        ):
+            raise HTTPException(
+                status_code=403, detail="IA proponent or IA signer required"
+            )
+        if submit and not user_has_roles(user, [RoleEnum.IA_SIGNER]):
+            raise HTTPException(
+                status_code=403, detail="Only an IA signer may submit evidence"
+            )
+        if submit and not data.declaration_accepted:
+            raise HTTPException(
+                status_code=422, detail="Signing authority declaration is required"
+            )
+        action = await self.validate_eoc_write(designated_action_id)
+        action_history = getattr(action, "_eoc_action_history", ())
+        requirements = await self.repo.get_evidence_requirements(designated_action_id)
+        evidence_responses = self._eoc_response_payload(data, requirements)
+        rows = await self.repo.get_portal_evidence_submissions(
+            designated_action_id, for_update=True
+        )
+        current = rows[0] if rows and rows[0].status == "Draft" else None
+        if current is None:
+            current = DaEocSubmission(
+                designated_action_id=designated_action_id,
+                organization_id=action.initiative_agreement.to_organization_id,
+                status="Draft",
+            )
+            self.repo.db.add(current)
+        elif current.organization_id != action.initiative_agreement.to_organization_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Submission organization does not match agreement",
+            )
+        current.evidence_responses = evidence_responses
+        first_response = next(
+            iter(evidence_responses.values()), self._empty_eoc_response()
+        )
+        for key in self.EOC_FIELDS:
+            # Retain the original scalar columns for older clients and
+            # downstream consumers; the JSON map is the per-requirement source.
+            setattr(current, key, first_response[key])
+        current.update_user = getattr(user, "keycloak_username", None)
+        await self.repo.db.flush()
+        if submit:
+            old_review = await self._evidence_snapshot(designated_action_id)
+            for requirement in requirements:
+                for key in (
+                    "analyst_review",
+                    "review_outcome",
+                    "review_notes",
+                    "missing_information",
+                    "reviewed_by_user_id",
+                    "reviewed_date",
+                ):
+                    setattr(requirement, key, None)
+                requirement.reviewed_by = None
+                requirement.update_user = getattr(user, "keycloak_username", None)
+            documents = await self.repo.get_eoc_document_snapshot(designated_action_id)
+            if documents:
+                await self.repo.db.execute(
+                    insert(da_eoc_submission_document_association),
+                    [
+                        {
+                            "da_eoc_submission_id": current.da_eoc_submission_id,
+                            "document_id": doc["document_id"],
+                        }
+                        for doc in documents
+                    ],
+                )
+            for prior in rows:
+                if (
+                    prior.status != "Draft"
+                    and self._submission_sub_status(prior) is not None
+                ):
+                    self.repo.db.add(
+                        DaEocSubmissionHistory(
+                            da_eoc_submission_id=prior.da_eoc_submission_id,
+                            event="SUB_STATUS_CHANGE",
+                            sub_status=None,
+                            user_profile_id=user.user_profile_id,
+                            snapshot={
+                                "reason": "Evidence resubmitted",
+                                "new_submission_id": current.da_eoc_submission_id,
+                            },
+                        )
+                    )
+            # A whole resubmission answers everything, so per-EOC requests
+            # still open on older submissions are closed, not left dangling.
+            from lcfs.web.api.initiative_agreement.eoc_information_request import (
+                supersede_open_requests,
+            )
+
+            await supersede_open_requests(
+                self.repo.db,
+                [
+                    prior.da_eoc_submission_id
+                    for prior in rows
+                    if prior.status != "Draft"
+                ],
+            )
+            current.status = "Submitted"
+            latest_info_request_id = self._latest_da_history_id(
+                action_history, event=EVENT_INFORMATION_REQUESTED
+            )
+            latest_return_id = self._latest_da_history_id(
+                action_history, event="STATUS_CHANGE", status="Returned"
+            )
+            self.repo.db.add(
+                DaEocSubmissionHistory(
+                    da_eoc_submission_id=current.da_eoc_submission_id,
+                    event="STATUS_CHANGE",
+                    status="Submitted",
+                    user_profile_id=user.user_profile_id,
+                    snapshot={
+                        "declaration_accepted": True,
+                        "content": {
+                            key: getattr(current, key) for key in self.EOC_FIELDS
+                        },
+                        "requirements": self._eoc_requirement_snapshot(requirements),
+                        "evidence_responses": evidence_responses,
+                        "documents": documents,
+                        "previous_evidence_review": old_review["evidence_requirements"],
+                        "da_information_request_history_id": latest_info_request_id,
+                        "da_return_history_id": latest_return_id,
+                    },
+                )
+            )
+            self.repo.db.add(
+                DaEocSubmissionHistory(
+                    da_eoc_submission_id=current.da_eoc_submission_id,
+                    event="SUB_STATUS_CHANGE",
+                    sub_status=None,
+                    user_profile_id=user.user_profile_id,
+                )
+            )
+        await self.repo.db.flush()
+        return await self.get_eoc(designated_action_id)
+
+    async def get_eoc_submission_document(
+        self, designated_action_id, submission_id, document_id
+    ):
+        from types import SimpleNamespace
+
+        await self._get_action_or_404(designated_action_id)
+        document = await self.repo.get_submission_document(
+            designated_action_id, submission_id, document_id
+        )
+        if document is None:
+            raise HTTPException(status_code=404, detail="Submission document not found")
+        rows = await self.repo.get_portal_evidence_submissions(designated_action_id)
+        row = next(
+            (row for row in rows if row.da_eoc_submission_id == submission_id), None
+        )
+        action = await self._get_action_or_404(designated_action_id)
+        if (
+            row is None
+            or row.organization_id != action.initiative_agreement.to_organization_id
+        ):
+            raise HTTPException(status_code=403, detail="Forbidden submission")
+        event = self._submission_event(row)
+        metadata = (
+            next(
+                (
+                    doc
+                    for doc in (event.snapshot or {}).get("documents", [])
+                    if doc["document_id"] == document_id
+                ),
+                None,
+            )
+            if event
+            else None
+        )
+        if metadata is None:
+            raise HTTPException(
+                status_code=404, detail="Submitted document snapshot not found"
+            )
+        return SimpleNamespace(**metadata)
 
     async def _agreement_or_404(self, initiative_agreement_id: int, user):
         """The agreement, unless it is missing or hidden from the caller."""

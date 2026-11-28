@@ -424,6 +424,37 @@ class NotificationService:
             )
 
     @service_handler
+    async def send_direct_notification(
+        self,
+        notification_type: NotificationTypeEnum,
+        recipient_user_profile_id: int,
+        recipient_email: Optional[str],
+        notification_data: NotificationMessageSchema,
+        email_context: Dict[str, Any],
+    ) -> None:
+        """
+        Notify one named user of a workflow step addressed to them, such as a
+        request for more information on their submission (#5545). Like an
+        @mention, it always creates the in-app message and sends the email,
+        regardless of channel subscriptions: the step is theirs to act on.
+        """
+        notification_type_id = await self.get_notification_type_id_by_name(
+            notification_type.value
+        )
+
+        message = NotificationMessage(
+            **notification_data.model_dump(exclude_unset=True, exclude={"deleted"}),
+            notification_type_id=notification_type_id,
+            related_user_profile_id=recipient_user_profile_id,
+        )
+        await self.repo.create_notification_messages([message])
+
+        if recipient_email:
+            await self.email_service.send_direct_notification_email(
+                notification_type, recipient_email, email_context
+            )
+
+    @service_handler
     async def delete_subscriptions_for_user_role(
         self, user_profile_id: int, role_id: int
     ):

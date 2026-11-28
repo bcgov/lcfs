@@ -42,7 +42,8 @@ export const Navbar = () => {
       initiativeAgreementsEnabled &&
       hasAnyRole(roles.ia_analyst, roles.ia_manager, roles.director)
     const canSeeInitiativeAgreementsBceid =
-      initiativeAgreementsEnabled && hasAnyRole(roles.ia_proponent)
+      initiativeAgreementsEnabled &&
+      hasAnyRole(roles.ia_proponent, roles.ia_signer)
     const lcjfipEnabled = isFeatureEnabled(FEATURE_FLAGS.LCJFIP)
     const canSeeLcjfipIdir = lcjfipEnabled && hasAnyRole(...lcjfipIdirRoles)
     const canSeeLcjfipBceid = lcjfipEnabled && hasAnyRole(...lcjfipBceidRoles)

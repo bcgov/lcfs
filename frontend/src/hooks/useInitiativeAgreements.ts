@@ -674,3 +674,230 @@ export const useDeleteNote = (initiativeAgreementId: number | string) =>
         ).replace(':noteId', String(noteId))
       )
   )
+
+/**
+ * The DA/EOC submission page's data, shared by the BCeID page, the IDIR
+ * read-only view and the IDIR EOC cards (#5516, #5545).
+ */
+export const eocKey = (designatedActionId: number | string) => [
+  'designated-action-eoc',
+  String(designatedActionId)
+]
+
+export const useDesignatedActionEoc = (
+  designatedActionId: number | string,
+  options: QueryOptions<unknown> = {}
+) => {
+  const client = useApiService()
+  return useQuery({
+    enabled: !!designatedActionId,
+    queryKey: eocKey(designatedActionId),
+    queryFn: async () =>
+      (
+        await client.get(
+          actionPath(apiRoutes.designatedActionEoc, designatedActionId)
+        )
+      ).data,
+    ...options
+  })
+}
+
+const requestPath = (
+  template: string,
+  designatedActionId: number | string,
+  ids: Record<string, number | string>
+) =>
+  Object.entries(ids).reduce(
+    (path, [key, value]) => path.replace(`:${key}`, String(value)),
+    actionPath(template, designatedActionId)
+  )
+
+/**
+ * Requests for additional information on one EOC (#5545). Each mutation that
+ * returns the EOC page's data puts it straight into the shared cache; the
+ * evidence cards and the document tree refetch.
+ */
+const useEocInformationMutation = <TVariables>(
+  designatedActionId: number | string,
+  mutationFn: (
+    client: ApiServiceInstance
+  ) => (variables: TVariables) => Promise<unknown>
+) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: mutationFn(client),
+    onSuccess: (data: unknown) => {
+      if (
+        data &&
+        typeof data === 'object' &&
+        'designatedActionId' in (data as Record<string, unknown>)
+      ) {
+        queryClient.setQueryData(eocKey(designatedActionId), data)
+      } else {
+        queryClient.invalidateQueries({ queryKey: eocKey(designatedActionId) })
+      }
+      queryClient.invalidateQueries({
+        queryKey: evidenceKey(designatedActionId)
+      })
+      queryClient.invalidateQueries({
+        queryKey: [
+          'document-tree',
+          'designatedAction',
+          String(designatedActionId)
+        ]
+      })
+    }
+  })
+}
+
+export const useRequestEocInformation = (designatedActionId: number | string) =>
+  useEocInformationMutation(
+    designatedActionId,
+    (client) =>
+      async ({
+        evidenceRequirementId,
+        missingInformation
+      }: {
+        evidenceRequirementId: number
+        missingInformation?: string
+      }) =>
+        (
+          await client.post(
+            requestPath(apiRoutes.eocInformationRequests, designatedActionId, {
+              evidenceRequirementId
+            }),
+            missingInformation === undefined ? {} : { missingInformation }
+          )
+        ).data
+  )
+
+type EocResponse = {
+  summaryOfWorkCompleted: string
+  howEvidenceMeetsAgreementRequirements: string
+  exceptionsLimitationsAndContext: string
+}
+
+export const useSaveEocInformationResponse = (
+  designatedActionId: number | string
+) =>
+  useEocInformationMutation(
+    designatedActionId,
+    (client) =>
+      async ({
+        requestId,
+        response
+      }: {
+        requestId: number
+        response: EocResponse
+      }) =>
+        (
+          await client.put(
+            requestPath(apiRoutes.eocInformationRequest, designatedActionId, {
+              requestId
+            }),
+            response
+          )
+        ).data
+  )
+
+export const useSubmitEocInformationResponse = (
+  designatedActionId: number | string
+) =>
+  useEocInformationMutation(
+    designatedActionId,
+    (client) =>
+      async ({
+        requestId,
+        response
+      }: {
+        requestId: number
+        response: EocResponse
+      }) =>
+        (
+          await client.post(
+            requestPath(
+              apiRoutes.eocInformationRequestSubmit,
+              designatedActionId,
+              {
+                requestId
+              }
+            ),
+            response
+          )
+        ).data
+  )
+
+export const useUploadEocInformationDocument = (
+  designatedActionId: number | string
+) =>
+  useEocInformationMutation(
+    designatedActionId,
+    (client) =>
+      async ({ requestId, file }: { requestId: number; file: File }) => {
+        const formData = new FormData()
+        formData.append('file', file)
+        return (
+          await client.post(
+            requestPath(
+              apiRoutes.eocInformationRequestDocuments,
+              designatedActionId,
+              { requestId }
+            ),
+            formData,
+            { headers: { 'Content-Type': 'multipart/form-data' } }
+          )
+        ).data
+      }
+  )
+
+export const useRenameEocInformationDocument = (
+  designatedActionId: number | string
+) =>
+  useEocInformationMutation(
+    designatedActionId,
+    (client) =>
+      async ({
+        requestId,
+        documentId,
+        displayName
+      }: {
+        requestId: number
+        documentId: number
+        displayName: string
+      }) =>
+        (
+          await client.put(
+            requestPath(
+              apiRoutes.eocInformationRequestDocument,
+              designatedActionId,
+              { requestId, documentId }
+            ),
+            { displayName }
+          )
+        ).data
+  )
+
+export const useDeleteEocInformationDocument = (
+  designatedActionId: number | string
+) =>
+  useEocInformationMutation(
+    designatedActionId,
+    (client) =>
+      async ({
+        requestId,
+        documentId
+      }: {
+        requestId: number
+        documentId: number
+      }) =>
+        (
+          await client.delete(
+            requestPath(
+              apiRoutes.eocInformationRequestDocument,
+              designatedActionId,
+              { requestId, documentId }
+            )
+          )
+        ).data
+  )

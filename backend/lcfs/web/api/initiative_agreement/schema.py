@@ -1,6 +1,6 @@
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Annotated, List, Optional
+from typing import Annotated, List, Optional, Union
 
 from pydantic import Field, PlainSerializer, field_validator
 
@@ -435,6 +435,127 @@ class AgreementUpdateSchema(BaseSchema):
     contact_phone: Optional[str] = Field(None, max_length=50)
     agreement_start_date: Optional[date] = None
     agreement_end_date: Optional[date] = None
+
+
+class EOCRequirementResponseSchema(BaseSchema):
+    summary_of_work_completed: str = ""
+    how_evidence_meets_agreement_requirements: str = ""
+    exceptions_limitations_and_context: str = ""
+
+
+class EOCRequirementSchema(BaseSchema):
+    id: Union[int, str]
+    requirement_number: Optional[int] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+
+
+class EOCApplicantSchema(BaseSchema):
+    name: Optional[str] = None
+    title: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+
+
+class EOCOrganizationDetailsSchema(BaseSchema):
+    address: Optional[AgreementOrganizationAddressSchema] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+
+
+class EOCSaveSchema(BaseSchema):
+    summary_of_work_completed: str = ""
+    how_evidence_meets_agreement_requirements: str = ""
+    exceptions_limitations_and_context: str = ""
+    evidence_responses: dict[str, EOCRequirementResponseSchema] = Field(
+        default_factory=dict
+    )
+    declaration_accepted: bool = False
+
+
+class EOCRevisionRequestSchema(BaseSchema):
+    event_type: str
+    requested_at: Optional[datetime] = None
+    message: str
+
+
+class EOCInformationRequestCreateSchema(BaseSchema):
+    """IDIR's request for more on one EOC (#5545). Absent text means the
+    EOC's saved Missing information field."""
+
+    missing_information: Optional[str] = Field(default=None, max_length=100_000)
+
+
+class EOCInformationRequestResponseSchema(BaseSchema):
+    """The proponent's answer to one request: the EOC's three fields."""
+
+    summary_of_work_completed: str = Field(default="", max_length=100_000)
+    how_evidence_meets_agreement_requirements: str = Field(
+        default="", max_length=100_000
+    )
+    exceptions_limitations_and_context: str = Field(default="", max_length=100_000)
+
+
+class EOCInformationRequestDocumentSchema(BaseSchema):
+    document_id: int
+    file_name: str
+    display_name: Optional[str] = None
+    file_size: Optional[int] = None
+    mime_type: Optional[str] = None
+    can_change: bool = False
+
+
+class EOCInformationRequestSchema(BaseSchema):
+    id: int
+    submission_id: int
+    evidence_requirement_id: int
+    requirement_number: Optional[int] = None
+    requirement_title: Optional[str] = None
+    status: str
+    missing_information: str
+    requested_at: Optional[datetime] = None
+    # IDIR names are shown to government users only.
+    requested_by: Optional[str] = None
+    # The proponent's working copy is not shown to government until submitted.
+    response: Optional[EOCRequirementResponseSchema] = None
+    submitted_at: Optional[datetime] = None
+    submitted_by: Optional[str] = None
+    documents: List[EOCInformationRequestDocumentSchema] = Field(default_factory=list)
+    can_edit: bool = False
+    can_submit: bool = False
+
+
+class EOCSchema(BaseSchema):
+    submissions: List[dict] = Field(default_factory=list)
+    can_edit: bool = False
+    revision_request: Optional[EOCRevisionRequestSchema] = None
+    applicant: Optional[EOCApplicantSchema] = None
+    organization_details: Optional[EOCOrganizationDetailsSchema] = None
+    sibling_action_ids: List[int] = Field(default_factory=list)
+    da_status: str
+    initiative_agreement_id: int
+    ia_code: Optional[str] = None
+    action_number: int
+    name: str
+    designated_action_id: int
+    status: str
+    content: dict[str, str] = Field(default_factory=dict)
+    submitted_at: Optional[datetime] = None
+    submitted_by_user_id: Optional[int] = None
+    organization_name: Optional[str] = None
+    requirements: List[EOCRequirementSchema] = Field(default_factory=list)
+    evidence_responses: dict[str, EOCRequirementResponseSchema] = Field(
+        default_factory=dict
+    )
+    # Per-EOC requests for additional information (#5545): every cycle on
+    # the latest submission, and the cycles of each submission by its ID.
+    information_request_available: bool = False
+    information_requests: List[EOCInformationRequestSchema] = Field(
+        default_factory=list
+    )
+    submission_information_requests: dict[str, List[EOCInformationRequestSchema]] = (
+        Field(default_factory=dict)
+    )
 
 
 # Quill markup is verbose; this still leaves room well beyond the seven or

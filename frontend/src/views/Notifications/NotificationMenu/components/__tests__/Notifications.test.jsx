@@ -423,6 +423,28 @@ describe('Notifications Component', () => {
       )
     })
 
+    it.each([
+      'EOC additional information requested',
+      'EOC additional information submitted'
+    ])('opens the designated action for "%s" (#5545)', (type) => {
+      rowNotification = {
+        notificationMessageId: 'eoc-id',
+        type,
+        message: JSON.stringify({
+          id: 12,
+          service: 'designatedAction',
+          linkPath: '/initiative-agreements/4/designated-actions/12'
+        })
+      }
+      render(<Notifications />, { wrapper: createWrapper() })
+
+      fireEvent.click(screen.getByTestId('test-row'))
+
+      expect(navigateMock).toHaveBeenCalledWith(
+        '/initiative-agreements/4/designated-actions/12'
+      )
+    })
+
     it('navigates and marks as read with valid route', async () => {
       render(<Notifications />, { wrapper: createWrapper() })
       const testRow = screen.getByTestId('test-row')

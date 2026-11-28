@@ -1,3 +1,4 @@
+from .DaEocInformationRequest import DaEocInformationRequest
 from .DaEocSubmission import DaEocSubmission, DaEocSubmissionHistory
 from .DesignatedAction import DesignatedAction
 from .DesignatedActionHistory import DesignatedActionHistory
@@ -13,6 +14,7 @@ from .InitiativeAgreementLifecycleStatus import InitiativeAgreementLifecycleStat
 from .InitiativeAgreementStatus import InitiativeAgreementStatus
 
 __all__ = [
+    "DaEocInformationRequest",
     "DaEocSubmission",
     "DaEocSubmissionHistory",
     "DesignatedAction",

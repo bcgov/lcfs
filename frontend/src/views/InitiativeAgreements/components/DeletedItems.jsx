@@ -25,7 +25,12 @@ import { timezoneFormatter } from '@/utils/formatters'
 
 // The bin beneath the document tree. Files can be restored, or permanently
 // removed by the user who uploaded and deleted them.
-export const DeletedItems = ({ parentType, parentID, heading }) => {
+export const DeletedItems = ({
+  parentType,
+  parentID,
+  heading,
+  readOnly = false
+}) => {
   const { t } = useTranslation(['common', 'initiativeAgreement'])
   const [expanded, setExpanded] = useState(false)
   const [pendingHardDelete, setPendingHardDelete] = useState(null)
@@ -76,34 +81,35 @@ export const DeletedItems = ({ parentType, parentID, heading }) => {
   const total = data?.total ?? 0
   const isEmpty = documents.length === 0 && folders.length === 0
 
-  const restoreControl = (key, label, onRestore) => (
-    <BCTypography
-      component="button"
-      type="button"
-      variant="subtitle2"
-      color="link"
-      data-test={key}
-      aria-label={label}
-      onClick={onRestore}
-      sx={{
-        background: 'none',
-        border: 'none',
-        padding: 0,
-        font: 'inherit',
-        cursor: 'pointer',
-        textDecoration: 'underline',
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 0.5
-      }}
-    >
-      <RestoreIcon fontSize="inherit" />
-      {t('initiativeAgreement:folders.restore')}
-    </BCTypography>
-  )
+  const restoreControl = (key, label, onRestore) =>
+    !readOnly && (
+      <BCTypography
+        component="button"
+        type="button"
+        variant="subtitle2"
+        color="link"
+        data-test={key}
+        aria-label={label}
+        onClick={onRestore}
+        sx={{
+          background: 'none',
+          border: 'none',
+          padding: 0,
+          font: 'inherit',
+          cursor: 'pointer',
+          textDecoration: 'underline',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 0.5
+        }}
+      >
+        <RestoreIcon fontSize="inherit" />
+        {t('initiativeAgreement:folders.restore')}
+      </BCTypography>
+    )
 
   const hardDeleteControl = (document, key) =>
-    document.canHardDelete ? (
+    document.canHardDelete && !readOnly ? (
       <BCTypography
         component="button"
         type="button"

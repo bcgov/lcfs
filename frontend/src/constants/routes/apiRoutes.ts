@@ -112,6 +112,19 @@ export const apiRoutes = {
     '/initiative-agreements/designated-actions/:designatedActionId/recommended-credits',
   designatedActionHistory:
     '/initiative-agreements/designated-actions/:designatedActionId/history',
+  // Requests for additional information on one EOC (#5545)
+  designatedActionEoc:
+    '/initiative-agreements/designated-actions/:designatedActionId/eoc',
+  eocInformationRequests:
+    '/initiative-agreements/designated-actions/:designatedActionId/eoc/requirements/:evidenceRequirementId/information-requests',
+  eocInformationRequest:
+    '/initiative-agreements/designated-actions/:designatedActionId/eoc/information-requests/:requestId',
+  eocInformationRequestSubmit:
+    '/initiative-agreements/designated-actions/:designatedActionId/eoc/information-requests/:requestId/submit',
+  eocInformationRequestDocuments:
+    '/initiative-agreements/designated-actions/:designatedActionId/eoc/information-requests/:requestId/documents',
+  eocInformationRequestDocument:
+    '/initiative-agreements/designated-actions/:designatedActionId/eoc/information-requests/:requestId/documents/:documentId',
   documentFolderTree: '/document-folders/:parentType/:parentID',
   documentFolderUpdate: '/document-folders/:parentType/:parentID/:folderId',
   documentFolderItems: '/document-folders/:parentType/:parentID/items',
