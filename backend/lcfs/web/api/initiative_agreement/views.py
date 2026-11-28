@@ -50,6 +50,7 @@ from lcfs.web.api.initiative_agreement.eoc_information_request import (
 )
 from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
 from lcfs.web.api.initiative_agreement.validation import InitiativeAgreementValidation
+from lcfs.web.api.initiative_agreement.workflow import SET_UNDERWAY_ROLES
 from lcfs.web.core.decorators import view_handler
 
 # Agreement-management endpoints are scoped to the Initiative Agreement roles.
@@ -115,8 +116,24 @@ async def create_agreement(
     service: InitiativeAgreementServices = Depends(),
 ):
     """Start a new initiative agreement. One entered by government starts
-    Underway (#5186)."""
+    as a Draft (#5553)."""
     return await service.create_agreement(data, request.user)
+
+
+@router.put(
+    "/agreements/{initiative_agreement_id}/underway",
+    response_model=InitiativeAgreementProfileSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(list(SET_UNDERWAY_ROLES))
+async def set_agreement_underway(
+    request: Request,
+    initiative_agreement_id: int,
+    service: InitiativeAgreementServices = Depends(),
+):
+    """Set a draft agreement Underway, releasing the package to its
+    organization (#5553). Directors only."""
+    return await service.set_agreement_underway(initiative_agreement_id, request.user)
 
 
 @router.put(
@@ -521,7 +538,8 @@ async def update_initiative_agreement(
     validate: InitiativeAgreementValidation = Depends(),
 ):
     """Endpoint to update an existing initiative agreement."""
-    # A draft is hidden from government (#5186), here as on every other route.
+    # A draft is hidden from the organization (#5553), here as on every
+    # other route.
     await validate.validate_organization_access(
         initiative_agreement_data.initiative_agreement_id
     )

@@ -21,6 +21,7 @@ from lcfs.web.api import (
     fuel_export,
     admin_adjustment,
     initiative_agreement,
+    lcjfip,
     compliance_report,
     report_opening,
     notional_transfer,
@@ -104,6 +105,7 @@ api_router.include_router(
     prefix="/initiative-agreements",
     tags=["initiative_agreements"],
 )
+api_router.include_router(lcjfip.router, prefix="/lcjfip", tags=["lcjfip"])
 api_router.include_router(
     eoc_information_request_documents.router,
     prefix="/initiative-agreements",

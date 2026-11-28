@@ -67,6 +67,17 @@ from lcfs.db.models.comment.DesignatedActionInternalComment import (
     DesignatedActionInternalComment,
 )
 from lcfs.services.comment_permissions import can_manage_penalty_comment
+from lcfs.db.models.comment.LCJFIPApplicationInternalComment import (
+    LCJFIPApplicationInternalComment,
+)
+from lcfs.db.models.lcjfip.LCJFIPApplication import (
+    LCJFIPApplication,
+    lcjfip_application_document_association,
+)
+from lcfs.db.models.lcjfip.LCJFIPApplicationStatus import (
+    LCJFIPApplicationStatus,
+    LCJFIPApplicationStatusEnum,
+)
 from lcfs.db.models.comment.CIApplicationInternalComment import (
     CIApplicationInternalComment,
 )
@@ -135,6 +146,10 @@ DOCUMENT_PARENT_ASSOCIATIONS = {
     "internal_comment": (
         internal_comment_document_association,
         "internal_comment_id",
+    ),
+    "lcjfip_application": (
+        lcjfip_application_document_association,
+        "lcjfip_application_id",
     ),
 }
 
@@ -631,9 +646,11 @@ class DocumentService:
         Organizations owning the entities a comment hangs off, restricted to
         the entity types a non-government caller may read.
 
-        Resolve compliance reports, CI applications and designated actions.
-        DA comments additionally require an IA role below. Other entities
-        resolve to an empty set and are refused.
+        Resolve compliance reports, CI applications, LCJFIP applications and
+        designated actions: the threads InternalCommentService exposes to a
+        non-government caller. DA comments additionally require an IA role
+        below. A comment on any other entity — or on none — resolves to an
+        empty set and is refused.
 
         The organization is derived live from the association tables rather than
         read from ``internal_comment.organization_id``: that column is a
@@ -680,8 +697,47 @@ class DocumentService:
                 == internal_comment_id
             )
         )
-        result = await self.db.execute(report_orgs.union(application_orgs, action_orgs))
+        lcjfip_orgs = (
+            select(LCJFIPApplication.organization_id)
+            .join(
+                LCJFIPApplicationInternalComment,
+                LCJFIPApplicationInternalComment.lcjfip_application_id
+                == LCJFIPApplication.lcjfip_application_id,
+            )
+            .where(
+                LCJFIPApplicationInternalComment.internal_comment_id
+                == internal_comment_id
+            )
+        )
+        result = await self.db.execute(
+            report_orgs.union(application_orgs, lcjfip_orgs, action_orgs)
+        )
         return {row[0] for row in result.all() if row[0] is not None}
+
+    async def _is_comment_on_draft_lcjfip_application(
+        self, internal_comment_id: int
+    ) -> bool:
+        """True when the comment belongs to an LCJFIP application still in Draft."""
+        stmt = (
+            select(LCJFIPApplicationInternalComment.internal_comment_id)
+            .join(
+                LCJFIPApplication,
+                LCJFIPApplication.lcjfip_application_id
+                == LCJFIPApplicationInternalComment.lcjfip_application_id,
+            )
+            .join(
+                LCJFIPApplicationStatus,
+                LCJFIPApplicationStatus.lcjfip_application_status_id
+                == LCJFIPApplication.status_id,
+            )
+            .where(
+                LCJFIPApplicationInternalComment.internal_comment_id
+                == internal_comment_id,
+                LCJFIPApplicationStatus.status
+                == LCJFIPApplicationStatusEnum.Draft.value,
+            )
+        )
+        return (await self.db.execute(stmt)).scalar_one_or_none() is not None
 
     async def verify_internal_comment_access(self, parent_id, user, write=False):
         """Authorise attachment access for an internal comment.
@@ -696,8 +752,9 @@ class DocumentService:
           belonging to their own organization.
 
         A comment on a draft agreement, or on one of its designated actions,
-        reads as missing to government (#5186), like its thread, and so do
-        its attachments.
+        reads as missing outside government (#5553), like its thread, and so
+        do its attachments. A comment on a Draft LCJFIP application, which is
+        still the applicant's own, reads as missing to government (#5532).
         """
         comment = await self.db.get(InternalComment, parent_id)
         if not comment:
@@ -709,6 +766,10 @@ class DocumentService:
             raise HTTPException(status_code=404, detail="Internal comment not found")
 
         is_government = RoleEnum.GOVERNMENT in user.role_names
+        if is_government and await self._is_comment_on_draft_lcjfip_application(
+            parent_id
+        ):
+            raise HTTPException(status_code=404, detail="Internal comment not found")
         if not is_government and agreement is not None:
             entity = await InternalCommentRepository(db=self.db).get_comment_entity(
                 parent_id

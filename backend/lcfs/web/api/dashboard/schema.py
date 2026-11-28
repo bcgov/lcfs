@@ -44,8 +44,7 @@ class CIApplicationCountsSchema(BaseSchema):
 
 class InitiativeAgreementCountsSchema(BaseSchema):
     # Counts of agreement-kind records by lifecycle status; legacy award
-    # rows are excluded (#4895). No draft count: drafts are proponents'
-    # unsubmitted applications, which IDIR users do not see (#5186).
+    # rows are excluded (#4895). The card shows only agreements underway.
     underway: int = Field(default=0)
 
 

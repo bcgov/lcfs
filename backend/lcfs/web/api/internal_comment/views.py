@@ -164,6 +164,8 @@ async def get_mentionable_users(
         RoleEnum.SUPPLIER,
         RoleEnum.IA_PROPONENT,
         RoleEnum.IA_SIGNER,
+        RoleEnum.LCJFIP_APPLICANT,
+        RoleEnum.LCJFIP_ADMINISTRATOR,
     ]
 )
 async def create_comment(
@@ -197,6 +199,8 @@ async def create_comment(
         RoleEnum.SUPPLIER,
         RoleEnum.IA_PROPONENT,
         RoleEnum.IA_SIGNER,
+        RoleEnum.LCJFIP_APPLICANT,
+        RoleEnum.LCJFIP_ADMINISTRATOR,
     ]
 )
 async def get_comments(
@@ -228,6 +232,8 @@ async def get_comments(
         RoleEnum.SUPPLIER,
         RoleEnum.IA_PROPONENT,
         RoleEnum.IA_SIGNER,
+        RoleEnum.LCJFIP_APPLICANT,
+        RoleEnum.LCJFIP_ADMINISTRATOR,
     ]
 )
 async def update_comment(

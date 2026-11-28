@@ -298,6 +298,14 @@
     "success": "Agreement {{code}} updated.",
     "failed": "The agreement could not be updated."
   },
+  "setUnderway": {
+    "button": "Set to Underway",
+    "title": "Set to Underway",
+    "message": "Setting this IA to Underway enables the organization to access this information. No further edits can be made other than by using the Change order process.",
+    "confirm": "Set to Underway",
+    "success": "Agreement {{code}} is now Underway.",
+    "failed": "The agreement could not be set to Underway."
+  },
   "create": {
     "button": "New initiative agreement",
     "title": "New initiative agreement",

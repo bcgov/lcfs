@@ -50,6 +50,7 @@ DEFAULT_CATEGORY_BY_ENTITY: dict[EntityTypeEnum, str] = {
     EntityTypeEnum.DESIGNATED_ACTION: "IA notes",
     EntityTypeEnum.ADMIN_ADJUSTMENT: "Penalty notes",
     EntityTypeEnum.CI_APPLICATION: "CI application notes",
+    EntityTypeEnum.LCJFIP_APPLICATION: "LCJFIP application notes",
     EntityTypeEnum.ORGANIZATION: "Company Overview",
     EntityTypeEnum.PENALTY_LOG: "Penalty notes",
 }
@@ -66,6 +67,7 @@ _ENTITY_LABEL_BY_TYPE: dict[EntityTypeEnum, str] = {
     EntityTypeEnum.DESIGNATED_ACTION: "an initiative agreement",
     EntityTypeEnum.ADMIN_ADJUSTMENT: "an administrative adjustment",
     EntityTypeEnum.CI_APPLICATION: "a CI application",
+    EntityTypeEnum.LCJFIP_APPLICATION: "an LCJFIP application",
     EntityTypeEnum.ORGANIZATION: "an organization's Company Overview",
     EntityTypeEnum.PENALTY_LOG: "an organization's penalty log",
 }
@@ -187,6 +189,8 @@ def _build_entity_link_path(
         return f"/admin-adjustment/{entity_id}"
     if entity_type == EntityTypeEnum.CI_APPLICATION:
         return f"/ci-applications/{entity_id}"
+    if entity_type == EntityTypeEnum.LCJFIP_APPLICATION:
+        return f"/jet-fuel/lcjfip/applications/{entity_id}"
     if entity_type == EntityTypeEnum.ORGANIZATION:
         return f"/organizations/{entity_id}/comment-log"
     if entity_type == EntityTypeEnum.PENALTY_LOG:
@@ -259,6 +263,12 @@ class InternalCommentService:
                 RoleEnum.IA_PROPONENT,
                 RoleEnum.IA_SIGNER,
             ),
+            # The roles develop's comment routes admit for LCJFIP threads.
+            EntityTypeEnum.LCJFIP_APPLICATION: (
+                RoleEnum.SUPPLIER,
+                RoleEnum.LCJFIP_APPLICANT,
+                RoleEnum.LCJFIP_ADMINISTRATOR,
+            ),
         }
         required_roles = roles_by_entity.get(entity_type, ())
         if has_ia_role and entity_type == EntityTypeEnum.COMPLIANCE_REPORT:
@@ -307,9 +317,9 @@ class InternalCommentService:
         self, entity_type: EntityTypeEnum, entity_id: int
     ) -> None:
         """
-        A proponent's unsubmitted draft agreement is hidden from government
-        (#5186). Its comment thread, and those of its designated actions,
-        read as missing, like the agreement itself.
+        A draft agreement that government is still preparing is hidden from
+        the organization (#5553). Its comment thread, and those of its
+        designated actions, read as missing, like the agreement itself.
         """
         # Imported here: the initiative agreement package imports this
         # service, so a module-level import would be circular.
@@ -326,10 +336,25 @@ class InternalCommentService:
         if agreement is None or is_hidden_from(agreement, self.request.user):
             raise HTTPException(status_code=404, detail="Not found")
 
+    async def _require_visible_lcjfip_application(
+        self, entity_type: EntityTypeEnum, entity_id: int
+    ) -> None:
+        """
+        A Draft LCJFIP application is the applicant's own, so government
+        reads its comment thread as missing, like the application (#5532).
+        """
+        if (
+            entity_type != EntityTypeEnum.LCJFIP_APPLICATION
+            or not self._is_government_user()
+        ):
+            return
+        if await self.repo.is_draft_lcjfip_application(entity_id):
+            raise HTTPException(status_code=404, detail="Not found")
+
     async def require_visible_comment(self, internal_comment_id: int) -> None:
         """
         A comment on a draft agreement, or on one of its designated actions,
-        reads as missing to government (#5186), like its thread.
+        reads as missing outside government (#5553), like its thread.
         """
         from lcfs.web.api.initiative_agreement.workflow import is_hidden_from
 
@@ -354,6 +379,10 @@ class InternalCommentService:
                     raise HTTPException(status_code=403, detail="Forbidden resource")
         if agreement is not None and is_hidden_from(agreement, self.request.user):
             raise HTTPException(status_code=404, detail="Internal comment not found.")
+        if self._is_government_user():
+            entity = await self.repo.get_comment_entity(internal_comment_id)
+            if entity is not None:
+                await self._require_visible_lcjfip_application(*entity)
 
     async def _send_ci_comment_notification(
         self,
@@ -614,6 +643,7 @@ class InternalCommentService:
                 EntityTypeEnum.COMPLIANCE_REPORT,
                 EntityTypeEnum.CI_APPLICATION,
                 EntityTypeEnum.DESIGNATED_ACTION,
+                EntityTypeEnum.LCJFIP_APPLICATION,
             ):
                 raise HTTPException(status_code=403, detail="Forbidden resource")
             if data.visibility != CommentVisibilityEnum.PUBLIC:
@@ -633,6 +663,7 @@ class InternalCommentService:
         await self._require_visible_initiative_agreement(
             data.entity_type, data.entity_id
         )
+        await self._require_visible_lcjfip_application(data.entity_type, data.entity_id)
 
         # Enforced here as well as in the editor.
         data.comment = await self._sanitize_comment_for_visibility(
@@ -757,11 +788,13 @@ class InternalCommentService:
                 EntityTypeEnum.COMPLIANCE_REPORT,
                 EntityTypeEnum.CI_APPLICATION,
                 EntityTypeEnum.DESIGNATED_ACTION,
+                EntityTypeEnum.LCJFIP_APPLICATION,
             ):
                 raise HTTPException(status_code=403, detail="Forbidden resource")
             await self._require_own_organization(entity_type, entity_id)
             visibility_filter = CommentVisibilityEnum.PUBLIC.value
         await self._require_visible_initiative_agreement(entity_type, entity_id)
+        await self._require_visible_lcjfip_application(entity_type, entity_id)
 
         comments = await self.repo.get_internal_comments(
             entity_type, entity_id, visibility_filter
@@ -1046,7 +1079,8 @@ class InternalCommentService:
             search=filters.search,
             sort_by=filters.sort_by.value,
             sort_order=filters.sort_order.value,
-            # A draft agreement's comments are hidden from government (#5186).
+            # A draft agreement's comments are hidden from the organization
+            # (#5553).
             hidden_lifecycle_statuses=tuple(hidden_lifecycle_statuses(current_user)),
         )
 

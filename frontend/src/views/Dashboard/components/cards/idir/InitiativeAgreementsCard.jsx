@@ -16,8 +16,7 @@ import { countDigits } from '../../countDigits'
 // IDIR dashboard links card for the Initiative Agreements module (#4895).
 // The wireframe's "Change order(s)" and "Expression of interest" counters
 // are undefined concepts (open PO question); until they are, the card
-// counts by lifecycle status. There is no draft counter: drafts are
-// proponents' unsubmitted applications, which IDIR users do not see (#5186).
+// counts by lifecycle status, showing agreements underway only.
 export const InitiativeAgreementsCard = () => {
   const { t } = useTranslation(['dashboard'])
   const navigate = useNavigate()

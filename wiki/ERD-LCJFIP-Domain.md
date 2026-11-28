@@ -2,7 +2,7 @@
 
 Data model for the Low Carbon Jet Fuel Incentive Program (LCJFIP) application (#5501), in `backend/lcfs/db/models/lcjfip/`. It covers the application form (applicant, LCJF purchase details, preferred incentive, fuel supplier transfer, signing authority), the workflow around it (status, intake period, history, comments, documents), and the Metabase views. It was designed so the later stages — award letter (#5284), disbursement letters (#5285, #5286) and delivery verification — attach to it without reshaping it. Those later tables are proposed under [Planned extensions](#planned-extensions), not built.
 
-Migration: `810923914d50` (`2026-11-19-11-00_810923914d50.py`).
+Migrations: `810923914d50` (`2026-11-19-11-00_810923914d50.py`) creates the model; `f29bf127e5a5` (#5541) renumbers applications JF-<id> in the views.
 
 See also: [Organization Domain](ERD-Organization-Domain.md), [Fuel Domain](ERD-Fuel-Domain.md), [Database Schema Overview](Database-Schema-Overview.md).
 
@@ -205,7 +205,7 @@ These are computed, not stored:
 |---|---|
 | Application-level "Estimated total volume for support (L)" | `SUM(lcjfip_purchase_detail.estimated_volume)`, read-only on the form |
 | Price premium validation | `price_premium_to - price_premium_from <= 0.25` CAD/L (see open question 4) |
-| Application number | `'LCJFIP-' \|\| lcjfip_application_id`, like CT/AA/IA display codes |
+| Application number | `'JF-' \|\| lcjfip_application_id` (for example JF-123, #5541), like CT/AA/IA display codes |
 | Incentive unit | `incentive_option.incentive_type`: Cash → CAD, Credit → credits |
 | Maximum rate | the `lcjfip_incentive_rate` row for that type where `ci > ci_lower_bound` and `ci <= ci_upper_bound`, in effect on the Pacific submission date (`effective_date <= date < expiration_date`) |
 | Maximum eligible incentive | `requested_incentive_volume × maximum rate` |
@@ -265,15 +265,17 @@ After deployment, run a Metabase schema sync so the views appear.
 
 Downgrade drops all of this, including any LCJFIP comments.
 
+`f29bf127e5a5` (#5541) recreates both views with application numbers as JF-<id> and updates the ID column's comment. Its downgrade restores LCJFIP-<id>.
+
 No application period is seeded: the first intake round's name and dates are still to be confirmed (open question 5). Until a period exists, submission has no period to assign. Development data can insert one.
 
 ## Planned extensions
 
 These are not built. They are sketched so the model above holds them without change.
 
-- **`lcjfip_incentive_award`** (0..1 per application). Approved LCJF volume, approved rate, approved amount (unit from the option), award letter date and reference, decided by and decided at. This is the source for the Incentive Award Letter (#5284). It is sized against overall program demand per period, which may add a budget to `lcjfip_application_period`.
+- **`lcjfip_incentive_award`** (0..1 per application). Approved LCJF volume, approved rate, approved amount (unit from the option), award letter date and reference, decided by and decided at. This is the source for the Incentive Award Letter (#5284), and for the *Incentive award date* column of the applications index (#5541), which stays empty until it exists. It is sized against overall program demand per period, which may add a budget to `lcjfip_application_period`.
 - **`lcjfip_delivery_verification`** (0..N per application, or per purchase row). Delivered volume and date, verified CI or fuel code, and documents. The final incentive is calculated from these rows.
-- **`lcjfip_disbursement`** (0..N per award). Authorized amount in CAD or credits, recipient organization, disbursement letter date and reference, and, for credits, a `transaction_id` FK to the ledger `transaction` table. This is the source for the disbursement letters (#5285, #5286), whose table can list more than one disbursement.
+- **`lcjfip_disbursement`** (0..N per award). Authorized amount in CAD or credits, recipient organization, disbursement letter date and reference, and, for credits, a `transaction_id` FK to the ledger `transaction` table. This is the source for the disbursement letters (#5285, #5286), whose table can list more than one disbursement, and for the index's *Authorized disbursement* column (#5541).
 - **IDIR review fields** such as an assigned analyst or a recommendation step, if the review workflow needs them (as on `ci_application`).
 
 ## Open questions for Product Owner review

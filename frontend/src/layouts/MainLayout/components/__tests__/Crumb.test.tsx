@@ -135,6 +135,26 @@ describe('Crumb', () => {
     )
   })
 
+  test.for([
+    '/jet-fuel/lcjfip/applications/7',
+    '/jet-fuel/lcjfip/applications/new'
+  ])(
+    'reads %s as Home > Jet fuel > LCJFIP application',
+    (pathname, { render, app }) => {
+      setupRouterMocks({
+        pathname,
+        matches: [{ handle: { title: 'LCJFIP application' } }]
+      })
+
+      render(<Crumb />, app)
+
+      const items = Array.from(
+        document.querySelectorAll('.MuiBreadcrumbs-li')
+      ).map((item) => item.textContent)
+      expect(items).toEqual(['Home', 'Jet fuel', 'LCJFIP application'])
+    }
+  )
+
   test('shows the agreement code for an initiative agreement detail path', ({
     render,
     app
